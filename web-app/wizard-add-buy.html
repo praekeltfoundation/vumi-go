@@ -1,0 +1,59 @@
+<script>
+	$(document).ready(function(){
+	  $('#wizard-add-sn').click(function() {
+			  
+			  $.ajax({url:"wizard.html", success:function(result){
+			  $("div#main div.inner").html(result);
+			  }});
+	  });	
+	  $('#wizard-add-team-member').click(function() {
+			  
+			  $.ajax({url:"wizard-team-member.html", success:function(result){
+			  $("div#main div.inner").html(result);
+			  }});
+	  });
+	  $('#wizard-add-contacts').click(function() {
+			  
+			  $.ajax({url:"wizard-add-contacts.html", success:function(result){
+			  $("div#main div.inner").html(result);
+			  }});
+	  });
+	  $('#wizard-add-buy').click(function() {
+			  
+			  $.ajax({url:"wizard-add-buy.html", success:function(result){
+			  $("div#main div.inner").html(result);
+			  }});
+	  });
+	});
+</script>
+<div id="wizard">
+
+  <div class="notification show success">Vumi account created and password emailed to gustav@praekelt.com</div>
+  
+  <h1>Welcome Gustav.</h1>
+  <h2>We've created your Vumi account and given you 100 free messaging credits.</h2>
+  <p class="big">Here are some things you might want to do next:</p>
+  
+  <div id="wizard-box">
+  	<div id="wizard-steps">
+    	<div class="wizard-step-item profile-sn"><a href="#" id="wizard-add-sn">Add Social Networks</a></div>
+        <div class="wizard-step-item profile-team"><a href="#" id="wizard-add-team-member">Add A Team Member</a></div>
+        <div class="wizard-step-item profile-people"><a href="#" id="wizard-add-contacts">Add Contacts</a></div>
+        <div class="wizard-step-item-active profile-buy">Buy Message Credits</div>
+        <div class="wizard-step-item profile-im"><a href="new-conversation.html">Start A Conversation</a></div>
+    </div>
+    <div id="wizard-actions">
+    	<p class="intro">Vumi messaging credits are required for outbound SMS messages and Star Menu sessions. <a href="credits-faq.html">More about credits</a></p>
+   
+             
+                
+                <div id="paypal">
+                	Paypal embed goes here
+                </div>
+                
+                
+    </div>
+    <div class="clear"></div>
+  </div>
+
+</div>
