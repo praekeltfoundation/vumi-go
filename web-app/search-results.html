@@ -4,8 +4,8 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=980">
   <meta name="Author" content="Praekelt Foundation" />
-  <title>Vumi</title>
-  <meta name="Keywords" content="vumi" /> 
+  <title>Vumi Go</title>
+  <meta name="Keywords" content="Vumi Go" /> 
   <meta name="Description" content="Vumi is a super-scalable conversation engine for the delivery of SMS, Star Menu and chat messages to diverse audiences. It's the most effective way to start and manage mobile conversations." />
   <meta content="no" http-equiv="imagetoolbar" />
   <script src="js/jquery-1.6.1.min.js"></script>
@@ -20,8 +20,8 @@
 	});
   </script>
   <link rel="stylesheet" href="css/screen.css" type="text/css">
-  <link type="text/css" href="css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
-  <link type="text/css" href="css/jquery-ui-timepicker.css" rel="stylesheet" />  <!--[if lt IE 7]>
+    <link type="text/css" href="css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
+  <link type="text/css" href="css/jquery-ui-timepicker.css" rel="stylesheet" />  <!--[if lt IE 8]>
 	<link rel="stylesheet" href="css/moveon.css" type="text/css">
   <![endif]-->
 </head>
@@ -30,7 +30,7 @@
 	<div id="header">
     	<div id="header-elements">
         	<div id="search">
-            	<form id="search-form" name="search-form" action="search-results.html" method="post"><input type="image" src="pics/search-btn.png" id="search-btn" /><input type="text" name="search-input" id="search-input" /></form>
+            	<form id="search-form" name="search-form" action="search-results.html" method="post"><input type="image" src="pics/header/search-btn.png" id="search-btn" /><input type="text" name="search-input" id="search-input" /></form>
             </div>
             <div id="user"><a href="#">Gustav Praekelt</a></div>
             <div id="user-fly">
@@ -77,52 +77,104 @@
     
     	<div class="inner">
         
-        <form id="search-filter" name="search-filter" action="" method="get"><input type="image" src="pics/search-btn.png" id="search-filter-btn" /><input type="text" id="search-filter-input" class="txt" value="Matchday" /></form>
+        <form id="search-filter" name="search-filter" action="" method="get"><input type="image" src="pics/header/search-btn.png" id="search-filter-btn" /><input type="text" id="search-filter-input" class="txt" value="Matchday" /></form>
         
         <div class="clear"></div>
     	
         <div class="wide-box people-box">
         
         	<div id="steps" class="three-step">
-            	<div id="search-conv" class="step groups-active"><a href="people.html">Conversations (8)</a></div>
-                <div id="search-people" class="step"><a href="people-people.html">People (2)</a></div>
-                <div id="search-help" class="step" style="border-right: none"><a href="people-people.html">Help (0)</a></div>
+            	<div id="search-conv" class="step groups-active help-step"><a href="#" id="conv-search-filter">Conversations (8)</a></div>
+                <div id="search-people" class="step help-step"><a href="#" id="people-search-filter">People (2)</a></div>
+                <div id="search-help" class="step help-step" style="border-right: none"><a href="#" id="help-search-filter">Help (0)</a></div>
             </div>
             
             <div class="clear"></div>
             
             <div id="conv-search-result">
-            <div id="conversations">
-        
-        	<div class="grid_4"><div class="msg-box"><h4><a href="conversation.html">Market Announcement: Tomatoes</a></h4><p><span class="timestamp">Fri, 10 Jun 2011 13:30:11 +0000</span>Tomatoes selling at ZK 30 000 per box at market today. If u have stock, pls bring</p><div class="msg-info"><div title="Twitter" class="twitter-ico"></div><div title="Facebook" class="fb-ico"></div><div title="SMS" class="sms-ico"></div><div title="People in this conversation" class="people-count-ico">900k+</div><div title="Reactions" class="people-reply-ico">900k+</div></div></div></div>
-            	<div class="grid_4"><div class="msg-box"><h4><a href="conversation.html">Weather Alert</a></h4><p><span class="timestamp">Fri, 10 Jun 2011 11:20:01 +0000</span>Rain forecast for tomorrow. 80% chance &amp; 4mm</p><div class="msg-info"><div title="Twitter" class="twitter-ico"></div><div title="Facebook" class="fb-ico"></div><div title="SMS" class="sms-ico"></div><div title="IM" class="im-ico"></div><div title="Email" class="email-ico"></div><div title="People in this conversation" class="people-count-ico">900k+</div><div title="Reactions" class="people-reply-ico">900k+</div></div></div></div>
-                <div class="grid_4"><div class="msg-box"><h4><a href="conversation.html">Market Announcement: Tomatoes</a></h4><p><span class="timestamp">Thu, 9 Jun 2011 09:20:01 +0000</span>Tomatoes selling at ZK 28 500 per box at market today. If u have stock, pls bring</p><div class="msg-info"><div title="Twitter" class="twitter-ico"></div><div title="Facebook" class="fb-ico"></div><div title="SMS" class="sms-ico"></div><div title="IM" class="im-ico"></div><div title="Email" class="email-ico"></div><div title="People in this conversation" class="people-count-ico">900k+</div><div title="Reactions" class="people-reply-ico">900k+</div></div></div></div>
-                <div class="grid_4"><div class="msg-box"><h4><a href="conversation.html">Market Announcement: Holiday</a></h4><p><span class="timestamp">Tue, 7 Jun 2011 11:20:01 +0000</span>Market will be closed tomorrow for the public holiday. Market re-opens 9 Jun 8AM.</p><div class="msg-info"><div title="Twitter" class="twitter-ico"></div><div title="Facebook" class="fb-ico"></div><div title="SMS" class="sms-ico"></div><div title="IM" class="im-ico"></div><div title="Email" class="email-ico"></div><div title="People in this conversation" class="people-count-ico">900k+</div><div title="Reactions" class="people-reply-ico">900k+</div></div></div></div>
-                <div class="grid_4"><div class="msg-box"><h4><a href="conversation.html">Market Announcement: Cocoa</a></h4><p><span class="timestamp">Mon, 6 Jun 2011 11:20:01 +0000</span>Cocoa selling at ZK 65 500 per kg at market today. If u have stock, pls bring</p><div class="msg-info"><div title="Twitter" class="twitter-ico"></div><div title="Facebook" class="fb-ico"></div><div title="SMS" class="sms-ico"></div><div title="IM" class="im-ico"></div><div title="Email" class="email-ico"></div><div title="People in this conversation" class="people-count-ico">900k+</div><div title="Reactions" class="people-reply-ico">900k+</div></div></div></div>
-                <div class="grid_4"><div class="msg-box"><h4><a href="conversation.html">USAID Training</a></h4><p><span class="timestamp">Sun, 5 Jun 2011 11:20:01 +0000</span>USAID teaching Cocoa productivity, crop loss, cost reduction lessons. Venue: Market When: 28 Feb 10AM</p><div class="msg-info"><div title="SMS" class="sms-ico"></div><div title="People in this conversation" class="people-count-ico">900k+</div><div title="Reactions" class="people-reply-ico">900k+</div></div></div></div>
-                
-                
-                <div class="page-controls">
-          <ul>
-              <li class="page-control-btn"><a href="#">Prev</a></li>
-              <li><a href="#">1</a></li>
-              <li><a href="#">2</a></li>
-              <li class="active">3</li>
-              <li class="ellipsis">...</li>
-              <li><a href="#">10</a></li>
-              <li class="page-control-btn"><a href="#">Next</a></li>
-          </ul>
-        </div>
-            
-        
-        	</div>
+              <div id="conversations">
+          
+              <div class="grid_4"><div class="msg-box"><h4><a href="conversation.html">Market Announcement: Tomatoes</a></h4><p><span class="timestamp">Fri, 10 Jun 2011 13:30:11 +0000</span>Tomatoes selling at ZK 30 000 per box at market today. If u have stock, pls bring</p><div class="msg-info"><div title="Twitter" class="twitter-ico"></div><div title="Facebook" class="fb-ico"></div><div title="SMS" class="sms-ico"></div><div title="People in this conversation" class="people-count-ico">900k+</div><div title="Reactions" class="people-reply-ico">900k+</div></div></div></div>
+                  <div class="grid_4"><div class="msg-box"><h4><a href="conversation.html">Weather Alert</a></h4><p><span class="timestamp">Fri, 10 Jun 2011 11:20:01 +0000</span>Rain forecast for tomorrow. 80% chance &amp; 4mm</p><div class="msg-info"><div title="Twitter" class="twitter-ico"></div><div title="Facebook" class="fb-ico"></div><div title="SMS" class="sms-ico"></div><div title="IM" class="im-ico"></div><div title="Email" class="email-ico"></div><div title="People in this conversation" class="people-count-ico">900k+</div><div title="Reactions" class="people-reply-ico">900k+</div></div></div></div>
+                  <div class="grid_4"><div class="msg-box"><h4><a href="conversation.html">Market Announcement: Tomatoes</a></h4><p><span class="timestamp">Thu, 9 Jun 2011 09:20:01 +0000</span>Tomatoes selling at ZK 28 500 per box at market today. If u have stock, pls bring</p><div class="msg-info"><div title="Twitter" class="twitter-ico"></div><div title="Facebook" class="fb-ico"></div><div title="SMS" class="sms-ico"></div><div title="IM" class="im-ico"></div><div title="Email" class="email-ico"></div><div title="People in this conversation" class="people-count-ico">900k+</div><div title="Reactions" class="people-reply-ico">900k+</div></div></div></div>
+                  <div class="grid_4"><div class="msg-box"><h4><a href="conversation.html">Market Announcement: Holiday</a></h4><p><span class="timestamp">Tue, 7 Jun 2011 11:20:01 +0000</span>Market will be closed tomorrow for the public holiday. Market re-opens 9 Jun 8AM.</p><div class="msg-info"><div title="Twitter" class="twitter-ico"></div><div title="Facebook" class="fb-ico"></div><div title="SMS" class="sms-ico"></div><div title="IM" class="im-ico"></div><div title="Email" class="email-ico"></div><div title="People in this conversation" class="people-count-ico">900k+</div><div title="Reactions" class="people-reply-ico">900k+</div></div></div></div>
+                  <div class="grid_4"><div class="msg-box"><h4><a href="conversation.html">Market Announcement: Cocoa</a></h4><p><span class="timestamp">Mon, 6 Jun 2011 11:20:01 +0000</span>Cocoa selling at ZK 65 500 per kg at market today. If u have stock, pls bring</p><div class="msg-info"><div title="Twitter" class="twitter-ico"></div><div title="Facebook" class="fb-ico"></div><div title="SMS" class="sms-ico"></div><div title="IM" class="im-ico"></div><div title="Email" class="email-ico"></div><div title="People in this conversation" class="people-count-ico">900k+</div><div title="Reactions" class="people-reply-ico">900k+</div></div></div></div>
+                  <div class="grid_4"><div class="msg-box"><h4><a href="conversation.html">USAID Training</a></h4><p><span class="timestamp">Sun, 5 Jun 2011 11:20:01 +0000</span>USAID teaching Cocoa productivity, crop loss, cost reduction lessons. Venue: Market When: 28 Feb 10AM</p><div class="msg-info"><div title="SMS" class="sms-ico"></div><div title="People in this conversation" class="people-count-ico">900k+</div><div title="Reactions" class="people-reply-ico">900k+</div></div></div></div>
+                  
+                  
+                  <div class="page-controls">
+                    <ul>
+                        <li class="page-control-btn"><a href="#">Prev</a></li>
+                        <li><a href="#">1</a></li>
+                        <li><a href="#">2</a></li>
+                        <li class="active">3</li>
+                        <li class="ellipsis">...</li>
+                        <li><a href="#">10</a></li>
+                        <li class="page-control-btn"><a href="#">Next</a></li>
+                    </ul>
+                  </div>
+              
+          
+              </div>
             </div>
             
-            <div class="inner-box">
-        	
-        	
+            <div id="people-search-result">
+              	<div class="inner-box">
+            
+            
+        
+            <div id="groups-list">
+            	
+                <div class="group"><span class="group-name"><a href="person.html">Aaron, John</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Aaron, John</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group"><span class="group-name"><a href="person.html">Abbot, William</a></span></div>
+                <div class="group last"><span class="group-name"><a href="person.html">Ayling, Bob</a></span></div>
+            </div>
+            
+            
+            <div class="page-controls">
+                    <ul>
+                        <li class="page-control-btn"><a href="#">Prev</a></li>
+                        <li><a href="#">1</a></li>
+                        <li><a href="#">2</a></li>
+                        <li class="active">3</li>
+                        <li class="ellipsis">...</li>
+                        <li><a href="#">10</a></li>
+                        <li class="page-control-btn"><a href="#">Next</a></li>
+                    </ul>
+                  </div>
+            
+            
             
             </div>
+            
+            
+            
+        
+        		</div>
+            </div>
+            
+          
+           
+           <div id="help-search-result">
+              No Results found
+            </div> 
+            
+           
         
         </div>
         
