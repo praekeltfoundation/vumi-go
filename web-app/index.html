@@ -15,7 +15,7 @@
   <script src="js/custom.js"></script>
   <script>
 	  $(document).ready(function(){
-		$("#forgot-form").validate();
+		$("#signin-form").validate();
 	  });
   	</script>
   <link rel="stylesheet" href="css/screen.css" type="text/css"><!--[if lt IE 8]>
@@ -29,13 +29,18 @@
     </div>
     <div id="main" class="main-alt">
     	<div id="forgot-box">
-        	<form name="forgot-form" id="forgot-form" method="post" action="forgot-complete.html">
-            	<h3>Enter your email to receive a link to reset your password</h3>
-                <input id="email" name="email" type="text" value="Email Address" class="email txtbox forgot" />
-                
-                <input type="submit" name="submit" value="Reset Password" class="btn send" />
-                <p class="forgot"><a href="index.html">Return to sign in</a></p>
-            </form>
+        	<form name="signin-form" action="home.html" method="post" id="signin-form">
+              
+                  <label for="signin-email" id="signin-label-email">Email Address</label>
+                  <input type="text" id="signin-input-email" class="txtbox required email" name="signin-email" autocomplete="on">
+                  
+                  <label for="signin-email" id="signin-label-password">Password</label>
+                  <input id="signin-input-password" type="password" name="password" autocomplete="off" class="txtbox password required" />
+                  
+                  <input type="submit" name="signin" class="btn" value="Sign in">
+                  
+                  <span><a href="forgot.html">Forgot your password?</a> <a href="contact.html">Need Help?</a> <a href="#">Sign up for a Vumi Go account</a> </span>
+              </form>
         </div>
         
     </div>
