@@ -22,7 +22,7 @@ label.match-label{float:right;text-align:right;width:200px;height:18px;overflow:
 #header{width:auto;height:42px;background-color:#fff;position:relative}
 #header-elements,#control-elements,#header-elements-creds{width:960px;position:relative;margin:0 auto}
 #header #logo{width:90px;height:42px;display:block;float:left;background:transparent url(../pics/sprites/sprite-map.png) repeat-x scroll 0 -43px;margin:0}
-#header-elements-creds { }
+#header-elements-creds { text-align:center }
 ul#nav{list-style:none;float:left;margin-top:13px}
 ul#nav li{display:inline;font-size:1em;margin-left:15px;text-transform:lowercase}
 ul#nav a.start{color:#f26669;font-style:oblique}
@@ -136,7 +136,7 @@ ul.people-filter li a{text-decoration:none}
 #forgot-box{width:600px;margin:0 auto 1em;padding:20px}
 #forgot-box input.forgot{width:450px;color:#ccc}
 #forgot-box input.send{width:120px}
-#forgot-box p.forgot{text-align:left}
+#forgot-box p.forgot, #forgot-box h3{text-align:center}
 #get-acc{width:280px;border:1px solid #ddd;box-shadow:inset 0 0 7px #ddd;-moz-box-shadow:inset 0 0 7px #ddd;-webkit-box-shadow:inset 0 0 7px #ddd;-webkit-border-radius:5px;-moz-border-radius:5px;border-radius:5px;text-align:center;background-color:#f5f5f5;color:#999;line-height:1.5em;margin:0 auto;padding:10px}
 #get-acc a{font-size:1em;color:#fff;background-color:#000;border:none;-webkit-border-radius:5px;-moz-border-radius:5px;border-radius:5px;text-align:center;background:0 to(#555));display:block;margin:10px 0;padding:10px}
 form#search-filter{display:inline-block;width:960px;-webkit-border-radius:5px;-moz-border-radius:5px;border-radius:5px;border:1px solid #ddd;box-shadow:inset 0 0 3px #ddd;-moz-box-shadow:inset 0 0 3px #ddd;-webkit-box-shadow:inset 0 0 3px #ddd;background:url(../pics/icons/icons.png) 9px -134px no-repeat;height:40px;background-color:#fff;margin:1em 0}
