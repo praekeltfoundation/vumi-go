@@ -1,0 +1,71 @@
+<script>
+	$(document).ready(function(){
+		$('div.notification').delay(5000).slideUp();	
+	  $('#wizard-add-team-member').click(function() {
+			  
+			  $.ajax({url:"wizard-team-member.html", success:function(result){
+			  $("div#main div.inner").html(result);
+			  }});
+	  });
+	  $('#wizard-add-contacts').click(function() {
+			  
+			  $.ajax({url:"wizard-add-contacts.html", success:function(result){
+			  $("div#main div.inner").html(result);
+			  }});
+	  });
+	  $('#wizard-add-buy').click(function() {
+			  
+			  $.ajax({url:"wizard-add-buy.html", success:function(result){
+			  $("div#main div.inner").html(result);
+			  }});
+	  });
+	  FB.init({ 
+                              appId:'YOUR_APP_ID', cookie:true, 
+                              status:true, xfbml:true 
+                           });
+	});
+	
+	
+</script>
+<div id="wizard">
+
+  <div class="notification show success">Vumi account created and password emailed to gustav@praekelt.com</div>
+  
+  <h1>Welcome Gustav.</h1>
+  <h2>We've created your Vumi account and given you 100 free messaging credits.</h2>
+  <p class="big">Here are some things you might want to do next:</p>
+  
+  <div id="wizard-box">
+  	<div id="wizard-steps">
+    	<div class="wizard-step-item-active">Add Social Networks</div>
+        <div class="wizard-step-item"><a href="#" id="wizard-add-team-member">Add A Team Member</a></div>
+        <div class="wizard-step-item"><a href="#" id="wizard-add-contacts">Add Contacts</a></div>
+        <div class="wizard-step-item"><a href="#" id="wizard-add-buy">Buy Message Credits</a></div>
+        <div class="wizard-step-item"><a href="home-new.html">Get Started...</a></div>
+    </div>
+    <div id="wizard-actions">
+    	<p class="intro">Adding social networks will let you message your followers and fans from Vumi</p>
+                
+                <div class="sn-box">
+                	<h4>Add your Facebook profile</h4>
+					<p>This will allow you to post messages to your wall.</p>
+						<div id="fb-root"></div>
+						
+                      
+                        <div id="fb-btn"><fb:login-button>Login with Facebook</fb:login-button></div>
+                     	
+                </div>
+                
+                <div class="sn-box norightmargin">
+                	<h4>Add your Twitter profile</h4>
+					<p>This will allow you to tweet to your twitter timeline.</p>
+						<img src="pics/sign-in-with-twitter-l.png">
+                        
+                </div>
+                
+                
+    </div>
+    <div class="clear"></div>
+  </div>
+
+</div>

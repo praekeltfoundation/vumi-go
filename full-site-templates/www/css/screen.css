@@ -15,6 +15,7 @@ dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tf
 article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, section { 
 	display: 			block 
 }
+html{overflow-y:scroll}
 body { 
 	line-height: 		1 
 }
