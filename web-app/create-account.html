@@ -16,17 +16,21 @@
   <script src="http://connect.facebook.net/en_US/all.js"></script>
   <script type="text/javascript">
 	$(document).ready(function(){
+	  $("#header").hide();	
 	  $("div#main div.inner").ajaxStart(function(){
-		$(this).html("<div class='creating'><img src='pics/creating.gif' class='loading' /><h2>Creating your Vumi account...</h2></div>");
+		$(this).html("<div class='creating'><img src='pics/header/logo.png' class='creating-logo' /><img src='pics/wizard/ajax-loader.gif' class='loading' /><h2>Creating your Vumi account...</h2></div>");
 	  }); 
 	  	$.ajax({url:"wizard.html", success:function(result){
     	$("div#main div.inner").html(result);
 		$("#top-nav-signin").show();
+		$("#header").show();
+		
  		}});
 		
 	});
   </script>
   <link rel="stylesheet" href="css/screen.css" type="text/css">
+  <link rel="stylesheet" href="css/wizard.css" type="text/css">
   <!--[if lt IE 8]>
 	<link rel="stylesheet" href="css/moveon.css" type="text/css">
   <![endif]-->

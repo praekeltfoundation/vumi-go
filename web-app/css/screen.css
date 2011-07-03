@@ -146,7 +146,7 @@ ul.people-filter li a{text-decoration:none}
 #signin-form input { width: 558px!important; }
 #signin-form label { margin: 5px 0!important }
 #signin-form label.error { width: 558px }
-#signin-form input.btn { width: 580px!important }
+#signin-form input.btn { width: 580px!important; margin-top: 5px!important }
 #signin-form span { display: block; width: 580px; text-align: center}
 #signin-form span a { display: inline-block; padding: 10px 10px 0 10px}
 #get-acc{width:280px;border:1px solid #ddd;box-shadow:inset 0 0 7px #ddd;-moz-box-shadow:inset 0 0 7px #ddd;-webkit-box-shadow:inset 0 0 7px #ddd;-webkit-border-radius:5px;-moz-border-radius:5px;border-radius:5px;text-align:center;background-color:#f5f5f5;color:#999;line-height:1.5em;margin:0 auto;padding:10px}
@@ -166,6 +166,8 @@ form#search-filter input#search-filter-btn{float:left;width:35px;height:35px}
 .msg-box p{font-size:1em;line-height:1.2em;margin:1.2em 0}
 .msg-box .timestamp{display:block;color:#666;font-size:.9em}
 .msg-box .msg-info{position:absolute;top:147px;left:0;width:280px;border-top:1px solid #fff;padding:0}
+.msg-box-empty{background-color:transparent!important;border:10px dashed #f9f9f9;box-shadow:none}
+.msg-box-empty:hover{background-color:transparent!important;box-shadow:none}
 div.twitter-ico{background:transparent url(../pics/icons/twitter.png) 4px 6px no-repeat;width:28px;height:32px;float:left;border-right:1px solid #fff}
 div.fb-ico{background:transparent url(../pics/icons/fb.png) 4px 6px no-repeat;width:28px;height:32px;float:left;border-right:1px solid #fff}
 div.sms-ico{background:transparent url(../pics/icons/sms.png) 4px 6px no-repeat;width:28px;height:32px;float:left;border-right:1px solid #fff}
@@ -232,8 +234,10 @@ div.people-reply-ico{background:transparent url(../pics/icons/replies.png) 3px 6
 #accordion h3 span.im-connected{background:transparent url(../pics/icons/im-status.png) no-repeat scroll -15px -11px;display:inline-block;margin-left:5px}
 #accordion h3 span.im-offline{background:transparent url(../pics/icons/im-status.png) no-repeat scroll -15px -64px;display:inline-block;margin-left:5px}
 .content-box #accordion input.txtbox,.content-box #accordion textarea,.content-box #accordion select,.content-box #accordion label.error{width:550px}
-#frm-invite-member input.txtbox{width:510px;float:left}
+#frm-invite-member{position:relative}
+#frm-invite-member input.txtbox{width:505px;float:left}
 #frm-invite-member input.btn{float:left;margin-left:5px;padding:8px 20px}
+#frm-invite-member label.error{position: absolute; width: 300px; top: 7px; right: 138px; text-align: right }
 table.members th{background-color:#f5f5f5;text-align:left;font-size:.9em;border-bottom:1px solid #ddd;padding:10px 5px}
 table.members td{background-color:#fff;text-align:left;font-size:.9em;border-bottom:1px solid #ddd;padding:10px 5px}
 #paypal{border:1px solid #ddd;padding:20px}
@@ -252,10 +256,6 @@ table.plain td.icon{padding:0 5px}
 .crumb-message{background-image:url(../pics/icons/conv-icons.png);background-position:14px -211px;background-repeat:no-repeat;background-attachment:scroll}
 .crumb-start{background-image:url(../pics/icons/conv-icons.png);background-position:14px -266px;background-repeat:no-repeat;background-attachment:scroll}
 .people-box{-webkit-border-top-right-radius:0;-moz-border-top-right-radius:0;border-top-right-radius:0;-webkit-border-top-left-radius:0;-moz-border-top-left-radius:0;border-top-left-radius:0}
-.creating-main{background-image:none!important}
-.creating{width:495px;margin:250px auto}
-.creating h2{font-size:2.2em;line-height:1.2em;text-shadow:1px 1px 1px #FFF;color:#333;padding-top:13px}
-img.loading{display:block;margin:20px auto}
 a#top-nav-signin{background-color:#f26669;-webkit-border-radius:5px;-moz-border-radius:5px;border-radius:5px;color:#fff;float:right;margin-top:6px;padding:6px 10px}
 .contact-left{float:left;width:400px;margin-top:40px;min-height:200px}
 .contact{float:right;width:160px;margin:40px 0 40px 20px}

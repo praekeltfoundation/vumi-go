@@ -1,0 +1,103 @@
+<script>
+	$(document).ready(function(){
+	  $('#wizard-add-sn').click(function() {
+			  
+			  $.ajax({url:"wizard.html", success:function(result){
+			  $("div#main div.inner").html(result);
+			  }});
+	  });		
+	  $('#wizard-add-team-member').click(function() {
+			  
+			  $.ajax({url:"wizard-team-member.html", success:function(result){
+			  $("div#main div.inner").html(result);
+			  }});
+	  });
+	  $('#wizard-add-contacts').click(function() {
+			  
+			  $.ajax({url:"wizard-add-contacts.html", success:function(result){
+			  $("div#main div.inner").html(result);
+			  }});
+	  });
+	  $('#wizard-add-buy').click(function() {
+			  
+			  $.ajax({url:"wizard-add-buy.html", success:function(result){
+			  $("div#main div.inner").html(result);
+			  }});
+	  });
+	  
+	});
+	jQuery(function() {
+		// show a simple loading indicator
+		var loader = jQuery('<div id="loader"><img src="pics/creating.gif" class="loading" /></div>')
+			.css({position: "relative", top: "1em", left: "1em"})
+			.appendTo("#main .inner")
+			.hide();
+		jQuery().ajaxStart(function() {
+			loader.show();
+		}).ajaxStop(function() {
+			loader.hide();
+		}).ajaxError(function(a, b, e) {
+			throw e;
+		});
+		
+		var v = jQuery("#frm-upload-contacts").validate({
+			submitHandler: function(form) {
+				jQuery(form).ajaxSubmit({
+					target: "#result"
+				});
+			}
+		});
+		
+		
+		
+		jQuery("#reset").click(function() {
+			v.resetForm();
+		});
+	});
+</script>
+<div id="wizard">
+
+  <div class="notification show success">Vumi account created and password emailed to gustav@praekelt.com</div>
+  
+  <h1>Welcome Gustav.</h1>
+  <h2>We've created your Vumi account and given you 100 free messaging credits.</h2>
+  <p class="big">Here are some things you might want to do next:</p>
+  
+  <div id="wizard-box">
+  	<div id="wizard-steps">
+    	<div class="wizard-step-item"><a href="#" id="wizard-add-sn">Add Social Networks</a></div>
+        <div class="wizard-step-item"><a href="#" id="wizard-add-team-member">Add A Team Member</a></div>
+        <div class="wizard-step-item-active">Add Contacts</div>
+        <div class="wizard-step-item"><a href="#" id="wizard-add-buy">Buy Message Credits</a></div>
+        <div class="wizard-step-item"><a href="home-new.html">Get Started...</a></div>
+    </div>
+    <div id="wizard-actions">
+    	<div id="result">
+    	<p class="intro">Contacts are people with whom you'll be having a conversation</p>
+        
+        <form name="frm-upload-contacts" id="frm-upload-contacts" method="post" action="wizard-contacts-preview.html">
+                	
+                    <div class="field-row">
+                    	<label for="name">Upload your spreadsheet</label>
+                    	<input type="file" class="txtbox required" name="name" maxlength="200" />
+                        <div class="clear"></div>
+                    </div>
+                    <div class="field-row">
+                        <label for="newgroup">Group Name</label>
+                    	<input type="text" class="txtbox required" name="newgroup" maxlength="200" />
+                        <div class="clear"></div>
+                    </div>
+                   
+                	<div class="field-row">
+                    	<input type="submit" name="submitbtn" class="btn" value="Upload Contacts">
+                        <div class="clear"></div>
+                    </div>
+                    
+                </form>
+         </div>
+                
+    </div>
+    <div class="clear"></div>
+  </div>
+
+</div>
