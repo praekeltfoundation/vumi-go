@@ -23,5 +23,19 @@
 <body>
     {% block content %}
     {% endblock %}
+    
+    {% block footer %}
+    <div id="footer">
+        Copyright {% now "Y" %} Praekelt Foundation 
+        <a href="{% url todo %}terms.html">Terms of Use</a> 
+        <a href="{% url todo %}contact.html">Contact Us</a></div>
+    </div>
+    <div id="ie">
+        Please upgrade your browser. 
+        We recommend <a href="http://www.microsoft.com/windows/internet-explorer/default.aspx">Internet Explorer 8+</a>, 
+        <a href="http://www.mozilla.com/en-US/firefox/">Firefox</a> or 
+        <a href="http://www.google.com/chrome/index.html">Chrome</a>
+    </div>
+    {% endblock %}
 </body>
 </html>
