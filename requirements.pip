@@ -1,1 +1,2 @@
-fabric
+fabric==1.0.1
+Django==1.3
