@@ -11,4 +11,5 @@ urlpatterns = patterns('',
     url(r'^accounts/login/$', 'django.contrib.auth.views.login'),
     url(r'^accounts/logout/$', 'django.contrib.auth.views.logout'),
     url(r'^', include('go.base.urls', namespace="go")),
+    url(r'^todo/.*$', 'go.base.views.todo', name='todo'),
 )

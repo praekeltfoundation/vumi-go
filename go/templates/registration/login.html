@@ -25,7 +25,7 @@
                 <input type="hidden" name="next" value="{{next}}">
                 {% csrf_token %}
 
-                <span><a href="forgot.html">Forgot your password?</a> <a href="contact.html">Need Help?</a> <a href="#">Sign up for a Vumi Go account</a> </span>
+                <span><a href="{% url todo %}forgot.html">Forgot your password?</a> <a href="{% url todo %}contact.html">Need Help?</a> <a href="{% url todo %}signup.html">Sign up for a Vumi Go account</a> </span>
             </form>
         </div>
     </div>
