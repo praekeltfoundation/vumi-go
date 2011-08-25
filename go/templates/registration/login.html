@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+     <form class="signin" method="post">
+         {{form}}
+         <input type="submit" class="submit" value="Sign In &raquo;" name="submit" />
+         <input type="hidden" name="next" value="{{next}}">
+         {% csrf_token %}
+
+     </form>
+    
+{% endblock %}
