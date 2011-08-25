@@ -1,3 +1,8 @@
 *.pyc
-ve/
-*.egg-info/
+/ve/
+/*.egg-info/
+/.coverage
+/coverage.xml
+/nosetests.xml
+/pyflakes.log
+/pep8.log
