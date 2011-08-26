@@ -7,6 +7,6 @@ def home(request):
     return render_to_response('home.html', {
     }, context_instance=RequestContext(request))
     
-def todo(request):
+def todo(request): # pragma: no cover
     return render_to_response('todo.html', {
     }, context_instance=RequestContext(request))

@@ -6,3 +6,4 @@
 /nosetests.xml
 /pyflakes.log
 /pep8.log
+/htmlcov/
