@@ -1,22 +1,17 @@
 {% extends "app.html" %}
 
 {% block main %}
+<div id="main" class="main-alt" >
     <div class="inner">
     <h2>Hey {{user.first_name}} {{user.last_name}}, you must be new here.</h2>
-    <h3 class="home"><a href="{% url todo %}new-conversation.html">Start Your First Conversation</a></h3>
-    
-   <div id="conversations">
-    
-            <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-            <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-            <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-            <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-            <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-            <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-           
-        
-    
+    <h3 class="home"><a href="{% url conversation:new %}">Start Your First Conversation</a></h3>
+    <div id="conversations">
+        <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+        <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+        <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+        <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+        <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+        <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
     </div>
-    
-
+</div>
 {% endblock %}

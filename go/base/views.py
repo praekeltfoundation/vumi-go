@@ -1,12 +1,11 @@
 from django.contrib.auth.decorators import login_required
-from django.template.context import RequestContext
-from django.shortcuts import render_to_response
+from django.shortcuts import render
 
 @login_required
 def home(request):
-    return render_to_response('home.html', {
-    }, context_instance=RequestContext(request))
+    return render(request, 'home.html', {
+    })
     
 def todo(request): # pragma: no cover
-    return render_to_response('todo.html', {
-    }, context_instance=RequestContext(request))
+    return render(request, 'todo.html', {
+    })

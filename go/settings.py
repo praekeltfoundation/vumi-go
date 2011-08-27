@@ -115,6 +115,7 @@ TEMPLATE_DIRS = (
     # Don't forget to use absolute paths, not relative paths.
     abspath("templates"),
     abspath("base", "templates"),
+    abspath("conversation", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -128,8 +129,10 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     'django.contrib.admindocs',
+    'south',
     'django_nose',
     'base',
+    'conversation',
 )
 
 # A sample logging configuration. The only tangible logging
