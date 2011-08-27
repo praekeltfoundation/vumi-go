@@ -6,7 +6,7 @@
             <div id="search">
                 <form id="search-form" name="search-form" action="{% url todo %}search-results.html" method="post"><input type="image" src="{{STATIC_URL}}pics/header/search-btn.png" id="search-btn" /><input type="text" name="search-input" id="search-input" /></form>
             </div>
-            <div id="user"><a href="{% url todo %}#">{{user.first_name}} {{user.last_name}}</a></div>
+            <div id="user"><a href="{% url todo %}#">{{user_profile.get_display_name}}</a></div>
             <div id="user-fly">
                 <ul>
                     <li class="sep">My Profile</li>
@@ -25,7 +25,7 @@
                     <li><a href="{% url logout %}">Sign Out</a></li>
                 </ul>
             </div>
-            <a href="{% url todo %}home.html" id="logo" title="Go Vumi"></a>
+            <a href="{% url home %}" id="logo" title="Go Vumi"></a>
             <ul id="nav">
                 <li><a href="{% url todo %}conversations.html">Conversations</a></li>
                 <li><a href="{% url todo %}people.html">People</a></li>

@@ -16,7 +16,6 @@ def new(request):
             conversation.save()
             return HttpResponseRedirect(reverse('conversation:participants', 
                 kwargs={'conversation_pk': conversation.pk}))
-        print form.errors
     else:
         form = forms.ConversationForm(initial={
             'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
@@ -32,3 +31,4 @@ def participants(request, conversation_pk):
     return render(request, 'participants.html', {
         'conversation': conversation
     })
+
