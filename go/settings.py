@@ -135,6 +135,16 @@ INSTALLED_APPS = (
     'conversation',
 )
 
+TEMPLATE_CONTEXT_PROCESSORS = (
+    "django.contrib.auth.context_processors.auth",
+    "django.core.context_processors.debug",
+    "django.core.context_processors.i18n",
+    "django.core.context_processors.media",
+    "django.core.context_processors.static",
+    "django.contrib.messages.context_processors.messages",
+    "go.base.context_processors.user_profile",
+)
+
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error.
@@ -161,3 +171,4 @@ LOGGING = {
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 SKIP_SOUTH_TESTS = True
 SOUTH_TESTS_MIGRATE = False
+AUTH_PROFILE_MODULE = 'base.UserProfile'
