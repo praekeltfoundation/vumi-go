@@ -1,0 +1,117 @@
+{% extends "app.html" %}
+
+{% block extra_header %}
+<script>
+    $(document).ready(function(){
+        $("#conversation").validate();
+    });
+</script>
+<link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
+<link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
+{% endblock %}
+
+{% block main %}
+<form name="conversation" id="conversation" method="post" action="">
+    {% csrf_token %}
+    <div id="control-bar">
+        <div id="control-elements">
+            <h3>
+                New Conversation
+            </h3>
+            <div id="control-bar-right">
+                <input type="submit" name="submit" class="btn" value="Next">
+                <input type="reset" class="btn-grey" value="Cancel">
+            </div>
+        </div>
+    </div>
+    <div id="main">
+        <div class="inner">
+            {# TODO: disable hiding via jQuery, enabling display via django messages  #}
+            {# <div class="notification success"> #}
+            {#     This is a positive notification message bar #}
+            {# </div> #}
+            {# <div class="notification warning"> #}
+            {#     This is a warning notification message bar #}
+            {# </div> #}
+            {# <div class="notification error"> #}
+            {#     This is a error notification message bar #}
+            {# </div> #}
+            <div id="progress-bar">
+                <ul>
+                    <li class="active">Message
+                    </li>
+                    <li>People
+                    </li>
+                    <li>Send
+                    </li>
+                </ul>
+            </div>
+            <div class="wide-box">
+                <div id="conv-box">
+                    <div id="form-filter">
+                        <ul>
+                            <li id="basic" class="active">
+                                <a href="#">Basic</a>
+                            </li>
+                            <li id="more">
+                                <a href="#">More</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div id="basic-form">
+                        <div class="field-row">
+                            <div class="label-hint">
+                                This won't be sent
+                            </div>
+                            <label>Conversation name</label> 
+                            {{form.subject}}
+                            {{form.subject.errors}}
+                            <div class="clear"></div>
+                        </div>
+                        <div class="field-row">
+                            <div class="label-hint">
+                                <span class="conv-message-count">0</span> Characters. Valid for:<br>
+                                <div class="valid" id="valid-twitter">
+                                    &nbsp;
+                                </div>
+                                <div class="valid" id="valid-facebook">
+                                    &nbsp;
+                                </div>
+                                <div class="valid" id="valid-sms">
+                                    &nbsp;
+                                </div>
+                                <div class="valid nomargin" id="valid-im">
+                                    &nbsp;
+                                </div>
+                            </div>
+                            <label for="conv-message">Message</label> 
+                            {{form.message}}
+                            {{form.message.errors}}
+                            <div class="clear"></div>
+                        </div>
+                    </div>
+                    <div id="more-form">
+                        <div class="field-row">
+                            <label class="wide">When would you like to start this conversation?</label> 
+                            Date: {{form.start_date}}
+                            Time: {{form.start_time}}
+                            <div class="clear"></div>
+                        </div>
+                        {# TODO: add when we have transport types  #}
+                        {# <div class="field-row"> #}
+                        {#     <label class="wide">Where would you like to have this conversation?</label> <input type="checkbox" name="where-fb" class="chkbox" checked="checked"> Facebook <input type="checkbox" name="where-fb" class="chkbox" checked="checked"> Twitter <input type="checkbox" name="where-fb" class="chkbox" checked="checked"> SMS <input type="checkbox" name="where-fb" class="chkbox" checked="checked"> Instant Messaging #}
+                        {#     <div class="clear"></div> #}
+                        {# </div> #}
+                    </div>
+                </div>
+                <div id="preview-box">
+                    <div id="preview-pane">
+                        <span class="sender">Praekelt:</span> <span class="preview-message">&nbsp;</span>
+                    </div>
+                </div>
+                <div class="clear"></div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}

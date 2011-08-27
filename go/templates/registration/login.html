@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block scripts %}
+{% block extra_header %}
 <script>
     $(document).ready(function(){
         $("#signin-form").validate();
@@ -10,7 +10,7 @@
 
 {% block content %}
     <div id="header">
-        <div id="header-elements-creds"><a href="{% url go:home %}"title="Go Vumi"><img src="{{STATIC_URL}}pics/header/logo.png"></a></div>
+        <div id="header-elements-creds"><a href="{% url home %}"title="Go Vumi"><img src="{{STATIC_URL}}pics/header/logo.png"></a></div>
     </div>
     <div id="main" class="main-alt">
         <div id="forgot-box">
