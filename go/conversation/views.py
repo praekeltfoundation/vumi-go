@@ -88,3 +88,10 @@ def send(request, conversation_pk):
     return render(request, 'send.html', {
         'conversation': conversation
     })
+
+@login_required
+def start(request, conversation_pk):
+    conversation = get_object_or_404(Conversation, pk=conversation_pk)
+    return render(request, 'start.html', {
+        'conversation': conversation
+    })
