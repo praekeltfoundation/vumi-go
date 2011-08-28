@@ -36,9 +36,9 @@
                         </ul>
                     </div><label class="group-label">Select which group(s) you'd like to message:</label>
                     <div id="groups-list">
-                        {% for group in user.groups.all %}
+                        {% for group in user.contactgroup_set.all %}
                         <div class="group {% if forloop.first %}first{% endif %}">
-                            <input type="checkbox" name="groups" value="{{group.pk}}" class="group-check"> <span class="group-name">group.name</span><span class="group-member-count">group.user_set.count()</span>
+                            <input type="checkbox" name="groups" value="{{group.pk}}" class="group-check"> <span class="group-name">{{group.name}}</span><span class="group-member-count">{{group.contact_set.count}}</span>
                         </div>
                         {% empty %}
                         <div class="group first">
@@ -52,24 +52,21 @@
                     <div id="upload-form">
                         <form name="uploader" enctype="multipart/form-data" action="" method="post" id="uploader">
                             <div class="field-row">
+                                {{upload_contacts_form.errors}}
                                 <label for="upload-contacts" class="wide">Upload file with new contacts (csv files only)</label> 
                                 {{upload_contacts_form.file}}
                                 <div class="clear"></div>
                             </div>
                             {% if user.contactgroup_set.exists %}
                                 <div class="field-row">
+                                    {{select_contact_group_form.errors}}
                                     <label for="existinggroup" class="wide">Add these contacts to an existing group</label>
-                                    <select name="existinggroup">
-                                        {% for group in user.contactgroup_set.all %}
-                                            <option value="{{group.pk}}">
-                                                {{group.name}}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
+                                    {{select_contact_group_form.contact_group}}
                                     <div class="clear"></div>
                                 </div>
                             {% endif %}
                             <div class="field-row">
+                                {{new_contact_group_form.errors}}
                                 <label for="newgroup" class="wide">
                                     {% if user.contactgroup_set.exists %}
                                         Or, create a new group
