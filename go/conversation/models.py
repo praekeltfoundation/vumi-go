@@ -1,5 +1,6 @@
 from django.db import models
 
+
 # Create your models here.
 class Conversation(models.Model):
     """A conversation with an audience"""
@@ -12,7 +13,7 @@ class Conversation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     group = models.ForeignKey('base.ContactGroup', null=True)
     previewcontacts = models.ManyToManyField('base.Contact')
-    
+
     class Meta:
         ordering = ['-updated_at']
         get_latest_by = 'updated_at'
