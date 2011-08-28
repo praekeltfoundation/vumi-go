@@ -15,6 +15,8 @@ class Conversation(models.Model):
     # transports = models.ManyToManyField('transport.Type')
     
     def previewcontact_set(self):
+        if not self.group:
+            return []
         return self.group.contact_set.all()[:5]
     
     class Meta:

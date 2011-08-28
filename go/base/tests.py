@@ -13,7 +13,7 @@ def reload_record(record):
 
 class AuthenticationTestCase(TestCase):
     
-    fixtures = ['test_user.json']
+    fixtures = ['test_user']
     
     def setUp(self):
         self.user = User.objects.get(username='username')
@@ -43,7 +43,7 @@ class AuthenticationTestCase(TestCase):
     
 class ContactGroupForm(TestCase):
     
-    fixtures = ['test_user', 'test_conversation']
+    fixtures = ['test_user', 'test_conversation', 'test_group']
     
     def setUp(self):
         self.user = User.objects.get(username='username')
@@ -58,15 +58,16 @@ class ContactGroupForm(TestCase):
     
     def test_group_creation(self):
         """test creation of a new contact group when starting a conversation"""
-        self.assertFalse(ContactGroup.objects.exists())
+        self.assertEqual(ContactGroup.objects.count(), 1)
         response = self.client.post(reverse('conversation:participants', kwargs={
             'conversation_pk': self.conversation.pk}))
-        self.assertFalse(ContactGroup.objects.exists())
+        self.assertEqual(ContactGroup.objects.count(), 1)
         response = self.client.post(reverse('conversation:participants', kwargs={
             'conversation_pk': self.conversation.pk}), {
             'name': 'Test Group'
         })
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(ContactGroup.objects.count(), 2)
         self.assertEqual(ContactGroup.objects.latest().name, 'Test Group')
     
     def test_contacts_upload(self):
@@ -101,11 +102,17 @@ class ContactGroupForm(TestCase):
         self.assertRedirects(response, reverse('conversation:send', kwargs={
             'conversation_pk': self.conversation.pk}))
         self.assertEqual(ContactGroup.objects.latest(), group)
-        self.assertEqual(ContactGroup.objects.count(), 1)
+        self.assertEqual(ContactGroup.objects.count(), 2)
         self.assertEqual(Contact.objects.count(), 3)
         for contact in Contact.objects.all():
             self.assertIn(contact, group.contact_set.all())
         self.assertEqual(reload_record(self.conversation).group, group)
         
-        
     
+    def test_sending_preview(self):
+        """test sending of conversation to a selected set of preview contacts"""
+        response = self.client.post(reverse('conversation:send', kwargs={
+            'conversation_pk': self.conversation.pk
+        }), {
+            'contact': [c.pk for c in Contact.objects.all()]
+        })
