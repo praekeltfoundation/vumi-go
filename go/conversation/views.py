@@ -10,6 +10,7 @@ from go.base.models import ContactGroup
 from datetime import datetime
 from StringIO import StringIO
 import csv
+import logging
 
 @login_required
 def new(request):
@@ -85,6 +86,15 @@ def participants(request, conversation_pk):
 @login_required
 def send(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk)
+    if request.POST:
+        contacts = Contact.objects.get(pk__in=request.POST.getlist('contact'))
+        for contact in contacts:
+            conversation.previewcontacts.add(contact)
+        logging.warning('implement sending preview to contacts %s' % contacts)
+        return redirect(reverse('conversation:start', kwargs={
+            'conversation_pk': conversation.pk,
+            'contacts': contacts,
+        }))
     return render(request, 'send.html', {
         'conversation': conversation
     })
