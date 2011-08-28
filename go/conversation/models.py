@@ -3,7 +3,7 @@ from django.db import models
 # Create your models here.
 class Conversation(models.Model):
     """A conversation with an audience"""
-    owner = models.ForeignKey('auth.User')
+    user = models.ForeignKey('auth.User')
     subject = models.CharField('Conversation Name', max_length=255)
     message = models.TextField('Message')
     start_date = models.DateField()

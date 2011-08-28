@@ -1,7 +1,7 @@
 {% extends "app.html" %}
 
 {% block main %}
-<form name="conversation" method="post" action="new-conversation-start.html" id="conversation">
+<form name="conversation" enctype="multipart/form-data" method="post" action="" id="conversation">
     <div id="control-bar">
         <div id="control-elements">
             <h3>
@@ -42,14 +42,18 @@
                         </div>
                         {% empty %}
                         <div class="group first">
-                            <p>You don't have any groups defined yet</p>
+                            <p>
+                                You don't have any groups defined yet. 
+                                Upload a set of contacts to create your
+                                first group.</p>
                         </div>
                         {% endfor %}
                     </div>
                     <div id="upload-form">
-                        <form name="uploader" action="new-conversation-people.html" method="post" id="uploader">
+                        <form name="uploader" enctype="multipart/form-data" action="" method="post" id="uploader">
                             <div class="field-row">
-                                <label for="upload-contacts" class="wide">Upload file with new contacts (text, csv files only)</label> <input type="file" name="upload-contacts" class="txtbox">
+                                <label for="upload-contacts" class="wide">Upload file with new contacts (csv files only)</label> 
+                                {{upload_contacts_form.file}}
                                 <div class="clear"></div>
                             </div>
                             {% if user.contactgroup_set.exists %}
@@ -71,15 +75,17 @@
                                         Or, create a new group
                                     {% else %}
                                         Save as group
-                                    {% endif %}</label> <input type="text" class="txtbox">
+                                    {% endif %}</label> 
+                                {{new_contact_group_form.name}}
                                 <div class="clear"></div>
                             </div><input type="submit" name="upload" value="Upload" class="btn">
+                            {% csrf_token %}
                         </form>
                     </div>
                 </div>
                 <div id="preview-box">
                     <div id="preview-pane">
-                        <span class="sender">{{user.get_profile.get_display_name}}:</span> <span class="preview-message">{{conversation.message}}</span>
+                        <span class="sender">{{user_profile.get_display_name}}:</span> <span class="preview-message">{{conversation.message}}</span>
                     </div>
                 </div>
                 <div class="clear"></div>
@@ -89,5 +95,6 @@
             </div>
         </div>
     </div>
+    {% csrf_token %}
 </form>
 {% endblock %}
