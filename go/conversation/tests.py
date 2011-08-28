@@ -4,17 +4,18 @@ from django.core.urlresolvers import reverse
 from go.conversation.models import Conversation
 from datetime import datetime
 
+
 class ConversationTestCase(TestCase):
-    
+
     fixtures = ['test_user']
-    
+
     def setUp(self):
         self.client = Client()
         self.client.login(username='username', password='password')
-    
+
     def tearDown(self):
         pass
-    
+
     def test_new_conversation(self):
         """test the creationg of a new conversation"""
         # render the form
@@ -29,4 +30,3 @@ class ConversationTestCase(TestCase):
             'start_time': datetime.utcnow().strftime('%H:%M'),
         })
         self.assertTrue(Conversation.objects.exists())
-        

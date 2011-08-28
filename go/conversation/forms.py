@@ -1,6 +1,6 @@
 from django import forms
 from go.conversation import models
-from django.contrib.auth.models import User
+
 
 class ConversationForm(forms.ModelForm):
     subject = forms.CharField(required=True, widget=forms.TextInput(attrs={
@@ -11,7 +11,7 @@ class ConversationForm(forms.ModelForm):
         attrs={'id': 'datepicker', 'class': 'txtbox txtbox-date'}))
     start_time = forms.TimeField(required=False, widget=forms.TextInput(
         attrs={'id': 'timepicker_1', 'class': 'txtbox txtbox-date'}))
-    
+
     class Meta:
         model = models.Conversation
         fields = (
@@ -20,4 +20,3 @@ class ConversationForm(forms.ModelForm):
             'start_date',
             'start_time',
         )
-

@@ -4,13 +4,12 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from go.conversation.models import Conversation
 from go.conversation.forms import ConversationForm
-from go.base.forms import (NewContactGroupForm, UploadContactsForm, 
+from go.base.forms import (NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
-from go.base.models import ContactGroup
+from go.base.models import Contact
 from datetime import datetime
-from StringIO import StringIO
-import csv
 import logging
+
 
 @login_required
 def new(request):
@@ -20,7 +19,7 @@ def new(request):
             conversation = form.save(commit=False)
             conversation.user = request.user
             conversation.save()
-            return HttpResponseRedirect(reverse('conversation:participants', 
+            return HttpResponseRedirect(reverse('conversation:participants',
                 kwargs={'conversation_pk': conversation.pk}))
     else:
         form = ConversationForm(initial={
@@ -31,13 +30,14 @@ def new(request):
         'form': form
     })
 
+
 @login_required
 def participants(request, conversation_pk):
     """
     Wow this function is _far_ too big.
-    
+
     TODO:   This uses too many forms, I think we can combine it into one form
-            with a group attribute, in the clean_group() function we can can 
+            with a group attribute, in the clean_group() function we can can
             either read the existing group from the db or create a new one
             from the submitted name if it doesn't exist yet.
     """
@@ -59,10 +59,11 @@ def participants(request, conversation_pk):
         else:
             new_contact_group_form = NewContactGroupForm(request.POST)
             select_contact_group_form = SelectContactGroupForm(request.POST)
-        
+
         # see if we've got a CSV file being uploaded
         if request.FILES.get('file'):
-            upload_contacts_form = UploadContactsForm(request.POST, request.FILES)
+            upload_contacts_form = UploadContactsForm(request.POST,
+                request.FILES)
             if upload_contacts_form.is_valid():
                 group.import_contacts_from_csv_file(request.FILES['file'])
                 conversation.group = group
@@ -83,6 +84,7 @@ def participants(request, conversation_pk):
         'upload_contacts_form': upload_contacts_form,
     })
 
+
 @login_required
 def send(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk)
@@ -98,6 +100,7 @@ def send(request, conversation_pk):
     return render(request, 'send.html', {
         'conversation': conversation
     })
+
 
 @login_required
 def start(request, conversation_pk):
