@@ -1,0 +1,51 @@
+{% extends "app.html" %}
+
+{% block main %}
+<form name="conversation" method="post" action="new-conversation-started.html" id="conversation">
+    <div id="control-bar">
+        <div id="control-elements">
+            <h3>
+                New Conversation
+            </h3>
+            <div id="control-bar-right">
+                <span class="status">&nbsp;</span><input type="submit" name="submit" class="btn" value="Start Conversation"><input type="button" class="btn-grey" value="Back" onclick="javascript:history.go(-1)">
+            </div>
+        </div>
+    </div>
+    <div id="main">
+        <div class="inner">
+            <div class="notification success show">
+                Preview sent...
+            </div>
+            <div id="progress-bar">
+                <ul>
+                    <li class="pre-active">Message</li><li class="pre-active">People</li><li class="last-active">Send</li>
+                </ul>
+            </div>
+            <div class="wide-box">
+                <div id="conv-box">
+                    <label class="group-label-b">Get your message approved:</label>
+                    <div id="groups-list">
+                        {% for contact in contacts %}
+                        {# TODO: implement status, waiting, approved  #}
+                        <div class="group {% if forloop.first %}first{% endif %}">
+                            <input type="checkbox" name="contacts" value="{{contact.pk}}" class="group-check"> <span class="group-name">{{contact.get_display_name}}</span>
+                        </div>
+                        {% endfor %}
+                        <input type="submit" name="upload" value="Send Preview" class="btn">
+                    </div>
+                    <p>
+                        You won't need to refresh this page.
+                    </p>
+                </div>
+                <div id="preview-box">
+                    <div id="preview-pane">
+                        <span class="sender">Praekelt:</span> <span class="preview-message">Hello <span class="preview-highlight">Gustav</span>. Tomatoes selling at ZK 30 000 per box at market today. If u have stock, pls bring</span>
+                    </div>
+                </div>
+                <div class="clear"></div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}

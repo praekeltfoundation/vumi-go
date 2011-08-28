@@ -11,13 +11,7 @@ class Conversation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     group = models.ForeignKey('base.ContactGroup', null=True)
-    # TODO: specify which transports to send & receive on
-    # transports = models.ManyToManyField('transport.Type')
-    
-    def previewcontact_set(self):
-        if not self.group:
-            return []
-        return self.group.contact_set.all()[:5]
+    previewcontacts = models.ManyToManyField('base.Contact')
     
     class Meta:
         ordering = ['-updated_at']
