@@ -34,7 +34,10 @@ class ContactGroup(models.Model):
         reader = csv.reader(csvfile, dialect)
         contacts = []
         for name,surname,msisdn in reader:
+            # TODO: normalize msisdn
             contact, created = Contact.objects.get_or_create(msisdn=msisdn)
+            contact.name = name
+            contact.surname = surname
             contact.save()
             contact.groups.add(self)
             contacts.append(contact)
@@ -55,6 +58,9 @@ class Contact(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     groups = models.ManyToManyField('base.ContactGroup')
+    
+    def get_display_name(self):
+        return '%s %s' % (self.name, self.surname)
 
     class Meta:
         ordering = ['surname','name']

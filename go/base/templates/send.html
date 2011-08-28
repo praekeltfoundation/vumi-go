@@ -1,0 +1,44 @@
+{% extends "app.html" %}
+
+{% block main %}
+<div id="control-bar">
+    <div id="control-elements">
+        <h3>
+            New Conversation
+        </h3>
+        <div id="control-bar-right">
+            <input type="submit" name="submit" class="btn" value="Send Preview"><input type="button" class="btn-grey" value="Back" onclick="javascript:history.go(-1)">
+        </div>
+    </div>
+</div>
+<div id="main">
+    <div class="inner">
+        <div id="progress-bar">
+            <ul>
+                <li class="pre-active">Message</li><li class="pre-active">People</li><li class="last-active">Send</li>
+            </ul>
+        </div>
+        <div class="wide-box">
+            <div id="conv-box">
+                <label class="group-label-b">Get your message approved:</label>
+                <div id="groups-list">
+                    {% for contact in conversation.previewcontact_set %}
+                    <div class="group {% if forloop.first %}first{% endif %}">
+                        <input type="checkbox" name="contact" value="{{contact.pk}}" class="group-check"> <span class="group-name">{{contact.get_display_name}}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                <p>
+                    Pick at least one recipient above to approve the message. They will receive a preview
+                </p>
+            </div>
+            <div id="preview-box">
+                <div id="preview-pane">
+                    <span class="sender">{{user_profile.get_display_name}}:</span> <span class="preview-message">{{conversation.message}}</span>
+                </div>
+            </div>
+            <div class="clear"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

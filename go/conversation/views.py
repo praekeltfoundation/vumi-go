@@ -1,5 +1,5 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from go.conversation.models import Conversation
@@ -32,41 +32,59 @@ def new(request):
 
 @login_required
 def participants(request, conversation_pk):
+    """
+    Wow this function is _far_ too big.
+    
+    TODO:   This uses too many forms, I think we can combine it into one form
+            with a group attribute, in the clean_group() function we can can 
+            either read the existing group from the db or create a new one
+            from the submitted name if it doesn't exist yet.
+    """
     conversation = get_object_or_404(Conversation, pk=conversation_pk)
     if request.POST:
         # see if we need to create a new contact group by checking for the name
-        if request.POST.get('name'):
+        if request.POST.get('contact_group'):
+            new_contact_group_form = NewContactGroupForm()
+            select_contact_group_form = SelectContactGroupForm(request.POST)
+            if select_contact_group_form.is_valid():
+                group = select_contact_group_form.cleaned_data['contact_group']
+        elif request.POST.get('name'):
             select_contact_group_form = SelectContactGroupForm()
             new_contact_group_form = NewContactGroupForm(request.POST)
             if new_contact_group_form.is_valid():
                 group = new_contact_group_form.save(commit=False)
                 group.user = request.user
                 group.save()
-            else:
-                print new_contact_group_form.errors
         else:
-            new_contact_group_form = NewContactGroupForm()
+            new_contact_group_form = NewContactGroupForm(request.POST)
             select_contact_group_form = SelectContactGroupForm(request.POST)
-            if select_contact_group_form.is_valid():
-                group = select_contact_group_form.contact_group
-            else:
-                print select_contact_group_form.errors
         
         # see if we've got a CSV file being uploaded
         if request.FILES.get('file'):
             upload_contacts_form = UploadContactsForm(request.POST, request.FILES)
             if upload_contacts_form.is_valid():
                 group.import_contacts_from_csv_file(request.FILES['file'])
-            else:
-                print upload_contacts_form.errors
+                conversation.group = group
+                conversation.save()
+                return redirect(reverse('conversation:send', kwargs={
+                    'conversation_pk': conversation.pk
+                }))
         else:
             upload_contacts_form = UploadContactsForm()
     else:
         upload_contacts_form = UploadContactsForm()
         new_contact_group_form = NewContactGroupForm()
+        select_contact_group_form = SelectContactGroupForm()
     return render(request, 'participants.html', {
         'conversation': conversation,
+        'select_contact_group_form': select_contact_group_form,
         'new_contact_group_form': new_contact_group_form,
         'upload_contacts_form': upload_contacts_form,
     })
 
+@login_required
+def send(request, conversation_pk):
+    conversation = get_object_or_404(Conversation, pk=conversation_pk)
+    return render(request, 'send.html', {
+        'conversation': conversation
+    })
