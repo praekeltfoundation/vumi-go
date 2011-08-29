@@ -39,6 +39,7 @@ class ConversationTestCase(TestCase):
         })
         self.assertTrue(Conversation.objects.exists())
 
+
 class ContactGroupForm(TestCase):
 
     fixtures = ['test_user', 'test_conversation', 'test_group']

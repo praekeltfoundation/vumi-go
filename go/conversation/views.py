@@ -53,7 +53,7 @@ def participants(request, conversation_pk):
                 conversation.groups.add(group)
             return redirect(reverse('conversation:send', kwargs={
                 'conversation_pk': conversation.pk}))
-            
+
         if request.POST.get('contact_group'):
             new_contact_group_form = NewContactGroupForm()
             select_contact_group_form = SelectContactGroupForm(request.POST)
@@ -98,7 +98,8 @@ def participants(request, conversation_pk):
 def send(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk)
     if request.POST:
-        contacts = Contact.objects.filter(pk__in=request.POST.getlist('contact'))
+        contact_ids = request.POST.getlist('contact')
+        contacts = Contact.objects.filter(pk__in=contact_ids)
         for contact in contacts:
             conversation.previewcontacts.add(contact)
         logging.warning('implement sending preview to contacts %s' % contacts)
@@ -120,6 +121,7 @@ def start(request, conversation_pk):
     return render(request, 'start.html', {
         'conversation': conversation
     })
+
 
 @login_required
 def show(request, conversation_pk):

@@ -1,7 +1,7 @@
 from django.db import models
 from go.base.models import Contact
 
-# Create your models here.
+
 class Conversation(models.Model):
     """A conversation with an audience"""
     user = models.ForeignKey('auth.User')
@@ -13,10 +13,10 @@ class Conversation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     groups = models.ManyToManyField('base.ContactGroup')
     previewcontacts = models.ManyToManyField('base.Contact')
-    
+
     def participants(self):
         return Contact.objects.filter(groups__in=self.groups.all())
-    
+
     class Meta:
         ordering = ['-updated_at']
         get_latest_by = 'updated_at'
