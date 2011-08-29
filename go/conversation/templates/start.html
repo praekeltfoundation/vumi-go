@@ -26,7 +26,7 @@
                 <div id="conv-box">
                     <label class="group-label-b">Get your message approved:</label>
                     <div id="groups-list">
-                        {% for contact in contacts %}
+                        {% for contact in conversation.previewcontacts.all %}
                         {# TODO: implement status, waiting, approved  #}
                         <div class="group {% if forloop.first %}first{% endif %}">
                             <input type="checkbox" name="contacts" value="{{contact.pk}}" class="group-check"> <span class="group-name">{{contact.get_display_name}}</span>
