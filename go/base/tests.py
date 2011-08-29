@@ -2,9 +2,6 @@ from django.test import TestCase
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
-from django.conf import settings
-from go.base.models import ContactGroup, Contact
-from os import path
 
 
 class AuthenticationTestCase(TestCase):
