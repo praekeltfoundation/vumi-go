@@ -1,0 +1,9 @@
+[{
+    "pk": 1,
+    "model": "base.Contact",
+    "fields": {
+        "name": "Name",
+        "surname": "Surname",
+        "msisdn": "+27761234567"
+    }
+}]
