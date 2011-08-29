@@ -11,7 +11,7 @@ class Conversation(models.Model):
     start_time = models.TimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    group = models.ForeignKey('base.ContactGroup', null=True)
+    groups = models.ManyToManyField('base.ContactGroup')
     previewcontacts = models.ManyToManyField('base.Contact')
 
     class Meta:

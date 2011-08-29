@@ -6,7 +6,7 @@ from go.conversation.models import Conversation
 from go.conversation.forms import ConversationForm
 from go.base.forms import (NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
-from go.base.models import Contact
+from go.base.models import Contact, ContactGroup
 from datetime import datetime
 import logging
 
@@ -44,6 +44,14 @@ def participants(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk)
     if request.POST:
         # see if we need to create a new contact group by checking for the name
+        if request.POST.getlist('groups'):
+            groups = ContactGroup.objects.filter(
+                pk__in=request.POST.getlist('groups'))
+            for group in groups:
+                conversation.groups.add(group)
+            return redirect(reverse('conversation:send', kwargs={
+                'conversation_pk': conversation.pk}))
+            
         if request.POST.get('contact_group'):
             new_contact_group_form = NewContactGroupForm()
             select_contact_group_form = SelectContactGroupForm(request.POST)
@@ -66,8 +74,7 @@ def participants(request, conversation_pk):
                 request.FILES)
             if upload_contacts_form.is_valid():
                 group.import_contacts_from_csv_file(request.FILES['file'])
-                conversation.group = group
-                conversation.save()
+                conversation.groups.add(group)
                 return redirect(reverse('conversation:send', kwargs={
                     'conversation_pk': conversation.pk
                 }))

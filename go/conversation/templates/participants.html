@@ -38,7 +38,9 @@
                     <div id="groups-list">
                         {% for group in user.contactgroup_set.all %}
                         <div class="group {% if forloop.first %}first{% endif %}">
-                            <input type="checkbox" name="groups" value="{{group.pk}}" class="group-check"> <span class="group-name">{{group.name}}</span><span class="group-member-count">{{group.contact_set.count}}</span>
+                            <input type="checkbox" name="groups" value="{{group.pk}}" class="group-check"> 
+                            <span class="group-name">{{group.name}}</span>
+                            <span class="group-member-count">{{group.contact_set.count}}</span>
                         </div>
                         {% empty %}
                         <div class="group first">
