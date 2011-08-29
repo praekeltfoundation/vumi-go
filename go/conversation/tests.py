@@ -54,7 +54,7 @@ class ConversationTestCase(TestCase):
 
 class ContactGroupForm(TestCase):
 
-    fixtures = ['test_user', 'test_conversation', 'test_group']
+    fixtures = ['test_user', 'test_conversation', 'test_group', 'test_contact']
 
     def setUp(self):
         self.user = User.objects.get(username='username')
@@ -113,8 +113,9 @@ class ContactGroupForm(TestCase):
             kwargs={'conversation_pk': self.conversation.pk}))
         group = ContactGroup.objects.latest()
         self.assertEquals(group.name, 'Test Group')
-        self.assertEquals(Contact.objects.count(), 3)
-        for idx, contact in enumerate(Contact.objects.all(), start=1):
+        contacts = Contact.objects.filter(groups=group)
+        self.assertEquals(contacts.count(), 3)
+        for idx, contact in enumerate(contacts, start=1):
             self.assertTrue(contact.name, 'Name %s' % idx)
             self.assertTrue(contact.surname, 'Surname %s' % idx)
             self.assertTrue(contact.msisdn.startswith('+2776123456%s' % idx))
@@ -135,9 +136,8 @@ class ContactGroupForm(TestCase):
             'conversation_pk': self.conversation.pk}))
         self.assertEqual(ContactGroup.objects.latest(), group)
         self.assertEqual(ContactGroup.objects.count(), 2)
-        self.assertEqual(Contact.objects.count(), 3)
-        for contact in Contact.objects.all():
-            self.assertIn(contact, group.contact_set.all())
+        contacts = Contact.objects.filter(groups=group)
+        self.assertEqual(contacts.count(), 3)
         self.assertIn(group, self.conversation.groups.all())
 
     def test_sending_preview(self):
@@ -148,3 +148,14 @@ class ContactGroupForm(TestCase):
         }), {
             'contact': [c.pk for c in Contact.objects.all()]
         })
+        self.assertRedirects(response, reverse('conversations:start', kwargs={
+            'conversation_pk': self.conversation.pk}))
+
+    def test_start(self):
+        """
+        Test the start conversation view
+        """
+        response = self.client.post(reverse('conversations:start', kwargs={
+            'conversation_pk': self.conversation.pk}))
+        self.assertRedirects(response, reverse('conversations:show', kwargs={
+            'conversation_pk': self.conversation.pk}))

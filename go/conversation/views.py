@@ -123,7 +123,7 @@ def send(request, conversation_pk):
 def start(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
         user=request.user)
-    if request.POST:
+    if request.method == 'POST':
         return redirect(reverse('conversations:show', kwargs={
             'conversation_pk': conversation.pk}))
     return render(request, 'start.html', {
