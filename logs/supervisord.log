@@ -1,0 +1,11 @@
+2011-08-29 08:34:41,032 INFO Increased RLIMIT_NOFILE limit to 1024
+2011-08-29 08:34:41,179 INFO RPC interface 'supervisor' initialized
+2011-08-29 08:34:41,179 CRIT Server 'inet_http_server' running without any HTTP authentication checking
+2011-08-29 08:34:41,180 INFO RPC interface 'supervisor' initialized
+2011-08-29 08:34:41,180 CRIT Server 'unix_http_server' running without any HTTP authentication checking
+2011-08-29 08:34:41,180 INFO supervisord started with pid 37905
+2011-08-29 08:34:42,183 INFO spawned: 'gunicorn_0' with pid 37906
+2011-08-29 08:34:44,179 INFO success: gunicorn_0 entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
+2011-08-29 08:34:55,725 WARN received SIGINT indicating exit request
+2011-08-29 08:34:55,752 INFO waiting for gunicorn_0 to die
+2011-08-29 08:34:55,932 INFO stopped: gunicorn_0 (exit status 0)
