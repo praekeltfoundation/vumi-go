@@ -77,6 +77,17 @@ class ContactGroupForm(TestCase):
         self.assertRedirects(response, reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk}))
 
+    def test_index(self):
+        """Display all conversations"""
+        response = self.client.get(reverse('conversations:index'))
+        self.assertContains(response, self.conversation.subject)
+
+    def test_index_search(self):
+        """Filter conversations based on query string"""
+        response = self.client.get(reverse('conversations:index'), {
+            'q': 'something that does not exist in the fixtures'})
+        self.assertNotContains(response, self.conversation.subject)
+
     def test_group_creation(self):
         """test creation of a new contact group when starting a conversation"""
         self.assertEqual(ContactGroup.objects.count(), 1)

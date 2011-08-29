@@ -21,8 +21,8 @@
             
             {% if user.conversation_set.exists %}
                 <div class="grid_4"><div class="msg-action-box"><a href="{% url conversations:index %}">See More Conversations</a></div></div>
-                <div class="grid_4"><div class="msg-action-box"><a href="credits.html">Buy More Vumi Credits</a></div></div>
-                <div class="grid_4"><div class="msg-action-box"><a href="new-conversation.html">Start A Conversation</a></div></div>
+                <div class="grid_4"><div class="msg-action-box"><a href="{% url todo %}credits.html">Buy More Vumi Credits</a></div></div>
+                <div class="grid_4"><div class="msg-action-box"><a href="{% url conversations:new %}">Start A Conversation</a></div></div>
             {% endif %}
         </div>
     </div>

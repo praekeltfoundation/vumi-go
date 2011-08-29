@@ -142,12 +142,15 @@ def show(request, conversation_pk):
 
 @login_required
 def index(request):
-    conversations = padded_queryset(request.user.conversation_set.all(),
-        CONVERSATIONS_PER_PAGE)
+    conversations = request.user.conversation_set.all()
+    query = request.GET.get('q', '')
+    if query:
+        conversations = conversations.filter(subject__icontains=query)
     paginator = Paginator(conversations, CONVERSATIONS_PER_PAGE)
     page = paginator.page(request.GET.get('p', 1))
     return render(request, 'index.html', {
         'conversations': conversations,
         'paginator': paginator,
         'page': page,
+        'query': query
     })
