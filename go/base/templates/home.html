@@ -1,16 +1,20 @@
 {% extends "app.html" %}
 
 {% block main %}
-
-{% if user.conversation_set.exists %}
-    <div id="main" class="main-alt">
-        <div class="inner">
+<div id="main" class="main-alt">
+    <div class="inner">
+        {% if user.conversation_set.exists %}
             <h2>Hi {{user_profile.get_display_name}}, here are some of your newest conversations.</h2>
             {# TODO add user counter / user activity metrics #}
             <h3 class="home">...and <strong>239 new people</strong> have also connected since you last checked in.</h3>
+        {% else %}
+            <h2>Hey {{user_profile.get_display_name}}, you must be new here.</h2>
+            <h3 class="home"><a href="{% url conversation:new %}">Start Your First Conversation</a></h3>
+        {% endif %}
         
-            <div id="conversations">
-                {% for conversation in user.conversation_set.all %}
+        <div id="conversations">
+            {% for conversation in latest_conversations %}
+                {% if conversation %}
                 <div class="grid_4">
                     <div class="msg-box">
                         <h4><a href="{% url conversation:show conversation_pk=conversation.pk %}">{{conversation.subject}}</a></h4>
@@ -28,33 +32,18 @@
                         </div>
                     </div>
                 </div>
-                {% endfor %}
+                {% else %}
                 <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-                
+                {% endif %}
+            {% endfor %}
+            
+            {% if user.conversation_set.exists %}
                 <div class="grid_4"><div class="msg-action-box"><a href="conversations.html">See More Conversations</a></div></div>
                 <div class="grid_4"><div class="msg-action-box"><a href="credits.html">Buy More Vumi Credits</a></div></div>
                 <div class="grid_4"><div class="msg-action-box"><a href="new-conversation.html">Start A Conversation</a></div></div>
-            </div>
+            {% endif %}
         </div>
     </div>
-{% else %}
-    <div id="main" class="main-alt" >
-        <div class="inner">
-            <h2>Hey {{user_profile.get_display_name}}, you must be new here.</h2>
-            <h3 class="home"><a href="{% url conversation:new %}">Start Your First Conversation</a></h3>
-            <div id="conversations">
-                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-            </div>
-        </div>
-    </div>
-{% endif %}
-
+    {% include "footer.html" %}
+</div>
 {% endblock %}
