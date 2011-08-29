@@ -1,6 +1,7 @@
 {% extends "app.html" %}
 
 {% block main %}
+{# TODO: this big form is a bad idea, it causes too much complexity on the backend #}
 <form name="conversation" enctype="multipart/form-data" method="post" action="" id="conversation">
     <div id="control-bar">
         <div id="control-elements">
@@ -14,7 +15,7 @@
     </div>
     <div id="main">
         <div class="inner">
-            {# TODO: fix this #}
+            {# TODO: fix notifications properly with Django messages framework #}
             {# <div class="notification success"> #}
             {#     <strong>999 New Contacts Added to "Market Agents"</strong> - 3 duplicates and 20 invalid records found #}
             {# </div> #}
@@ -47,7 +48,8 @@
                             <p>
                                 You don't have any groups defined yet. 
                                 Upload a set of contacts to create your
-                                first group.</p>
+                                first group.
+                            </p>
                         </div>
                         {% endfor %}
                     </div>

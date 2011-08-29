@@ -19,7 +19,7 @@ def new(request):
             conversation = form.save(commit=False)
             conversation.user = request.user
             conversation.save()
-            return HttpResponseRedirect(reverse('conversation:participants',
+            return HttpResponseRedirect(reverse('conversations:participants',
                 kwargs={'conversation_pk': conversation.pk}))
     else:
         form = ConversationForm(initial={
@@ -41,7 +41,8 @@ def participants(request, conversation_pk):
             either read the existing group from the db or create a new one
             from the submitted name if it doesn't exist yet.
     """
-    conversation = get_object_or_404(Conversation, pk=conversation_pk)
+    conversation = get_object_or_404(Conversation, pk=conversation_pk,
+        user=request.user)
     if request.POST:
         # see if we need to create a new contact group by checking for the name
         if request.POST.getlist('groups'):
@@ -51,7 +52,7 @@ def participants(request, conversation_pk):
             # link to the conversation
             for group in groups:
                 conversation.groups.add(group)
-            return redirect(reverse('conversation:send', kwargs={
+            return redirect(reverse('conversations:send', kwargs={
                 'conversation_pk': conversation.pk}))
 
         if request.POST.get('contact_group'):
@@ -77,7 +78,7 @@ def participants(request, conversation_pk):
             if upload_contacts_form.is_valid():
                 group.import_contacts_from_csv_file(request.FILES['file'])
                 conversation.groups.add(group)
-                return redirect(reverse('conversation:send', kwargs={
+                return redirect(reverse('conversations:send', kwargs={
                     'conversation_pk': conversation.pk
                 }))
         else:
@@ -96,14 +97,15 @@ def participants(request, conversation_pk):
 
 @login_required
 def send(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk)
+    conversation = get_object_or_404(Conversation, pk=conversation_pk,
+        user=request.user)
     if request.POST:
         contact_ids = request.POST.getlist('contact')
         contacts = Contact.objects.filter(pk__in=contact_ids)
         for contact in contacts:
             conversation.previewcontacts.add(contact)
         logging.warning('implement sending preview to contacts %s' % contacts)
-        return redirect(reverse('conversation:start', kwargs={
+        return redirect(reverse('conversations:start', kwargs={
             'conversation_pk': conversation.pk}), {
             'contacts': contacts,
         })
@@ -114,9 +116,10 @@ def send(request, conversation_pk):
 
 @login_required
 def start(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk)
+    conversation = get_object_or_404(Conversation, pk=conversation_pk,
+        user=request.user)
     if request.POST:
-        return redirect(reverse('conversation:show', kwargs={
+        return redirect(reverse('conversations:show', kwargs={
             'conversation_pk': conversation.pk}))
     return render(request, 'start.html', {
         'conversation': conversation
@@ -125,7 +128,16 @@ def start(request, conversation_pk):
 
 @login_required
 def show(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk)
+    conversation = get_object_or_404(Conversation, pk=conversation_pk,
+        user=request.user)
     return render(request, 'show.html', {
         'conversation': conversation
+    })
+
+
+@login_required
+def index(request):
+    conversations = request.user.conversation_set.all()
+    return render(request, 'index.html', {
+        'conversations': conversations
     })

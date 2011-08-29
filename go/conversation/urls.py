@@ -2,6 +2,7 @@ from django.conf.urls.defaults import patterns, url
 from go.conversation import views
 
 urlpatterns = patterns('',
+    url(r'^$', views.index, name='index'),
     url(r'^new/', views.new, name='new'),
     url(r'^(?P<conversation_pk>\d+)/people/', views.participants,
         name='participants'),

@@ -9,7 +9,7 @@
             <h3 class="home">...and <strong>239 new people</strong> have also connected since you last checked in.</h3>
         {% else %}
             <h2>Hey {{user_profile}}, you must be new here.</h2>
-            <h3 class="home"><a href="{% url conversation:new %}">Start Your First Conversation</a></h3>
+            <h3 class="home"><a href="{% url conversations:new %}">Start Your First Conversation</a></h3>
         {% endif %}
         
         <div id="conversations">
