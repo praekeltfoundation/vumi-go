@@ -2,13 +2,18 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
+from django.core.paginator import Paginator
 from go.conversation.models import Conversation
 from go.conversation.forms import ConversationForm
 from go.base.forms import (NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
 from go.base.models import Contact, ContactGroup
+from go.base.utils import padded_queryset
 from datetime import datetime
 import logging
+
+
+CONVERSATIONS_PER_PAGE = 6
 
 
 @login_required
@@ -137,7 +142,12 @@ def show(request, conversation_pk):
 
 @login_required
 def index(request):
-    conversations = request.user.conversation_set.all()
+    conversations = padded_queryset(request.user.conversation_set.all(),
+        CONVERSATIONS_PER_PAGE)
+    paginator = Paginator(conversations, CONVERSATIONS_PER_PAGE)
+    page = paginator.page(request.GET.get('p', 1))
     return render(request, 'index.html', {
-        'conversations': conversations
+        'conversations': conversations,
+        'paginator': paginator,
+        'page': page,
     })
