@@ -15,7 +15,7 @@ def reload_record(record):
 
 class ConversationTestCase(TestCase):
 
-    fixtures = ['test_user']
+    fixtures = ['test_user', 'test_conversation']
 
     def setUp(self):
         self.client = Client()
@@ -24,10 +24,20 @@ class ConversationTestCase(TestCase):
     def tearDown(self):
         pass
 
+    def test_recent_conversations(self):
+        """
+        Conversation.objects.recent() should return the most recent
+        conversations, if given a limit it should return a list of that
+        exact size padded with the value of `padding`.
+        """
+        conversations = Conversation.objects.recent(limit=10, padding=False)
+        self.assertEqual(len(conversations), 10)
+        self.assertEqual(len(filter(lambda v: v, conversations)), 1)
+
     def test_new_conversation(self):
         """test the creationg of a new conversation"""
         # render the form
-        self.assertFalse(Conversation.objects.exists())
+        self.assertEqual(Conversation.objects.count(), 1)
         response = self.client.get(reverse('conversation:new'))
         self.assertEqual(response.status_code, 200)
         # post the form
@@ -37,7 +47,7 @@ class ConversationTestCase(TestCase):
             'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
             'start_time': datetime.utcnow().strftime('%H:%M'),
         })
-        self.assertTrue(Conversation.objects.exists())
+        self.assertEqual(Conversation.objects.count(), 2)
 
 
 class ContactGroupForm(TestCase):

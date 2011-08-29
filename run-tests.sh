@@ -7,4 +7,5 @@ source ve/bin/activate && \
     coverage xml --include="go/*" && \
     coverage html --include="go/*" && \
     (find ./go -name '*.py' | xargs pep8 --exclude='0*' > pep8.log || true) && \
+    cat pep8.log && \
 deactivate
