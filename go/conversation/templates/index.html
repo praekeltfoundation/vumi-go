@@ -17,35 +17,15 @@
             <input type="image" src="{{STATIC_URL}}pics/header/search-btn.png" id="search-filter-btn"><input type="text" id="search-filter-input" class="txt" value="Find a conversation...">
         </form>
         <div id="conversations">
-            {% for conversation in conversations %}
+            {% for object in page.object_list %}
+                {% with object as conversation %}
                 <div class="grid_4">
                     {% include "includes/conversation-box.html" %}
                 </div>
+                {% endwith %}
             {% endfor %}
         </div>
-        <div class="page-controls">
-            <ul>
-                <li class="page-control-btn">
-                    <a href="#">Prev</a>
-                </li>
-                <li>
-                    <a href="#">1</a>
-                </li>
-                <li>
-                    <a href="#">2</a>
-                </li>
-                <li class="active">3
-                </li>
-                <li class="ellipsis">...
-                </li>
-                <li>
-                    <a href="#">10</a>
-                </li>
-                <li class="page-control-btn">
-                    <a href="#">Next</a>
-                </li>
-            </ul>
-        </div>
+        {% include "includes/conversation-pagination.html" %}
     </div>
     {% include "footer.html" %}
 </div>
