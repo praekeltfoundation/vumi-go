@@ -16,11 +16,8 @@ class UserProfile(models.Model):
     """A profile for a user"""
     user = models.OneToOneField('auth.User')
 
-    def get_display_name(self):
-        return '%s %s' % (self.user.first_name, self.user.last_name)
-
     def __unicode__(self):
-        return u"UserProfile for %s" % self.user
+        return u' '.join([self.user.first_name, self.user.last_name])
 
 
 class ContactGroup(models.Model):
@@ -62,12 +59,9 @@ class Contact(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     groups = models.ManyToManyField('base.ContactGroup')
 
-    def get_display_name(self):
-        return '%s %s' % (self.name, self.surname)
-
     class Meta:
         ordering = ['surname', 'name']
         get_latest_by = 'created_at'
 
     def __unicode__(self):
-        return '%s, %s' % (self.surname, self.name)
+        return u' '.join([self.name, self.surname])

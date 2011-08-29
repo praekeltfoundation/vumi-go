@@ -106,12 +106,13 @@
                 </div>
                 <div id="preview-box">
                     <div id="preview-pane">
-                        <span class="sender">{{user_profile.get_display_name}}:</span> <span class="preview-message">&nbsp;</span>
+                        <span class="sender">{{user_profile}}:</span> <span class="preview-message">&nbsp;</span>
                     </div>
                 </div>
                 <div class="clear"></div>
             </div>
         </div>
+        {% include "footer.html" %}
     </div>
 </form>
 {% endblock %}

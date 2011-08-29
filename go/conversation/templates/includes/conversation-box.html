@@ -1,0 +1,19 @@
+{% if conversation %}
+    <div class="msg-box">
+        <h4><a href="{% url conversation:show conversation_pk=conversation.pk %}">{{conversation.subject}}</a></h4>
+        <p>
+            <span class="timestamp">{{conversation.start_date|date:"Fri, 10 Jun 2011"}} {{conversation.start_time|date:"13:30"}}</span>
+            {{conversation.message}}
+        </p>
+        <div class="msg-info">
+            {# TODO: implement transports  #}
+            {# <div title="Twitter" class="twitter-ico"></div> #}
+            {# <div title="Facebook" class="fb-ico"></div> #}
+            <div title="SMS" class="sms-ico"></div>
+            <div title="People in this conversation" class="people-count-ico">{{conversation.participants.count}}</div>
+            <div title="Reactions" class="people-reply-ico">{{conversation.replies.count|default:"0"}}</div>
+        </div>
+    </div>
+{% else %}
+    <div class="msg-box msg-box-empty">&nbsp;</div>
+{% endif %}
