@@ -1,0 +1,52 @@
+{% extends "app.html" %}
+
+{% block main %}
+<div id="control-bar">
+    <div id="control-elements">
+        <h3>
+            Conversations
+        </h3>
+        <div id="control-bar-right">
+            &nbsp;
+        </div>
+    </div>
+</div>
+<div id="main">
+    <div class="inner">
+        <form id="search-filter" name="search-filter" action="" method="get">
+            <input type="image" src="{{STATIC_URL}}pics/header/search-btn.png" id="search-filter-btn"><input type="text" id="search-filter-input" class="txt" value="Find a conversation...">
+        </form>
+        <div id="conversations">
+            {% for conversation in conversations %}
+                <div class="grid_4">
+                    {% include "includes/conversation-box.html" %}
+                </div>
+            {% endfor %}
+        </div>
+        <div class="page-controls">
+            <ul>
+                <li class="page-control-btn">
+                    <a href="#">Prev</a>
+                </li>
+                <li>
+                    <a href="#">1</a>
+                </li>
+                <li>
+                    <a href="#">2</a>
+                </li>
+                <li class="active">3
+                </li>
+                <li class="ellipsis">...
+                </li>
+                <li>
+                    <a href="#">10</a>
+                </li>
+                <li class="page-control-btn">
+                    <a href="#">Next</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    {% include "footer.html" %}
+</div>
+{% endblock %}

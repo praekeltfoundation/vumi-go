@@ -19,7 +19,7 @@ urlpatterns = patterns('',
 
     # vumi go!
     url(r'^$', 'go.base.views.home', name='home'),
-    url(r'^conversation/', include('go.conversation.urls',
-        namespace='conversation'))
+    url(r'^conversations/', include('go.conversation.urls',
+        namespace='conversations'))
 
 )

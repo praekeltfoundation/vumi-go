@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from go.conversation.models import Conversation
 from go.base.models import ContactGroup, Contact
+from go.base.utils import padded_queryset
 from datetime import datetime
 from os import path
 
@@ -30,18 +31,19 @@ class ConversationTestCase(TestCase):
         conversations, if given a limit it should return a list of that
         exact size padded with the value of `padding`.
         """
-        conversations = Conversation.objects.recent(limit=10, padding=False)
+        conversations = padded_queryset(Conversation.objects.all(), size=10,
+            padding='')
         self.assertEqual(len(conversations), 10)
-        self.assertEqual(len(filter(lambda v: v, conversations)), 1)
+        self.assertEqual(len(filter(lambda v: v is not '', conversations)), 1)
 
     def test_new_conversation(self):
-        """test the creationg of a new conversation"""
+        """test the creation of a new conversation"""
         # render the form
         self.assertEqual(Conversation.objects.count(), 1)
-        response = self.client.get(reverse('conversation:new'))
+        response = self.client.get(reverse('conversations:new'))
         self.assertEqual(response.status_code, 200)
         # post the form
-        response = self.client.post(reverse('conversation:new'), {
+        response = self.client.post(reverse('conversations:new'), {
             'subject': 'the subject',
             'message': 'the message',
             'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
@@ -68,20 +70,20 @@ class ContactGroupForm(TestCase):
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
         conversation"""
-        response = self.client.post(reverse('conversation:participants',
+        response = self.client.post(reverse('conversations:participants',
             kwargs={'conversation_pk': self.conversation.pk}), {
             'groups': [grp.pk for grp in ContactGroup.objects.all()]
         })
-        self.assertRedirects(response, reverse('conversation:send', kwargs={
+        self.assertRedirects(response, reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk}))
 
     def test_group_creation(self):
         """test creation of a new contact group when starting a conversation"""
         self.assertEqual(ContactGroup.objects.count(), 1)
-        response = self.client.post(reverse('conversation:participants',
+        response = self.client.post(reverse('conversations:participants',
             kwargs={'conversation_pk': self.conversation.pk}))
         self.assertEqual(ContactGroup.objects.count(), 1)
-        response = self.client.post(reverse('conversation:participants',
+        response = self.client.post(reverse('conversations:participants',
             kwargs={'conversation_pk': self.conversation.pk}), {
                 'name': 'Test Group'
             })
@@ -91,12 +93,12 @@ class ContactGroupForm(TestCase):
 
     def test_contacts_upload(self):
         """test uploading of contacts via CSV file"""
-        response = self.client.post(reverse('conversation:participants',
+        response = self.client.post(reverse('conversations:participants',
             kwargs={'conversation_pk': self.conversation.pk}), {
             'name': 'Test Group',
             'file': self.csv_file,
         })
-        self.assertRedirects(response, reverse('conversation:send',
+        self.assertRedirects(response, reverse('conversations:send',
             kwargs={'conversation_pk': self.conversation.pk}))
         group = ContactGroup.objects.latest()
         self.assertEquals(group.name, 'Test Group')
@@ -112,13 +114,13 @@ class ContactGroupForm(TestCase):
         """Selected existing groups takes priority over creating
         new groups"""
         group = ContactGroup.objects.create(user=self.user, name='Test Group')
-        response = self.client.post(reverse('conversation:participants',
+        response = self.client.post(reverse('conversations:participants',
             kwargs={'conversation_pk': self.conversation.pk}), {
             'name': 'Should be ignored',
             'contact_group': group.pk,
             'file': self.csv_file,
         })
-        self.assertRedirects(response, reverse('conversation:send', kwargs={
+        self.assertRedirects(response, reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk}))
         self.assertEqual(ContactGroup.objects.latest(), group)
         self.assertEqual(ContactGroup.objects.count(), 2)
@@ -130,7 +132,7 @@ class ContactGroupForm(TestCase):
     def test_sending_preview(self):
         """test sending of conversation to a selected set of preview
         contacts"""
-        response = self.client.post(reverse('conversation:send', kwargs={
+        response = self.client.post(reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk
         }), {
             'contact': [c.pk for c in Contact.objects.all()]
