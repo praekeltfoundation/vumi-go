@@ -55,6 +55,16 @@ class ContactGroupForm(TestCase):
     def tearDown(self):
         pass
 
+    def test_group_selection(self):
+        """Select an existing group and use that as the group for the
+        conversation"""
+        response = self.client.post(reverse('conversation:participants',
+            kwargs={'conversation_pk': self.conversation.pk}), {
+            'groups': [grp.pk for grp in ContactGroup.objects.all()]
+        })
+        self.assertRedirects(response, reverse('conversation:send', kwargs={
+            'conversation_pk': self.conversation.pk}))
+
     def test_group_creation(self):
         """test creation of a new contact group when starting a conversation"""
         self.assertEqual(ContactGroup.objects.count(), 1)
@@ -68,16 +78,6 @@ class ContactGroupForm(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(ContactGroup.objects.count(), 2)
         self.assertEqual(ContactGroup.objects.latest().name, 'Test Group')
-
-    def test_group_selection(self):
-        """Select an existing group and use that as the group for the
-        conversation"""
-        response = self.client.post(reverse('conversation:participants',
-            kwargs={'conversation_pk': self.conversation.pk}), {
-            'groups': [grp.pk for grp in ContactGroup.objects.all()]
-        })
-        self.assertRedirects(response, reverse('conversation:send', kwargs={
-            'conversation_pk': self.conversation.pk}))
 
     def test_contacts_upload(self):
         """test uploading of contacts via CSV file"""
