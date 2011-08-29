@@ -23,7 +23,7 @@
             <div id="conv-box">
                 <label class="group-label-b">Get your message approved:</label>
                 <div id="groups-list">
-                    {% for contact in conversation.previewcontact_set %}
+                    {% for contact in conversation.participants %}
                     <div class="group {% if forloop.first %}first{% endif %}">
                         <input type="checkbox" name="contact" value="{{contact.pk}}" class="group-check"> <span class="group-name">{{contact.get_display_name}}</span>
                     </div>

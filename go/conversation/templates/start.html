@@ -1,7 +1,8 @@
 {% extends "app.html" %}
 
 {% block main %}
-<form name="conversation" method="post" action="new-conversation-started.html" id="conversation">
+<form name="conversation" method="post" action="" id="conversation">
+    {% csrf_token %}
     <div id="control-bar">
         <div id="control-elements">
             <h3>
@@ -40,7 +41,7 @@
                 </div>
                 <div id="preview-box">
                     <div id="preview-pane">
-                        <span class="sender">Praekelt:</span> <span class="preview-message">Hello <span class="preview-highlight">Gustav</span>. Tomatoes selling at ZK 30 000 per box at market today. If u have stock, pls bring</span>
+                        <span class="sender">{{user_profile.get_display_name}}:</span> <span class="preview-message">{{conversation.message}}</span>
                     </div>
                 </div>
                 <div class="clear"></div>
