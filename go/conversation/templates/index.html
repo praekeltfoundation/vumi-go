@@ -14,7 +14,7 @@
 <div id="main">
     <div class="inner">
         <form id="search-filter" name="search-filter" action="" method="get">
-            <input type="image" src="{{STATIC_URL}}pics/header/search-btn.png" id="search-filter-btn"><input type="text" id="search-filter-input" class="txt" value="Find a conversation...">
+            <input type="image" src="{{STATIC_URL}}pics/header/search-btn.png" id="search-filter-btn"><input type="text" id="search-filter-input" class="txt" name="q" value="{{query|default:"Find a conversation..."}}">
         </form>
         <div id="conversations">
             {% for object in page.object_list %}
@@ -23,6 +23,10 @@
                     {% include "includes/conversation-box.html" %}
                 </div>
                 {% endwith %}
+            {% empty %}
+                <div>
+                    <p>Not conversations matching {{query}}</p>
+                </div>
             {% endfor %}
         </div>
         {% include "includes/conversation-pagination.html" %}
