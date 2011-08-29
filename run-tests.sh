@@ -8,22 +8,23 @@ fi
 
 echo "Activating virtualenv"
 source ve/bin/activate
+hasher=$(which md5 or md5sum)
 
 if [ -f 'requirements.pip.md5' ]; then
-    current=$(cat requirements.pip | md5)
+    current=$(cat requirements.pip | $hasher)
     cached=$(cat requirements.pip.md5)
     if [ $current = $cached ]; then
         echo "Requirements still up to date"
     else
         echo "Upgrading requirements"
         pip install --upgrade -r requirements.pip
-        cat requirements.pip | md5 > requirements.pip.md5
+        cat requirements.pip | $hasher > requirements.pip.md5
     fi
     true
 else
     echo "Installing requirements"
     pip install -r requirements.pip && \
-    cat requirements.pip | md5 > requirements.pip.md5
+    cat requirements.pip | $hasher > requirements.pip.md5
 fi
 
 find ./go -name '*.pyc' -delete && \
