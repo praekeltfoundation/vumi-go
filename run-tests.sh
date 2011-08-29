@@ -6,5 +6,5 @@ source ve/bin/activate && \
     python go/manage.py test --with-coverage --cover-package=go --with-xunit && \
     coverage xml --include="go/*" && \
     coverage html --include="go/*" && \
-    find ./go -name '*.py' | xargs pep8 --exclude='0*' > pep8.log && \
+    (find ./go -name '*.py' | xargs pep8 --exclude='0*' > pep8.log || true) && \
 deactivate
