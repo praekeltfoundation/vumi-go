@@ -8,6 +8,7 @@ from go.conversation.forms import ConversationForm
 from go.base.forms import (NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
 from go.base.models import Contact, ContactGroup
+from go.base.utils import padded_queryset
 from datetime import datetime
 import logging
 
@@ -145,6 +146,8 @@ def index(request):
     query = request.GET.get('q', '')
     if query:
         conversations = conversations.filter(subject__icontains=query)
+    if conversations.count() < CONVERSATIONS_PER_PAGE:
+        conversations = padded_queryset(conversations, CONVERSATIONS_PER_PAGE)
     paginator = Paginator(conversations, CONVERSATIONS_PER_PAGE)
     page = paginator.page(request.GET.get('p', 1))
     return render(request, 'index.html', {
