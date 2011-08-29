@@ -45,8 +45,10 @@ def participants(request, conversation_pk):
     if request.POST:
         # see if we need to create a new contact group by checking for the name
         if request.POST.getlist('groups'):
+            # get the groups
             groups = ContactGroup.objects.filter(
                 pk__in=request.POST.getlist('groups'))
+            # link to the conversation
             for group in groups:
                 conversation.groups.add(group)
             return redirect(reverse('conversation:send', kwargs={
@@ -96,14 +98,14 @@ def participants(request, conversation_pk):
 def send(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk)
     if request.POST:
-        contacts = Contact.objects.get(pk__in=request.POST.getlist('contact'))
+        contacts = Contact.objects.filter(pk__in=request.POST.getlist('contact'))
         for contact in contacts:
             conversation.previewcontacts.add(contact)
         logging.warning('implement sending preview to contacts %s' % contacts)
         return redirect(reverse('conversation:start', kwargs={
-            'conversation_pk': conversation.pk,
+            'conversation_pk': conversation.pk}), {
             'contacts': contacts,
-        }))
+        })
     return render(request, 'send.html', {
         'conversation': conversation
     })
@@ -112,6 +114,16 @@ def send(request, conversation_pk):
 @login_required
 def start(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk)
+    if request.POST:
+        return redirect(reverse('conversation:show', kwargs={
+            'conversation_pk': conversation.pk}))
     return render(request, 'start.html', {
+        'conversation': conversation
+    })
+
+@login_required
+def show(request, conversation_pk):
+    conversation = get_object_or_404(Conversation, pk=conversation_pk)
+    return render(request, 'show.html', {
         'conversation': conversation
     })

@@ -1,0 +1,219 @@
+{% extends "app.html" %}
+
+{% block extra_header %}
+    <link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
+    <link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />  
+{% endblock %}
+
+{% block main %}
+<form name="conversation" method="post" action="" id="conversation">
+    <div id="control-bar">
+        <div id="control-elements">
+            <h3 class="wide">
+                <a href="conversations.html">Conversations</a> » Market Announcement: Tomatoes
+            </h3>
+        </div>
+    </div>
+    <div id="main">
+        <div class="inner">
+            <div class="notification success show">
+                Conversation started
+            </div>
+            <div id="summary" class="box">
+                <span class="timestamp">23 Feb 2011 - <strong>Tomato Farmers</strong></span>
+                <div class="message">
+                    Tomatoes selling at ZK 30 000 per box at market today. If u have stock, pls bring
+                </div>
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" class="status-table">
+                    <tr>
+                        <th>
+                            Channel
+                        </th>
+                        <th>
+                            Conversation Status
+                        </th>
+                    </tr>
+                    <tr>
+                        <td>
+                            SMS
+                        </td>
+                        <td align="right">
+                            <span class="green">Sending to</span> 99 999 people - <a href="#">Pause</a> - <a href="#">Cancel</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Twitter
+                        </td>
+                        <td align="right">
+                            Tweeted to 143 493 followers
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Facebook
+                        </td>
+                        <td align="right">
+                            Posted to 393 292 fans
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            IM
+                        </td>
+                        <td align="right">
+                            <span class="green">Sending to</span> 3 291 people - <a href="#">Pause</a> - <a href="#">Cancel</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Email
+                        </td>
+                        <td align="right">
+                            <span class="green">Sending to</span> 32 577 people - <a href="#">Pause</a> - <a href="#">Cancel</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <strong>Total</strong>
+                        </td>
+                        <td align="right">
+                            <strong>562 202 People</strong>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div id="graph-box" class="box">
+                <h4>
+                    Conversation Infographics
+                </h4>
+                <div class="grey-box">
+                    <form name="graph-pick" id="graph-pick">
+                        <label for="graph-pick" class="inline small">What would you like to see:</label> <select>
+                            <option>
+                                Conversation Channel Split
+                            </option>
+                            <option>
+                                Replies
+                            </option>
+                            <option>
+                                Unsubscribes
+                            </option>
+                            <option>
+                                etc
+                            </option>
+                        </select>
+                    </form>
+                </div>
+                <div id="graph">
+                    <img src="https://chart.googleapis.com/chart?chs=388x200&amp;chd=t:40,15,30,5,10&amp;cht=p3&amp;chl=SMS|Twitter|FB|IM|Email">
+                </div>
+            </div>
+            <div id="connections" class="box nopadding">
+                <div id="tabs">
+                    <ul>
+                        <li>
+                            <a href="#fragment-1"><span>People</span></a>
+                        </li>
+                        <li>
+                            <a href="#fragment-2"><span>Our Replies</span></a>
+                        </li>
+                    </ul>
+                    <div id="fragment-1">
+                        <div class="connection reply">
+                            <span class="timestamp"><a href="person.html">Belinda Lewis</a> via Facebook - 5 mins ago - <a href="#" class="reply">Reply</a></span>
+                            <p>
+                                oh noes!!
+                            </p>
+                        </div>
+                        <div class="connection retweet">
+                            <span class="timestamp"><a href="person.html">Gustav Praekelt</a> via Twitter - 5 mins ago - <a href="#" class="reply">Reply</a></span>
+                            <p>
+                                RT <a href="#" target="_blank">@ajax_ct</a>: Sorry for the late notice, but practice today has been cancelled due to bad weather. :(
+                            </p>
+                        </div>
+                        <div class="connection like">
+                            <p>
+                                <a href="person.html">Kabelo Mapoka</a> liked this on Facebook - 6 mins ago
+                            </p>
+                        </div>
+                        <div class="connection unsub">
+                            <span class="timestamp"><a href="person.html">Gavin Willmore</a> via SMS - 6 mins ago - Unsubscribe Processed</span>
+                            <p>
+                                <span class="red">stop</span>
+                            </p>
+                        </div>
+                        <div class="connection reply">
+                            <span class="timestamp"><a href="person.html">Morgan Collett</a> via SMS - 5 mins ago - <a href="#" class="reply">Reply</a></span>
+                            <p>
+                                Anybody swinging by the training ground? I got dropped off and need a ride back to Durbanville
+                            </p>
+                        </div>
+                        <div class="connection reply">
+                            <span class="timestamp"><a href="person.html">Hulisani Ravele</a> via Facebook - 5 mins ago - <a href="#" class="reply">Reply</a></span>
+                            <p>
+                                whoop whoop! what lousy weather
+                            </p>
+                        </div>
+                        <div class="connection reply">
+                            <span class="timestamp"><a href="person.html">Belinda Lewis</a> via Twitter - 5 mins ago - <a href="#">Replied</a></span>
+                            <p>
+                                <a href="#" target="_blank">@ajax_ct</a>: When is practice going to be re-scheduled for? Huuuge game on saturday - don't want to jeopardise chances...
+                            </p>
+                        </div>
+                        <div class="more">
+                            <a href="#">See more connections</a>
+                        </div>
+                    </div>
+                    <div id="fragment-2">
+                        <div class="connection reply">
+                            <span class="timestamp"><a href="person.html">Belinda Lewis</a> via Facebook - 5 mins ago - <a href="#" class="reply">Reply</a></span>
+                            <p>
+                                oh noes!!
+                            </p>
+                        </div>
+                        <div class="connection retweet">
+                            <span class="timestamp"><a href="person.html">Gustav Praekelt</a> via Twitter - 5 mins ago - <a href="#" class="reply">Reply</a></span>
+                            <p>
+                                RT <a href="#" target="_blank">@ajax_ct</a>: Sorry for the late notice, but practice today has been cancelled due to bad weather. :(
+                            </p>
+                        </div>
+                        <div class="connection like">
+                            <p>
+                                <a href="person.html">Kabelo Mapoka</a> liked this on Facebook - 6 mins ago
+                            </p>
+                        </div>
+                        <div class="connection unsub">
+                            <span class="timestamp"><a href="person.html">Gavin Willmore</a> via SMS - 6 mins ago - Unsubscribe Processed</span>
+                            <p>
+                                <span class="red">stop</span>
+                            </p>
+                        </div>
+                        <div class="connection reply">
+                            <span class="timestamp"><a href="person.html">Morgan Collett</a> via SMS - 5 mins ago - <a href="#" class="reply">Reply</a></span>
+                            <p>
+                                Anybody swinging by the training ground? I got dropped off and need a ride back to Durbanville
+                            </p>
+                        </div>
+                        <div class="connection reply">
+                            <span class="timestamp"><a href="person.html">Hulisani Ravele</a> via Facebook - 5 mins ago - <a href="#" class="reply">Reply</a></span>
+                            <p>
+                                whoop whoop! what lousy weather
+                            </p>
+                        </div>
+                        <div class="connection reply">
+                            <span class="timestamp"><a href="person.html">Belinda Lewis</a> via Twitter - 5 mins ago - <a href="#">Replied</a></span>
+                            <p>
+                                <a href="#" target="_blank">@ajax_ct</a>: When is practice going to be re-scheduled for? Huuuge game on saturday - don't want to jeopardise chances...
+                            </p>
+                        </div>
+                        <div class="more">
+                            <a href="#">See more connections</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
