@@ -1,17 +1,60 @@
 {% extends "app.html" %}
 
 {% block main %}
-<div id="main" class="main-alt" >
-    <div class="inner">
-    <h2>Hey {{user_profile.get_display_name}}, you must be new here.</h2>
-    <h3 class="home"><a href="{% url conversation:new %}">Start Your First Conversation</a></h3>
-    <div id="conversations">
-        <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-        <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-        <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-        <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-        <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
-        <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+
+{% if user.conversation_set.exists %}
+    <div id="main" class="main-alt">
+        <div class="inner">
+            <h2>Hi {{user_profile.get_display_name}}, here are some of your newest conversations.</h2>
+            {# TODO add user counter / user activity metrics #}
+            <h3 class="home">...and <strong>239 new people</strong> have also connected since you last checked in.</h3>
+        
+            <div id="conversations">
+                {% for conversation in user.conversation_set.all %}
+                <div class="grid_4">
+                    <div class="msg-box">
+                        <h4><a href="{% url conversation:show conversation_pk=conversation.pk %}">{{conversation.subject}}</a></h4>
+                        <p>
+                            <span class="timestamp">{{conversation.start_date|date:"Fri, 10 Jun 2011"}} {{conversation.start_time|date:"13:30"}}</span>
+                            {{conversation.message}}
+                        </p>
+                        <div class="msg-info">
+                            {# TODO: implement transports  #}
+                            {# <div title="Twitter" class="twitter-ico"></div> #}
+                            {# <div title="Facebook" class="fb-ico"></div> #}
+                            <div title="SMS" class="sms-ico"></div>
+                            <div title="People in this conversation" class="people-count-ico">{{conversation.participants.count}}</div>
+                            <div title="Reactions" class="people-reply-ico">{{conversation.replies.count|default:"0"}}</div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+                
+                <div class="grid_4"><div class="msg-action-box"><a href="conversations.html">See More Conversations</a></div></div>
+                <div class="grid_4"><div class="msg-action-box"><a href="credits.html">Buy More Vumi Credits</a></div></div>
+                <div class="grid_4"><div class="msg-action-box"><a href="new-conversation.html">Start A Conversation</a></div></div>
+            </div>
+        </div>
     </div>
-</div>
+{% else %}
+    <div id="main" class="main-alt" >
+        <div class="inner">
+            <h2>Hey {{user_profile.get_display_name}}, you must be new here.</h2>
+            <h3 class="home"><a href="{% url conversation:new %}">Start Your First Conversation</a></h3>
+            <div id="conversations">
+                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+                <div class="grid_4"><div class="msg-box msg-box-empty">&nbsp;</div></div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
 {% endblock %}
