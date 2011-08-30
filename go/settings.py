@@ -116,6 +116,7 @@ TEMPLATE_DIRS = (
     abspath("templates"),
     abspath("base", "templates"),
     abspath("conversation", "templates"),
+    abspath("contacts", "templates"),
 )
 
 INSTALLED_APPS = (

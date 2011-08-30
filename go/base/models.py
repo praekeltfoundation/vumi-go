@@ -17,4 +17,3 @@ class UserProfile(models.Model):
 
     def __unicode__(self):
         return u' '.join([self.user.first_name, self.user.last_name])
-

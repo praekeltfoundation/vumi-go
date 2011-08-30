@@ -1,6 +1,7 @@
 from django.db import models
 import csv
 
+
 class ContactGroup(models.Model):
     """A group of contacts"""
     user = models.ForeignKey('auth.User')
@@ -15,7 +16,8 @@ class ContactGroup(models.Model):
         contacts = []
         for name, surname, msisdn in reader:
             # TODO: normalize msisdn
-            contact, created = Contact.objects.get_or_create(msisdn=msisdn)
+            contact, _ = Contact.objects.get_or_create(user=self.user,
+                msisdn=msisdn)
             contact.name = name
             contact.surname = surname
             contact.save()
@@ -33,6 +35,7 @@ class ContactGroup(models.Model):
 
 class Contact(models.Model):
     """A contact"""
+    user = models.ForeignKey('auth.User')
     name = models.CharField(blank=True, max_length=255)
     surname = models.CharField(blank=True, max_length=255)
     msisdn = models.CharField(blank=False, max_length=255)
