@@ -13,7 +13,7 @@ hasher=$(which md5 or md5sum)
 if [ -f 'requirements.pip.md5' ]; then
     current=$(cat requirements.pip | $hasher)
     cached=$(cat requirements.pip.md5)
-    if [ $current = $cached ]; then
+    if [ "$current" = "$cached" ]; then
         echo "Requirements still up to date"
     else
         echo "Upgrading requirements"
