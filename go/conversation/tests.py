@@ -4,7 +4,7 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.conf import settings
 from go.conversation.models import Conversation
-from go.base.models import ContactGroup, Contact
+from go.contacts.models import ContactGroup, Contact
 from go.base.utils import padded_queryset
 from datetime import datetime
 from os import path

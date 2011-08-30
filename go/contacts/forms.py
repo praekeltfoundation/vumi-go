@@ -1,5 +1,5 @@
 from django import forms
-from go.base import models
+from go.contacts import models
 
 
 class NewContactGroupForm(forms.ModelForm):

@@ -1,5 +1,5 @@
 from django.db import models
-from go.base.models import Contact
+from go.contacts.models import Contact
 
 
 class Conversation(models.Model):
@@ -11,8 +11,8 @@ class Conversation(models.Model):
     start_time = models.TimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    groups = models.ManyToManyField('base.ContactGroup')
-    previewcontacts = models.ManyToManyField('base.Contact')
+    groups = models.ManyToManyField('contacts.ContactGroup')
+    previewcontacts = models.ManyToManyField('contacts.Contact')
 
     def participants(self):
         return Contact.objects.filter(groups__in=self.groups.all())
