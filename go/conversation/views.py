@@ -5,9 +5,9 @@ from django.http import HttpResponseRedirect
 from django.core.paginator import Paginator
 from go.conversation.models import Conversation
 from go.conversation.forms import ConversationForm
-from go.base.forms import (NewContactGroupForm, UploadContactsForm,
+from go.contacts.forms import (NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
-from go.base.models import Contact, ContactGroup
+from go.contacts.models import Contact, ContactGroup
 from go.base.utils import padded_queryset
 from datetime import datetime
 import logging

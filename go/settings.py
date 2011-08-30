@@ -134,6 +134,7 @@ INSTALLED_APPS = (
     'django_nose',
     'base',
     'conversation',
+    'contacts',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (

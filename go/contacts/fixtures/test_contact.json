@@ -1,6 +1,6 @@
 [{
     "pk": 1,
-    "model": "base.Contact",
+    "model": "contacts.Contact",
     "fields": {
         "name": "Name",
         "surname": "Surname",
