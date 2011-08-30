@@ -6,117 +6,12 @@
         <h3>
             People
         </h3>
-        <div id="control-bar-right">
-            <div id="new-group-button" class="new-group">
-                <a href="#">New Group</a>
-            </div>
-            <div id="new-person-button" class="new-group">
-                <a href="new-person.html">New Contact</a>
-            </div>
-            <div id="upload-contacts-button" class="new-group">
-                <a href="#">Upload Contacts</a>
-            </div>
-        </div>
+        {% include "includes/contacts-menu.html" %}
     </div>
 </div>
 <div id="main">
     <div class="inner">
-        <div id="new-group" class="content-box pop">
-            <h3>
-                Add A New Group
-            </h3>
-            <form name="frm-new-group" id="frm-new-group" method="post" action="new-group-added.html">
-                <div class="field-row">
-                    <label for="name">New Group Name</label> <input type="text" class="txtbox required" name="name" maxlength="200">
-                    <div class="clear"></div>
-                </div>
-                <div class="field-row">
-                    <input type="submit" name="submit" class="btn" value="Save New Group"><input type="reset" name="submit" class="btn-grey" value="Cancel" id="cancel-new-group">
-                    <div class="clear"></div>
-                </div>
-            </form>
-        </div>
-        <div id="upload-contacts" class="content-box pop">
-            <h3>
-                Upload Contacts
-            </h3>
-            <div id="upload-choose-box">
-                <p class="intro">
-                    Choose how you'd you like to upload contacts:
-                </p>
-                <div class="sn-box">
-                    <h4>
-                        Import a spreadsheet
-                    </h4>
-                    <p style="height: 36px">
-                        XLS,CSV or tab-delimited TXT
-                    </p>
-                    <div class="upload-button">
-                        <a href="#" id="spreadsheet-method" name="spreadsheet-method">Select</a>
-                    </div>
-                </div>
-                <div class="sn-box norightmargin">
-                    <h4>
-                        Import from Google Docs
-                    </h4>
-                    <p style="height: 36px">
-                        <img src="{{STATIC_URL}}pics/google_docs_icon.gif">
-                    </p>
-                    <div class="upload-button">
-                        <a href="#" id="google-docs-method" name="google-docs-method">Select</a>
-                    </div>
-                </div>
-            </div>
-            <div id="upload-form-box">
-                <form name="frm-upload-contacts" id="frm-upload-contacts" method="post" action="new-contacts-preview.html">
-                    <div class="field-row">
-                        <label for="name">Upload your spreadsheet</label> <input type="file" class="txtbox required" name="name" maxlength="200">
-                        <div class="clear"></div>
-                    </div>
-                    <div class="field-row">
-                        <label for="addtogroup">Choose which group you want to add new contacts to:</label> <select name="addtogroup">
-                            <option value="">
-                                Please select:
-                            </option>
-                            <option value="Tomato Farmers">
-                                Tomato Farmers
-                            </option>
-                            <option value="Cocoa Farmers">
-                                Cocoa Farmers
-                            </option>
-                            <option value="Kenaf Farmers">
-                                Kenaf Farmers
-                            </option>
-                            <option value="Cane Farmers">
-                                Cane Farmers
-                            </option>
-                            <option value="Tobacco Farmers">
-                                Tobacco Farmers
-                            </option>
-                            <option value="Market Agents">
-                                Market Agents
-                            </option>
-                        </select>
-                        <div class="clear" style="height: 10px"></div><label for="newgroup">...Or add to a new group</label> <input type="text" class="txtbox" name="newgroup" maxlength="200">
-                        <div class="clear"></div>
-                    </div>
-                    <div class="field-row">
-                        <input type="submit" name="submit" class="btn" value="Upload Contacts"><input type="reset" name="submit" class="btn-grey" value="Cancel" id="cancel-google-upload">
-                        <div class="clear"></div>
-                    </div>
-                </form>
-            </div>
-            <div id="google-docs-box">
-                <form name="frm-google-auth" id="frm-google-auth" method="post" action="choose-google-spreadsheet.html">
-                    First, connect to your Google account:
-                    <div class="field-row">
-                        <input type="submit" name="submit" class="btn" value="Authorise"><input type="reset" name="submit" class="btn-grey" value="Cancel" id="cancel-upload-contacts">
-                        <div class="clear"></div>
-                    </div>
-                </form>
-            </div>
-        </div>
-        <div class="clear"></div>
+        {% include "includes/contacts-tools.html" %}
         <div class="wide-box people-box">
             <div id="steps" class="two-step">
                 <div id="main-left-groups" class="step">
