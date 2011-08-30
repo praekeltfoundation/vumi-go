@@ -2,6 +2,7 @@
     "pk": 1,
     "model": "contacts.Contact",
     "fields": {
+        "user": 1,
         "name": "Name",
         "surname": "Surname",
         "msisdn": "+27761234567"
