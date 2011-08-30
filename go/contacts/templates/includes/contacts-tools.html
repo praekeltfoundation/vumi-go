@@ -2,9 +2,11 @@
     <h3>
         Add A New Group
     </h3>
-    <form name="frm-new-group" id="frm-new-group" method="post" action="new-group-added.html">
+    <form name="frm-new-group" id="frm-new-group" method="post" action="{% url contacts:groups %}">
+        {% csrf_token %}
         <div class="field-row">
-            <label for="name">New Group Name</label> <input type="text" class="txtbox required" name="name" maxlength="200">
+            <label for="name">New Group Name</label>
+            {{new_contact_group_form.name}}
             <div class="clear"></div>
         </div>
         <div class="field-row">
