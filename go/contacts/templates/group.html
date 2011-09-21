@@ -16,7 +16,7 @@
     <div id="control-bar">
         <div id="control-elements">
             <h3>
-                <a href="people.html">People</a> » {{group.name}}
+                <a href="{% url contacts:groups %}">Group</a> » {{group.name}}
             </h3>
             {% include "includes/contacts-menu.html" %}
         </div>

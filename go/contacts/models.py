@@ -28,7 +28,7 @@ class Contact(models.Model):
     name = models.CharField(blank=True, max_length=255)
     surname = models.CharField(blank=True, max_length=255)
     email_address = models.EmailField('Email', blank=True)
-    msisdn = models.CharField('Mobile Number', blank=True, max_length=255)
+    msisdn = models.CharField('Mobile Number', blank=False, max_length=255)
     dob = models.DateField('Date of Birth', help_text='YYYY-MM-DD', blank=True, null=True)
     twitter_handle = models.CharField('Twitter Handle', blank=True, max_length=100)
     facebook_id = models.CharField('Facebook ID', blank=True, max_length=100)
