@@ -1,7 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.urlresolvers import reverse
-from django.http import HttpResponseRedirect
 from django.core.paginator import Paginator
 from go.conversation.models import Conversation
 from go.conversation.forms import ConversationForm
@@ -24,7 +23,7 @@ def new(request):
             conversation = form.save(commit=False)
             conversation.user = request.user
             conversation.save()
-            return HttpResponseRedirect(reverse('conversations:participants',
+            return redirect(reverse('conversations:people',
                 kwargs={'conversation_pk': conversation.pk}))
     else:
         form = ConversationForm(initial={
@@ -35,68 +34,76 @@ def new(request):
         'form': form
     })
 
+@login_required
+def upload(request, conversation_pk):
+    """
+    TODO: This view is still too big.
+    """
+    conversation = get_object_or_404(Conversation, pk=conversation_pk)
+    if request.POST:
+        # first parse the CSV file and create Contact instances
+        # from them for attaching to a group later
+        upload_contacts_form = UploadContactsForm(request.POST,
+            request.FILES)
+        if upload_contacts_form.is_valid():
+            contacts = Contact.create_from_csv_file(request.user,
+                request.FILES['file'])
+            if request.POST.get('name'):
+                new_contact_group_form = NewContactGroupForm(request.POST)
+                if new_contact_group_form.is_valid():
+                    group = new_contact_group_form.save(commit=False)
+                    group.user = request.user
+                    group.save()
+                    group.add_contacts(contacts)
+                    conversation.groups.add(group)
+                    return redirect(reverse('conversations:send', kwargs={
+                        'conversation_pk': conversation.pk
+                    }))
+                else:
+                    select_contact_group_form = SelectContactGroupForm()
+        
+            if request.POST.get('contact_group'):
+                select_contact_group_form = SelectContactGroupForm(
+                    request.POST)
+                if select_contact_group_form.is_valid():
+                    group = select_contact_group_form.cleaned_data['contact_group']
+                    group.add_contacts(contacts)
+                    conversation.groups.add(group)
+                    return redirect(reverse('conversations:send', kwargs={
+                        'conversation_pk': conversation.pk
+                    }))
+                else:
+                    new_contact_group_form = NewContactGroupForm()
+        else:
+            new_contact_group_form = NewContactGroupForm()
+            select_contact_group_form = SelectContactGroupForm()
+    else:
+        upload_contacts_form = UploadContactsForm()
+        new_contact_group_form = NewContactGroupForm()
+        select_contact_group_form = SelectContactGroupForm()
+    return render(request, 'upload.html', {
+        'conversation': conversation,
+        'upload_contacts_form': upload_contacts_form,
+        'new_contact_group_form': new_contact_group_form,
+        'select_contact_group_form': select_contact_group_form,
+    })
 
 @login_required
-def participants(request, conversation_pk):
-    """
-    Wow this function is _far_ too big.
-
-    TODO:   This uses too many forms, I think we can combine it into one form
-            with a group attribute, in the clean_group() function we can can
-            either read the existing group from the db or create a new one
-            from the submitted name if it doesn't exist yet.
-    """
+def people(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
         user=request.user)
     if request.POST:
-        # see if we need to create a new contact group by checking for the name
-        if request.POST.getlist('groups'):
+        group_pks = request.POST.getlist('groups')
+        if group_pks:
             # get the groups
-            groups = ContactGroup.objects.filter(
-                pk__in=request.POST.getlist('groups'))
+            groups = ContactGroup.objects.filter(pk__in=group_pks)
             # link to the conversation
             for group in groups:
                 conversation.groups.add(group)
             return redirect(reverse('conversations:send', kwargs={
                 'conversation_pk': conversation.pk}))
-
-        if request.POST.get('contact_group'):
-            new_contact_group_form = NewContactGroupForm()
-            select_contact_group_form = SelectContactGroupForm(request.POST)
-            if select_contact_group_form.is_valid():
-                group = select_contact_group_form.cleaned_data['contact_group']
-        elif request.POST.get('name'):
-            select_contact_group_form = SelectContactGroupForm()
-            new_contact_group_form = NewContactGroupForm(request.POST)
-            if new_contact_group_form.is_valid():
-                group = new_contact_group_form.save(commit=False)
-                group.user = request.user
-                group.save()
-        else:
-            new_contact_group_form = NewContactGroupForm(request.POST)
-            select_contact_group_form = SelectContactGroupForm(request.POST)
-
-        # see if we've got a CSV file being uploaded
-        if request.FILES.get('file'):
-            upload_contacts_form = UploadContactsForm(request.POST,
-                request.FILES)
-            if upload_contacts_form.is_valid():
-                group.import_contacts_from_csv_file(request.FILES['file'])
-                conversation.groups.add(group)
-                return redirect(reverse('conversations:send', kwargs={
-                    'conversation_pk': conversation.pk
-                }))
-        else:
-            upload_contacts_form = UploadContactsForm()
-    else:
-        upload_contacts_form = UploadContactsForm()
-        new_contact_group_form = NewContactGroupForm()
-        select_contact_group_form = SelectContactGroupForm()
-    return render(request, 'participants.html', {
+    return render(request, 'people.html', {
         'conversation': conversation,
-        'select_contact_group_form': select_contact_group_form,
-        'new_contact_group_form': new_contact_group_form,
-        'upload_contacts_form': upload_contacts_form,
     })
 
 

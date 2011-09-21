@@ -70,7 +70,7 @@ class ContactGroupForm(TestCase):
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
         conversation"""
-        response = self.client.post(reverse('conversations:participants',
+        response = self.client.post(reverse('conversations:people',
             kwargs={'conversation_pk': self.conversation.pk}), {
             'groups': [grp.pk for grp in ContactGroup.objects.all()]
         })
@@ -88,31 +88,19 @@ class ContactGroupForm(TestCase):
             'q': 'something that does not exist in the fixtures'})
         self.assertNotContains(response, self.conversation.subject)
 
-    def test_group_creation(self):
-        """test creation of a new contact group when starting a conversation"""
-        self.assertEqual(ContactGroup.objects.count(), 1)
-        response = self.client.post(reverse('conversations:participants',
-            kwargs={'conversation_pk': self.conversation.pk}))
-        self.assertEqual(ContactGroup.objects.count(), 1)
-        response = self.client.post(reverse('conversations:participants',
-            kwargs={'conversation_pk': self.conversation.pk}), {
-                'name': 'Test Group'
-            })
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(ContactGroup.objects.count(), 2)
-        self.assertEqual(ContactGroup.objects.latest().name, 'Test Group')
-
     def test_contacts_upload(self):
         """test uploading of contacts via CSV file"""
-        response = self.client.post(reverse('conversations:participants',
+        self.assertEqual(ContactGroup.objects.count(), 1)
+        response = self.client.post(reverse('conversations:upload',
             kwargs={'conversation_pk': self.conversation.pk}), {
-            'name': 'Test Group',
+            'name': 'Unit Test Group',
             'file': self.csv_file,
         })
         self.assertRedirects(response, reverse('conversations:send',
             kwargs={'conversation_pk': self.conversation.pk}))
         group = ContactGroup.objects.latest()
-        self.assertEquals(group.name, 'Test Group')
+        self.assertEqual(ContactGroup.objects.count(), 2)
+        self.assertEqual(group.name, 'Unit Test Group')
         contacts = Contact.objects.filter(groups=group)
         self.assertEquals(contacts.count(), 3)
         for idx, contact in enumerate(contacts, start=1):
@@ -122,24 +110,39 @@ class ContactGroupForm(TestCase):
             self.assertIn(contact, group.contact_set.all())
         self.assertIn(group, self.conversation.groups.all())
 
-    def test_priority_of_select_over_group_creation(self):
-        """Selected existing groups takes priority over creating
-        new groups"""
-        group = ContactGroup.objects.create(user=self.user, name='Test Group')
-        response = self.client.post(reverse('conversations:participants',
+    def test_contacts_upload_to_existing_group(self):
+        """It should be able to upload new contacts to an existing group"""
+        group = ContactGroup.objects.latest()
+        response = self.client.post(reverse('conversations:upload',
             kwargs={'conversation_pk': self.conversation.pk}), {
-            'name': 'Should be ignored',
             'contact_group': group.pk,
             'file': self.csv_file,
         })
         self.assertRedirects(response, reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk}))
-        self.assertEqual(ContactGroup.objects.latest(), group)
-        self.assertEqual(ContactGroup.objects.count(), 2)
         contacts = Contact.objects.filter(groups=group)
         self.assertEqual(contacts.count(), 3)
         self.assertIn(group, self.conversation.groups.all())
 
+    def test_priority_of_name_over_select_group_creation(self):
+        """Selected existing groups takes priority over creating
+        new groups"""
+        group = ContactGroup.objects.create(user=self.user, name='Test Group')
+        response = self.client.post(reverse('conversations:upload',
+            kwargs={'conversation_pk': self.conversation.pk}), {
+            'name': 'Name of Group',
+            'contact_group': group.pk,
+            'file': self.csv_file,
+        })
+        self.assertRedirects(response, reverse('conversations:send', kwargs={
+            'conversation_pk': self.conversation.pk}))
+        new_group = ContactGroup.objects.latest()
+        self.assertNotEqual(new_group, group)
+        self.assertEqual(new_group.name, 'Name of Group')
+        contacts = Contact.objects.filter(groups=new_group)
+        self.assertEqual(contacts.count(), 3)
+        self.assertIn(new_group, self.conversation.groups.all())
+    
     def test_sending_preview(self):
         """test sending of conversation to a selected set of preview
         contacts"""

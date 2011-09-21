@@ -14,7 +14,7 @@ class Conversation(models.Model):
     groups = models.ManyToManyField('contacts.ContactGroup')
     previewcontacts = models.ManyToManyField('contacts.Contact')
 
-    def participants(self):
+    def people(self):
         return Contact.objects.filter(groups__in=self.groups.all())
 
     class Meta:

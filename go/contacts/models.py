@@ -8,23 +8,11 @@ class ContactGroup(models.Model):
     name = models.CharField(blank=False, max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    def import_contacts_from_csv_file(self, csvfile):
-        dialect = csv.Sniffer().sniff(csvfile.read(1024))
-        csvfile.seek(0)
-        reader = csv.reader(csvfile, dialect)
-        contacts = []
-        for name, surname, msisdn in reader:
-            # TODO: normalize msisdn
-            contact, _ = Contact.objects.get_or_create(user=self.user,
-                msisdn=msisdn)
-            contact.name = name
-            contact.surname = surname
-            contact.save()
-            contact.groups.add(self)
-            contacts.append(contact)
-        return contacts
-
+    
+    def add_contacts(self, contacts):
+        for contact in contacts:
+            self.contact_set.add(contact)
+    
     class Meta:
         ordering = ['-updated_at']
         get_latest_by = 'updated_at'
@@ -46,6 +34,21 @@ class Contact(models.Model):
     class Meta:
         ordering = ['surname', 'name']
         get_latest_by = 'created_at'
+
+    @classmethod
+    def create_from_csv_file(cls, user, csvfile):
+        dialect = csv.Sniffer().sniff(csvfile.read(1024))
+        csvfile.seek(0)
+        reader = csv.reader(csvfile, dialect)
+        for name, surname, msisdn in reader:
+            # TODO: normalize msisdn
+            contact, _ = Contact.objects.get_or_create(user=user,
+                msisdn=msisdn)
+            contact.name = name
+            contact.surname = surname
+            contact.save()
+            yield contact
+
 
     def __unicode__(self):
         return u' '.join([self.name, self.surname])
