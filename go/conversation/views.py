@@ -34,6 +34,7 @@ def new(request):
         'form': form
     })
 
+
 @login_required
 def upload(request, conversation_pk):
     """
@@ -61,12 +62,13 @@ def upload(request, conversation_pk):
                     }))
                 else:
                     select_contact_group_form = SelectContactGroupForm()
-        
+
             if request.POST.get('contact_group'):
                 select_contact_group_form = SelectContactGroupForm(
                     request.POST)
                 if select_contact_group_form.is_valid():
-                    group = select_contact_group_form.cleaned_data['contact_group']
+                    cleaned_data = select_contact_group_form.cleaned_data
+                    group = cleaned_data['contact_group']
                     group.add_contacts(contacts)
                     conversation.groups.add(group)
                     return redirect(reverse('conversations:send', kwargs={
@@ -87,6 +89,7 @@ def upload(request, conversation_pk):
         'new_contact_group_form': new_contact_group_form,
         'select_contact_group_form': select_contact_group_form,
     })
+
 
 @login_required
 def people(request, conversation_pk):

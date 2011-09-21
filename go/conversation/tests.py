@@ -142,7 +142,7 @@ class ContactGroupForm(TestCase):
         contacts = Contact.objects.filter(groups=new_group)
         self.assertEqual(contacts.count(), 3)
         self.assertIn(new_group, self.conversation.groups.all())
-    
+
     def test_sending_preview(self):
         """test sending of conversation to a selected set of preview
         contacts"""

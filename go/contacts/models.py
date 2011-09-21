@@ -8,12 +8,11 @@ class ContactGroup(models.Model):
     name = models.CharField(blank=False, max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
-    
+
     def add_contacts(self, contacts):
         for contact in contacts:
             self.contact_set.add(contact)
-    
+
     class Meta:
         ordering = ['-updated_at']
         get_latest_by = 'updated_at'
@@ -29,8 +28,10 @@ class Contact(models.Model):
     surname = models.CharField(blank=True, max_length=255)
     email_address = models.EmailField('Email', blank=True)
     msisdn = models.CharField('Mobile Number', blank=False, max_length=255)
-    dob = models.DateField('Date of Birth', help_text='YYYY-MM-DD', blank=True, null=True)
-    twitter_handle = models.CharField('Twitter Handle', blank=True, max_length=100)
+    dob = models.DateField('Date of Birth', help_text='YYYY-MM-DD',
+        blank=True, null=True)
+    twitter_handle = models.CharField('Twitter Handle', blank=True,
+        max_length=100)
     facebook_id = models.CharField('Facebook ID', blank=True, max_length=100)
     bbm_pin = models.CharField('BBM Pin', blank=True, max_length=100)
     gtalk_id = models.EmailField('GTalk ID', blank=True)
@@ -55,7 +56,6 @@ class Contact(models.Model):
             contact.surname = surname
             contact.save()
             yield contact
-
 
     def __unicode__(self):
         return u' '.join([self.name, self.surname])
