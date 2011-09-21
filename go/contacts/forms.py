@@ -23,4 +23,4 @@ class UploadContactsForm(forms.Form):
 
 class SelectContactGroupForm(forms.Form):
     contact_group = forms.ModelChoiceField(
-        queryset=models.ContactGroup.objects.all(), empty_label=None)
+        queryset=models.ContactGroup.objects.all())

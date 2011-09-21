@@ -296,7 +296,7 @@ ul#nav a,#user a,#user-fly a,#user-fly ul li a{color:#5d5a50}
 table.status-table,table.members,table.plain{border:1px solid #ddd;margin:1em 0}
 .connection-over,.more:hover{background-color:#f5f5f5}
 #form-filter,.pop h3{margin:0 0 .5em}
-#more-form,#upload-form,#ie,#people-search-result,#help-search-result,#new-group,#upload-contacts,#upload-form-box,#google-docs-box{display:none}
+#more-form,#ie,#people-search-result,#help-search-result,#new-group,#upload-contacts,#upload-form-box,#google-docs-box{display:none}
 #groups-list .group-member-count a,#login-box p.forgot a,#footer a{margin-left:10px}
 .step,.three-step .step{border-bottom:1px solid #ddd;width:265px;float:left;border-right:1px solid #ddd;font-size:.9em;padding:1em 10px 1em 44px}
 .two-step .step a,.three-step .step a,.search-filter-input-highlight,.content-box input.txtbox,.content-box textarea,.content-box select,.black,select.error{color:#000!important}

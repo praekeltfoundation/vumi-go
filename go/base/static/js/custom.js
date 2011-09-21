@@ -113,18 +113,20 @@ $(document).ready(function() {
 		$('#form-filter li#basic').addClass('active');
 		$('#form-filter li#more').removeClass('active')
 	});
-	$('#form-filter li#upload').click(function() {
-		$('#upload-form').show();
-		$('#groups-list').hide();
-		$('#form-filter li#upload').addClass('active');
-		$('#form-filter li#groups').removeClass('active')
-	});
-	$('#form-filter li#groups').click(function() {
-		$('#upload-form').hide();
-		$('#groups-list').show();
-		$('#form-filter li#groups').addClass('active');
-		$('#form-filter li#upload').removeClass('active')
-	});
+    // No longer implementing this as javascript, separate HTML pages for now.
+    // 
+    // $('#form-filter li#upload').click(function() {
+    //  $('#upload-form').show();
+    //  $('#groups-list').hide();
+    //  $('#form-filter li#upload').addClass('active');
+    //  $('#form-filter li#groups').removeClass('active')
+    // });
+    // $('#form-filter li#groups').click(function() {
+    //  $('#upload-form').hide();
+    //  $('#groups-list').show();
+    //  $('#form-filter li#groups').addClass('active');
+    //  $('#form-filter li#upload').removeClass('active')
+    // });
 	$('.group-check').click(function() {
 		$(this).parent(".group").toggleClass('selected')
 	});
