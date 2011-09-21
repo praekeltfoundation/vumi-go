@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from go.contacts import forms
@@ -63,7 +64,17 @@ def people(request):
 @login_required
 def person(request, person_pk):
     contact = get_object_or_404(Contact, pk=person_pk, user=request.user)
-    form = forms.ContactForm(instance=contact)
+    if request.POST:
+        form = forms.ContactForm(request.POST, instance=contact)
+        if form.is_valid():
+            form.save()
+            messages.add_message(request, messages.INFO, 'Profile Updated')
+            return redirect(reverse('contacts:person', kwargs={
+                'person_pk': contact.pk}))
+        else:
+            messages.add_message(request, messages.ERROR, 'Please correct the problem below.')
+    else:
+        form = forms.ContactForm(instance=contact)
     return render(request, 'person.html', {
         'contact': contact,
         'form': form,
