@@ -15,7 +15,7 @@
     <div id="control-bar">
         <div id="control-elements">
             <h3>
-                <a href="people-people.html">People</a> » {{contact}}
+                <a href="{% url contacts:people %}">People</a>
             </h3>
             {% include "includes/contacts-menu.html" %}
         </div>
@@ -36,10 +36,10 @@
                 <div class="inner-box">
                     <div class="person">
                         <h3 style="margin">
-                            {{contact}}
+                            Add New Contact
                         </h3>
                         <p class="byline">
-                            First Contact: {{contact.created_at|date:"d F Y"}}
+                            * = Required
                         </p>
                     </div><!-- provision for avatar, replies history and more fields  -->
                     <form name="frm-person" id="frm-person" method="post" action="">

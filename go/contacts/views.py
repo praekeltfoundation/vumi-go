@@ -72,10 +72,30 @@ def person(request, person_pk):
             return redirect(reverse('contacts:person', kwargs={
                 'person_pk': contact.pk}))
         else:
-            messages.add_message(request, messages.ERROR, 'Please correct the problem below.')
+            messages.add_message(request, messages.ERROR, 
+                'Please correct the problem below.')
     else:
         form = forms.ContactForm(instance=contact)
     return render(request, 'person.html', {
         'contact': contact,
+        'form': form,
+    })
+
+@login_required
+def new_person(request):
+    if request.POST:
+        form = forms.ContactForm(request.POST, 
+            instance=Contact(user=request.user))
+        if form.is_valid():
+            contact = form.save()
+            messages.add_message(request, messages.INFO, 'Profile Created')
+            return redirect(reverse('contacts:person', kwargs={
+                'person_pk': contact.pk}))
+        else:
+            messages.add_message(request, messages.ERROR, 
+                'Please correct the problem below.')
+    else:
+        form = forms.ContactForm()
+    return render(request, 'new_person.html', {
         'form': form,
     })
