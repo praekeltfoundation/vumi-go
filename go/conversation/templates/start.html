@@ -29,16 +29,16 @@
                     <div id="groups-list">
                         {% for contact in conversation.previewcontacts.all %}
                         {# TODO: implement status, waiting, approved  #}
-                        <div class="group {% if forloop.first %}first{% endif %}">
-                            <input type="checkbox" name="contacts" value="{{contact.pk}}" class="group-check"> <span class="group-name">{{contact}}</span>
+                        <div class="group approved {% if forloop.first %}first{% endif %}">
+                            <span class="group-name">{{contact}}</span>
                         </div>
                         {% endfor %}
                         <input type="submit" name="upload" value="Send Preview" class="btn">
                     </div>
                     {# TODO: implement auto-refresh? #}
-                    <p>
-                        You won't need to refresh this page.
-                    </p>
+                    {# <p> #}
+                    {#     You won't need to refresh this page. #}
+                    {# </p> #}
                 </div>
                 <div id="preview-box">
                     <div id="preview-pane">

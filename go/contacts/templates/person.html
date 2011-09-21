@@ -1,0 +1,120 @@
+{% extends "app.html" %}
+
+{% block extra_header %}
+    <script type="text/javascript">
+      $(document).ready(function(){
+          $('#frm-new-group').validate();
+          $('#frm-upload-contacts').validate();
+      });
+    </script>
+    <link type="text/css" href="{{ STATIC_URL }}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
+    <link type="text/css" href="{{ STATIC_URL }}css/jquery-ui-timepicker.css" rel="stylesheet" />
+{% endblock %}
+
+{% block main %}
+    <div id="control-bar">
+        <div id="control-elements">
+            <h3>
+                <a href="people-people.html">People</a> » {{contact}}
+            </h3>
+            {% include "includes/contacts-menu.html" %}
+        </div>
+    </div>
+    <div id="main">
+        <div class="inner">
+            {% include "includes/contacts-tools.html" %}
+            <div class="wide-box people-box">
+                <div id="steps" class="two-step">
+                    <div id="main-left-groups" class="step">
+                        <a href="{% url contacts:groups %}">Groups</a>
+                    </div>
+                    <div id="people" class="step people-active" style="border-right: none">
+                        <a href="{% url contacts:people %}">People</a>
+                    </div>
+                </div>
+                <div class="inner-box">
+                    <div class="person">
+                        <h3 style="margin">
+                            {{contact}}
+                        </h3>
+                        <p class="byline">
+                            First Contact: {{contact.created_at|date:"d F Y"}}
+                        </p>
+                    </div><!-- provision for avatar, replies history and more fields  -->
+                    <form name="frm-person" id="frm-person" method="post" action="person-updated.html">
+                        {# {{form}} #}
+                        <div class="field-row">
+                            <label for="name">Name</label> <input type="text" class="txtbox widebox required" value="John" name="name" maxlength="200">
+                            <div class="clear"></div>
+                        </div>
+                        <div class="field-row">
+                            <label for="name">Surname</label> <input type="text" class="txtbox widebox" value="Doe" name="lname" maxlength="200">
+                            <div class="clear"></div>
+                        </div>
+                        <div class="field-row">
+                            <label for="email">Email</label> <input type="text" class="txtbox widebox email" value="johndoe@praekelt.com" name="email" maxlength="200">
+                            <div class="clear"></div>
+                        </div>
+                        <div class="field-row">
+                            <label for="email">Mobile Number</label> <input type="text" class="txtbox widebox digits required" value="0825559999" name="mobile" maxlength="200">
+                            <div class="clear"></div>
+                        </div>
+                        <div class="field-row">
+                            <label for="email">Date of Birth</label> <input type="text" class="txtbox widebox dateISO" id="dob" value="1997-07-16" name="email" maxlength="200">
+                            <div class="clear"></div>
+                        </div>
+                        <div class="field-row">
+                            <label for="groups">Group Memberships</label> <select multiple="multiple" class="mult-select">
+                                <option value="Tomato Farmers" selected>
+                                    Tomato Farmers
+                                </option>
+                                <option value="Cocoa Farmers">
+                                    Cocoa Farmers
+                                </option>
+                                <option value="Kenaf Farmers">
+                                    Kenaf Farmers
+                                </option>
+                                <option value="Cane Farmers">
+                                    Cane Farmers
+                                </option>
+                                <option value="Tobacco Farmers">
+                                    Tobacco Farmers
+                                </option>
+                                <option value="Market Agents">
+                                    Market Agents
+                                </option>
+                            </select>
+                            <div class="clear"></div>
+                        </div>
+                        <div class="field-row">
+                            <label for="twitter">Twitter Handle</label> <input type="text" class="txtbox widebox" value="" name="twitter" maxlength="200">
+                            <div class="clear"></div>
+                        </div>
+                        <div class="field-row">
+                            <label for="fb">Facebook ID</label> <input type="text" class="txtbox widebox" value="" name="fb" maxlength="200">
+                            <div class="clear"></div>
+                        </div>
+                        <div class="field-row">
+                            <label for="bbm">BBM Pin</label> <input type="text" class="txtbox widebox" value="" name="bbm" maxlength="200">
+                            <div class="clear"></div>
+                        </div>
+                        <div class="field-row">
+                            <label for="gtalk">GTalk ID</label> <input type="text" class="txtbox widebox" value="" name="gtalk" maxlength="200">
+                            <div class="clear"></div>
+                        </div>
+                        <div class="field-row">
+                            <label class="wide">Opt-Ins:</label> <input type="checkbox" name="opt-mobile" class="chkbox" checked="checked"> Mobile <input type="checkbox" name="opt-email" class="chkbox" checked="checked"> Email <input type="checkbox" name="opt-bbm" class="chkbox" checked="checked"> BBM <input type="checkbox" name="opt-gtalk" class="chkbox" checked="checked"> GTalk
+                            <div class="clear"></div>
+                        </div>
+                        <div class="field-row">
+                            <input type="submit" name="submit" class="btn" value="Save">
+                            <div class="clear"></div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% include "footer.html" %}
+        </div>
+    </div>
+    
+{% endblock %}

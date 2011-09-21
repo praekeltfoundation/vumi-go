@@ -4,3 +4,4 @@ def user_profile(request):
     return {
         'user_profile': request.user.get_profile()
     }
+

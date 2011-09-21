@@ -9,6 +9,7 @@ class ContactGroup(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    
     def add_contacts(self, contacts):
         for contact in contacts:
             self.contact_set.add(contact)
@@ -26,7 +27,13 @@ class Contact(models.Model):
     user = models.ForeignKey('auth.User')
     name = models.CharField(blank=True, max_length=255)
     surname = models.CharField(blank=True, max_length=255)
-    msisdn = models.CharField(blank=False, max_length=255)
+    email_address = models.EmailField(blank=True)
+    msisdn = models.CharField(blank=True, max_length=255)
+    dob = models.DateField(blank=True, null=True)
+    twitter_handle = models.CharField(blank=True, max_length=100)
+    facebook_id = models.CharField(blank=True, max_length=100)
+    bbm_pin = models.CharField(blank=True, max_length=100)
+    gtalk_id = models.CharField(blank=True, max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     groups = models.ManyToManyField('contacts.ContactGroup')
