@@ -25,7 +25,7 @@ def groups(request):
                 'group_pk': group.pk}))
     else:
         new_contact_group_form = forms.NewContactGroupForm()
-    
+
     groups = request.user.contactgroup_set.all()
     paginator = Paginator(groups, 5)
     page = paginator.page(request.GET.get('p', 1))
@@ -34,6 +34,7 @@ def groups(request):
         'page': page,
         'new_contact_group_form': new_contact_group_form,
     })
+
 
 @login_required
 def group(request, group_pk):
@@ -54,12 +55,14 @@ def group(request, group_pk):
         'query': query,
     })
 
+
 @login_required
 def people(request):
     contacts = request.user.contact_set.all()
     return render(request, 'people.html', {
         'contacts': contacts
     })
+
 
 @login_required
 def person(request, person_pk):
@@ -72,7 +75,7 @@ def person(request, person_pk):
             return redirect(reverse('contacts:person', kwargs={
                 'person_pk': contact.pk}))
         else:
-            messages.add_message(request, messages.ERROR, 
+            messages.add_message(request, messages.ERROR,
                 'Please correct the problem below.')
     else:
         form = forms.ContactForm(instance=contact)
@@ -81,10 +84,11 @@ def person(request, person_pk):
         'form': form,
     })
 
+
 @login_required
 def new_person(request):
     if request.POST:
-        form = forms.ContactForm(request.POST, 
+        form = forms.ContactForm(request.POST,
             instance=Contact(user=request.user))
         if form.is_valid():
             contact = form.save()
@@ -92,7 +96,7 @@ def new_person(request):
             return redirect(reverse('contacts:person', kwargs={
                 'person_pk': contact.pk}))
         else:
-            messages.add_message(request, messages.ERROR, 
+            messages.add_message(request, messages.ERROR,
                 'Please correct the problem below.')
     else:
         form = forms.ContactForm()

@@ -1,8 +1,10 @@
 from django import forms
 from go.contacts import models
 
+
 widebox = forms.TextInput(attrs={'class': 'txtbox widebox'})
 wideselect = forms.SelectMultiple(attrs={'class': 'mult-select'})
+
 
 class ContactForm(forms.ModelForm):
     class Meta:
@@ -31,6 +33,7 @@ class ContactForm(forms.ModelForm):
             'gtalk_id': widebox,
             'groups': wideselect,
         }
+
 
 class NewContactGroupForm(forms.ModelForm):
     class Meta:
