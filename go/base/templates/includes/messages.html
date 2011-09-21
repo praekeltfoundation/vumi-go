@@ -1,0 +1,10 @@
+{% if messages %}
+    {% for message in messages %}
+        <div class="{% spaceless %}
+            notification 
+            {% if message.tags == 'info' %}success{% endif %}
+            {% if message.tags == 'error' %}error{% endif %}
+            show
+            {% endspaceless %}">{{message}}</div>
+    {% endfor %}
+{% endif %}
