@@ -117,7 +117,7 @@ def people(request, conversation_pk):
             for group in groups:
                 conversation.groups.add(group)
             messages.add_message(request, messages.INFO, 
-                'The selected groups have been added tot the conversation')
+                'The selected groups have been added to the conversation')
             return redirect(reverse('conversations:send', kwargs={
                 'conversation_pk': conversation.pk}))
     return render(request, 'conversation/people.html', {
