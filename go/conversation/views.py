@@ -86,16 +86,15 @@ def upload(request, conversation_pk):
                     }))
                 else:
                     new_contact_group_form = NewContactGroupForm()
-            else:
-                new_contact_group_form = NewContactGroupForm()
-                select_contact_group_form = SelectContactGroupForm()
-                messages.add_message(request, messages.ERROR,
-                    'Something is wrong with the file you tried to upload.')
-
         else:
-            upload_contacts_form = UploadContactsForm()
             new_contact_group_form = NewContactGroupForm()
             select_contact_group_form = SelectContactGroupForm()
+            messages.add_message(request, messages.ERROR,
+                'Something is wrong with the file you tried to upload.')
+    else:
+        upload_contacts_form = UploadContactsForm()
+        new_contact_group_form = NewContactGroupForm()
+        select_contact_group_form = SelectContactGroupForm()
 
     return render(request, 'conversation/upload.html', {
         'conversation': conversation,
