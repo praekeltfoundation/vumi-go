@@ -17,9 +17,6 @@
     <div id="main">
         <div class="inner">
             {% include "base/includes/messages.html" %}
-            <div class="notification success show">
-                Conversation started
-            </div>
             <div id="summary" class="box">
                 <span class="timestamp">{{conversation.start_date|date:"d F Y"}} - <strong>{{conversation.groups.all|join:", "}}</strong></span>
                 <div class="message">
