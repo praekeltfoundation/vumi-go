@@ -15,15 +15,15 @@
     <div id="control-bar">
         <div id="control-elements">
             <h3>
-                <a href="{% url contacts:people %}">People</a>
+                <a href="{% url contacts:people %}">People</a> » {{contact}}
             </h3>
-            {% include "includes/contacts-menu.html" %}
+            {% include "contacts/includes/contacts-menu.html" %}
         </div>
     </div>
     <div id="main">
         <div class="inner">
-            {% include "includes/messages.html" %}
-            {% include "includes/contacts-tools.html" %}
+            {% include "base/includes/messages.html" %}
+            {% include "contacts/includes/contacts-tools.html" %}
             <div class="wide-box people-box">
                 <div id="steps" class="two-step">
                     <div id="main-left-groups" class="step">
@@ -36,10 +36,10 @@
                 <div class="inner-box">
                     <div class="person">
                         <h3 style="margin">
-                            Add New Contact
+                            {{contact}}
                         </h3>
                         <p class="byline">
-                            * = Required
+                            First Contact: {{contact.created_at|date:"d F Y"}}
                         </p>
                     </div><!-- provision for avatar, replies history and more fields  -->
                     <form name="frm-person" id="frm-person" method="post" action="">

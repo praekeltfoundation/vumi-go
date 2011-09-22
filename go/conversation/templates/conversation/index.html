@@ -20,7 +20,7 @@
             {% for object in page.object_list %}
                 {% with conversation=object %}
                 <div class="grid_4">
-                    {% include "includes/conversation-box.html" %}
+                    {% include "conversation/includes/conversation-box.html" %}
                 </div>
                 {% endwith %}
             {% empty %}
@@ -29,7 +29,7 @@
                 </div>
             {% endfor %}
         </div>
-        {% include "includes/pagination.html" %}
+        {% include "base/includes/pagination.html" %}
     </div>
     {% include "footer.html" %}
 </div>

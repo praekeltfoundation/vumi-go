@@ -30,7 +30,7 @@ def new(request):
             'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
             'start_time': datetime.utcnow().strftime('%H:%M')
         })
-    return render(request, 'new.html', {
+    return render(request, 'conversation/new.html', {
         'form': form
     })
 
@@ -83,7 +83,7 @@ def upload(request, conversation_pk):
         upload_contacts_form = UploadContactsForm()
         new_contact_group_form = NewContactGroupForm()
         select_contact_group_form = SelectContactGroupForm()
-    return render(request, 'upload.html', {
+    return render(request, 'conversation/upload.html', {
         'conversation': conversation,
         'upload_contacts_form': upload_contacts_form,
         'new_contact_group_form': new_contact_group_form,
@@ -105,7 +105,7 @@ def people(request, conversation_pk):
                 conversation.groups.add(group)
             return redirect(reverse('conversations:send', kwargs={
                 'conversation_pk': conversation.pk}))
-    return render(request, 'people.html', {
+    return render(request, 'conversation/people.html', {
         'conversation': conversation,
     })
 
@@ -124,7 +124,7 @@ def send(request, conversation_pk):
             'conversation_pk': conversation.pk}), {
             'contacts': contacts,
         })
-    return render(request, 'send.html', {
+    return render(request, 'conversation/send.html', {
         'conversation': conversation
     })
 
@@ -136,7 +136,7 @@ def start(request, conversation_pk):
     if request.method == 'POST':
         return redirect(reverse('conversations:show', kwargs={
             'conversation_pk': conversation.pk}))
-    return render(request, 'start.html', {
+    return render(request, 'conversation/start.html', {
         'conversation': conversation
     })
 
@@ -145,7 +145,7 @@ def start(request, conversation_pk):
 def show(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
         user=request.user)
-    return render(request, 'show.html', {
+    return render(request, 'conversation/show.html', {
         'conversation': conversation
     })
 
@@ -160,7 +160,7 @@ def index(request):
         conversations = padded_queryset(conversations, CONVERSATIONS_PER_PAGE)
     paginator = Paginator(conversations, CONVERSATIONS_PER_PAGE)
     page = paginator.page(request.GET.get('p', 1))
-    return render(request, 'index.html', {
+    return render(request, 'conversation/index.html', {
         'conversations': conversations,
         'paginator': paginator,
         'page': page,
