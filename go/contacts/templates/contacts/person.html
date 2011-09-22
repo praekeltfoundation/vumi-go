@@ -17,13 +17,13 @@
             <h3>
                 <a href="{% url contacts:people %}">People</a> » {{contact}}
             </h3>
-            {% include "contacts/includes/contacts-menu.html" %}
+            {% include "contacts/includes/menu.html" %}
         </div>
     </div>
     <div id="main">
         <div class="inner">
             {% include "base/includes/messages.html" %}
-            {% include "contacts/includes/contacts-tools.html" %}
+            {% include "contacts/includes/tools.html" %}
             <div class="wide-box people-box">
                 <div id="steps" class="two-step">
                     <div id="main-left-groups" class="step">
