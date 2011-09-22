@@ -28,6 +28,7 @@ def new(request):
                 'Conversation Created')
             return redirect(reverse('conversations:people',
                 kwargs={'conversation_pk': conversation.pk}))
+
     else:
         form = ConversationForm(initial={
             'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
@@ -61,11 +62,13 @@ def upload(request, conversation_pk):
                     group.add_contacts(contacts)
                     conversation.groups.add(group)
                     messages.add_message(request, messages.INFO,
-                        'Contacts uploadedto the group and linked '
+                        'Contacts uploaded to the group and linked '
                         'to the conversation')
                     return redirect(reverse('conversations:send', kwargs={
                         'conversation_pk': conversation.pk
                     }))
+                else:
+                    select_contact_group_form = SelectContactGroupForm()
 
             if request.POST.get('contact_group'):
                 select_contact_group_form = SelectContactGroupForm(
@@ -81,10 +84,18 @@ def upload(request, conversation_pk):
                     return redirect(reverse('conversations:send', kwargs={
                         'conversation_pk': conversation.pk
                     }))
+                else:
+                    new_contact_group_form = NewContactGroupForm()
+            else:
+                new_contact_group_form = NewContactGroupForm()
+                select_contact_group_form = SelectContactGroupForm()
+                messages.add_message(request, messages.ERROR,
+                    'Something is wrong with the file you tried to upload.')
 
         else:
-            messages.add_message(request, messages.ERROR,
-                'Something is wrong with the file you tried to upload.')
+            upload_contacts_form = UploadContactsForm()
+            new_contact_group_form = NewContactGroupForm()
+            select_contact_group_form = SelectContactGroupForm()
 
     return render(request, 'conversation/upload.html', {
         'conversation': conversation,
