@@ -3,6 +3,7 @@
 {% block main %}
 <div id="main" class="main-alt">
     <div class="inner">
+        {% include "base/includes/messages.html" %}
         {% if user.conversation_set.exists %}
             <h2>Hi {{user_profile}}, here are some of your newest conversations.</h2>
             {# TODO add user counter / user activity metrics #}
