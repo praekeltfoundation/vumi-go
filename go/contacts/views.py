@@ -89,9 +89,23 @@ def people(request):
             messages.add_message(request, messages.ERROR,
                 'Something went wrong with the upload.')
 
+
+    query = request.GET.get('q', None)
     contacts = request.user.contact_set.all()
+    if query:
+        selected_contacts = contacts.filter(
+            Q(surname__icontains=query) | Q(name__icontains=query))
+        selected_letter = None
+    else:
+        selected_letter = request.GET.get('l', 'a').lower()
+        selected_contacts = contacts.filter(
+            surname__istartswith=selected_letter)
+        
     return render(request, 'contacts/people.html', {
         'contacts': contacts,
+        'selected_contacts': selected_contacts,
+        'selected_letter': selected_letter,
+        'query': query,
     })
 
 
