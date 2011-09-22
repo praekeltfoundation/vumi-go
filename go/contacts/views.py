@@ -29,7 +29,7 @@ def groups(request):
     groups = request.user.contactgroup_set.all()
     paginator = Paginator(groups, 5)
     page = paginator.page(request.GET.get('p', 1))
-    return render(request, 'groups.html', {
+    return render(request, 'contacts/groups.html', {
         'paginator': paginator,
         'page': page,
         'new_contact_group_form': new_contact_group_form,
@@ -48,7 +48,7 @@ def group(request, group_pk):
         selected_letter = request.GET.get('l', 'a').lower()
         selected_contacts = group.contact_set.filter(
             surname__istartswith=selected_letter)
-    return render(request, 'group.html', {
+    return render(request, 'contacts/group.html', {
         'group': group,
         'selected_letter': selected_letter,
         'selected_contacts': selected_contacts,
@@ -59,7 +59,7 @@ def group(request, group_pk):
 @login_required
 def people(request):
     contacts = request.user.contact_set.all()
-    return render(request, 'people.html', {
+    return render(request, 'contacts/people.html', {
         'contacts': contacts
     })
 
@@ -79,7 +79,7 @@ def person(request, person_pk):
                 'Please correct the problem below.')
     else:
         form = forms.ContactForm(instance=contact)
-    return render(request, 'person.html', {
+    return render(request, 'contacts/person.html', {
         'contact': contact,
         'form': form,
     })
@@ -100,6 +100,6 @@ def new_person(request):
                 'Please correct the problem below.')
     else:
         form = forms.ContactForm()
-    return render(request, 'new_person.html', {
+    return render(request, 'contacts/new_person.html', {
         'form': form,
     })
