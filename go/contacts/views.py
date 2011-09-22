@@ -58,9 +58,42 @@ def group(request, group_pk):
 
 @login_required
 def people(request):
+    if request.POST:
+        # first parse the CSV file and create Contact instances
+        # from them for attaching to a group later
+        upload_contacts_form = forms.UploadContactsForm(request.POST,
+            request.FILES)
+        if upload_contacts_form.is_valid():
+            contacts = Contact.create_from_csv_file(request.user,
+                request.FILES['file'])
+            if request.POST.get('name'):
+                new_contact_group_form = forms.NewContactGroupForm(request.POST)
+                if new_contact_group_form.is_valid():
+                    group = new_contact_group_form.save(commit=False)
+                    group.user = request.user
+                    group.save()
+                    group.add_contacts(contacts)
+                    return redirect(reverse('contacts:group', kwargs={
+                        'group_pk': group.pk
+                    }))
+    
+            if request.POST.get('contact_group'):
+                select_contact_group_form = forms.SelectContactGroupForm(
+                    request.POST)
+                if select_contact_group_form.is_valid():
+                    cleaned_data = select_contact_group_form.cleaned_data
+                    group = cleaned_data['contact_group']
+                    group.add_contacts(contacts)
+                    return redirect(reverse('contacts:group', kwargs={
+                        'group_pk': group.pk
+                    }))
+        else:
+            messages.add_message(request, messages.ERROR,
+                'Something went wrong with the upload.')
+
     contacts = request.user.contact_set.all()
     return render(request, 'contacts/people.html', {
-        'contacts': contacts
+        'contacts': contacts,
     })
 
 

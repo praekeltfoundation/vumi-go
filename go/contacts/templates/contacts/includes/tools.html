@@ -42,41 +42,36 @@
                 <img src="{{STATIC_URL}}pics/google_docs_icon.gif">
             </p>
             <div class="upload-button">
-                <a href="#" id="google-docs-method" name="google-docs-method">Select</a>
+                Coming Soon!
+                {# TODO: google doc import <a href="#" id="google-docs-method" name="google-docs-method">Select</a> #}
             </div>
         </div>
     </div>
     <div id="upload-form-box">
-        <form name="frm-upload-contacts" id="frm-upload-contacts" method="post" action="new-contacts-preview.html">
+        <form name="frm-upload-contacts" enctype="multipart/form-data" id="frm-upload-contacts" method="post" action="{% url contacts:people %}">
+            {% csrf_token %}
             <div class="field-row">
-                <label for="name">Upload your spreadsheet</label> <input type="file" class="txtbox required" name="name" maxlength="200">
+                {{upload_contacts_form.errors}}
+                <label for="name">Upload your spreadsheet</label>
+                {{upload_contacts_form.file}}
                 <div class="clear"></div>
             </div>
             <div class="field-row">
-                <label for="addtogroup">Choose which group you want to add new contacts to:</label> <select name="addtogroup">
-                    <option value="">
-                        Please select:
-                    </option>
-                    <option value="Tomato Farmers">
-                        Tomato Farmers
-                    </option>
-                    <option value="Cocoa Farmers">
-                        Cocoa Farmers
-                    </option>
-                    <option value="Kenaf Farmers">
-                        Kenaf Farmers
-                    </option>
-                    <option value="Cane Farmers">
-                        Cane Farmers
-                    </option>
-                    <option value="Tobacco Farmers">
-                        Tobacco Farmers
-                    </option>
-                    <option value="Market Agents">
-                        Market Agents
-                    </option>
-                </select>
-                <div class="clear" style="height: 10px"></div><label for="newgroup">...Or add to a new group</label> <input type="text" class="txtbox" name="newgroup" maxlength="200">
+                {% if user.contactgroup_set.exists %}
+                    {{select_contact_group_form.errors}}
+                    <label for="existinggroup" class="wide">Choose which group you want to add new contacts to:</label>
+                    {{select_contact_group_form.contact_group}}
+                {% endif %}
+                <div class="clear" style="height: 10px"></div>
+                {{new_contact_group_form.errors}}
+                <label for="newgroup">
+                    {% if user.contactgroup_set.exists %}
+                        ...Or add to a new group
+                    {% else %}
+                        Save as group
+                    {% endif %}
+                </label> 
+                {{new_contact_group_form.name}}
                 <div class="clear"></div>
             </div>
             <div class="field-row">
@@ -85,14 +80,15 @@
             </div>
         </form>
     </div>
-    <div id="google-docs-box">
-        <form name="frm-google-auth" id="frm-google-auth" method="post" action="choose-google-spreadsheet.html">
-            First, connect to your Google account:
-            <div class="field-row">
-                <input type="submit" name="submit" class="btn" value="Authorise"><input type="reset" name="submit" class="btn-grey" value="Cancel" id="cancel-upload-contacts">
-                <div class="clear"></div>
-            </div>
-        </form>
-    </div>
+    {# TODO: google import  #}
+    {# <div id="google-docs-box"> #}
+    {#     <form name="frm-google-auth" id="frm-google-auth" method="post" action="choose-google-spreadsheet.html"> #}
+    {#         First, connect to your Google account: #}
+    {#         <div class="field-row"> #}
+    {#             <input type="submit" name="submit" class="btn" value="Authorise"><input type="reset" name="submit" class="btn-grey" value="Cancel" id="cancel-upload-contacts"> #}
+    {#             <div class="clear"></div> #}
+    {#         </div> #}
+    {#     </form> #}
+    {# </div> #}
 </div>
 <div class="clear"></div>

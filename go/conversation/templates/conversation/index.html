@@ -13,6 +13,7 @@
 </div>
 <div id="main">
     <div class="inner">
+        {% include "base/includes/messages.html" %}
         <form id="search-filter" name="search-filter" action="" method="get">
             <input type="image" src="{{STATIC_URL}}pics/header/search-btn.png" id="search-filter-btn"><input type="text" id="search-filter-input" class="txt" name="q" value="{{query|default:"Find a conversation..."}}">
         </form>
