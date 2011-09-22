@@ -24,6 +24,8 @@ def groups(request):
             messages.add_message(request, messages.INFO, 'New group created')
             return redirect(reverse('contacts:group', kwargs={
                 'group_pk': group.pk}))
+    else:
+        new_contact_group_form = forms.NewContactGroupForm()
 
     groups = request.user.contactgroup_set.all()
     paginator = Paginator(groups, 5)
@@ -31,6 +33,7 @@ def groups(request):
     return render(request, 'contacts/groups.html', {
         'paginator': paginator,
         'page': page,
+        'new_contact_group_form': new_contact_group_form,
     })
 
 
