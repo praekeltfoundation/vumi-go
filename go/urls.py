@@ -1,7 +1,11 @@
 from django.conf.urls.defaults import patterns, include, url
 from django.contrib import admin
+from django.http import HttpResponse
 
 admin.autodiscover()
+
+def health(request):
+    return HttpResponse('')
 
 urlpatterns = patterns('',
     # django admin site
@@ -21,6 +25,10 @@ urlpatterns = patterns('',
     url(r'^$', 'go.base.views.home', name='home'),
     url(r'^conversations/', include('go.conversation.urls',
         namespace='conversations')),
-    url(r'^contacts/', include('go.contacts.urls', namespace='contacts'))
+    url(r'^contacts/', include('go.contacts.urls', namespace='contacts')),
+)
 
+# HAProxy health check
+urlpatterns += patterns('',
+    url(r'^health/$', health, name='health'),
 )
