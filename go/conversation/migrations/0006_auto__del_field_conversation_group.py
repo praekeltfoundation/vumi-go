@@ -6,6 +6,12 @@ from django.db import models
 
 class Migration(SchemaMigration):
 
+    # this migration needs to be run before base 0004.
+
+    needed_by = (
+        ("base", "0004_auto__del_contactgroup__del_contact"),
+        )
+
     def forwards(self, orm):
         
         # Deleting field 'Conversation.group'

@@ -6,6 +6,12 @@ from django.db import models
 
 class Migration(SchemaMigration):
 
+    # This migration needs to be run after base 0002.
+
+    depends_on = (
+        ("base", "0002_auto__add_contact"),
+        )
+
     def forwards(self, orm):
         
         # Adding field 'Conversation.group'
