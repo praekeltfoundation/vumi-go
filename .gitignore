@@ -7,4 +7,5 @@
 /pyflakes.log
 /pep8.log
 /htmlcov/
+/_trial_temp/
 requirements.pip.md5
