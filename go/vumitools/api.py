@@ -5,8 +5,6 @@
 
 from uuid import uuid4
 
-from celery import task
-
 
 class VumiApi(object):
 
@@ -74,21 +72,30 @@ class MessageStore(object):
 
 class MessageSender(object):
     def __init__(self, config):
+        from go.vumitools import api_celery
         self.config = config
-        self.publisher_config = {
-            'exchange': 'vumi',
-            'exchange_type': 'direct',
-            'routing_key': 'vumi.api',
-            }
+        self.sender_api = api_celery
+        self.publisher_config = VumiApiCommand.default_routing_config()
 
     def batch_send(self, batch_id, msg, addresses):
-        batch_send_task.delay(batch_id, msg, addresses, self.publisher_config)
+        self.sender_api.batch_send_task.delay(batch_id, msg, addresses,
+                                              self.publisher_config)
 
 
 class VumiApiCommand(object):
 
+    _DEFAULT_ROUTING_CONFIG = {
+        'exchange': 'vumi',
+        'exchange_type': 'direct',
+        'routing_key': 'vumi.api',
+        }
+
     def __init__(self, payload):
         self.payload = payload
+
+    @classmethod
+    def default_routing_config(cls):
+        return cls._DEFAULT_ROUTING_CONFIG.copy()
 
     @classmethod
     def send(cls, batch_id, msg, address):
@@ -98,13 +105,3 @@ class VumiApiCommand(object):
             'content': msg,
             'to_addr': address,
             })
-
-
-@task
-def batch_send_task(batch_id, msg, addresses, publisher_config):
-    logger = batch_send_task.get_logger()
-    with batch_send_task.get_publisher(**publisher_config) as publisher:
-        for address in addresses:
-            msg = VumiApiCommand.send(batch_id, msg, address)
-            publisher.publish(msg.payload)
-    logger.info("Sent %d messages to vumi api worker." % len(addresses))
