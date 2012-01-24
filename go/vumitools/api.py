@@ -5,6 +5,8 @@
 
 from uuid import uuid4
 
+from vumi.message import Message
+
 
 class VumiApi(object):
 
@@ -82,7 +84,7 @@ class MessageSender(object):
                                               self.publisher_config)
 
 
-class VumiApiCommand(object):
+class VumiApiCommand(Message):
 
     _DEFAULT_ROUTING_CONFIG = {
         'exchange': 'vumi',
@@ -90,16 +92,13 @@ class VumiApiCommand(object):
         'routing_key': 'vumi.api',
         }
 
-    def __init__(self, payload):
-        self.payload = payload
-
     @classmethod
     def default_routing_config(cls):
         return cls._DEFAULT_ROUTING_CONFIG.copy()
 
     @classmethod
     def send(cls, batch_id, msg, address):
-        return cls({
+        return cls(**{
             'command': 'send',
             'batch_id': batch_id,
             'content': msg,
