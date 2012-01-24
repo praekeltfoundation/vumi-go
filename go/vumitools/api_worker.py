@@ -6,6 +6,7 @@
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.application import ApplicationWorker
+from vumi import log
 
 from go.vumitools.api import VumiApiCommand
 
@@ -44,8 +45,21 @@ class VumiApiWorker(ApplicationWorker):
             yield self.api_consumer.stop()
             self.api_consumer = None
 
+    def process_unknown_cmd(self, cmd):
+        log.error("Unknown vumi API command: %r" % (cmd,))
+
+    def process_cmd_send(self, cmd):
+        batch_id = cmd['batch_id']
+        content = cmd['content']
+        to_addr = cmd['to_addr']
+        # TODO add message to batch_id
+        self.send_to(to_addr, content)
+
     def consume_api_command(self, cmd):
-        pass
+        cmd_method_name = 'process_cmd_%s' % (cmd.get('command'),)
+        cmd_method = getattr(self, cmd_method_name,
+                             self.process_unknown_cmd)
+        return cmd_method(cmd)
 
     def consume_ack(self, event):
         pass
