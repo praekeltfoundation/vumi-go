@@ -60,6 +60,35 @@ class VumiApi(object):
 
 
 class MessageStore(object):
+    """Vumi Go message store.
+
+    HBase-like data schema:
+
+      # [row_id] -> [family] -> [columns]
+
+      batches:
+        batch_id -> messages -> column names are message ids
+
+      messages:
+        message_id -> body -> column names are message fields,
+                              values are JSON encoded
+                   -> events -> column names are event ids
+                   -> batches -> column names are batch ids
+
+      events:
+        event_id -> body -> column names are message fields,
+                            values are JSON encoded
+
+
+    Possible future schema tweaks for later:
+
+    * third_party_ids table that maps third party message ids
+      to vumi message ids (third_pary:third_party_id -> data
+      -> message_id)
+    * Consider making message_id "batch_id:current_message_id"
+      (this makes retrieving batches of messages fast, it
+       might be better to have "timestamp:current_message_id").
+    """
 
     def __init__(self, config):
         import redis
@@ -67,21 +96,10 @@ class MessageStore(object):
         self.r_config = config.get('redis', {})
         self.r_server = redis.Redis(**self.r_config)
 
-    def _event_column(self, event_name):
-        return 'no_%s' % (event_name,)
-
-    def _inc_event_column(self, status, event_name):
-        column_name = self._event_column(event_name)
-        count = int(status[column_name])
-        status[column_name] = str(count + 1)
-
     def batch_start(self):
         batch_id = uuid4()
-        events = TransportEvent.EVENT_TYPES + ['message', 'sent']
-        initial_status = dict((self._event_column(event), '0')
-                              for event in events)
+        self._init_status(batch_id)
         self._put_row('batches', batch_id, 'messages', {})
-        self._put_row('batches', batch_id, 'status', initial_status)
         return batch_id
 
     def add_message(self, batch_id, msg):
@@ -93,10 +111,8 @@ class MessageStore(object):
         self._put_row('messages', msg_id, 'batches', {batch_id: '1'})
         self._put_row('batches', batch_id, 'messages', {msg_id: '1'})
 
-        batch_status = self._get_row('batches', batch_id, 'status')
-        self._inc_event_column(batch_status, 'message')
-        self._inc_event_column(batch_status, 'sent')
-        self._put_row('batches', batch_id, 'status', batch_status)
+        self._inc_status(batch_id, 'message')
+        self._inc_status(batch_id, 'sent')
 
     def add_event(self, event):
         event_id = event['event_id']
@@ -107,28 +123,29 @@ class MessageStore(object):
 
         event_type = event['event_type']
         for batch_id in self._get_row('messages', msg_id, 'batches'):
-            batch_status = self._get_row('batches', batch_id, 'status')
-            self._inc_event_column(batch_status, event_type)
-            self._put_row('batches', batch_id, 'status')
+            self._inc_status(batch_id, event_type)
 
     def batch_status(self, batch_id):
         return self._get_row('batches', batch_id, 'status')
 
-    # [row_id] -> [family] -> [columns]
-    #
-    # batches:
-    # batch_id -> messages -> column names are message ids
-    #          -> status -> no_messages, no_sent, no_acks, no_delivered
+    # batch status is stored in Redis as a cache of batch progress
 
-    # messages:
-    # message_id -> body -> column names are message fields,
-    #                       values are JSON encoded
-    #            -> events -> column names are event ids
-    #            -> batches -> column names are batch ids
+    def _batch_key(self, batch_id):
+        return ":".join(self.r_prefix, "batches", "status", batch_id)
 
-    # events:
-    # event_id -> body -> column names are message fields,
-    #                     values are JSON encoded
+    def _init_status(self, batch_id):
+        batch_key = self._batch_key(batch_id)
+        events = TransportEvent.EVENT_TYPES + ['message', 'sent']
+        initial_status = dict((event, '0') for event in events)
+        self.r_server.hmset(batch_key, initial_status)
+
+    def _inc_status(self, batch_id, event):
+        batch_key = self._batch_key(batch_id)
+        self.r_server.hincrby(batch_id, event, 1)
+
+    def _get_status(self, batch_id):
+        batch_key = self._batch_key(batch_id)
+        return self.r_server.hgetall(batch_key)
 
     # interface to redis -- intentionally made to look
     # like a limited subset of HBase.
