@@ -5,6 +5,7 @@
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.application.tests.test_base import ApplicationTestCase
+from vumi.tests.utils import FakeRedis
 
 from go.vumitools.api_worker import VumiApiWorker
 from go.vumitools.api import VumiApiCommand
@@ -18,6 +19,11 @@ class TestVumiApiWorker(ApplicationTestCase):
     def setUp(self):
         super(TestVumiApiWorker, self).setUp()
         self.api = yield self.get_application({})
+        self.api.store.r_server = FakeRedis()
+
+    def tearDown(self):
+        self.api.store.r_server.teardown()
+        super(TestVumiApiWorker, self).tearDown()
 
     def publish_command(self, cmd):
         return self.dispatch(cmd, rkey='vumi.api')
@@ -29,3 +35,12 @@ class TestVumiApiWorker(ApplicationTestCase):
         [msg] = yield self.get_dispatched_messages()
         self.assertEqual(msg['to_addr'], 'to_addr')
         self.assertEqual(msg['content'], 'content')
+
+    def test_consume_ack(self):
+        pass
+
+    def test_consume_delivery_report(self):
+        pass
+
+    def test_consume_user_message(self):
+        pass

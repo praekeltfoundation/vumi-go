@@ -8,7 +8,7 @@ from twisted.internet.defer import inlineCallbacks
 from vumi.application import ApplicationWorker
 from vumi import log
 
-from go.vumitools.api import VumiApiCommand
+from go.vumitools.api import VumiApiCommand, MessageStore
 
 
 class VumiApiWorker(ApplicationWorker):
@@ -25,12 +25,14 @@ class VumiApiWorker(ApplicationWorker):
     SEND_TO_TAGS = frozenset(['default'])
 
     def validate_config(self):
+        self.message_store_config = self.config.get('message_store', {})
         self.api_routing_config = VumiApiCommand.default_routing_config()
         self.api_routing_config.update(self.config.get('api_routing', {}))
         self.api_consumer = None
 
     @inlineCallbacks
     def setup_application(self):
+        self.store = MessageStore(self.message_store_config)
         self.api_consumer = yield self.consume(
             self.api_routing_config['routing_key'],
             self.consume_api_command,
@@ -50,8 +52,8 @@ class VumiApiWorker(ApplicationWorker):
         batch_id = cmd['batch_id']
         content = cmd['content']
         to_addr = cmd['to_addr']
-        # TODO add message to batch_id
-        self.send_to(to_addr, content)
+        msg = self.send_to(to_addr, content)
+        self.store.add_message(batch_id, msg)
 
     def consume_api_command(self, cmd):
         cmd_method_name = 'process_cmd_%s' % (cmd.get('command'),)
