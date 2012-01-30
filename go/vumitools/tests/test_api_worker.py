@@ -17,7 +17,14 @@ class TestVumiApiWorker(ApplicationTestCase):
     @inlineCallbacks
     def setUp(self):
         super(TestVumiApiWorker, self).setUp()
-        self.api = yield self.get_application({})
+        config = {
+            'send_to': {
+                'default': {
+                    'transport_name': 'test_transport',
+                    },
+                },
+            }
+        self.api = yield self.get_application(config)
 
     def publish_command(self, cmd):
         return self.dispatch(cmd, rkey='vumi.api')

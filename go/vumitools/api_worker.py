@@ -22,9 +22,7 @@ class VumiApiWorker(ApplicationWorker):
         Dictionary describing where to consume API commands.
     """
 
-    # TODO: Vumi application worker will need to grow
-    #       support for sending messages that are not
-    #       replies
+    SEND_TO_TAGS = frozenset(['default'])
 
     def validate_config(self):
         self.api_routing_config = VumiApiCommand.default_routing_config()
