@@ -6,7 +6,7 @@
 from uuid import uuid4
 import json
 
-from vumi.message import Message, TransportEvent
+from vumi.message import Message, TransportEvent, from_json, to_json
 
 
 class VumiApi(object):
@@ -104,7 +104,8 @@ class MessageStore(object):
 
     def add_message(self, batch_id, msg):
         msg_id = msg['message_id']
-        body_data = dict((k, json.encode(v)) for k, v in msg.payload.items())
+        body_data = dict((k.encode('utf-8'), to_json(v)) for k, v
+                         in msg.payload.items())
         self._put_row('messages', msg_id, 'body', body_data)
         self._put_row('messages', msg_id, 'events', {})
 
@@ -116,7 +117,8 @@ class MessageStore(object):
 
     def add_event(self, event):
         event_id = event['event_id']
-        body_data = dict((k, json.encode(v)) for k, v in event.payload.items())
+        body_data = dict((k.encode('utf-8'), to_json(v)) for k, v
+                         in event.payload.items())
         self._put_row('events', event_id, 'body', body_data)
         msg_id = event['user_message_id']
         self._put_row('messages', msg_id, 'events', {event_id, '1'})
@@ -126,12 +128,12 @@ class MessageStore(object):
             self._inc_status(batch_id, event_type)
 
     def batch_status(self, batch_id):
-        return self._get_row('batches', batch_id, 'status')
+        return self._get_status(batch_id)
 
     # batch status is stored in Redis as a cache of batch progress
 
     def _batch_key(self, batch_id):
-        return ":".join(self.r_prefix, "batches", "status", batch_id)
+        return ":".join([self.r_prefix, "batches", "status", batch_id])
 
     def _init_status(self, batch_id):
         batch_key = self._batch_key(batch_id)
@@ -158,11 +160,12 @@ class MessageStore(object):
     def _put_row(self, table, row_id, family, data):
         """Update a set of column values in storage."""
         r_key = self._row_key(table, row_id, family)
-        self.r_server.hmset(r_key, data)
+        if data:
+            self.r_server.hmset(r_key, data)
 
     def _row_key(self, table, row_id, family):
         """Internal method for use by _get_row and _put_row."""
-        return ":".join(self.r_prefix, table, family, row_id)
+        return ":".join([self.r_prefix, table, family, row_id])
 
 
 class MessageSender(object):
