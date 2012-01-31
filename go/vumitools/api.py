@@ -103,7 +103,7 @@ class MessageStore(object):
         self.r_server = redis.Redis(**self.r_config)
 
     def batch_start(self):
-        batch_id = uuid4()
+        batch_id = uuid4().get_hex()
         self._init_status(batch_id)
         self._put_row('batches', batch_id, 'messages', {})
         return batch_id
@@ -177,7 +177,7 @@ class MessageStore(object):
 
     def _init_status(self, batch_id):
         batch_key = self._batch_key(batch_id)
-        events = TransportEvent.EVENT_TYPES + ['message', 'sent']
+        events = TransportEvent.EVENT_TYPES.keys() + ['message', 'sent']
         initial_status = dict((event, '0') for event in events)
         self.r_server.hmset(batch_key, initial_status)
 
