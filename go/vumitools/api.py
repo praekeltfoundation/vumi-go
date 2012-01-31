@@ -108,11 +108,23 @@ class MessageStore(object):
         self._put_row('batches', batch_id, 'messages', {})
         return batch_id
 
+    def _msg_to_body_data(self, msg):
+        return dict((k.encode('utf-8'), to_json(v)) for k, v
+                     in msg.payload.items())
+
+    def _msg_from_body_data(self, cls, body_data):
+        body = dict((k.decode('utf-8'), from_json(v))
+                    for k, v in body_data.items())
+        # TODO: this is a hack needed because from_json(to_json(x)) != x
+        #       if x is a datetime. Remove this once from_json and to_json
+        #       are fixed.
+        body['timestamp'] = datetime.strptime(body['timestamp'],
+                                              VUMI_DATE_FORMAT)
+        return cls(**body)
+
     def add_message(self, batch_id, msg):
         msg_id = msg['message_id']
-        body_data = dict((k.encode('utf-8'), to_json(v)) for k, v
-                         in msg.payload.items())
-        self._put_row('messages', msg_id, 'body', body_data)
+        self._put_row('messages', msg_id, 'body', self._msg_to_body_data(msg))
         self._put_row('messages', msg_id, 'events', {})
 
         self._put_row('messages', msg_id, 'batches', {batch_id: '1'})
@@ -123,20 +135,12 @@ class MessageStore(object):
 
     def get_message(self, msg_id):
         body_data = self._get_row('messages', msg_id, 'body')
-        body = dict((k.decode('utf-8'), from_json(v))
-                    for k, v in body_data.items())
-        # TODO: this is a hack needed because from_json(to_json(x)) != x
-        #       if x is a datetime. Remove this once from_json and to_json
-        #       are fixed.
-        body['timestamp'] = datetime.strptime(body['timestamp'],
-                                              VUMI_DATE_FORMAT)
-        return TransportUserMessage(**body)
+        return self._msg_from_body_data(TransportUserMessage, body_data)
 
     def add_event(self, event):
         event_id = event['event_id']
-        body_data = dict((k.encode('utf-8'), to_json(v)) for k, v
-                         in event.payload.items())
-        self._put_row('events', event_id, 'body', body_data)
+        self._put_row('events', event_id, 'body',
+                      self._msg_to_body_data(event))
         msg_id = event['user_message_id']
         self._put_row('messages', msg_id, 'events', {event_id: '1'})
 
@@ -146,20 +150,12 @@ class MessageStore(object):
 
     def get_event(self, event_id):
         body_data = self._get_row('events', event_id, 'body')
-        body = dict((k.decode('utf-8'), from_json(v))
-                    for k, v in body_data.items())
-        # TODO: this is a hack needed because from_json(to_json(x)) != x
-        #       if x is a datetime. Remove this once from_json and to_json
-        #       are fixed.
-        body['timestamp'] = datetime.strptime(body['timestamp'],
-                                              VUMI_DATE_FORMAT)
-        return TransportEvent(**body)
+        return self._msg_from_body_data(TransportEvent, body_data)
 
     def add_inbound_message(self, msg):
         msg_id = msg['message_id']
-        body_data = dict((k.encode('utf-8'), to_json(v)) for k, v
-                         in msg.payload.items())
-        self._put_row('inbound_messages', msg_id, 'body', body_data)
+        self._put_row('inbound_messages', msg_id, 'body',
+                      self._msg_to_body_data(msg))
 
     def batch_status(self, batch_id):
         return self._get_status(batch_id)
