@@ -30,7 +30,10 @@ class TestVumiApiWorker(ApplicationTestCase):
         return self.dispatch(cmd, rkey='vumi.api')
 
     def publish_event(self, **kw):
-        return self.dispatch(TransportEvent(**kw), rkey=self.rkey('event'))
+        event = TransportEvent(**kw)
+        d = self.dispatch(event, rkey=self.rkey('event'))
+        d.addCallback(lambda _result: event)
+        return d
 
     @inlineCallbacks
     def test_double_teardown(self):
@@ -70,14 +73,19 @@ class TestVumiApiWorker(ApplicationTestCase):
 
     @inlineCallbacks
     def test_consume_ack(self):
-        yield self.publish_event(user_message_id='123', event_type='ack',
-                                 sent_message_id='xyz')
+        ack_event = yield self.publish_event(user_message_id='123',
+                                             event_type='ack',
+                                             sent_message_id='xyz')
+        [event_id] = self.api.store.message_events('123')
+        self.assertEqual(self.api.store.get_event(event_id), ack_event)
 
     @inlineCallbacks
     def test_consume_delivery_report(self):
-        yield self.publish_event(user_message_id='123',
-                                 event_type='delivery_report',
-                                 delivery_status='delivered')
+        dr_event = yield self.publish_event(user_message_id='123',
+                                            event_type='delivery_report',
+                                            delivery_status='delivered')
+        [event_id] = self.api.store.message_events('123')
+        self.assertEqual(self.api.store.get_event(event_id), dr_event)
 
     @inlineCallbacks
     def test_consume_user_message(self):

@@ -144,6 +144,17 @@ class MessageStore(object):
         for batch_id in self._get_row('messages', msg_id, 'batches'):
             self._inc_status(batch_id, event_type)
 
+    def get_event(self, event_id):
+        body_data = self._get_row('events', event_id, 'body')
+        body = dict((k.decode('utf-8'), from_json(v))
+                    for k, v in body_data.items())
+        # TODO: this is a hack needed because from_json(to_json(x)) != x
+        #       if x is a datetime. Remove this once from_json and to_json
+        #       are fixed.
+        body['timestamp'] = datetime.strptime(body['timestamp'],
+                                              VUMI_DATE_FORMAT)
+        return TransportEvent(**body)
+
     def add_inbound_message(self, msg):
         msg_id = msg['message_id']
         body_data = dict((k.encode('utf-8'), to_json(v)) for k, v
@@ -155,6 +166,9 @@ class MessageStore(object):
 
     def batch_messages(self, batch_id):
         return self._get_row('batches', batch_id, 'messages').keys()
+
+    def message_events(self, msg_id):
+        return self._get_row('messages', msg_id, 'events').keys()
 
     # batch status is stored in Redis as a cache of batch progress
 
