@@ -33,6 +33,11 @@ class TestVumiApiWorker(ApplicationTestCase):
         return self.dispatch(TransportEvent(**kw), rkey=self.rkey('event'))
 
     @inlineCallbacks
+    def test_double_teardown(self):
+        yield self.api.teardown_application()
+        yield self.api.teardown_application()
+
+    @inlineCallbacks
     def test_send(self):
         yield self.publish_command(VumiApiCommand.send('batch1', 'content',
                                                        'to_addr'))
