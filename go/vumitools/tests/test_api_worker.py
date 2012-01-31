@@ -4,6 +4,7 @@
 
 from twisted.internet.defer import inlineCallbacks
 
+from vumi.message import TransportEvent
 from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import FakeRedis
 
@@ -28,6 +29,9 @@ class TestVumiApiWorker(ApplicationTestCase):
     def publish_command(self, cmd):
         return self.dispatch(cmd, rkey='vumi.api')
 
+    def publish_event(self, **kw):
+        return self.dispatch(TransportEvent(**kw), rkey=self.rkey('event'))
+
     @inlineCallbacks
     def test_send(self):
         yield self.publish_command(VumiApiCommand.send('batch1', 'content',
@@ -36,11 +40,16 @@ class TestVumiApiWorker(ApplicationTestCase):
         self.assertEqual(msg['to_addr'], 'to_addr')
         self.assertEqual(msg['content'], 'content')
 
+    @inlineCallbacks
     def test_consume_ack(self):
-        pass
+        yield self.publish_event(user_message_id='123', event_type='ack',
+                                 sent_message_id='xyz')
 
+    @inlineCallbacks
     def test_consume_delivery_report(self):
-        pass
+        yield self.publish_event(user_message_id='123',
+                                 event_type='delivery_report',
+                                 delivery_status='delivered')
 
     def test_consume_user_message(self):
         pass

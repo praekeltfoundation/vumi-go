@@ -62,10 +62,10 @@ class VumiApiWorker(ApplicationWorker):
         return cmd_method(cmd)
 
     def consume_ack(self, event):
-        pass
+        self.store.add_event(event)
 
     def consume_delivery_report(self, event):
-        pass
+        self.store.add_event(event)
 
     def consume_user_message(self, msg):
         pass
