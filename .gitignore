@@ -2,6 +2,7 @@
 /ve/
 /*.egg-info/
 /.coverage
+/coverage-html/
 /coverage.xml
 /nosetests.xml
 /pyflakes.log
