@@ -6,7 +6,7 @@ from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportEvent, TransportUserMessage
 from vumi.application.tests.test_base import ApplicationTestCase
-from vumi.tests.utils import FakeRedis
+from vumi.tests.utils import FakeRedis, LogCatcher
 
 from go.vumitools.api_worker import VumiApiWorker
 from go.vumitools.api import VumiApiCommand
@@ -46,6 +46,22 @@ class TestVumiApiWorker(ApplicationTestCase):
             })
         [msg_id] = self.api.store.batch_messages('batch1')
         self.assertEqual(self.api.store.get_message(msg_id), msg)
+
+    @inlineCallbacks
+    def test_unknown_command(self):
+        with LogCatcher() as logs:
+            yield self.publish_command(VumiApiCommand(command='???'))
+            [error] = logs.errors
+            self.assertTrue(error['message'][0].startswith(
+                "'Unknown vumi API command:"))
+
+    @inlineCallbacks
+    def test_badly_constructed_command(self):
+        with LogCatcher() as logs:
+            yield self.publish_command(VumiApiCommand())
+            [error] = logs.errors
+            self.assertTrue(error['message'][0].startswith(
+                "'Unknown vumi API command:"))
 
     @inlineCallbacks
     def test_consume_ack(self):
