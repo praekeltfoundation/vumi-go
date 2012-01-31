@@ -4,7 +4,7 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.message import TransportEvent
+from vumi.message import TransportEvent, TransportUserMessage
 from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import FakeRedis
 
@@ -51,5 +51,12 @@ class TestVumiApiWorker(ApplicationTestCase):
                                  event_type='delivery_report',
                                  delivery_status='delivered')
 
+    @inlineCallbacks
     def test_consume_user_message(self):
-        pass
+        msg = self.mkmsg_in()
+        yield self.dispatch(msg)
+
+    @inlineCallbacks
+    def test_close_session(self):
+        msg = self.mkmsg_in(session_event=TransportUserMessage.SESSION_CLOSE)
+        yield self.dispatch(msg)

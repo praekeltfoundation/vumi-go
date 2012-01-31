@@ -68,7 +68,7 @@ class VumiApiWorker(ApplicationWorker):
         self.store.add_event(event)
 
     def consume_user_message(self, msg):
-        pass
+        self.store.add_inbound_message(msg)
 
     def close_session(self, msg):
-        pass
+        self.store.add_inbound_message(msg)
