@@ -8,12 +8,26 @@ from vumi.message import TransportEvent
 from vumi.tests.utils import FakeRedis
 from vumi.application.tests.test_base import ApplicationTestCase
 
-from go.vumitools.api import MessageStore, VumiApiCommand
+from go.vumitools.api import VumiApi, MessageStore, VumiApiCommand
 
 
 class TestVumiApi(TestCase):
-    # TODO: write tests
-    pass
+    def setUp(self):
+        self.api = VumiApi({
+            'message_store': {},
+            'message_sender': {},
+            })
+        self.api.mdb.r_server = FakeRedis()
+
+    def test_batch_start(self):
+        batch_id = self.api.batch_start()
+        self.assertEqual(len(batch_id), 32)
+
+    def test_batch_status(self):
+        batch_id = self.api.mdb.batch_start()
+        self.assertEqual(self.api.batch_status(batch_id), {
+            'ack': 0, 'delivery_report': 0, 'message': 0, 'sent': 0,
+            })
 
 
 class TestMessageStore(ApplicationTestCase):
