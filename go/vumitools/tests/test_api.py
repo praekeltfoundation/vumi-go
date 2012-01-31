@@ -8,7 +8,7 @@ from vumi.message import TransportEvent
 from vumi.tests.utils import FakeRedis
 from vumi.application.tests.test_base import ApplicationTestCase
 
-from go.vumitools.api import MessageStore
+from go.vumitools.api import MessageStore, VumiApiCommand
 
 
 class TestVumiApi(TestCase):
@@ -74,5 +74,14 @@ class TestMessageSender(TestCase):
 
 
 class TestVumiApiCommand(TestCase):
-    # TODO: write tests
-    pass
+    def test_default_routing_config(self):
+        cfg = VumiApiCommand.default_routing_config()
+        self.assertEqual(set(cfg.keys()),
+                         set(['exchange', 'exchange_type', 'routing_key']))
+
+    def test_send(self):
+        cmd = VumiApiCommand.send('b123', 'content', '+4567')
+        self.assertEqual(cmd['command'], 'send')
+        self.assertEqual(cmd['batch_id'], 'b123')
+        self.assertEqual(cmd['content'], 'content')
+        self.assertEqual(cmd['to_addr'], '+4567')
