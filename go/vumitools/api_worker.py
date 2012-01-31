@@ -40,6 +40,7 @@ class VumiApiWorker(ApplicationWorker):
             exchange_type=self.api_routing_config['exchange_type'],
             message_class=VumiApiCommand)
 
+    @inlineCallbacks
     def teardown_application(self):
         if self.api_consumer is not None:
             yield self.api_consumer.stop()
