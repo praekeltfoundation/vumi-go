@@ -91,8 +91,12 @@ class TestVumiApiWorker(ApplicationTestCase):
     def test_consume_user_message(self):
         msg = self.mkmsg_in()
         yield self.dispatch(msg)
+        self.assertEqual(self.api.store.get_inbound_message(msg['message_id']),
+                         msg)
 
     @inlineCallbacks
     def test_close_session(self):
         msg = self.mkmsg_in(session_event=TransportUserMessage.SESSION_CLOSE)
         yield self.dispatch(msg)
+        self.assertEqual(self.api.store.get_inbound_message(msg['message_id']),
+                         msg)
