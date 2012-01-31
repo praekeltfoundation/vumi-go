@@ -121,7 +121,7 @@ class MessageStore(object):
                          in event.payload.items())
         self._put_row('events', event_id, 'body', body_data)
         msg_id = event['user_message_id']
-        self._put_row('messages', msg_id, 'events', {event_id, '1'})
+        self._put_row('messages', msg_id, 'events', {event_id: '1'})
 
         event_type = event['event_type']
         for batch_id in self._get_row('messages', msg_id, 'batches'):
@@ -143,7 +143,7 @@ class MessageStore(object):
 
     def _inc_status(self, batch_id, event):
         batch_key = self._batch_key(batch_id)
-        self.r_server.hincrby(batch_id, event, 1)
+        self.r_server.hincrby(batch_key, event, 1)
 
     def _get_status(self, batch_id):
         batch_key = self._batch_key(batch_id)
