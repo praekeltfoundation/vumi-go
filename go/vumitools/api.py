@@ -157,6 +157,10 @@ class MessageStore(object):
         self._put_row('inbound_messages', msg_id, 'body',
                       self._msg_to_body_data(msg))
 
+    def get_inbound_message(self, msg_id):
+        body_data = self._get_row('inbound_messages', msg_id, 'body')
+        return self._msg_from_body_data(TransportUserMessage, body_data)
+
     def batch_status(self, batch_id):
         return self._get_status(batch_id)
 
