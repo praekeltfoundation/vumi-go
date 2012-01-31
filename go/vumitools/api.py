@@ -56,9 +56,11 @@ class VumiApi(object):
         :param batch_id:
             batch to check the status of
         :rtype:
-            TODO: define return
+            dictionary of counts of messages in batch,
+            messages sent, messages acked and messages
+            with delivery reports.
         """
-        return self.mdb.batch_status()
+        return self.mdb.batch_status(batch_id)
 
 
 class MessageStore(object):
