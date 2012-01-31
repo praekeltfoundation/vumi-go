@@ -3,7 +3,7 @@
 
 """Celery tasks for sending commands to a Vumi API Worker."""
 
-from celery import task
+from celery.task import task
 
 from go.vumitools.api import VumiApiCommand
 
