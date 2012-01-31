@@ -167,6 +167,9 @@ class MessageStore(object):
     def batch_messages(self, batch_id):
         return self._get_row('batches', batch_id, 'messages').keys()
 
+    def message_batches(self, msg_id):
+        return self._get_row('messages', msg_id, 'batches').keys()
+
     def message_events(self, msg_id):
         return self._get_row('messages', msg_id, 'events').keys()
 

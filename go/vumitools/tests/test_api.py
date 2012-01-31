@@ -35,9 +35,12 @@ class TestMessageStore(ApplicationTestCase):
     def test_add_message(self):
         batch_id = self.store.batch_start()
         msg = self.mkmsg_out(content="outfoo")
+        msg_id = msg['message_id']
         self.store.add_message(batch_id, msg)
 
-        self.assertEqual(self.store.get_message(msg['message_id']), msg)
+        self.assertEqual(self.store.get_message(msg_id), msg)
+        self.assertEqual(self.store.message_batches(msg_id), [batch_id])
+        self.assertEqual(self.store.message_events(msg_id), [])
         self.assertEqual(self.store.batch_status(batch_id), {
             'ack': 0, 'delivery_report': 0, 'message': 1, 'sent': 1,
             })
