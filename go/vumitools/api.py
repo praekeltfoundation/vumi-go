@@ -75,6 +75,10 @@ class MessageStore(object):
                    -> events -> column names are event ids
                    -> batches -> column names are batch ids
 
+      inbound_messages:
+        message_id -> body -> column names are message fields,
+                              values are JSON encoded
+
       events:
         event_id -> body -> column names are message fields,
                             values are JSON encoded
@@ -126,6 +130,12 @@ class MessageStore(object):
         event_type = event['event_type']
         for batch_id in self._get_row('messages', msg_id, 'batches'):
             self._inc_status(batch_id, event_type)
+
+    def add_inbound_message(self, msg):
+        msg_id = msg['message_id']
+        body_data = dict((k.encode('utf-8'), to_json(v)) for k, v
+                         in msg.payload.items())
+        self._put_row('inbound_messages', msg_id, 'body', body_data)
 
     def batch_status(self, batch_id):
         return self._get_status(batch_id)
