@@ -40,6 +40,13 @@ class TestVumiApiWorker(ApplicationTestCase):
         self.assertEqual(msg['to_addr'], 'to_addr')
         self.assertEqual(msg['content'], 'content')
 
+        self.assertEqual(self.api.store.batch_status('batch1'), {
+            'message': 1,
+            'sent': 1,
+            })
+        [msg_id] = self.api.store.batch_messages('batch1')
+        self.assertEqual(self.api.store.get_message(msg_id), msg)
+
     @inlineCallbacks
     def test_consume_ack(self):
         yield self.publish_event(user_message_id='123', event_type='ack',

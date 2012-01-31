@@ -4,9 +4,11 @@
 """Vumi API for high-volume messaging."""
 
 from uuid import uuid4
-import json
+from datetime import datetime
 
-from vumi.message import Message, TransportEvent, from_json, to_json
+from vumi.message import (Message, TransportEvent,
+                          TransportUserMessage, from_json, to_json,
+                          VUMI_DATE_FORMAT)
 
 
 class VumiApi(object):
@@ -119,6 +121,17 @@ class MessageStore(object):
         self._inc_status(batch_id, 'message')
         self._inc_status(batch_id, 'sent')
 
+    def get_message(self, msg_id):
+        body_data = self._get_row('messages', msg_id, 'body')
+        body = dict((k.decode('utf-8'), from_json(v))
+                    for k, v in body_data.items())
+        # TODO: this is a hack needed because from_json(to_json(x)) != x
+        #       if x is a datetime. Remove this once from_json and to_json
+        #       are fixed.
+        body['timestamp'] = datetime.strptime(body['timestamp'],
+                                              VUMI_DATE_FORMAT)
+        return TransportUserMessage(**body)
+
     def add_event(self, event):
         event_id = event['event_id']
         body_data = dict((k.encode('utf-8'), to_json(v)) for k, v
@@ -140,6 +153,9 @@ class MessageStore(object):
     def batch_status(self, batch_id):
         return self._get_status(batch_id)
 
+    def batch_messages(self, batch_id):
+        return self._get_row('batches', batch_id, 'messages').keys()
+
     # batch status is stored in Redis as a cache of batch progress
 
     def _batch_key(self, batch_id):
@@ -157,7 +173,9 @@ class MessageStore(object):
 
     def _get_status(self, batch_id):
         batch_key = self._batch_key(batch_id)
-        return self.r_server.hgetall(batch_key)
+        raw_statuses = self.r_server.hgetall(batch_key)
+        statuses = dict((k, int(v)) for k, v in raw_statuses.items())
+        return statuses
 
     # interface to redis -- intentionally made to look
     # like a limited subset of HBase.
