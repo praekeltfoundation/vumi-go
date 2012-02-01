@@ -21,7 +21,6 @@ class TestVumiApi(TestCase, CeleryTestMixIn):
             'message_sender': {},
             })
         self.api.mdb.r_server = FakeRedis()
-        self.exchange_config = VumiApiCommand.default_routing_config()
 
     def tearDown(self):
         self.restore_celery()
@@ -37,7 +36,7 @@ class TestVumiApi(TestCase, CeleryTestMixIn):
             })
 
     def test_batch_send(self):
-        consumer = self.get_consumer(**self.exchange_config)
+        consumer = self.get_cmd_consumer()
         self.api.batch_send("b123", "Hello!", ["+12", "+34", "+56"])
         [cmd1, cmd2, cmd3] = self.fetch_cmds(consumer)
         self.assertEqual(cmd1,
@@ -104,13 +103,12 @@ class TestMessageSender(TestCase, CeleryTestMixIn):
     def setUp(self):
         self.setup_celery_for_tests()
         self.mapi = MessageSender({})
-        self.exchange_config = VumiApiCommand.default_routing_config()
 
     def tearDown(self):
         self.restore_celery()
 
     def test_batch_send(self):
-        consumer = self.get_consumer(**self.exchange_config)
+        consumer = self.get_cmd_consumer()
         self.mapi.batch_send("b123", "Hello!", ["+12", "+34"])
         [cmd1, cmd2] = self.fetch_cmds(consumer)
         self.assertEqual(cmd1,

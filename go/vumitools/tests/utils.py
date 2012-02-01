@@ -34,6 +34,9 @@ class CeleryTestMixIn(object):
                                                **options)
         return consumer
 
+    def get_cmd_consumer(self):
+        return self.get_consumer(**VumiApiCommand.default_routing_config())
+
     def fetch_cmds(self, consumer):
         msgs = []
         while True:
