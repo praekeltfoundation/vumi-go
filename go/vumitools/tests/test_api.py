@@ -9,15 +9,20 @@ from vumi.tests.utils import FakeRedis
 from vumi.application.tests.test_base import ApplicationTestCase
 
 from go.vumitools.api import VumiApi, MessageStore, VumiApiCommand
+from go.vumitools.tests.utils import setup_celery_for_tests, restore_celery
 
 
 class TestVumiApi(TestCase):
     def setUp(self):
+        self._celery_setup = setup_celery_for_tests()
         self.api = VumiApi({
             'message_store': {},
             'message_sender': {},
             })
         self.api.mdb.r_server = FakeRedis()
+
+    def tearDown(self):
+        restore_celery(*self._celery_setup)
 
     def test_batch_start(self):
         batch_id = self.api.batch_start()
