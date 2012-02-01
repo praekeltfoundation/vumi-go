@@ -8,7 +8,8 @@ from vumi.message import TransportEvent
 from vumi.tests.utils import FakeRedis
 from vumi.application.tests.test_base import ApplicationTestCase
 
-from go.vumitools.api import VumiApi, MessageStore, VumiApiCommand
+from go.vumitools.api import (VumiApi, MessageStore, MessageSender,
+                              VumiApiCommand)
 from go.vumitools.tests.utils import CeleryTestMixIn
 
 
@@ -99,9 +100,23 @@ class TestMessageStore(ApplicationTestCase):
         self.assertEqual(self.store.get_inbound_message(msg_id), msg)
 
 
-class TestMessageSender(TestCase):
-    # TODO: write tests
-    pass
+class TestMessageSender(TestCase, CeleryTestMixIn):
+    def setUp(self):
+        self.setup_celery_for_tests()
+        self.mapi = MessageSender({})
+        self.exchange_config = VumiApiCommand.default_routing_config()
+
+    def tearDown(self):
+        self.restore_celery()
+
+    def test_batch_send(self):
+        consumer = self.get_consumer(**self.exchange_config)
+        self.mapi.batch_send("b123", "Hello!", ["+12", "+34"])
+        [cmd1, cmd2] = self.fetch_cmds(consumer)
+        self.assertEqual(cmd1,
+                         VumiApiCommand.send("b123", "Hello!", "+12"))
+        self.assertEqual(cmd2,
+                         VumiApiCommand.send("b123", "Hello!", "+34"))
 
 
 class TestVumiApiCommand(TestCase):
