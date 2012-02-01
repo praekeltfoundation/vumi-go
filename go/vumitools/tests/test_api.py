@@ -9,20 +9,21 @@ from vumi.tests.utils import FakeRedis
 from vumi.application.tests.test_base import ApplicationTestCase
 
 from go.vumitools.api import VumiApi, MessageStore, VumiApiCommand
-from go.vumitools.tests.utils import setup_celery_for_tests, restore_celery
+from go.vumitools.tests.utils import CeleryTestMixIn
 
 
-class TestVumiApi(TestCase):
+class TestVumiApi(TestCase, CeleryTestMixIn):
     def setUp(self):
-        self._celery_setup = setup_celery_for_tests()
+        self.setup_celery_for_tests()
         self.api = VumiApi({
             'message_store': {},
             'message_sender': {},
             })
         self.api.mdb.r_server = FakeRedis()
+        self.exchange_config = VumiApiCommand.default_routing_config()
 
     def tearDown(self):
-        restore_celery(*self._celery_setup)
+        self.restore_celery()
 
     def test_batch_start(self):
         batch_id = self.api.batch_start()
@@ -33,6 +34,17 @@ class TestVumiApi(TestCase):
         self.assertEqual(self.api.batch_status(batch_id), {
             'ack': 0, 'delivery_report': 0, 'message': 0, 'sent': 0,
             })
+
+    def test_batch_send(self):
+        consumer = self.get_consumer(**self.exchange_config)
+        self.api.batch_send("b123", "Hello!", ["+12", "+34", "+56"])
+        [cmd1, cmd2, cmd3] = self.fetch_cmds(consumer)
+        self.assertEqual(cmd1,
+                         VumiApiCommand.send("b123", "Hello!", "+12"))
+        self.assertEqual(cmd2,
+                         VumiApiCommand.send("b123", "Hello!", "+34"))
+        self.assertEqual(cmd3,
+                         VumiApiCommand.send("b123", "Hello!", "+56"))
 
 
 class TestMessageStore(ApplicationTestCase):

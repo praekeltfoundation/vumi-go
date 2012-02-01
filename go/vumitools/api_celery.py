@@ -8,10 +8,16 @@ from celery.task import task
 from go.vumitools.api import VumiApiCommand
 
 
+def get_publisher(app, **options):
+    connection = app.broker_connection()
+    publisher = app.amqp.TaskPublisher(connection=connection, **options)
+    return publisher
+
+
 @task
 def batch_send_task(batch_id, msg, addresses, publisher_config):
     logger = batch_send_task.get_logger()
-    with batch_send_task.get_publisher(**publisher_config) as publisher:
+    with get_publisher(batch_send_task.app, **publisher_config) as publisher:
         for address in addresses:
             cmd = VumiApiCommand.send(batch_id, msg, address)
             publisher.publish(cmd.payload)
