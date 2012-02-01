@@ -3,12 +3,13 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator
 from django.contrib import messages
-from go.conversation.models import Conversation
+from go.conversation.models import Conversation, MessageBatch
 from go.conversation.forms import ConversationForm
 from go.contacts.forms import (NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
 from go.contacts.models import Contact, ContactGroup
 from go.base.utils import padded_queryset
+from go.vumitools.api import VumiApi
 from datetime import datetime
 import logging
 
@@ -127,6 +128,7 @@ def people(request, conversation_pk):
 
 @login_required
 def send(request, conversation_pk):
+    vumiapi = VumiApi({'message_store': {}, 'message_sender': {}})
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
         user=request.user)
     if request.POST:
@@ -134,7 +136,14 @@ def send(request, conversation_pk):
         contacts = Contact.objects.filter(pk__in=contact_ids)
         for contact in contacts:
             conversation.previewcontacts.add(contact)
-        logging.warning('implement sending preview to contacts %s' % contacts)
+
+        # send previews to contacts
+        batch_id = vumiapi.batch_start()
+        batch = MessageBatch(conversation=conversation, batch_id=batch_id)
+        batch.save()
+        addrs = [contact.msisdn for contact in contacts]
+        vumiapi.batch_send(batch_id, conversation.message, addrs)
+
         messages.add_message(request, messages.INFO, 'Previews sent')
         return redirect(reverse('conversations:start', kwargs={
             'conversation_pk': conversation.pk}), {
