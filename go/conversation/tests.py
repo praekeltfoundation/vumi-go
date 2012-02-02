@@ -6,6 +6,7 @@ from django.conf import settings
 from go.conversation.models import Conversation
 from go.contacts.models import ContactGroup, Contact
 from go.base.utils import padded_queryset
+from go.vumitools.tests.utils import CeleryTestMixIn, VumiApiCommand
 from datetime import datetime
 from os import path
 
@@ -52,11 +53,12 @@ class ConversationTestCase(TestCase):
         self.assertEqual(Conversation.objects.count(), 2)
 
 
-class ContactGroupForm(TestCase):
+class ContactGroupForm(TestCase, CeleryTestMixIn):
 
     fixtures = ['test_user', 'test_conversation', 'test_group', 'test_contact']
 
     def setUp(self):
+        self.setup_celery_for_tests()
         self.user = User.objects.get(username='username')
         self.conversation = self.user.conversation_set.latest()
         self.client = Client()
@@ -65,7 +67,7 @@ class ContactGroupForm(TestCase):
             'fixtures', 'sample-contacts.csv'))
 
     def tearDown(self):
-        pass
+        self.restore_celery()
 
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
@@ -146,6 +148,7 @@ class ContactGroupForm(TestCase):
     def test_sending_preview(self):
         """test sending of conversation to a selected set of preview
         contacts"""
+        consumer = self.get_cmd_consumer()
         response = self.client.post(reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk
         }), {
@@ -153,6 +156,12 @@ class ContactGroupForm(TestCase):
         })
         self.assertRedirects(response, reverse('conversations:start', kwargs={
             'conversation_pk': self.conversation.pk}))
+        [cmd] = self.fetch_cmds(consumer)
+        [batch] = self.conversation.messagebatch_set.all()
+        [contact] = self.conversation.previewcontacts.all()
+        self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
+                                                  "Test message",
+                                                  contact.msisdn))
 
     def test_start(self):
         """
