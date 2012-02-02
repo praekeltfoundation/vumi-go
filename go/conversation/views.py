@@ -128,10 +128,11 @@ def people(request, conversation_pk):
 
 @login_required
 def send(request, conversation_pk):
-    vumiapi = VumiApi({'message_store': {}, 'message_sender': {}})
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
         user=request.user)
     if request.POST:
+        vumiapi = VumiApi({'message_store': {}, 'message_sender': {}})
+
         contact_ids = request.POST.getlist('contact')
         contacts = Contact.objects.filter(pk__in=contact_ids)
         for contact in contacts:
