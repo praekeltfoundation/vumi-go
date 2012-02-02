@@ -6,7 +6,8 @@ from go.base.utils import padded_queryset
 
 @login_required
 def home(request):
-    latest_conversations = padded_queryset(Conversation.objects.all(), size=6)
+    conversations = request.user.conversation_set.all()
+    latest_conversations = padded_queryset(conversations, size=6)
     return render(request, 'base/home.html', {
         'latest_conversations': latest_conversations
     })
