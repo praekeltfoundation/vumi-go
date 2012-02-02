@@ -23,3 +23,14 @@ class Conversation(models.Model):
 
     def __unicode__(self):
         return self.subject
+
+
+class MessageBatch(models.Model):
+    """A set of messages that belong to a conversation.
+
+    The full data about messages is stored in the Vumi API
+    message store. This table is just a link from Vumi Go's
+    conversations to the Vumi API's batches.
+    """
+    conversation = models.ForeignKey(Conversation)
+    batch_id = models.CharField(max_length=32)  # uuid4 as hex
