@@ -2,9 +2,11 @@
 /ve/
 /*.egg-info/
 /.coverage
+/coverage-html/
 /coverage.xml
 /nosetests.xml
 /pyflakes.log
 /pep8.log
 /htmlcov/
+/_trial_temp/
 requirements.pip.md5
