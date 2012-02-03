@@ -9,7 +9,7 @@ from go.contacts.forms import (NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
 from go.contacts.models import Contact, ContactGroup
 from go.base.utils import padded_queryset
-from go.vumitools.api import VumiApi
+from go.vumitools import VumiApi
 from datetime import datetime
 import logging
 
