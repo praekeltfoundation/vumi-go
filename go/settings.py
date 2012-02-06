@@ -1,6 +1,8 @@
 # Django settings for go project.
 import os
+import djcelery
 
+djcelery.setup_loader()
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
@@ -133,6 +135,8 @@ INSTALLED_APPS = (
     'south',
     'gunicorn',
     'django_nose',
+    'djcelery',
+    'djcelery_email',
     'base',
     'conversation',
     'contacts',
@@ -176,3 +180,19 @@ TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 SKIP_SOUTH_TESTS = True
 SOUTH_TESTS_MIGRATE = False
 AUTH_PROFILE_MODULE = 'base.UserProfile'
+
+# celery / RabbitMQ configuration
+
+BROKER_HOST = "localhost"
+BROKER_PORT = 5672
+BROKER_USER = "vumi"
+BROKER_PASSWORD = "vumi"
+BROKER_VHOST = "/develop"
+
+# If we're running in DEBUG mode then skip RabbitMQ and execute tasks
+# immediate instead of deferring them to the queue / workers.
+CELERY_ALWAYS_EAGER = DEBUG
+CELERY_IMPORTS = ("go.vumitools.api_celery",)
+CELERY_RESULT_BACKEND = "amqp"
+EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
+SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
