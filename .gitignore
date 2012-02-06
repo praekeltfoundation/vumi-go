@@ -9,4 +9,6 @@
 /pep8.log
 /htmlcov/
 /_trial_temp/
+/logs/*
+/tmp/*
 requirements.pip.md5
