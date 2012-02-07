@@ -11,7 +11,6 @@ from go.contacts.models import Contact, ContactGroup
 from go.base.utils import padded_queryset
 from go.vumitools import VumiApi
 from datetime import datetime
-import logging
 
 
 CONVERSATIONS_PER_PAGE = 6
@@ -33,10 +32,10 @@ def new(request):
     else:
         form = ConversationForm(initial={
             'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
-            'start_time': datetime.utcnow().strftime('%H:%M')
+            'start_time': datetime.utcnow().strftime('%H:%M'),
         })
     return render(request, 'conversation/new.html', {
-        'form': form
+        'form': form,
     })
 
 
@@ -66,7 +65,7 @@ def upload(request, conversation_pk):
                         'Contacts uploaded to the group and linked '
                         'to the conversation')
                     return redirect(reverse('conversations:send', kwargs={
-                        'conversation_pk': conversation.pk
+                        'conversation_pk': conversation.pk,
                     }))
                 else:
                     select_contact_group_form = SelectContactGroupForm()
@@ -83,7 +82,7 @@ def upload(request, conversation_pk):
                         'Contacts uploaded to the group and linked '
                         'to the conversation')
                     return redirect(reverse('conversations:send', kwargs={
-                        'conversation_pk': conversation.pk
+                        'conversation_pk': conversation.pk,
                     }))
                 else:
                     new_contact_group_form = NewContactGroupForm()
@@ -117,7 +116,7 @@ def people(request, conversation_pk):
             # link to the conversation
             for group in groups:
                 conversation.groups.add(group)
-            messages.add_message(request, messages.INFO, 
+            messages.add_message(request, messages.INFO,
                 'The selected groups have been added to the conversation')
             return redirect(reverse('conversations:send', kwargs={
                 'conversation_pk': conversation.pk}))
@@ -152,7 +151,7 @@ def send(request, conversation_pk):
             'contacts': contacts,
         })
     return render(request, 'conversation/send.html', {
-        'conversation': conversation
+        'conversation': conversation,
     })
 
 
@@ -165,7 +164,7 @@ def start(request, conversation_pk):
         return redirect(reverse('conversations:show', kwargs={
             'conversation_pk': conversation.pk}))
     return render(request, 'conversation/start.html', {
-        'conversation': conversation
+        'conversation': conversation,
     })
 
 
@@ -174,7 +173,7 @@ def show(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
         user=request.user)
     return render(request, 'conversation/show.html', {
-        'conversation': conversation
+        'conversation': conversation,
     })
 
 
@@ -192,5 +191,5 @@ def index(request):
         'conversations': conversations,
         'paginator': paginator,
         'page': page,
-        'query': query
+        'query': query,
     })

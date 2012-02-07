@@ -23,12 +23,12 @@ class ContactsTestCase(TestCase):
 
     def test_groups_creation(self):
         response = self.client.post(reverse('contacts:groups'), {
-            'name': 'a new group'
+            'name': 'a new group',
         })
         group = ContactGroup.objects.latest()
         self.assertEqual(group.name, 'a new group')
         self.assertRedirects(response, reverse('contacts:group', kwargs={
-            'group_pk': group.pk
+            'group_pk': group.pk,
         }))
 
     def test_group_contact_querying(self):
@@ -41,13 +41,13 @@ class ContactsTestCase(TestCase):
 
         # test no-match
         response = self.client.get(group_url, {
-            'q': contact.name + 'not matching'
+            'q': contact.name + 'not matching',
         })
         self.assertContains(response, 'No contact match')
 
         # test match
         response = self.client.get(group_url, {
-            'q': contact.name
+            'q': contact.name,
         })
         self.assertContains(response, contact_url)
 
@@ -59,7 +59,7 @@ class ContactsTestCase(TestCase):
         contact_url = reverse('contacts:person', kwargs={
             'person_pk': contact.pk})
 
-        # assert the fixture doesn't load a contact with a surname starting 
+        # assert the fixture doesn't load a contact with a surname starting
         # with a z
         contact_first_letter = contact.surname[0]
         self.assertNotEqual(contact_first_letter, 'z')
@@ -73,17 +73,17 @@ class ContactsTestCase(TestCase):
         group = ContactGroup.objects.latest()
         response = self.client.post(reverse('contacts:new_person'), {
             'msisdn': '27761234567',
-            'groups': [group.pk]
+            'groups': [group.pk],
         })
         contact = Contact.objects.latest()
         self.assertRedirects(response, reverse('contacts:person', kwargs={
-            'person_pk': contact.pk
+            'person_pk': contact.pk,
         }))
 
     def test_contact_update(self):
         contact = Contact.objects.latest()
         contact_url = reverse('contacts:person', kwargs={
-            'person_pk': contact.pk
+            'person_pk': contact.pk,
         })
         response = self.client.post(contact_url, {
             'name': 'changed name',
@@ -108,21 +108,21 @@ class ContactsTestCase(TestCase):
         group = ContactGroup.objects.latest()
         group_url = reverse('contacts:group', kwargs={'group_pk': group.pk})
         self.assertRedirects(response, group_url)
-        self.assertEqual(group.contact_set.count(), 3) # nr of contacts in CSV
+        self.assertEqual(group.contact_set.count(), 3)  # nr of contacts in CSV
 
     def test_contact_upload_into_existing_group(self):
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
             'fixtures', 'sample-contacts.csv'))
         group = ContactGroup.objects.latest()
         group_url = reverse('contacts:group', kwargs={'group_pk': group.pk})
-        
+
         response = self.client.post(reverse('contacts:people'), {
             'contact_group': group.pk,
             'file': csv_file,
         })
         self.assertRedirects(response, group_url)
-        self.assertEqual(group.contact_set.count(), 3) # nr of contacts in CSV
-    
+        self.assertEqual(group.contact_set.count(), 3)  # nr of contacts in CSV
+
     def test_contact_upload_failure(self):
         response = self.client.post(reverse('contacts:people'), {
             'name': 'a new group',
@@ -131,15 +131,15 @@ class ContactsTestCase(TestCase):
         self.assertContains(response, 'Something went wrong with the upload')
         self.assertFalse(ContactGroup.objects.filter(name='a new group')\
             .exists())
-    
+
     def test_contact_letter_filter(self):
         contact = Contact.objects.latest()
         contact_url = reverse('contacts:person', kwargs={
-            'person_pk': contact.pk
+            'person_pk': contact.pk,
         })
         people_url = reverse('contacts:people')
 
-        # assert the fixture doesn't load a contact with a surname starting 
+        # assert the fixture doesn't load a contact with a surname starting
         # with a z
         contact_first_letter = contact.surname[0]
         self.assertNotEqual(contact_first_letter, 'z')
@@ -157,13 +157,12 @@ class ContactsTestCase(TestCase):
 
         # test no-match
         response = self.client.get(people_url, {
-            'q': contact.name + 'not matching'
+            'q': contact.name + 'not matching',
         })
         self.assertContains(response, 'No contact match')
 
         # test match
         response = self.client.get(people_url, {
-            'q': contact.name
+            'q': contact.name,
         })
         self.assertContains(response, contact_url)
-        
