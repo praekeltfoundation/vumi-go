@@ -143,7 +143,8 @@ def send(request, conversation_pk):
         batch = MessageBatch(conversation=conversation, batch_id=batch_id)
         batch.save()
         addrs = [contact.msisdn for contact in contacts]
-        vumiapi.batch_send(batch_id, conversation.message, addrs)
+        msg_options = {}
+        vumiapi.batch_send(batch_id, conversation.message, msg_options, addrs)
 
         messages.add_message(request, messages.INFO, 'Previews sent')
         return redirect(reverse('conversations:start', kwargs={

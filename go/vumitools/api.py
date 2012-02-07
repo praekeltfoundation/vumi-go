@@ -27,7 +27,7 @@ class VumiApi(object):
         """
         return self.mdb.batch_start()
 
-    def batch_send(self, batch_id, msg, addresses):
+    def batch_send(self, batch_id, msg, msg_options, addresses):
         """Send a batch of text message to a list of addresses.
 
         Use multiple calls to :meth:`batch_send` if you have *lots* of
@@ -41,13 +41,17 @@ class VumiApi(object):
         :type msg: unicode
         :param msg:
             text to send
+        :type msg_options: dict
+        :param msg_options:
+            additional paramters for the outgoing Vumi message, usually
+            something like {'from_addr': '+1234'} or {}.
         :type addresses:
         :param msg:
             list of addresses to send messages to
         :rtype:
             None.
         """
-        return self.mapi.batch_send(batch_id, msg, addresses)
+        return self.mapi.batch_send(batch_id, msg, msg_options, addresses)
 
     def batch_status(self, batch_id):
         """Check the status of a batch of messages.
@@ -222,8 +226,9 @@ class MessageSender(object):
         self.sender_api = api_celery
         self.publisher_config = VumiApiCommand.default_routing_config()
 
-    def batch_send(self, batch_id, msg, addresses):
-        self.sender_api.batch_send_task.delay(batch_id, msg, addresses,
+    def batch_send(self, batch_id, msg, msg_options, addresses):
+        self.sender_api.batch_send_task.delay(batch_id, msg,
+                                              msg_options, addresses,
                                               self.publisher_config)
 
 
@@ -240,10 +245,11 @@ class VumiApiCommand(Message):
         return cls._DEFAULT_ROUTING_CONFIG.copy()
 
     @classmethod
-    def send(cls, batch_id, msg, address):
+    def send(cls, batch_id, msg, msg_options, address):
         return cls(**{
             'command': 'send',
             'batch_id': batch_id,
+            'msg_options': msg_options,
             'content': msg,
             'to_addr': address,
             })

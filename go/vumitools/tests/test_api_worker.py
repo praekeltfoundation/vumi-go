@@ -42,7 +42,9 @@ class TestVumiApiWorker(ApplicationTestCase):
 
     @inlineCallbacks
     def test_send(self):
-        yield self.publish_command(VumiApiCommand.send('batch1', 'content',
+        yield self.publish_command(VumiApiCommand.send('batch1',
+                                                       'content',
+                                                       {"from_addr": "from"},
                                                        'to_addr'))
         [msg] = yield self.get_dispatched_messages()
         self.assertEqual(msg['to_addr'], 'to_addr')

@@ -15,11 +15,11 @@ def get_publisher(app, **options):
 
 
 @task
-def batch_send_task(batch_id, msg, addresses, publisher_config):
+def batch_send_task(batch_id, msg, msg_options, addresses, publisher_config):
     logger = batch_send_task.get_logger()
     with get_publisher(batch_send_task.app, serializer="json",
                        **publisher_config) as publisher:
         for address in addresses:
-            cmd = VumiApiCommand.send(batch_id, msg, address)
+            cmd = VumiApiCommand.send(batch_id, msg, msg_options, address)
             publisher.publish(cmd.payload)
     logger.info("Sent %d messages to vumi api worker." % len(addresses))

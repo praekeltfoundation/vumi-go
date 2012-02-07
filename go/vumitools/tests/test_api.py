@@ -37,14 +37,15 @@ class TestVumiApi(TestCase, CeleryTestMixIn):
 
     def test_batch_send(self):
         consumer = self.get_cmd_consumer()
-        self.api.batch_send("b123", "Hello!", ["+12", "+34", "+56"])
+        msg_options = {"from_addr": "+100"}
+        self.api.batch_send("b123", "Hello!", msg_options,
+                            ["+12", "+34", "+56"])
         [cmd1, cmd2, cmd3] = self.fetch_cmds(consumer)
-        self.assertEqual(cmd1,
-                         VumiApiCommand.send("b123", "Hello!", "+12"))
-        self.assertEqual(cmd2,
-                         VumiApiCommand.send("b123", "Hello!", "+34"))
-        self.assertEqual(cmd3,
-                         VumiApiCommand.send("b123", "Hello!", "+56"))
+        send_msg = lambda to_addr: VumiApiCommand.send("b123", "Hello!",
+                                                       msg_options, to_addr)
+        self.assertEqual(cmd1, send_msg("+12"))
+        self.assertEqual(cmd2, send_msg("+34"))
+        self.assertEqual(cmd3, send_msg("+56"))
 
 
 class TestMessageStore(ApplicationTestCase):
@@ -109,12 +110,13 @@ class TestMessageSender(TestCase, CeleryTestMixIn):
 
     def test_batch_send(self):
         consumer = self.get_cmd_consumer()
-        self.mapi.batch_send("b123", "Hello!", ["+12", "+34"])
+        msg_options = {"from_addr": "+56"}
+        self.mapi.batch_send("b123", "Hello!", msg_options, ["+12", "+34"])
         [cmd1, cmd2] = self.fetch_cmds(consumer)
-        self.assertEqual(cmd1,
-                         VumiApiCommand.send("b123", "Hello!", "+12"))
-        self.assertEqual(cmd2,
-                         VumiApiCommand.send("b123", "Hello!", "+34"))
+        send_msg = lambda to_addr: VumiApiCommand.send("b123", "Hello!",
+                                                       msg_options, to_addr)
+        self.assertEqual(cmd1, send_msg("+12"))
+        self.assertEqual(cmd2, send_msg("+34"))
 
 
 class TestVumiApiCommand(TestCase):
@@ -124,8 +126,10 @@ class TestVumiApiCommand(TestCase):
                          set(['exchange', 'exchange_type', 'routing_key']))
 
     def test_send(self):
-        cmd = VumiApiCommand.send('b123', 'content', '+4567')
+        cmd = VumiApiCommand.send('b123', 'content', {"from_addr": "+89"},
+                                  '+4567')
         self.assertEqual(cmd['command'], 'send')
         self.assertEqual(cmd['batch_id'], 'b123')
         self.assertEqual(cmd['content'], 'content')
+        self.assertEqual(cmd['msg_options'], {"from_addr": "+89"})
         self.assertEqual(cmd['to_addr'], '+4567')
