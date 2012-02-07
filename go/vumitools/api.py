@@ -19,13 +19,19 @@ class VumiApi(object):
         # message sending API
         self.mapi = MessageSender(config['message_sender'])
 
-    def batch_start(self):
+    def batch_start(self, tag):
         """Start a message batch.
 
+        :type tag: str
+        :param tag:
+            An identifier for linking replies to this batch. Conceptually
+            a tag corresponds to a set of from_addrs that a message goes
+            out on. The from_addrs can then be observed in incoming
+            messages and used to link replies to a specific batch.
         :rtype:
             Returns the batch_id of the new batch.
         """
-        return self.mdb.batch_start()
+        return self.mdb.batch_start(tag)
 
     def batch_send(self, batch_id, msg, msg_options, addresses):
         """Send a batch of text message to a list of addresses.
@@ -35,7 +41,7 @@ class VumiApi(object):
         call. Messages passed to multiple calls to :meth:`batch_send`
         do not have to be the same.
 
-        :type batch_id:
+        :type batch_id: str
         :param batch_id:
             batch to append the messages too
         :type msg: unicode
@@ -75,7 +81,12 @@ class MessageStore(object):
       # [row_id] -> [family] -> [columns]
 
       batches:
-        batch_id -> messages -> column names are message ids
+        batch_id -> common -> ['tag']
+                 -> messages -> column names are message ids
+                 -> replies -> column names are inbound_message ids
+
+      tags:
+        tag -> common -> ['current_batch_id']
 
       messages:
         message_id -> body -> column names are message fields,
@@ -108,10 +119,14 @@ class MessageStore(object):
         self.r_config = config.get('redis', {})
         self.r_server = redis.Redis(**self.r_config)
 
-    def batch_start(self):
+    def batch_start(self, tag):
         batch_id = uuid4().get_hex()
+        fields = {'tag': tag}
+        tag_fields = {'current_batch_id': batch_id}
         self._init_status(batch_id)
+        self._put_row('batches', batch_id, 'common', fields)
         self._put_row('batches', batch_id, 'messages', {})
+        self._put_row('tags', tag, 'common', tag_fields)
         return batch_id
 
     def _msg_to_body_data(self, msg):
@@ -127,6 +142,12 @@ class MessageStore(object):
         body['timestamp'] = datetime.strptime(body['timestamp'],
                                               VUMI_DATE_FORMAT)
         return cls(**body)
+
+    def _map_inbound_msg_to_tag(self, msg):
+        # TODO: this eventually needs to become more generic to support
+        #       additional transports
+        tag = "default%s" % (msg['from_addr'][-5:],)
+        return tag
 
     def add_message(self, batch_id, msg):
         msg_id = msg['message_id']
@@ -160,12 +181,19 @@ class MessageStore(object):
 
     def add_inbound_message(self, msg):
         msg_id = msg['message_id']
+        tag = self._map_inbound_msg_to_tag(msg)
+        batch_id = self.tag_common(tag).get('current_batch_id')
         self._put_row('inbound_messages', msg_id, 'body',
                       self._msg_to_body_data(msg))
+        if batch_id is not None:
+            self._put_row('batches', batch_id, 'replies', {msg_id: '1'})
 
     def get_inbound_message(self, msg_id):
         body_data = self._get_row('inbound_messages', msg_id, 'body')
         return self._msg_from_body_data(TransportUserMessage, body_data)
+
+    def batch_common(self, batch_id):
+        return self._get_row('batches', batch_id, 'common')
 
     def batch_status(self, batch_id):
         return self._get_status(batch_id)
@@ -173,11 +201,17 @@ class MessageStore(object):
     def batch_messages(self, batch_id):
         return self._get_row('batches', batch_id, 'messages').keys()
 
+    def batch_replies(self, batch_id):
+        return self._get_row('batches', batch_id, 'replies').keys()
+
     def message_batches(self, msg_id):
         return self._get_row('messages', msg_id, 'batches').keys()
 
     def message_events(self, msg_id):
         return self._get_row('messages', msg_id, 'events').keys()
+
+    def tag_common(self, tag):
+        return self._get_row('tags', tag, 'common')
 
     # batch status is stored in Redis as a cache of batch progress
 
