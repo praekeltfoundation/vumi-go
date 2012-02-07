@@ -29,9 +29,19 @@ class CeleryTestMixIn(object):
         self._app.conf.CELERY_ALWAYS_EAGER = always_eager
 
     def get_consumer(self, **options):
+        """Create a command message consumer.
+
+        Call this *before* sending any messages for two reasons:
+
+        * Messages sent to non-existent consumers will be lost.
+        * This method clears out any remaining commands from old test
+          runs.
+        """
+        # TODO: avoid using real RabbitMQ in tests.
         connection = self._app.broker_connection()
         consumer = self._app.amqp.TaskConsumer(connection=connection,
                                                **options)
+        self.fetch_cmds(consumer)  # throw away existing messages
         return consumer
 
     def get_cmd_consumer(self):
