@@ -52,8 +52,9 @@ class VumiApiWorker(ApplicationWorker):
     def process_cmd_send(self, cmd):
         batch_id = cmd['batch_id']
         content = cmd['content']
+        msg_options = cmd['msg_options']
         to_addr = cmd['to_addr']
-        msg = self.send_to(to_addr, content)
+        msg = self.send_to(to_addr, content, **msg_options)
         self.store.add_message(batch_id, msg)
 
     def consume_api_command(self, cmd):

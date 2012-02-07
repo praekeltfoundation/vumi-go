@@ -150,7 +150,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         contacts"""
         consumer = self.get_cmd_consumer()
         response = self.client.post(reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk
+            'conversation_pk': self.conversation.pk,
         }), {
             'contact': [c.pk for c in Contact.objects.all()]
         })
@@ -160,7 +160,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         [batch] = self.conversation.messagebatch_set.all()
         [contact] = self.conversation.previewcontacts.all()
         self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
-                                                  "Test message",
+                                                  "Test message", {},
                                                   contact.msisdn))
 
     def test_start(self):
