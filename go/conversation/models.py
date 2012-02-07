@@ -1,5 +1,6 @@
 from django.db import models
 from go.contacts.models import Contact
+from go.vumitools import VumiApi
 
 
 class Conversation(models.Model):
@@ -16,6 +17,19 @@ class Conversation(models.Model):
 
     def people(self):
         return Contact.objects.filter(groups__in=self.groups.all())
+
+    def send_preview(self):
+        self._send_batch(self.previewcontacts.all())
+
+    def _send_batch(self, contacts):
+        vumiapi = VumiApi({'message_store': {}, 'message_sender': {}})
+        tag = "default10001"
+        batch_id = vumiapi.batch_start(tag)
+        batch = MessageBatch(conversation=self, batch_id=batch_id)
+        batch.save()
+        addrs = [contact.msisdn for contact in contacts]
+        msg_options = {"from_addr": tag}
+        vumiapi.batch_send(batch_id, self.message, msg_options, addrs)
 
     class Meta:
         ordering = ['-updated_at']
