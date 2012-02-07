@@ -45,9 +45,9 @@ class FakeTemplateToken(object):
 
 
 class GoTemplateTagsTestCase(TestCase):
-    
+
     def test_load_alphabet(self):
-        
+
         token = FakeTemplateToken('load_alphabet as alphabet')
         node = go_tags.load_alphabet('bogus', token)
         context = {}
@@ -55,23 +55,24 @@ class GoTemplateTagsTestCase(TestCase):
         self.assertEqual(output, '')
         self.assertEqual(node.var_name, 'alphabet')
         self.assertEqual(context['alphabet'], string.ascii_lowercase)
-    
+
     def test_load_alphabet_value_error(self):
-        self.assertRaises(template.TemplateSyntaxError, go_tags.load_alphabet, 
+        self.assertRaises(template.TemplateSyntaxError, go_tags.load_alphabet,
             'bogus', FakeTemplateToken('load_alphabet'))
-        self.assertRaises(template.TemplateSyntaxError, go_tags.load_alphabet, 
+        self.assertRaises(template.TemplateSyntaxError, go_tags.load_alphabet,
             'bogus', FakeTemplateToken('load_alphabet as'))
 
+
 class UtilsTestCase(TestCase):
-    
+
     fixtures = ['test_user']
-    
+
     def test_padded_queryset(self):
         short_list = User.objects.all()[:1]
         padded_list = utils.padded_queryset(short_list)
         expected_list = list(short_list) + [None, None, None, None, None]
         self.assertEqual(padded_list, expected_list)
-    
+
     def test_padded_queryset_limiting(self):
         long_list = Permission.objects.all()
         self.assertTrue(long_list.count() > 6)

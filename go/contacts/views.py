@@ -68,16 +68,17 @@ def people(request):
             contacts = Contact.create_from_csv_file(request.user,
                 request.FILES['file'])
             if request.POST.get('name'):
-                new_contact_group_form = forms.NewContactGroupForm(request.POST)
+                new_contact_group_form = forms.NewContactGroupForm(
+                                                            request.POST)
                 if new_contact_group_form.is_valid():
                     group = new_contact_group_form.save(commit=False)
                     group.user = request.user
                     group.save()
                     group.add_contacts(contacts)
                     return redirect(reverse('contacts:group', kwargs={
-                        'group_pk': group.pk
+                        'group_pk': group.pk,
                     }))
-    
+
             if request.POST.get('contact_group'):
                 select_contact_group_form = forms.SelectContactGroupForm(
                     request.POST)
@@ -86,12 +87,11 @@ def people(request):
                     group = cleaned_data['contact_group']
                     group.add_contacts(contacts)
                     return redirect(reverse('contacts:group', kwargs={
-                        'group_pk': group.pk
+                        'group_pk': group.pk,
                     }))
         else:
             messages.add_message(request, messages.ERROR,
                 'Something went wrong with the upload.')
-
 
     query = request.GET.get('q', None)
     contacts = request.user.contact_set.all()
@@ -103,7 +103,7 @@ def people(request):
         selected_letter = request.GET.get('l', 'a').lower()
         selected_contacts = contacts.filter(
             surname__istartswith=selected_letter)
-        
+
     return render(request, 'contacts/people.html', {
         'contacts': contacts,
         'selected_contacts': selected_contacts,

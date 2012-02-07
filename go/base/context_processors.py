@@ -5,8 +5,9 @@ def user_profile(request):
     if request.user.is_anonymous():
         return {}
     return {
-        'user_profile': request.user.get_profile()
+        'user_profile': request.user.get_profile(),
     }
+
 
 def standard_forms(request):
     if request.user.is_anonymous():
@@ -26,5 +27,3 @@ def standard_forms(request):
             'new_contact_group_form': new_contact_group_form,
             'select_contact_group_form': select_contact_group_form,
         }
-
-    

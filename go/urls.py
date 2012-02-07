@@ -4,6 +4,7 @@ from django.http import HttpResponse
 
 admin.autodiscover()
 
+
 def health(request):
     return HttpResponse('')
 
