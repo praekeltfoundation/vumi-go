@@ -2,6 +2,8 @@
 
 """Tests for go.vumitools.api."""
 
+import json
+
 from twisted.trial.unittest import TestCase
 
 from vumi.message import TransportEvent
@@ -26,11 +28,11 @@ class TestVumiApi(TestCase, CeleryTestMixIn):
         self.restore_celery()
 
     def test_batch_start(self):
-        batch_id = self.api.batch_start("tag")
+        batch_id = self.api.batch_start(["tag"])
         self.assertEqual(len(batch_id), 32)
 
     def test_batch_status(self):
-        batch_id = self.api.mdb.batch_start("tag")
+        batch_id = self.api.mdb.batch_start(["tag"])
         self.assertEqual(self.api.batch_status(batch_id), {
             'ack': 0, 'delivery_report': 0, 'message': 0, 'sent': 0,
             })
@@ -59,18 +61,18 @@ class TestMessageStore(ApplicationTestCase):
         self.store.r_server.teardown()
 
     def test_batch_start(self):
-        batch_id = self.store.batch_start("tag1")
+        batch_id = self.store.batch_start(["tag1"])
         self.assertEqual(self.store.batch_messages(batch_id), [])
         self.assertEqual(self.store.batch_status(batch_id), {
             'ack': 0, 'delivery_report': 0, 'message': 0, 'sent': 0,
             })
         self.assertEqual(self.store.batch_common(batch_id),
-                         {"tag": "tag1"})
+                         {"tags": json.dumps(["tag1"])})
         self.assertEqual(self.store.tag_common("tag1"),
                          {"current_batch_id": batch_id})
 
     def test_add_message(self):
-        batch_id = self.store.batch_start("tag")
+        batch_id = self.store.batch_start(["tag"])
         msg = self.mkmsg_out(content="outfoo")
         msg_id = msg['message_id']
         self.store.add_message(batch_id, msg)
@@ -84,7 +86,7 @@ class TestMessageStore(ApplicationTestCase):
             })
 
     def test_add_ack_event(self):
-        batch_id = self.store.batch_start("tag")
+        batch_id = self.store.batch_start(["tag"])
         msg = self.mkmsg_out(content="outfoo")
         msg_id = msg['message_id']
         ack = TransportEvent(user_message_id=msg_id, event_type='ack',
@@ -104,7 +106,7 @@ class TestMessageStore(ApplicationTestCase):
         self.assertEqual(self.store.get_inbound_message(msg_id), msg)
 
     def test_add_inbound_message_with_tag(self):
-        batch_id = self.store.batch_start("default10001")
+        batch_id = self.store.batch_start(["default10001"])
         msg = self.mkmsg_in(content="infoo", from_addr="+1234567810001")
         msg_id = msg['message_id']
         self.store.add_inbound_message(msg)

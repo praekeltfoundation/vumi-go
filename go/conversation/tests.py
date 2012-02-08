@@ -161,7 +161,8 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         [contact] = self.conversation.previewcontacts.all()
         msg_options = {"from_addr": "default10001"}
         self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
-                                                  "Test message", msg_options,
+                                                  "APPROVE? Test message",
+                                                  msg_options,
                                                   contact.msisdn))
 
     def test_start(self):
