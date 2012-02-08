@@ -19,19 +19,20 @@ class VumiApi(object):
         # message sending API
         self.mapi = MessageSender(config['message_sender'])
 
-    def batch_start(self, tag):
+    def batch_start(self, tags):
         """Start a message batch.
 
-        :type tag: str
-        :param tag:
-            An identifier for linking replies to this batch. Conceptually
-            a tag corresponds to a set of from_addrs that a message goes
-            out on. The from_addrs can then be observed in incoming
-            messages and used to link replies to a specific batch.
+        :type tags: list of str
+        :param tags:
+            A list of identifiers for linking replies to this
+            batch. Conceptually a tag corresponds to a set of
+            from_addrs that a message goes out on. The from_addrs can
+            then be observed in incoming messages and used to link
+            replies to a specific batch.
         :rtype:
             Returns the batch_id of the new batch.
         """
-        return self.mdb.batch_start(tag)
+        return self.mdb.batch_start(tags)
 
     def batch_send(self, batch_id, msg, msg_options, addresses):
         """Send a batch of text message to a list of addresses.
@@ -119,14 +120,15 @@ class MessageStore(object):
         self.r_config = config.get('redis', {})
         self.r_server = redis.Redis(**self.r_config)
 
-    def batch_start(self, tag):
+    def batch_start(self, tags):
         batch_id = uuid4().get_hex()
-        fields = {'tag': tag}
+        fields = {'tags': to_json(tags)}
         tag_fields = {'current_batch_id': batch_id}
         self._init_status(batch_id)
         self._put_row('batches', batch_id, 'common', fields)
         self._put_row('batches', batch_id, 'messages', {})
-        self._put_row('tags', tag, 'common', tag_fields)
+        for tag in tags:
+            self._put_row('tags', tag, 'common', tag_fields)
         return batch_id
 
     def _msg_to_body_data(self, msg):

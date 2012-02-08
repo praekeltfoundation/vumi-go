@@ -19,17 +19,18 @@ class Conversation(models.Model):
         return Contact.objects.filter(groups__in=self.groups.all())
 
     def send_preview(self):
-        self._send_batch(self.previewcontacts.all())
+        approval_message = "APPROVE? " + self.message
+        self._send_batch(approval_message, self.previewcontacts.all())
 
-    def _send_batch(self, contacts):
+    def _send_batch(self, message, contacts):
         vumiapi = VumiApi({'message_store': {}, 'message_sender': {}})
         tag = "default10001"
-        batch_id = vumiapi.batch_start(tag)
+        batch_id = vumiapi.batch_start([tag])
         batch = MessageBatch(conversation=self, batch_id=batch_id)
         batch.save()
         addrs = [contact.msisdn for contact in contacts]
         msg_options = {"from_addr": tag}
-        vumiapi.batch_send(batch_id, self.message, msg_options, addrs)
+        vumiapi.batch_send(batch_id, message, msg_options, addrs)
 
     class Meta:
         ordering = ['-updated_at']
