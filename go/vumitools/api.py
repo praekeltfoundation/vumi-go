@@ -131,6 +131,15 @@ class MessageStore(object):
             self._put_row('tags', tag, 'common', tag_fields)
         return batch_id
 
+    def acquire_tag(self, pool):
+        return self._acquire_tag(pool)
+
+    def release_tag(self, pool, tag):
+        return self._release_tag(pool)
+
+    def declare_tags(self, pool, tags):
+        return self._declare_tags(pool, tags)
+
     def _msg_to_body_data(self, msg):
         return dict((k.encode('utf-8'), to_json(v)) for k, v
                      in msg.payload.items())
@@ -214,6 +223,35 @@ class MessageStore(object):
 
     def tag_common(self, tag):
         return self._get_row('tags', tag, 'common')
+
+    # tag pool is stored in Redis since HBase doesn't have a nice
+    # list implementation
+
+    def _tag_pool_key(self, pool):
+        return tuple(":".join([self.r_prefix, "tagpools", pool, state])
+                     for state in ("free:list", "free:set", "inuse:set"))
+
+    def _acquire_tag(self, pool):
+        free_list_key, free_set_key, inuse_set_key = self._tag_pool_keys(pool)
+        tag = self.r_server.lpop(free_list_key)
+        if tag is not None:
+            self.r_server.smove(free_set_key, inuse_set_key, tag)
+        return tag
+
+    def _release_tag(self, pool, tag):
+        free_list_key, free_set_key, inuse_set_key = self._tag_pool_keys(pool)
+        count = self.r_server.smove(inuse_set_key, free_set_key, tag)
+        if count == 1:
+            self.r_server.rpush(free_list_key, tag)
+
+    def _declare_tags(self, pool, tags):
+        free_list_key, free_set_key, inuse_set_key = self._tag_pool_keys(pool)
+        new_tags = set(tags)
+        old_tags = set(self.r_server.sunion(free_set_key, inuse_set_key))
+        for tag in new_tags - old_tags:
+            self.r_server.sadd(free_set_key, tag)
+            self.r_server.rpush(free_list_key, tag)
+        return self._declare_tags(pool, tags)
 
     # batch status is stored in Redis as a cache of batch progress
 
