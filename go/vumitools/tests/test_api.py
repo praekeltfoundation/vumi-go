@@ -71,6 +71,41 @@ class TestMessageStore(ApplicationTestCase):
         self.assertEqual(self.store.tag_common("tag1"),
                          {"current_batch_id": batch_id})
 
+    def test_declare_tags(self):
+        self.store.declare_tags("poolA", ["tag1", "tag2"])
+        self.assertEqual(self.store.acquire_tag("poolA"), "tag1")
+        self.assertEqual(self.store.acquire_tag("poolA"), "tag2")
+        self.assertEqual(self.store.acquire_tag("poolA"), None)
+        self.store.declare_tags("poolA", ["tag2", "tag3"])
+        self.assertEqual(self.store.acquire_tag("poolA"), "tag3")
+
+    def test_acquire_tag(self):
+        tkey = lambda x: "message_store:tagpools:poolA:" + x
+        self.store.declare_tags("poolA", ["tag1", "tag2"])
+        self.assertEqual(self.store.acquire_tag("poolA"), "tag1")
+        self.assertEqual(self.store.acquire_tag("poolB"), None)
+        self.assertEqual(self.store.r_server.lrange(tkey("free:list"),
+                                                    0, -1),
+                         ["tag2"])
+        self.assertEqual(self.store.r_server.smembers(tkey("free:set")),
+                         set(["tag2"]))
+        self.assertEqual(self.store.r_server.smembers(tkey("inuse:set")),
+                         set(["tag1"]))
+
+    def test_release_tag(self):
+        tkey = lambda x: "message_store:tagpools:poolA:" + x
+        self.store.declare_tags("poolA", ["tag1", "tag2", "tag3"])
+        self.store.acquire_tag("poolA")
+        self.store.acquire_tag("poolA")
+        self.store.release_tag("poolA", "tag1")
+        self.assertEqual(self.store.r_server.lrange(tkey("free:list"),
+                                                    0, -1),
+                         ["tag3", "tag1"])
+        self.assertEqual(self.store.r_server.smembers(tkey("free:set")),
+                         set(["tag1", "tag3"]))
+        self.assertEqual(self.store.r_server.smembers(tkey("inuse:set")),
+                         set(["tag2"]))
+
     def test_add_message(self):
         batch_id = self.store.batch_start(["tag"])
         msg = self.mkmsg_out(content="outfoo")
