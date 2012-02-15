@@ -15,7 +15,9 @@ from go.vumitools.api import (VumiApi, MessageStore, MessageSender,
 from go.vumitools.tests.utils import CeleryTestMixIn
 
 
-class TestVumiApi(TestCase, CeleryTestMixIn):
+class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
+    # inherits from ApplicationTestCase for .mkmsg_in and .mkmsg_out
+
     def setUp(self):
         self.setup_celery_for_tests()
         self.api = VumiApi({
@@ -48,6 +50,39 @@ class TestVumiApi(TestCase, CeleryTestMixIn):
         self.assertEqual(cmd1, send_msg("+12"))
         self.assertEqual(cmd2, send_msg("+34"))
         self.assertEqual(cmd3, send_msg("+56"))
+
+    def test_batch_messages(self):
+        batch_id = self.api.batch_start(["default10001"])
+        msgs = [self.mkmsg_out(content=msg, message_id=str(i)) for
+                i, msg in enumerate(("msg1", "msg2"))]
+        for msg in msgs:
+            self.api.mdb.add_message(batch_id, msg)
+        api_msgs = self.api.batch_messages(batch_id)
+        api_msgs.sort(key=lambda msg: msg['message_id'])
+        self.assertEqual(api_msgs, msgs)
+
+    def test_batch_replies(self):
+        tag = "default10001"
+        to_addr = "+12310001"
+        batch_id = self.api.batch_start([tag])
+        msgs = [self.mkmsg_in(content=msg, to_addr=to_addr, message_id=str(i))
+                for i, msg in enumerate(("msg1", "msg2"))]
+        for msg in msgs:
+            self.api.mdb.add_inbound_message(msg)
+        api_msgs = self.api.batch_replies(batch_id)
+        api_msgs.sort(key=lambda msg: msg['message_id'])
+        self.assertEqual(api_msgs, msgs)
+
+    def test_declare_acquire_and_release_tags(self):
+        self.api.declare_tags("poolA", ["tag1", "tag2"])
+        self.assertEqual(self.api.acquire_tag("poolA"), "tag1")
+        self.assertEqual(self.api.acquire_tag("poolA"), "tag2")
+        self.assertEqual(self.api.acquire_tag("poolA"), None)
+        self.assertEqual(self.api.acquire_tag("poolB"), None)
+
+        self.api.release_tag("poolA", "tag2")
+        self.assertEqual(self.api.acquire_tag("poolA"), "tag2")
+        self.assertEqual(self.api.acquire_tag("poolA"), None)
 
 
 class TestMessageStore(ApplicationTestCase):
@@ -142,7 +177,7 @@ class TestMessageStore(ApplicationTestCase):
 
     def test_add_inbound_message_with_tag(self):
         batch_id = self.store.batch_start(["default10001"])
-        msg = self.mkmsg_in(content="infoo", from_addr="+1234567810001")
+        msg = self.mkmsg_in(content="infoo", to_addr="+1234567810001")
         msg_id = msg['message_id']
         self.store.add_inbound_message(msg)
 

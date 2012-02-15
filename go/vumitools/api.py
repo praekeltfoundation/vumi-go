@@ -63,7 +63,7 @@ class VumiApi(object):
     def batch_status(self, batch_id):
         """Check the status of a batch of messages.
 
-        :type batch_id:
+        :type batch_id: str
         :param batch_id:
             batch to check the status of
         :rtype:
@@ -72,6 +72,79 @@ class VumiApi(object):
             with delivery reports.
         """
         return self.mdb.batch_status(batch_id)
+
+    def batch_messages(self, batch_id):
+        """Return a list of batch message dictionaries.
+
+        Should only be used on batches that are expected
+        to have a small set of messages.
+
+        :type batch_id: str
+        :param batch_id:
+            batch to get messages for
+        :rtype:
+            list of message dictionaries.
+        """
+        msg_ids = self.mdb.batch_messages(batch_id)
+        return [self.mdb.get_message(m_id) for m_id in msg_ids]
+
+    def batch_replies(self, batch_id):
+        """Return a list of reply message dictionaries.
+
+        Should only be used on batches that are expected
+        to have a small set of replies.
+
+        :type batch_id: str
+        :param batch_id:
+            batch to get replies for
+        :rtype:
+            list of message dictionaries.
+        """
+        reply_ids = self.mdb.batch_replies(batch_id)
+        return [self.mdb.get_inbound_message(r_id) for r_id in reply_ids]
+
+    def acquire_tag(self, pool):
+        """Acquire a tag from a given tag pool.
+
+        Tags should be held for the duration of a conversation.
+
+        :type pool: str
+        :param pool:
+            name of the pool to retrieve tags from.
+        :rtype:
+            str containing the tag
+        """
+        return self.mdb.acquire_tag(pool)
+
+    def release_tag(self, pool, tag):
+        """Release a tag back to the pool it came from.
+
+        Tags should be released only once a conversation is finished.
+
+        :type pool: str
+        :param pool:
+            name of the pool to return the tag too (must be the same as
+            the name of the pool the tag came from).
+        :rtype:
+            None.
+        """
+        return self.mdb.release_tag(pool, tag)
+
+    def declare_tags(self, pool, tags):
+        """Populate a pool with tags.
+
+        Tags already in the pool are not duplicated.
+
+        :type pool: str
+        :param pool:
+            name of the pool to add the tags too
+        :type tags: list of str
+        :param tags:
+            list of tags to add to the pool.
+        :rtype:
+            None
+        """
+        return self.mdb.declare_tags(pool, tags)
 
 
 class MessageStore(object):
@@ -157,7 +230,7 @@ class MessageStore(object):
     def _map_inbound_msg_to_tag(self, msg):
         # TODO: this eventually needs to become more generic to support
         #       additional transports
-        tag = "default%s" % (msg['from_addr'][-5:],)
+        tag = "default%s" % (msg['to_addr'][-5:],)
         return tag
 
     def add_message(self, batch_id, msg):
