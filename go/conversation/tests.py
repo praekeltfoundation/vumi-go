@@ -7,6 +7,7 @@ from go.conversation.models import Conversation
 from go.contacts.models import ContactGroup, Contact
 from go.base.utils import padded_queryset
 from go.vumitools.tests.utils import CeleryTestMixIn, VumiApiCommand
+from go.vumitools import VumiApi
 from datetime import datetime
 from os import path
 
@@ -68,6 +69,11 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
 
     def tearDown(self):
         self.restore_celery()
+
+    def declare_ambient_tags(self):
+        api = VumiApi({'message_store': {}, 'message_sender': {}})
+        api.declare_tags("ambient", ["default%s" % i for i
+                                     in range(10001, 10001 + 1000)])
 
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
@@ -148,6 +154,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
     def test_sending_preview(self):
         """test sending of conversation to a selected set of preview
         contacts"""
+        self.declare_ambient_tags()
         consumer = self.get_cmd_consumer()
         response = self.client.post(reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk,
@@ -157,7 +164,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.assertRedirects(response, reverse('conversations:start', kwargs={
             'conversation_pk': self.conversation.pk}))
         [cmd] = self.fetch_cmds(consumer)
-        [batch] = self.conversation.messagebatch_set.all()
+        [batch] = self.conversation.preview_batch_set.all()
         [contact] = self.conversation.previewcontacts.all()
         msg_options = {"from_addr": "default10001"}
         self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,

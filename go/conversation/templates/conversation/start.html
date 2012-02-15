@@ -25,10 +25,9 @@
                 <div id="conv-box">
                     <label class="group-label-b">Get your message approved:</label>
                     <div id="groups-list">
-                        {% for contact in conversation.previewcontacts.all %}
-                        {# TODO: implement status, waiting, approved  #}
+                        {% for contact, status in conversation.preview_status %}
                         <div class="group approved {% if forloop.first %}first{% endif %}">
-                            <span class="group-name">{{contact}}</span>
+                            <span class="group-name">{{contact}} - {{status}}</span>
                         </div>
                         {% endfor %}
                         <input type="submit" name="upload" value="Send Preview" class="btn">
