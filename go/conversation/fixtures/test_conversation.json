@@ -6,6 +6,7 @@
         "subject": "Test Conversation",
         "message": "Test message",
         "start_date": "2011-08-26",
-        "start_time": "06:10"
+        "start_time": "06:10",
+        "groups": [1]
     }
 }]

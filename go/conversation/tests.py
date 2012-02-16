@@ -8,7 +8,6 @@ from go.contacts.models import ContactGroup, Contact
 from go.base.utils import padded_queryset
 from vumi.tests.utils import FakeRedis
 from go.vumitools.tests.utils import CeleryTestMixIn, VumiApiCommand
-from go.vumitools import VumiApi
 from datetime import datetime
 from os import path
 
@@ -138,6 +137,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
     def test_contacts_upload_to_existing_group(self):
         """It should be able to upload new contacts to an existing group"""
         group = ContactGroup.objects.latest()
+        group.contact_set.clear()
         response = self.client.post(reverse('conversations:upload',
             kwargs={'conversation_pk': self.conversation.pk}), {
             'contact_group': group.pk,
@@ -192,7 +192,17 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         """
         Test the start conversation view
         """
+        consumer = self.get_cmd_consumer()
         response = self.client.post(reverse('conversations:start', kwargs={
             'conversation_pk': self.conversation.pk}))
         self.assertRedirects(response, reverse('conversations:show', kwargs={
             'conversation_pk': self.conversation.pk}))
+
+        [cmd] = self.fetch_cmds(consumer)
+        [batch] = self.conversation.message_batch_set.all()
+        [contact] = self.conversation.people()
+        msg_options = {"from_addr": "default10001"}
+        self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
+                                                  "Test message",
+                                                  msg_options,
+                                                  contact.msisdn))
