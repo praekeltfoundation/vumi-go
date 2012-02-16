@@ -6,6 +6,7 @@ from django.conf import settings
 from go.conversation.models import Conversation
 from go.contacts.models import ContactGroup, Contact
 from go.base.utils import padded_queryset
+from vumi.tests.utils import FakeRedis
 from go.vumitools.tests.utils import CeleryTestMixIn, VumiApiCommand
 from go.vumitools import VumiApi
 from datetime import datetime
@@ -59,6 +60,8 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
     fixtures = ['test_user', 'test_conversation', 'test_group', 'test_contact']
 
     def setUp(self):
+        self.setup_api()
+        self.declare_ambient_tags()
         self.setup_celery_for_tests()
         self.user = User.objects.get(username='username')
         self.conversation = self.user.conversation_set.latest()
@@ -70,8 +73,22 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
     def tearDown(self):
         self.restore_celery()
 
+    def setup_api(self):
+        self._fake_redis = FakeRedis()
+        self._old_vumi_api_config = settings.VUMI_API_CONFIG
+        settings.VUMI_API_CONFIG = {
+            'message_store': {
+                'redis_cls': lambda **kws: self._fake_redis,
+                },
+            'message_sender': {},
+            }
+
+    def teardown_api(self):
+        settings.VUMI_API_CONFIG = self._old_vumi_api_config
+        self._fake_redis.teardown()
+
     def declare_ambient_tags(self):
-        api = VumiApi({'message_store': {}, 'message_sender': {}})
+        api = Conversation.vumi_api()
         api.declare_tags("ambient", ["default%s" % i for i
                                      in range(10001, 10001 + 1000)])
 
@@ -154,7 +171,6 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
     def test_sending_preview(self):
         """test sending of conversation to a selected set of preview
         contacts"""
-        self.declare_ambient_tags()
         consumer = self.get_cmd_consumer()
         response = self.client.post(reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk,
