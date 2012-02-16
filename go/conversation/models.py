@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from go.contacts.models import Contact
 from go.vumitools import VumiApi
 
@@ -27,7 +28,7 @@ class Conversation(models.Model):
         # unit tests for start view with approved message
 
     def preview_status(self):
-        vumiapi = self._vumi_api()
+        vumiapi = self.vumi_api()
         batches = self.preview_batch_set.all()
         messages, replies = [], []
         for batch in batches:
@@ -54,12 +55,13 @@ class Conversation(models.Model):
         batch.message_batch = self
         batch.save()
 
-    def _vumi_api(self):
-        return VumiApi({'message_store': {}, 'message_sender': {}})
+    @staticmethod
+    def vumi_api():
+        return VumiApi(settings.VUMI_API_CONFIG)
 
     def _send_batch(self, message, contacts):
         # ambient tags: default10001 - default11000 inclusive
-        vumiapi = self._vumi_api()
+        vumiapi = self.vumi_api()
         tag = vumiapi.acquire_tag("ambient")
         batch_id = vumiapi.batch_start([tag])
         batch = MessageBatch(batch_id=batch_id)
