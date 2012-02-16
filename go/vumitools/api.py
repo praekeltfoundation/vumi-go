@@ -191,7 +191,8 @@ class MessageStore(object):
         import redis
         self.r_prefix = config.get('store_prefix', 'message_store')
         self.r_config = config.get('redis', {})
-        self.r_server = redis.Redis(**self.r_config)
+        redis_cls = config.get('redis_cls', redis.Redis)  # testing hook
+        self.r_server = redis_cls(**self.r_config)
 
     def batch_start(self, tags):
         batch_id = uuid4().get_hex()
