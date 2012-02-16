@@ -204,3 +204,11 @@ VUMI_API_CONFIG = {
         },
     'message_sender': {}
     }
+
+if os.environ.get('VUMIGO_FAST_TESTS'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
