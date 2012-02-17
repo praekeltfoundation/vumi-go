@@ -3,7 +3,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator
 from django.contrib import messages
-from go.conversation.models import Conversation
+from go.conversation.models import Conversation, ConversationSendError
 from go.conversation.forms import ConversationForm
 from go.contacts.forms import (NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
@@ -133,7 +133,12 @@ def send(request, conversation_pk):
         contacts = Contact.objects.filter(pk__in=contact_ids)
         for contact in contacts:
             conversation.previewcontacts.add(contact)
-        conversation.send_preview()
+        try:
+            conversation.send_preview()
+        except ConversationSendError as error:
+            messages.add_message(request, messages.ERROR, str(error))
+            return redirect(reverse('conversations:send', kwargs={
+                'conversation_pk': conversation.pk}))
         messages.add_message(request, messages.INFO, 'Previews sent')
         return redirect(reverse('conversations:start', kwargs={
             'conversation_pk': conversation.pk}), {
@@ -149,7 +154,12 @@ def start(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
         user=request.user)
     if request.method == 'POST':
-        conversation.send_messages()
+        try:
+            conversation.send_messages()
+        except ConversationSendError as error:
+            messages.add_message(request, messages.ERROR, str(error))
+            return redirect(reverse('conversations:start', kwargs={
+                'conversation_pk': conversation.pk}))
         messages.add_message(request, messages.INFO, 'Conversation started')
         return redirect(reverse('conversations:show', kwargs={
             'conversation_pk': conversation.pk}))

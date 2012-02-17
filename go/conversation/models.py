@@ -63,6 +63,8 @@ class Conversation(models.Model):
         # ambient tags: default10001 - default11000 inclusive
         vumiapi = self.vumi_api()
         tag = vumiapi.acquire_tag("ambient")
+        if tag is None:
+            raise ConversationSendError("No spare messaging tags.")
         batch_id = vumiapi.batch_start([tag])
         batch = MessageBatch(batch_id=batch_id)
         batch.save()
@@ -93,3 +95,7 @@ class MessageBatch(models.Model):
     message_batch = models.ForeignKey(Conversation,
                                       related_name="message_batch_set",
                                       null=True)
+
+
+class ConversationSendError(Exception):
+    """Raised if there are no tags available for a given conversation."""
