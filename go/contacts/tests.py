@@ -114,6 +114,7 @@ class ContactsTestCase(TestCase):
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
             'fixtures', 'sample-contacts.csv'))
         group = ContactGroup.objects.latest()
+        group.contact_set.clear()
         group_url = reverse('contacts:group', kwargs={'group_pk': group.pk})
 
         response = self.client.post(reverse('contacts:people'), {

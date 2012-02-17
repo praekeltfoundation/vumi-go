@@ -3,13 +3,12 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator
 from django.contrib import messages
-from go.conversation.models import Conversation, MessageBatch
+from go.conversation.models import Conversation, ConversationSendError
 from go.conversation.forms import ConversationForm
 from go.contacts.forms import (NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
 from go.contacts.models import Contact, ContactGroup
 from go.base.utils import padded_queryset
-from go.vumitools import VumiApi
 from datetime import datetime
 
 
@@ -130,21 +129,16 @@ def send(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
         user=request.user)
     if request.POST:
-        vumiapi = VumiApi({'message_store': {}, 'message_sender': {}})
-
         contact_ids = request.POST.getlist('contact')
         contacts = Contact.objects.filter(pk__in=contact_ids)
         for contact in contacts:
             conversation.previewcontacts.add(contact)
-
-        # send previews to contacts
-        batch_id = vumiapi.batch_start()
-        batch = MessageBatch(conversation=conversation, batch_id=batch_id)
-        batch.save()
-        addrs = [contact.msisdn for contact in contacts]
-        msg_options = {}
-        vumiapi.batch_send(batch_id, conversation.message, msg_options, addrs)
-
+        try:
+            conversation.send_preview()
+        except ConversationSendError as error:
+            messages.add_message(request, messages.ERROR, str(error))
+            return redirect(reverse('conversations:send', kwargs={
+                'conversation_pk': conversation.pk}))
         messages.add_message(request, messages.INFO, 'Previews sent')
         return redirect(reverse('conversations:start', kwargs={
             'conversation_pk': conversation.pk}), {
@@ -160,6 +154,12 @@ def start(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
         user=request.user)
     if request.method == 'POST':
+        try:
+            conversation.send_messages()
+        except ConversationSendError as error:
+            messages.add_message(request, messages.ERROR, str(error))
+            return redirect(reverse('conversations:start', kwargs={
+                'conversation_pk': conversation.pk}))
         messages.add_message(request, messages.INFO, 'Conversation started')
         return redirect(reverse('conversations:show', kwargs={
             'conversation_pk': conversation.pk}))

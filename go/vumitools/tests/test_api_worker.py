@@ -19,11 +19,15 @@ class TestVumiApiWorker(ApplicationTestCase):
     @inlineCallbacks
     def setUp(self):
         super(TestVumiApiWorker, self).setUp()
-        self.api = yield self.get_application({})
-        self.api.store.r_server = FakeRedis()
+        self._fake_redis = FakeRedis()
+        self.api = yield self.get_application({
+            'message_store': {
+                'redis_cls': lambda **kw: self._fake_redis,
+                },
+            })
 
     def tearDown(self):
-        self.api.store.r_server.teardown()
+        self._fake_redis.teardown()
         super(TestVumiApiWorker, self).tearDown()
 
     def publish_command(self, cmd):
