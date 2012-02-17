@@ -55,6 +55,23 @@ class Conversation(models.Model):
         batch.message_batch = self
         batch.save()
 
+    def replies(self):
+        vumiapi = self.vumi_api()
+        batches = self.message_batch_set.all()
+        replies, reply_statuses = [], []
+        for batch in batches:
+            replies.extend(vumiapi.batch_replies(batch.batch_id))
+        for reply in replies:
+            contact = Contact.objects.get(msisdn=reply['from_addr'])
+            reply_statuses.append({
+                'type': 'sms',  # CSS class, TODO: don't hardcode this
+                'source': 'SMS',  # TODO: don't hardcode this
+                'reply.contact': contact,
+                'reply.time': reply['timestamp'],
+                'reply.content': reply['content'],
+                })
+        return reply_statuses
+
     @staticmethod
     def vumi_api():
         return VumiApi(settings.VUMI_API_CONFIG)
