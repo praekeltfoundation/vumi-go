@@ -137,9 +137,9 @@ INSTALLED_APPS = (
     'django_nose',
     'djcelery',
     'djcelery_email',
-    'base',
-    'conversation',
-    'contacts',
+    'go.base',
+    'go.conversation',
+    'go.contacts',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
