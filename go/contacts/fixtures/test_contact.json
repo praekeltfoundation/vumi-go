@@ -5,6 +5,7 @@
         "user": 1,
         "name": "Name",
         "surname": "Surname",
-        "msisdn": "+27761234567"
+        "msisdn": "+27761234567",
+        "groups": [1]
     }
 }]

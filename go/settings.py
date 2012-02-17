@@ -137,9 +137,9 @@ INSTALLED_APPS = (
     'django_nose',
     'djcelery',
     'djcelery_email',
-    'base',
-    'conversation',
-    'contacts',
+    'go.base',
+    'go.conversation',
+    'go.contacts',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -196,3 +196,19 @@ CELERY_IMPORTS = ("go.vumitools.api_celery",)
 CELERY_RESULT_BACKEND = "amqp"
 EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
 SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
+
+# Vumi API config
+VUMI_API_CONFIG = {
+    'message_store': {
+        'store_prefix': 'vumigo_store',
+        },
+    'message_sender': {}
+    }
+
+if os.environ.get('VUMIGO_FAST_TESTS'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }

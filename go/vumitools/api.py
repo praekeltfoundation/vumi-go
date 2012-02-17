@@ -19,13 +19,20 @@ class VumiApi(object):
         # message sending API
         self.mapi = MessageSender(config['message_sender'])
 
-    def batch_start(self):
+    def batch_start(self, tags):
         """Start a message batch.
 
+        :type tags: list of str
+        :param tags:
+            A list of identifiers for linking replies to this
+            batch. Conceptually a tag corresponds to a set of
+            from_addrs that a message goes out on. The from_addrs can
+            then be observed in incoming messages and used to link
+            replies to a specific batch.
         :rtype:
             Returns the batch_id of the new batch.
         """
-        return self.mdb.batch_start()
+        return self.mdb.batch_start(tags)
 
     def batch_send(self, batch_id, msg, msg_options, addresses):
         """Send a batch of text message to a list of addresses.
@@ -35,7 +42,7 @@ class VumiApi(object):
         call. Messages passed to multiple calls to :meth:`batch_send`
         do not have to be the same.
 
-        :type batch_id:
+        :type batch_id: str
         :param batch_id:
             batch to append the messages too
         :type msg: unicode
@@ -56,7 +63,7 @@ class VumiApi(object):
     def batch_status(self, batch_id):
         """Check the status of a batch of messages.
 
-        :type batch_id:
+        :type batch_id: str
         :param batch_id:
             batch to check the status of
         :rtype:
@@ -65,6 +72,79 @@ class VumiApi(object):
             with delivery reports.
         """
         return self.mdb.batch_status(batch_id)
+
+    def batch_messages(self, batch_id):
+        """Return a list of batch message dictionaries.
+
+        Should only be used on batches that are expected
+        to have a small set of messages.
+
+        :type batch_id: str
+        :param batch_id:
+            batch to get messages for
+        :rtype:
+            list of message dictionaries.
+        """
+        msg_ids = self.mdb.batch_messages(batch_id)
+        return [self.mdb.get_message(m_id) for m_id in msg_ids]
+
+    def batch_replies(self, batch_id):
+        """Return a list of reply message dictionaries.
+
+        Should only be used on batches that are expected
+        to have a small set of replies.
+
+        :type batch_id: str
+        :param batch_id:
+            batch to get replies for
+        :rtype:
+            list of message dictionaries.
+        """
+        reply_ids = self.mdb.batch_replies(batch_id)
+        return [self.mdb.get_inbound_message(r_id) for r_id in reply_ids]
+
+    def acquire_tag(self, pool):
+        """Acquire a tag from a given tag pool.
+
+        Tags should be held for the duration of a conversation.
+
+        :type pool: str
+        :param pool:
+            name of the pool to retrieve tags from.
+        :rtype:
+            str containing the tag
+        """
+        return self.mdb.acquire_tag(pool)
+
+    def release_tag(self, pool, tag):
+        """Release a tag back to the pool it came from.
+
+        Tags should be released only once a conversation is finished.
+
+        :type pool: str
+        :param pool:
+            name of the pool to return the tag too (must be the same as
+            the name of the pool the tag came from).
+        :rtype:
+            None.
+        """
+        return self.mdb.release_tag(pool, tag)
+
+    def declare_tags(self, pool, tags):
+        """Populate a pool with tags.
+
+        Tags already in the pool are not duplicated.
+
+        :type pool: str
+        :param pool:
+            name of the pool to add the tags too
+        :type tags: list of str
+        :param tags:
+            list of tags to add to the pool.
+        :rtype:
+            None
+        """
+        return self.mdb.declare_tags(pool, tags)
 
 
 class MessageStore(object):
@@ -75,7 +155,12 @@ class MessageStore(object):
       # [row_id] -> [family] -> [columns]
 
       batches:
-        batch_id -> messages -> column names are message ids
+        batch_id -> common -> ['tag']
+                 -> messages -> column names are message ids
+                 -> replies -> column names are inbound_message ids
+
+      tags:
+        tag -> common -> ['current_batch_id']
 
       messages:
         message_id -> body -> column names are message fields,
@@ -106,13 +191,28 @@ class MessageStore(object):
         import redis
         self.r_prefix = config.get('store_prefix', 'message_store')
         self.r_config = config.get('redis', {})
-        self.r_server = redis.Redis(**self.r_config)
+        redis_cls = config.get('redis_cls', redis.Redis)  # testing hook
+        self.r_server = redis_cls(**self.r_config)
 
-    def batch_start(self):
+    def batch_start(self, tags):
         batch_id = uuid4().get_hex()
+        fields = {'tags': to_json(tags)}
+        tag_fields = {'current_batch_id': batch_id}
         self._init_status(batch_id)
+        self._put_row('batches', batch_id, 'common', fields)
         self._put_row('batches', batch_id, 'messages', {})
+        for tag in tags:
+            self._put_row('tags', tag, 'common', tag_fields)
         return batch_id
+
+    def acquire_tag(self, pool):
+        return self._acquire_tag(pool)
+
+    def release_tag(self, pool, tag):
+        return self._release_tag(pool, tag)
+
+    def declare_tags(self, pool, tags):
+        return self._declare_tags(pool, tags)
 
     def _msg_to_body_data(self, msg):
         return dict((k.encode('utf-8'), to_json(v)) for k, v
@@ -127,6 +227,12 @@ class MessageStore(object):
         body['timestamp'] = datetime.strptime(body['timestamp'],
                                               VUMI_DATE_FORMAT)
         return cls(**body)
+
+    def _map_inbound_msg_to_tag(self, msg):
+        # TODO: this eventually needs to become more generic to support
+        #       additional transports
+        tag = "default%s" % (msg['to_addr'][-5:],)
+        return tag
 
     def add_message(self, batch_id, msg):
         msg_id = msg['message_id']
@@ -160,12 +266,19 @@ class MessageStore(object):
 
     def add_inbound_message(self, msg):
         msg_id = msg['message_id']
+        tag = self._map_inbound_msg_to_tag(msg)
+        batch_id = self.tag_common(tag).get('current_batch_id')
         self._put_row('inbound_messages', msg_id, 'body',
                       self._msg_to_body_data(msg))
+        if batch_id is not None:
+            self._put_row('batches', batch_id, 'replies', {msg_id: '1'})
 
     def get_inbound_message(self, msg_id):
         body_data = self._get_row('inbound_messages', msg_id, 'body')
         return self._msg_from_body_data(TransportUserMessage, body_data)
+
+    def batch_common(self, batch_id):
+        return self._get_row('batches', batch_id, 'common')
 
     def batch_status(self, batch_id):
         return self._get_status(batch_id)
@@ -173,11 +286,45 @@ class MessageStore(object):
     def batch_messages(self, batch_id):
         return self._get_row('batches', batch_id, 'messages').keys()
 
+    def batch_replies(self, batch_id):
+        return self._get_row('batches', batch_id, 'replies').keys()
+
     def message_batches(self, msg_id):
         return self._get_row('messages', msg_id, 'batches').keys()
 
     def message_events(self, msg_id):
         return self._get_row('messages', msg_id, 'events').keys()
+
+    def tag_common(self, tag):
+        return self._get_row('tags', tag, 'common')
+
+    # tag pool is stored in Redis since HBase doesn't have a nice
+    # list implementation
+
+    def _tag_pool_keys(self, pool):
+        return tuple(":".join([self.r_prefix, "tagpools", pool, state])
+                     for state in ("free:list", "free:set", "inuse:set"))
+
+    def _acquire_tag(self, pool):
+        free_list_key, free_set_key, inuse_set_key = self._tag_pool_keys(pool)
+        tag = self.r_server.lpop(free_list_key)
+        if tag is not None:
+            self.r_server.smove(free_set_key, inuse_set_key, tag)
+        return tag
+
+    def _release_tag(self, pool, tag):
+        free_list_key, free_set_key, inuse_set_key = self._tag_pool_keys(pool)
+        count = self.r_server.smove(inuse_set_key, free_set_key, tag)
+        if count == 1:
+            self.r_server.rpush(free_list_key, tag)
+
+    def _declare_tags(self, pool, tags):
+        free_list_key, free_set_key, inuse_set_key = self._tag_pool_keys(pool)
+        new_tags = set(tags)
+        old_tags = set(self.r_server.sunion(free_set_key, inuse_set_key))
+        for tag in sorted(new_tags - old_tags):
+            self.r_server.sadd(free_set_key, tag)
+            self.r_server.rpush(free_list_key, tag)
 
     # batch status is stored in Redis as a cache of batch progress
 
