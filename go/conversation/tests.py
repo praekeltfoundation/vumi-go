@@ -201,12 +201,13 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
             'conversation_pk': self.conversation.pk,
         }), {
             'contact': [c.pk for c in Contact.objects.all()]
-        })
+        }, follow=True)
         self.assertRedirects(response, reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk}))
         [] = self.fetch_cmds(consumer)
         [] = self.conversation.preview_batch_set.all()
-        # TODO: assert correct message is raised
+        [msg] = response.context['messages']
+        self.assertEqual(str(msg), "No spare messaging tags.")
 
     def test_start(self):
         """
@@ -232,12 +233,13 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.acquire_all_ambient_tags()
         consumer = self.get_cmd_consumer()
         response = self.client.post(reverse('conversations:start', kwargs={
-            'conversation_pk': self.conversation.pk}))
+            'conversation_pk': self.conversation.pk}), follow=True)
         self.assertRedirects(response, reverse('conversations:start', kwargs={
             'conversation_pk': self.conversation.pk}))
         [] = self.fetch_cmds(consumer)
         [] = self.conversation.preview_batch_set.all()
-        # TODO: assert correct message is raised.
+        [msg] = response.context['messages']
+        self.assertEqual(str(msg), "No spare messaging tags.")
 
     def test_show(self):
         """
