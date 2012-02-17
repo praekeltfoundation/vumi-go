@@ -206,3 +206,12 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
                                                   "Test message",
                                                   msg_options,
                                                   contact.msisdn))
+
+    def test_show(self):
+        """
+        Test showing the conversation
+        """
+        response = self.client.get(reverse('conversations:show', kwargs={
+            'conversation_pk': self.conversation.pk}))
+        conversation = response.context[0].get('conversation')
+        self.assertEqual(conversation.subject, 'Test Conversation')
