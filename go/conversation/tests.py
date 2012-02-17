@@ -89,7 +89,12 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
     def declare_ambient_tags(self):
         api = Conversation.vumi_api()
         api.declare_tags("ambient", ["default%s" % i for i
-                                     in range(10001, 10001 + 1000)])
+                                     in range(10001, 10001 + 4)])
+
+    def acquire_all_ambient_tags(self):
+        api = Conversation.vumi_api()
+        for _i in range(4):
+            api.acquire_tag("ambient")
 
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
@@ -188,6 +193,21 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
                                                   msg_options,
                                                   contact.msisdn))
 
+    def test_sending_preview_fails(self):
+        """test failure to send previews"""
+        self.acquire_all_ambient_tags()
+        consumer = self.get_cmd_consumer()
+        response = self.client.post(reverse('conversations:send', kwargs={
+            'conversation_pk': self.conversation.pk,
+        }), {
+            'contact': [c.pk for c in Contact.objects.all()]
+        })
+        self.assertRedirects(response, reverse('conversations:send', kwargs={
+            'conversation_pk': self.conversation.pk}))
+        [] = self.fetch_cmds(consumer)
+        [] = self.conversation.preview_batch_set.all()
+        # TODO: assert correct message is raised
+
     def test_start(self):
         """
         Test the start conversation view
@@ -206,6 +226,18 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
                                                   "Test message",
                                                   msg_options,
                                                   contact.msisdn))
+
+    def test_start_fails(self):
+        """test failure to send messages"""
+        self.acquire_all_ambient_tags()
+        consumer = self.get_cmd_consumer()
+        response = self.client.post(reverse('conversations:start', kwargs={
+            'conversation_pk': self.conversation.pk}))
+        self.assertRedirects(response, reverse('conversations:start', kwargs={
+            'conversation_pk': self.conversation.pk}))
+        [] = self.fetch_cmds(consumer)
+        [] = self.conversation.preview_batch_set.all()
+        # TODO: assert correct message is raised.
 
     def test_show(self):
         """
