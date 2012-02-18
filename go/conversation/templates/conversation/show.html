@@ -121,15 +121,12 @@
                         </li>
                     </ul>
                     <div id="fragment-1">
-                        {% for reply in conversation.replies.inbound %}
+                        {% for reply in conversation.replies %}
                         <div class="connection {{reply.type}}">
                             <span class="timestamp">
-                                <a href="{% url todo %}person.html">Belinda Lewis</a> via Facebook - 5 mins ago - 
-                                <a href="#" class="reply">Reply</a>
+                                <a href="{% url todo %}person.html">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}} -
+                                <a href="#" class="reply">{{reply.content}}</a>
                             </span>
-                            <p>
-                                oh noes!!
-                            </p>
                         </div>
                         {% empty %}
                         <div class="connection">
