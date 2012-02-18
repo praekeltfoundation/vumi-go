@@ -36,18 +36,22 @@ class Conversation(models.Model):
             replies.extend(vumiapi.batch_replies(batch.batch_id))
         contacts = dict((c, 'waiting to send') for c in
                         self.previewcontacts.all())
+        msisdn_to_contact = dict((c.msisdn, c) for c in
+                                 self.previewcontacts.all())
         awaiting_reply = 'awaiting reply'
         for msg in messages:
-            from_addr = msg['from_addr']
-            if from_addr in contacts:
-                contacts[from_addr] = awaiting_reply
+            to_addr = msg['to_addr']
+            contact = msisdn_to_contact.get(to_addr)
+            if contact in contacts:
+                contacts[contact] = awaiting_reply
         for reply in replies:
-            from_addr = reply['from_addr']
-            if from_addr in contacts and contacts[from_addr] == awaiting_reply:
-                contents = reply['contents'].strip().lower()
-                contacts[from_addr] = ('approved'
-                                       if contents in ('approve', 'yes')
-                                       else 'denied')
+            from_addr = '+' + reply['from_addr']  # TODO: normalize better
+            contact = msisdn_to_contact.get(from_addr)
+            if contact in contacts and contacts[contact] == awaiting_reply:
+                contents = (reply['content'] or '').strip().lower()
+                contacts[contact] = ('approved'
+                                     if contents in ('approve', 'yes')
+                                     else 'denied')
         return sorted(contacts.items())
 
     def send_messages(self):
@@ -62,13 +66,16 @@ class Conversation(models.Model):
         for batch in batches:
             replies.extend(vumiapi.batch_replies(batch.batch_id))
         for reply in replies:
-            contact = Contact.objects.get(msisdn=reply['from_addr'])
+            msisdn = '+' + reply['from_addr']  # TODO: normalize better
+            contact = Contact.objects.get(msisdn=msisdn)
+            if contact is None:
+                continue
             reply_statuses.append({
                 'type': 'sms',  # CSS class, TODO: don't hardcode this
                 'source': 'SMS',  # TODO: don't hardcode this
-                'reply.contact': contact,
-                'reply.time': reply['timestamp'],
-                'reply.content': reply['content'],
+                'contact': contact,
+                'time': reply['timestamp'],
+                'content': reply['content'],
                 })
         return reply_statuses
 
