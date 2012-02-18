@@ -1,7 +1,0 @@
-2011-08-29 06:34:43 [37906] [INFO] Starting gunicorn 0.12.2
-2011-08-29 06:34:43 [37906] [INFO] Listening at: http://127.0.0.1:9000 (37906)
-2011-08-29 06:34:43 [37906] [INFO] Using worker: sync
-2011-08-29 06:34:43 [37907] [INFO] Booting worker with pid: 37907
-2011-08-29 06:34:55 [37906] [INFO] Handling signal: term
-2011-08-29 06:34:55 [37907] [INFO] Worker exiting (pid: 37907)
-2011-08-29 06:34:55 [37906] [INFO] Shutting down: Master
