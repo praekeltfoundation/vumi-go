@@ -48,7 +48,7 @@ class Conversation(models.Model):
                 contacts[from_addr] = ('approved'
                                        if contents in ('approve', 'yes')
                                        else 'denied')
-        return contacts
+        return sorted(contacts.items())
 
     def send_messages(self):
         batch = self._send_batch(self.message, self.people())
