@@ -198,11 +198,12 @@ EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
 SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
 
 # Vumi API config
+# TODO: go.vumitools.api_worker and this should share the same
+#       configuration file so that configuration values aren't
+#       duplicated
 VUMI_API_CONFIG = {
-    'message_store': {
-        'store_prefix': 'vumigo_store',
-        },
-    'message_sender': {}
+    'message_store': {},
+    'message_sender': {},
     }
 
 if os.environ.get('VUMIGO_FAST_TESTS'):
