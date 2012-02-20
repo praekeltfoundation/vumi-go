@@ -85,9 +85,17 @@ class Conversation(models.Model):
         """Return message options for tagpool and tag."""
         # TODO: this is hardcoded for ambient and gtalk pool currently
         if tagpool == "ambient":
-            return {"from_addr": tag, "transport_name": "ambient"}
+            return {
+                "from_addr": tag,
+                "transport_name": "ambient",
+                "transport_type": "sms",
+                }
         elif tagpool == "gtalk":
-            return {"from_addr": tag, "transport_name": "gtalk_vumigo"}
+            return {
+                "from_addr": tag,
+                "transport_name": "gtalk_vumigo",
+                "transport_type": "xmpp",
+                }
         else:
             raise ConversationSendError("Unknown tagpool %r" % (tagpool,))
 
