@@ -253,9 +253,25 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.assertEqual(self.conversation.preview_status(),
                          [(contact, 'waiting to send')])
         self.conversation.send_preview()
+        [batch] = self.conversation.preview_batch_set.all()
         self.process_cmds(vumiapi.mdb, consumer=consumer)
         self.assertEqual(self.conversation.preview_status(),
                          [(contact, 'awaiting reply')])
+        [tag] = vumiapi.mdb.batch_common(batch.batch_id)['tags']
+        to_addr = "+123" + tag[-5:]
+
+        # unknown contact
+        msg = self.mkmsg_in('hello', to_addr=to_addr)
+        vumiapi.mdb.add_inbound_message(msg)
+        self.assertEqual(self.conversation.preview_status(),
+                         [(contact, 'awaiting reply')])
+
+        # known contact
+        msg = self.mkmsg_in('approve', to_addr=to_addr,
+                            from_addr=contact.msisdn.lstrip('+'))
+        vumiapi.mdb.add_inbound_message(msg)
+        self.assertEqual(self.conversation.preview_status(),
+                         [(contact, 'approved')])
 
     def test_show(self):
         """
