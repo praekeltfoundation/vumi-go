@@ -9,6 +9,19 @@ from twisted.python. monkey import MonkeyPatcher
 from celery.app import app_or_default
 
 from go.vumitools.api import VumiApiCommand
+from go.vumitools.api_worker import VumiApiWorker
+from vumi.message import TransportUserMessage
+
+
+class DummyApiWorker(VumiApiWorker):
+    def __init__(self, store):
+        self.store = store
+
+    def send_to(self, to_addr, content, **msg_options):
+        return TransportUserMessage(to_addr=to_addr, content=content,
+                                    transport_name='dummy_transport',
+                                    transport_type='sms',
+                                    **msg_options)
 
 
 class RabbitConsumerFactory(object):
@@ -98,6 +111,13 @@ class CeleryTestMixIn(object):
             os.environ["CELERY_CONFIG_MODULE"] = celery_config
         self._app.conf.CELERY_ALWAYS_EAGER = always_eager
 
+    def mkmsg_in(self, content, **kw):
+        kw.setdefault('to_addr', '+123')
+        kw.setdefault('from_addr', '+456')
+        kw.setdefault('transport_name', 'dummy_transport')
+        kw.setdefault('transport_type', 'sms')
+        return TransportUserMessage(content=content, **kw)
+
     def get_consumer(self, **options):
         """Create a command message consumer.
 
@@ -122,3 +142,12 @@ class CeleryTestMixIn(object):
             else:
                 break
         return [VumiApiCommand(**payload) for payload in msgs]
+
+    def process_cmds(self, store, cmds=None, consumer=None):
+        """Create a stubby Vumi API worker and feed commands to it."""
+        assert ((cmds is None) ^ (consumer is None))
+        if cmds is None:
+            cmds = self.fetch_cmds(consumer)
+        api_worker = DummyApiWorker(store)
+        for cmd in cmds:
+            api_worker.consume_api_command(cmd)

@@ -229,7 +229,9 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
                                                   contact.msisdn))
 
     def test_start_fails(self):
-        """test failure to send messages"""
+        """
+        Test failure to send messages
+        """
         self.acquire_all_ambient_tags()
         consumer = self.get_cmd_consumer()
         response = self.client.post(reverse('conversations:start', kwargs={
@@ -241,6 +243,36 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "No spare messaging tags.")
 
+    def test_preview_status(self):
+        """
+        Test preview status helper function
+        """
+        consumer = self.get_cmd_consumer()
+        vumiapi = Conversation.vumi_api()
+        [contact] = self.conversation.previewcontacts.all()
+        self.assertEqual(self.conversation.preview_status(),
+                         [(contact, 'waiting to send')])
+        self.conversation.send_preview()
+        [batch] = self.conversation.preview_batch_set.all()
+        self.process_cmds(vumiapi.mdb, consumer=consumer)
+        self.assertEqual(self.conversation.preview_status(),
+                         [(contact, 'awaiting reply')])
+        [tag] = vumiapi.mdb.batch_common(batch.batch_id)['tags']
+        to_addr = "+123" + tag[-5:]
+
+        # unknown contact
+        msg = self.mkmsg_in('hello', to_addr=to_addr)
+        vumiapi.mdb.add_inbound_message(msg)
+        self.assertEqual(self.conversation.preview_status(),
+                         [(contact, 'awaiting reply')])
+
+        # known contact
+        msg = self.mkmsg_in('approve', to_addr=to_addr,
+                            from_addr=contact.msisdn.lstrip('+'))
+        vumiapi.mdb.add_inbound_message(msg)
+        self.assertEqual(self.conversation.preview_status(),
+                         [(contact, 'approved')])
+
     def test_show(self):
         """
         Test showing the conversation
@@ -249,3 +281,36 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
             'conversation_pk': self.conversation.pk}))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.subject, 'Test Conversation')
+
+    def test_replies(self):
+        """
+        Test replies helper function
+        """
+        consumer = self.get_cmd_consumer()
+        vumiapi = Conversation.vumi_api()
+        [contact] = self.conversation.people()
+        self.assertEqual(self.conversation.replies(), [])
+        self.conversation.send_messages()
+        [batch] = self.conversation.message_batch_set.all()
+        self.process_cmds(vumiapi.mdb, consumer=consumer)
+        self.assertEqual(self.conversation.replies(), [])
+        [tag] = vumiapi.mdb.batch_common(batch.batch_id)['tags']
+        to_addr = "+123" + tag[-5:]
+
+        # unknown contact
+        msg = self.mkmsg_in('hello', to_addr=to_addr)
+        vumiapi.mdb.add_inbound_message(msg)
+        self.assertEqual(self.conversation.replies(), [])
+
+        # known contact
+        msg = self.mkmsg_in('hello', to_addr=to_addr,
+                            from_addr=contact.msisdn.lstrip('+'))
+        vumiapi.mdb.add_inbound_message(msg)
+        [reply] = self.conversation.replies()
+        self.assertTrue(isinstance(reply.pop('time'), datetime))
+        self.assertEqual(reply, {
+            'contact': contact,
+            'content': u'hello',
+            'source': 'SMS',
+            'type': 'sms',
+            })
