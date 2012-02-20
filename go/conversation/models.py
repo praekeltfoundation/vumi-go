@@ -20,12 +20,12 @@ class Conversation(models.Model):
         return Contact.objects.filter(groups__in=self.groups.all())
 
     def send_preview(self):
+        # TODO: remove hardcoded sms
         approval_message = "APPROVE? " + self.message
-        batch = self._send_batch(approval_message, self.previewcontacts.all())
+        batch = self._send_batch("sms", approval_message,
+                                 self.previewcontacts.all())
         batch.preview_batch = self
         batch.save()
-        # unit tests for start view
-        # unit tests for start view with approved message
 
     def preview_status(self):
         vumiapi = self.vumi_api()
@@ -55,7 +55,8 @@ class Conversation(models.Model):
         return sorted(contacts.items())
 
     def send_messages(self):
-        batch = self._send_batch(self.message, self.people())
+        # TODO: remove hardcoded sms
+        batch = self._send_batch("sms", self.message, self.people())
         batch.message_batch = self
         batch.save()
 
@@ -83,17 +84,40 @@ class Conversation(models.Model):
     def vumi_api():
         return VumiApi(settings.VUMI_API_CONFIG)
 
-    def _send_batch(self, message, contacts):
-        # ambient tags: default10001 - default11000 inclusive
+    def delivery_info(self, delivery_class):
+        """Return a delivery information for a given delivery_class."""
+        # TODO: remove hard coded delivery class to tagpool and transport_type
+        #       mapping
+        if delivery_class == 'sms':
+            return "ambient", "sms"
+        elif delivery_class == 'gtalk':
+            return "gtalk", "xmpp"
+        else:
+            raise ConversationSendError("Unknown delivery class %r"
+                                        % (delivery_class,))
+
+    def tag_message_options(self, tagpool, tag):
+        """Return message options for tagpool and tag."""
+        # TODO: this is hardcoded for ambient and gtalk pool currently
+        if tagpool == "ambient":
+            return {"from_addr": tag}
+        elif tagpool == "gtalk":
+            return {"from_addr": tag}
+        else:
+            raise ConversationSendError("Unknown tagpool %r" % (tagpool,))
+
+    def _send_batch(self, delivery_class, message, contacts):
         vumiapi = self.vumi_api()
-        tag = vumiapi.acquire_tag("ambient")
+        tagpool, transport_type = self.delivery_info(delivery_class)
+        addrs = [contact.addr_for(transport_type) for contact in contacts]
+        addrs = [addr for addr in addrs if addr]
+        tag = vumiapi.acquire_tag(tagpool)
         if tag is None:
             raise ConversationSendError("No spare messaging tags.")
+        msg_options = self.tag_message_options(tagpool, tag)
         batch_id = vumiapi.batch_start([tag])
         batch = MessageBatch(batch_id=batch_id)
         batch.save()
-        addrs = [contact.msisdn for contact in contacts]
-        msg_options = {"from_addr": tag}
         vumiapi.batch_send(batch_id, message, msg_options, addrs)
         return batch
 
