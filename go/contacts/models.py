@@ -65,5 +65,17 @@ class Contact(models.Model):
         else:
             return None
 
+    @classmethod
+    def for_addr(cls, transport_type, addr):
+        if transport_type == 'sms':
+            addr = '+' + addr.lstrip('+')
+            return cls.objects.get(msisdn=addr)
+        elif transport_type == 'xmpp':
+            return cls.objects.get(gtalk_id=addr)
+        else:
+            raise Contact.DoesNotExist("Contact for address %r, transport"
+                                       " type %r does not exist."
+                                       % (addr, transport_type))
+
     def __unicode__(self):
         return u' '.join([self.name, self.surname])
