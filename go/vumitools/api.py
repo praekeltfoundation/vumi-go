@@ -307,6 +307,7 @@ class MessageStore(object):
 
     def _acquire_tag(self, pool):
         free_list_key, free_set_key, inuse_set_key = self._tag_pool_keys(pool)
+        print free_list_key, free_set_key, inuse_set_key
         tag = self.r_server.lpop(free_list_key)
         if tag is not None:
             self.r_server.smove(free_set_key, inuse_set_key, tag)
