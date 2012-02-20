@@ -23,19 +23,16 @@
             </div>
             <div class="wide-box">
                 <div id="conv-box">
-                    <label class="group-label-b">Get your message approved:</label>
+                    <label class="group-label-b">Replies to approval message:</label>
                     <div id="groups-list">
                         {% for contact, status in conversation.preview_status %}
                         <div class="group approved {% if forloop.first %}first{% endif %}">
                             <span class="group-name">{{contact}} - {{status}}</span>
                         </div>
                         {% endfor %}
-                        <input type="submit" name="upload" value="Send Preview" class="btn">
+                        <input type="submit" name="upload" value="Resend Preview" class="btn">
+                        <a class="btn" href="">Refresh</a>
                     </div>
-                    {# TODO: implement auto-refresh? #}
-                    {# <p> #}
-                    {#     You won't need to refresh this page. #}
-                    {# </p> #}
                 </div>
                 <div id="preview-box">
                     <div id="preview-pane">
