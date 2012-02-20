@@ -278,7 +278,10 @@ class MessageStore(object):
         return self._msg_from_body_data(TransportUserMessage, body_data)
 
     def batch_common(self, batch_id):
-        return self._get_row('batches', batch_id, 'common')
+        common = self._get_row('batches', batch_id, 'common')
+        for field in ('tags',):
+            common[field] = from_json(common[field])
+        return common
 
     def batch_status(self, batch_id):
         return self._get_status(batch_id)
