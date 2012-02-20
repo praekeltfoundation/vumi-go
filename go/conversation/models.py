@@ -15,14 +15,14 @@ class Conversation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     groups = models.ManyToManyField('contacts.ContactGroup')
     previewcontacts = models.ManyToManyField('contacts.Contact')
+    delivery_class = models.CharField(max_length=255, null=True)
 
     def people(self):
         return Contact.objects.filter(groups__in=self.groups.all())
 
     def send_preview(self):
-        # TODO: remove hardcoded sms
         approval_message = "APPROVE? " + self.message
-        batch = self._send_batch("sms", approval_message,
+        batch = self._send_batch(self.delivery_class, approval_message,
                                  self.previewcontacts.all())
         batch.preview_batch = self
         batch.save()
@@ -55,8 +55,8 @@ class Conversation(models.Model):
         return sorted(contacts.items())
 
     def send_messages(self):
-        # TODO: remove hardcoded sms
-        batch = self._send_batch("sms", self.message, self.people())
+        batch = self._send_batch(
+            self.delivery_class, self.message, self.people())
         batch.message_batch = self
         batch.save()
 
@@ -100,13 +100,15 @@ class Conversation(models.Model):
         """Return message options for tagpool and tag."""
         # TODO: this is hardcoded for ambient and gtalk pool currently
         if tagpool == "ambient":
-            return {"from_addr": tag}
+            return {"from_addr": tag, "transport_name": "ambient"}
         elif tagpool == "gtalk":
-            return {"from_addr": tag}
+            return {"from_addr": tag, "transport_name": "gtalk_vumigo"}
         else:
             raise ConversationSendError("Unknown tagpool %r" % (tagpool,))
 
     def _send_batch(self, delivery_class, message, contacts):
+        if delivery_class is None:
+            raise ConversationSendError("No delivery class specified.")
         vumiapi = self.vumi_api()
         tagpool, transport_type = self.delivery_info(delivery_class)
         addrs = [contact.addr_for(transport_type) for contact in contacts]

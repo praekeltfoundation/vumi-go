@@ -61,7 +61,7 @@ class Contact(models.Model):
         if transport_type == 'sms':
             return self.msisdn
         elif transport_type == 'xmpp':
-            return self.gtalk
+            return self.gtalk_id
         else:
             return None
 
