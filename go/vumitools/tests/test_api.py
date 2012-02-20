@@ -102,7 +102,7 @@ class TestMessageStore(ApplicationTestCase):
             'ack': 0, 'delivery_report': 0, 'message': 0, 'sent': 0,
             })
         self.assertEqual(self.store.batch_common(batch_id),
-                         {"tags": json.dumps(["tag1"])})
+                         {"tags": ["tag1"]})
         self.assertEqual(self.store.tag_common("tag1"),
                          {"current_batch_id": batch_id})
 
