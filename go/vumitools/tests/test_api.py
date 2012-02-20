@@ -65,7 +65,8 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
         tag = "default10001"
         to_addr = "+12310001"
         batch_id = self.api.batch_start([tag])
-        msgs = [self.mkmsg_in(content=msg, to_addr=to_addr, message_id=str(i))
+        msgs = [self.mkmsg_in(content=msg, to_addr=to_addr, message_id=str(i),
+                              transport_type="sms")
                 for i, msg in enumerate(("msg1", "msg2"))]
         for msg in msgs:
             self.api.mdb.add_inbound_message(msg)
@@ -177,7 +178,8 @@ class TestMessageStore(ApplicationTestCase):
 
     def test_add_inbound_message_with_tag(self):
         batch_id = self.store.batch_start(["default10001"])
-        msg = self.mkmsg_in(content="infoo", to_addr="+1234567810001")
+        msg = self.mkmsg_in(content="infoo", to_addr="+1234567810001",
+                            transport_type="sms")
         msg_id = msg['message_id']
         self.store.add_inbound_message(msg)
 
