@@ -57,5 +57,13 @@ class Contact(models.Model):
             contact.save()
             yield contact
 
+    def addr_for(self, transport_type):
+        if transport_type == 'sms':
+            return self.msisdn
+        elif transport_type == 'xmpp':
+            return self.gtalk
+        else:
+            return None
+
     def __unicode__(self):
         return u' '.join([self.name, self.surname])
