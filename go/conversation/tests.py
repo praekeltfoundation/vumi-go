@@ -101,7 +101,8 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         conversation"""
         response = self.client.post(reverse('conversations:people',
             kwargs={'conversation_pk': self.conversation.pk}), {
-            'groups': [grp.pk for grp in ContactGroup.objects.all()]
+            'groups': [grp.pk for grp in ContactGroup.objects.all()],
+            'delivery_class': 'sms',
         })
         self.assertRedirects(response, reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk}))
@@ -187,7 +188,8 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         [cmd] = self.fetch_cmds(consumer)
         [batch] = self.conversation.preview_batch_set.all()
         [contact] = self.conversation.previewcontacts.all()
-        msg_options = {"from_addr": "default10001"}
+        msg_options = {"from_addr": "default10001",
+                       "transport_name": "ambient"}
         self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
                                                   "APPROVE? Test message",
                                                   msg_options,
@@ -222,7 +224,8 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         [cmd] = self.fetch_cmds(consumer)
         [batch] = self.conversation.message_batch_set.all()
         [contact] = self.conversation.people()
-        msg_options = {"from_addr": "default10001"}
+        msg_options = {"from_addr": "default10001",
+                       "transport_name": "ambient"}
         self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
                                                   "Test message",
                                                   msg_options,
