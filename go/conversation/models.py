@@ -46,7 +46,10 @@ class Conversation(models.Model):
                 contacts[contact] = awaiting_reply
         for reply in replies:
             from_addr = '+' + reply['from_addr']  # TODO: normalize better
-            contact = msisdn_to_contact.get(from_addr)
+            try:
+                contact = msisdn_to_contact.get(from_addr)
+            except (Contact.DoesNotExist, Contact.MultipleObjectsReturned):
+                continue
             if contact in contacts and contacts[contact] == awaiting_reply:
                 contents = (reply['content'] or '').strip().lower()
                 contacts[contact] = ('approved'
@@ -68,8 +71,9 @@ class Conversation(models.Model):
             replies.extend(vumiapi.batch_replies(batch.batch_id))
         for reply in replies:
             msisdn = '+' + reply['from_addr']  # TODO: normalize better
-            contact = Contact.objects.get(msisdn=msisdn)
-            if contact is None:
+            try:
+                contact = Contact.objects.get(msisdn=msisdn)
+            except (Contact.DoesNotExist, Contact.MultipleObjectsReturned):
                 continue
             reply_statuses.append({
                 'type': 'sms',  # CSS class, TODO: don't hardcode this
