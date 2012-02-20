@@ -111,6 +111,13 @@ class CeleryTestMixIn(object):
             os.environ["CELERY_CONFIG_MODULE"] = celery_config
         self._app.conf.CELERY_ALWAYS_EAGER = always_eager
 
+    def mkmsg_in(self, content, **kw):
+        kw.setdefault('to_addr', '+123')
+        kw.setdefault('from_addr', '+456')
+        kw.setdefault('transport_name', 'dummy_transport')
+        kw.setdefault('transport_type', 'sms')
+        return TransportUserMessage(content=content, **kw)
+
     def get_consumer(self, **options):
         """Create a command message consumer.
 
