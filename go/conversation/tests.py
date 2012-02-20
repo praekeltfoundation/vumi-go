@@ -229,7 +229,9 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
                                                   contact.msisdn))
 
     def test_start_fails(self):
-        """test failure to send messages"""
+        """
+        Test failure to send messages
+        """
         self.acquire_all_ambient_tags()
         consumer = self.get_cmd_consumer()
         response = self.client.post(reverse('conversations:start', kwargs={
@@ -240,6 +242,20 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         [] = self.conversation.preview_batch_set.all()
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "No spare messaging tags.")
+
+    def test_preview_status(self):
+        """
+        Test preview status helper function
+        """
+        consumer = self.get_cmd_consumer()
+        vumiapi = Conversation.vumi_api()
+        [contact] = self.conversation.previewcontacts.all()
+        self.assertEqual(self.conversation.preview_status(),
+                         [(contact, 'waiting to send')])
+        self.conversation.send_preview()
+        self.process_cmds(vumiapi.mdb, consumer=consumer)
+        self.assertEqual(self.conversation.preview_status(),
+                         [(contact, 'awaiting reply')])
 
     def test_show(self):
         """
