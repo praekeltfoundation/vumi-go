@@ -71,7 +71,7 @@ class Contact(models.Model):
             addr = '+' + addr.lstrip('+')
             return cls.objects.get(msisdn=addr)
         elif transport_type == 'xmpp':
-            return cls.objects.get(gtalk_id=addr)
+            return cls.objects.get(gtalk_id=addr.partition('/')[0])
         else:
             raise Contact.DoesNotExist("Contact for address %r, transport"
                                        " type %r does not exist."
