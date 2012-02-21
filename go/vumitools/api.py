@@ -235,7 +235,7 @@ class MessageStore(object):
         if transport_type == 'sms':
             tag = "default%s" % (msg['to_addr'][-5:],)
         elif transport_type == 'xmpp':
-            tag = msg['to_addr'].partition('@')[0] or None
+            tag = msg['to_addr']
         else:
             tag = None
         return tag

@@ -189,6 +189,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         [batch] = self.conversation.preview_batch_set.all()
         [contact] = self.conversation.previewcontacts.all()
         msg_options = {"from_addr": "default10001",
+                       "transport_type": "sms",
                        "transport_name": "ambient"}
         self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
                                                   "APPROVE? Test message",
@@ -225,6 +226,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         [batch] = self.conversation.message_batch_set.all()
         [contact] = self.conversation.people()
         msg_options = {"from_addr": "default10001",
+                       "transport_type": "sms",
                        "transport_name": "ambient"}
         self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
                                                   "Test message",
