@@ -74,6 +74,13 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
         api_msgs.sort(key=lambda msg: msg['message_id'])
         self.assertEqual(api_msgs, msgs)
 
+    def test_batch_tags(self):
+        tag1, tag2 = "tag1", "tag2"
+        batch_id = self.api.batch_start([tag1])
+        self.assertEqual(self.api.batch_tags(batch_id), [tag1])
+        batch_id = self.api.batch_start([tag1, tag2])
+        self.assertEqual(self.api.batch_tags(batch_id), [tag1, tag2])
+
     def test_declare_acquire_and_release_tags(self):
         self.api.declare_tags("poolA", ["tag1", "tag2"])
         self.assertEqual(self.api.acquire_tag("poolA"), "tag1")

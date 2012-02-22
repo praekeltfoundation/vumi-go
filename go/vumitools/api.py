@@ -103,6 +103,17 @@ class VumiApi(object):
         reply_ids = self.mdb.batch_replies(batch_id)
         return [self.mdb.get_inbound_message(r_id) for r_id in reply_ids]
 
+    def batch_tags(self, batch_id):
+        """Return a list of tags associated with a given batch.
+
+        :type batch_id: str
+        :param batch_id:
+            batch to get tags for
+        :rtype:
+            list of tags
+        """
+        return self.mdb.batch_common(batch_id)['tags']
+
     def acquire_tag(self, pool):
         """Acquire a tag from a given tag pool.
 
