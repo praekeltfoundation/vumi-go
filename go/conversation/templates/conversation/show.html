@@ -6,7 +6,6 @@
 {% endblock %}
 
 {% block main %}
-<form name="conversation" method="post" action="" id="conversation">
     <div id="control-bar">
         <div id="control-elements">
             <h3 class="wide">
@@ -83,6 +82,12 @@
                     {#     </td> #}
                     {# </tr> #}
                 </table>
+                <div>
+                    <form name="conversation-end" id="conversation-end" method="post"
+                          action="{% url conversations:end conversation_pk=conversation.pk %}">
+                        <input type="submit" value="End conversation" />
+                    </form>
+                </div>
             </div>
             <div id="graph-box" class="box">
                 <h4>
@@ -229,5 +234,4 @@
         </div>
         {% include "footer.html" %}
     </div>
-</form>
 {% endblock %}
