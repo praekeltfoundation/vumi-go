@@ -1,7 +1,16 @@
+import operator
 from django.db import models
 from django.conf import settings
 from go.contacts.models import Contact
 from go.vumitools import VumiApi
+
+
+def get_delivery_classes():
+    # TODO: Unhardcode this when we have more configurable delivery classes.
+    return [
+        ('sms', 'SMS'),
+        ('gtalk', 'Google Talk'),
+        ]
 
 
 class Conversation(models.Model):
@@ -15,41 +24,29 @@ class Conversation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     groups = models.ManyToManyField('contacts.ContactGroup')
     previewcontacts = models.ManyToManyField('contacts.Contact')
+    delivery_class = models.CharField(max_length=255, null=True)
 
     def people(self):
         return Contact.objects.filter(groups__in=self.groups.all())
 
     def send_preview(self):
-        # TODO: remove hardcoded sms
         approval_message = "APPROVE? " + self.message
-        batch = self._send_batch("sms", approval_message,
+        batch = self._send_batch(self.delivery_class, approval_message,
                                  self.previewcontacts.all())
         batch.preview_batch = self
         batch.save()
 
     def preview_status(self):
-        vumiapi = self.vumi_api()
         batches = self.preview_batch_set.all()
-        messages, replies = [], []
-        for batch in batches:
-            messages.extend(vumiapi.batch_messages(batch.batch_id))
-            replies.extend(vumiapi.batch_replies(batch.batch_id))
+        messages = self._get_messages(self.delivery_class, batches)
+        replies = self._get_replies(self.delivery_class, batches)
         contacts = dict((c, 'waiting to send') for c in
                         self.previewcontacts.all())
-        msisdn_to_contact = dict((c.msisdn, c) for c in
-                                 self.previewcontacts.all())
         awaiting_reply = 'awaiting reply'
-        for msg in messages:
-            to_addr = msg['to_addr']
-            contact = msisdn_to_contact.get(to_addr)
+        for contact, msg in messages:
             if contact in contacts:
                 contacts[contact] = awaiting_reply
-        for reply in replies:
-            from_addr = '+' + reply['from_addr']  # TODO: normalize better
-            try:
-                contact = msisdn_to_contact.get(from_addr)
-            except (Contact.DoesNotExist, Contact.MultipleObjectsReturned):
-                continue
+        for contact, reply in replies:
             if contact in contacts and contacts[contact] == awaiting_reply:
                 contents = (reply['content'] or '').strip().lower()
                 contacts[contact] = ('approved'
@@ -58,26 +55,19 @@ class Conversation(models.Model):
         return sorted(contacts.items())
 
     def send_messages(self):
-        # TODO: remove hardcoded sms
-        batch = self._send_batch("sms", self.message, self.people())
+        batch = self._send_batch(
+            self.delivery_class, self.message, self.people())
         batch.message_batch = self
         batch.save()
 
     def replies(self):
-        vumiapi = self.vumi_api()
         batches = self.message_batch_set.all()
-        replies, reply_statuses = [], []
-        for batch in batches:
-            replies.extend(vumiapi.batch_replies(batch.batch_id))
-        for reply in replies:
-            msisdn = '+' + reply['from_addr']  # TODO: normalize better
-            try:
-                contact = Contact.objects.get(msisdn=msisdn)
-            except (Contact.DoesNotExist, Contact.MultipleObjectsReturned):
-                continue
+        reply_statuses = []
+        for contact, reply in self._get_replies(self.delivery_class, batches):
+            delivery_classes = dict(get_delivery_classes())
             reply_statuses.append({
-                'type': 'sms',  # CSS class, TODO: don't hardcode this
-                'source': 'SMS',  # TODO: don't hardcode this
+                'type': self.delivery_class,
+                'source': delivery_classes[self.delivery_class],
                 'contact': contact,
                 'time': reply['timestamp'],
                 'content': reply['content'],
@@ -104,13 +94,23 @@ class Conversation(models.Model):
         """Return message options for tagpool and tag."""
         # TODO: this is hardcoded for ambient and gtalk pool currently
         if tagpool == "ambient":
-            return {"from_addr": tag}
+            return {
+                "from_addr": tag,
+                "transport_name": "ambient",
+                "transport_type": "sms",
+                }
         elif tagpool == "gtalk":
-            return {"from_addr": tag}
+            return {
+                "from_addr": tag,
+                "transport_name": "gtalk_vumigo",
+                "transport_type": "xmpp",
+                }
         else:
             raise ConversationSendError("Unknown tagpool %r" % (tagpool,))
 
     def _send_batch(self, delivery_class, message, contacts):
+        if delivery_class is None:
+            raise ConversationSendError("No delivery class specified.")
         vumiapi = self.vumi_api()
         tagpool, transport_type = self.delivery_info(delivery_class)
         addrs = [contact.addr_for(transport_type) for contact in contacts]
@@ -124,6 +124,37 @@ class Conversation(models.Model):
         batch.save()
         vumiapi.batch_send(batch_id, message, msg_options, addrs)
         return batch
+
+    def _get_helper(self, delivery_class, batches, addr_func, batch_msg_func):
+        """Return a list of (Contact, reply_msg) tuples."""
+        if delivery_class is None:
+            return []
+        _tagpool, transport_type = self.delivery_info(delivery_class)
+
+        replies = []
+        for batch in batches:
+            for reply in batch_msg_func(batch.batch_id):
+                try:
+                    contact = Contact.for_addr(transport_type,
+                                               addr_func(reply))
+                except (Contact.DoesNotExist, Contact.MultipleObjectsReturned):
+                    continue
+                replies.append((contact, reply))
+        return replies
+
+    def _get_replies(self, delivery_class, batches):
+        vumiapi = self.vumi_api()
+        addr_func = operator.itemgetter('from_addr')
+        batch_msg_func = vumiapi.batch_replies
+        return self._get_helper(delivery_class, batches,
+                                addr_func, batch_msg_func)
+
+    def _get_messages(self, delivery_class, batches):
+        vumiapi = self.vumi_api()
+        addr_func = operator.itemgetter('to_addr')
+        batch_msg_func = vumiapi.batch_messages
+        return self._get_helper(delivery_class, batches,
+                                addr_func, batch_msg_func)
 
     class Meta:
         ordering = ['-updated_at']

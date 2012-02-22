@@ -123,7 +123,6 @@ def person(request, person_pk):
             return redirect(reverse('contacts:person', kwargs={
                 'person_pk': contact.pk}))
         else:
-            print form.errors
             messages.add_message(request, messages.ERROR,
                 'Please correct the problem below.')
     else:

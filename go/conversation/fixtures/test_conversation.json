@@ -7,6 +7,7 @@
         "message": "Test message",
         "start_date": "2011-08-26",
         "start_time": "06:10",
+        "delivery_class": "sms",
         "groups": [1],
         "previewcontacts": [1]
     }

@@ -18,9 +18,9 @@ class DummyApiWorker(VumiApiWorker):
         self.store = store
 
     def send_to(self, to_addr, content, **msg_options):
+        msg_options.setdefault('transport_name', 'dummy_transport')
+        msg_options.setdefault('transport_type', 'sms')
         return TransportUserMessage(to_addr=to_addr, content=content,
-                                    transport_name='dummy_transport',
-                                    transport_type='sms',
                                     **msg_options)
 
 

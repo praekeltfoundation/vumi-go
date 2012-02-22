@@ -20,3 +20,7 @@ class ConversationForm(forms.ModelForm):
             'start_date',
             'start_time',
         )
+
+
+class SelectDeliveryClassForm(forms.Form):
+    delivery_class = forms.ChoiceField(choices=models.get_delivery_classes())
