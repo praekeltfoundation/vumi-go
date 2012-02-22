@@ -5,6 +5,14 @@ from go.contacts.models import Contact
 from go.vumitools import VumiApi
 
 
+def get_delivery_classes():
+    # TODO: Unhardcode this when we have more configurable delivery classes.
+    return [
+        ('sms', 'SMS'),
+        ('gtalk', 'Google Talk'),
+        ]
+
+
 class Conversation(models.Model):
     """A conversation with an audience"""
     user = models.ForeignKey('auth.User')
@@ -56,9 +64,10 @@ class Conversation(models.Model):
         batches = self.message_batch_set.all()
         reply_statuses = []
         for contact, reply in self._get_replies(self.delivery_class, batches):
+            delivery_classes = dict(get_delivery_classes())
             reply_statuses.append({
-                'type': 'sms',  # CSS class, TODO: don't hardcode this
-                'source': 'SMS',  # TODO: don't hardcode this
+                'type': self.delivery_class,
+                'source': delivery_classes[self.delivery_class],
                 'contact': contact,
                 'time': reply['timestamp'],
                 'content': reply['content'],

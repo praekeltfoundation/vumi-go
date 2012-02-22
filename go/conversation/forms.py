@@ -23,7 +23,4 @@ class ConversationForm(forms.ModelForm):
 
 
 class SelectDeliveryClassForm(forms.Form):
-    delivery_class = forms.ChoiceField(choices=[
-            ('sms', 'SMS'),
-            ('gtalk', 'Google Talk'),
-            ])
+    delivery_class = forms.ChoiceField(choices=models.get_delivery_classes())
