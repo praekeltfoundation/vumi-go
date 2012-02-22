@@ -341,3 +341,22 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.assertFalse(self.conversation.ended())
         self.conversation.end_conversation()
         self.assertTrue(self.conversation.ended())
+
+    def test_tag_releasing(self):
+        """
+        Test that tags are released when a conversation is ended.
+        """
+        vumiapi = Conversation.vumi_api()
+        self.conversation.send_preview()
+        self.conversation.send_messages()
+        [preview_batch] = self.conversation.preview_batch_set.all()
+        [message_batch] = self.conversation.message_batch_set.all()
+        self.assertEqual(len(vumiapi.batch_tags(preview_batch.batch_id)), 1)
+        self.assertEqual(len(vumiapi.batch_tags(message_batch.batch_id)), 1)
+        self.conversation.end_conversation()
+        [pre_tag] = vumiapi.batch_tags(preview_batch.batch_id)
+        [msg_tag] = vumiapi.batch_tags(message_batch.batch_id)
+        self.assertEqual(vumiapi.mdb.tag_common(pre_tag)['current_batch_id'],
+                         None)
+        self.assertEqual(vumiapi.mdb.tag_common(msg_tag)['current_batch_id'],
+                         None)
