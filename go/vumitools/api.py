@@ -203,6 +203,9 @@ class MessageStore(object):
         redis_cls = config.get('redis_cls', redis.Redis)  # testing hook
         self.r_server = redis_cls(**self.r_config)
 
+    def _tag_key(self, tag):
+        return "%s:%s" % tag
+
     def batch_start(self, tags):
         batch_id = uuid4().get_hex()
         fields = {'tags': to_json(tags)}
@@ -211,7 +214,7 @@ class MessageStore(object):
         self._put_row('batches', batch_id, 'common', fields)
         self._put_row('batches', batch_id, 'messages', {})
         for tag in tags:
-            self._put_row('tags', tag, 'common', tag_fields)
+            self._put_row('tags', self._tag_key(tag), 'common', tag_fields)
         return batch_id
 
     def acquire_tag(self, pool):
@@ -248,9 +251,9 @@ class MessageStore(object):
         #       additional transports
         transport_type = msg['transport_type']
         if transport_type == 'sms':
-            tag = "default%s" % (msg['to_addr'][-5:],)
+            tag = ("ambient", "default%s" % (msg['to_addr'][-5:],))
         elif transport_type == 'xmpp':
-            tag = msg['to_addr']
+            tag = ("gtalk", msg['to_addr'])
         else:
             tag = None
         return tag
@@ -301,8 +304,9 @@ class MessageStore(object):
 
     def batch_common(self, batch_id):
         common = self._get_row('batches', batch_id, 'common')
-        for field in ('tags',):
-            common[field] = from_json(common[field])
+        tags = common['tags']
+        tags = from_json(tags)
+        common['tags'] = [tuple(x) for x in tags]
         return common
 
     def batch_status(self, batch_id):
@@ -321,7 +325,7 @@ class MessageStore(object):
         return self._get_row('messages', msg_id, 'events').keys()
 
     def tag_common(self, tag):
-        return self._get_row('tags', tag, 'common')
+        return self._get_row('tags', self._tag_key(tag), 'common')
 
     # tag pool is stored in Redis since HBase doesn't have a nice
     # list implementation
