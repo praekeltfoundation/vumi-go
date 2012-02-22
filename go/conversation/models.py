@@ -1,4 +1,5 @@
 import operator
+import datetime
 from django.db import models
 from django.conf import settings
 from go.contacts.models import Contact
@@ -20,6 +21,8 @@ class Conversation(models.Model):
     message = models.TextField('Message')
     start_date = models.DateField()
     start_time = models.TimeField()
+    end_date = models.DateField(null=True)
+    end_time = models.TimeField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     groups = models.ManyToManyField('contacts.ContactGroup')
@@ -28,6 +31,15 @@ class Conversation(models.Model):
 
     def people(self):
         return Contact.objects.filter(groups__in=self.groups.all())
+
+    def ended(self):
+        return self.end_time is not None
+
+    def end_conversation(self):
+        now = datetime.datetime.now()
+        self.end_date = now.date()
+        self.end_time = now.time()
+        self.save()
 
     def send_preview(self):
         approval_message = "APPROVE? " + self.message

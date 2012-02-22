@@ -319,3 +319,25 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
             'source': 'SMS',
             'type': 'sms',
             })
+
+    def test_end(self):
+        """
+        Test ending the conversation
+        """
+        self.assertFalse(self.conversation.ended())
+        response = self.client.post(reverse('conversations:end', kwargs={
+            'conversation_pk': self.conversation.pk}), follow=True)
+        self.assertRedirects(response, reverse('conversations:show', kwargs={
+            'conversation_pk': self.conversation.pk}))
+        [msg] = response.context['messages']
+        self.assertEqual(str(msg), "Conversation ended")
+        self.conversation = reload_record(self.conversation)
+        self.assertTrue(self.conversation.ended())
+
+    def test_end_conversation(self):
+        """
+        Test the end_conversation helper function
+        """
+        self.assertFalse(self.conversation.ended())
+        self.conversation.end_conversation()
+        self.assertTrue(self.conversation.ended())
