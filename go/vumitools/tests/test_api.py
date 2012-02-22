@@ -82,14 +82,15 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
         self.assertEqual(self.api.batch_tags(batch_id), [tag1, tag2])
 
     def test_declare_acquire_and_release_tags(self):
-        self.api.declare_tags("poolA", ["tag1", "tag2"])
-        self.assertEqual(self.api.acquire_tag("poolA"), "tag1")
-        self.assertEqual(self.api.acquire_tag("poolA"), "tag2")
+        tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
+        self.api.declare_tags([tag1, tag2])
+        self.assertEqual(self.api.acquire_tag("poolA"), tag1)
+        self.assertEqual(self.api.acquire_tag("poolA"), tag2)
         self.assertEqual(self.api.acquire_tag("poolA"), None)
         self.assertEqual(self.api.acquire_tag("poolB"), None)
 
-        self.api.release_tag("poolA", "tag2")
-        self.assertEqual(self.api.acquire_tag("poolA"), "tag2")
+        self.api.release_tag(tag2)
+        self.assertEqual(self.api.acquire_tag("poolA"), tag2)
         self.assertEqual(self.api.acquire_tag("poolA"), None)
 
 
@@ -115,17 +116,20 @@ class TestMessageStore(ApplicationTestCase):
                          {"current_batch_id": batch_id})
 
     def test_declare_tags(self):
-        self.store.declare_tags("poolA", ["tag1", "tag2"])
-        self.assertEqual(self.store.acquire_tag("poolA"), "tag1")
-        self.assertEqual(self.store.acquire_tag("poolA"), "tag2")
+        tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
+        self.store.declare_tags([tag1, tag2])
+        self.assertEqual(self.store.acquire_tag("poolA"), tag1)
+        self.assertEqual(self.store.acquire_tag("poolA"), tag2)
         self.assertEqual(self.store.acquire_tag("poolA"), None)
-        self.store.declare_tags("poolA", ["tag2", "tag3"])
-        self.assertEqual(self.store.acquire_tag("poolA"), "tag3")
+        tag3 = ("poolA", "tag3")
+        self.store.declare_tags([tag2, tag3])
+        self.assertEqual(self.store.acquire_tag("poolA"), tag3)
 
     def test_acquire_tag(self):
         tkey = lambda x: "message_store:tagpools:poolA:" + x
-        self.store.declare_tags("poolA", ["tag1", "tag2"])
-        self.assertEqual(self.store.acquire_tag("poolA"), "tag1")
+        tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
+        self.store.declare_tags([tag1, tag2])
+        self.assertEqual(self.store.acquire_tag("poolA"), tag1)
         self.assertEqual(self.store.acquire_tag("poolB"), None)
         self.assertEqual(self.store.r_server.lrange(tkey("free:list"),
                                                     0, -1),
@@ -137,10 +141,11 @@ class TestMessageStore(ApplicationTestCase):
 
     def test_release_tag(self):
         tkey = lambda x: "message_store:tagpools:poolA:" + x
-        self.store.declare_tags("poolA", ["tag1", "tag2", "tag3"])
+        tag1, tag2, tag3 = [("poolA", "tag%d" % i) for i in (1, 2, 3)]
+        self.store.declare_tags([tag1, tag2, tag3])
         self.store.acquire_tag("poolA")
         self.store.acquire_tag("poolA")
-        self.store.release_tag("poolA", "tag1")
+        self.store.release_tag(tag1)
         self.assertEqual(self.store.r_server.lrange(tkey("free:list"),
                                                     0, -1),
                          ["tag3", "tag1"])

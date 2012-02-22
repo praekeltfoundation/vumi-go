@@ -127,7 +127,7 @@ class VumiApi(object):
         """
         return self.mdb.acquire_tag(pool)
 
-    def release_tag(self, pool, tag):
+    def release_tag(self, tag):
         """Release a tag back to the pool it came from.
 
         Tags should be released only once a conversation is finished.
@@ -139,23 +139,21 @@ class VumiApi(object):
         :rtype:
             None.
         """
-        return self.mdb.release_tag(pool, tag)
+        return self.mdb.release_tag(tag)
 
-    def declare_tags(self, pool, tags):
+    def declare_tags(self, tags):
         """Populate a pool with tags.
 
         Tags already in the pool are not duplicated.
 
         :type pool: str
-        :param pool:
-            name of the pool to add the tags too
-        :type tags: list of str
+        :type tags: list of (pool, local_tag) tuples
         :param tags:
             list of tags to add to the pool.
         :rtype:
             None
         """
-        return self.mdb.declare_tags(pool, tags)
+        return self.mdb.declare_tags(tags)
 
 
 class MessageStore(object):
@@ -217,13 +215,19 @@ class MessageStore(object):
         return batch_id
 
     def acquire_tag(self, pool):
-        return self._acquire_tag(pool)
+        local_tag = self._acquire_tag(pool)
+        return (pool, local_tag) if local_tag is not None else None
 
-    def release_tag(self, pool, tag):
-        return self._release_tag(pool, tag)
+    def release_tag(self, tag):
+        pool, local_tag = tag
+        return self._release_tag(pool, local_tag)
 
-    def declare_tags(self, pool, tags):
-        return self._declare_tags(pool, tags)
+    def declare_tags(self, tags):
+        pools = {}
+        for pool, local_tag in tags:
+            pools.setdefault(pool, []).append(local_tag)
+        for pool, local_tags in pools.items():
+            return self._declare_tags(pool, local_tags)
 
     def _msg_to_body_data(self, msg):
         return dict((k.encode('utf-8'), to_json(v)) for k, v
@@ -333,15 +337,15 @@ class MessageStore(object):
             self.r_server.smove(free_set_key, inuse_set_key, tag)
         return tag
 
-    def _release_tag(self, pool, tag):
+    def _release_tag(self, pool, local_tag):
         free_list_key, free_set_key, inuse_set_key = self._tag_pool_keys(pool)
-        count = self.r_server.smove(inuse_set_key, free_set_key, tag)
+        count = self.r_server.smove(inuse_set_key, free_set_key, local_tag)
         if count == 1:
-            self.r_server.rpush(free_list_key, tag)
+            self.r_server.rpush(free_list_key, local_tag)
 
-    def _declare_tags(self, pool, tags):
+    def _declare_tags(self, pool, local_tags):
         free_list_key, free_set_key, inuse_set_key = self._tag_pool_keys(pool)
-        new_tags = set(tags)
+        new_tags = set(local_tags)
         old_tags = set(self.r_server.sunion(free_set_key, inuse_set_key))
         for tag in sorted(new_tags - old_tags):
             self.r_server.sadd(free_set_key, tag)
