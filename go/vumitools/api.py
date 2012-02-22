@@ -231,7 +231,13 @@ class MessageStore(object):
     def _map_inbound_msg_to_tag(self, msg):
         # TODO: this eventually needs to become more generic to support
         #       additional transports
-        tag = "default%s" % (msg['to_addr'][-5:],)
+        transport_type = msg['transport_type']
+        if transport_type == 'sms':
+            tag = "default%s" % (msg['to_addr'][-5:],)
+        elif transport_type == 'xmpp':
+            tag = msg['to_addr']
+        else:
+            tag = None
         return tag
 
     def add_message(self, batch_id, msg):
@@ -266,10 +272,11 @@ class MessageStore(object):
 
     def add_inbound_message(self, msg):
         msg_id = msg['message_id']
-        tag = self._map_inbound_msg_to_tag(msg)
-        batch_id = self.tag_common(tag).get('current_batch_id')
         self._put_row('inbound_messages', msg_id, 'body',
                       self._msg_to_body_data(msg))
+        tag = self._map_inbound_msg_to_tag(msg)
+        batch_id = (self.tag_common(tag).get('current_batch_id')
+                    if tag else None)
         if batch_id is not None:
             self._put_row('batches', batch_id, 'replies', {msg_id: '1'})
 

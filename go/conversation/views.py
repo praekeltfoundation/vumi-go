@@ -4,7 +4,7 @@ from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator
 from django.contrib import messages
 from go.conversation.models import Conversation, ConversationSendError
-from go.conversation.forms import ConversationForm
+from go.conversation.forms import ConversationForm, SelectDeliveryClassForm
 from go.contacts.forms import (NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
 from go.contacts.models import Contact, ContactGroup
@@ -109,18 +109,24 @@ def people(request, conversation_pk):
         user=request.user)
     if request.POST:
         group_pks = request.POST.getlist('groups')
-        if group_pks:
+        delivery_class = SelectDeliveryClassForm(request.POST)
+        if group_pks and delivery_class.is_valid():
             # get the groups
             groups = ContactGroup.objects.filter(pk__in=group_pks)
             # link to the conversation
             for group in groups:
                 conversation.groups.add(group)
+            # set the delivery class
+            cleaned_data = delivery_class.cleaned_data
+            conversation.delivery_class = cleaned_data['delivery_class']
+            conversation.save()
             messages.add_message(request, messages.INFO,
                 'The selected groups have been added to the conversation')
             return redirect(reverse('conversations:send', kwargs={
                 'conversation_pk': conversation.pk}))
     return render(request, 'conversation/people.html', {
         'conversation': conversation,
+        'delivery_class': SelectDeliveryClassForm(),
     })
 
 
