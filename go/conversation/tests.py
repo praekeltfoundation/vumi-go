@@ -88,8 +88,8 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
 
     def declare_ambient_tags(self):
         api = Conversation.vumi_api()
-        api.declare_tags("ambient", ["default%s" % i for i
-                                     in range(10001, 10001 + 4)])
+        api.declare_tags([("ambient", "default%s" % i) for i
+                          in range(10001, 10001 + 4)])
 
     def acquire_all_ambient_tags(self):
         api = Conversation.vumi_api()
@@ -262,8 +262,8 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.process_cmds(vumiapi.mdb, consumer=consumer)
         self.assertEqual(self.conversation.preview_status(),
                          [(contact, 'awaiting reply')])
-        [tag] = vumiapi.mdb.batch_common(batch.batch_id)['tags']
-        to_addr = "+123" + tag[-5:]
+        [tag] = vumiapi.batch_tags(batch.batch_id)
+        to_addr = "+123" + tag[1][-5:]
 
         # unknown contact
         msg = self.mkmsg_in('hello', to_addr=to_addr)
@@ -299,8 +299,8 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         [batch] = self.conversation.message_batch_set.all()
         self.process_cmds(vumiapi.mdb, consumer=consumer)
         self.assertEqual(self.conversation.replies(), [])
-        [tag] = vumiapi.mdb.batch_common(batch.batch_id)['tags']
-        to_addr = "+123" + tag[-5:]
+        [tag] = vumiapi.batch_tags(batch.batch_id)
+        to_addr = "+123" + tag[1][-5:]
 
         # unknown contact
         msg = self.mkmsg_in('hello', to_addr=to_addr)
