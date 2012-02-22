@@ -209,7 +209,7 @@ class MessageStore(object):
     def batch_start(self, tags):
         batch_id = uuid4().get_hex()
         fields = {'tags': to_json(tags)}
-        tag_fields = {'current_batch_id': batch_id}
+        tag_fields = {'current_batch_id': to_json(batch_id)}
         self._init_status(batch_id)
         self._put_row('batches', batch_id, 'common', fields)
         self._put_row('batches', batch_id, 'messages', {})
@@ -223,14 +223,22 @@ class MessageStore(object):
 
     def release_tag(self, tag):
         pool, local_tag = tag
-        return self._release_tag(pool, local_tag)
+        self._release_tag(pool, local_tag)
+        self._unset_tag_current_batch_id(tag)
 
     def declare_tags(self, tags):
         pools = {}
         for pool, local_tag in tags:
             pools.setdefault(pool, []).append(local_tag)
         for pool, local_tags in pools.items():
-            return self._declare_tags(pool, local_tags)
+            self._declare_tags(pool, local_tags)
+        for tag in tags:
+            if not self.tag_common(tag):
+                self._unset_tag_current_batch_id(tag)
+
+    def _unset_tag_current_batch_id(self, tag):
+        tag_fields = {'current_batch_id': to_json(None)}
+        self._put_row('tags', self._tag_key(tag), 'common', tag_fields)
 
     def _msg_to_body_data(self, msg):
         return dict((k.encode('utf-8'), to_json(v)) for k, v
@@ -305,8 +313,10 @@ class MessageStore(object):
     def batch_common(self, batch_id):
         common = self._get_row('batches', batch_id, 'common')
         tags = common['tags']
-        tags = from_json(tags)
-        common['tags'] = [tuple(x) for x in tags]
+        if tags is not None:
+            tags = from_json(tags)
+            tags = [tuple(x) for x in tags]
+        common['tags'] = tags
         return common
 
     def batch_status(self, batch_id):
@@ -325,7 +335,11 @@ class MessageStore(object):
         return self._get_row('messages', msg_id, 'events').keys()
 
     def tag_common(self, tag):
-        return self._get_row('tags', self._tag_key(tag), 'common')
+        common = self._get_row('tags', self._tag_key(tag), 'common')
+        batch_id_bytes = common.get('current_batch_id')
+        if batch_id_bytes is not None:
+            common['current_batch_id'] = from_json(batch_id_bytes)
+        return common
 
     # tag pool is stored in Redis since HBase doesn't have a nice
     # list implementation

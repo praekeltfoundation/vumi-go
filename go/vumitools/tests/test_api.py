@@ -2,8 +2,6 @@
 
 """Tests for go.vumitools.api."""
 
-import json
-
 from twisted.trial.unittest import TestCase
 
 from vumi.message import TransportEvent
@@ -94,6 +92,24 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
         self.api.release_tag(tag2)
         self.assertEqual(self.api.acquire_tag("poolA"), tag2)
         self.assertEqual(self.api.acquire_tag("poolA"), None)
+
+    def test_declare_tags_from_different_pools(self):
+        tag1, tag2 = ("poolA", "tag1"), ("poolB", "tag2")
+        self.api.declare_tags([tag1, tag2])
+        self.assertEqual(self.api.acquire_tag("poolA"), tag1)
+        self.assertEqual(self.api.acquire_tag("poolB"), tag2)
+
+    def test_start_batch_and_release_tags(self):
+        tag = ("pool", "tag")
+        self.api.declare_tags([tag])
+        self.assertEqual(self.api.mdb.tag_common(tag), {
+            "current_batch_id": None})
+        batch_id = self.api.batch_start([tag])
+        self.assertEqual(self.api.mdb.tag_common(tag), {
+            "current_batch_id": batch_id})
+        self.api.release_tag(tag)
+        self.assertEqual(self.api.mdb.tag_common(tag), {
+            "current_batch_id": None})
 
 
 class TestMessageStore(ApplicationTestCase):
