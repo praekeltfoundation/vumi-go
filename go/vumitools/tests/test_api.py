@@ -30,11 +30,13 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
         self.restore_celery()
 
     def test_batch_start(self):
-        batch_id = self.api.batch_start(["tag"])
+        tag = ("pool", "tag")
+        batch_id = self.api.batch_start([tag])
         self.assertEqual(len(batch_id), 32)
 
     def test_batch_status(self):
-        batch_id = self.api.mdb.batch_start(["tag"])
+        tag = ("pool", "tag")
+        batch_id = self.api.mdb.batch_start([tag])
         self.assertEqual(self.api.batch_status(batch_id), {
             'ack': 0, 'delivery_report': 0, 'message': 0, 'sent': 0,
             })
@@ -52,7 +54,7 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
         self.assertEqual(cmd3, send_msg("+56"))
 
     def test_batch_messages(self):
-        batch_id = self.api.batch_start(["default10001"])
+        batch_id = self.api.batch_start([("poolA", "default10001")])
         msgs = [self.mkmsg_out(content=msg, message_id=str(i)) for
                 i, msg in enumerate(("msg1", "msg2"))]
         for msg in msgs:
@@ -62,7 +64,7 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
         self.assertEqual(api_msgs, msgs)
 
     def test_batch_replies(self):
-        tag = "default10001"
+        tag = ("ambient", "default10001")
         to_addr = "+12310001"
         batch_id = self.api.batch_start([tag])
         msgs = [self.mkmsg_in(content=msg, to_addr=to_addr, message_id=str(i),
@@ -75,7 +77,7 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
         self.assertEqual(api_msgs, msgs)
 
     def test_batch_tags(self):
-        tag1, tag2 = "tag1", "tag2"
+        tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
         batch_id = self.api.batch_start([tag1])
         self.assertEqual(self.api.batch_tags(batch_id), [tag1])
         batch_id = self.api.batch_start([tag1, tag2])
@@ -105,14 +107,15 @@ class TestMessageStore(ApplicationTestCase):
         self.store.r_server.teardown()
 
     def test_batch_start(self):
-        batch_id = self.store.batch_start(["tag1"])
+        tag1 = ("poolA", "tag1")
+        batch_id = self.store.batch_start([tag1])
         self.assertEqual(self.store.batch_messages(batch_id), [])
         self.assertEqual(self.store.batch_status(batch_id), {
             'ack': 0, 'delivery_report': 0, 'message': 0, 'sent': 0,
             })
         self.assertEqual(self.store.batch_common(batch_id),
-                         {"tags": ["tag1"]})
-        self.assertEqual(self.store.tag_common("tag1"),
+                         {"tags": [tag1]})
+        self.assertEqual(self.store.tag_common(tag1),
                          {"current_batch_id": batch_id})
 
     def test_declare_tags(self):
@@ -155,7 +158,7 @@ class TestMessageStore(ApplicationTestCase):
                          set(["tag2"]))
 
     def test_add_message(self):
-        batch_id = self.store.batch_start(["tag"])
+        batch_id = self.store.batch_start([("pool", "tag")])
         msg = self.mkmsg_out(content="outfoo")
         msg_id = msg['message_id']
         self.store.add_message(batch_id, msg)
@@ -169,7 +172,7 @@ class TestMessageStore(ApplicationTestCase):
             })
 
     def test_add_ack_event(self):
-        batch_id = self.store.batch_start(["tag"])
+        batch_id = self.store.batch_start([("pool", "tag")])
         msg = self.mkmsg_out(content="outfoo")
         msg_id = msg['message_id']
         ack = TransportEvent(user_message_id=msg_id, event_type='ack',
@@ -189,7 +192,7 @@ class TestMessageStore(ApplicationTestCase):
         self.assertEqual(self.store.get_inbound_message(msg_id), msg)
 
     def test_add_inbound_message_with_tag(self):
-        batch_id = self.store.batch_start(["default10001"])
+        batch_id = self.store.batch_start([("ambient", "default10001")])
         msg = self.mkmsg_in(content="infoo", to_addr="+1234567810001",
                             transport_type="sms")
         msg_id = msg['message_id']
