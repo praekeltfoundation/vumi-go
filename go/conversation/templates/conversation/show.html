@@ -83,10 +83,14 @@
                     {# </tr> #}
                 </table>
                 <div>
+                    {% if conversation.ended %}
+                    Conversation ended on {{conversation.end_date|date:"d F Y"}}
+                    {% else %}
                     <form name="conversation-end" id="conversation-end" method="post"
                           action="{% url conversations:end conversation_pk=conversation.pk %}">
                         <input type="submit" value="End conversation" />
                     </form>
+                    {% endif %}
                 </div>
             </div>
             <div id="graph-box" class="box">
