@@ -73,6 +73,13 @@ class Conversation(models.Model):
         batch.message_batch = self
         batch.save()
 
+    def delivery_class_description(self):
+        delivery_classes = dict(get_delivery_classes())
+        description = delivery_classes.get(self.delivery_class)
+        if description is None:
+            description = "Unknown"
+        return description
+
     def replies(self):
         batches = self.message_batch_set.all()
         reply_statuses = []
