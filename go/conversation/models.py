@@ -36,7 +36,7 @@ class Conversation(models.Model):
         return self.end_time is not None
 
     def end_conversation(self):
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()
         self.end_date = now.date()
         self.end_time = now.time()
         self.save()
