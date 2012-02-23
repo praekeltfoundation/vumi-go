@@ -89,6 +89,7 @@
                     <form name="conversation-end" id="conversation-end" method="post"
                           action="{% url conversations:end conversation_pk=conversation.pk %}">
                         <input type="submit" value="End conversation" />
+                        {% csrf_token %}
                     </form>
                     {% endif %}
                 </div>
