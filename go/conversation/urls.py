@@ -8,5 +8,6 @@ urlpatterns = patterns('',
     url(r'^(?P<conversation_pk>\d+)/upload/', views.upload, name='upload'),
     url(r'^(?P<conversation_pk>\d+)/send/', views.send, name='send'),
     url(r'^(?P<conversation_pk>\d+)/start/', views.start, name='start'),
+    url(r'^(?P<conversation_pk>\d+)/end/', views.end, name='end'),
     url(r'^(?P<conversation_pk>\d+)/', views.show, name='show'),
 )

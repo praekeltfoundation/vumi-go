@@ -103,6 +103,17 @@ class VumiApi(object):
         reply_ids = self.mdb.batch_replies(batch_id)
         return [self.mdb.get_inbound_message(r_id) for r_id in reply_ids]
 
+    def batch_tags(self, batch_id):
+        """Return a list of tags associated with a given batch.
+
+        :type batch_id: str
+        :param batch_id:
+            batch to get tags for
+        :rtype:
+            list of tags
+        """
+        return self.mdb.batch_common(batch_id)['tags']
+
     def acquire_tag(self, pool):
         """Acquire a tag from a given tag pool.
 
@@ -116,7 +127,7 @@ class VumiApi(object):
         """
         return self.mdb.acquire_tag(pool)
 
-    def release_tag(self, pool, tag):
+    def release_tag(self, tag):
         """Release a tag back to the pool it came from.
 
         Tags should be released only once a conversation is finished.
@@ -128,23 +139,21 @@ class VumiApi(object):
         :rtype:
             None.
         """
-        return self.mdb.release_tag(pool, tag)
+        return self.mdb.release_tag(tag)
 
-    def declare_tags(self, pool, tags):
+    def declare_tags(self, tags):
         """Populate a pool with tags.
 
         Tags already in the pool are not duplicated.
 
         :type pool: str
-        :param pool:
-            name of the pool to add the tags too
-        :type tags: list of str
+        :type tags: list of (pool, local_tag) tuples
         :param tags:
             list of tags to add to the pool.
         :rtype:
             None
         """
-        return self.mdb.declare_tags(pool, tags)
+        return self.mdb.declare_tags(tags)
 
 
 class MessageStore(object):
@@ -194,25 +203,42 @@ class MessageStore(object):
         redis_cls = config.get('redis_cls', redis.Redis)  # testing hook
         self.r_server = redis_cls(**self.r_config)
 
+    def _tag_key(self, tag):
+        return "%s:%s" % tag
+
     def batch_start(self, tags):
         batch_id = uuid4().get_hex()
         fields = {'tags': to_json(tags)}
-        tag_fields = {'current_batch_id': batch_id}
+        tag_fields = {'current_batch_id': to_json(batch_id)}
         self._init_status(batch_id)
         self._put_row('batches', batch_id, 'common', fields)
         self._put_row('batches', batch_id, 'messages', {})
         for tag in tags:
-            self._put_row('tags', tag, 'common', tag_fields)
+            self._put_row('tags', self._tag_key(tag), 'common', tag_fields)
         return batch_id
 
     def acquire_tag(self, pool):
-        return self._acquire_tag(pool)
+        local_tag = self._acquire_tag(pool)
+        return (pool, local_tag) if local_tag is not None else None
 
-    def release_tag(self, pool, tag):
-        return self._release_tag(pool, tag)
+    def release_tag(self, tag):
+        pool, local_tag = tag
+        self._release_tag(pool, local_tag)
+        self._unset_tag_current_batch_id(tag)
 
-    def declare_tags(self, pool, tags):
-        return self._declare_tags(pool, tags)
+    def declare_tags(self, tags):
+        pools = {}
+        for pool, local_tag in tags:
+            pools.setdefault(pool, []).append(local_tag)
+        for pool, local_tags in pools.items():
+            self._declare_tags(pool, local_tags)
+        for tag in tags:
+            if not self.tag_common(tag):
+                self._unset_tag_current_batch_id(tag)
+
+    def _unset_tag_current_batch_id(self, tag):
+        tag_fields = {'current_batch_id': to_json(None)}
+        self._put_row('tags', self._tag_key(tag), 'common', tag_fields)
 
     def _msg_to_body_data(self, msg):
         return dict((k.encode('utf-8'), to_json(v)) for k, v
@@ -233,9 +259,9 @@ class MessageStore(object):
         #       additional transports
         transport_type = msg['transport_type']
         if transport_type == 'sms':
-            tag = "default%s" % (msg['to_addr'][-5:],)
+            tag = ("ambient", "default%s" % (msg['to_addr'][-5:],))
         elif transport_type == 'xmpp':
-            tag = msg['to_addr']
+            tag = ("gtalk", msg['to_addr'])
         else:
             tag = None
         return tag
@@ -286,8 +312,11 @@ class MessageStore(object):
 
     def batch_common(self, batch_id):
         common = self._get_row('batches', batch_id, 'common')
-        for field in ('tags',):
-            common[field] = from_json(common[field])
+        tags = common['tags']
+        if tags is not None:
+            tags = from_json(tags)
+            tags = [tuple(x) for x in tags]
+        common['tags'] = tags
         return common
 
     def batch_status(self, batch_id):
@@ -306,7 +335,11 @@ class MessageStore(object):
         return self._get_row('messages', msg_id, 'events').keys()
 
     def tag_common(self, tag):
-        return self._get_row('tags', tag, 'common')
+        common = self._get_row('tags', self._tag_key(tag), 'common')
+        batch_id_bytes = common.get('current_batch_id')
+        if batch_id_bytes is not None:
+            common['current_batch_id'] = from_json(batch_id_bytes)
+        return common
 
     # tag pool is stored in Redis since HBase doesn't have a nice
     # list implementation
@@ -322,15 +355,15 @@ class MessageStore(object):
             self.r_server.smove(free_set_key, inuse_set_key, tag)
         return tag
 
-    def _release_tag(self, pool, tag):
+    def _release_tag(self, pool, local_tag):
         free_list_key, free_set_key, inuse_set_key = self._tag_pool_keys(pool)
-        count = self.r_server.smove(inuse_set_key, free_set_key, tag)
+        count = self.r_server.smove(inuse_set_key, free_set_key, local_tag)
         if count == 1:
-            self.r_server.rpush(free_list_key, tag)
+            self.r_server.rpush(free_list_key, local_tag)
 
-    def _declare_tags(self, pool, tags):
+    def _declare_tags(self, pool, local_tags):
         free_list_key, free_set_key, inuse_set_key = self._tag_pool_keys(pool)
-        new_tags = set(tags)
+        new_tags = set(local_tags)
         old_tags = set(self.r_server.sunion(free_set_key, inuse_set_key))
         for tag in sorted(new_tags - old_tags):
             self.r_server.sadd(free_set_key, tag)

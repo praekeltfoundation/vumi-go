@@ -1,4 +1,5 @@
 import operator
+import datetime
 from django.db import models
 from django.conf import settings
 from go.contacts.models import Contact
@@ -20,6 +21,8 @@ class Conversation(models.Model):
     message = models.TextField('Message')
     start_date = models.DateField()
     start_time = models.TimeField()
+    end_date = models.DateField(null=True)
+    end_time = models.TimeField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     groups = models.ManyToManyField('contacts.ContactGroup')
@@ -28,6 +31,16 @@ class Conversation(models.Model):
 
     def people(self):
         return Contact.objects.filter(groups__in=self.groups.all())
+
+    def ended(self):
+        return self.end_time is not None
+
+    def end_conversation(self):
+        now = datetime.datetime.utcnow()
+        self.end_date = now.date()
+        self.end_time = now.time()
+        self.save()
+        self._release_tags()
 
     def send_preview(self):
         approval_message = "APPROVE? " + self.message
@@ -95,13 +108,13 @@ class Conversation(models.Model):
         # TODO: this is hardcoded for ambient and gtalk pool currently
         if tagpool == "ambient":
             return {
-                "from_addr": tag,
+                "from_addr": tag[1],
                 "transport_name": "ambient",
                 "transport_type": "sms",
                 }
         elif tagpool == "gtalk":
             return {
-                "from_addr": tag,
+                "from_addr": tag[1],
                 "transport_name": "gtalk_vumigo",
                 "transport_type": "xmpp",
                 }
@@ -111,6 +124,9 @@ class Conversation(models.Model):
     def _send_batch(self, delivery_class, message, contacts):
         if delivery_class is None:
             raise ConversationSendError("No delivery class specified.")
+        if self.ended():
+            raise ConversationSendError("Conversation has already ended --"
+                                        " no more messages may be sent.")
         vumiapi = self.vumi_api()
         tagpool, transport_type = self.delivery_info(delivery_class)
         addrs = [contact.addr_for(transport_type) for contact in contacts]
@@ -124,6 +140,15 @@ class Conversation(models.Model):
         batch.save()
         vumiapi.batch_send(batch_id, message, msg_options, addrs)
         return batch
+
+    def _release_tags(self):
+        vumiapi = self.vumi_api()
+        batches = []
+        batches.extend(self.preview_batch_set.all())
+        batches.extend(self.message_batch_set.all())
+        for batch in batches:
+            for tag in vumiapi.batch_tags(batch.batch_id):
+                vumiapi.release_tag(tag)
 
     def _get_helper(self, delivery_class, batches, addr_func, batch_msg_func):
         """Return a list of (Contact, reply_msg) tuples."""

@@ -184,6 +184,17 @@ def show(request, conversation_pk):
 
 
 @login_required
+def end(request, conversation_pk):
+    conversation = get_object_or_404(Conversation, pk=conversation_pk,
+        user=request.user)
+    if request.method == 'POST':
+        conversation.end_conversation()
+        messages.add_message(request, messages.INFO, 'Conversation ended')
+    return redirect(reverse('conversations:show', kwargs={
+        'conversation_pk': conversation.pk}))
+
+
+@login_required
 def index(request):
     conversations = request.user.conversation_set.all()
     query = request.GET.get('q', '')
