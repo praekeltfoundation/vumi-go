@@ -2,8 +2,6 @@
 
 """Tests for go.vumitools.api."""
 
-import json
-
 from twisted.trial.unittest import TestCase
 
 from vumi.message import TransportEvent
@@ -30,11 +28,13 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
         self.restore_celery()
 
     def test_batch_start(self):
-        batch_id = self.api.batch_start(["tag"])
+        tag = ("pool", "tag")
+        batch_id = self.api.batch_start([tag])
         self.assertEqual(len(batch_id), 32)
 
     def test_batch_status(self):
-        batch_id = self.api.mdb.batch_start(["tag"])
+        tag = ("pool", "tag")
+        batch_id = self.api.mdb.batch_start([tag])
         self.assertEqual(self.api.batch_status(batch_id), {
             'ack': 0, 'delivery_report': 0, 'message': 0, 'sent': 0,
             })
@@ -52,7 +52,7 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
         self.assertEqual(cmd3, send_msg("+56"))
 
     def test_batch_messages(self):
-        batch_id = self.api.batch_start(["default10001"])
+        batch_id = self.api.batch_start([("poolA", "default10001")])
         msgs = [self.mkmsg_out(content=msg, message_id=str(i)) for
                 i, msg in enumerate(("msg1", "msg2"))]
         for msg in msgs:
@@ -62,7 +62,7 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
         self.assertEqual(api_msgs, msgs)
 
     def test_batch_replies(self):
-        tag = "default10001"
+        tag = ("ambient", "default10001")
         to_addr = "+12310001"
         batch_id = self.api.batch_start([tag])
         msgs = [self.mkmsg_in(content=msg, to_addr=to_addr, message_id=str(i),
@@ -74,16 +74,42 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
         api_msgs.sort(key=lambda msg: msg['message_id'])
         self.assertEqual(api_msgs, msgs)
 
+    def test_batch_tags(self):
+        tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
+        batch_id = self.api.batch_start([tag1])
+        self.assertEqual(self.api.batch_tags(batch_id), [tag1])
+        batch_id = self.api.batch_start([tag1, tag2])
+        self.assertEqual(self.api.batch_tags(batch_id), [tag1, tag2])
+
     def test_declare_acquire_and_release_tags(self):
-        self.api.declare_tags("poolA", ["tag1", "tag2"])
-        self.assertEqual(self.api.acquire_tag("poolA"), "tag1")
-        self.assertEqual(self.api.acquire_tag("poolA"), "tag2")
+        tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
+        self.api.declare_tags([tag1, tag2])
+        self.assertEqual(self.api.acquire_tag("poolA"), tag1)
+        self.assertEqual(self.api.acquire_tag("poolA"), tag2)
         self.assertEqual(self.api.acquire_tag("poolA"), None)
         self.assertEqual(self.api.acquire_tag("poolB"), None)
 
-        self.api.release_tag("poolA", "tag2")
-        self.assertEqual(self.api.acquire_tag("poolA"), "tag2")
+        self.api.release_tag(tag2)
+        self.assertEqual(self.api.acquire_tag("poolA"), tag2)
         self.assertEqual(self.api.acquire_tag("poolA"), None)
+
+    def test_declare_tags_from_different_pools(self):
+        tag1, tag2 = ("poolA", "tag1"), ("poolB", "tag2")
+        self.api.declare_tags([tag1, tag2])
+        self.assertEqual(self.api.acquire_tag("poolA"), tag1)
+        self.assertEqual(self.api.acquire_tag("poolB"), tag2)
+
+    def test_start_batch_and_release_tags(self):
+        tag = ("pool", "tag")
+        self.api.declare_tags([tag])
+        self.assertEqual(self.api.mdb.tag_common(tag), {
+            "current_batch_id": None})
+        batch_id = self.api.batch_start([tag])
+        self.assertEqual(self.api.mdb.tag_common(tag), {
+            "current_batch_id": batch_id})
+        self.api.release_tag(tag)
+        self.assertEqual(self.api.mdb.tag_common(tag), {
+            "current_batch_id": None})
 
 
 class TestMessageStore(ApplicationTestCase):
@@ -97,28 +123,32 @@ class TestMessageStore(ApplicationTestCase):
         self.store.r_server.teardown()
 
     def test_batch_start(self):
-        batch_id = self.store.batch_start(["tag1"])
+        tag1 = ("poolA", "tag1")
+        batch_id = self.store.batch_start([tag1])
         self.assertEqual(self.store.batch_messages(batch_id), [])
         self.assertEqual(self.store.batch_status(batch_id), {
             'ack': 0, 'delivery_report': 0, 'message': 0, 'sent': 0,
             })
         self.assertEqual(self.store.batch_common(batch_id),
-                         {"tags": ["tag1"]})
-        self.assertEqual(self.store.tag_common("tag1"),
+                         {"tags": [tag1]})
+        self.assertEqual(self.store.tag_common(tag1),
                          {"current_batch_id": batch_id})
 
     def test_declare_tags(self):
-        self.store.declare_tags("poolA", ["tag1", "tag2"])
-        self.assertEqual(self.store.acquire_tag("poolA"), "tag1")
-        self.assertEqual(self.store.acquire_tag("poolA"), "tag2")
+        tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
+        self.store.declare_tags([tag1, tag2])
+        self.assertEqual(self.store.acquire_tag("poolA"), tag1)
+        self.assertEqual(self.store.acquire_tag("poolA"), tag2)
         self.assertEqual(self.store.acquire_tag("poolA"), None)
-        self.store.declare_tags("poolA", ["tag2", "tag3"])
-        self.assertEqual(self.store.acquire_tag("poolA"), "tag3")
+        tag3 = ("poolA", "tag3")
+        self.store.declare_tags([tag2, tag3])
+        self.assertEqual(self.store.acquire_tag("poolA"), tag3)
 
     def test_acquire_tag(self):
         tkey = lambda x: "message_store:tagpools:poolA:" + x
-        self.store.declare_tags("poolA", ["tag1", "tag2"])
-        self.assertEqual(self.store.acquire_tag("poolA"), "tag1")
+        tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
+        self.store.declare_tags([tag1, tag2])
+        self.assertEqual(self.store.acquire_tag("poolA"), tag1)
         self.assertEqual(self.store.acquire_tag("poolB"), None)
         self.assertEqual(self.store.r_server.lrange(tkey("free:list"),
                                                     0, -1),
@@ -130,10 +160,11 @@ class TestMessageStore(ApplicationTestCase):
 
     def test_release_tag(self):
         tkey = lambda x: "message_store:tagpools:poolA:" + x
-        self.store.declare_tags("poolA", ["tag1", "tag2", "tag3"])
+        tag1, tag2, tag3 = [("poolA", "tag%d" % i) for i in (1, 2, 3)]
+        self.store.declare_tags([tag1, tag2, tag3])
         self.store.acquire_tag("poolA")
         self.store.acquire_tag("poolA")
-        self.store.release_tag("poolA", "tag1")
+        self.store.release_tag(tag1)
         self.assertEqual(self.store.r_server.lrange(tkey("free:list"),
                                                     0, -1),
                          ["tag3", "tag1"])
@@ -143,7 +174,7 @@ class TestMessageStore(ApplicationTestCase):
                          set(["tag2"]))
 
     def test_add_message(self):
-        batch_id = self.store.batch_start(["tag"])
+        batch_id = self.store.batch_start([("pool", "tag")])
         msg = self.mkmsg_out(content="outfoo")
         msg_id = msg['message_id']
         self.store.add_message(batch_id, msg)
@@ -157,7 +188,7 @@ class TestMessageStore(ApplicationTestCase):
             })
 
     def test_add_ack_event(self):
-        batch_id = self.store.batch_start(["tag"])
+        batch_id = self.store.batch_start([("pool", "tag")])
         msg = self.mkmsg_out(content="outfoo")
         msg_id = msg['message_id']
         ack = TransportEvent(user_message_id=msg_id, event_type='ack',
@@ -177,7 +208,7 @@ class TestMessageStore(ApplicationTestCase):
         self.assertEqual(self.store.get_inbound_message(msg_id), msg)
 
     def test_add_inbound_message_with_tag(self):
-        batch_id = self.store.batch_start(["default10001"])
+        batch_id = self.store.batch_start([("ambient", "default10001")])
         msg = self.mkmsg_in(content="infoo", to_addr="+1234567810001",
                             transport_type="sms")
         msg_id = msg['message_id']
