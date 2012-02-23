@@ -8,7 +8,7 @@ class Command(BaseCommand):
 
     POOLS = [
         ("ambient", ["default%d" % i for i in range(10001, 10001 + 1000)]),
-        ("gtalk", ["go-%d" % i for i in range(1, 1 + 5)]),
+        ("gtalk", ["go-%d@vumi.org" % i for i in range(1, 1 + 5)]),
         ]
 
     POOL_LOOKUP = dict(POOLS)
