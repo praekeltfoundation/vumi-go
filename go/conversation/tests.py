@@ -88,8 +88,8 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
 
     def declare_ambient_tags(self):
         api = Conversation.vumi_api()
-        api.declare_tags("ambient", ["default%s" % i for i
-                                     in range(10001, 10001 + 4)])
+        api.declare_tags([("ambient", "default%s" % i) for i
+                          in range(10001, 10001 + 4)])
 
     def acquire_all_ambient_tags(self):
         api = Conversation.vumi_api()
@@ -262,8 +262,8 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.process_cmds(vumiapi.mdb, consumer=consumer)
         self.assertEqual(self.conversation.preview_status(),
                          [(contact, 'awaiting reply')])
-        [tag] = vumiapi.mdb.batch_common(batch.batch_id)['tags']
-        to_addr = "+123" + tag[-5:]
+        [tag] = vumiapi.batch_tags(batch.batch_id)
+        to_addr = "+123" + tag[1][-5:]
 
         # unknown contact
         msg = self.mkmsg_in('hello', to_addr=to_addr)
@@ -299,8 +299,8 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         [batch] = self.conversation.message_batch_set.all()
         self.process_cmds(vumiapi.mdb, consumer=consumer)
         self.assertEqual(self.conversation.replies(), [])
-        [tag] = vumiapi.mdb.batch_common(batch.batch_id)['tags']
-        to_addr = "+123" + tag[-5:]
+        [tag] = vumiapi.batch_tags(batch.batch_id)
+        to_addr = "+123" + tag[1][-5:]
 
         # unknown contact
         msg = self.mkmsg_in('hello', to_addr=to_addr)
@@ -319,3 +319,44 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
             'source': 'SMS',
             'type': 'sms',
             })
+
+    def test_end(self):
+        """
+        Test ending the conversation
+        """
+        self.assertFalse(self.conversation.ended())
+        response = self.client.post(reverse('conversations:end', kwargs={
+            'conversation_pk': self.conversation.pk}), follow=True)
+        self.assertRedirects(response, reverse('conversations:show', kwargs={
+            'conversation_pk': self.conversation.pk}))
+        [msg] = response.context['messages']
+        self.assertEqual(str(msg), "Conversation ended")
+        self.conversation = reload_record(self.conversation)
+        self.assertTrue(self.conversation.ended())
+
+    def test_end_conversation(self):
+        """
+        Test the end_conversation helper function
+        """
+        self.assertFalse(self.conversation.ended())
+        self.conversation.end_conversation()
+        self.assertTrue(self.conversation.ended())
+
+    def test_tag_releasing(self):
+        """
+        Test that tags are released when a conversation is ended.
+        """
+        vumiapi = Conversation.vumi_api()
+        self.conversation.send_preview()
+        self.conversation.send_messages()
+        [preview_batch] = self.conversation.preview_batch_set.all()
+        [message_batch] = self.conversation.message_batch_set.all()
+        self.assertEqual(len(vumiapi.batch_tags(preview_batch.batch_id)), 1)
+        self.assertEqual(len(vumiapi.batch_tags(message_batch.batch_id)), 1)
+        self.conversation.end_conversation()
+        [pre_tag] = vumiapi.batch_tags(preview_batch.batch_id)
+        [msg_tag] = vumiapi.batch_tags(message_batch.batch_id)
+        self.assertEqual(vumiapi.mdb.tag_common(pre_tag)['current_batch_id'],
+                         None)
+        self.assertEqual(vumiapi.mdb.tag_common(msg_tag)['current_batch_id'],
+                         None)
