@@ -17,7 +17,6 @@ class TestTagpoolManager(TestCase):
 
     def pool_key_generator(self, pool):
         def tkey(x):
-            print ":".join([self.prefix, pool, x])
             return ":".join([self.prefix, "tagpools", pool, x])
         return tkey
 
