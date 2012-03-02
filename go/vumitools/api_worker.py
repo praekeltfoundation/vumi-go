@@ -8,7 +8,7 @@ from twisted.internet.defer import inlineCallbacks
 from vumi.application import ApplicationWorker
 from vumi import log
 
-from go.vumitools.api import VumiApiCommand, MessageStore
+from go.vumitools.api import VumiApiCommand, MessageStore, get_redis
 
 
 class VumiApiWorker(ApplicationWorker):
@@ -25,14 +25,18 @@ class VumiApiWorker(ApplicationWorker):
     SEND_TO_TAGS = frozenset(['default'])
 
     def validate_config(self):
-        self.message_store_config = self.config.get('message_store', {})
+        # message store
+        mdb_config = self.config.get('message_store', {})
+        self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
+        # api worker
         self.api_routing_config = VumiApiCommand.default_routing_config()
         self.api_routing_config.update(self.config.get('api_routing', {}))
         self.api_consumer = None
 
     @inlineCallbacks
     def setup_application(self):
-        self.store = MessageStore(self.message_store_config)
+        r_server = get_redis(self.config)
+        self.store = MessageStore(r_server, self.mdb_prefix)
         self.api_consumer = yield self.consume(
             self.api_routing_config['routing_key'],
             self.consume_api_command,

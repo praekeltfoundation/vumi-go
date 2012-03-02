@@ -21,9 +21,7 @@ class TestVumiApiWorker(ApplicationTestCase):
         super(TestVumiApiWorker, self).setUp()
         self._fake_redis = FakeRedis()
         self.api = yield self.get_application({
-            'message_store': {
-                'redis_cls': lambda **kw: self._fake_redis,
-                },
+            'redis_cls': lambda **kw: self._fake_redis,
             })
 
     def tearDown(self):

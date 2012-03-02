@@ -76,9 +76,8 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self._fake_redis = FakeRedis()
         self._old_vumi_api_config = settings.VUMI_API_CONFIG
         settings.VUMI_API_CONFIG = {
-            'message_store': {
-                'redis_cls': lambda **kws: self._fake_redis,
-                },
+            'redis_cls': lambda **kws: self._fake_redis,
+            'message_store': {},
             'message_sender': {},
             }
 
