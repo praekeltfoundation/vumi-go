@@ -6,18 +6,32 @@
 from uuid import uuid4
 from datetime import datetime
 
+import redis
+
 from vumi.message import (Message, TransportEvent,
                           TransportUserMessage, from_json, to_json,
                           VUMI_DATE_FORMAT)
+
+from go.vumitools.tagpool import TagpoolManager
 
 
 class VumiApi(object):
 
     def __init__(self, config):
+        redis_cls = config.get('redis_cls', redis.Redis)  # testing hook
+        r_server = redis_cls(**config.get('redis', {}))
+
+        # tagpool manager
+        tpm_config = config.get('tagpool_manager', {})
+        tpm_prefix = tpm_config.get('tagpool_prefix', 'tagpool_store')
+        self.tpm = TagpoolManager(r_server, tpm_prefix)
         # message store
-        self.mdb = MessageStore(config['message_store'])
+        mdb_config = config.get('message_store', {})
+        mdb_prefix = mdb_config.get('store_prefix', 'message_store')
+        self.mdb = MessageStore(r_server, mdb_prefix)
         # message sending API
-        self.mapi = MessageSender(config['message_sender'])
+        mapi_config = config.get('message_sender', {})
+        self.mapi = MessageSender(mapi_config)
 
     def batch_start(self, tags):
         """Start a message batch.
@@ -33,6 +47,20 @@ class VumiApi(object):
             Returns the batch_id of the new batch.
         """
         return self.mdb.batch_start(tags)
+
+    def batch_done(self, batch_id):
+        """Mark a batch as completed.
+
+        Once a batch is done, inbound messages will not be mapped
+        to it.
+
+        :type batch_id: str
+        :param batch_id:
+            batch to mark as done.
+        :rtype:
+            None.
+        """
+        return self.mdb.batch_done(batch_id)
 
     def batch_send(self, batch_id, msg, msg_options, addresses):
         """Send a batch of text message to a list of addresses.
@@ -125,7 +153,7 @@ class VumiApi(object):
         :rtype:
             str containing the tag
         """
-        return self.mdb.acquire_tag(pool)
+        return self.tpm.acquire_tag(pool)
 
     def release_tag(self, tag):
         """Release a tag back to the pool it came from.
@@ -139,7 +167,7 @@ class VumiApi(object):
         :rtype:
             None.
         """
-        return self.mdb.release_tag(tag)
+        return self.tpm.release_tag(tag)
 
     def declare_tags(self, tags):
         """Populate a pool with tags.
@@ -153,7 +181,7 @@ class VumiApi(object):
         :rtype:
             None
         """
-        return self.mdb.declare_tags(tags)
+        return self.tpm.declare_tags(tags)
 
 
 class MessageStore(object):
@@ -196,79 +224,32 @@ class MessageStore(object):
        might be better to have "timestamp:current_message_id").
     """
 
-    def __init__(self, config):
-        import redis
-        self.r_prefix = config.get('store_prefix', 'message_store')
-        self.r_config = config.get('redis', {})
-        redis_cls = config.get('redis_cls', redis.Redis)  # testing hook
-        self.r_server = redis_cls(**self.r_config)
-
-    def _tag_key(self, tag):
-        return "%s:%s" % tag
+    def __init__(self, r_server, r_prefix):
+        self.r_server = r_server
+        self.r_prefix = r_prefix
 
     def batch_start(self, tags):
         batch_id = uuid4().get_hex()
-        fields = {'tags': to_json(tags)}
-        tag_fields = {'current_batch_id': to_json(batch_id)}
+        batch_common = {u'tags': tags}
+        tag_common = {u'current_batch_id': batch_id}
         self._init_status(batch_id)
-        self._put_row('batches', batch_id, 'common', fields)
+        self._put_common('batches', batch_id, 'common', batch_common)
         self._put_row('batches', batch_id, 'messages', {})
         for tag in tags:
-            self._put_row('tags', self._tag_key(tag), 'common', tag_fields)
+            self._put_common('tags', self._tag_key(tag), 'common', tag_common)
         return batch_id
 
-    def acquire_tag(self, pool):
-        local_tag = self._acquire_tag(pool)
-        return (pool, local_tag) if local_tag is not None else None
-
-    def release_tag(self, tag):
-        pool, local_tag = tag
-        self._release_tag(pool, local_tag)
-        self._unset_tag_current_batch_id(tag)
-
-    def declare_tags(self, tags):
-        pools = {}
-        for pool, local_tag in tags:
-            pools.setdefault(pool, []).append(local_tag)
-        for pool, local_tags in pools.items():
-            self._declare_tags(pool, local_tags)
-        for tag in tags:
-            if not self.tag_common(tag):
-                self._unset_tag_current_batch_id(tag)
-
-    def _unset_tag_current_batch_id(self, tag):
-        tag_fields = {'current_batch_id': to_json(None)}
-        self._put_row('tags', self._tag_key(tag), 'common', tag_fields)
-
-    def _msg_to_body_data(self, msg):
-        return dict((k.encode('utf-8'), to_json(v)) for k, v
-                     in msg.payload.items())
-
-    def _msg_from_body_data(self, cls, body_data):
-        body = dict((k.decode('utf-8'), from_json(v))
-                    for k, v in body_data.items())
-        # TODO: this is a hack needed because from_json(to_json(x)) != x
-        #       if x is a datetime. Remove this once from_json and to_json
-        #       are fixed.
-        body['timestamp'] = datetime.strptime(body['timestamp'],
-                                              VUMI_DATE_FORMAT)
-        return cls(**body)
-
-    def _map_inbound_msg_to_tag(self, msg):
-        # TODO: this eventually needs to become more generic to support
-        #       additional transports
-        transport_type = msg['transport_type']
-        if transport_type == 'sms':
-            tag = ("ambient", "default%s" % (msg['to_addr'][-5:],))
-        elif transport_type == 'xmpp':
-            tag = ("gtalk", msg['to_addr'])
-        else:
-            tag = None
-        return tag
+    def batch_done(self, batch_id):
+        tags = self.batch_common(batch_id)['tags']
+        tag_common = {u'current_batch_id': None}
+        if tags is not None:
+            for tag in tags:
+                self._put_common('tags', self._tag_key(tag), 'common',
+                                 tag_common)
 
     def add_message(self, batch_id, msg):
         msg_id = msg['message_id']
-        self._put_row('messages', msg_id, 'body', self._msg_to_body_data(msg))
+        self._put_msg('messages', msg_id, 'body', msg)
         self._put_row('messages', msg_id, 'events', {})
 
         self._put_row('messages', msg_id, 'batches', {batch_id: '1'})
@@ -278,13 +259,11 @@ class MessageStore(object):
         self._inc_status(batch_id, 'sent')
 
     def get_message(self, msg_id):
-        body_data = self._get_row('messages', msg_id, 'body')
-        return self._msg_from_body_data(TransportUserMessage, body_data)
+        return self._get_msg('messages', msg_id, 'body', TransportUserMessage)
 
     def add_event(self, event):
         event_id = event['event_id']
-        self._put_row('events', event_id, 'body',
-                      self._msg_to_body_data(event))
+        self._put_msg('events', event_id, 'body', event)
         msg_id = event['user_message_id']
         self._put_row('messages', msg_id, 'events', {event_id: '1'})
 
@@ -293,34 +272,37 @@ class MessageStore(object):
             self._inc_status(batch_id, event_type)
 
     def get_event(self, event_id):
-        body_data = self._get_row('events', event_id, 'body')
-        return self._msg_from_body_data(TransportEvent, body_data)
+        return self._get_msg('events', event_id, 'body',
+                             TransportEvent)
 
     def add_inbound_message(self, msg):
         msg_id = msg['message_id']
-        self._put_row('inbound_messages', msg_id, 'body',
-                      self._msg_to_body_data(msg))
+        self._put_msg('inbound_messages', msg_id, 'body', msg)
         tag = self._map_inbound_msg_to_tag(msg)
-        batch_id = (self.tag_common(tag).get('current_batch_id')
-                    if tag else None)
-        if batch_id is not None:
-            self._put_row('batches', batch_id, 'replies', {msg_id: '1'})
+        if tag is not None:
+            batch_id = self.tag_common(tag)['current_batch_id']
+            if batch_id is not None:
+                self._put_row('batches', batch_id, 'replies', {msg_id: '1'})
 
     def get_inbound_message(self, msg_id):
-        body_data = self._get_row('inbound_messages', msg_id, 'body')
-        return self._msg_from_body_data(TransportUserMessage, body_data)
+        return self._get_msg('inbound_messages', msg_id, 'body',
+                             TransportUserMessage)
 
     def batch_common(self, batch_id):
-        common = self._get_row('batches', batch_id, 'common')
+        common = self._get_common('batches', batch_id, 'common')
         tags = common['tags']
         if tags is not None:
-            tags = from_json(tags)
-            tags = [tuple(x) for x in tags]
-        common['tags'] = tags
+            common['tags'] = [tuple(x) for x in tags]
         return common
 
     def batch_status(self, batch_id):
         return self._get_status(batch_id)
+
+    def tag_common(self, tag):
+        common = self._get_common('tags', self._tag_key(tag), 'common')
+        if not common:
+            common = {u'current_batch_id': None}
+        return common
 
     def batch_messages(self, batch_id):
         return self._get_row('batches', batch_id, 'messages').keys()
@@ -333,41 +315,6 @@ class MessageStore(object):
 
     def message_events(self, msg_id):
         return self._get_row('messages', msg_id, 'events').keys()
-
-    def tag_common(self, tag):
-        common = self._get_row('tags', self._tag_key(tag), 'common')
-        batch_id_bytes = common.get('current_batch_id')
-        if batch_id_bytes is not None:
-            common['current_batch_id'] = from_json(batch_id_bytes)
-        return common
-
-    # tag pool is stored in Redis since HBase doesn't have a nice
-    # list implementation
-
-    def _tag_pool_keys(self, pool):
-        return tuple(":".join([self.r_prefix, "tagpools", pool, state])
-                     for state in ("free:list", "free:set", "inuse:set"))
-
-    def _acquire_tag(self, pool):
-        free_list_key, free_set_key, inuse_set_key = self._tag_pool_keys(pool)
-        tag = self.r_server.lpop(free_list_key)
-        if tag is not None:
-            self.r_server.smove(free_set_key, inuse_set_key, tag)
-        return tag
-
-    def _release_tag(self, pool, local_tag):
-        free_list_key, free_set_key, inuse_set_key = self._tag_pool_keys(pool)
-        count = self.r_server.smove(inuse_set_key, free_set_key, local_tag)
-        if count == 1:
-            self.r_server.rpush(free_list_key, local_tag)
-
-    def _declare_tags(self, pool, local_tags):
-        free_list_key, free_set_key, inuse_set_key = self._tag_pool_keys(pool)
-        new_tags = set(local_tags)
-        old_tags = set(self.r_server.sunion(free_set_key, inuse_set_key))
-        for tag in sorted(new_tags - old_tags):
-            self.r_server.sadd(free_set_key, tag)
-            self.r_server.rpush(free_list_key, tag)
 
     # batch status is stored in Redis as a cache of batch progress
 
@@ -390,8 +337,50 @@ class MessageStore(object):
         statuses = dict((k, int(v)) for k, v in raw_statuses.items())
         return statuses
 
+    # tag <-> batch mappings are stored in Redis
+
+    def _tag_key(self, tag):
+        return "%s:%s" % tag
+
+    def _map_inbound_msg_to_tag(self, msg):
+        # TODO: this eventually needs to become more generic to support
+        #       additional transports
+        transport_type = msg['transport_type']
+        if transport_type == 'sms':
+            tag = ("ambient", "default%s" % (msg['to_addr'][-5:],))
+        elif transport_type == 'xmpp':
+            tag = ("gtalk", msg['to_addr'])
+        else:
+            tag = None
+        return tag
+
     # interface to redis -- intentionally made to look
     # like a limited subset of HBase.
+
+    def _get_msg(self, table, row_id, family, cls):
+        payload = self._get_common(table, row_id, family)
+        # TODO: this is a hack needed because from_json(to_json(x)) != x
+        #       if x is a datetime. Remove this once from_json and to_json
+        #       are fixed.
+        payload['timestamp'] = datetime.strptime(payload['timestamp'],
+                                                VUMI_DATE_FORMAT)
+        return cls(**payload)
+
+    def _put_msg(self, table, row_id, family, msg):
+        return self._put_common(table, row_id, family, msg.payload)
+
+    def _get_common(self, table, row_id, family):
+        """Retrieve and decode a set of JSON-encoded values."""
+        data = self._get_row(table, row_id, family)
+        pydata = dict((k.decode('utf-8'), from_json(v))
+                      for k, v in data.items())
+        return pydata
+
+    def _put_common(self, table, row_id, family, pydata):
+        """JSON-encode and update a set of values."""
+        data = dict((k.encode('utf-8'), to_json(v)) for k, v
+                    in pydata.items())
+        return self._put_row(table, row_id, family, data)
 
     def _get_row(self, table, row_id, family):
         """Retreive a set of column values from storage."""
