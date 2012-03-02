@@ -15,11 +15,16 @@ from vumi.message import (Message, TransportEvent,
 from go.vumitools.tagpool import TagpoolManager
 
 
+def get_redis(config):
+    """Get a possibly fake redis."""
+    redis_cls = config.get('redis_cls', redis.Redis)  # testing hook
+    return redis_cls(**config.get('redis', {}))
+
+
 class VumiApi(object):
 
     def __init__(self, config):
-        redis_cls = config.get('redis_cls', redis.Redis)  # testing hook
-        r_server = redis_cls(**config.get('redis', {}))
+        r_server = get_redis(config)
 
         # tagpool manager
         tpm_config = config.get('tagpool_manager', {})
