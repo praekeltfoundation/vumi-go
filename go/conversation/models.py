@@ -154,6 +154,7 @@ class Conversation(models.Model):
         batches.extend(self.preview_batch_set.all())
         batches.extend(self.message_batch_set.all())
         for batch in batches:
+            vumiapi.batch_done(batch.batch_id)
             for tag in vumiapi.batch_tags(batch.batch_id):
                 vumiapi.release_tag(tag)
 
