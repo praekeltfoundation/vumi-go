@@ -168,7 +168,7 @@ class Conversation(models.Model):
         for batch in batches:
             for reply in batch_msg_func(batch.batch_id):
                 try:
-                    contact = Contact.for_addr(transport_type,
+                    contact = Contact.for_addr(self.user, transport_type,
                                                addr_func(reply))
                 except (Contact.DoesNotExist, Contact.MultipleObjectsReturned):
                     continue
