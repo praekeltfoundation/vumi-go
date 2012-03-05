@@ -5,10 +5,10 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.application import ApplicationWorker
+from vumi.application import ApplicationWorker, MessageStore
 from vumi import log
 
-from go.vumitools.api import VumiApiCommand, MessageStore, get_redis
+from go.vumitools.api import VumiApiCommand, get_redis
 
 
 class VumiApiWorker(ApplicationWorker):

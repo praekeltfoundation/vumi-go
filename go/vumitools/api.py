@@ -7,8 +7,8 @@ import redis
 
 from vumi.message import Message
 
-from go.vumitools.tagpool import TagpoolManager
-from go.vumitools.message_store import MessageStore
+from vumi.application import TagpoolManager
+from vumi.application import MessageStore
 
 
 def get_redis(config):
