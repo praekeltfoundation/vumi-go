@@ -133,6 +133,20 @@ class ContactsTestCase(TestCase):
         self.assertFalse(ContactGroup.objects.filter(name='a new group')\
             .exists())
 
+    def test_contact_phone_number_normalization(self):
+        settings.VUMI_COUNTRY_CODE = '27'
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+            'fixtures', 'sample-denormalized-contacts.csv'))
+        response = self.client.post(reverse('contacts:people'), {
+            'name': 'normalization group',
+            'file': csv_file,
+        })
+        group = ContactGroup.objects.latest()
+        group_url = reverse('contacts:group', kwargs={'group_pk': group.pk})
+        self.assertRedirects(response, group_url)
+        self.assertTrue(all([c.msisdn.startswith('+27') for c
+                                in group.contact_set.all()]))
+
     def test_contact_letter_filter(self):
         contact = Contact.objects.latest()
         contact_url = reverse('contacts:person', kwargs={

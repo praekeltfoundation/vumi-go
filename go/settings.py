@@ -206,6 +206,8 @@ VUMI_API_CONFIG = {
     'message_sender': {},
     }
 
+VUMI_COUNTRY_CODE = '27'
+
 if os.environ.get('VUMIGO_FAST_TESTS'):
     DATABASES = {
         'default': {
