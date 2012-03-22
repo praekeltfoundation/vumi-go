@@ -1,5 +1,35 @@
 {% extends "base.html" %}
 
+{% block extra_header %}
+<script>
+    $(document).ready(function(){
+        $("#signin-form").validate();
+    });
+</script>
+{% endblock %}
+
 {% block content %}
-    You've been logged out.
+    <div id="header">
+        <div id="header-elements-creds"><a href="{% url home %}"title="Go Vumi"><img src="{{STATIC_URL}}pics/header/logo.png"></a></div>
+    </div>
+    <div id="main" class="main-alt">
+        <div id="forgot-box">
+            <div style="width: auto;" class="notification success show">You've been logged out.</div>
+            <form name="signin-form" action="/accounts/login/" method="post" id="signin-form">
+                <label for="signin-email" id="signin-label-email">Email Address</label>
+                <input type="text" id="signin-input-email" class="txtbox required email" name="username" autocomplete="on">
+
+                <label for="signin-email" id="signin-label-password">Password</label>
+                <input id="signin-input-password" type="password" name="password" autocomplete="off" class="txtbox password required" />
+
+                <input type="submit" name="signin" class="btn" value="Sign in">
+                <input type="hidden" name="next" value="{% url home %}">
+                {% csrf_token %}
+
+                <!-- <span><a href="{% url todo %}forgot.html">Forgot your password?</a> <a href="{% url todo %}contact.html">Need Help?</a> <a href="{% url todo %}signup.html">Sign up for a Vumi Go account</a> </span> -->
+            </form>
+        </div>
+    </div>
+    <div id="ie">Please upgrade your browser. We recommend <a href="http://www.microsoft.com/windows/internet-explorer/default.aspx">Internet Explorer 8+</a>, <a href="http://www.mozilla.com/en-US/firefox/">Firefox</a> or <a href="http://www.google.com/chrome/index.html">Chrome</a></div>
+
 {% endblock %}
