@@ -3,6 +3,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator
 from django.contrib import messages
+from django.conf import settings
 from go.conversation.models import Conversation, ConversationSendError
 from go.conversation.forms import ConversationForm, SelectDeliveryClassForm
 from go.contacts.forms import (NewContactGroupForm, UploadContactsForm,
@@ -51,7 +52,7 @@ def upload(request, conversation_pk):
             request.FILES)
         if upload_contacts_form.is_valid():
             contacts = Contact.create_from_csv_file(request.user,
-                request.FILES['file'])
+                request.FILES['file'], settings.VUMI_COUNTRY_CODE)
             if request.POST.get('name'):
                 new_contact_group_form = NewContactGroupForm(request.POST)
                 if new_contact_group_form.is_valid():
@@ -100,6 +101,7 @@ def upload(request, conversation_pk):
         'upload_contacts_form': upload_contacts_form,
         'new_contact_group_form': new_contact_group_form,
         'select_contact_group_form': select_contact_group_form,
+        'country_code': settings.VUMI_COUNTRY_CODE,
     })
 
 

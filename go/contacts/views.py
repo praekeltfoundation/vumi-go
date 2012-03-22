@@ -4,6 +4,8 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.conf import settings
+
 from go.contacts import forms
 from go.contacts.models import ContactGroup, Contact
 
@@ -34,6 +36,7 @@ def groups(request):
         'paginator': paginator,
         'page': page,
         'new_contact_group_form': new_contact_group_form,
+        'country_code': settings.VUMI_COUNTRY_CODE,
     })
 
 
@@ -54,6 +57,7 @@ def group(request, group_pk):
         'selected_letter': selected_letter,
         'selected_contacts': selected_contacts,
         'query': query,
+        'country_code': settings.VUMI_COUNTRY_CODE,
     })
 
 
@@ -66,7 +70,7 @@ def people(request):
             request.FILES)
         if upload_contacts_form.is_valid():
             contacts = Contact.create_from_csv_file(request.user,
-                request.FILES['file'])
+                request.FILES['file'], settings.VUMI_COUNTRY_CODE)
             if request.POST.get('name'):
                 new_contact_group_form = forms.NewContactGroupForm(
                                                             request.POST)
@@ -109,6 +113,7 @@ def people(request):
         'selected_contacts': selected_contacts,
         'selected_letter': selected_letter,
         'query': query,
+        'country_code': settings.VUMI_COUNTRY_CODE,
     })
 
 
@@ -130,6 +135,7 @@ def person(request, person_pk):
     return render(request, 'contacts/person.html', {
         'contact': contact,
         'form': form,
+        'country_code': settings.VUMI_COUNTRY_CODE,
     })
 
 
@@ -150,4 +156,5 @@ def new_person(request):
         form = forms.ContactForm()
     return render(request, 'contacts/new_person.html', {
         'form': form,
+        'country_code': settings.VUMI_COUNTRY_CODE,
     })
