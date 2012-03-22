@@ -41,7 +41,9 @@
                         <form name="uploader" enctype="multipart/form-data" action="" method="post" id="uploader">
                             <div class="field-row">
                                 {{upload_contacts_form.errors}}
-                                <label for="upload-contacts" class="wide">Upload file with new contacts (csv files only)</label> 
+                                <label for="upload-contacts" class="wide">Upload file with new contacts (CSV files only using <a href="{{ STATIC_URL }}contacts-upload-template.csv">this template</a>). 
+                                <br/></br/>
+                                Phone numbers will be prefixed with <strong>'+{{country_code}}'</strong> if they are not specified in the international number format.</label> 
                                 {{upload_contacts_form.file}}
                                 <div class="clear"></div>
                             </div>
