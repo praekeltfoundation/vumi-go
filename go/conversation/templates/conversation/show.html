@@ -134,7 +134,7 @@
                         {% for reply in conversation.replies %}
                         <div class="connection {{reply.type}}">
                             <span class="timestamp">
-                                <a href="{% url contacts:people person_pk=reply.contact.pk %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}} -
+                                <a href="{% url contacts:person person_pk=reply.contact.pk %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}} -
                                 {# <a href="#" class="reply"> #}{{reply.content}}{# </a> #}
                             </span>
                         </div>
