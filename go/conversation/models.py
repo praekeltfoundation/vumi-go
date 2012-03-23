@@ -65,6 +65,8 @@ class Conversation(models.Model):
                 contacts[contact] = ('approved'
                                      if contents in ('approve', 'yes')
                                      else 'denied')
+                if contacts[contact] == 'approved':
+                    self._release_preview_tags()
         return sorted(contacts.items())
 
     def send_messages(self):
@@ -148,15 +150,22 @@ class Conversation(models.Model):
         vumiapi.batch_send(batch_id, message, msg_options, addrs)
         return batch
 
-    def _release_tags(self):
+    def _release_preview_tags(self):
+        self._release_batches(self.preview_batch_set.all())
+
+    def _release_message_tags(self):
+        self._release_batches(self.message_batch_set.all())
+
+    def _release_batches(self, batches):
         vumiapi = self.vumi_api()
-        batches = []
-        batches.extend(self.preview_batch_set.all())
-        batches.extend(self.message_batch_set.all())
         for batch in batches:
             vumiapi.batch_done(batch.batch_id)
             for tag in vumiapi.batch_tags(batch.batch_id):
                 vumiapi.release_tag(tag)
+
+    def _release_tags(self):
+        self._release_preview_tags()
+        self._release_message_tags()
 
     def _get_helper(self, delivery_class, batches, addr_func, batch_msg_func):
         """Return a list of (Contact, reply_msg) tuples."""
