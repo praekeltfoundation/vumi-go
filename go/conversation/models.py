@@ -118,7 +118,7 @@ class Conversation(models.Model):
         if tagpool == "ambient":
             return {
                 "from_addr": tag[1],
-                "transport_name": "ambient",
+                "transport_name": "yo_transport",
                 "transport_type": "sms",
                 }
         elif tagpool == "gtalk":
