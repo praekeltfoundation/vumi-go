@@ -1,5 +1,5 @@
 from django.conf.urls.defaults import patterns, include, url
-from afropinions.webapp.surveys import views
+from go.surveys import views
 
 urlpatterns = patterns('',
     url(r'^new/$', views.new, name='new'),
