@@ -1,10 +1,17 @@
 import operator
 import datetime
+import redis
+
 from django.db import models
 from django.conf import settings
+
 from go.contacts.models import Contact
 from go.vumitools import VumiApi
 
+from vxpolls.manager import PollManager
+
+
+redis = redis.Redis(**settings.VXPOLLS_REDIS_CONFIG)
 
 def get_delivery_classes():
     # TODO: Unhardcode this when we have more configurable delivery classes.
@@ -13,6 +20,10 @@ def get_delivery_classes():
         ('gtalk', 'Google Talk'),
         ]
 
+CONVERSATION_TYPES = (
+    ('bulk_message', 'Send Bulk SMS and track replies'),
+    ('survey', 'Interactive Survey'),
+)
 
 class Conversation(models.Model):
     """A conversation with an audience"""
@@ -27,6 +38,8 @@ class Conversation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     groups = models.ManyToManyField('contacts.ContactGroup')
     previewcontacts = models.ManyToManyField('contacts.Contact')
+    conversation_type = models.CharField('Conversation Type', max_length=255,
+        choices=CONVERSATION_TYPES, default='bulk_message')
     delivery_class = models.CharField(max_length=255, null=True)
 
     def people(self):
@@ -74,6 +87,30 @@ class Conversation(models.Model):
             self.delivery_class, self.message, self.people())
         batch.message_batch = self
         batch.save()
+
+    def start_survey(self):
+        pm = PollManager(redis, settings.VXPOLLS_PREFIX)
+        poll_id = 'poll-%s' % (self.pk,)
+        poll = pm.get(poll_id)
+        tagpool, transport_type = self.delivery_info(self.delivery_class)
+        if poll.questions:
+            first_question_copy = poll.questions[0]['copy']
+            for contact in self.people():
+                addr = contact.addr_for(transport_type)
+                if addr:
+                    participant = pm.get_participant(addr)
+                    next_question = poll.get_next_question(participant, last_index=-1)
+                    # save state so we're expecting an answer
+                    # next time around.
+                    participant.has_unanswered_question = True
+                    poll.set_last_question(participant, next_question)
+                    pm.save_participant(participant)
+
+            batch = self._send_batch(
+                self.delivery_class, first_question_copy, self.people()
+            )
+            batch.message_batch = self
+            batch.save()
 
     def delivery_class_description(self):
         delivery_classes = dict(get_delivery_classes())
@@ -140,13 +177,16 @@ class Conversation(models.Model):
         tagpool, transport_type = self.delivery_info(delivery_class)
         addrs = [contact.addr_for(transport_type) for contact in contacts]
         addrs = [addr for addr in addrs if addr]
+        print 'addrs', addrs
         tag = vumiapi.acquire_tag(tagpool)
+        print 'tag', tag
         if tag is None:
             raise ConversationSendError("No spare messaging tags.")
         msg_options = self.tag_message_options(tagpool, tag)
         batch_id = vumiapi.batch_start([tag])
         batch = MessageBatch(batch_id=batch_id)
         batch.save()
+        print 'sending bactch', batch_id, message, msg_options, addrs
         vumiapi.batch_send(batch_id, message, msg_options, addrs)
         return batch
 
