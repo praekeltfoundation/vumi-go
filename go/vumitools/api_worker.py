@@ -10,6 +10,8 @@ from vumi import log
 
 from go.vumitools.api import VumiApiCommand, get_redis
 
+from django.conf import settings
+
 
 class VumiApiWorker(ApplicationWorker):
     """An application worker that provides a RabbitMQ and message-store
@@ -43,6 +45,11 @@ class VumiApiWorker(ApplicationWorker):
             exchange_name=self.api_routing_config['exchange'],
             exchange_type=self.api_routing_config['exchange_type'],
             message_class=VumiApiCommand)
+        vxpolls_transport_name = '%(transport_name)s.inbound' % {
+            'transport_name': settings.VXPOLLS_TRANSPORT_NAME,
+        }
+        print vxpolls_transport_name
+        self.vxpolls_publisher = yield self.publish_to(vxpolls_transport_name)
 
     @inlineCallbacks
     def teardown_application(self):
@@ -73,8 +80,30 @@ class VumiApiWorker(ApplicationWorker):
     def consume_delivery_report(self, event):
         self.store.add_event(event)
 
+    @inlineCallbacks
     def consume_user_message(self, msg):
+        from go.conversation.models import Conversation
+        from go.contacts.models import Contact
+
+        from_addr = msg['from_addr'].split('/', 1)[0]
+        transport_type = msg['transport_type']
         self.store.add_inbound_message(msg)
+        if transport_type == 'xmpp':
+            contacts = Contact.objects.filter(gtalk_id=from_addr)
+        elif transport_type == 'sms':
+            contacts = Contact.objects.filter(msisdn=from_addr)
+        if contacts.exists():
+            contact = contacts[0]
+            groups = contact.groups.all()
+            conversations = Conversation.objects.filter(end_time__isnull=True,
+                    conversation_type='survey',
+                    groups__in=groups).order_by('-created_at')
+            if conversations.exists():
+                conversation = conversations[0]
+                print 'this needs to go conversation', conversation
+                msg['helper_metadata']['poll_id'] = 'poll-%s' % (conversation.pk,)
+                r = yield self.vxpolls_publisher.publish_message(msg)
+                print 'published', r
 
     def close_session(self, msg):
         self.store.add_inbound_message(msg)
