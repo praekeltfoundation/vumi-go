@@ -51,7 +51,7 @@ def upload(request, conversation_pk):
         upload_contacts_form = UploadContactsForm(request.POST,
             request.FILES)
         delivery_class = SelectDeliveryClassForm(request.POST)
-        if upload_contacts_form.is_valid():
+        if upload_contacts_form.is_valid() and delivery_class.is_valid():
             contacts = Contact.create_from_csv_file(request.user,
                 request.FILES['file'], settings.VUMI_COUNTRY_CODE)
             if request.POST.get('name'):
