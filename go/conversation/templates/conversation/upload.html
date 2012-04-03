@@ -38,6 +38,10 @@
                         </ul>
                     </div>
                     <div id="upload-form">
+                        <div id="delivery-class-list">
+                            <label>Select a delivery class:</label>
+                            {{delivery_class.delivery_class}}
+                        </div>
                         <form name="uploader" enctype="multipart/form-data" action="" method="post" id="uploader">
                             <div class="field-row">
                                 {{upload_contacts_form.errors}}
