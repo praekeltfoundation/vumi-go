@@ -1,0 +1,9 @@
+dispatcher_name: afropinions_dispatcher
+router_class: afropinions.apps.router.TransportToTransportRouter
+transport_names:
+    - gtalk_vumigo
+exposed_names:
+    - vxpolls_transport
+route_mappings:
+    gtalk_vumigo:
+        - gtalk_vumigo

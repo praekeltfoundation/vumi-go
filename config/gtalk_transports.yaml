@@ -1,0 +1,23 @@
+defaults:
+  host: talk.google.com
+  port: 5222
+  status: "status"
+  debug: 1
+
+gtalk_dev_1:
+  transport_name: gtalk_dev_1
+  username: 'some-account1@gmail.com'
+  password: 'password'
+
+vumigo_gtalk_dispatch:
+  transport_names:
+    - gtalk_dev_1
+  exposed_names:
+    - gtalk_vumigo
+  router_class: vumi.dispatchers.base.FromAddrMultiplexRouter
+  fromaddr_mappings:
+    "some-account1@gmail.com": gtalk_dev_1
+
+workers:
+  gtalk_dev_1: vumi.transports.xmpp.XMPPTransport
+  vumigo_gtalk_dispatch: vumi.dispatchers.base.BaseDispatchWorker

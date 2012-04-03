@@ -1,0 +1,11 @@
+transport_names:
+  - yo_transport
+  - gtalk_vumigo
+exposed_names:
+  - vumigo_router
+router_class: vumi.dispatchers.base.SimpleDispatchRouter
+route_mappings:
+  yo_transport:
+    - vumigo_router
+  gtalk_vumigo:
+    - vumigo_router

@@ -1,0 +1,4 @@
+transport_name: vumigo_router
+send_to:
+  default:
+    transport_name: "invalid broken transport"
