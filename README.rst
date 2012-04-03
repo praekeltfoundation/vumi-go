@@ -47,12 +47,12 @@ If you've gotten this far then things look good :)
 
 Final steps are:
 
- 1. Create the PostgreSQL user for `go` with password `go` and create a database called `go`.
- 2. Run `go-admin.sh syncdb --noinput --migrate` to populate the db.
- 3. Run `go-admin.sh createsuperuser` to create a superuser.
- 4. Run `go-admin.sh runserver` to run the dev-server and login at `http://localhost:8000/admin/` with your super-user credentials.
- 5. Create a normal Django user but specify an email address as the `username`.
- 6. Use this account to log in at `http://localhost:8000`
+1. Create the PostgreSQL user for `go` with password `go` and create a database called `go`.
+2. Run `go-admin.sh syncdb --noinput --migrate` to populate the db.
+3. Run `go-admin.sh createsuperuser` to create a superuser.
+4. Run `go-admin.sh runserver` to run the dev-server and login at `http://localhost:8000/admin/` with your super-user credentials.
+5. Create a normal Django user but specify an email address as the `username`.
+6. Use this account to log in at `http://localhost:8000`
 
 .. _Redis: http://redis.io
 .. _RabbitMQ: http://rabbitmq.com
