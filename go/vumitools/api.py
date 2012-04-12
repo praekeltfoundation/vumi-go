@@ -115,7 +115,7 @@ class VumiApi(object):
             list of message dictionaries.
         """
         msg_ids = self.mdb.batch_messages(batch_id)
-        return [self.mdb.get_message(m_id) for m_id in msg_ids]
+        return [self.mdb.get_outbound_message(m_id) for m_id in msg_ids]
 
     def batch_replies(self, batch_id):
         """Return a list of reply message dictionaries.

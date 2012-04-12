@@ -131,7 +131,24 @@ class Conversation(models.Model):
                 'time': reply['timestamp'],
                 'content': reply['content'],
                 })
-        return reply_statuses
+        return sorted(reply_statuses, key=lambda reply: reply['time'],
+                        reverse=True)
+
+    def sent_messages(self):
+        batches = self.message_batch_set.all()
+        outbound_statuses = []
+        sent_messages = self._get_messages(self.delivery_class, batches)
+        for contact, message in sent_messages:
+            delivery_classes = dict(get_delivery_classes())
+            outbound_statuses.append({
+                'type': self.delivery_class,
+                'source': delivery_classes[self.delivery_class],
+                'contact': contact,
+                'time': message['timestamp'],
+                'content': message['content']
+                })
+        return sorted(outbound_statuses, key=lambda sent: sent['time'],
+                        reverse=True)
 
     @staticmethod
     def vumi_api():
@@ -239,8 +256,8 @@ class Conversation(models.Model):
                                 addr_func, batch_msg_func)
 
     class Meta:
-        ordering = ['-updated_at']
-        get_latest_by = 'updated_at'
+        ordering = ['-created_at']
+        get_latest_by = 'created_at'
 
     def __unicode__(self):
         return self.subject

@@ -40,47 +40,6 @@
                             {# - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
                         </td>
                     </tr>
-                    {# TODO: implement other transports #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         Twitter #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         Tweeted to 143 493 followers #}
-                    {#     </td> #}
-                    {# </tr> #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         Facebook #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         Posted to 393 292 fans #}
-                    {#     </td> #}
-                    {# </tr> #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         IM #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         <span class="green">Sending to</span> 3 291 people - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
-                    {#     </td> #}
-                    {# </tr> #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         Email #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         <span class="green">Sending to</span> 32 577 people - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
-                    {#     </td> #}
-                    {# </tr> #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         <strong>Total</strong> #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         <strong>562 202 People</strong> #}
-                    {#     </td> #}
-                    {# </tr> #}
                 </table>
                 <div>
                     {% if conversation.ended %}
@@ -143,96 +102,20 @@
                             <p>No one has replied yet</p>
                         </div>
                         {% endfor %}
-                        {# <div class="connection retweet"> #}
-                        {#     <span class="timestamp"><a href="person.html">Gustav Praekelt</a> via Twitter - 5 mins ago - <a href="#" class="reply">Reply</a></span> #}
-                        {#     <p> #}
-                        {#         RT <a href="#" target="_blank">@ajax_ct</a>: Sorry for the late notice, but practice today has been cancelled due to bad weather. :( #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection like"> #}
-                        {#     <p> #}
-                        {#         <a href="person.html">Kabelo Mapoka</a> liked this on Facebook - 6 mins ago #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection unsub"> #}
-                        {#     <span class="timestamp"><a href="person.html">Gavin Willmore</a> via SMS - 6 mins ago - Unsubscribe Processed</span> #}
-                        {#     <p> #}
-                        {#         <span class="red">stop</span> #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection reply"> #}
-                        {#     <span class="timestamp"><a href="person.html">Morgan Collett</a> via SMS - 5 mins ago - <a href="#" class="reply">Reply</a></span> #}
-                        {#     <p> #}
-                        {#         Anybody swinging by the training ground? I got dropped off and need a ride back to Durbanville #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection reply"> #}
-                        {#     <span class="timestamp"><a href="person.html">Hulisani Ravele</a> via Facebook - 5 mins ago - <a href="#" class="reply">Reply</a></span> #}
-                        {#     <p> #}
-                        {#         whoop whoop! what lousy weather #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection reply"> #}
-                        {#     <span class="timestamp"><a href="person.html">Belinda Lewis</a> via Twitter - 5 mins ago - <a href="#">Replied</a></span> #}
-                        {#     <p> #}
-                        {#         <a href="#" target="_blank">@ajax_ct</a>: When is practice going to be re-scheduled for? Huuuge game on saturday - don't want to jeopardise chances... #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="more"> #}
-                        {#     <a href="#">See more connections</a> #}
-                        {# </div> #}
                     </div>
                     <div id="fragment-2">
-                        {% for reply in conversation.replies.outbound %}
-                        <div class="connection {{reply.type}}">
-                            <span class="timestamp"><a href="{% url todo %}person.html">Belinda Lewis</a> via Facebook - 5 mins ago - <a href="#" class="reply">Reply</a></span>
-                            <p>
-                                oh noes!!
-                            </p>
+                        {% for message in conversation.sent_messages %}
+                        <div class="connection {{message.type}}">
+                            <span class="timestamp">
+                                <a href="{% url contacts:person person_pk=message.contact.pk %}">{{message.contact}}</a> via {{message.source}} - {{message.time}} -
+                                {# <a href="#" class="reply"> #}{{message.content}}{# </a> #}
+                            </span>
                         </div>
                         {% empty %}
                         <div class="connection">
                             <p>No replies sent</p>
                         </div>
                         {% endfor %}
-                        {# <div class="connection retweet"> #}
-                        {#     <span class="timestamp"><a href="person.html">Gustav Praekelt</a> via Twitter - 5 mins ago - <a href="#" class="reply">Reply</a></span> #}
-                        {#     <p> #}
-                        {#         RT <a href="#" target="_blank">@ajax_ct</a>: Sorry for the late notice, but practice today has been cancelled due to bad weather. :( #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection like"> #}
-                        {#     <p> #}
-                        {#         <a href="person.html">Kabelo Mapoka</a> liked this on Facebook - 6 mins ago #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection unsub"> #}
-                        {#     <span class="timestamp"><a href="person.html">Gavin Willmore</a> via SMS - 6 mins ago - Unsubscribe Processed</span> #}
-                        {#     <p> #}
-                        {#         <span class="red">stop</span> #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection reply"> #}
-                        {#     <span class="timestamp"><a href="person.html">Morgan Collett</a> via SMS - 5 mins ago - <a href="#" class="reply">Reply</a></span> #}
-                        {#     <p> #}
-                        {#         Anybody swinging by the training ground? I got dropped off and need a ride back to Durbanville #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection reply"> #}
-                        {#     <span class="timestamp"><a href="person.html">Hulisani Ravele</a> via Facebook - 5 mins ago - <a href="#" class="reply">Reply</a></span> #}
-                        {#     <p> #}
-                        {#         whoop whoop! what lousy weather #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection reply"> #}
-                        {#     <span class="timestamp"><a href="person.html">Belinda Lewis</a> via Twitter - 5 mins ago - <a href="#">Replied</a></span> #}
-                        {#     <p> #}
-                        {#         <a href="#" target="_blank">@ajax_ct</a>: When is practice going to be re-scheduled for? Huuuge game on saturday - don't want to jeopardise chances... #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="more"> #}
-                        {#     <a href="#">See more connections</a> #}
-                        {# </div> #}
                     </div>
                 </div>
             </div>
