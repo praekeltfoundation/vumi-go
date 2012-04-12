@@ -184,6 +184,19 @@ class VumiApi(object):
         """
         return self.tpm.declare_tags(tags)
 
+    def purge_pool(self, pool):
+        """Completely remove a pool with all its contents.
+
+        If tags in the pool are still in use it will throw an error.
+
+        :type pool: str
+        :param pool:
+            name of the pool to purge.
+        :rtype:
+            None.
+        """
+        return self.tpm.purge_pool(pool)
+
 
 class MessageSender(object):
     def __init__(self, config):
