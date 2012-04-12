@@ -6,11 +6,10 @@
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.application import ApplicationWorker, MessageStore
+from vumi.message import TransportUserMessage
 from vumi import log
 
 from go.vumitools.api import VumiApiCommand, get_redis
-
-from django.conf import settings
 
 
 class VumiApiWorker(ApplicationWorker):
@@ -34,6 +33,7 @@ class VumiApiWorker(ApplicationWorker):
         self.api_routing_config = VumiApiCommand.default_routing_config()
         self.api_routing_config.update(self.config.get('api_routing', {}))
         self.api_consumer = None
+        self.applications = self.config.get('applications', {})
 
     @inlineCallbacks
     def setup_application(self):
@@ -45,11 +45,24 @@ class VumiApiWorker(ApplicationWorker):
             exchange_name=self.api_routing_config['exchange'],
             exchange_type=self.api_routing_config['exchange_type'],
             message_class=VumiApiCommand)
-        vxpolls_transport_name = '%(transport_name)s.inbound' % {
-            'transport_name': settings.VXPOLLS_TRANSPORT_NAME,
-        }
-        print vxpolls_transport_name
-        self.vxpolls_publisher = yield self.publish_to(vxpolls_transport_name)
+
+
+        self.application_publishers = {}
+        for app_type, app_transport_name in self.applications.items():
+            # Consume the outbound messages so we can funnel
+            # them back out again to the relevant transport.
+            app_consumer = yield self.consume('%s.outbound' % (
+                app_transport_name,), self.handle_application_message,
+                message_class=TransportUserMessage)
+            self._consumers.append(app_consumer)
+
+            # Publish messages meant for the app to the appropriate
+            # routing key & queue
+            app_publisher = yield self.publish_to('%s.inbound' % (
+                app_transport_name,))
+
+            self.application_publishers[app_type] = app_publisher
+
 
     @inlineCallbacks
     def teardown_application(self):
@@ -60,13 +73,12 @@ class VumiApiWorker(ApplicationWorker):
     def process_unknown_cmd(self, cmd):
         log.error("Unknown vumi API command: %r" % (cmd,))
 
+    @inlineCallbacks
     def process_cmd_send(self, cmd):
-        batch_id = cmd['batch_id']
         content = cmd['content']
         msg_options = cmd['msg_options']
         to_addr = cmd['to_addr']
-        msg = self.send_to(to_addr, content, **msg_options)
-        self.store.add_message(batch_id, msg)
+        yield self.send_to(to_addr, content, **msg_options)
 
     def consume_api_command(self, cmd):
         cmd_method_name = 'process_cmd_%s' % (cmd.get('command'),)
@@ -74,36 +86,37 @@ class VumiApiWorker(ApplicationWorker):
                              self.process_unknown_cmd)
         return cmd_method(cmd)
 
-    def consume_ack(self, event):
-        self.store.add_event(event)
-
-    def consume_delivery_report(self, event):
-        self.store.add_event(event)
-
     @inlineCallbacks
+    def handle_application_message(self, msg):
+        yield self.transport_publisher.publish_message(msg)
+
     def consume_user_message(self, msg):
         from go.conversation.models import Conversation
         from go.contacts.models import Contact
 
         from_addr = msg['from_addr'].split('/', 1)[0]
         transport_type = msg['transport_type']
-        self.store.add_inbound_message(msg)
-        if transport_type == 'xmpp':
-            contacts = Contact.objects.filter(gtalk_id=from_addr)
-        elif transport_type == 'sms':
-            contacts = Contact.objects.filter(msisdn=from_addr)
+
+        transport_lookup_map = {
+            'xmpp': 'gtalk_id',
+            'sms': 'msisdn'
+        }
+
+        contacts = Contact.objects.filter(**{
+            transport_lookup_map[transport_type]: from_addr
+        })
         if contacts.exists():
-            contact = contacts[0]
+            contact = contacts.latest()
             groups = contact.groups.all()
             conversations = Conversation.objects.filter(end_time__isnull=True,
-                    conversation_type='survey',
                     groups__in=groups).order_by('-created_at')
             if conversations.exists():
-                conversation = conversations[0]
+                conversation = conversations.latest()
                 print 'this needs to go conversation', conversation
-                msg['helper_metadata']['poll_id'] = 'poll-%s' % (conversation.pk,)
-                r = yield self.vxpolls_publisher.publish_message(msg)
-                print 'published', r
-
-    def close_session(self, msg):
-        self.store.add_inbound_message(msg)
+                publisher = self.application_publishers.get(
+                                conversation.conversation_type)
+                if publisher:
+                    metadata = msg['helper_metadata']
+                    metadata['poll_id'] = 'poll-%s' % (conversation.pk,)
+                    metadata['conversation_id'] = conversation.pk
+                    publisher.publish_message(msg)
