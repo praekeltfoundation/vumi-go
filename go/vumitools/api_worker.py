@@ -75,10 +75,14 @@ class VumiApiWorker(ApplicationWorker):
 
     @inlineCallbacks
     def process_cmd_send(self, cmd):
+        batch_id = cmd['batch_id']
         content = cmd['content']
         msg_options = cmd['msg_options']
         to_addr = cmd['to_addr']
-        yield self.send_to(to_addr, content, **msg_options)
+        print 'sending to', to_addr, content, msg_options
+        msg = yield self.send_to(to_addr, content, **msg_options)
+        self.store.add_outbound_message(msg, batch_id=batch_id)
+        print 'stored outbound', msg
 
     def consume_api_command(self, cmd):
         cmd_method_name = 'process_cmd_%s' % (cmd.get('command'),)
@@ -109,14 +113,27 @@ class VumiApiWorker(ApplicationWorker):
             contact = contacts.latest()
             groups = contact.groups.all()
             conversations = Conversation.objects.filter(end_time__isnull=True,
+                    delivery_class=msg['helper_metadata']['tag']['tag'][0],
                     groups__in=groups).order_by('-created_at')
+            print 'conversations', conversations
             if conversations.exists():
                 conversation = conversations.latest()
                 print 'this needs to go conversation', conversation
-                publisher = self.application_publishers.get(
-                                conversation.conversation_type)
-                if publisher:
-                    metadata = msg['helper_metadata']
-                    metadata['poll_id'] = 'poll-%s' % (conversation.pk,)
-                    metadata['conversation_id'] = conversation.pk
-                    publisher.publish_message(msg)
+                if conversation.preview_batch_set.exists():
+                    batch = conversation.preview_batch_set.latest('pk')
+                elif conversation.message_batch_set.exists():
+                    batch = conversation.message_batch_set.latest('pk')
+                else:
+                    batch = None
+
+                print 'storing in batch', batch.batch_id
+                if batch:
+                    self.store.add_inbound_message(msg,
+                                                    batch_id=batch.batch_id)
+                    publisher = self.application_publishers.get(
+                                    conversation.conversation_type)
+                    if publisher:
+                        metadata = msg['helper_metadata']
+                        metadata['poll_id'] = 'poll-%s' % (conversation.pk,)
+                        metadata['conversation_id'] = conversation.pk
+                        publisher.publish_message(msg)
