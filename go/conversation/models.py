@@ -169,6 +169,8 @@ class Conversation(models.Model):
             return "xmpp", "xmpp"
         elif delivery_class == "gtalk":
             return "xmpp", "xmpp"
+        elif delivery_class == "sms":
+            return "longcode", "sms"
         else:
             raise ConversationSendError("Unknown delivery class %r"
                                         % (delivery_class,))
