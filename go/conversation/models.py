@@ -16,8 +16,9 @@ redis = redis.Redis(**settings.VXPOLLS_REDIS_CONFIG)
 def get_delivery_classes():
     # TODO: Unhardcode this when we have more configurable delivery classes.
     return [
-        ('sms', 'SMS'),
-        ('gtalk', 'Google Talk'),
+        ('shortcode', 'SMS Short code'),
+        ('longcode', 'SMS Long code'),
+        ('xmpp', 'Google Talk'),
         ]
 
 CONVERSATION_TYPES = (
@@ -73,6 +74,8 @@ class Conversation(models.Model):
             if contact in contacts:
                 contacts[contact] = awaiting_reply
         for contact, reply in replies:
+            print 'contact', contact
+            print 'reply', reply
             if contact in contacts and contacts[contact] == awaiting_reply:
                 contents = (reply['content'] or '').strip().lower()
                 contacts[contact] = ('approved'
@@ -126,7 +129,7 @@ class Conversation(models.Model):
             delivery_classes = dict(get_delivery_classes())
             reply_statuses.append({
                 'type': self.delivery_class,
-                'source': delivery_classes[self.delivery_class],
+                'source': delivery_classes.get(self.delivery_class, 'Unknown'),
                 'contact': contact,
                 'time': reply['timestamp'],
                 'content': reply['content'],
@@ -142,7 +145,7 @@ class Conversation(models.Model):
             delivery_classes = dict(get_delivery_classes())
             outbound_statuses.append({
                 'type': self.delivery_class,
-                'source': delivery_classes[self.delivery_class],
+                'source': delivery_classes.get(self.delivery_class, 'Unknown'),
                 'contact': contact,
                 'time': message['timestamp'],
                 'content': message['content']
@@ -158,10 +161,14 @@ class Conversation(models.Model):
         """Return a delivery information for a given delivery_class."""
         # TODO: remove hard coded delivery class to tagpool and transport_type
         #       mapping
-        if delivery_class == 'sms':
-            return "ambient", "sms"
-        elif delivery_class == 'gtalk':
-            return "gtalk", "xmpp"
+        if delivery_class == "shortcode":
+            return "shortcode", "sms"
+        elif delivery_class == "longcode":
+            return "longcode", "sms"
+        elif delivery_class == "xmpp":
+            return "xmpp", "xmpp"
+        elif delivery_class == "gtalk":
+            return "xmpp", "xmpp"
         else:
             raise ConversationSendError("Unknown delivery class %r"
                                         % (delivery_class,))
@@ -169,18 +176,24 @@ class Conversation(models.Model):
     def tag_message_options(self, tagpool, tag):
         """Return message options for tagpool and tag."""
         # TODO: this is hardcoded for ambient and gtalk pool currently
-        if tagpool == "ambient":
+        if tagpool == "shortcode":
             return {
                 "from_addr": tag[1],
                 "transport_name": "smpp_transport",
                 "transport_type": "sms",
-                }
-        elif tagpool == "gtalk":
+            }
+        elif tagpool == "longcode":
+            return {
+                "from_addr": tag[1],
+                "transport_name": "gsm_transport",
+                "transport_type": "sms",
+            }
+        elif tagpool == "xmpp":
             return {
                 "from_addr": tag[1],
                 "transport_name": "gtalk_vumigo",
                 "transport_type": "xmpp",
-                }
+            }
         else:
             raise ConversationSendError("Unknown tagpool %r" % (tagpool,))
 
