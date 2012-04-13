@@ -58,6 +58,8 @@ def contents(request, conversation_pk):
         'transport_name': settings.VXPOLLS_TRANSPORT_NAME,
     })
 
+    config.setdefault('survey_completed_response', '')
+
     if request.POST:
         post_data = request.POST.copy()
         post_data.update({
