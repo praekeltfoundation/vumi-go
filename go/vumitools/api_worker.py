@@ -107,11 +107,14 @@ class VumiApiWorker(ApplicationWorker):
         }
 
         contacts = Contact.objects.filter(**{
-            transport_lookup_map[transport_type]: from_addr
+            '%s__endswith' % (transport_lookup_map[transport_type],): from_addr
         })
+
         if contacts.exists():
             contact = contacts.latest()
             groups = contact.groups.all()
+            print 'contact', contact
+            print 'groups', groups
             conversations = Conversation.objects.filter(end_time__isnull=True,
                     delivery_class=msg['helper_metadata']['tag']['tag'][0],
                     groups__in=groups).order_by('-created_at')

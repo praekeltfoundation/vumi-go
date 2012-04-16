@@ -187,7 +187,7 @@ class Conversation(models.Model):
         elif tagpool == "longcode":
             return {
                 "from_addr": tag[1],
-                "transport_name": "gsm_transport",
+                "transport_name": "smpp_transport",
                 "transport_type": "sms",
             }
         elif tagpool == "xmpp":
