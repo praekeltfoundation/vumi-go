@@ -6,237 +6,283 @@
 {% endblock %}
 
 {% block main %}
-    <div id="control-bar">
-        <div id="control-elements">
-            <h3 class="wide">
-                <a href="{% url conversations:index %}">Conversations</a> » {{conversation.subject}}
-            </h3>
+
+    <div class="row">
+        <div class="span12">
+            <div id="welcome">
+                <h1><a href="{% url conversations:index %}">Conversations</a> &raquo; {{conversation.subject}}</h1>
+            </div>
         </div>
     </div>
-    <div id="main">
-        <div class="inner">
+    <div class="row">
+        <div class="span12">
             {% include "base/includes/messages.html" %}
-            <div id="summary" class="box">
-                <span class="timestamp">{{conversation.start_date|date:"d F Y"}} - <strong>{{conversation.groups.all|join:", "}}</strong></span>
-                <div class="message">
-                    {{conversation.message}}
-                </div>
-                <table width="100%" cellpadding="0" cellspacing="0" border="0" class="status-table">
-                    <tr>
-                        <th>
-                            Channel
-                        </th>
-                        <th>
-                            Conversation Status
-                        </th>
-                    </tr>
-                    <tr>
-                        <td>
-                            {{conversation.delivery_class_description}}
-                        </td>
-                        <td align="right">
-                            <span class="green">Sending to</span> {{conversation.people.count}} people 
-                            {# TODO can we even implement this? Would we want to? #}
-                            {# - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
-                        </td>
-                    </tr>
-                    {# TODO: implement other transports #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         Twitter #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         Tweeted to 143 493 followers #}
-                    {#     </td> #}
-                    {# </tr> #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         Facebook #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         Posted to 393 292 fans #}
-                    {#     </td> #}
-                    {# </tr> #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         IM #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         <span class="green">Sending to</span> 3 291 people - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
-                    {#     </td> #}
-                    {# </tr> #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         Email #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         <span class="green">Sending to</span> 32 577 people - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
-                    {#     </td> #}
-                    {# </tr> #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         <strong>Total</strong> #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         <strong>562 202 People</strong> #}
-                    {#     </td> #}
-                    {# </tr> #}
-                </table>
-                <div>
-                    {% if conversation.ended %}
-                    Conversation ended on {{conversation.end_date|date:"d F Y"}}
-                    {% else %}
-                    <form name="conversation-end" id="conversation-end" method="post"
-                          action="{% url conversations:end conversation_pk=conversation.pk %}">
-                        <input type="submit" value="End conversation" />
-                        {% csrf_token %}
-                    </form>
-                    {% endif %}
-                </div>
-            </div>
-            <div id="graph-box" class="box">
-                <h4>
-                    Conversation Infographics
-                </h4>
-                <div class="grey-box">
-                    <form name="graph-pick" id="graph-pick">
-                        <label for="graph-pick" class="inline small">What would you like to see:</label> <select>
-                            <option>
-                                Conversation Channel Split
-                            </option>
-                            <option>
-                                Replies
-                            </option>
-                            <option>
-                                Unsubscribes
-                            </option>
-                            <option>
-                                etc
-                            </option>
-                        </select>
-                    </form>
-                </div>
-                <div id="graph">
-                    <img src="https://chart.googleapis.com/chart?chs=388x200&amp;chd=t:40,15,30,5,10&amp;cht=p3&amp;chl=SMS|Twitter|FB|IM|Email">
-                </div>
-            </div>
-            <div id="connections" class="box nopadding">
-                <div id="tabs">
-                    <ul>
-                        <li>
-                            <a href="#fragment-1"><span>People</span></a>
-                        </li>
-                        <li>
-                            <a href="#fragment-2"><span>Our Replies</span></a>
-                        </li>
-                    </ul>
-                    <div id="fragment-1">
-                        {% for reply in conversation.replies %}
-                        <div class="connection {{reply.type}}">
-                            <span class="timestamp">
-                                <a href="{% url contacts:person person_pk=reply.contact.pk %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}} -
-                                {# <a href="#" class="reply"> #}{{reply.content}}{# </a> #}
-                            </span>
-                        </div>
-                        {% empty %}
-                        <div class="connection">
-                            <p>No one has replied yet</p>
-                        </div>
-                        {% endfor %}
-                        {# <div class="connection retweet"> #}
-                        {#     <span class="timestamp"><a href="person.html">Gustav Praekelt</a> via Twitter - 5 mins ago - <a href="#" class="reply">Reply</a></span> #}
-                        {#     <p> #}
-                        {#         RT <a href="#" target="_blank">@ajax_ct</a>: Sorry for the late notice, but practice today has been cancelled due to bad weather. :( #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection like"> #}
-                        {#     <p> #}
-                        {#         <a href="person.html">Kabelo Mapoka</a> liked this on Facebook - 6 mins ago #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection unsub"> #}
-                        {#     <span class="timestamp"><a href="person.html">Gavin Willmore</a> via SMS - 6 mins ago - Unsubscribe Processed</span> #}
-                        {#     <p> #}
-                        {#         <span class="red">stop</span> #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection reply"> #}
-                        {#     <span class="timestamp"><a href="person.html">Morgan Collett</a> via SMS - 5 mins ago - <a href="#" class="reply">Reply</a></span> #}
-                        {#     <p> #}
-                        {#         Anybody swinging by the training ground? I got dropped off and need a ride back to Durbanville #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection reply"> #}
-                        {#     <span class="timestamp"><a href="person.html">Hulisani Ravele</a> via Facebook - 5 mins ago - <a href="#" class="reply">Reply</a></span> #}
-                        {#     <p> #}
-                        {#         whoop whoop! what lousy weather #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection reply"> #}
-                        {#     <span class="timestamp"><a href="person.html">Belinda Lewis</a> via Twitter - 5 mins ago - <a href="#">Replied</a></span> #}
-                        {#     <p> #}
-                        {#         <a href="#" target="_blank">@ajax_ct</a>: When is practice going to be re-scheduled for? Huuuge game on saturday - don't want to jeopardise chances... #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="more"> #}
-                        {#     <a href="#">See more connections</a> #}
-                        {# </div> #}
-                    </div>
-                    <div id="fragment-2">
-                        {% for reply in conversation.replies.outbound %}
-                        <div class="connection {{reply.type}}">
-                            <span class="timestamp"><a href="{% url todo %}person.html">Belinda Lewis</a> via Facebook - 5 mins ago - <a href="#" class="reply">Reply</a></span>
-                            <p>
-                                oh noes!!
-                            </p>
-                        </div>
-                        {% empty %}
-                        <div class="connection">
-                            <p>No replies sent</p>
-                        </div>
-                        {% endfor %}
-                        {# <div class="connection retweet"> #}
-                        {#     <span class="timestamp"><a href="person.html">Gustav Praekelt</a> via Twitter - 5 mins ago - <a href="#" class="reply">Reply</a></span> #}
-                        {#     <p> #}
-                        {#         RT <a href="#" target="_blank">@ajax_ct</a>: Sorry for the late notice, but practice today has been cancelled due to bad weather. :( #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection like"> #}
-                        {#     <p> #}
-                        {#         <a href="person.html">Kabelo Mapoka</a> liked this on Facebook - 6 mins ago #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection unsub"> #}
-                        {#     <span class="timestamp"><a href="person.html">Gavin Willmore</a> via SMS - 6 mins ago - Unsubscribe Processed</span> #}
-                        {#     <p> #}
-                        {#         <span class="red">stop</span> #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection reply"> #}
-                        {#     <span class="timestamp"><a href="person.html">Morgan Collett</a> via SMS - 5 mins ago - <a href="#" class="reply">Reply</a></span> #}
-                        {#     <p> #}
-                        {#         Anybody swinging by the training ground? I got dropped off and need a ride back to Durbanville #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection reply"> #}
-                        {#     <span class="timestamp"><a href="person.html">Hulisani Ravele</a> via Facebook - 5 mins ago - <a href="#" class="reply">Reply</a></span> #}
-                        {#     <p> #}
-                        {#         whoop whoop! what lousy weather #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="connection reply"> #}
-                        {#     <span class="timestamp"><a href="person.html">Belinda Lewis</a> via Twitter - 5 mins ago - <a href="#">Replied</a></span> #}
-                        {#     <p> #}
-                        {#         <a href="#" target="_blank">@ajax_ct</a>: When is practice going to be re-scheduled for? Huuuge game on saturday - don't want to jeopardise chances... #}
-                        {#     </p> #}
-                        {# </div> #}
-                        {# <div class="more"> #}
-                        {#     <a href="#">See more connections</a> #}
-                        {# </div> #}
-                    </div>
-                </div>
-            </div>
         </div>
-        {% include "footer.html" %}
     </div>
+    <div class="row">
+	    <div class="span12">
+	        <div class="pull-right">
+	           {% if conversation.ended %}
+	                <h4 class="btn btn-info"><i class="icon-ok icon-white"></i> Conversation ended on {{conversation.end_date|date:"d F Y"}}</h4>
+	            {% else %}
+	                <form id="conversation-end" name="conversation-end" method="post" action="{% url conversations:end conversation_pk=conversation.pk %}">
+	                    {% csrf_token %}
+	                    <a href="javascript: document.getElementById('conversation-end').submit();" class="btn btn-danger"><i class="icon-remove-sign icon-white"></i> End Conversation</a>
+	                </form>
+	            {% endif %}
+<!--
+                <a href="" class="btn btn-success disabled"><i class="icon-repeat icon-white"></i> Resume Conversation</a>
+-->
+	        </div>
+	        <span class="label label-info">{{conversation.start_date|date:"d F Y"}}</span> <span class="label">{{conversation.delivery_class_description}}</span> <span class="label label-inverse">{{conversation.groups.all|join:", "}}</span> 
+	         <h3>{{conversation.subject}}</h3>
+	         <p>{{conversation.message}}</p>
+	    </div>
+	    <div class="span12">
+            <table class="table table-bordered table-striped">
+	            <tr>
+	                <th>Channel</th>
+	                <th>Conversation Status</th>
+	            </tr>
+	            <tr>
+	                <td>{{conversation.delivery_class_description}}</td>
+	                <td align="right">
+	                    <span class="green">Sending to</span> {{conversation.people.count}} people 
+	                    {# TODO can we even implement this? Would we want to? #}
+	                    {# 
+<!--
+                            <div class="pull-right">
+                                <a href="" class="btn btn-danger"><i class="icon-remove-sign icon-white"></i> End Conversation</a>
+                                <a href="" class="btn btn-success disabled"><i class="icon-repeat icon-white"></i> Resume Conversation</a>
+                            </div>
+-->
+                         #}
+	                </td>
+	            </tr>
+	            {# TODO: implement other transports #}
+	            {# <tr> #}
+	            {#     <td> #}
+	            {#         Twitter #}
+	            {#     </td> #}
+	            {#     <td align="right"> #}
+	            {#         Tweeted to 143 493 followers #}
+	            {#     </td> #}
+	            {# </tr> #}
+	            {# <tr> #}
+	            {#     <td> #}
+	            {#         Facebook #}
+	            {#     </td> #}
+	            {#     <td align="right"> #}
+	            {#         Posted to 393 292 fans #}
+	            {#     </td> #}
+	            {# </tr> #}
+	            {# <tr> #}
+	            {#     <td> #}
+	            {#         IM #}
+	            {#     </td> #}
+	            {#     <td align="right"> #}
+	            {#         <span class="green">Sending to</span> 3 291 people - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
+	            {#     </td> #}
+	            {# </tr> #}
+	            {# <tr> #}
+	            {#     <td> #}
+	            {#         Email #}
+	            {#     </td> #}
+	            {#     <td align="right"> #}
+	            {#         <span class="green">Sending to</span> 32 577 people - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
+	            {#     </td> #}
+	            {# </tr> #}
+	            {# <tr> #}
+	            {#     <td> #}
+	            {#         <strong>Total</strong> #}
+	            {#     </td> #}
+	            {#     <td align="right"> #}
+	            {#         <strong>562 202 People</strong> #}
+	            {#     </td> #}
+	            {# </tr> #}
+	        </table>
+	    </div>
+    </div>
+    
+    <hr>
+    
+    <div class="row">
+        <div class="span12">
+            <h3>Conversation Dasboard</h3>
+        </div>
+    </div>
+    <div class="row padtop">
+        <div class="span12">
+            <form name="graph-pick" id="graph-pick">
+                <label for="graph-pick" class="inline small">What would you like to see:</label> <select>
+                    <option>Conversation Channel Split</option>
+                    <option>Replies</option>
+                    <option>Unsubscribes</option>
+                    <option>etc</option>
+                </select>
+            </form>
+        </div>
+        <div class="span12">
+            <img src="https://chart.googleapis.com/chart?chs=388x200&amp;chd=t:40,15,30,5,10&amp;cht=p3&amp;chl=SMS|Twitter|FB|IM|Email">
+        </div>
+    </div>
+    
+    <hr>
+    
+    <div class="row">
+        <div class="span12">
+            <h3>Conversation Messages</h3>
+        </div>
+    </div>
+    <div class="tabbable padtop">
+	    <ul class="nav nav-tabs">
+	       <li class="active"><a href="#1" data-toggle="tab"><strong>People</strong></a></li>
+	       <li><a href="#2" data-toggle="tab">Our Replies</a></li>
+	    </ul>
+	    <div class="tab-content">
+	        <div class="tab-pane active" id="1">
+<!-- 
+	            <div class="btn-group">
+	                <a class="btn active" href="#">All (2 293)</a>
+	                <a class="btn" href="#" title="Text Message"><i class="icon-comment"></i> (1 012)</a>
+	                <a class="btn" href="#" title="Twitter"><i class="icon-twitter-sign"></i> (563)</a>
+	                <a class="btn" href="#" title="Facebook"><i class="icon-facebook-sign"></i>  (411)</a>
+	                <a class="btn" href="#" title="Instant Messages"><i class="icon-comments"></i> (42)</a>
+	                <a class="btn" href="#" title="Email"><i class="icon-envelope"></i> (42)</a>
+	            </div>
+	         <br>
+-->
+	        <table class="table table-bordered table-striped">
+	            <thead>
+	                <tr>
+	                    <th width="32">Type</th>
+	                    <th>Response</th>
+	                    <th width="70">Actions</th>
+	                </tr>
+	            </thead>
+	            <tbody>
+	                {% for reply in conversation.replies %}
+	                <tr>
+	                    <td><i class="icon-repeat"></i> {{reply.type}}</td>
+	                    <td>
+                            <h6><a href="{% url contacts:person person_pk=reply.contact.pk %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}}</h6>
+                            <p>{{reply.content}}</p></td>
+	                    <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+	                </tr>
+	                {% empty %}
+                    <tr>
+                        <td colspan="3">No one has replied yet</td>
+                    </tr>
+                    {% endfor %}
+<!--  	                
+	                <tr>
+	                    <td><i class="icon-retweet"></i></td>
+	                    <td><h6><a href="person.html">Gustav Praekelt</a> via Twitter - 5 mins ago</h6><p>RT @ajax_ct: Sorry for the late notice, but practice today has been cancelled due to bad weather. :(</p></td>
+	                    <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+	                </tr>
+	                <tr>
+	                    <td><i class="icon-thumbs-up"></i></td>
+	                    <td><p><a href="person.html">Kabelo Mapoka</a>  like this on Facebook 6 mins ago</p>
+	                    <td></td>
+	                </tr>
+	                <tr>
+	                    <td><i class="icon-remove"></i></td>
+	                    <td><p><a href="person.html">Gavin Wilmore</a> unsubscribed via text message 10 mins ago</p>
+	                    <td></td>
+	                </tr>
+	                <tr>
+	                    <td><i class="icon-repeat"></i></td>
+	                    <td><h6><a href="person.html">Morgan Collett</a> via Text Message - 15 mins ago</h6><p>Anybody swinging by the training ground? I got dropped off and need a ride back to Durbanville</p></td>
+	                    <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+	                </tr>
+	                <tr>
+	                    <td><i class="icon-repeat"></i></td>
+	                    <td><h6><a href="person.html">Hulisani Ravele</a> via Facebook - 20 mins ago</h6><p>whoop whoop! what lousy weather</p></td>
+	                    <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+	                </tr>
+	                <tr>
+	                    <td><i class="icon-repeat"></i></td>
+	                    <td><h6><a href="person.html">Belinda Lewis</a> via Twitter - 20 mins ago</h6><p>@ajax_ct: When is practice going to be re-scheduled for? Huuuge game on saturday - don't want to jeopardise chances...</p>
+	                        <div class="well"><h6>Praekelt Foundation via Vumi Go - 20 mins ago <span class="label label-info">Our Reply</span></h6><p>Hello Belinda, practice is re-scheduled for Thursday</p></div>
+	                    </td>
+	                    <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+	                </tr>
+-->
+	            </tbody>
+	        </table>
+	        </div>
+	        <div class="tab-pane" id="2">
+<!-- 	        
+	            <div class="btn-group">
+	                <a class="btn active" href="#">All (30)</a>
+	                <a class="btn" href="#" title="Text Message"><i class="icon-comment"></i> (20)</a>
+	                <a class="btn" href="#" title="Twitter"><i class="icon-twitter-sign"></i> (5)</a>
+	                <a class="btn" href="#" title="Facebook"><i class="icon-facebook-sign"></i>  (3)</a>
+	                <a class="btn" href="#" title="Instant Messages"><i class="icon-comments"></i> (2)</a>
+	                <a class="btn disabled" href="#" title="Email"><i class="icon-envelope"></i> (0)</a>
+	            </div>
+	         <br>
+-->
+	        <table class="table table-bordered table-striped">
+	            <thead>
+	                <tr>
+	                    <th width="32">Type</th>
+	                    <th>Response</th>
+	                    <th width="70">Actions</th>
+	                </tr>
+	            </thead>
+	            <tbody>
+	                {% for reply in conversation.replies.outbound %}
+                    <tr>
+                        <td><i class="icon-repeat"></i> {{reply.type}}</td>
+                        <td>
+                            <h6><a href="{% url contacts:person person_pk=reply.contact.pk %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}}</h6>
+                            <p>{{reply.content}}</p></td>
+                        <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3">No one has replied yet</td>
+                    </tr>
+                    {% endfor %}
+<!--  	                
+	                <tr>
+	                    <td><i class="icon-retweet"></i></td>
+	                    <td><h6><a href="person.html">Gustav Praekelt</a> via Twitter - 5 mins ago</h6><p>RT @ajax_ct: Sorry for the late notice, but practice today has been cancelled due to bad weather. :(</p></td>
+	                    <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+	                </tr>
+	                <tr>
+	                    <td><i class="icon-thumbs-up"></i></td>
+	                    <td><p><a href="person.html">Kabelo Mapoka</a>  like this on Facebook 6 mins ago</p>
+	                    <td></td>
+	                </tr>
+	                <tr>
+	                    <td><i class="icon-remove"></i></td>
+	                    <td><p><a href="person.html">Gavin Wilmore</a> unsubscribed via text message 10 mins ago</p>
+	                    <td></td>
+	                </tr>
+	                <tr>
+	                    <td><i class="icon-repeat"></i></td>
+	                    <td><h6><a href="person.html">Morgan Collett</a> via Text Message - 15 mins ago</h6><p>Anybody swinging by the training ground? I got dropped off and need a ride back to Durbanville</p></td>
+	                    <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+	                </tr>
+	                <tr>
+	                    <td><i class="icon-repeat"></i></td>
+	                    <td><h6><a href="person.html">Hulisani Ravele</a> via Facebook - 20 mins ago</h6><p>whoop whoop! what lousy weather</p></td>
+	                    <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+	                </tr>
+	                <tr>
+	                    <td><i class="icon-repeat"></i></td>
+	                    <td><h6><a href="person.html">Belinda Lewis</a> via Twitter - 20 mins ago</h6><p>@ajax_ct: When is practice going to be re-scheduled for? Huuuge game on saturday - don't want to jeopardise chances...</p>
+	                        <div class="well"><h6>Praekelt Foundation via Vumi Go - 20 mins ago <span class="label label-info">Our Reply</span></h6><p>Hello Belinda, practice is re-scheduled for Thursday</p></div>
+	                    </td>
+	                    <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+	                </tr>
+-->
+	            </tbody>
+	        </table>
+	        </div>
+	    </div>  
+	  </div>
+	  
 {% endblock %}

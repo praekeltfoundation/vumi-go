@@ -1,32 +1,92 @@
 {% extends "app.html" %}
 
 {% block main %}
-<div id="main" class="main-alt">
-    <div class="inner">
-        {% include "base/includes/messages.html" %}
-        {% if user.conversation_set.exists %}
-            <h2>Hi {{user_profile}}, here are some of your newest conversations.</h2>
-            {# TODO add user counter / user activity metrics #}
-            <h3 class="home">...and <strong>239 new people</strong> have also connected since you last checked in.</h3>
-        {% else %}
-            <h2>Hey {{user_profile}}, you must be new here.</h2>
-            <h3 class="home"><a href="{% url conversations:new %}">Start Your First Conversation</a></h3>
-        {% endif %}
-        
-        <div id="conversations">
+
+    {% if user.conversation_set.exists %}
+	    <div class="row">
+	        <div class="span12">
+	            <div id="welcome">
+	                <div class="pull-right start-button shadow">
+	                <h1><a data-toggle="modal" href="#newConv" tite="New Conversation"><i class="icon-plus"></i></a></h1></div>
+	                <h1>Hi Gustav, here are some of your newest conversations.</h1>
+	                {# TODO add user counter / user activity metrics #}
+	            </div>
+	        </div>
+	    </div>
+	    <div class="row">
+	        <div class="span12">
+	            {% include "base/includes/messages.html" %}
+	        </div>
+	    </div>
+<!--
+	    <div class="row">
+	        <div class="span12">
+	            <form id="search-filter" name="search-filter" action="" method="get" class="well form-inline">
+	                <input type="text" class="input-xlarge" name="search-filter-input" id="search-filter-input" value="{{query}}" placeholder="Search conversations…">
+	                <select name="search02" class="input-small">
+	                    <option value="1">All Types</option>
+	                    <option value="2">Bulk Message</option>
+	                    <option value="3">Survey</option>
+	                    <option value="4">Interactive SMS</option>
+	                    <option value="5">Star Menu</option>
+	                </select>
+	                <select name="search03" class="input-small">
+	                    <option value="1">All Status</option>
+	                    <option value="2">Running</option>
+	                    <option value="3">Finished</option>
+	                    <option value="4">Paused</option>
+	                    <option value="4">Draft</option>
+	                </select>
+	                <button type="submit" class="btn" id="search-filter-btn">Search</button>
+	            </form>
+	        </div>
+	    </div>
+--> 
+	    <div class="row">
             {% for conversation in latest_conversations %}
-                <div class="grid_4">
-                    {% include "conversation/includes/conversation-box.html" %}
-                </div>
+                {% include "conversation/includes/conversation-box.html" %}
+                {% if forloop.counter|divisibleby:"3" %}
+                    </div>
+                    <div class="row">
+                {% endif %}    
             {% endfor %}
-            
-            {% if user.conversation_set.exists %}
-                <div class="grid_4"><div class="msg-action-box"><a href="{% url conversations:index %}">See More Conversations</a></div></div>
-                <div class="grid_4"><div class="msg-action-box"><a href="{% url todo %}credits.html">Buy More Vumi Credits</a></div></div>
-                <div class="grid_4"><div class="msg-action-box"><a href="{% url conversations:new %}">Start A Conversation</a></div></div>
-            {% endif %}
-        </div>
-    </div>
-    {% include "footer.html" %}
+	    </div>
+    {% else %}
+	    <div class="row">
+	        <div class="span12">
+	            <div id="welcome">
+	                <div class="pull-right start-button shadow">
+	                <h1><a data-toggle="modal" href="#newConv" tite="New Conversation"><i class="icon-plus"></i></a></h1></div>
+	                <h1>Hey {{user_profile}}, you must be new here.</h1>
+	                <h2><a href="{% url conversations:new %}">Start Your First Conversation</a></h2>
+	            </div>
+	        </div>
+	    </div>
+    {% endif %}
+    
+    {% include "base/includes/pagination.html" %}
+
+{% endblock %}
+
+{% block modals %}
+<div class="modal hide fade" id="newConv">
+	<div class="modal-header">
+	   <a class="close" data-dismiss="modal">×</a>
+	   <h3>What type of conversation would you like to start?</h3>
+	</div>
+	<form action="{% url conversations:new %}">
+		<div class="modal-body">
+		    <select name="convtype">
+		        <option selected="selected">Bulk Message</option>
+		        <option>Interactive SMS</option>
+		        <option>Survey</option>
+		        <option>Poll</option>
+		    </select>
+		</div>
+		<div class="modal-footer">
+		   <button type="submit" class="btn btn-primary">Next &rarr;</button>
+		   <a data-dismiss="modal" class="btn">Cancel</a>
+		</div>
+	</form>
 </div>
 {% endblock %}
