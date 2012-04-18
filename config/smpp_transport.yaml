@@ -1,4 +1,4 @@
-transport_name: yo_transport
+transport_name: smpp_transport
 
 system_id: "system_id"
 password: "password"

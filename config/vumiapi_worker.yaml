@@ -1,4 +1,6 @@
 transport_name: vumigo_router
+applications:
+    survey: vxpolls_transport
 send_to:
   default:
     transport_name: "invalid broken transport"
