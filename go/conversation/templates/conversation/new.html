@@ -1,6 +1,127 @@
 {% extends "app.html" %}
 
-{% block extra_header %}
+{% block main %}
+
+    <form name="conversation" id="conversation" method="post" action="">
+    {% csrf_token %}
+    <div class="row">
+        <div class="span12">
+<!-- 
+            <div class="pull-right">
+		        <a class="btn btn-success" data-toggle="modal" href="#previewConv">Send Preview</a>
+		    </div>
+		    <div class="pull-right" style="margin-right: 10px">
+		        <a class="btn" href="home.html">Save Draft</a>
+		    </div>
+-->
+            <div class="pull-right padtop">
+                <input type="reset" class="btn" value="Cancel">
+            </div>
+            <div class="pull-right padtop" style="margin-right: 10px">
+                <input type="submit" name="submit" class="btn btn-success" value="Next">
+            </div>
+            <div id="welcome">
+                <h1>New Conversation</h1>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="span4">
+            <div class="box shadow">
+                <h3>1. Message Details</h3>
+                <br>
+                <fieldset>
+                    <div class="control-group">
+                        <label class="control-label" for="input01">Conversation Name</label>
+                        <div class="controls">{{form.subject}}{{form.subject.errors}}</div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="cmessage">Message <span id="charcount" class="label label-info">0</span></label>
+                        <div class="controls">{{form.message}}{{form.message.errors}}</div>
+                    </div>
+<!--                      
+                    <div class="control-group">
+                        <label class="control-label" for="inlineCheckboxes">Conversation Locations</label>
+                        <table class="table table-condensed" style="width: 90%">
+                        <tbody>
+                        <tr>
+                            <td>
+                                <label class="checkbox inline"><input type="checkbox" id="inlineCheckbox1" value="option1" name="channel"> Txt</label>
+                            </td>
+                            <td>
+                                <label class="checkbox inline"><input type="checkbox" id="inlineCheckbox2" value="option2" name="channel"> IM</label>
+                            </td>
+                            <td>
+                                <label class="checkbox inline"><input type="checkbox" id="inlineCheckbox3" value="option3" name="channel"> BBM</label>    
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="checkbox inline"><input type="checkbox" id="inlineCheckbox4" value="option4" name="channel"> Twitter</label>
+                            </td>
+                            <td>
+                                <label class="checkbox inline"><input type="checkbox" id="inlineCheckbox5" value="option5" name="channel"> Facebook</label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="3">
+                                <label for="channel" class="error" style="display: none">Please select at least one channel for your message.</label>
+                            </td>
+                        </tr>
+                        </tbody>
+                        </table>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="select01">Pick a shortcode</label>
+                        <div class="controls">
+                         <select id="select01" class="input-medium"> 
+                             <option>32329</option>
+                             <option>32323</option>
+                             <option>32973</option> 
+                             <option>32328</option> 
+                             <option>32975</option> 
+                             <option>39571</option> 
+                             <option>32324</option> 
+                             <option>A longcode is suitable</option>
+                         </select>
+                        </div>
+                    </div>
+-->
+                    <div class="control-group">
+                        <label class="control-label" for="cdate">Date</label>
+                        <div class="controls">
+                            <div class="input-prepend">
+                                <span class="add-on"><i class="icon-calendar"></i></span>
+                                {{form.start_date}}
+                            </div>
+                        </div>          
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label" for="ctime">Time</label>
+                        <div class="controls">
+                            <div class="input-prepend">
+                            <span class="add-on"><i class="icon-time"></i></span>
+                          {{form.start_time}}
+                            </div>
+                        </div>          
+                    </div>
+                    <div class="btn-toolbar">
+                        <div class="btn-group"><input type="submit" class="btn btn-primary" value="Next &rarr;"></div>
+                        <div class="btn-group"><input type="reset" class="btn" value="Cancel"></div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
 <script>
     $(document).ready(function(){
         $("#conversation").validate();
@@ -8,107 +129,4 @@
 </script>
 <link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
 <link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
-{% endblock %}
-
-{% block main %}
-<form name="conversation" id="conversation" method="post" action="">
-    {% csrf_token %}
-    <div id="control-bar">
-        <div id="control-elements">
-            <h3>
-                New Conversation
-            </h3>
-            <div id="control-bar-right">
-                <input type="submit" name="submit" class="btn" value="Next">
-                <input type="reset" class="btn-grey" value="Cancel">
-            </div>
-        </div>
-    </div>
-    <div id="main">
-        <div class="inner">
-            {% include "base/includes/messages.html" %}
-            {# TODO: disable hiding via jQuery, enabling display via django messages  #}
-            {# <div class="notification success"> #}
-            {#     This is a positive notification message bar #}
-            {# </div> #}
-            {# <div class="notification warning"> #}
-            {#     This is a warning notification message bar #}
-            {# </div> #}
-            {# <div class="notification error"> #}
-            {#     This is a error notification message bar #}
-            {# </div> #}
-            <div id="progress-bar">
-                <ul>
-                    <li class="active">Message
-                    </li>
-                    <li>People
-                    </li>
-                    <li>Send
-                    </li>
-                </ul>
-            </div>
-            <div class="wide-box">
-                <div id="conv-box">
-<!--                     <div id="form-filter">
-                        <ul>
-                            <li id="basic" class="active">
-                                <a href="#">Basic</a>
-                            </li>
-                            <li id="more">
-                                <a href="#">More</a>
-                            </li>
-                        </ul>
-                    </div>
- -->                    <div id="basic-form">
-                        <div class="field-row">
-                            <div class="label-hint">
-                                This won't be sent
-                            </div>
-                            <label>Conversation name</label> 
-                            {{form.subject}}
-                            {{form.subject.errors}}
-                            <div class="clear"></div>
-                        </div>
-                        <div class="field-row">
-                            <div class="label-hint">
-                                <span class="conv-message-count">0</span> Characters. Valid for:<br>
-                                <div class="valid" id="valid-twitter">
-                                    &nbsp;
-                                </div>
-                                <div class="valid" id="valid-facebook">
-                                    &nbsp;
-                                </div>
-                                <div class="valid" id="valid-sms">
-                                    &nbsp;
-                                </div>
-                                <div class="valid nomargin" id="valid-im">
-                                    &nbsp;
-                                </div>
-                            </div>
-                            <label for="conv-message">Message</label> 
-                            {{form.message}}
-                            {{form.message.errors}}
-                            <div class="clear"></div>
-                        </div>
-                    </div>
-                    <div id="more-form">
-                        <div class="field-row">
-                            <label class="wide">When would you like to start this conversation?</label> 
-                            Date: {{form.start_date}}
-                            Time: {{form.start_time}}
-                            <div class="clear"></div>
-                        </div>
-                    </div>
-                </div>
-                <div id="preview-box">
-                    <div id="preview-pane">
-                        <span class="sender">{{user_profile}}:</span> <span class="preview-message">&nbsp;</span>
-                    </div>
-                </div>
-                <div class="clear"></div>
-            </div>
-        </div>
-        {% include "footer.html" %}
-    </div>
-</form>
 {% endblock %}

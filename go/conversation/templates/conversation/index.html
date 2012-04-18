@@ -1,37 +1,80 @@
 {% extends "app.html" %}
 
 {% block main %}
-<div id="control-bar">
-    <div id="control-elements">
-        <h3>
-            Conversations
-        </h3>
-        <div id="control-bar-right">
-            &nbsp;
+
+    <div class="row">
+        <div class="span12">
+            <div id="welcome">
+                <div class="pull-right start-button shadow">
+                <h1><a data-toggle="modal" href="#newConv" tite="New Conversation"><i class="icon-plus"></i></a></h1></div>
+                <h1>Conversations</h1>
+            </div>
         </div>
     </div>
-</div>
-<div id="main">
-    <div class="inner">
-        {% include "base/includes/messages.html" %}
-        <form id="search-filter" name="search-filter" action="" method="get">
-            <input type="image" src="{{STATIC_URL}}pics/header/search-btn.png" id="search-filter-btn"><input type="text" id="search-filter-input" class="txt" name="q" value="{{query|default:"Find a conversation..."}}">
-        </form>
-        <div id="conversations">
-            {% for object in page.object_list %}
-                {% with conversation=object %}
-                <div class="grid_4">
-                    {% include "conversation/includes/conversation-box.html" %}
-                </div>
-                {% endwith %}
-            {% empty %}
-                <div>
-                    <p>Not conversations matching {{query}}</p>
-                </div>
-            {% endfor %}
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
         </div>
-        {% include "base/includes/pagination.html" %}
     </div>
-    {% include "footer.html" %}
+    <div class="row">
+        <div class="span12">
+            <form id="search-filter" name="search-filter" action="" method="get" class="well form-inline">
+                <input type="text" class="input-xlarge" name="q" id="search-filter-input" value="{{query}}" placeholder="Search conversations…">
+<!--                    
+                    <select name="search02" class="input-small">
+                        <option value="1">All Types</option>
+                        <option value="2">Bulk Message</option>
+                        <option value="3">Survey</option>
+                        <option value="4">Interactive SMS</option>
+                        <option value="5">Star Menu</option>
+                    </select>
+                    <select name="search03" class="input-small">
+                        <option value="1">All Status</option>
+                        <option value="2">Running</option>
+                        <option value="3">Finished</option>
+                        <option value="4">Paused</option>
+                        <option value="4">Draft</option>
+                    </select>
+-->  
+                <button type="submit" class="btn" id="search-filter-btn">Search</button>
+            </form>
+        </div>
+    </div>
+    <div class="row">
+        {% for object in page.object_list %}
+            {% with conversation=object %}
+                {% include "conversation/includes/conversation-box.html" %}
+            {% endwith %}
+        {% empty %}
+            <div>
+                <p>No conversations matching {{query}}</p>
+            </div>
+        {% endfor %}
+    </div>
+    
+    {% include "base/includes/pagination.html" %}
+
+{% endblock %}
+
+{% block modals %}
+<div class="modal hide fade" id="newConv">
+    <div class="modal-header">
+       <a class="close" data-dismiss="modal">×</a>
+       <h3>What type of conversation would you like to start?</h3>
+    </div>
+    <form action="{% url conversations:new %}">
+        <div class="modal-body">
+            <select name="convtype">
+                <option selected="selected">Bulk Message</option>
+                <option>Interactive SMS</option>
+                <option>Survey</option>
+                <option>Poll</option>
+            </select>
+        </div>
+        <div class="modal-footer">
+           <button type="submit" class="btn btn-primary">Next &rarr;</button>
+           <a data-dismiss="modal" class="btn">Cancel</a>
+        </div>
+    </form>
 </div>
 {% endblock %}
