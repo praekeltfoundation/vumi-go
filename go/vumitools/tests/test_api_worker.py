@@ -6,101 +6,137 @@ from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportEvent, TransportUserMessage
 from vumi.application.tests.test_base import ApplicationTestCase
+from vumi.dispatchers.tests.test_base import DispatcherTestCase
+from vumi.dispatchers.base import BaseDispatchWorker
+from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.utils import FakeRedis, LogCatcher
 
-from go.vumitools.api_worker import VumiApiWorker
+from go.vumitools.api_worker import (VumiApiWorker, CommandDispatcher,
+                                        GoApplicationRouter)
 from go.vumitools.api import VumiApiCommand
 
 
-class TestVumiApiWorker(ApplicationTestCase):
+class CommandDispatcherTestCase(ApplicationTestCase):
 
-    application_class = VumiApiWorker
+    application_class = CommandDispatcher
 
     @inlineCallbacks
     def setUp(self):
-        super(TestVumiApiWorker, self).setUp()
+        super(CommandDispatcherTestCase, self).setUp()
         self._fake_redis = FakeRedis()
         self.api = yield self.get_application({
             'redis_cls': lambda **kw: self._fake_redis,
-            })
+            'worker_names': ['worker_1', 'worker_2'],
+        })
 
     def tearDown(self):
         self._fake_redis.teardown()
-        super(TestVumiApiWorker, self).tearDown()
+        super(CommandDispatcherTestCase, self).tearDown()
 
     def publish_command(self, cmd):
         return self.dispatch(cmd, rkey='vumi.api')
 
-    def publish_event(self, **kw):
-        event = TransportEvent(**kw)
-        d = self.dispatch(event, rkey=self.rkey('event'))
-        d.addCallback(lambda _result: event)
-        return d
+    @inlineCallbacks
+    def test_forwarding_to_worker_name(self):
+        api_cmd = VumiApiCommand(worker_name='worker_1')
+        yield self.publish_command(api_cmd)
+        [dispatched] = self._amqp.get_messages('vumi', 'worker_1.control')
+        self.assertEqual(dispatched, api_cmd)
 
     @inlineCallbacks
-    def test_double_teardown(self):
-        yield self.api.teardown_application()
-        yield self.api.teardown_application()
-
-    @inlineCallbacks
-    def test_send(self):
-        yield self.publish_command(VumiApiCommand.send('batch1',
-                                                       'content',
-                                                       {"from_addr": "from"},
-                                                       'to_addr'))
-        [msg] = yield self.get_dispatched_messages()
-        self.assertEqual(msg['to_addr'], 'to_addr')
-        self.assertEqual(msg['content'], 'content')
-
-        self.assertEqual(self.api.store.batch_status('batch1'), {
-            'message': 1,
-            'sent': 1,
-            })
-        [msg_id] = self.api.store.batch_messages('batch1')
-        self.assertEqual(self.api.store.get_message(msg_id), msg)
-
-    @inlineCallbacks
-    def test_unknown_command(self):
+    def test_unknown_worker_name(self):
         with LogCatcher() as logs:
-            yield self.publish_command(VumiApiCommand(command='???'))
+            yield self.publish_command(VumiApiCommand(
+                    worker_name='non-existent-worker'))
             [error] = logs.errors
-            self.assertTrue(error['message'][0].startswith(
-                "'Unknown vumi API command:"))
+            self.assertTrue("No worker publisher available" in
+                                error['message'][0])
 
     @inlineCallbacks
     def test_badly_constructed_command(self):
         with LogCatcher() as logs:
             yield self.publish_command(VumiApiCommand())
             [error] = logs.errors
-            self.assertTrue(error['message'][0].startswith(
-                "'Unknown vumi API command:"))
+            self.assertTrue("No worker publisher available" in
+                                error['message'][0])
+
+
+class TestGoApplicationRouter(GoApplicationRouter):
+
+    def __init__(self, *args, **kwargs):
+        super(TestGoApplicationRouter, self).__init__(*args, **kwargs)
+        self.tag_to_batch_ids_map = {
+            ('xmpp', 'test1@xmpp.org'): 'batch-id-1',
+            ('xmpp', 'test2@xmpp.org'): 'batch-id-2',
+        }
+        self.batch_id_to_conversations_map = {
+            'batch-id-1': {
+                'conversation_id': '1', 'conversation_type': 'type_1',
+            },
+            'batch-id-2': {
+                'conversation_type': '2', 'conversation_type': 'type_2',
+            }
+        }
+
+    def get_conversation_for_tag(self, tag):
+        batch_id = self.tag_to_batch_ids_map.get(tag)
+        return self.batch_id_to_conversations_map.get(batch_id, {})
+
+class GoApplicationRouterTestCase(DispatcherTestCase):
+
+    dispatcher_class = BaseDispatchWorker
+    transport_name = 'test_transport'
+    timeout = 1
 
     @inlineCallbacks
-    def test_consume_ack(self):
-        ack_event = yield self.publish_event(user_message_id='123',
-                                             event_type='ack',
-                                             sent_message_id='xyz')
-        [event_id] = self.api.store.message_events('123')
-        self.assertEqual(self.api.store.get_event(event_id), ack_event)
+    def setUp(self):
+        yield super(GoApplicationRouterTestCase, self).setUp()
+        self.dispatcher = yield self.get_dispatcher({
+            'router_class': 'go.vumitools.tests.test_api_worker.' \
+                                'TestGoApplicationRouter',
+            'transport_names': [
+                self.transport_name,
+            ],
+            'exposed_names': [
+                'app_1',
+                'app_2',
+            ],
+            'conversation_mappings': {
+                'type_1': 'app_1',
+                'type_2': 'app_2',
+            }
+        })
+        self.router = self.dispatcher._router
 
     @inlineCallbacks
-    def test_consume_delivery_report(self):
-        dr_event = yield self.publish_event(user_message_id='123',
-                                            event_type='delivery_report',
-                                            delivery_status='delivered')
-        [event_id] = self.api.store.message_events('123')
-        self.assertEqual(self.api.store.get_event(event_id), dr_event)
+    def test_tag_retrieval_and_dispatching(self):
+        msg = self.mkmsg_in(transport_type='xmpp',
+                                transport_name='xmpp_transport')
+        TaggingMiddleware.add_tag_to_msg(msg, ('xmpp', 'test1@xmpp.org'))
+        yield self.dispatch(msg, self.transport_name)
+        [dispatched] = self.get_dispatched_messages('app_1',
+                                                    direction='inbound')
+        conv_metadata = dispatched['helper_metadata']['conversations']
+        self.assertEqual(conv_metadata, {
+            'conversation_id': '1',
+            'conversation_type': 'type_1',
+        })
 
     @inlineCallbacks
-    def test_consume_user_message(self):
-        msg = self.mkmsg_in()
-        yield self.dispatch(msg)
-        self.assertEqual(self.api.store.get_inbound_message(msg['message_id']),
-                         msg)
+    def test_no_tag(self):
+        msg = self.mkmsg_in(transport_type='xmpp',
+                                transport_name='xmpp_transport')
+        with LogCatcher() as log:
+            yield self.dispatch(msg, self.transport_name)
+            [error] = log.errors
+            self.assertTrue('No application setup' in error['message'][0])
 
     @inlineCallbacks
-    def test_close_session(self):
-        msg = self.mkmsg_in(session_event=TransportUserMessage.SESSION_CLOSE)
-        yield self.dispatch(msg)
-        self.assertEqual(self.api.store.get_inbound_message(msg['message_id']),
-                         msg)
+    def test_unknown_tag(self):
+        msg = self.mkmsg_in(transport_type='xmpp',
+                                transport_name='xmpp_transport')
+        TaggingMiddleware.add_tag_to_msg(msg, ('this', 'does not exist'))
+        with LogCatcher() as log:
+            yield self.dispatch(msg, self.transport_name)
+            [error] = log.errors
+            self.assertTrue('No application setup' in error['message'][0])
