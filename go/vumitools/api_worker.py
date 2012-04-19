@@ -76,10 +76,30 @@ class GoApplicationRouter(BaseDispatchRouter):
 
     """
     def setup_routing(self):
+        # map conversation types to applications that deal with them
         self.conversation_mappings = self.config['conversation_mappings']
+        # setup the message_store
+        mdb_config = self.config.get('message_store', {})
+        self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
+        r_server = get_redis(self.config)
+        self.store = MessageStore(r_server, self.mdb_prefix)
 
     def get_conversation_type_for_tag(self, tag):
-        raise NotImplementedError()
+        from go.conversation.models import MessageBatch
+        batch_id = self.store.tag_common(tag)['current_batch_id']
+        try:
+            batch = MessageBatch.objects.get(batch_id=batch_id)
+            conversation = batch.preview_batch or batch.message_batch
+            if conversation:
+                return {
+                    'conversation_id': conversation.pk,
+                    'conversation_type': conversation.conversation_type,
+                }
+            else:
+                log.error('Cannot find conversation for %s' % (batch_id,))
+        except MessageBatch.DoesNotExist:
+            log.error('Cannot find batch for %s' % (batch_id,))
+        return {}
 
     def find_application_for_msg(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
@@ -88,7 +108,6 @@ class GoApplicationRouter(BaseDispatchRouter):
         conv_metadata.update(conv_info)
         conv_type = conv_metadata.get('conversation_type')
         return self.conversation_mappings.get(conv_type)
-
 
     @inlineCallbacks
     def dispatch_inbound_message(self, msg):
