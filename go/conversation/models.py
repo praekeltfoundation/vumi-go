@@ -236,7 +236,8 @@ class Conversation(models.Model):
                 try:
                     contact = Contact.for_addr(self.user, transport_type,
                                                addr_func(reply))
-                except (Contact.DoesNotExist, Contact.MultipleObjectsReturned):
+                except (Contact.DoesNotExist, Contact.MultipleObjectsReturned), e:
+                    print e
                     continue
                 replies.append((contact, reply))
         return replies

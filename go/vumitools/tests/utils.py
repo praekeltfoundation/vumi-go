@@ -11,11 +11,10 @@ from celery.app import app_or_default
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.api_worker import CommandDispatcher
 from vumi.message import TransportUserMessage
+from vumi.tests.utils import get_stubbed_worker
 
 
 class DummyApiWorker(CommandDispatcher):
-    def __init__(self, store):
-        self.store = store
 
     def send_to(self, to_addr, content, **msg_options):
         msg_options.setdefault('transport_name', 'dummy_transport')
@@ -148,6 +147,15 @@ class CeleryTestMixIn(object):
         assert ((cmds is None) ^ (consumer is None))
         if cmds is None:
             cmds = self.fetch_cmds(consumer)
-        api_worker = DummyApiWorker(store)
-        for cmd in cmds:
-            api_worker.consume_api_command(cmd)
+
+        worker = get_stubbed_worker(DummyApiWorker, {
+            'transport_name': 'dummy_transport',
+            'worker_names': ['bulk_message_application']
+        })
+        def _consume_api_commands(*args, **kwargs):
+            worker.store = store
+            for cmd in cmds:
+                worker.consume_api_command(cmd)
+
+        d = worker.startWorker()
+        d.addCallback(_consume_api_commands)
