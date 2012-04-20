@@ -1,4 +1,5 @@
-transport_name: vxpolls_transport
+worker_name: survey_application
+transport_name: survey_transport
 dashboard_port: 8101
 dashboard_path_prefix: 'dashboard/'
 batch_size: 2

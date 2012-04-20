@@ -1,0 +1,9 @@
+transport_names:
+  - vumigo_router
+exposed_names:
+  - bulk_message_transport
+  - survey_transport
+router_class: go.vumitools.api_worker.GoApplicationRouter
+conversation_mappings:
+    survey: survey_transport
+    bulk_message: bulk_message_transport

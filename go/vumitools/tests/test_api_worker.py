@@ -4,15 +4,13 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.message import TransportEvent, TransportUserMessage
 from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.dispatchers.tests.test_base import DispatcherTestCase
 from vumi.dispatchers.base import BaseDispatchWorker
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.utils import FakeRedis, LogCatcher
 
-from go.vumitools.api_worker import (VumiApiWorker, CommandDispatcher,
-                                        GoApplicationRouter)
+from go.vumitools.api_worker import CommandDispatcher, GoApplicationRouter
 from go.vumitools.api import VumiApiCommand
 
 
@@ -38,7 +36,9 @@ class CommandDispatcherTestCase(ApplicationTestCase):
 
     @inlineCallbacks
     def test_forwarding_to_worker_name(self):
-        api_cmd = VumiApiCommand(worker_name='worker_1')
+        api_cmd = VumiApiCommand(msg_options={
+            'worker_name': 'worker_1'
+        })
         yield self.publish_command(api_cmd)
         [dispatched] = self._amqp.get_messages('vumi', 'worker_1.control')
         self.assertEqual(dispatched, api_cmd)
@@ -46,8 +46,9 @@ class CommandDispatcherTestCase(ApplicationTestCase):
     @inlineCallbacks
     def test_unknown_worker_name(self):
         with LogCatcher() as logs:
-            yield self.publish_command(VumiApiCommand(
-                    worker_name='non-existent-worker'))
+            yield self.publish_command(VumiApiCommand(msg_options={
+                'worker_name': 'non-existent-worker'
+            }))
             [error] = logs.errors
             self.assertTrue("No worker publisher available" in
                                 error['message'][0])

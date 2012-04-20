@@ -128,6 +128,46 @@
                     </ul>
                 </div>
             </div>
+            <div id="connections" class="box nopadding">
+                <div id="tabs">
+                    <ul>
+                        <li>
+                            <a href="#fragment-1"><span>People</span></a>
+                        </li>
+                        <li>
+                            <a href="#fragment-2"><span>Our Replies</span></a>
+                        </li>
+                    </ul>
+                    <div id="fragment-1">
+                        {% for reply in conversation.replies %}
+                        <div class="connection {{reply.type}}">
+                            <span class="timestamp">
+                                <a href="{% url contacts:person person_pk=reply.contact.pk %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}} -
+                                {# <a href="#" class="reply"> #}{{reply.content}}{# </a> #}
+                            </span>
+                        </div>
+                        {% empty %}
+                        <div class="connection">
+                            <p>No one has replied yet</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div id="fragment-2">
+                        {% for message in conversation.sent_messages %}
+                        <div class="connection {{message.type}}">
+                            <span class="timestamp">
+                                <a href="{% url contacts:person person_pk=message.contact.pk %}">{{message.contact}}</a> via {{message.source}} - {{message.time}} -
+                                {# <a href="#" class="reply"> #}{{message.content}}{# </a> #}
+                            </span>
+                        </div>
+                        {% empty %}
+                        <div class="connection">
+                            <p>No replies sent</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
         </div>
         {% include "footer.html" %}
     </div>
