@@ -66,12 +66,16 @@ class SurveyApplication(PollApplication):
     def process_command_send(self, cmd):
         message_options = cmd.get('msg_options', {})
         conversation_id = message_options['conversation_id']
+        conversation_type = message_options['conversation_type']
         msg = TransportUserMessage(from_addr=cmd['to_addr'],
                 to_addr=cmd['msg_options']['from_addr'],
                 content=cmd['content'],
                 transport_name=message_options['transport_name'],
                 transport_type=message_options['transport_type'],
                 helper_metadata={
-                    'poll_id': 'poll-%s' % (conversation_id,)
+                    'conversations': {
+                        'conversation_id': conversation_id,
+                        'conversation_type': conversation_type,
+                    }
                 })
         self.consume_user_message(msg)
