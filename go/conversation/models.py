@@ -74,8 +74,6 @@ class Conversation(models.Model):
             if contact in contacts:
                 contacts[contact] = awaiting_reply
         for contact, reply in replies:
-            print 'contact', contact
-            print 'reply', reply
             if contact in contacts and contacts[contact] == awaiting_reply:
                 contents = (reply['content'] or '').strip().lower()
                 contacts[contact] = ('approved'
@@ -92,28 +90,11 @@ class Conversation(models.Model):
         batch.save()
 
     def start_survey(self):
-        pm = PollManager(redis, settings.VXPOLLS_PREFIX)
-        poll_id = 'poll-%s' % (self.pk,)
-        poll = pm.get(poll_id)
-        tagpool, transport_type = self.delivery_info(self.delivery_class)
-        if poll.questions:
-            first_question_copy = poll.questions[0]['copy']
-            for contact in self.people():
-                addr = contact.addr_for(transport_type)
-                if addr:
-                    participant = pm.get_participant(addr)
-                    next_question = poll.get_next_question(participant, last_index=-1)
-                    # save state so we're expecting an answer
-                    # next time around.
-                    participant.has_unanswered_question = True
-                    poll.set_last_question(participant, next_question)
-                    pm.save_participant(participant)
-
-            batch = self._send_batch(
-                self.delivery_class, first_question_copy, self.people()
-            )
-            batch.message_batch = self
-            batch.save()
+        batch = self._send_batch(
+            self.delivery_class, '', self.people()
+        )
+        batch.message_batch = self
+        batch.save()
 
     def delivery_class_description(self):
         delivery_classes = dict(get_delivery_classes())
@@ -209,16 +190,20 @@ class Conversation(models.Model):
         tagpool, transport_type = self.delivery_info(delivery_class)
         addrs = [contact.addr_for(transport_type) for contact in contacts]
         addrs = [addr for addr in addrs if addr]
-        print 'addrs', addrs
         tag = vumiapi.acquire_tag(tagpool)
-        print 'tag', tag
         if tag is None:
             raise ConversationSendError("No spare messaging tags.")
         msg_options = self.tag_message_options(tagpool, tag)
+        # Add the worker_name so our command dispatcher knows where
+        # to send stuff to.
+        msg_options.update({
+            'worker_name': '%s_application' % (self.conversation_type,),
+            'conversation_id': self.pk,
+            'conversation_type': self.conversation_type,
+        })
         batch_id = vumiapi.batch_start([tag])
         batch = MessageBatch(batch_id=batch_id)
         batch.save()
-        print 'sending bactch', batch_id, message, msg_options, addrs
         vumiapi.batch_send(batch_id, message, msg_options, addrs)
         return batch
 

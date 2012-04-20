@@ -9,11 +9,11 @@ from twisted.python. monkey import MonkeyPatcher
 from celery.app import app_or_default
 
 from go.vumitools.api import VumiApiCommand
-from go.vumitools.api_worker import VumiApiWorker
+from go.vumitools.api_worker import CommandDispatcher
 from vumi.message import TransportUserMessage
 
 
-class DummyApiWorker(VumiApiWorker):
+class DummyApiWorker(CommandDispatcher):
     def __init__(self, store):
         self.store = store
 
