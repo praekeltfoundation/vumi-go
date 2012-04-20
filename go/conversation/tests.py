@@ -60,7 +60,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
 
     def setUp(self):
         self.setup_api()
-        self.declare_ambient_tags()
+        self.declare_longcode_tags()
         self.setup_celery_for_tests()
         self.user = User.objects.get(username='username')
         self.conversation = self.user.conversation_set.latest()
@@ -85,15 +85,15 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         settings.VUMI_API_CONFIG = self._old_vumi_api_config
         self._fake_redis.teardown()
 
-    def declare_ambient_tags(self):
+    def declare_longcode_tags(self):
         api = Conversation.vumi_api()
-        api.declare_tags([("ambient", "default%s" % i) for i
+        api.declare_tags([("longcode", "default%s" % i) for i
                           in range(10001, 10001 + 4)])
 
-    def acquire_all_ambient_tags(self):
+    def acquire_all_longcode_tags(self):
         api = Conversation.vumi_api()
         for _i in range(4):
-            api.acquire_tag("ambient")
+            api.acquire_tag("longcode")
 
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
@@ -101,7 +101,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         response = self.client.post(reverse('conversations:people',
             kwargs={'conversation_pk': self.conversation.pk}), {
             'groups': [grp.pk for grp in ContactGroup.objects.all()],
-            'delivery_class': 'sms',
+            'delivery_class': 'shortcode',
         })
         self.assertRedirects(response, reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk}))
@@ -124,6 +124,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
             kwargs={'conversation_pk': self.conversation.pk}), {
             'name': 'Unit Test Group',
             'file': self.csv_file,
+            'delivery_class': 'xmpp',
         })
         self.assertRedirects(response, reverse('conversations:send',
             kwargs={'conversation_pk': self.conversation.pk}))
@@ -147,6 +148,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
             kwargs={'conversation_pk': self.conversation.pk}), {
             'contact_group': group.pk,
             'file': self.csv_file,
+            'delivery_class': 'xmpp',
         })
         self.assertRedirects(response, reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk}))
@@ -163,6 +165,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
             'name': 'Name of Group',
             'contact_group': group.pk,
             'file': self.csv_file,
+            'delivery_class': 'xmpp',
         })
         self.assertRedirects(response, reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk}))
@@ -187,9 +190,14 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         [cmd] = self.fetch_cmds(consumer)
         [batch] = self.conversation.preview_batch_set.all()
         [contact] = self.conversation.previewcontacts.all()
+        conversation = self.conversation
         msg_options = {"from_addr": "default10001",
                        "transport_type": "sms",
-                       "transport_name": "ambient"}
+                       "transport_name": "smpp_transport",
+                       "worker_name": "bulk_message_application",
+                       "conversation_id": conversation.pk,
+                       "conversation_type": conversation.conversation_type,
+                    }
         self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
                                                   "APPROVE? Test message",
                                                   msg_options,
@@ -197,7 +205,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
 
     def test_sending_preview_fails(self):
         """test failure to send previews"""
-        self.acquire_all_ambient_tags()
+        self.acquire_all_longcode_tags()
         consumer = self.get_cmd_consumer()
         response = self.client.post(reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk,
@@ -224,9 +232,14 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         [cmd] = self.fetch_cmds(consumer)
         [batch] = self.conversation.message_batch_set.all()
         [contact] = self.conversation.people()
+        conversation = self.conversation
         msg_options = {"from_addr": "default10001",
                        "transport_type": "sms",
-                       "transport_name": "ambient"}
+                       "transport_name": "smpp_transport",
+                       "worker_name": "bulk_message_application",
+                       "conversation_id": conversation.pk,
+                       "conversation_type": conversation.conversation_type,
+                       }
         self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
                                                   "Test message",
                                                   msg_options,
@@ -236,7 +249,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         """
         Test failure to send messages
         """
-        self.acquire_all_ambient_tags()
+        self.acquire_all_longcode_tags()
         consumer = self.get_cmd_consumer()
         response = self.client.post(reverse('conversations:start', kwargs={
             'conversation_pk': self.conversation.pk}), follow=True)
@@ -292,31 +305,37 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         """
         consumer = self.get_cmd_consumer()
         vumiapi = Conversation.vumi_api()
+        print '1 conversation.user', self.conversation.user
         [contact] = self.conversation.people()
         self.assertEqual(self.conversation.replies(), [])
         self.conversation.send_messages()
+        print '2 conversation.user', self.conversation.user
         [batch] = self.conversation.message_batch_set.all()
         self.process_cmds(vumiapi.mdb, consumer=consumer)
         self.assertEqual(self.conversation.replies(), [])
         [tag] = vumiapi.batch_tags(batch.batch_id)
         to_addr = "+123" + tag[1][-5:]
 
+        print '3 conversation.user', self.conversation.user
         # unknown contact
         msg = self.mkmsg_in('hello', to_addr=to_addr)
-        vumiapi.mdb.add_inbound_message(msg)
+        vumiapi.mdb.add_inbound_message(msg, tag=tag)
         self.assertEqual(self.conversation.replies(), [])
+        print '4 conversation.user', self.conversation.user
 
         # known contact
         msg = self.mkmsg_in('hello', to_addr=to_addr,
                             from_addr=contact.msisdn.lstrip('+'))
-        vumiapi.mdb.add_inbound_message(msg)
+        print '5 conversation.user', self.conversation.user
+        vumiapi.mdb.add_inbound_message(msg, tag=tag)
         [reply] = self.conversation.replies()
+        print '6 conversation.user', self.conversation.user
         self.assertTrue(isinstance(reply.pop('time'), datetime))
         self.assertEqual(reply, {
             'contact': contact,
             'content': u'hello',
-            'source': 'SMS',
-            'type': 'sms',
+            'source': 'SMS Long code',
+            'type': u'longcode',
             })
 
     def test_end(self):
