@@ -37,9 +37,30 @@
 	    {% block footer %}{% endblock %}
 	    
 	</div><!--/container-->
+
+	<div class="modal hide fade" id="newConv">
+		<div class="modal-header">
+		   <a class="close" data-dismiss="modal">×</a>
+		   <h3>What type of conversation would you like to start?</h3>
+		</div>
+		<form id="newConversationType" action="">
+			<div class="modal-body">
+			    <select id="convtype" class="required">
+			        <option value="" selected="selected">Please choose</option>
+			        <option value="{% url conversations:new %}">Bulk SMS</option>
+			        <option value="{% url surveys:new %}">Survey</option>
+			    </select>
+			</div>
+			<div class="modal-footer">
+			   <button type="submit" class="btn btn-primary">Next &rarr;</button>
+			   <a data-dismiss="modal" class="btn">Cancel</a>
+			</div>
+		</form>
+	</div><!--/newConversation-->
 	
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
 	<script>window.jQuery || document.write('<script src="{{ STATIC_URL }}js/libs/jquery-1.7.1.min.js"><\/script>')</script>
+	<script src="{{ STATIC_URL }}js/libs/bootstrap/tooltip.js"></script>
 	<script src="{{ STATIC_URL }}js/libs/bootstrap/transition.js"></script>
 	<script src="{{ STATIC_URL }}js/libs/bootstrap/collapse.js"></script>
 	<script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-dropdown.js"></script>
@@ -52,13 +73,17 @@
 	<script src="{{ STATIC_URL }}js/libs/jquery.timePicker.min.js"></script>
 	<script src="{{ STATIC_URL }}js/libs/jquery-ui-1.8.17.custom.min.js"></script>
 	<script src="{{ STATIC_URL }}js/libs/jquery.validate.js"></script>
-	<script src="{{ STATIC_URL }}js/libs/highcharts.js"></script>
 	<script src="{{ STATIC_URL }}js/script.js"></script>
 	<script>
 	var _gaq=[['_setAccount','UA-XXXXX-X'],['_trackPageview']];
 	(function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
 	g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
 	s.parentNode.insertBefore(g,s)}(document,'script'));
+	</script>
+	<script>
+    $(document).ready(function(){
+        $("#newConversationType").validate();
+    });
 	</script>
 	{% block extra_js %}{% endblock %}
 

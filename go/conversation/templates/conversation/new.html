@@ -1,25 +1,21 @@
 {% extends "app.html" %}
 
-{% block main %}
+{% block extra_header %}
+<link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
+<link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
+{% endblock %}
 
+{% block main %}
     <form name="conversation" id="conversation" method="post" action="">
     {% csrf_token %}
     <div class="row">
         <div class="span12">
-<!-- 
-            <div class="pull-right">
+            <div class="pull-right padtop">
 		        <a class="btn btn-success" data-toggle="modal" href="#previewConv">Send Preview</a>
 		    </div>
-		    <div class="pull-right" style="margin-right: 10px">
-		        <a class="btn" href="home.html">Save Draft</a>
+		    <div class="pull-right padtop" style="margin-right: 10px">
+		        <a class="btn" href="#">Save Draft</a>
 		    </div>
--->
-            <div class="pull-right padtop">
-                <input type="reset" class="btn" value="Cancel">
-            </div>
-            <div class="pull-right padtop" style="margin-right: 10px">
-                <input type="submit" name="submit" class="btn btn-success" value="Next">
-            </div>
             <div id="welcome">
                 <h1>New Conversation</h1>
             </div>
@@ -44,7 +40,6 @@
                         <label class="control-label" for="cmessage">Message <span id="charcount" class="label label-info">0</span></label>
                         <div class="controls">{{form.message}}{{form.message.errors}}</div>
                     </div>
-<!--                      
                     <div class="control-group">
                         <label class="control-label" for="inlineCheckboxes">Conversation Locations</label>
                         <table class="table table-condensed" style="width: 90%">
@@ -91,7 +86,6 @@
                          </select>
                         </div>
                     </div>
--->
                     <div class="control-group">
                         <label class="control-label" for="cdate">Date</label>
                         <div class="controls">
@@ -117,6 +111,16 @@
                 </fieldset>
             </div>
         </div>
+        <div class="span4">
+            <div class="box shadow conv-disabled">
+                <h3>2. Message Recipients</h3>
+            </div>
+        </div>
+        <div class="span4">
+            <div class="box shadow conv-disabled">
+                <h3>3. Send Message</h3>
+            </div>
+        </div>
     </div>
 </form>
 {% endblock %}
@@ -127,6 +131,8 @@
         $("#conversation").validate();
     });
 </script>
-<link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
-<link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
+{% endblock %}
+
+{% block modals %}
+    {% include "conversation/includes/tools.html" %}
 {% endblock %}

@@ -3,70 +3,72 @@
 {% block main %}
 {# TODO: this big form is a bad idea, it causes too much complexity on the backend #}
 <form name="conversation" enctype="multipart/form-data" method="post" action="" id="conversation">
-    <div id="control-bar">
-        <div id="control-elements">
-            <h3>
-                New Survey
-            </h3>
-            <div id="control-bar-right">
-                <input type="submit" name="submit" class="btn" value="Next"><input type="button" class="btn-grey" value="Back" onclick="javascript:history.go(-1)">
-            </div>
-        </div>
-    </div>
-    <div id="main">
-        <div class="inner">
-            {% include "base/includes/messages.html" %}
-            <div id="progress-bar">
-                <ul>
-                    <li class="pre-active">Survey</li><li class="active">People</li><li>Send</li>
-                </ul>
-            </div>
-            <div class="wide-box">
-                <div id="conv-box">
-                    <div id="form-filter">
-                        <ul>
-                            <li id="groups" class="active">
-                                <a href="{% url conversations:people conversation_pk=conversation.pk %}">Groups</a>
-                            </li>
-                            <li id="upload">
-                                <a href="{% url conversations:upload conversation_pk=conversation.pk %}">Upload...</a>
-                            </li>
-                        </ul>
-                    </div><label class="group-label">Select which group(s) you'd like to message:</label>
-                    <div id="groups-list">
-                        {% for group in user.contactgroup_set.all %}
-                        <div class="group {% if forloop.first %}first{% endif %}">
-                            <input type="checkbox" name="groups" value="{{group.pk}}" class="group-check"> 
-                            <span class="group-name">{{group.name}}</span>
-                            <span class="group-member-count">{{group.contact_set.count}}</span>
-                        </div>
-                        {% empty %}
-                        <div class="group first">
-                            <p>
-                                You don't have any groups defined yet. 
-                                Upload a set of contacts to create your
-                                first group.
-                            </p>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <div id="delivery-class-list">
-                        <label>Select a delivery class:</label>
-                        {{delivery_class.delivery_class}}
-                    </div>
-                </div>
-                <div id="preview-box">
-                    <div id="preview-pane">
-                        <span class="sender">{{user_profile}}:</span> <span class="preview-message">{{conversation.message}}</span>
-                    </div>
-                </div>
-                <div class="clear"></div>
-            </div>
-            <div class="clear">
-                &nbsp;
-            </div>
-        </div>
-    </div>
     {% csrf_token %}
+    <div class="row">
+        <div class="span12">
+            <div class="pull-right padtop">
+                <input type="submit" name="submit" class="btn btn-success" value="Next">
+            </div>
+            <div class="pull-right padtop" style="margin-right: 10px">
+                <input type="button" class="btn" value="Back" onclick="javascript:history.go(-1)">
+            </div>
+            <div id="welcome">
+                <h1>New Survey</h1>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="span4">
+            <div class="box shadow survey-box conv-disabled">
+                <h3>1. Survey Details</h3>
+            </div>
+        </div>
+        <div class="span4">
+            <div class="box shadow survey-box conv-disabled">
+                <h3>2. Survey Setup</h3>
+            </div>
+        </div>
+        <div class="span4">
+            <div class="box shadow survey-box survey-questions">
+                <h3>3. Survey Recipients</h3>
+                <br>
+                <fieldset>
+
+                    <label class="control-label" for="input01">Select which contact(s) you'd like to message:</label>
+                    <table class="table table-condensed">
+                    <tbody>
+                        {% for group in user.contactgroup_set.all %}
+                        <tr>
+                        <td>
+                            <label class="checkbox inline">
+                                <input type="checkbox" name="groups" value="{{group.pk}}" class="group-check"> {{group.name}}
+                            </label>
+                            <span class="label label-info pull-right">{{group.contact_set.count}}</span>
+                        </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                        <td>
+                            You don't have any groups defined yet. Upload a set of contacts to create your first group.
+                        </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    </table>
+                    <div class="control-group">
+                        <label class="control-label">Select a delivery class:</label>
+                        <div class="controls">
+                            {{delivery_class.delivery_class}}
+                        </div>          
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
 </form>
 {% endblock %}

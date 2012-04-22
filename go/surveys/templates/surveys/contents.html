@@ -1,11 +1,6 @@
 {% extends "app.html" %}
 
 {% block extra_header %}
-<script>
-    $(document).ready(function(){
-        $("#conversation").validate();
-    });
-</script>
 <link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
 <link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
 {% endblock %}
@@ -13,52 +8,64 @@
 {% block main %}
 <form name="conversation" id="conversation" method="post" action="">
     {% csrf_token %}
-    <div id="control-bar">
-        <div id="control-elements">
-            <h3>
-                New Survey
-            </h3>
-            <div id="control-bar-right">
-                <input type="submit" name="submit" class="btn" value="Next">
-                <input type="reset" class="btn-grey" value="Cancel">
+    <div class="row">
+        <div class="span12">
+            <div class="pull-right padtop">
+                <input type="submit" name="submit" class="btn btn-success" value="Next">
+            </div>
+            <div class="pull-right padtop" style="margin-right: 10px">
+                <input type="reset" class="btn" value="Cancel">
+            </div>
+            <div id="welcome">
+                <h1>New Survey</h1>
             </div>
         </div>
     </div>
-    <div id="main">
-        <div class="inner">
+    <div class="row">
+        <div class="span12">
             {% include "base/includes/messages.html" %}
-            <div id="progress-bar">
-                <ul>
-                    <li class="active">Survey
-                    </li>
-                    <li>People
-                    </li>
-                    <li>Send
-                    </li>
-                </ul>
+        </div>
+    </div>
+    <div class="row">
+        <div class="span4">
+            <div class="box shadow survey-box conv-disabled">
+                <h3>1. Survey Details</h3>
             </div>
-            <div class="wide-box">
-                <div id="conv-box">
-                    <div id="basic-form">
-                        {{form.errors}}
-                        {% for field in form.visible_fields %}
-                        <div class="field-row">
-                            <div class="label-hint">
-                                {{field.help_text}}
-                            </div>
-                            <label>{{field.label}}</label> 
+        </div>
+        <div class="span4">
+            <div class="box shadow survey-box survey-questions">
+                <h3>2. Survey Setup</h3>
+                <br>
+                <fieldset>
+                    {{form.errors}}
+                    {% for field in form.visible_fields %}
+                    <div class="control-group">
+                        <label class="control-label">{{field.label}}</label>
+                        <div class="controls">
                             {{field}}
                             {{field.errors}}
-                            <div class="clear"></div>
                         </div>
-                        {% endfor %}
                     </div>
-                    <input type="submit" name="_save_contents" value="Update Contents" />
-                </div>
-                <div class="clear"></div>
+                    {% endfor %}
+                    <div class="btn-toolbar">
+                        <input type="submit" name="_save_contents" value="Update Contents" class="btn" />
+                    </div>
+                </fieldset>
             </div>
         </div>
-        {% include "footer.html" %}
+        <div class="span4">
+            <div class="box shadow survey-box conv-disabled">
+                <h3>3. Survey Recipients</h3>
+            </div>
+        </div>
     </div>
 </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function(){
+        $("#conversation").validate();
+    });
+</script>
 {% endblock %}

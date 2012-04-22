@@ -1,7 +1,102 @@
 {% extends "app.html" %}
 {% load go_tags %}
 
-{% block extra_header %}
+{% block main %}
+    <div class="row">
+        <div class="span12">
+            <div id="welcome">
+                <h1><a href="{% url contacts:groups %}">People &amp; Groups</a> &raquo; {{group.name}}</h1>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            <ul class="nav nav-tabs">
+                <li><a href="{% url contacts:people %}"><strong>People</strong></a></li>
+                <li class="active"><a href="{% url contacts:groups %}">Groups</a></li>
+            </ul>
+            <form id="search-filter" name="search-filter" action="" method="get" class="well form-search">
+                <input type="text" id="search-filter-input" name="q" value="{{query|default_if_none:"Find people..."}}" class="input-large search-query">
+                <button type="submit" id="search-filter-btn" class="btn">Search</button>
+            </form>
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            <div class="pull-right">
+		        <div class="btn-group">
+                    <a class="btn btn-success" href="#"><i class="icon-user white"></i> Group Actions</a>
+		            <a class="btn btn-success dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
+		            <ul class="dropdown-menu">
+                        <li><a href="{% url contacts:new_person %}"><i class="icon-user"></i> New Contact</a></li>
+                        <li><a data-toggle="modal" href="#uplContactFrm"><i class="icon-upload"></i> Upload Contacts</a></li>
+                        <li><a data-toggle="modal" href="#editGroup"><i class="icon-edit"></i> Edit Group</a></li>
+                        <li><a data-toggle="modal" href="#emptyGroup"><i class="icon-fire"></i> Empty Group</a></li>
+                        <li><a data-toggle="modal" href="#delGroup"><i class="icon-trash"></i> Remove Group</a></li>
+		            </ul>
+		        </div>
+	        </div>
+	        <div class="pull-right" style="margin-right: 10px">
+	            <div class="btn">
+	               <a data-toggle="modal" href="#newConv">Message this group</a>
+	            </div>
+	        </div>
+            <h3>{{group.name}} <span class="label label-info">{{group.contact_set.count}} Members</span></h3><br />
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            <div class="btn-group">
+                {% load_alphabet as alphabet %}
+                {% for letter in alphabet %}
+                    <a class="btn {% spaceless %}
+                    {% if forloop.first %}first{% endif %}
+                    {% if letter == selected_letter %}active{% endif %}
+                    {% if forloop.last %}last{% endif %}
+                    {% endspaceless %}" href="?l={{letter}}">
+                        {{letter|upper}}
+                    </a>
+                {% endfor %}
+            </div>
+            <br />
+            <table class="table table-bordered table-striped">
+            <thead>
+            <tr>
+                <th>Surname</th>
+                <th>Mobile</th>
+                <th>Location</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for contact in selected_contacts %}
+                 <tr>
+                    <td colspan="3"><a href="{% url contacts:person person_pk=contact.pk %}">{{contact}}</a></td>
+                 </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="3">
+                    {% if selected_letter %}
+                        No contact surnames start with the letter <strong>{{selected_letter|upper}}</strong>
+                    {% endif %}
+                    {% if query %}
+                        No contact match <strong>{{query}}</strong>
+                    {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+            </table>
+        </div>
+    </div>
+    {% include "base/includes/pagination.html" %}
+{% endblock %}
+
+{% block extra_js %}
     <script type="text/javascript">
       $(document).ready(function(){
           $('#frm-new-group').validate();
@@ -12,79 +107,6 @@
     <link type="text/css" href="{{ STATIC_URL }}css/jquery-ui-timepicker.css" rel="stylesheet" />
 {% endblock %}
 
-{% block main %}
-    <div id="control-bar">
-        <div id="control-elements">
-            <h3>
-                <a href="{% url contacts:groups %}">Group</a> » {{group.name}}
-            </h3>
-            {% include "contacts/includes/menu.html" %}
-        </div>
-    </div>
-    <div id="main">
-        <div class="inner">
-            {% include "base/includes/messages.html" %}
-            {% include "contacts/includes/tools.html" %}
-            <div class="wide-box people-box">
-                <div id="steps" class="two-step">
-                    <div id="main-left-groups" class="step groups-active">
-                        <a href="{% url contacts:groups %}">Groups</a>
-                    </div>
-                    <div id="people" class="step" style="border-right: none">
-                        <a href="{% url contacts:people %}">People</a>
-                    </div>
-                </div>
-                <div class="inner-box">
-                    <form id="search-filter" name="search-filter" action="" method="get">
-                        <input type="image" src="{{STATIC_URL}}pics/header/search-btn.png" id="search-filter-btn">
-                        <input type="text" id="search-filter-input" class="txt" name="q" value="{{query|default_if_none:"Find people in this group..."}}">
-                    </form>
-                    <div id="groups-list">
-                        <div class="group first">
-                            <span class="group-name"><strong>{{group.name}}</strong></span><span class="group-member-count">{{group.contact_set.count}} Members {# Todo: implement <a href="#">Empty Group</a> <a href="#">Delete Group</a> #}</span>
-                        </div>
-                        <ul class="people-filter">
-                            {% load_alphabet as alphabet %}
-                            {% for letter in alphabet %}
-                                <li class="{% spaceless %}
-                                {% if forloop.first %}first{% endif %}
-                                {% if letter == selected_letter %}active{% endif %}
-                                {% if forloop.last %}last{% endif %}
-                                {% endspaceless %}">
-                                    {% if letter == selected_letter %}
-                                        {{letter|upper}}
-                                    {% else %}
-                                        <a href="?l={{letter}}">{{letter|upper}}</a>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                        <div class="clear"></div>
-                        {% for contact in selected_contacts %}
-                            <div class="{% spaceless %}
-                                group 
-                                {% if forloop.first %}first{% endif %}
-                                {% if forloop.last %}last{% endif %}
-                                {% endspaceless %}">
-                                <span class="group-name"><a href="{% url contacts:person person_pk=contact.pk %}">{{contact}}</a></span>
-                            </div>
-                        {% empty %}
-                            <div class="group">
-                                <span class="group-name">
-                                    {% if selected_letter %}
-                                        No contact surnames start with the letter 
-                                        <strong>{{selected_letter|upper}}</strong>
-                                    {% endif %}
-                                    {% if query %}
-                                    No contact match <strong>{{query}}</strong>
-                                    {% endif %}
-                                </span>
-                            </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% include "footer.html" %}
-        </div>
-    </div>
+{% block modals %}
+    {% include "contacts/includes/tools.html" %}
 {% endblock %}
