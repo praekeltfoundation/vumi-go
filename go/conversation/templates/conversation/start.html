@@ -3,43 +3,50 @@
 {% block main %}
 <form name="conversation" method="post" action="" id="conversation">
     {% csrf_token %}
-    <div id="control-bar">
-        <div id="control-elements">
-            <h3>
-                New Conversation
-            </h3>
-            <div id="control-bar-right">
-                <span class="status">&nbsp;</span><input type="submit" name="submit" class="btn" value="Start Conversation"><input type="button" class="btn-grey" value="Back" onclick="javascript:history.go(-1)">
+    <div class="row">
+        <div class="span12">
+            <div class="pull-right padtop">
+                <input type="submit" name="submit" class="btn btn-success" value="Start Conversation">
+            </div>
+            <div class="pull-right padtop" style="margin-right: 10px">
+                <input type="button" class="btn" value="Back" onclick="javascript:history.go(-1)">
+            </div>
+            <div id="welcome">
+                <h1>New Conversation</h1>
             </div>
         </div>
     </div>
-    <div id="main">
-        <div class="inner">
+    <div class="row">
+        <div class="span12">
             {% include "base/includes/messages.html" %}
-            <div id="progress-bar">
-                <ul>
-                    <li class="pre-active">Message</li><li class="pre-active">People</li><li class="last-active">Send</li>
-                </ul>
-            </div>
-            <div class="wide-box">
-                <div id="conv-box">
-                    <label class="group-label-b">Replies to approval message:</label>
-                    <div id="groups-list">
-                        {% for contact, status in conversation.preview_status %}
-                        <div class="group approved {% if forloop.first %}first{% endif %}">
-                            <span class="group-name">{{contact}} - {{status}}</span>
-                        </div>
-                        {% endfor %}
-                        <input type="submit" name="upload" value="Resend Preview" class="btn">
-                        <a class="btn" href="">Refresh</a>
-                    </div>
-                </div>
-                <div id="preview-box">
-                    <div id="preview-pane">
-                        <span class="sender">{{user_profile}}:</span> <span class="preview-message">{{conversation.message}}</span>
-                    </div>
-                </div>
-                <div class="clear"></div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            <h3>Replies to approval message:</h3>
+            <br />
+            <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for contact, status in conversation.preview_status %}
+                <tr>
+                    <td>{{contact}}</td>
+                    <td>{{status}}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="2">You have received no replies yet</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+            </table>
+            <div class="btn-toolbar">
+                <div class="btn-group"><input type="submit" name="upload" value="Resend Preview" class="btn btn-primary"></div>
             </div>
         </div>
     </div>

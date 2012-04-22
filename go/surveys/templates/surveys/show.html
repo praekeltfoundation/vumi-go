@@ -6,129 +6,241 @@
 {% endblock %}
 
 {% block main %}
-    <div id="control-bar">
-        <div id="control-elements">
-            <h3 class="wide">
-                <a href="{% url conversations:index %}">Surveys</a> » {{conversation.subject}}
-            </h3>
+    <div class="row">
+        <div class="span12">
+            <div id="welcome">
+                <h1><a href="{% url conversations:index %}">Surveys</a> &raquo; {{conversation.subject}}</h1>
+            </div>
         </div>
     </div>
-    <div id="main">
-        <div class="inner">
+    <div class="row">
+        <div class="span12">
             {% include "base/includes/messages.html" %}
-            <div id="summary" class="box">
-                <span class="timestamp">{{conversation.start_date|date:"d F Y"}} - <strong>{{conversation.groups.all|join:", "}}</strong></span>
-                <div class="message">
-                    {{conversation.message}}
-                </div>
-                <table width="100%" cellpadding="0" cellspacing="0" border="0" class="status-table">
-                    <tr>
-                        <th>
-                            Channel
-                        </th>
-                        <th>
-                            Survey Status
-                        </th>
-                    </tr>
-                    <tr>
-                        <td>
-                            {{conversation.delivery_class_description}}
-                        </td>
-                        <td align="right">
-                            <span class="green">Sending to</span> {{conversation.people.count}} people 
-                            {# TODO can we even implement this? Would we want to? #}
-                            {# - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
-                        </td>
-                    </tr>
-                    {# TODO: implement other transports #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         Twitter #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         Tweeted to 143 493 followers #}
-                    {#     </td> #}
-                    {# </tr> #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         Facebook #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         Posted to 393 292 fans #}
-                    {#     </td> #}
-                    {# </tr> #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         IM #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         <span class="green">Sending to</span> 3 291 people - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
-                    {#     </td> #}
-                    {# </tr> #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         Email #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         <span class="green">Sending to</span> 32 577 people - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
-                    {#     </td> #}
-                    {# </tr> #}
-                    {# <tr> #}
-                    {#     <td> #}
-                    {#         <strong>Total</strong> #}
-                    {#     </td> #}
-                    {#     <td align="right"> #}
-                    {#         <strong>562 202 People</strong> #}
-                    {#     </td> #}
-                    {# </tr> #}
-                </table>
-                <div>
-                    {% if conversation.ended %}
-                    Survey ended on {{conversation.end_date|date:"d F Y"}}
-                    {% else %}
-                    <form name="conversation-end" id="conversation-end" method="post"
-                          action="{% url surveys:end conversation_pk=conversation.pk %}">
-                        <input type="submit" value="End survey" />
-                        {% csrf_token %}
-                    </form>
-                    {% endif %}
-                </div>
-            </div>
-            <div id="graph-box" class="box">
-                <h4>
-                    Survey Infographics
-                </h4>
-                <div class="grey-box">
-                    <form name="graph-pick" id="graph-pick">
-                        <label for="graph-pick" class="inline small">What would you like to see:</label> <select>
-                            <option>
-                                Survey Channel Split
-                            </option>
-                            <option>
-                                Replies
-                            </option>
-                            <option>
-                                Unsubscribes
-                            </option>
-                            <option>
-                                etc
-                            </option>
-                        </select>
-                    </form>
-                </div>
-                <div id="graph">
-                    <img src="https://chart.googleapis.com/chart?chs=388x200&amp;chd=t:40,15,30,5,10&amp;cht=p3&amp;chl=SMS|Twitter|FB|IM|Email">
-                </div>
-            </div>
-            <div id="connections" class="box nopadding">
-                <div id="fragment-1" class="box">
-                    <ul>
-                        <li>Download <a href="{% url dashboard:export_users poll_id=poll_id %}">User data</a><br/><br/></li>
-                        <li>Download <a href="{% url dashboard:export_results poll_id=poll_id %}">Poll results</a></li>
-                    </ul>
-                </div>
-            </div>
         </div>
-        {% include "footer.html" %}
     </div>
+    <div class="row">
+        <div class="span12">
+            <div class="pull-right">
+               {% if conversation.ended %}
+                    <h4 class="btn btn-info"><i class="icon-ok icon-white"></i> Survey ended on {{conversation.end_date|date:"d F Y"}}</h4>
+                {% else %}
+                    <form id="conversation-end" name="conversation-end" method="post" action="{% url conversations:end conversation_pk=conversation.pk %}">
+                        {% csrf_token %}
+                        <a href="javascript: document.getElementById('conversation-end').submit();" class="btn btn-danger"><i class="icon-remove-sign icon-white"></i> End Survey</a>
+                    </form>
+                {% endif %}
+<!--
+                <a href="" class="btn btn-success disabled"><i class="icon-repeat icon-white"></i> Resume Survey</a>
+-->
+            </div>
+            <span class="label label-info">{{conversation.start_date|date:"d F Y"}}</span> <span class="label">{{conversation.delivery_class_description}}</span> <span class="label label-inverse">{{conversation.groups.all|join:", "}}</span> 
+             <h3>{{conversation.subject}}</h3>
+             <p>{{conversation.message}}</p>
+        </div>
+        <div class="span12">
+            <table class="table table-bordered table-striped">
+                <tr>
+                    <th>Channel</th>
+                    <th>Recipients</th>
+                    <th>Cost</th>
+                    <th>Status</th>
+                </tr>
+                <tr>
+                    <td><i class="icon-comment"></i> {{conversation.delivery_class_description}}</td>
+                    <td>{{conversation.people.count}}</td>
+                    <td>12345</td>
+                    <td>
+                       <div class="progress progress-striped active">
+                            <div class="bar" style="width: 67%;"><strong>In progress:</strong> 5 690 / 99 999</div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <hr>
+    
+    <div class="row">
+        <div class="span12">
+            <h3>Conversation Dasboard</h3>
+        </div>
+    </div>
+    <div class="row padtop">
+        <div class="span4">
+            <div id="myChart" style="width: 100%; height: 250px"></div>
+        </div>
+        <div class="span8">
+            <div id="myChart-b" style="width: 100%; height: 250px"></div>
+        </div>
+        {% comment %}
+        <ul>
+            <li>Download <a href="{% url dashboard:export_users poll_id=poll_id %}">User data</a><br/><br/></li>
+            <li>Download <a href="{% url dashboard:export_results poll_id=poll_id %}">Poll results</a></li>
+        </ul>
+        {% endcomment %}
+    </div>
+    
+    <hr>
+
+    <div class="row">
+        <div class="span12">
+            <h3>Conversation Messages</h3>
+        </div>
+    </div>
+    <div class="tabbable padtop">
+        <ul class="nav nav-tabs">
+           <li class="active"><a href="#1" data-toggle="tab"><strong>People</strong></a></li>
+           <li><a href="#2" data-toggle="tab">Our Replies</a></li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane active" id="1">
+<!-- 
+                <div class="btn-group">
+                    <a class="btn active" href="#">All (2 293)</a>
+                    <a class="btn" href="#" title="Text Message"><i class="icon-comment"></i> (1 012)</a>
+                    <a class="btn" href="#" title="Twitter"><i class="icon-twitter-sign"></i> (563)</a>
+                    <a class="btn" href="#" title="Facebook"><i class="icon-facebook-sign"></i>  (411)</a>
+                    <a class="btn" href="#" title="Instant Messages"><i class="icon-comments"></i> (42)</a>
+                    <a class="btn" href="#" title="Email"><i class="icon-envelope"></i> (42)</a>
+                </div>
+             <br>
+-->
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th width="32">Type</th>
+                        <th>Response</th>
+                        <th width="70">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reply in conversation.replies %}
+                    <tr>
+                        <td><i class="icon-repeat"></i> {{reply.type}}</td>
+                        <td>
+                            <h6><a href="{% url contacts:person person_pk=reply.contact.pk %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}}</h6>
+                            <p>{{reply.content}}</p></td>
+                        <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3">No one has replied yet</td>
+                    </tr>
+                    {% endfor %}
+<!--                    
+                    <tr>
+                        <td><i class="icon-retweet"></i></td>
+                        <td><h6><a href="person.html">Gustav Praekelt</a> via Twitter - 5 mins ago</h6><p>RT @ajax_ct: Sorry for the late notice, but practice today has been cancelled due to bad weather. :(</p></td>
+                        <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+                    </tr>
+                    <tr>
+                        <td><i class="icon-thumbs-up"></i></td>
+                        <td><p><a href="person.html">Kabelo Mapoka</a>  like this on Facebook 6 mins ago</p>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><i class="icon-remove"></i></td>
+                        <td><p><a href="person.html">Gavin Wilmore</a> unsubscribed via text message 10 mins ago</p>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><i class="icon-repeat"></i></td>
+                        <td><h6><a href="person.html">Morgan Collett</a> via Text Message - 15 mins ago</h6><p>Anybody swinging by the training ground? I got dropped off and need a ride back to Durbanville</p></td>
+                        <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+                    </tr>
+                    <tr>
+                        <td><i class="icon-repeat"></i></td>
+                        <td><h6><a href="person.html">Hulisani Ravele</a> via Facebook - 20 mins ago</h6><p>whoop whoop! what lousy weather</p></td>
+                        <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+                    </tr>
+                    <tr>
+                        <td><i class="icon-repeat"></i></td>
+                        <td><h6><a href="person.html">Belinda Lewis</a> via Twitter - 20 mins ago</h6><p>@ajax_ct: When is practice going to be re-scheduled for? Huuuge game on saturday - don't want to jeopardise chances...</p>
+                            <div class="well"><h6>Praekelt Foundation via Vumi Go - 20 mins ago <span class="label label-info">Our Reply</span></h6><p>Hello Belinda, practice is re-scheduled for Thursday</p></div>
+                        </td>
+                        <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+                    </tr>
+-->
+                </tbody>
+            </table>
+            </div>
+            <div class="tab-pane" id="2">
+<!--            
+                <div class="btn-group">
+                    <a class="btn active" href="#">All (30)</a>
+                    <a class="btn" href="#" title="Text Message"><i class="icon-comment"></i> (20)</a>
+                    <a class="btn" href="#" title="Twitter"><i class="icon-twitter-sign"></i> (5)</a>
+                    <a class="btn" href="#" title="Facebook"><i class="icon-facebook-sign"></i>  (3)</a>
+                    <a class="btn" href="#" title="Instant Messages"><i class="icon-comments"></i> (2)</a>
+                    <a class="btn disabled" href="#" title="Email"><i class="icon-envelope"></i> (0)</a>
+                </div>
+             <br>
+-->
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th width="32">Type</th>
+                        <th>Response</th>
+                        <th width="70">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reply in conversation.replies.outbound %}
+                    <tr>
+                        <td><i class="icon-repeat"></i> {{reply.type}}</td>
+                        <td>
+                            <h6><a href="{% url contacts:person person_pk=reply.contact.pk %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}}</h6>
+                            <p>{{reply.content}}</p></td>
+                        <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3">No one has replied yet</td>
+                    </tr>
+                    {% endfor %}
+<!--                    
+                    <tr>
+                        <td><i class="icon-retweet"></i></td>
+                        <td><h6><a href="person.html">Gustav Praekelt</a> via Twitter - 5 mins ago</h6><p>RT @ajax_ct: Sorry for the late notice, but practice today has been cancelled due to bad weather. :(</p></td>
+                        <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+                    </tr>
+                    <tr>
+                        <td><i class="icon-thumbs-up"></i></td>
+                        <td><p><a href="person.html">Kabelo Mapoka</a>  like this on Facebook 6 mins ago</p>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><i class="icon-remove"></i></td>
+                        <td><p><a href="person.html">Gavin Wilmore</a> unsubscribed via text message 10 mins ago</p>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><i class="icon-repeat"></i></td>
+                        <td><h6><a href="person.html">Morgan Collett</a> via Text Message - 15 mins ago</h6><p>Anybody swinging by the training ground? I got dropped off and need a ride back to Durbanville</p></td>
+                        <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+                    </tr>
+                    <tr>
+                        <td><i class="icon-repeat"></i></td>
+                        <td><h6><a href="person.html">Hulisani Ravele</a> via Facebook - 20 mins ago</h6><p>whoop whoop! what lousy weather</p></td>
+                        <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+                    </tr>
+                    <tr>
+                        <td><i class="icon-repeat"></i></td>
+                        <td><h6><a href="person.html">Belinda Lewis</a> via Twitter - 20 mins ago</h6><p>@ajax_ct: When is practice going to be re-scheduled for? Huuuge game on saturday - don't want to jeopardise chances...</p>
+                            <div class="well"><h6>Praekelt Foundation via Vumi Go - 20 mins ago <span class="label label-info">Our Reply</span></h6><p>Hello Belinda, practice is re-scheduled for Thursday</p></div>
+                        </td>
+                        <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+                    </tr>
+-->
+                </tbody>
+            </table>
+            </div>
+        </div>  
+      </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ STATIC_URL }}js/libs/highcharts.js"></script>
+<script src="{{ STATIC_URL }}js/libs/conv-dash.js"></script>
 {% endblock %}

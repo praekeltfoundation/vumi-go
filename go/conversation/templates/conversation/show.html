@@ -6,7 +6,6 @@
 {% endblock %}
 
 {% block main %}
-
     <div class="row">
         <div class="span12">
             <div id="welcome">
@@ -42,22 +41,23 @@
             <table class="table table-bordered table-striped">
 	            <tr>
 	                <th>Channel</th>
-	                <th>Conversation Status</th>
+	                <th>Recipients</th>
+	                <th>Cost</th>
+	                <th>Status</th>
 	            </tr>
 	            <tr>
-	                <td>{{conversation.delivery_class_description}}</td>
-	                <td align="right">
-	                    <span class="green">Sending to</span> {{conversation.people.count}} people 
-	                    {# TODO can we even implement this? Would we want to? #}
-	                    {# 
-<!--
-                            <div class="pull-right">
-                                <a href="" class="btn btn-danger"><i class="icon-remove-sign icon-white"></i> End Conversation</a>
-                                <a href="" class="btn btn-success disabled"><i class="icon-repeat icon-white"></i> Resume Conversation</a>
-                            </div>
--->
-                         #}
+	                <td><i class="icon-comment"></i> {{conversation.delivery_class_description}}</td>
+	                <td>{{conversation.people.count}}</td>
+	                <td>12345</td>
+	                <td>
+	                   <div class="progress progress-striped active">
+                            <div class="bar" style="width: 67%;"><strong>In progress:</strong> 5 690 / 99 999</div>
+                        </div>
 	                </td>
+	                {# TODO can we even implement this? Would we want to? #}
+<!--
+	                <td><a href="" class="btn btn-warning"><i class="icon-pause icon-white"></i> Pause</a> <a href="" class="btn btn-danger"><i class="icon-remove-sign icon-white"></i> Cancel</a></td>
+-->
 	            </tr>
 	            {# TODO: implement other transports #}
 	            {# <tr> #}
@@ -112,19 +112,12 @@
         </div>
     </div>
     <div class="row padtop">
-        <div class="span12">
-            <form name="graph-pick" id="graph-pick">
-                <label for="graph-pick" class="inline small">What would you like to see:</label> <select>
-                    <option>Conversation Channel Split</option>
-                    <option>Replies</option>
-                    <option>Unsubscribes</option>
-                    <option>etc</option>
-                </select>
-            </form>
-        </div>
-        <div class="span12">
-            <img src="https://chart.googleapis.com/chart?chs=388x200&amp;chd=t:40,15,30,5,10&amp;cht=p3&amp;chl=SMS|Twitter|FB|IM|Email">
-        </div>
+	    <div class="span4">
+	        <div id="myChart" style="width: 100%; height: 250px"></div>
+	    </div>
+	    <div class="span8">
+	        <div id="myChart-b" style="width: 100%; height: 250px"></div>
+	    </div>
     </div>
     
     <hr>
@@ -285,4 +278,9 @@
 	    </div>  
 	  </div>
 	  
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ STATIC_URL }}js/libs/highcharts.js"></script>
+<script src="{{ STATIC_URL }}js/libs/conv-dash.js"></script>
 {% endblock %}

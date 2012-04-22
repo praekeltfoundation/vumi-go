@@ -1,48 +1,94 @@
 {% extends "app.html" %}
 
 {% block main %}
-<form action="" method="post" accept-charset="utf-8">
-<div id="control-bar">
-    <div id="control-elements">
-        <h3>
-            New Conversation
-        </h3>
-        <div id="control-bar-right">
-            <input type="submit" name="submit" class="btn" value="Send Preview"><input type="button" class="btn-grey" value="Back" onclick="javascript:history.go(-1)">
+    <form action="" method="post" accept-charset="utf-8">
+    <div class="row">
+        <div class="span12">
+            <div class="pull-right padtop">
+                <a class="btn btn-success" data-toggle="modal" href="#previewConv">Send Preview</a>
+            </div>
+            <div class="pull-right padtop" style="margin-right: 10px">
+                <input type="button" class="btn" value="Back" onclick="javascript:history.go(-1)">
+            </div>
+            <div id="welcome">
+                <h1>New Conversation</h1>
+            </div>
         </div>
     </div>
-</div>
-<div id="main">
-    <div class="inner">
-        {% include "base/includes/messages.html" %}
-        <div id="progress-bar">
-            <ul>
-                <li class="pre-active">Message</li><li class="pre-active">People</li><li class="last-active">Send</li>
-            </ul>
-        </div>
-        <div class="wide-box">
-            <div id="conv-box">
-                <label class="group-label-b">Get your message approved:</label>
-                <div id="groups-list">
-                    {% for contact in conversation.people %}
-                    <div class="group {% if forloop.first %}first{% endif %}">
-                        <input type="checkbox" name="contact" value="{{contact.pk}}" class="group-check"> <span class="group-name">{{contact}}</span>
-                    </div>
-                    {% endfor %}
-                </div>
-                <p>
-                    Pick at least one recipient above to approve the message. They will receive a preview
-                </p>
-            </div>
-            <div id="preview-box">
-                <div id="preview-pane">
-                    <span class="sender">{{user_profile}}:</span> <span class="preview-message">{{conversation.message}}</span>
-                </div>
-            </div>
-            <div class="clear"></div>
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
         </div>
     </div>
-</div>
-{% csrf_token %}
-</form>
+    <div class="row">
+        <div class="span4">
+            <div class="box shadow conv-disabled">
+                <h3>1. Message Details</h3>
+            </div>
+        </div>
+        <div class="span4">
+            <div class="box shadow conv-disabled">
+                <h3>2. Message Recipients</h3>
+            </div>
+        </div>
+        <div class="span4">
+            <div class="box shadow">
+                <h3>3. Send Message</h3>
+                <br><a name="step3" id="step3"></a>
+                <p>Please review before sending:</p>
+                <table class="table table-condensed cost">
+                    <thead>
+                        <tr>
+                            <th colspan="4">Text Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th>Type</th>
+                            <th class="right">Recipients</th>
+                            <th class="right">Unit Cost</th>
+                            <th class="right">Total</th>
+                        </tr>
+                        <tr>
+                            <td>Txt (Zone 1)</td>
+                            <td class="right">120</td>
+                            <td class="right">1</td>
+                            <td class="right">120</td>
+                        </tr>
+                        <tr>
+                            <td>Txt (Zone 2)</td>
+                            <td class="right">10</td>
+                            <td class="right">2</td>
+                            <td class="right">20</td>
+                        </tr>
+                
+                        <tr>
+                            <td>IM</td>
+                            <td class="right">70</td>
+                            <td class="right">0</td>
+                            <td class="right">0</td>
+                        </tr>
+                        <tr>
+                            <th colspan="4" class="right"><h1>140</h1><small style="display: block">Vumi Credits Required</small></th>
+                        </tr>
+                        <tr>
+                            <th colspan="4" class="right"><h1>130</h1><small style="display: block">Total Recipients</small></th>
+                        </tr>
+                    </tbody>
+                </table>                  
+                <div class="btn-toolbar">
+                    <div class="btn-group"><input type="submit" class="btn btn-success btn-large" value="Send Message &rarr;"></div>
+                    <div class="btn-group"><input type="reset" class="btn" onClick="javascript:history.go(-1)" value="Go Back"></div>
+                    <div class="btn-group"><input type="reset" class="btn" value="Cancel"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% csrf_token %}
+    </form>
+{% endblock %}
+
+
+{% block modals %}
+    {% include "conversation/includes/tools.html" %}
 {% endblock %}

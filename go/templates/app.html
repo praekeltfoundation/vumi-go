@@ -13,19 +13,14 @@
 	    <div class="nav-collapse">
 	        <ul class="nav">
 	            <li><a href="{% url conversations:index %}">Conversations</a></li>
-	            <li><a href="{% url contacts:index %}">People</a></li>
-	<!-- 
+	            <li><a href="{% url contacts:people %}">People</a></li>
 	            <li><a href="{% url todo %}apps.html">Apps</a></li> 
-	-->
-	            <li><a href="{% url conversations:new %}" class="start" data-toggle="modal">New Conversation</a></li>
+	            <li><a href="#newConv" class="start" data-toggle="modal">New Conversation</a></li>
 	        </ul>
-	<!-- 
 	        <form id="search-form" name="search-form" action="{% url todo %}search-results.html" method="post" class="navbar-search pull-right">
-	            <input type="text" placeholder="Search" class="search-query" data-provide="typeahead" data-items="5" data-source='["Market Announcement: Tomatoes","Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Dakota","North Carolina","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"]'>
+	            <input type="text" placeholder="Search" class="search-query" />
 	        </form>
-	-->
 	        <ul class="nav pull-right">
-	<!--
 	            <li><a href="{% url todo %}help.html">Help</a></li>
 	            <li class="divider-vertical"></li>
 	            <li class="dropdown">
@@ -40,18 +35,15 @@
 	               </ul>
 	            </li>
 	            <li class="divider-vertical"></li>
-	-->
 	            <li class="dropdown">
 	               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Settings <b class="caret"></b></a>
 	               <ul class="dropdown-menu">
-	<!--
 	                   <li><a href="{% url todo %}my-profile.html"><i class="icon-list-alt"></i> Account Information</a></li>
 	                   <li><a href="{% url todo %}my-profile-sn.html"><i class="icon-heart"></i> Social Networks</a></li>
 	                   <li><a href="{% url todo %}my-profile-im.html"><i class="icon-comment"></i> IM Accounts</a></li>
 	                   <li><a href="{% url todo %}my-profile-email.html"><i class="icon-envelope"></i> Email Settings</a></li>
 	                   <li><a href="{% url todo %}my-profile-team.html"><i class="icon-user"></i> Team Members</a></li>
 	                   <li class="divider"></li>
-	-->
 	                   <li><a href="{% url logout %}"><i class="icon-off"></i> <strong>Sign Out</strong></a></li>
 	              </ul>
 	        </li>

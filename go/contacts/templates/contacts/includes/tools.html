@@ -1,97 +1,189 @@
-<div id="new-group" class="content-box pop">
-    <h3>
-        Add A New Group
-    </h3>
-    <form name="frm-new-group" id="frm-new-group" method="post" action="{% url contacts:groups %}">
-        {% csrf_token %}
-        <div class="field-row">
-            <label for="name">New Group Name</label>
-            {{new_contact_group_form.name}}
-            <div class="clear"></div>
-        </div>
-        <div class="field-row">
-            <input type="submit" name="submit" class="btn" value="Save New Group"><input type="reset" name="submit" class="btn-grey" value="Cancel" id="cancel-new-group">
-            <div class="clear"></div>
-        </div>
-    </form>
-</div>
-<div id="upload-contacts" class="content-box pop">
-    <h3>
-        Upload Contacts
-    </h3>
-    <div id="upload-choose-box">
-        <p class="intro">
-            Choose how you'd you like to upload contacts:
-        </p>
-        <div class="sn-box">
-            <h4>
-                Import a spreadsheet
-            </h4>
-            <p style="height: 36px">
-                CSV files supported, more coming...
-            </p>
-            <div class="upload-button">
-                <a href="#" id="spreadsheet-method" name="spreadsheet-method">Select</a>
-            </div>
-        </div>
-        <div class="sn-box norightmargin">
-            <h4>
-                Import from Google Docs
-            </h4>
-            <p style="height: 36px">
-                <img src="{{STATIC_URL}}pics/google_docs_icon.gif">
-            </p>
-            <div class="upload-button">
-                Coming Soon!
-                {# TODO: google doc import <a href="#" id="google-docs-method" name="google-docs-method">Select</a> #}
-            </div>
-        </div>
-    </div>
-    <div id="upload-form-box">
-        <form name="frm-upload-contacts" enctype="multipart/form-data" id="frm-upload-contacts" method="post" action="{% url contacts:people %}">
-            {% csrf_token %}
-            <div class="field-row">
-                {{upload_contacts_form.errors}}
 
-                <label for="name">Upload file with new contacts (CSV files only using <a href="{{ STATIC_URL }}contacts-upload-template.csv">this template</a>). 
-                <br/></br/>
-                Phone numbers will be prefixed with <strong>'+{{country_code}}'</strong> if they are not specified in the international number format.</label> 
-                {{upload_contacts_form.file}}
-                <div class="clear"></div>
+<div class="modal hide fade" id="uplContacts">
+    <div class="modal-header">
+        <a class="close" data-dismiss="modal">×</a>
+        <h3>Upload Contacts</h3>
+    </div>
+	<div class="modal-body">
+	    <p>Choose how you'd you like to upload contacts:</p>
+	    <div class="row">
+	        <div class="span3">
+	            <div class="well"><h4>Import a spreadsheet</h4><p>XLS,CSV or tab-delimited TXT</p>
+	                <form action="">
+	                    <button type="submit" class="btn btn-primary" data-dismiss="modal" data-toggle="modal" href="#uplContactFrm">Select</button>
+	                </form>
+	            </div>
+	        </div>
+	        <div class="span3">
+	            <div class="well"><h4>Import from Google Docs</h4><img src="{{ STATIC_URL }}img/google_docs_icon.png" />
+	                <form action="">
+	                    <button type="submit" class="btn btn-primary disabled">Coming Soon!</button>
+	                </form>
+	            </div>
+	        </div>
+	    </div>
+	</div>
+	<div class="modal-footer"></div>
+</div><!--/uplContacts-->
+    
+<div class="modal hide fade" id="uplContactFrm">
+    <div class="modal-header">
+        <a class="close" data-dismiss="modal">×</a>
+        <h3>Upload Contacts</h3>
+    </div>
+    <form id="frm-upload-contacts" name="frm-upload-contacts" enctype="multipart/form-data" method="post" action="{% url contacts:people %}" class="form-horizontal">
+        {% csrf_token %}
+        <div class="modal-body">
+            <fieldset>
+            {{upload_contacts_form.errors}}
+            <div class="control-group">
+                <label class="control-label" for="input01">Upload your data file:<br />Use this <a href="{{ STATIC_URL }}contacts-upload-template.csv">Template</a></label>
+                <div class="controls">{{upload_contacts_form.file}}</div>
             </div>
-            <div class="field-row">
-                {% if user.contactgroup_set.exists %}
-                    {{select_contact_group_form.errors}}
-                    <label for="existinggroup" class="wide">Choose which group you want to add new contacts to:</label>
-                    {{select_contact_group_form.contact_group}}
-                {% endif %}
-                <div class="clear" style="height: 10px"></div>
-                {{new_contact_group_form.errors}}
-                <label for="newgroup">
+            {% if user.contactgroup_set.exists %}
+            <div class="control-group">
+                <label class="control-label" for="input02">Choose which group you want to add new contacts to:</label>
+                <div class="controls">
+	               {{select_contact_group_form.errors}}
+	               {{select_contact_group_form.contact_group}}
+                </div>
+            </div>
+            {% endif %}
+            {{new_contact_group_form.errors}}
+            <div class="control-group">
+                <label class="control-label">
                     {% if user.contactgroup_set.exists %}
-                        ...Or add to a new group
+                        <strong>Or,</strong> specify a new group:
                     {% else %}
                         Save as group
                     {% endif %}
-                </label> 
-                {{new_contact_group_form.name}}
-                <div class="clear"></div>
+                </label>
+                <div class="controls">{{new_contact_group_form.name}}</div>
             </div>
-            <div class="field-row">
-                <input type="submit" name="submit" class="btn" value="Upload Contacts"><input type="reset" name="submit" class="btn-grey" value="Cancel" id="cancel-google-upload">
-                <div class="clear"></div>
-            </div>
-        </form>
-    </div>
-    {# TODO: google import  #}
-    {# <div id="google-docs-box"> #}
-    {#     <form name="frm-google-auth" id="frm-google-auth" method="post" action="choose-google-spreadsheet.html"> #}
-    {#         First, connect to your Google account: #}
-    {#         <div class="field-row"> #}
-    {#             <input type="submit" name="submit" class="btn" value="Authorise"><input type="reset" name="submit" class="btn-grey" value="Cancel" id="cancel-upload-contacts"> #}
-    {#             <div class="clear"></div> #}
-    {#         </div> #}
-    {#     </form> #}
-    {# </div> #}
+            </fieldset>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" class="btn btn-primary" data-loading-text="uploading...">Upload contacts</button>
+        </div>
+    </form>
+</div><!--/uplContactFrm-->
+    
+<!-- 
+<div class="modal hide fade" id="recMatchFrm">
+	<div class="modal-header">
+	    <a class="close" data-dismiss="modal">×</a>
+	    <h3>Please match the sample to the fields provided</h3>
+	</div>
+	<form class="form-horizontal" action="people.html">
+	    <div class="modal-body">
+	        <div class="alert alert-success">
+	            <a class="close" data-dismiss="alert">×</a>
+	            <strong>Success!</strong> 55 records found.
+	        </div>
+			<fieldset>
+			<table class="table table-bordered table-striped">
+			  <tbody>
+			    <tr>
+			      <td>
+					<select name="input02">
+					    <option value="">Please Select:</option>
+					    <option value="1">Mobile</option>
+					    <option value="1">Email</option>
+					    <option value="1">Name</option>
+					    <option value="1">Surname</option>
+					</select>
+			      </td>
+			      <td>gustav@praekelt.com</td>
+			    </tr>
+			  </tbody>
+			</table>
+			</fieldset>
+	    </div>
+	    <div class="modal-footer">
+	       <button type="submit" class="btn btn-primary" data-loading-text="saving...">Finish</button>
+	    </div>
+    </form>
 </div>
-<div class="clear"></div>
+-->
+ 
+<div class="modal hide fade" id="newGroup">
+    <div class="modal-header">
+        <a class="close" data-dismiss="modal">×</a>
+        <h3>New Group</h3>
+    </div>
+    <form name="frm-new-group" id="frm-new-group" method="post" action="{% url contacts:groups %}" class="form-horizontal">
+    {% csrf_token %}
+    <div class="modal-body">
+	    <fieldset>
+	      <div class="control-group">
+	        <label class="control-label">New group name:</label>
+	        <div class="controls">
+	           {{new_contact_group_form.name}}
+	        </div>
+	      </div>
+	    </fieldset>
+    </div>
+    <div class="modal-footer">
+        <button type="submit" class="btn btn-primary" data-loading-text="uploading..." >Add New Group</button>
+    </div>
+    </form>
+</div><!--/newGroup-->
+
+<div class="modal hide fade" id="editGroup">
+  <div class="modal-header">
+      <a class="close" data-dismiss="modal">×</a>
+      <h3>Edit Group</h3>
+  </div>
+  <form class="form-horizontal">
+  <div class="modal-body">
+        <fieldset>
+          <div class="control-group">
+            <label class="control-label" for="input01">Group name:</label>
+            <div class="controls">
+              <input type="text" class="input-xlarge" id="input01" value="Tomato Farmers">
+            </div>
+          </div>
+        </fieldset>
+  </div>
+  <div class="modal-footer">
+  <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+  <button type="submit" class="btn btn-primary" data-loading-text="saving..."  data-dismiss="modal" data-toggle="modal" >Save Details</button>
+  </div>
+  </form>
+</div><!--/editGroup-->
+        
+<div class="modal hide fade" id="delGroup">
+	<div class="modal-header">
+	  <a class="close" data-dismiss="modal">×</a>
+	  <h3>Remove Group</h3>
+	</div>
+	<form class="form-horizontal">
+	<div class="modal-body">
+	      <fieldset>
+	        <p><strong>Are you sure you want to remove this group?</strong><br>The group members will not be deleted.</p>
+	      </fieldset>
+	</div>
+	<div class="modal-footer">
+	<a href="#" class="btn" data-dismiss="modal">Cancel</a>
+	<button type="submit" class="btn btn-primary" data-loading-text="saving..."  data-dismiss="modal" data-toggle="modal" >Remove Group</button>
+	</div>
+	</form>
+</div><!--/delGroup-->
+      
+<div class="modal hide fade" id="emptyGroup">
+	<div class="modal-header">
+	  <a class="close" data-dismiss="modal">×</a>
+	  <h3>Empty Group</h3>
+	</div>
+    <form class="form-horizontal">
+    <div class="modal-body">
+          <fieldset>
+            <p><strong>Are you sure you want to remove all members from this group?</strong><br>The group members being removed will not be deleted.</p>
+          </fieldset>
+    </div>
+    <div class="modal-footer">
+    <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+    <button type="submit" class="btn btn-primary" data-loading-text="saving..."  data-dismiss="modal" data-toggle="modal" >Empty Group</button>
+    </div>
+    </form>
+</div><!--/emptyGroup-->
