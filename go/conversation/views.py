@@ -4,7 +4,8 @@ from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.conf import settings
-from go.conversation.models import Conversation, ConversationSendError
+from go.conversation.models import (Conversation, ConversationSendError,
+                                    get_delivery_classes)
 from go.conversation.forms import ConversationForm, SelectDeliveryClassForm
 from go.contacts.forms import (NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
@@ -34,8 +35,11 @@ def new(request):
             'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
             'start_time': datetime.utcnow().strftime('%H:%M'),
         })
+
+    delivery_classes = get_delivery_classes()
     return render(request, 'conversation/new.html', {
         'form': form,
+        'delivery_classes': delivery_classes,
     })
 
 
