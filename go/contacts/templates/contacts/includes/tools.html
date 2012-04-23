@@ -28,7 +28,7 @@
                 Import a spreadsheet
             </h4>
             <p style="height: 36px">
-                XLS,CSV or tab-delimited TXT
+                CSV files supported, more coming...
             </p>
             <div class="upload-button">
                 <a href="#" id="spreadsheet-method" name="spreadsheet-method">Select</a>
@@ -52,7 +52,10 @@
             {% csrf_token %}
             <div class="field-row">
                 {{upload_contacts_form.errors}}
-                <label for="name">Upload your spreadsheet</label>
+
+                <label for="name">Upload file with new contacts (CSV files only using <a href="{{ STATIC_URL }}contacts-upload-template.csv">this template</a>). 
+                <br/></br/>
+                Phone numbers will be prefixed with <strong>'+{{country_code}}'</strong> if they are not specified in the international number format.</label> 
                 {{upload_contacts_form.file}}
                 <div class="clear"></div>
             </div>

@@ -9,7 +9,7 @@
     <div id="control-bar">
         <div id="control-elements">
             <h3 class="wide">
-                <a href="{% url conversations:index %}">Conversations</a> » {{conversation.subject}}
+                <a href="{% url conversations:index %}">Surveys</a> » {{conversation.subject}}
             </h3>
         </div>
     </div>
@@ -27,7 +27,7 @@
                             Channel
                         </th>
                         <th>
-                            Conversation Status
+                            Survey Status
                         </th>
                     </tr>
                     <tr>
@@ -40,14 +40,55 @@
                             {# - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
                         </td>
                     </tr>
+                    {# TODO: implement other transports #}
+                    {# <tr> #}
+                    {#     <td> #}
+                    {#         Twitter #}
+                    {#     </td> #}
+                    {#     <td align="right"> #}
+                    {#         Tweeted to 143 493 followers #}
+                    {#     </td> #}
+                    {# </tr> #}
+                    {# <tr> #}
+                    {#     <td> #}
+                    {#         Facebook #}
+                    {#     </td> #}
+                    {#     <td align="right"> #}
+                    {#         Posted to 393 292 fans #}
+                    {#     </td> #}
+                    {# </tr> #}
+                    {# <tr> #}
+                    {#     <td> #}
+                    {#         IM #}
+                    {#     </td> #}
+                    {#     <td align="right"> #}
+                    {#         <span class="green">Sending to</span> 3 291 people - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
+                    {#     </td> #}
+                    {# </tr> #}
+                    {# <tr> #}
+                    {#     <td> #}
+                    {#         Email #}
+                    {#     </td> #}
+                    {#     <td align="right"> #}
+                    {#         <span class="green">Sending to</span> 32 577 people - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
+                    {#     </td> #}
+                    {# </tr> #}
+                    {# <tr> #}
+                    {#     <td> #}
+                    {#         <strong>Total</strong> #}
+                    {#     </td> #}
+                    {#     <td align="right"> #}
+                    {#         <strong>562 202 People</strong> #}
+                    {#     </td> #}
+                    {# </tr> #}
                 </table>
                 <div>
                     {% if conversation.ended %}
-                    Conversation ended on {{conversation.end_date|date:"d F Y"}}
+                    Survey ended on {{conversation.end_date|date:"d F Y"}}
                     {% else %}
                     <form name="conversation-end" id="conversation-end" method="post"
-                          action="{% url conversations:end conversation_pk=conversation.pk %}">
-                        <input type="submit" value="End conversation" />
+                          action="{% url surveys:end conversation_pk=conversation.pk %}">
+                        <input type="submit" value="End survey" />
                         {% csrf_token %}
                     </form>
                     {% endif %}
@@ -55,13 +96,13 @@
             </div>
             <div id="graph-box" class="box">
                 <h4>
-                    Conversation Infographics
+                    Survey Infographics
                 </h4>
                 <div class="grey-box">
                     <form name="graph-pick" id="graph-pick">
                         <label for="graph-pick" class="inline small">What would you like to see:</label> <select>
                             <option>
-                                Conversation Channel Split
+                                Survey Channel Split
                             </option>
                             <option>
                                 Replies
@@ -77,6 +118,14 @@
                 </div>
                 <div id="graph">
                     <img src="https://chart.googleapis.com/chart?chs=388x200&amp;chd=t:40,15,30,5,10&amp;cht=p3&amp;chl=SMS|Twitter|FB|IM|Email">
+                </div>
+            </div>
+            <div id="connections" class="box nopadding">
+                <div id="fragment-1" class="box">
+                    <ul>
+                        <li>Download <a href="{% url dashboard:export_users poll_id=poll_id %}">User data</a><br/><br/></li>
+                        <li>Download <a href="{% url dashboard:export_results poll_id=poll_id %}">Poll results</a></li>
+                    </ul>
                 </div>
             </div>
             <div id="connections" class="box nopadding">

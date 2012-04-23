@@ -1,6 +1,10 @@
 # Django settings for go project.
 import os
 import djcelery
+import yaml
+
+from os.path import join
+
 
 djcelery.setup_loader()
 
@@ -119,6 +123,7 @@ TEMPLATE_DIRS = (
     abspath("base", "templates"),
     abspath("conversation", "templates"),
     abspath("contacts", "templates"),
+    abspath("surveys", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -140,6 +145,7 @@ INSTALLED_APPS = (
     'go.base',
     'go.conversation',
     'go.contacts',
+    'vxpolls.djdashboard',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -205,6 +211,17 @@ VUMI_API_CONFIG = {
     'message_store': {},
     'message_sender': {},
     }
+
+VUMI_COUNTRY_CODE = '27'
+
+VXPOLLS_REDIS_CONFIG = {}
+VXPOLLS_PREFIX = 'poll_manager'
+VXPOLLS_CONFIG_PATH = join(PROJECT_ROOT, '..', 'config', 'poll.yaml')
+VXPOLLS_CONFIG = yaml.load(open(VXPOLLS_CONFIG_PATH, 'r'))
+VXPOLLS_QUESTIONS = VXPOLLS_CONFIG.get('questions', [])
+VXPOLLS_POLL_ID = VXPOLLS_CONFIG.get('poll_id')
+VXPOLLS_TRANSPORT_NAME = 'vxpolls_transport'
+
 
 if os.environ.get('VUMIGO_FAST_TESTS'):
     DATABASES = {

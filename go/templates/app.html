@@ -4,12 +4,12 @@
     <div id="header">
         <div id="header-elements">
             <div id="search">
-                <form id="search-form" name="search-form" action="{% url todo %}search-results.html" method="post"><input type="image" src="{{STATIC_URL}}pics/header/search-btn.png" id="search-btn" /><input type="text" name="search-input" id="search-input" /></form>
-            </div>
+<!--                 <form id="search-form" name="search-form" action="{% url todo %}search-results.html" method="post"><input type="image" src="{{STATIC_URL}}pics/header/search-btn.png" id="search-btn" /><input type="text" name="search-input" id="search-input" /></form>
+ -->            </div>
             <div id="user"><a href="{% url todo %}#">{{user_profile}}</a></div>
             <div id="user-fly">
                 <ul>
-                    <li class="sep">My Profile</li>
+<!--                     <li class="sep">My Profile</li>
                        <li><a href="{% url todo %}my-profile.html">Account Information</a></li>
                     <li><a href="{% url todo %}my-profile-sn.html">Social Networks</a></li>
                     <li><a href="{% url todo %}my-profile-im.html">IM Accounts</a></li>
@@ -22,16 +22,17 @@
                     <li><a href="{% url todo %}credits-spend-history.html">Spending History</a></li>
                     <li><a href="{% url todo %}credits-faq.html">Purchase FAQ</a></li>   
                     <li class="sep">&nbsp;</li> 
-                    <li><a href="{% url logout %}">Sign Out</a></li>
+ -->                    <li><a href="{% url logout %}">Sign Out</a></li>
                 </ul>
             </div>
             <a href="{% url home %}" id="logo" title="Go Vumi"></a>
             <ul id="nav">
                 <li><a href="{% url conversations:index %}">Conversations</a></li>
                 <li><a href="{% url contacts:index %}">People</a></li>
-                <li><a href="{% url todo %}help.html">Help</a></li>
-                <li><a href="{% url todo %}apps.html">Apps</a></li>
+                <!-- <li><a href="{% url todo %}help.html">Help</a></li> -->
+                <!-- <li><a href="{% url todo %}apps.html">Apps</a></li> -->
                 <li><a href="{% url conversations:new %}" class="start">Start A Conversation</a></li>
+                <li><a href="{% url surveys:new %}" class="start">Start A Survey</a></li>
             </ul>
         </div>
     </div>
