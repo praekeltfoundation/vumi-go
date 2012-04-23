@@ -299,45 +299,6 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.subject, 'Test Conversation')
 
-    def test_replies(self):
-        """
-        Test replies helper function
-        """
-        consumer = self.get_cmd_consumer()
-        vumiapi = Conversation.vumi_api()
-        print '1 conversation.user', self.conversation.user
-        [contact] = self.conversation.people()
-        self.assertEqual(self.conversation.replies(), [])
-        self.conversation.send_messages()
-        print '2 conversation.user', self.conversation.user
-        [batch] = self.conversation.message_batch_set.all()
-        self.process_cmds(vumiapi.mdb, consumer=consumer)
-        self.assertEqual(self.conversation.replies(), [])
-        [tag] = vumiapi.batch_tags(batch.batch_id)
-        to_addr = "+123" + tag[1][-5:]
-
-        print '3 conversation.user', self.conversation.user
-        # unknown contact
-        msg = self.mkmsg_in('hello', to_addr=to_addr)
-        vumiapi.mdb.add_inbound_message(msg, tag=tag)
-        self.assertEqual(self.conversation.replies(), [])
-        print '4 conversation.user', self.conversation.user
-
-        # known contact
-        msg = self.mkmsg_in('hello', to_addr=to_addr,
-                            from_addr=contact.msisdn.lstrip('+'))
-        print '5 conversation.user', self.conversation.user
-        vumiapi.mdb.add_inbound_message(msg, tag=tag)
-        [reply] = self.conversation.replies()
-        print '6 conversation.user', self.conversation.user
-        self.assertTrue(isinstance(reply.pop('time'), datetime))
-        self.assertEqual(reply, {
-            'contact': contact,
-            'content': u'hello',
-            'source': 'SMS Long code',
-            'type': u'longcode',
-            })
-
     def test_end(self):
         """
         Test ending the conversation
