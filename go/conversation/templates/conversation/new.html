@@ -44,25 +44,14 @@
                         <label class="control-label" for="inlineCheckboxes">Conversation Locations</label>
                         <table class="table table-condensed" style="width: 90%">
                         <tbody>
-                        <tr>
+                        {% for delivery_class, name in delivery_classes %}
+                        {% cycle '<tr>' '' %}
                             <td>
-                                <label class="checkbox inline"><input type="checkbox" id="inlineCheckbox1" value="option1" name="channel"> Txt</label>
+                                <input type="radio" id="inlineCheckbox-{{ delivery_class }}" value="{{ delivery_class }}" name="channel">
+                                <label class="checkbox inline" for="inlineCheckbox-{{ delivery_class }}">{{ name }}</label>
                             </td>
-                            <td>
-                                <label class="checkbox inline"><input type="checkbox" id="inlineCheckbox2" value="option2" name="channel"> IM</label>
-                            </td>
-                            <td>
-                                <label class="checkbox inline"><input type="checkbox" id="inlineCheckbox3" value="option3" name="channel"> BBM</label>    
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <label class="checkbox inline"><input type="checkbox" id="inlineCheckbox4" value="option4" name="channel"> Twitter</label>
-                            </td>
-                            <td>
-                                <label class="checkbox inline"><input type="checkbox" id="inlineCheckbox5" value="option5" name="channel"> Facebook</label>
-                            </td>
-                        </tr>
+                        {% cycle '' '</tr>' %}
+                        {% endfor %}
                         <tr>
                             <td colspan="3">
                                 <label for="channel" class="error" style="display: none">Please select at least one channel for your message.</label>

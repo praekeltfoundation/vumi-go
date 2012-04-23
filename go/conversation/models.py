@@ -17,6 +17,7 @@ def get_delivery_classes():
     return [
         ('shortcode', 'SMS Short code'),
         ('longcode', 'SMS Long code'),
+        ('ussd', 'USSD code'),
         ('xmpp', 'Google Talk'),
         ]
 
