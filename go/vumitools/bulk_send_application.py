@@ -72,7 +72,7 @@ class GoApplication(ApplicationWorker):
 
     def consume_user_message(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
-        self.store.add_inbound_message(msg)
+        self.store.add_inbound_message(msg, tag=tag)
 
     def consume_ack(self, event):
         self.store.add_event(event)
@@ -82,7 +82,7 @@ class GoApplication(ApplicationWorker):
 
     def close_session(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
-        self.store.add_inbound_message(msg)
+        self.store.add_inbound_message(msg, tag=tag)
 
 
 
