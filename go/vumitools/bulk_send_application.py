@@ -6,6 +6,7 @@
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.application import ApplicationWorker, MessageStore
+from vumi.middleware import TaggingMiddleware
 from vumi import log
 
 from go.vumitools.api import VumiApiCommand, get_redis
@@ -70,16 +71,18 @@ class GoApplication(ApplicationWorker):
         log.error("Unknown vumi API command: %r" % (command_message,))
 
     def consume_user_message(self, msg):
-        log.info('Received Message: %s' % (msg,))
+        tag = TaggingMiddleware.map_msg_to_tag(msg)
+        self.store.add_inbound_message(msg)
 
     def consume_ack(self, event):
-        log.info('Received Ack: %s' % (event,))
+        self.store.add_event(event)
 
     def consume_delivery_report(self, event):
-        log.info('Received Delivery Report: %s' % (event,))
+        self.store.add_event(event)
 
     def close_session(self, msg):
-        log.info('Received Close Session: %s' % (msg,))
+        tag = TaggingMiddleware.map_msg_to_tag(msg)
+        self.store.add_inbound_message(msg)
 
 
 
@@ -100,3 +103,4 @@ class BulkSendApplication(GoApplication):
         msg = yield self.send_to(to_addr, content, **msg_options)
         self.store.add_outbound_message(msg, batch_id=batch_id)
         log.info('Stored outbound %s'% (msg,))
+
