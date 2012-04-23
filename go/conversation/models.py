@@ -2,16 +2,15 @@ import operator
 import datetime
 import redis
 
-from django.db import models, transaction
+from django.db import models
 from django.conf import settings
 
 from go.contacts.models import Contact
 from go.vumitools import VumiApi
 
-from vxpolls.manager import PollManager
-
 
 redis = redis.Redis(**settings.VXPOLLS_REDIS_CONFIG)
+
 
 def get_delivery_classes():
     # TODO: Unhardcode this when we have more configurable delivery classes.
@@ -25,6 +24,7 @@ CONVERSATION_TYPES = (
     ('bulk_message', 'Send Bulk SMS and track replies'),
     ('survey', 'Interactive Survey'),
 )
+
 
 class Conversation(models.Model):
     """A conversation with an audience"""
@@ -236,7 +236,8 @@ class Conversation(models.Model):
                 try:
                     contact = Contact.for_addr(self.user, transport_type,
                                                addr_func(reply))
-                except (Contact.DoesNotExist, Contact.MultipleObjectsReturned), e:
+                except (Contact.DoesNotExist,
+                        Contact.MultipleObjectsReturned), e:
                     print e
                     continue
                 replies.append((contact, reply))

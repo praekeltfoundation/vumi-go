@@ -5,6 +5,7 @@ from twisted.trial.unittest import TestCase
 from go.vumitools.middleware import NormalizeMsisdnMiddleware
 from vumi.message import TransportUserMessage
 
+
 class NormalizeMisdnMiddlewareTestCase(TestCase):
 
     def setUp(self):
@@ -18,7 +19,6 @@ class NormalizeMisdnMiddlewareTestCase(TestCase):
         return TransportUserMessage(to_addr=to_addr, from_addr=from_addr,
                                    transport_name="dummy_endpoint",
                                    transport_type="dummy_transport_type")
-
 
     def test_normalization(self):
         msg = self.mk_msg(to_addr='8007', from_addr='256123456789')

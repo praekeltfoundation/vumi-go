@@ -85,7 +85,6 @@ class GoApplication(ApplicationWorker):
         self.store.add_inbound_message(msg, tag=tag)
 
 
-
 class BulkSendApplication(GoApplication):
     """
     Application that accepts 'send message' commands and does exactly that.
@@ -99,8 +98,7 @@ class BulkSendApplication(GoApplication):
         content = cmd['content']
         msg_options = cmd['msg_options']
         to_addr = cmd['to_addr']
-        log.info('Sending to %s %s %s'% (to_addr, content, msg_options,))
+        log.info('Sending to %s %s %s' % (to_addr, content, msg_options,))
         msg = yield self.send_to(to_addr, content, **msg_options)
         self.store.add_outbound_message(msg, batch_id=batch_id)
-        log.info('Stored outbound %s'% (msg,))
-
+        log.info('Stored outbound %s' % (msg,))

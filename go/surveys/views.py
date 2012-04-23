@@ -9,13 +9,14 @@ from django.contrib.auth.decorators import login_required
 
 from go.conversation.models import Conversation, ConversationSendError
 from go.conversation.forms import ConversationForm, SelectDeliveryClassForm
-from go.contacts.models import Contact, ContactGroup
+from go.contacts.models import ContactGroup
 
 from vxpolls.content import forms
 from vxpolls.manager import PollManager
 
 
 redis = redis.Redis(**settings.VXPOLLS_REDIS_CONFIG)
+
 
 @login_required
 def new(request):
@@ -39,6 +40,7 @@ def new(request):
     return render(request, 'surveys/new.html', {
         'form': form,
     })
+
 
 @login_required
 def contents(request, conversation_pk):
@@ -85,6 +87,7 @@ def contents(request, conversation_pk):
         'form': form,
     })
 
+
 @login_required
 def people(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
@@ -111,6 +114,7 @@ def people(request, conversation_pk):
         'delivery_class': SelectDeliveryClassForm(),
     })
 
+
 @login_required
 def start(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
@@ -129,6 +133,7 @@ def start(request, conversation_pk):
         'conversation': conversation,
     })
 
+
 @login_required
 def end(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
@@ -138,6 +143,7 @@ def end(request, conversation_pk):
         messages.add_message(request, messages.INFO, 'Survey ended')
     return redirect(reverse('surveys:show', kwargs={
         'conversation_pk': conversation.pk}))
+
 
 @login_required
 def show(request, conversation_pk):

@@ -83,6 +83,7 @@ class TestGoApplicationRouter(GoApplicationRouter):
         batch_id = self.tag_to_batch_ids_map.get(tag)
         return self.batch_id_to_conversations_map.get(batch_id, {})
 
+
 class GoApplicationRouterTestCase(DispatcherTestCase):
 
     dispatcher_class = BaseDispatchWorker
