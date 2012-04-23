@@ -63,8 +63,8 @@ def upload(request, conversation_pk):
                     group.add_contacts(contacts)
 
                     # set the delivery class
-                    cleaned_data = delivery_class.cleaned_data
-                    conversation.delivery_class = cleaned_data['delivery_class']
+                    clean_data = delivery_class.cleaned_data
+                    conversation.delivery_class = clean_data['delivery_class']
                     conversation.groups.add(group)
                     conversation.save()
                     messages.add_message(request, messages.INFO,
@@ -85,8 +85,8 @@ def upload(request, conversation_pk):
                     group.add_contacts(contacts)
 
                     # set the delivery class
-                    cleaned_data = delivery_class.cleaned_data
-                    conversation.delivery_class = cleaned_data['delivery_class']
+                    clean_data = delivery_class.cleaned_data
+                    conversation.delivery_class = clean_data['delivery_class']
                     conversation.groups.add(group)
                     conversation.save()
                     messages.add_message(request, messages.INFO,

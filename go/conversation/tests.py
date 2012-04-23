@@ -321,13 +321,11 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         """
         Test replies helper function
         """
-        consumer = self.get_cmd_consumer()
         vumiapi = Conversation.vumi_api()
         [contact] = self.conversation.people()
         self.assertEqual(self.conversation.replies(), [])
         self.conversation.send_messages()
         [batch] = self.conversation.message_batch_set.all()
-        self.process_cmds(vumiapi.mdb, consumer=consumer)
         self.assertEqual(self.conversation.replies(), [])
         [tag] = vumiapi.batch_tags(batch.batch_id)
         to_addr = "+123" + tag[1][-5:]

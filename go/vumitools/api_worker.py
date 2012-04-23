@@ -51,7 +51,6 @@ class CommandDispatcher(ApplicationWorker):
                 worker_name,))
             self.worker_publishers[worker_name] = worker_publisher
 
-
     @inlineCallbacks
     def teardown_application(self):
         if self.api_consumer:

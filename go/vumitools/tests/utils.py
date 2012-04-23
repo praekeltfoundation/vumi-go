@@ -142,34 +142,3 @@ class CeleryTestMixIn(object):
             else:
                 break
         return [VumiApiCommand(**payload) for payload in msgs]
-
-    def process_cmds(self, store, cmds=None, consumer=None):
-        """Create a stubby Vumi API worker and feed commands to it."""
-        assert ((cmds is None) ^ (consumer is None))
-        if cmds is None:
-            cmds = self.fetch_cmds(consumer)
-
-        command_dispatch_worker = get_stubbed_worker(CommandDispatcher, {
-            'transport_name': 'dummy_transport',
-            'worker_names': ['bulk_message_application']
-        })
-
-        bulk_message_app_worker = get_stubbed_worker(BulkSendApplication, {
-            'transport_name': 'bulk_message_transport',
-            'worker_name': 'bulk_message_application',
-            'send_to': {
-                'default': {
-                    'transport_name': "invalid broken transport"
-                }
-            }
-        })
-
-        def _consume_api_commands(*args, **kwargs):
-            command_dispatch_worker.store = store
-            for cmd in cmds:
-                command_dispatch_worker.consume_api_command(cmd)
-
-
-        d = command_dispatch_worker.startWorker()
-        d.addCallback(lambda *a, **kw: bulk_message_app_worker.startWorker())
-        d.addCallback(_consume_api_commands)
