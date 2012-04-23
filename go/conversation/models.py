@@ -2,7 +2,7 @@ import operator
 import datetime
 import redis
 
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 
 from go.contacts.models import Contact
@@ -278,6 +278,9 @@ class MessageBatch(models.Model):
     message_batch = models.ForeignKey(Conversation,
                                       related_name="message_batch_set",
                                       null=True)
+
+    def __unicode__(self):
+        return u"<MessageBatch: %s>" % (self.batch_id,)
 
 
 class ConversationSendError(Exception):
