@@ -1,5 +1,6 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from go.conversation.models import Conversation
+from vumi.application.tagpool import TagpoolError
 from optparse import make_option
 
 
@@ -13,7 +14,12 @@ class Command(BaseCommand):
 
     POOL_LOOKUP = dict(POOLS)
 
-    option_list = BaseCommand.option_list + tuple([
+    option_list = BaseCommand.option_list + (
+            make_option('--purge', dest='purge',
+                            action='store_true', default=False,
+                            help='Purge all existing tags before populating.'),
+        )
+    option_list += tuple([
         make_option('--%s' % pool, action='append_const', dest='pools',
                         const=pool,
                         help='Declare %s pool tags.' % pool)
@@ -23,6 +29,15 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         pools = options['pools']
         vumiapi = Conversation.vumi_api()
+
+        if options['purge']:
+            for pool in pools:
+                try:
+                    print 'Purging pool %s ...' % (pool,)
+                    vumiapi.purge_pool(pool)
+                    print '  done.'
+                except TagpoolError, e:
+                    raise CommandError(e)
 
         for pool in pools:
             print "Declaring tags for %s .." % (pool,)

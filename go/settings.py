@@ -145,6 +145,7 @@ INSTALLED_APPS = (
     'go.base',
     'go.conversation',
     'go.contacts',
+    'vxpolls.djdashboard',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
