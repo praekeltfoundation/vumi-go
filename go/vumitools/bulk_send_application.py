@@ -1,4 +1,4 @@
-# -*- test-case-name: go.vumitools.tests.test_bulk_send_worker -*-
+# -*- test-case-name: go.vumitools.tests.test_bulk_send_application -*-
 # -*- coding: utf-8 -*-
 
 """Vumi application worker for the vumitools API."""
@@ -70,16 +70,16 @@ class GoApplication(ApplicationWorker):
         log.error("Unknown vumi API command: %r" % (command_message,))
 
     def consume_user_message(self, msg):
-        self.store.add_inbound_message(msg)
+        log.info('Received Message: %s' % (msg,))
 
     def consume_ack(self, event):
-        self.store.add_event(event)
+        log.info('Received Ack: %s' % (event,))
 
     def consume_delivery_report(self, event):
-        self.store.add_event(event)
+        log.info('Received Delivery Report: %s' % (event,))
 
     def close_session(self, msg):
-        self.store.add_inbound_message(msg)
+        log.info('Received Close Session: %s' % (msg,))
 
 
 
