@@ -10,17 +10,18 @@ from celery.app import app_or_default
 
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.api_worker import CommandDispatcher
+from go.vumitools.bulk_send_application import BulkSendApplication
 from vumi.message import TransportUserMessage
 from vumi.tests.utils import get_stubbed_worker
 
 
-class DummyApiWorker(CommandDispatcher):
+# class DummyApiWorker(CommandDispatcher):
 
-    def send_to(self, to_addr, content, **msg_options):
-        msg_options.setdefault('transport_name', 'dummy_transport')
-        msg_options.setdefault('transport_type', 'sms')
-        return TransportUserMessage(to_addr=to_addr, content=content,
-                                    **msg_options)
+#     def send_to(self, to_addr, content, **msg_options):
+#         msg_options.setdefault('transport_name', 'dummy_transport')
+#         msg_options.setdefault('transport_type', 'sms')
+#         return TransportUserMessage(to_addr=to_addr, content=content,
+#                                     **msg_options)
 
 
 class RabbitConsumerFactory(object):
@@ -148,14 +149,27 @@ class CeleryTestMixIn(object):
         if cmds is None:
             cmds = self.fetch_cmds(consumer)
 
-        worker = get_stubbed_worker(DummyApiWorker, {
+        command_dispatch_worker = get_stubbed_worker(CommandDispatcher, {
             'transport_name': 'dummy_transport',
             'worker_names': ['bulk_message_application']
         })
-        def _consume_api_commands(*args, **kwargs):
-            worker.store = store
-            for cmd in cmds:
-                worker.consume_api_command(cmd)
 
-        d = worker.startWorker()
+        bulk_message_app_worker = get_stubbed_worker(BulkSendApplication, {
+            'transport_name': 'bulk_message_transport',
+            'worker_name': 'bulk_message_application',
+            'send_to': {
+                'default': {
+                    'transport_name': "invalid broken transport"
+                }
+            }
+        })
+
+        def _consume_api_commands(*args, **kwargs):
+            command_dispatch_worker.store = store
+            for cmd in cmds:
+                command_dispatch_worker.consume_api_command(cmd)
+
+
+        d = command_dispatch_worker.startWorker()
+        d.addCallback(lambda *a, **kw: bulk_message_app_worker.startWorker())
         d.addCallback(_consume_api_commands)

@@ -7,6 +7,7 @@ from go.conversation.models import Conversation
 from go.contacts.models import ContactGroup, Contact
 from go.base.utils import padded_queryset
 from vumi.tests.utils import FakeRedis
+from vumi.message import TransportUserMessage
 from go.vumitools.tests.utils import CeleryTestMixIn, VumiApiCommand
 from datetime import datetime
 from os import path
@@ -264,29 +265,46 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         """
         Test preview status helper function
         """
-        consumer = self.get_cmd_consumer()
         vumiapi = Conversation.vumi_api()
         [contact] = self.conversation.previewcontacts.all()
         self.assertEqual(self.conversation.preview_status(),
                          [(contact, 'waiting to send')])
+
+        # Send the preview, find out what batch it was given
+        # and find the tag associated with it.
         self.conversation.send_preview()
         [batch] = self.conversation.preview_batch_set.all()
-        self.process_cmds(vumiapi.mdb, consumer=consumer)
+        [tag] = vumiapi.batch_tags(batch.batch_id)
+        tagpool, msisdn = tag
+
+        # Fake the msg that is sent to the preview users, we're faking
+        # this because we don't want to fire up the BulkSendApplication
+        # as part of a Django test case.
+        # This message is roughly what it would look like.
+        msg = TransportUserMessage(to_addr=contact.msisdn, from_addr=msisdn,
+            transport_name='dummy_transport', transport_type='sms',
+            content='approve? something something')
+        vumiapi.mdb.add_outbound_message(msg=msg, tag=tag)
+
+        # Make sure we display the correct message in the UI when
+        # asked at this stage.
         self.assertEqual(self.conversation.preview_status(),
                          [(contact, 'awaiting reply')])
-        [tag] = vumiapi.batch_tags(batch.batch_id)
+
+        # Fake an inbound message received on our number
         to_addr = "+123" + tag[1][-5:]
 
-        # unknown contact
+        # unknown contact, since we haven't sent the from_addr correctly
         msg = self.mkmsg_in('hello', to_addr=to_addr)
-        vumiapi.mdb.add_inbound_message(msg)
+        vumiapi.mdb.add_inbound_message(msg, tag=tag)
         self.assertEqual(self.conversation.preview_status(),
                          [(contact, 'awaiting reply')])
 
-        # known contact
+        # known contact, which was in the preview_batch_set and now the status
+        # should display 'approved'
         msg = self.mkmsg_in('approve', to_addr=to_addr,
                             from_addr=contact.msisdn.lstrip('+'))
-        vumiapi.mdb.add_inbound_message(msg)
+        vumiapi.mdb.add_inbound_message(msg, tag=tag)
         self.assertEqual(self.conversation.preview_status(),
                          [(contact, 'approved')])
 
@@ -305,31 +323,25 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         """
         consumer = self.get_cmd_consumer()
         vumiapi = Conversation.vumi_api()
-        print '1 conversation.user', self.conversation.user
         [contact] = self.conversation.people()
         self.assertEqual(self.conversation.replies(), [])
         self.conversation.send_messages()
-        print '2 conversation.user', self.conversation.user
         [batch] = self.conversation.message_batch_set.all()
         self.process_cmds(vumiapi.mdb, consumer=consumer)
         self.assertEqual(self.conversation.replies(), [])
         [tag] = vumiapi.batch_tags(batch.batch_id)
         to_addr = "+123" + tag[1][-5:]
 
-        print '3 conversation.user', self.conversation.user
         # unknown contact
         msg = self.mkmsg_in('hello', to_addr=to_addr)
         vumiapi.mdb.add_inbound_message(msg, tag=tag)
         self.assertEqual(self.conversation.replies(), [])
-        print '4 conversation.user', self.conversation.user
 
         # known contact
         msg = self.mkmsg_in('hello', to_addr=to_addr,
                             from_addr=contact.msisdn.lstrip('+'))
-        print '5 conversation.user', self.conversation.user
         vumiapi.mdb.add_inbound_message(msg, tag=tag)
         [reply] = self.conversation.replies()
-        print '6 conversation.user', self.conversation.user
         self.assertTrue(isinstance(reply.pop('time'), datetime))
         self.assertEqual(reply, {
             'contact': contact,
