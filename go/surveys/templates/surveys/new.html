@@ -16,7 +16,7 @@
     <div id="control-bar">
         <div id="control-elements">
             <h3>
-                New Conversation
+                New Survey
             </h3>
             <div id="control-bar-right">
                 <input type="submit" name="submit" class="btn" value="Next">
@@ -27,19 +27,9 @@
     <div id="main">
         <div class="inner">
             {% include "base/includes/messages.html" %}
-            {# TODO: disable hiding via jQuery, enabling display via django messages  #}
-            {# <div class="notification success"> #}
-            {#     This is a positive notification message bar #}
-            {# </div> #}
-            {# <div class="notification warning"> #}
-            {#     This is a warning notification message bar #}
-            {# </div> #}
-            {# <div class="notification error"> #}
-            {#     This is a error notification message bar #}
-            {# </div> #}
             <div id="progress-bar">
                 <ul>
-                    <li class="active">Message
+                    <li class="active">Survey
                     </li>
                     <li>People
                     </li>
@@ -64,13 +54,13 @@
                             <div class="label-hint">
                                 This won't be sent
                             </div>
-                            <label>Conversation name</label> 
+                            <label>Survey name</label> 
                             {{form.subject}}
                             {{form.subject.errors}}
                             <div class="clear"></div>
                         </div>
                         <div class="field-row">
-                            <div class="label-hint">
+<!--                             <div class="label-hint">
                                 <span class="conv-message-count">0</span> Characters. Valid for:<br>
                                 <div class="valid" id="valid-twitter">
                                     &nbsp;
@@ -85,7 +75,7 @@
                                     &nbsp;
                                 </div>
                             </div>
-                            <label for="conv-message">Message</label> 
+ -->                            <label for="conv-message">Summary</label> 
                             {{form.message}}
                             {{form.message.errors}}
                             <div class="clear"></div>
@@ -100,12 +90,12 @@
                         </div>
                     </div>
                 </div>
-                <div id="preview-box">
+<!--                 <div id="preview-box">
                     <div id="preview-pane">
                         <span class="sender">{{user_profile}}:</span> <span class="preview-message">&nbsp;</span>
                     </div>
                 </div>
-                <div class="clear"></div>
+ -->                <div class="clear"></div>
             </div>
         </div>
         {% include "footer.html" %}

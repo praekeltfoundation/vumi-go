@@ -53,7 +53,7 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
         msgs = [self.mkmsg_out(content=msg, message_id=str(i)) for
                 i, msg in enumerate(("msg1", "msg2"))]
         for msg in msgs:
-            self.api.mdb.add_message(batch_id, msg)
+            self.api.mdb.add_outbound_message(msg, batch_id=batch_id)
         api_msgs = self.api.batch_messages(batch_id)
         api_msgs.sort(key=lambda msg: msg['message_id'])
         self.assertEqual(api_msgs, msgs)
@@ -66,7 +66,7 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
                               transport_type="sms")
                 for i, msg in enumerate(("msg1", "msg2"))]
         for msg in msgs:
-            self.api.mdb.add_inbound_message(msg)
+            self.api.mdb.add_inbound_message(msg, batch_id=batch_id)
         api_msgs = self.api.batch_replies(batch_id)
         api_msgs.sort(key=lambda msg: msg['message_id'])
         self.assertEqual(api_msgs, msgs)

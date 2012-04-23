@@ -1,17 +1,29 @@
 import operator
 import datetime
+import redis
+
 from django.db import models
 from django.conf import settings
+
 from go.contacts.models import Contact
 from go.vumitools import VumiApi
+
+
+redis = redis.Redis(**settings.VXPOLLS_REDIS_CONFIG)
 
 
 def get_delivery_classes():
     # TODO: Unhardcode this when we have more configurable delivery classes.
     return [
-        ('sms', 'SMS'),
-        ('gtalk', 'Google Talk'),
+        ('shortcode', 'SMS Short code'),
+        ('longcode', 'SMS Long code'),
+        ('xmpp', 'Google Talk'),
         ]
+
+CONVERSATION_TYPES = (
+    ('bulk_message', 'Send Bulk SMS and track replies'),
+    ('survey', 'Interactive Survey'),
+)
 
 
 class Conversation(models.Model):
@@ -27,6 +39,8 @@ class Conversation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     groups = models.ManyToManyField('contacts.ContactGroup')
     previewcontacts = models.ManyToManyField('contacts.Contact')
+    conversation_type = models.CharField('Conversation Type', max_length=255,
+        choices=CONVERSATION_TYPES, default='bulk_message')
     delivery_class = models.CharField(max_length=255, null=True)
 
     def people(self):
@@ -65,11 +79,20 @@ class Conversation(models.Model):
                 contacts[contact] = ('approved'
                                      if contents in ('approve', 'yes')
                                      else 'denied')
+                if contacts[contact] == 'approved':
+                    self._release_preview_tags()
         return sorted(contacts.items())
 
     def send_messages(self):
         batch = self._send_batch(
             self.delivery_class, self.message, self.people())
+        batch.message_batch = self
+        batch.save()
+
+    def start_survey(self):
+        batch = self._send_batch(
+            self.delivery_class, '', self.people()
+        )
         batch.message_batch = self
         batch.save()
 
@@ -87,12 +110,29 @@ class Conversation(models.Model):
             delivery_classes = dict(get_delivery_classes())
             reply_statuses.append({
                 'type': self.delivery_class,
-                'source': delivery_classes[self.delivery_class],
+                'source': delivery_classes.get(self.delivery_class, 'Unknown'),
                 'contact': contact,
                 'time': reply['timestamp'],
                 'content': reply['content'],
                 })
-        return reply_statuses
+        return sorted(reply_statuses, key=lambda reply: reply['time'],
+                        reverse=True)
+
+    def sent_messages(self):
+        batches = self.message_batch_set.all()
+        outbound_statuses = []
+        sent_messages = self._get_messages(self.delivery_class, batches)
+        for contact, message in sent_messages:
+            delivery_classes = dict(get_delivery_classes())
+            outbound_statuses.append({
+                'type': self.delivery_class,
+                'source': delivery_classes.get(self.delivery_class, 'Unknown'),
+                'contact': contact,
+                'time': message['timestamp'],
+                'content': message['content']
+                })
+        return sorted(outbound_statuses, key=lambda sent: sent['time'],
+                        reverse=True)
 
     @staticmethod
     def vumi_api():
@@ -102,10 +142,16 @@ class Conversation(models.Model):
         """Return a delivery information for a given delivery_class."""
         # TODO: remove hard coded delivery class to tagpool and transport_type
         #       mapping
-        if delivery_class == 'sms':
-            return "ambient", "sms"
-        elif delivery_class == 'gtalk':
-            return "gtalk", "xmpp"
+        if delivery_class == "shortcode":
+            return "shortcode", "sms"
+        elif delivery_class == "longcode":
+            return "longcode", "sms"
+        elif delivery_class == "xmpp":
+            return "xmpp", "xmpp"
+        elif delivery_class == "gtalk":
+            return "xmpp", "xmpp"
+        elif delivery_class == "sms":
+            return "longcode", "sms"
         else:
             raise ConversationSendError("Unknown delivery class %r"
                                         % (delivery_class,))
@@ -113,18 +159,24 @@ class Conversation(models.Model):
     def tag_message_options(self, tagpool, tag):
         """Return message options for tagpool and tag."""
         # TODO: this is hardcoded for ambient and gtalk pool currently
-        if tagpool == "ambient":
+        if tagpool == "shortcode":
             return {
                 "from_addr": tag[1],
-                "transport_name": "ambient",
+                "transport_name": "smpp_transport",
                 "transport_type": "sms",
-                }
-        elif tagpool == "gtalk":
+            }
+        elif tagpool == "longcode":
+            return {
+                "from_addr": tag[1],
+                "transport_name": "smpp_transport",
+                "transport_type": "sms",
+            }
+        elif tagpool == "xmpp":
             return {
                 "from_addr": tag[1],
                 "transport_name": "gtalk_vumigo",
                 "transport_type": "xmpp",
-                }
+            }
         else:
             raise ConversationSendError("Unknown tagpool %r" % (tagpool,))
 
@@ -142,21 +194,35 @@ class Conversation(models.Model):
         if tag is None:
             raise ConversationSendError("No spare messaging tags.")
         msg_options = self.tag_message_options(tagpool, tag)
+        # Add the worker_name so our command dispatcher knows where
+        # to send stuff to.
+        msg_options.update({
+            'worker_name': '%s_application' % (self.conversation_type,),
+            'conversation_id': self.pk,
+            'conversation_type': self.conversation_type,
+        })
         batch_id = vumiapi.batch_start([tag])
         batch = MessageBatch(batch_id=batch_id)
         batch.save()
         vumiapi.batch_send(batch_id, message, msg_options, addrs)
         return batch
 
-    def _release_tags(self):
+    def _release_preview_tags(self):
+        self._release_batches(self.preview_batch_set.all())
+
+    def _release_message_tags(self):
+        self._release_batches(self.message_batch_set.all())
+
+    def _release_batches(self, batches):
         vumiapi = self.vumi_api()
-        batches = []
-        batches.extend(self.preview_batch_set.all())
-        batches.extend(self.message_batch_set.all())
         for batch in batches:
             vumiapi.batch_done(batch.batch_id)
             for tag in vumiapi.batch_tags(batch.batch_id):
                 vumiapi.release_tag(tag)
+
+    def _release_tags(self):
+        self._release_preview_tags()
+        self._release_message_tags()
 
     def _get_helper(self, delivery_class, batches, addr_func, batch_msg_func):
         """Return a list of (Contact, reply_msg) tuples."""
@@ -170,7 +236,9 @@ class Conversation(models.Model):
                 try:
                     contact = Contact.for_addr(self.user, transport_type,
                                                addr_func(reply))
-                except (Contact.DoesNotExist, Contact.MultipleObjectsReturned):
+                except (Contact.DoesNotExist,
+                        Contact.MultipleObjectsReturned), e:
+                    print e
                     continue
                 replies.append((contact, reply))
         return replies
@@ -190,8 +258,8 @@ class Conversation(models.Model):
                                 addr_func, batch_msg_func)
 
     class Meta:
-        ordering = ['-updated_at']
-        get_latest_by = 'updated_at'
+        ordering = ['-created_at']
+        get_latest_by = 'created_at'
 
     def __unicode__(self):
         return self.subject
@@ -211,6 +279,9 @@ class MessageBatch(models.Model):
     message_batch = models.ForeignKey(Conversation,
                                       related_name="message_batch_set",
                                       null=True)
+
+    def __unicode__(self):
+        return u"<MessageBatch: %s>" % (self.batch_id,)
 
 
 class ConversationSendError(Exception):

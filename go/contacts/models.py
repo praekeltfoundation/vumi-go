@@ -1,5 +1,7 @@
-from django.db import models
 import csv
+
+from django.db import models
+from vumi.utils import normalize_msisdn
 
 
 class ContactGroup(models.Model):
@@ -44,12 +46,13 @@ class Contact(models.Model):
         get_latest_by = 'created_at'
 
     @classmethod
-    def create_from_csv_file(cls, user, csvfile):
+    def create_from_csv_file(cls, user, csvfile, country_code):
         dialect = csv.Sniffer().sniff(csvfile.read(1024))
         csvfile.seek(0)
         reader = csv.reader(csvfile, dialect)
         for name, surname, msisdn in reader:
             # TODO: normalize msisdn
+            msisdn = normalize_msisdn(msisdn, country_code=country_code)
             contact, _ = Contact.objects.get_or_create(user=user,
                 msisdn=msisdn)
             contact.name = name
@@ -69,9 +72,10 @@ class Contact(models.Model):
     def for_addr(cls, user, transport_type, addr):
         if transport_type == 'sms':
             addr = '+' + addr.lstrip('+')
-            return cls.objects.get(user=user, msisdn=addr)
+            return cls.objects.filter(user=user, msisdn=addr).latest()
         elif transport_type == 'xmpp':
-            return cls.objects.get(user=user, gtalk_id=addr.partition('/')[0])
+            return cls.objects.filter(user=user,
+                    gtalk_id=addr.partition('/')[0]).latest()
         else:
             raise Contact.DoesNotExist("Contact for address %r, transport"
                                        " type %r does not exist."

@@ -3,6 +3,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator
 from django.contrib import messages
+from django.conf import settings
 from go.conversation.models import Conversation, ConversationSendError
 from go.conversation.forms import ConversationForm, SelectDeliveryClassForm
 from go.contacts.forms import (NewContactGroupForm, UploadContactsForm,
@@ -49,9 +50,10 @@ def upload(request, conversation_pk):
         # from them for attaching to a group later
         upload_contacts_form = UploadContactsForm(request.POST,
             request.FILES)
-        if upload_contacts_form.is_valid():
+        delivery_class = SelectDeliveryClassForm(request.POST)
+        if upload_contacts_form.is_valid() and delivery_class.is_valid():
             contacts = Contact.create_from_csv_file(request.user,
-                request.FILES['file'])
+                request.FILES['file'], settings.VUMI_COUNTRY_CODE)
             if request.POST.get('name'):
                 new_contact_group_form = NewContactGroupForm(request.POST)
                 if new_contact_group_form.is_valid():
@@ -59,7 +61,12 @@ def upload(request, conversation_pk):
                     group.user = request.user
                     group.save()
                     group.add_contacts(contacts)
+
+                    # set the delivery class
+                    clean_data = delivery_class.cleaned_data
+                    conversation.delivery_class = clean_data['delivery_class']
                     conversation.groups.add(group)
+                    conversation.save()
                     messages.add_message(request, messages.INFO,
                         'Contacts uploaded to the group and linked '
                         'to the conversation')
@@ -76,7 +83,12 @@ def upload(request, conversation_pk):
                     cleaned_data = select_contact_group_form.cleaned_data
                     group = cleaned_data['contact_group']
                     group.add_contacts(contacts)
+
+                    # set the delivery class
+                    clean_data = delivery_class.cleaned_data
+                    conversation.delivery_class = clean_data['delivery_class']
                     conversation.groups.add(group)
+                    conversation.save()
                     messages.add_message(request, messages.INFO,
                         'Contacts uploaded to the group and linked '
                         'to the conversation')
@@ -100,6 +112,8 @@ def upload(request, conversation_pk):
         'upload_contacts_form': upload_contacts_form,
         'new_contact_group_form': new_contact_group_form,
         'select_contact_group_form': select_contact_group_form,
+        'country_code': settings.VUMI_COUNTRY_CODE,
+        'delivery_class': SelectDeliveryClassForm(),
     })
 
 
@@ -134,6 +148,7 @@ def people(request, conversation_pk):
 def send(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
         user=request.user)
+
     if request.POST:
         contact_ids = request.POST.getlist('contact')
         contacts = Contact.objects.filter(pk__in=contact_ids)
