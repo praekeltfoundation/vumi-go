@@ -28,6 +28,7 @@ urlpatterns = patterns('',
         namespace='conversations')),
     url(r'^contacts/', include('go.contacts.urls', namespace='contacts')),
     url(r'^surveys/', include('go.surveys.urls', namespace='surveys')),
+    url(r'^', include('vxpolls.urls')),
 )
 
 # HAProxy health check
