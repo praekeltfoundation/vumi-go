@@ -239,7 +239,8 @@ def index(request):
 
     if conversation_status:
         status_map = {
-            'running': lambda c: c.filter(end_time__isnull=True),
+            'running': lambda c: c.filter(end_time__isnull=True,
+                message_batch_set__isnull=False),
             'finished': lambda c: c.filter(end_time__isnull=False),
             'draft': lambda c: c.filter(end_time__isnull=True,
                 message_batch_set__isnull=True)
