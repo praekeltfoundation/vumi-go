@@ -185,55 +185,12 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.assertEqual(contacts.count(), 3)
         self.assertIn(new_group, self.conversation.groups.all())
 
-    def test_sending_preview(self):
-        """test sending of conversation to a selected set of preview
-        contacts"""
-        consumer = self.get_cmd_consumer()
-        response = self.client.post(reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk,
-        }), {
-            'contact': [c.pk for c in Contact.objects.all()]
-        })
-        self.assertRedirects(response, reverse('conversations:start', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        [cmd] = self.fetch_cmds(consumer)
-        [batch] = self.conversation.preview_batch_set.all()
-        [contact] = self.conversation.previewcontacts.all()
-        conversation = self.conversation
-        msg_options = {"from_addr": "default10001",
-                       "transport_type": "sms",
-                       "transport_name": "smpp_transport",
-                       "worker_name": "bulk_message_application",
-                       "conversation_id": conversation.pk,
-                       "conversation_type": conversation.conversation_type,
-                    }
-        self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
-                                                  "APPROVE? Test message",
-                                                  msg_options,
-                                                  contact.msisdn))
-
-    def test_sending_preview_fails(self):
-        """test failure to send previews"""
-        self.acquire_all_longcode_tags()
-        consumer = self.get_cmd_consumer()
-        response = self.client.post(reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk,
-        }), {
-            'contact': [c.pk for c in Contact.objects.all()]
-        }, follow=True)
-        self.assertRedirects(response, reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        [] = self.fetch_cmds(consumer)
-        [] = self.conversation.preview_batch_set.all()
-        [msg] = response.context['messages']
-        self.assertEqual(str(msg), "No spare messaging tags.")
-
-    def test_start(self):
+    def test_send(self):
         """
         Test the start conversation view
         """
         consumer = self.get_cmd_consumer()
-        response = self.client.post(reverse('conversations:start', kwargs={
+        response = self.client.post(reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk}))
         self.assertRedirects(response, reverse('conversations:show', kwargs={
             'conversation_pk': self.conversation.pk}))
@@ -254,15 +211,15 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
                                                   msg_options,
                                                   contact.msisdn))
 
-    def test_start_fails(self):
+    def test_send_fails(self):
         """
         Test failure to send messages
         """
         self.acquire_all_longcode_tags()
         consumer = self.get_cmd_consumer()
-        response = self.client.post(reverse('conversations:start', kwargs={
+        response = self.client.post(reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk}), follow=True)
-        self.assertRedirects(response, reverse('conversations:start', kwargs={
+        self.assertRedirects(response, reverse('conversations:send', kwargs={
             'conversation_pk': self.conversation.pk}))
         [] = self.fetch_cmds(consumer)
         [] = self.conversation.preview_batch_set.all()
@@ -352,8 +309,8 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.assertEqual(reply, {
             'contact': contact,
             'content': u'hello',
-            'source': 'SMS Long code',
-            'type': u'longcode',
+            'source': 'Long code',
+            'type': u'sms',
             })
 
     def test_end(self):

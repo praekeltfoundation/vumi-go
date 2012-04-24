@@ -23,7 +23,5 @@ def make_read_only_form(form):
             widget.attrs.update({
                 'readonly': 'readonly'
             })
-        if hasattr(widget, 'choices'):
-            print widget.choices
     return form
 

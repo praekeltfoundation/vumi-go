@@ -162,9 +162,10 @@ class Conversation(models.Model):
         reply_statuses = []
         for contact, reply in self._get_replies(self.delivery_class, batches):
             delivery_classes = dict(get_combined_delivery_classes())
+            tag_pools = dict(delivery_classes.get(self.delivery_class))
             reply_statuses.append({
                 'type': self.delivery_class,
-                'source': delivery_classes.get(self.delivery_class, 'Unknown'),
+                'source': tag_pools.get(self.delivery_tag_pool, 'Unknown'),
                 'contact': contact,
                 'time': reply['timestamp'],
                 'content': reply['content'],
