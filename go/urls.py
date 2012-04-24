@@ -23,7 +23,11 @@ urlpatterns = patterns('',
     url(r'^todo/.*$', 'go.base.views.todo', name='todo'),
 
     # vumi go!
-    url(r'^$', 'go.base.views.home', name='home'),
+    url(r'^$', 'django.views.generic.simple.redirect_to', {
+        'url': '/conversations/',
+        'permanent': False,
+        'query_string': True,
+        }, name='home'),
     url(r'^conversations/', include('go.conversation.urls',
         namespace='conversations')),
     url(r'^contacts/', include('go.contacts.urls', namespace='contacts')),

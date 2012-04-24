@@ -6,7 +6,7 @@
             {% if page_number == page.number %}
                 <li class="active"><a href="#">{{page_number}}</a></li>
             {% else %}
-                <li><a href="?p={{page_number}}&amp;q={{query}}">{{page_number}}</a></li>
+                <li><a href="?p={{page_number}}&amp;query={{query}}&amp;conversation_type={{conversation_type}}&amp;conversation_status={{conversation_status}}">{{page_number}}</a></li>
             {% endif %}
         {% endfor %}
         {# TODO: fix page numbering for large numbers of conversations  #}

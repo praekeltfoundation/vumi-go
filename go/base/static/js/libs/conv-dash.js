@@ -10,11 +10,11 @@ $(document).ready(function() {
             type: 'pie'
          },
          title: {
-            text: 'Item Title'
+            text: 'Conversation Status'
          },
          series: [{
             type: 'pie',
-            name: 'Browser share',
+            name: 'Progress',
             data: [
                 ['FF',   15.0],
                 ['IE',       55.0],

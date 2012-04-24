@@ -123,8 +123,38 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
     def test_index_search(self):
         """Filter conversations based on query string"""
         response = self.client.get(reverse('conversations:index'), {
-            'q': 'something that does not exist in the fixtures'})
+            'query': 'something that does not exist in the fixtures'})
         self.assertNotContains(response, self.conversation.subject)
+
+    def test_index_search_on_type(self):
+        self.conversation.conversation_type = 'survey'
+        self.conversation.save()
+
+        def search_type(conversation_type):
+            return self.client.get(reverse('conversations:index'), {
+                'query': self.conversation.subject,
+                'conversation_type': conversation_type,
+                })
+
+        self.assertNotContains(search_type('bulk_message'),
+                self.conversation.message)
+        self.assertContains(search_type('survey'),
+                self.conversation.message)
+
+    def test_index_search_on_status(self):
+        self.conversation.conversation_type = 'survey'
+        self.conversation.save()
+
+        def search_type(conversation_type):
+            return self.client.get(reverse('conversations:index'), {
+                'query': self.conversation.subject,
+                'conversation_type': conversation_type,
+                })
+
+        self.assertNotContains(search_type('bulk_message'),
+                self.conversation.message)
+        self.assertContains(search_type('survey'),
+                self.conversation.message)
 
     def test_contacts_upload(self):
         """test uploading of contacts via CSV file"""

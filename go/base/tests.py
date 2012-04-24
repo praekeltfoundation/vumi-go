@@ -21,22 +21,24 @@ class AuthenticationTestCase(TestCase):
 
     def test_redirect_to_login(self):
         """test the authentication mechanism"""
-        response = self.client.get(reverse('home'))
-        self.assertRedirects(response, '%s?next=/' % reverse('login'))
+        response = self.client.get(reverse('conversations:index'))
+        self.assertRedirects(response, '%s?next=%s' % (
+            reverse('login'), reverse('conversations:index')))
 
     def test_login(self):
         """test correct login"""
         self.client.login(username=self.user.username, password='password')
-        response = self.client.get(reverse('home'))
+        response = self.client.get(reverse('conversations:index'))
         self.assertContains(response, '%s %s' % (self.user.first_name,
-            self.user.last_name))
+            self.user.last_name),)
 
     def test_logged_out(self):
         """test logout & redirect after logout"""
         self.client.login(username=self.user.username, password='password')
         response = self.client.get(reverse('logout'))
-        response = self.client.get(reverse('home'))
-        self.assertRedirects(response, '%s?next=/' % reverse('login'))
+        response = self.client.get(reverse('conversations:index'))
+        self.assertRedirects(response, '%s?next=%s' % (
+            reverse('login'), reverse('conversations:index')))
 
 
 class FakeTemplateToken(object):
