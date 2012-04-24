@@ -27,8 +27,8 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'go',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'go.db',
         'USER': 'go',
         'PASSWORD': 'go',
         'HOST': 'localhost',
