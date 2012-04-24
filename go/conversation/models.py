@@ -12,14 +12,39 @@ from go.vumitools import VumiApi
 redis = redis.Redis(**settings.VXPOLLS_REDIS_CONFIG)
 
 
-def get_delivery_classes():
-    # TODO: Unhardcode this when we have more configurable delivery classes.
+def get_tag_pool_names():
+    pool_names = []
+    for delivery_class, tag_pools in get_combined_delivery_classes():
+        for tag_pool, label in tag_pools:
+            pool_names.append(tag_pool)
+    return pool_names
+
+def get_delivery_class_names():
+    return [delivery_class for delivery_class, tag_pools
+                in get_combined_delivery_classes()]
+
+def get_combined_delivery_classes():
+    return (get_client_init_delivery_classes() +
+                get_server_init_delivery_classes())
+
+def get_client_init_delivery_classes():
     return [
-        ('shortcode', 'SMS Short code'),
-        ('longcode', 'SMS Long code'),
-        ('ussd', 'USSD code'),
-        ('xmpp', 'Google Talk'),
-        ]
+        ('sms', [
+            ('shortcode', 'Short code'),
+            ('longcode', 'Long code'),
+        ]),
+        ('gtalk', [
+            ('xmpp', 'Google Talk'),
+        ])
+    ]
+
+def get_server_init_delivery_classes():
+    return [
+        ('ussd', [
+            ('truteq', '*120*646*4*...#'),
+            ('integrat', '*120*99*987*10*...#'),
+        ]),
+    ]
 
 CONVERSATION_TYPES = (
     ('bulk_message', 'Send Bulk SMS and track replies'),
@@ -43,6 +68,7 @@ class Conversation(models.Model):
     conversation_type = models.CharField('Conversation Type', max_length=255,
         choices=CONVERSATION_TYPES, default='bulk_message')
     delivery_class = models.CharField(max_length=255, null=True)
+    delivery_tag_pool = models.CharField(max_length=255, null=True)
 
     def people(self):
         return Contact.objects.filter(groups__in=self.groups.all())

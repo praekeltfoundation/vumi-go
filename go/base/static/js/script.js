@@ -26,3 +26,13 @@ $('#convtype').change(function() {
 	var newAction = $('#convtype').val();
 	$('#newConversationType').attr('action', newAction);
 });
+
+/* show or hide the tag pool options depending on the delivery class chosen */
+$('.delivery-class-radio').change(function() {
+    delivery_classes = $('.delivery-class-radio[name=delivery_class]');
+    delivery_classes.each(function(index, element) {
+        var deliveryClass = $(element);
+        var tagPoolDiv = $('#' + deliveryClass.val() + '_tag_pool_selection');
+        element.checked ? tagPoolDiv.show() : tagPoolDiv.hide();
+    });
+})

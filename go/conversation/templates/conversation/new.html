@@ -44,13 +44,13 @@
                         <label class="control-label" for="inlineCheckboxes">Conversation Locations</label>
                         <table class="table table-condensed" style="width: 90%">
                         <tbody>
-                        {% for delivery_class, name in delivery_classes %}
-                        {% cycle '<tr>' '' %}
+                        {% for delivery_class, tag_pools in delivery_classes %}
+                            {% cycle '<tr>' '' %}
                             <td>
-                                <input type="radio" id="inlineCheckbox-{{ delivery_class }}" value="{{ delivery_class }}" name="channel">
-                                <label class="checkbox inline" for="inlineCheckbox-{{ delivery_class }}">{{ name }}</label>
+                                <input type="radio" id="inlineCheckbox-{{ delivery_class }}" value="{{ delivery_class }}" name="delivery_class" class="delivery-class-radio">
+                                <label class="checkbox inline" for="inlineCheckbox-{{ delivery_class }}">{{ delivery_class|title }}</label>
                             </td>
-                        {% cycle '' '</tr>' %}
+                            {% cycle '' '</tr>' %}
                         {% endfor %}
                         <tr>
                             <td colspan="3">
@@ -60,22 +60,22 @@
                         </tbody>
                         </table>
                     </div>
-                    <div class="control-group">
-                        <label class="control-label" for="select01">Pick a shortcode</label>
+                    {% for delivery_class, tag_pools in delivery_classes %}
+                    <div class="control-group delivery-class-selection" style="display:none" 
+                            id="{{delivery_class}}_tag_pool_selection">
+                        <label class="control-label" for="{{delivery_class}}_tagpool">
+                            Pick a method delivery via {{delivery_class}}
+                        </label>
                         <div class="controls">
-                         <select id="select01" class="input-medium"> 
-                             <option>32329</option>
-                             <option>32323</option>
-                             <option>32973</option> 
-                             <option>32328</option> 
-                             <option>32975</option> 
-                             <option>39571</option> 
-                             <option>32324</option> 
-                             <option>A longcode is suitable</option>
-                         </select>
+                            <select id="{{delivery_class}}_tag_pool" name="delivery_tag_pool" class="input-medium">
+                                {% for tag_pool, label in tag_pools %}
+                                <option value="{{tag_pool}}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                     </div>
-                    <div class="control-group">
+                    {% endfor %}
+                <div class="control-group">
                         <label class="control-label" for="cdate">Date</label>
                         <div class="controls">
                             <div class="input-prepend">
