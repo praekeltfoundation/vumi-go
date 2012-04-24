@@ -19,6 +19,13 @@ def get_tag_pool_names():
             pool_names.append(tag_pool)
     return pool_names
 
+def get_server_init_tag_pool_names():
+    pool_names = []
+    for delivery_class, tag_pools in get_server_init_delivery_classes():
+        for tag_pool, label in tag_pools:
+            pool_names.append(tag_pool)
+    return pool_names
+
 def get_delivery_class_names():
     return [delivery_class for delivery_class, tag_pools
                 in get_combined_delivery_classes()]
@@ -27,7 +34,11 @@ def get_combined_delivery_classes():
     return (get_client_init_delivery_classes() +
                 get_server_init_delivery_classes())
 
-def get_client_init_delivery_classes():
+def get_server_init_delivery_class_names():
+    return [delivery_class for delivery_class, tag_pools
+                in get_server_init_delivery_classes()]
+
+def get_server_init_delivery_classes():
     return [
         ('sms', [
             ('shortcode', 'Short code'),
@@ -38,7 +49,7 @@ def get_client_init_delivery_classes():
         ])
     ]
 
-def get_server_init_delivery_classes():
+def get_client_init_delivery_classes():
     return [
         ('ussd', [
             ('truteq', '*120*646*4*...#'),
@@ -110,6 +121,21 @@ class Conversation(models.Model):
                     self._release_preview_tags()
         return sorted(contacts.items())
 
+    def get_status(self):
+        vumiapi = self.vumi_api()
+        batch = self.message_batch_set.latest('pk')
+        status = vumiapi.mdb.batch_status(batch.batch_id)
+        status.update({
+            'total': self.people().count()
+        })
+        return status
+
+    def get_progress(self):
+        status = self.get_status()
+        if self.people().exists():
+            return int(status['ack'] / float(status['total'])) * 100
+        return 0
+
     def send_messages(self):
         batch = self._send_batch(
             self.delivery_class, self.message, self.people())
@@ -124,8 +150,9 @@ class Conversation(models.Model):
         batch.save()
 
     def delivery_class_description(self):
-        delivery_classes = dict(get_delivery_classes())
-        description = delivery_classes.get(self.delivery_class)
+        delivery_classes = dict(get_combined_delivery_classes())
+        tag_pools = dict(delivery_classes.get(self.delivery_class))
+        description = tag_pools.get(self.delivery_tag_pool)
         if description is None:
             description = "Unknown"
         return description
@@ -134,7 +161,7 @@ class Conversation(models.Model):
         batches = self.message_batch_set.all()
         reply_statuses = []
         for contact, reply in self._get_replies(self.delivery_class, batches):
-            delivery_classes = dict(get_delivery_classes())
+            delivery_classes = dict(get_combined_delivery_classes())
             reply_statuses.append({
                 'type': self.delivery_class,
                 'source': delivery_classes.get(self.delivery_class, 'Unknown'),
@@ -150,7 +177,7 @@ class Conversation(models.Model):
         outbound_statuses = []
         sent_messages = self._get_messages(self.delivery_class, batches)
         for contact, message in sent_messages:
-            delivery_classes = dict(get_delivery_classes())
+            delivery_classes = dict(get_combined_delivery_classes())
             outbound_statuses.append({
                 'type': self.delivery_class,
                 'source': delivery_classes.get(self.delivery_class, 'Unknown'),

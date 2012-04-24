@@ -8,8 +8,8 @@ class Command(BaseCommand):
     help = "Populate messaging tag pools"
 
     POOLS = [
-        ("ambient", ["default%d" % i for i in range(10001, 10001 + 1000)]),
-        ("gtalk", ["ruan@unomena.com"]),
+        ("longcode", ["default%d" % i for i in range(10001, 10001 + 1000)]),
+        ("xmpp", ["go-%s@vumi.org" % i for i in range(1,6)]),
         ]
 
     POOL_LOOKUP = dict(POOLS)

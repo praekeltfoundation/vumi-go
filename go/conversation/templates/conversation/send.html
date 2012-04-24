@@ -4,12 +4,14 @@
     <form action="" method="post" accept-charset="utf-8">
     <div class="row">
         <div class="span12">
+            <!--
             <div class="pull-right padtop">
                 <a class="btn btn-success" data-toggle="modal" href="#previewConv">Send Preview</a>
             </div>
             <div class="pull-right padtop" style="margin-right: 10px">
                 <input type="button" class="btn" value="Back" onclick="javascript:history.go(-1)">
             </div>
+            -->
             <div id="welcome">
                 <h1>New Conversation</h1>
             </div>
@@ -24,11 +26,15 @@
         <div class="span4">
             <div class="box shadow conv-disabled">
                 <h3>1. Message Details</h3>
+                <br>
+                {% include "conversation/includes/new.html" with form=conversation_form %}
             </div>
         </div>
         <div class="span4">
             <div class="box shadow conv-disabled">
                 <h3>2. Message Recipients</h3>
+                <br>
+                {% include "conversation/includes/groups-selected.html" with form=group_form %}
             </div>
         </div>
         <div class="span4">
@@ -50,36 +56,25 @@
                             <th class="right">Total</th>
                         </tr>
                         <tr>
-                            <td>Txt (Zone 1)</td>
-                            <td class="right">120</td>
+                            <td>{{conversation.delivery_class}}</td>
+                            <td class="right">{{conversation.people.count}}</td>
                             <td class="right">1</td>
-                            <td class="right">120</td>
+                            <td class="right">{{conversation.people.count}}</td>
                         </tr>
                         <tr>
-                            <td>Txt (Zone 2)</td>
-                            <td class="right">10</td>
-                            <td class="right">2</td>
-                            <td class="right">20</td>
-                        </tr>
-                
-                        <tr>
-                            <td>IM</td>
-                            <td class="right">70</td>
-                            <td class="right">0</td>
-                            <td class="right">0</td>
+                            <th colspan="4" class="right"><h1>{{conversation.people.count}}</h1><small style="display: block">Vumi Credits Required</small></th>
                         </tr>
                         <tr>
-                            <th colspan="4" class="right"><h1>140</h1><small style="display: block">Vumi Credits Required</small></th>
-                        </tr>
-                        <tr>
-                            <th colspan="4" class="right"><h1>130</h1><small style="display: block">Total Recipients</small></th>
+                            <th colspan="4" class="right"><h1>{{conversation.people.count}}</h1><small style="display: block">Total Recipients</small></th>
                         </tr>
                     </tbody>
                 </table>                  
                 <div class="btn-toolbar">
                     <div class="btn-group"><input type="submit" class="btn btn-success btn-large" value="Send Message &rarr;"></div>
                     <div class="btn-group"><input type="reset" class="btn" onClick="javascript:history.go(-1)" value="Go Back"></div>
+                    <!--
                     <div class="btn-group"><input type="reset" class="btn" value="Cancel"></div>
+                    -->
                 </div>
             </div>
         </div>
