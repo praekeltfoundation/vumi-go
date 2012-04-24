@@ -88,6 +88,7 @@ class GoApplication(ApplicationWorker):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
         return self.store.add_inbound_message(msg, tag=tag)
 
+
 class BulkSendApplication(GoApplication):
     """
     Application that accepts 'send message' commands and does exactly that.
@@ -103,6 +104,5 @@ class BulkSendApplication(GoApplication):
         to_addr = cmd['to_addr']
         log.info('Sending to %s %s %s' % (to_addr, content, msg_options,))
         msg = yield self.send_to(to_addr, content, **msg_options)
-        self.store.add_outbound_message(msg, batch_id=batch_id)
         yield self.store.add_outbound_message(msg, batch_id=batch_id)
         log.info('Stored outbound %s' % (msg,))
