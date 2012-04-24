@@ -5,7 +5,7 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 from django.conf import settings
 from go.conversation.models import (Conversation, ConversationSendError,
-                                    get_client_init_delivery_classes)
+                                    get_server_init_delivery_classes)
 from go.conversation.forms import (ConversationForm, SelectDeliveryClassForm,
                             BulkSendConversationForm, ConversationGroupForm,
                             ConversationSearchForm)
@@ -38,7 +38,7 @@ def new(request):
 
     return render(request, 'conversation/new.html', {
         'form': form,
-        'delivery_classes': get_client_init_delivery_classes(),
+        'delivery_classes': get_server_init_delivery_classes(),
     })
 
 
@@ -149,7 +149,7 @@ def people(request, conversation_pk):
         'conversation': conversation,
         'conversation_form': conversation_form,
         'group_form': group_form,
-        'delivery_classes': get_client_init_delivery_classes(),
+        'delivery_classes': get_server_init_delivery_classes(),
     })
 
 

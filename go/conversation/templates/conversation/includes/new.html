@@ -10,7 +10,7 @@
     <label class="control-label" for="inlineCheckboxes">Conversation Locations</label>
     <table class="table table-condensed" style="width: 90%">
     <tbody>
-    {% for choice in form.delivery_class %}
+    {% for choice in form.delivery_class_widgets %}
         {% cycle '<tr>' '' %}
         <td>
             {{choice.tag}}
