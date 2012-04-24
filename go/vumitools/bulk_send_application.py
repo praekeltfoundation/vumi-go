@@ -5,7 +5,9 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.application import ApplicationWorker, MessageStore
+from vumi.application import ApplicationWorker
+from vumi.persist.message_store import MessageStore
+from vumi.persist.txriak_manager import TxRiakManager
 from vumi.middleware import TaggingMiddleware
 from vumi import log
 
@@ -39,7 +41,9 @@ class GoApplication(ApplicationWorker):
     @inlineCallbacks
     def setup_application(self):
         r_server = get_redis(self.config)
-        self.store = MessageStore(r_server, self.mdb_prefix)
+        self.manager = TxRiakManager.from_config({
+                'bucket_prefix': self.mdb_prefix})
+        self.store = MessageStore(self.manager, r_server, self.mdb_prefix)
         self.control_consumer = yield self.consume(
             '%s.control' % (self.worker_name,),
             self.consume_control_command,
@@ -72,18 +76,17 @@ class GoApplication(ApplicationWorker):
 
     def consume_user_message(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
-        self.store.add_inbound_message(msg, tag=tag)
+        return self.store.add_inbound_message(msg, tag=tag)
 
     def consume_ack(self, event):
-        self.store.add_event(event)
+        return self.store.add_event(event)
 
     def consume_delivery_report(self, event):
-        self.store.add_event(event)
+        return self.store.add_event(event)
 
     def close_session(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
-        self.store.add_inbound_message(msg, tag=tag)
-
+        return self.store.add_inbound_message(msg, tag=tag)
 
 class BulkSendApplication(GoApplication):
     """
@@ -101,4 +104,5 @@ class BulkSendApplication(GoApplication):
         log.info('Sending to %s %s %s' % (to_addr, content, msg_options,))
         msg = yield self.send_to(to_addr, content, **msg_options)
         self.store.add_outbound_message(msg, batch_id=batch_id)
+        yield self.store.add_outbound_message(msg, batch_id=batch_id)
         log.info('Stored outbound %s' % (msg,))
