@@ -48,10 +48,11 @@
 	            <tr>
 	                <td><i class="icon-comment"></i> {{conversation.delivery_class_description}}</td>
 	                <td>{{conversation.people.count}}</td>
-	                <td>12345</td>
+	                <td>{{conversation.people.count}}</td>
 	                <td>
 	                   <div class="progress progress-striped active">
-                            <div class="bar" style="width: 67%;"><strong>In progress:</strong> 5 690 / 99 999</div>
+                                <strong>In progress:</strong> {{conversation.get_status.sent}} / {{conversation.get_status.total}}
+                            <div class="bar" style="width: {{conversation.get_progress}}%;"></div>
                         </div>
 	                </td>
 	                {# TODO can we even implement this? Would we want to? #}
@@ -92,14 +93,11 @@
 	            {#         <span class="green">Sending to</span> 32 577 people - <a href="#">Pause</a> - <a href="#">Cancel</a> #}
 	            {#     </td> #}
 	            {# </tr> #}
-	            {# <tr> #}
-	            {#     <td> #}
-	            {#         <strong>Total</strong> #}
-	            {#     </td> #}
-	            {#     <td align="right"> #}
-	            {#         <strong>562 202 People</strong> #}
-	            {#     </td> #}
-	            {# </tr> #}
+                <tr>
+                    <td><strong>Totals</strong></td>
+                    <td><strong>{{conversation.people.count}} People</strong></td>
+                    <td colspan="3"><strong>{{conversation.people.count}} Vumi Credits</strong></td>
+                </tr>
 	        </table>
 	    </div>
     </div>

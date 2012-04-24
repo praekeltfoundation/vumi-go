@@ -6,21 +6,21 @@ from django.contrib import messages
 from django.conf import settings
 from go.conversation.models import (Conversation, ConversationSendError,
                                     get_client_init_delivery_classes)
-from go.conversation.forms import ConversationForm, SelectDeliveryClassForm
+from go.conversation.forms import (ConversationForm, SelectDeliveryClassForm,
+                            BulkSendConversationForm, ConversationGroupForm)
 from go.contacts.forms import (NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
 from go.contacts.models import Contact, ContactGroup
-from go.base.utils import padded_queryset
+from go.base.utils import padded_queryset, make_read_only_form
 from datetime import datetime
 
 
 CONVERSATIONS_PER_PAGE = 6
 
-
 @login_required
 def new(request):
     if request.POST:
-        form = ConversationForm(request.POST)
+        form = BulkSendConversationForm(request.POST)
         if form.is_valid():
             conversation = form.save(commit=False)
             conversation.user = request.user
@@ -30,15 +30,14 @@ def new(request):
             return redirect(reverse('conversations:people',
                 kwargs={'conversation_pk': conversation.pk}))
     else:
-        form = ConversationForm(initial={
+        form = BulkSendConversationForm(initial={
             'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
             'start_time': datetime.utcnow().strftime('%H:%M'),
         })
 
-    delivery_classes = get_client_init_delivery_classes()
     return render(request, 'conversation/new.html', {
         'form': form,
-        'delivery_classes': delivery_classes,
+        'delivery_classes': get_client_init_delivery_classes(),
     })
 
 
@@ -124,26 +123,32 @@ def upload(request, conversation_pk):
 def people(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
         user=request.user)
+    groups_for_user = ContactGroup.objects.filter(user=request.user)
     if request.POST:
-        group_pks = request.POST.getlist('groups')
-        delivery_class = SelectDeliveryClassForm(request.POST)
-        if group_pks and delivery_class.is_valid():
-            # get the groups
-            groups = ContactGroup.objects.filter(pk__in=group_pks)
+        group_form = ConversationGroupForm(request.POST)
+        group_form.fields['groups'].queryset = groups_for_user
+        if group_form.is_valid():
+            groups = group_form.cleaned_data['groups']
             # link to the conversation
             for group in groups:
                 conversation.groups.add(group)
-            # set the delivery class
-            cleaned_data = delivery_class.cleaned_data
-            conversation.delivery_class = cleaned_data['delivery_class']
             conversation.save()
             messages.add_message(request, messages.INFO,
                 'The selected groups have been added to the conversation')
             return redirect(reverse('conversations:send', kwargs={
                 'conversation_pk': conversation.pk}))
+
+    conversation_form = make_read_only_form(
+                            BulkSendConversationForm(instance=conversation))
+
+    group_form = ConversationGroupForm(request.POST)
+    group_form.fields['groups'].queryset = groups_for_user
+
     return render(request, 'conversation/people.html', {
         'conversation': conversation,
-        'delivery_class': SelectDeliveryClassForm(),
+        'conversation_form': conversation_form,
+        'group_form': group_form,
+        'delivery_classes': get_client_init_delivery_classes(),
     })
 
 
@@ -153,23 +158,26 @@ def send(request, conversation_pk):
         user=request.user)
 
     if request.POST:
-        contact_ids = request.POST.getlist('contact')
-        contacts = Contact.objects.filter(pk__in=contact_ids)
-        for contact in contacts:
-            conversation.previewcontacts.add(contact)
         try:
-            conversation.send_preview()
+            conversation.send_messages()
         except ConversationSendError as error:
             messages.add_message(request, messages.ERROR, str(error))
             return redirect(reverse('conversations:send', kwargs={
                 'conversation_pk': conversation.pk}))
-        messages.add_message(request, messages.INFO, 'Previews sent')
-        return redirect(reverse('conversations:start', kwargs={
-            'conversation_pk': conversation.pk}), {
-            'contacts': contacts,
-        })
+        messages.add_message(request, messages.INFO, 'Conversation started')
+        return redirect(reverse('conversations:show', kwargs={
+            'conversation_pk': conversation.pk}))
+
+    conversation_form = make_read_only_form(BulkSendConversationForm(
+                                                instance=conversation))
+    group_form = make_read_only_form(ConversationGroupForm(initial={
+        'groups': conversation.groups.all()
+    }))
+
     return render(request, 'conversation/send.html', {
         'conversation': conversation,
+        'conversation_form': conversation_form,
+        'group_form': group_form,
     })
 
 
