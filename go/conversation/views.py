@@ -157,7 +157,7 @@ def send(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
         user=request.user)
 
-    if request.POST:
+    if request.method == 'POST':
         try:
             conversation.send_messages()
         except ConversationSendError as error:
