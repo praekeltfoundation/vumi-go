@@ -24,9 +24,11 @@ class TestBulkSendApplication(ApplicationTestCase):
             'redis_cls': lambda **kw: self._fake_redis,
             })
 
+    @inlineCallbacks
     def tearDown(self):
         self._fake_redis.teardown()
-        super(TestBulkSendApplication, self).tearDown()
+        yield self.api.manager.purge_all()
+        yield super(TestBulkSendApplication, self).tearDown()
 
     def publish_command(self, cmd):
         return self.dispatch(cmd, rkey='%s.control' % (
@@ -60,7 +62,7 @@ class TestBulkSendApplication(ApplicationTestCase):
         ack_event = yield self.publish_event(user_message_id='123',
                                              event_type='ack',
                                              sent_message_id='xyz')
-        [event_id] = self.api.store.message_events('123')
+        [event_id] = yield self.api.store.message_events('123')
         self.assertEqual(self.api.store.get_event(event_id), ack_event)
 
     @inlineCallbacks
@@ -68,7 +70,7 @@ class TestBulkSendApplication(ApplicationTestCase):
         dr_event = yield self.publish_event(user_message_id='123',
                                             event_type='delivery_report',
                                             delivery_status='delivered')
-        [event_id] = self.api.store.message_events('123')
+        [event_id] = yield self.api.store.message_events('123')
         self.assertEqual(self.api.store.get_event(event_id), dr_event)
 
     @inlineCallbacks
@@ -82,5 +84,5 @@ class TestBulkSendApplication(ApplicationTestCase):
     def test_close_session(self):
         msg = self.mkmsg_in(session_event=TransportUserMessage.SESSION_CLOSE)
         yield self.dispatch(msg)
-        self.assertEqual(self.api.store.get_inbound_message(msg['message_id']),
-                         msg)
+        dbmsg = yield self.api.store.get_inbound_message(msg['message_id'])
+        self.assertEqual(dbmsg, msg)
