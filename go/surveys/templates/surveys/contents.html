@@ -30,6 +30,10 @@
         <div class="span4">
             <div class="box shadow survey-box conv-disabled">
                 <h3>1. Survey Details</h3>
+                <br>
+                <fieldset>
+                    {% include "surveys/includes/new.html" with form=survey_form %}
+                </fieldset>
             </div>
         </div>
         <div class="span4">
@@ -37,8 +41,8 @@
                 <h3>2. Survey Setup</h3>
                 <br>
                 <fieldset>
-                    {{form.errors}}
                     {% for field in form.visible_fields %}
+                    {{ field.errors }}
                     <div class="control-group">
                         <label class="control-label">{{field.label}}</label>
                         <div class="controls">
@@ -48,7 +52,7 @@
                     </div>
                     {% endfor %}
                     <div class="btn-toolbar">
-                        <input type="submit" name="_save_contents" value="Update Contents" class="btn" />
+                        <input type="submit" name="_save_contents" value="Update Contents" class="btn btn-primary" />
                     </div>
                 </fieldset>
             </div>

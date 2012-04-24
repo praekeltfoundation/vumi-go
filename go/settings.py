@@ -216,6 +216,7 @@ VXPOLLS_CONFIG = yaml.load(open(VXPOLLS_CONFIG_PATH, 'r'))
 VXPOLLS_QUESTIONS = VXPOLLS_CONFIG.get('questions', [])
 VXPOLLS_POLL_ID = VXPOLLS_CONFIG.get('poll_id')
 VXPOLLS_TRANSPORT_NAME = 'vxpolls_transport'
+VXPOLLS_WORKER_NAME = 'vxpolls_worker'
 
 
 if os.environ.get('VUMIGO_FAST_TESTS'):
