@@ -7,9 +7,11 @@ from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
 
-from go.conversation.models import Conversation, ConversationSendError
+from go.conversation.models import (Conversation, ConversationSendError,
+                                    get_combined_delivery_classes)
 from go.conversation.forms import ConversationForm, SelectDeliveryClassForm
 from go.contacts.models import ContactGroup
+from go.base.utils import make_read_only_form
 
 from vxpolls.content import forms
 from vxpolls.manager import PollManager
@@ -39,6 +41,7 @@ def new(request):
         })
     return render(request, 'surveys/new.html', {
         'form': form,
+        'delivery_classes': get_combined_delivery_classes(),
     })
 
 
@@ -47,32 +50,28 @@ def contents(request, conversation_pk):
     conversation = get_object_or_404(Conversation, pk=conversation_pk,
         user=request.user)
     poll_id = 'poll-%s' % (conversation.pk,)
-
     pm = PollManager(redis, settings.VXPOLLS_PREFIX)
-    # If this is the first run then load the config
-    # from the settings file.
-    if poll_id not in pm.polls():
-        pm.set(poll_id, settings.VXPOLLS_CONFIG)
 
     config = pm.get_config(poll_id)
     config.update({
         'poll_id': poll_id,
         'transport_name': settings.VXPOLLS_TRANSPORT_NAME,
+        'worker_name': settings.VXPOLLS_WORKER_NAME,
     })
 
-    config.setdefault('survey_completed_response', '')
+    config.setdefault('survey_completed_response',
+                        'Thanks for completing the survey')
 
-    if request.POST:
+    if request.method == 'POST':
         post_data = request.POST.copy()
         post_data.update({
             'poll_id': poll_id,
             'transport_name': settings.VXPOLLS_TRANSPORT_NAME,
+            'worker_name': settings.VXPOLLS_WORKER_NAME,
         })
         form = forms.make_form(data=post_data, initial=config)
         if form.is_valid():
-            uid = pm.set(poll_id, form.export())
-            print 'saved', poll_id, uid
-            print request.POST.get('_save_contents')
+            pm.set(poll_id, form.export())
             if request.POST.get('_save_contents'):
                 return redirect(reverse('surveys:contents', kwargs={
                     'conversation_pk': conversation.pk,
@@ -83,8 +82,11 @@ def contents(request, conversation_pk):
                 }))
     else:
         form = forms.make_form(data=config, initial=config)
+
+    survey_form = make_read_only_form(ConversationForm(instance=conversation))
     return render(request, 'surveys/contents.html', {
         'form': form,
+        'survey_form': survey_form,
     })
 
 
