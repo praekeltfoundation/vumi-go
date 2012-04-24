@@ -130,30 +130,49 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.conversation.conversation_type = 'survey'
         self.conversation.save()
 
-        def search_type(conversation_type):
+        def search(conversation_type):
             return self.client.get(reverse('conversations:index'), {
                 'query': self.conversation.subject,
                 'conversation_type': conversation_type,
                 })
 
-        self.assertNotContains(search_type('bulk_message'),
+        self.assertNotContains(search('bulk_message'),
                 self.conversation.message)
-        self.assertContains(search_type('survey'),
+        self.assertContains(search('survey'),
                 self.conversation.message)
 
     def test_index_search_on_status(self):
-        self.conversation.conversation_type = 'survey'
-        self.conversation.save()
 
-        def search_type(conversation_type):
+        def search(conversation_status):
             return self.client.get(reverse('conversations:index'), {
                 'query': self.conversation.subject,
-                'conversation_type': conversation_type,
+                'conversation_status': conversation_status,
                 })
 
-        self.assertNotContains(search_type('bulk_message'),
+        # it should be draft
+        self.assertContains(search('draft'),
                 self.conversation.message)
-        self.assertContains(search_type('survey'),
+        self.assertNotContains(search('running'),
+                self.conversation.message)
+        self.assertNotContains(search('finished'),
+                self.conversation.message)
+
+        # now it should be running
+        self.conversation.send_messages()
+        self.assertNotContains(search('draft'),
+                self.conversation.message)
+        self.assertContains(search('running'),
+                self.conversation.message)
+        self.assertNotContains(search('finished'),
+                self.conversation.message)
+
+        # now it shouldn't be
+        self.conversation.end_conversation()
+        self.assertNotContains(search('draft'),
+                self.conversation.message)
+        self.assertNotContains(search('running'),
+                self.conversation.message)
+        self.assertContains(search('finished'),
                 self.conversation.message)
 
     def test_contacts_upload(self):
