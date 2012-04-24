@@ -48,6 +48,24 @@ class ConversationGroupForm(forms.Form):
             queryset=ContactGroup.objects.all(),
             widget=forms.CheckboxSelectMultiple)
 
+class ConversationSearchForm(forms.Form):
+    query = forms.CharField(required=False, widget=forms.TextInput(attrs={
+        'class': 'input-xlarge',
+        'id': 'search-filter-input',
+        'placeholder': 'Search conversations...',
+        }))
+    conversation_type = forms.ChoiceField(required=False,
+        choices=([('', 'Type ...')] + models.CONVERSATION_TYPES),
+        widget=forms.Select(attrs={'class': 'input-small'}))
+    conversation_status = forms.ChoiceField(required=False,
+        choices=[
+            ('', 'Status ...'),
+            ('running', 'Running'),
+            ('finished', 'Finished'),
+            ('draft', 'Draft'),
+        ],
+        widget=forms.Select(attrs={'class': 'input-small'}))
+
 class SelectDeliveryClassForm(forms.Form):
     delivery_class = forms.ChoiceField(
                         choices=models.get_combined_delivery_classes())

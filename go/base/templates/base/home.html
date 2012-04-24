@@ -8,7 +8,7 @@
 	            <div id="welcome">
 	                <div class="pull-right start-button shadow">
 	                <h1><a data-toggle="modal" href="#newConv" tite="New Conversation"><i class="icon-plus"></i></a></h1></div>
-	                <h1>Hi Gustav, here are some of your newest conversations.</h1>
+	                <h1>Hi {{user_profile}}, here are some of your newest conversations.</h1>
 	                {# TODO add user counter / user activity metrics #}
 	            </div>
 	        </div>
@@ -33,7 +33,6 @@
                         <option value="1">All Status</option>
                         <option value="2">Running</option>
                         <option value="3">Finished</option>
-                        <option value="4">Paused</option>
                         <option value="4">Draft</option>
                     </select>
 		            <button type="submit" class="btn" id="search-filter-btn">Search</button>
@@ -46,7 +45,7 @@
                 {% if forloop.counter|divisibleby:"3" %}
                     </div>
                     <div class="row">
-                {% endif %}    
+                {% endif %}
             {% endfor %}
 	    </div>
     {% else %}
@@ -61,7 +60,5 @@
 	        </div>
 	    </div>
     {% endif %}
-    
     {% include "base/includes/pagination.html" %}
-
 {% endblock %}

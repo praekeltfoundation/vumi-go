@@ -7,7 +7,8 @@ from django.conf import settings
 from go.conversation.models import (Conversation, ConversationSendError,
                                     get_client_init_delivery_classes)
 from go.conversation.forms import (ConversationForm, SelectDeliveryClassForm,
-                            BulkSendConversationForm, ConversationGroupForm)
+                            BulkSendConversationForm, ConversationGroupForm,
+                            ConversationSearchForm)
 from go.contacts.forms import (NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
 from go.contacts.models import Contact, ContactGroup
@@ -223,11 +224,33 @@ def end(request, conversation_pk):
 @login_required
 def index(request):
     conversations = request.user.conversation_set.all()
-    query = request.GET.get('q', '')
+    search_form = ConversationSearchForm(request.GET)
+    search_form.is_valid()
+
+    query = search_form.cleaned_data['query']
+    conversation_type = search_form.cleaned_data['conversation_type']
+    conversation_status = search_form.cleaned_data['conversation_status']
+
     if query:
         conversations = conversations.filter(subject__icontains=query)
+
+    if conversation_type:
+        conversations = conversations.filter(conversation_type=conversation_type)
+
+    if conversation_status:
+        status_map = {
+            'running': lambda c: c.filter(end_time__isnull=True),
+            'finished': lambda c: c.filter(end_time__isnull=False),
+            'draft': lambda c: c.filter(end_time__isnull=True,
+                message_batch_set__isnull=True)
+        }
+
+        filter_cb = status_map.get(conversation_status, lambda c: c)
+        conversations = filter_cb(conversations)
+
     if conversations.count() < CONVERSATIONS_PER_PAGE:
         conversations = padded_queryset(conversations, CONVERSATIONS_PER_PAGE)
+
     paginator = Paginator(conversations, CONVERSATIONS_PER_PAGE)
     page = paginator.page(request.GET.get('p', 1))
     return render(request, 'conversation/index.html', {
@@ -235,4 +258,5 @@ def index(request):
         'paginator': paginator,
         'page': page,
         'query': query,
+        'search_form': search_form,
     })

@@ -57,10 +57,10 @@ def get_client_init_delivery_classes():
         ]),
     ]
 
-CONVERSATION_TYPES = (
+CONVERSATION_TYPES = [
     ('bulk_message', 'Send Bulk SMS and track replies'),
     ('survey', 'Interactive Survey'),
-)
+]
 
 
 class Conversation(models.Model):
@@ -125,8 +125,10 @@ class Conversation(models.Model):
         vumiapi = self.vumi_api()
         batch = self.message_batch_set.latest('pk')
         status = vumiapi.mdb.batch_status(batch.batch_id)
+        total = self.people().count()
         status.update({
-            'total': self.people().count()
+            'total': total,
+            'queued': total - status['sent'],
         })
         return status
 
