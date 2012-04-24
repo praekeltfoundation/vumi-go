@@ -51,8 +51,16 @@ class ConversationTestCase(TestCase):
             'message': 'the message',
             'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
             'start_time': datetime.utcnow().strftime('%H:%M'),
+            'delivery_class': 'sms',
+            'delivery_tag_pool': 'longcode',
         })
         self.assertEqual(Conversation.objects.count(), 2)
+        conversation = Conversation.objects.latest()
+        self.assertEqual(conversation.delivery_class, 'sms')
+        self.assertEqual(conversation.delivery_tag_pool, 'longcode')
+        self.assertRedirects(response, reverse('conversations:people', kwargs={
+            'conversation_pk': conversation.pk,
+        }))
 
 
 class ContactGroupForm(TestCase, CeleryTestMixIn):
