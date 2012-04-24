@@ -19,6 +19,15 @@ class ConversationForm(forms.ModelForm):
         attrs={'class': 'input-medium'},
         choices=[(tpn, tpn) for tpn in models.get_tag_pool_names()]))
 
+    def delivery_class_widgets(self):
+        # Backported hack from Django 1.4 to allow me to iterate
+        # over RadioInputs. Django 1.4 isn't happy yet with our nose tests
+        # and twisted setup.
+        field = self['delivery_class']
+        for widget in field.field.widget.get_renderer(field.html_name,
+                                                        field.value()):
+            yield widget
+
     class Meta:
         model = models.Conversation
         fields = (
