@@ -101,6 +101,10 @@ class Conversation(models.Model):
         batch.preview_batch = self
         batch.save()
 
+    def is_client_initiated(self):
+        return (self.delivery_class not in
+                    get_server_init_delivery_class_names())
+
     def preview_status(self):
         batches = self.preview_batch_set.all()
         messages = self._get_messages(self.delivery_class, batches)
@@ -122,18 +126,34 @@ class Conversation(models.Model):
         return sorted(contacts.items())
 
     def get_status(self):
+        if self.ended():
+            return 'finished'
+        elif self.message_batch_set.exists():
+            return 'running'
+        else:
+            return 'draft'
+
+    def get_progress_status(self):
+        default = {
+            'total': 0,
+            'queued': 0,
+            'ack': 0,
+            'sent': 0,
+            'delivery_report': 0,
+        }
+
         vumiapi = self.vumi_api()
         batch = self.message_batch_set.latest('pk')
-        status = vumiapi.mdb.batch_status(batch.batch_id)
+        default.update(vumiapi.mdb.batch_status(batch.batch_id))
         total = self.people().count()
-        status.update({
+        default.update({
             'total': total,
-            'queued': total - status['sent'],
+            'queued': total - default['sent'],
         })
-        return status
+        return default
 
-    def get_progress(self):
-        status = self.get_status()
+    def get_progress_percentage(self):
+        status = self.get_progress_status()
         if self.people().exists():
             return int(status['ack'] / float(status['total'])) * 100
         return 0
@@ -209,6 +229,8 @@ class Conversation(models.Model):
             return "xmpp", "xmpp"
         elif delivery_class == "sms":
             return "longcode", "sms"
+        elif delivery_class == "ussd":
+            return "ussd", "truteq"
         else:
             raise ConversationSendError("Unknown delivery class %r"
                                         % (delivery_class,))

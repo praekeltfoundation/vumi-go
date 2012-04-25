@@ -9,7 +9,7 @@ class Command(BaseCommand):
 
     POOLS = [
         ("longcode", ["default%d" % i for i in range(10001, 10001 + 1000)]),
-        ("xmpp", ["go-%s@vumi.org" % i for i in range(1,6)]),
+        ("xmpp", ["s.dehaan@gmail.com"]),
         ]
 
     POOL_LOOKUP = dict(POOLS)

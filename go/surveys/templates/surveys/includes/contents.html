@@ -1,0 +1,15 @@
+{% for field in form.visible_fields %}
+<div class="control-group">
+    {% with field.name|slice:":11" as group_name %}
+        <label class="control-label">
+            {% ifchanged group_name %}<strong>{% endifchanged %}
+            {{field.label}}
+            {% ifchanged group_name %}</strong>{% endifchanged %}
+        </label>
+        <div class="controls">
+            {{field}}
+            {{field.errors}}
+        </div>
+    {% endwith %}
+</div>
+{% endfor %}
