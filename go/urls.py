@@ -24,7 +24,7 @@ urlpatterns = patterns('',
     url(r'^todo/.*$', 'go.base.views.todo', name='todo'),
 
     # vumi go!
-    url(r'^$', RedirectView.as_view(url='/contacts/', permanent=False,
+    url(r'^$', RedirectView.as_view(url='/conversations/', permanent=False,
                                     query_string=True), name='home'),
     url(r'^conversations/', include('go.conversation.urls',
         namespace='conversations')),

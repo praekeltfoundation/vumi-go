@@ -48,8 +48,8 @@
 	                <td>{{conversation.people.count}}</td>
 	                <td>
 	                   <div class="progress progress-striped active">
-                                <strong>In progress:</strong> {{conversation.get_status.sent}} / {{conversation.get_status.total}}
-                            <div class="bar" style="width: {{conversation.get_progress}}%;"></div>
+                                <strong>In progress:</strong> {{conversation.get_progress_status.sent}} / {{conversation.get_progress_status.total}}
+                            <div class="bar" style="width: {{conversation.get_progress_percentage}}%;"></div>
                         </div>
 	                </td>
                 <tr>

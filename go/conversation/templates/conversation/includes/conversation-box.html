@@ -5,7 +5,7 @@
 	        {% if conversation.ended %}
 	        	<span class="label label-important"><i class="icon-ok-circle icon-white"></i> Finished</span>
 	        {% else %}
-	        	<span class="label label-success"><i class="icon-ok-circle icon-white"></i> Running</span>
+	        	<span class="label label-success"><i class="icon-ok-circle icon-white"></i> {{conversation.get_status|title}}</span>
 	        {% endif %}
 	        <h3><a href="{% url conversations:show conversation_pk=conversation.pk %}">{{conversation.subject}}</a></h3>
 	        <p>{{conversation.message}}</p>
