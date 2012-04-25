@@ -6,16 +6,16 @@ from datetime import datetime
 from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager
-from vumi.persist.fields import Unicode, ManyToMany, Timestamp
+from vumi.persist.fields import Unicode, ManyToMany, ForeignKey, Timestamp
 
-from go.vumitools.model_store import ModelStore
+from go.vumitools.account import UserAccount, PerAccountStore
 
 
 class ContactGroup(Model):
     """A group of contacts"""
     # key is group name
     # name = Unicode(max_length=255)
-    user = Unicode()                    # ForeignKey('auth.User')
+    user_account = ForeignKey(UserAccount)
     created_at = Timestamp(default=datetime.utcnow)
 
     @Manager.calls_manager
@@ -30,7 +30,7 @@ class ContactGroup(Model):
 
 class Contact(Model):
     """A contact"""
-    user = Unicode()                    # ForeignKey('auth.User')
+    user_account = ForeignKey(UserAccount)
     name = Unicode(max_length=255, null=True)
     surname = Unicode(max_length=255, null=True)
     email_address = Unicode(null=True)  # EmailField, blank=True
@@ -42,6 +42,12 @@ class Contact(Model):
     gtalk_id = Unicode(null=True)
     created_at = Timestamp(default=datetime.utcnow)
     groups = ManyToMany(ContactGroup)
+
+    def add_to_group(self, group):
+        if isinstance(group, ContactGroup):
+            self.groups.add(group)
+        else:
+            self.groups.add_key(group)
 
     # TODO: Move this elsewhere
     # @classmethod
@@ -71,7 +77,7 @@ class Contact(Model):
         return u' '.join([self.name, self.surname])
 
 
-class ContactStore(ModelStore):
+class ContactStore(PerAccountStore):
     def setup_proxies(self):
         self.contacts = self.manager.proxy(Contact)
         self.groups = self.manager.proxy(ContactGroup)
@@ -80,14 +86,18 @@ class ContactStore(ModelStore):
     def new_contact(self, name, surname, **fields):
         contact_id = uuid4().get_hex()
         contact = self.contacts(
-            contact_id, user=self.user, name=name, surname=surname,
-            created_at=datetime.utcnow(), **fields)
+            contact_id, user_account=self.user_account, name=name,
+            surname=surname, **fields)
         yield contact.save()
         returnValue(contact)
 
     @Manager.calls_manager
     def new_group(self, name):
-        group = self.groups(name, user=self.user, created_at=datetime.utcnow())
+        existing_group = yield self.groups.load(name)
+        if existing_group is not None:
+            raise ValueError(
+                "A group with this name already exists: %s" % (name,))
+        group = self.groups(name, user_account=self.user_account)
         yield group.save()
         returnValue(group)
 
@@ -98,7 +108,7 @@ class ContactStore(ModelStore):
         return self.groups.load(name)
 
     @Manager.calls_manager
-    def contact_for_addr(self, user, transport_type, addr):
+    def contact_for_addr(self, transport_type, addr):
         # TODO: Implement this.
         pass
         # if transport_type == 'sms':
