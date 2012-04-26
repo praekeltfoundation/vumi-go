@@ -1,5 +1,5 @@
 from django.conf.urls.defaults import patterns, url
-from go.bulk_message import views
+from go.apps.bulk_message import views
 
 urlpatterns = patterns('',
     url(r'^new/', views.new, name='new'),

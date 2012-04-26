@@ -5,7 +5,7 @@ from django.contrib import messages
 from go.conversation.models import (Conversation, ConversationSendError,
                                     get_server_init_delivery_classes)
 from go.conversation.forms import ConversationGroupForm
-from go.bulk_message.forms import BulkSendConversationForm
+from go.apps.bulk_message.forms import BulkSendConversationForm
 from go.contacts.models import ContactGroup
 from go.base.utils import make_read_only_form
 from datetime import datetime
