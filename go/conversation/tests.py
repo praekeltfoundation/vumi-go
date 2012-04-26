@@ -1,32 +1,33 @@
-from django.test import TestCase
+from os import path
+from datetime import datetime
+
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.conf import settings
+
+from vumi.tests.utils import FakeRedis
+from vumi.message import TransportUserMessage
+
+from go.test_utils import VumiGoDjangoTestCase
+from go.vumitools.tests.utils import CeleryTestMixIn, VumiApiCommand
 from go.conversation.models import Conversation
 from go.contacts.models import ContactGroup, Contact
 from go.base.utils import padded_queryset
-from vumi.tests.utils import FakeRedis
-from vumi.message import TransportUserMessage
-from go.vumitools.tests.utils import CeleryTestMixIn, VumiApiCommand
-from datetime import datetime
-from os import path
 
 
 def reload_record(record):
     return record.__class__.objects.get(pk=record.pk)
 
 
-class ConversationTestCase(TestCase):
+class ConversationTestCase(VumiGoDjangoTestCase):
 
     fixtures = ['test_user', 'test_conversation']
 
     def setUp(self):
+        super(ConversationTestCase, self).setUp()
         self.client = Client()
         self.client.login(username='username', password='password')
-
-    def tearDown(self):
-        pass
 
     def test_recent_conversations(self):
         """
@@ -55,11 +56,12 @@ class ConversationTestCase(TestCase):
         self.assertEqual(Conversation.objects.count(), 2)
 
 
-class ContactGroupForm(TestCase, CeleryTestMixIn):
+class ContactGroupForm(VumiGoDjangoTestCase, CeleryTestMixIn):
 
     fixtures = ['test_user', 'test_conversation', 'test_group', 'test_contact']
 
     def setUp(self):
+        super(ContactGroupForm, self).setUp()
         self.setup_api()
         self.declare_longcode_tags()
         self.setup_celery_for_tests()
@@ -72,19 +74,17 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
 
     def tearDown(self):
         self.restore_celery()
+        self._fake_redis.teardown()
+        super(ContactGroupForm, self).tearDown()
 
     def setup_api(self):
         self._fake_redis = FakeRedis()
-        self._old_vumi_api_config = settings.VUMI_API_CONFIG
-        settings.VUMI_API_CONFIG = {
-            'redis_cls': lambda **kws: self._fake_redis,
-            'message_store': {},
-            'message_sender': {},
-            }
-
-    def teardown_api(self):
-        settings.VUMI_API_CONFIG = self._old_vumi_api_config
-        self._fake_redis.teardown()
+        self.patch_setting('VUMI_API_CONFIG', {
+                'redis_cls': lambda **kws: self._fake_redis,
+                'message_store': {},
+                'message_sender': {},
+                'riak_manager': {'bucket_prefix': 'test.'},
+                })
 
     def declare_longcode_tags(self):
         api = Conversation.vumi_api()

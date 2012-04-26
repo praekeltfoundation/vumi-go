@@ -25,6 +25,8 @@ def get_redis(config):
 class VumiApi(object):
 
     def __init__(self, config):
+        config = config.copy()  # So we can modify it.
+        riak_config = config.pop('riak_manager')
         r_server = get_redis(config)
 
         # tagpool manager
@@ -34,7 +36,7 @@ class VumiApi(object):
         # message store
         mdb_config = config.get('message_store', {})
         mdb_prefix = mdb_config.get('store_prefix', 'message_store')
-        self.manager = RiakManager.from_config({'bucket_prefix': mdb_prefix})
+        self.manager = RiakManager.from_config(riak_config)
         self.mdb = MessageStore(self.manager, r_server, mdb_prefix)
         # message sending API
         mapi_config = config.get('message_sender', {})

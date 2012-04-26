@@ -1,23 +1,28 @@
-from django.test import TestCase
+import string
+
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User, Permission
 from django import template
+
+from go.test_utils import VumiGoDjangoTestCase
 from go.base.templatetags import go_tags
 from go.base import utils
-import string
 
 
-class AuthenticationTestCase(TestCase):
+class AuthenticationTestCase(VumiGoDjangoTestCase):
 
     fixtures = ['test_user']
 
     def setUp(self):
+        super(AuthenticationTestCase, self).setUp()
         self.user = User.objects.get(username='username')
         self.client = Client()
 
-    def tearDown(self):
-        pass
+    def test_user_account_created(self):
+        """test that we have a user account"""
+        self.assertEqual('username',
+                         self.user.userprofile.get_user_account().username)
 
     def test_redirect_to_login(self):
         """test the authentication mechanism"""
@@ -44,7 +49,8 @@ class FakeTemplateToken(object):
         self.contents = contents
 
 
-class GoTemplateTagsTestCase(TestCase):
+class GoTemplateTagsTestCase(VumiGoDjangoTestCase):
+    USE_RIAK = False
 
     def test_load_alphabet(self):
 
@@ -63,7 +69,7 @@ class GoTemplateTagsTestCase(TestCase):
             'bogus', FakeTemplateToken('load_alphabet as'))
 
 
-class UtilsTestCase(TestCase):
+class UtilsTestCase(VumiGoDjangoTestCase):
 
     fixtures = ['test_user']
 

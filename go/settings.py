@@ -210,6 +210,7 @@ SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
 VUMI_API_CONFIG = {
     'message_store': {},
     'message_sender': {},
+    'riak_manager': {'bucket_prefix': 'vumigo.'}
     }
 
 VUMI_COUNTRY_CODE = '27'
@@ -221,12 +222,3 @@ VXPOLLS_CONFIG = yaml.load(open(VXPOLLS_CONFIG_PATH, 'r'))
 VXPOLLS_QUESTIONS = VXPOLLS_CONFIG.get('questions', [])
 VXPOLLS_POLL_ID = VXPOLLS_CONFIG.get('poll_id')
 VXPOLLS_TRANSPORT_NAME = 'vxpolls_transport'
-
-
-if os.environ.get('VUMIGO_FAST_TESTS'):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:',
-        }
-    }
