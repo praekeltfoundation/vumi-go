@@ -7,6 +7,7 @@ from go.base.utils import padded_queryset
 
 CONVERSATIONS_PER_PAGE = 6
 
+
 @login_required
 def index(request):
     conversations = request.user.conversation_set.all()
@@ -21,7 +22,8 @@ def index(request):
         conversations = conversations.filter(subject__icontains=query)
 
     if conversation_type:
-        conversations = conversations.filter(conversation_type=conversation_type)
+        conversations = conversations.filter(
+            conversation_type=conversation_type)
 
     if conversation_status:
         status_map = {

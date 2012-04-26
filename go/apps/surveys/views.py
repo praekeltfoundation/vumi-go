@@ -21,7 +21,6 @@ from vxpolls.manager import PollManager
 redis = redis.Redis(**settings.VXPOLLS_REDIS_CONFIG)
 
 
-
 def get_poll_config(poll_id):
     pm = PollManager(redis, settings.VXPOLLS_PREFIX)
     config = pm.get_config(poll_id)
@@ -34,6 +33,7 @@ def get_poll_config(poll_id):
     config.setdefault('survey_completed_response',
                         'Thanks for completing the survey')
     return pm, config
+
 
 @login_required
 def new(request):
