@@ -363,7 +363,7 @@ class Conversation(models.Model):
 
     @models.permalink
     def get_absolute_url(self):
-        return ('%s:show' % (self.conversation_type,), (self.pk,))
+        return ('%ss:show' % (self.conversation_type,), (self.pk,))
 
 
 class MessageBatch(models.Model):

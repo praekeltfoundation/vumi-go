@@ -8,7 +8,6 @@ class Command(BaseCommand):
     help = "Populate messaging tag pools"
 
     POOLS = [
-        ("shortcode", [i for i in range(10001, 1001 + 1000)]),
         ("longcode", ["default%d" % i for i in range(10001, 10001 + 1000)]),
         ("truteq", ["*120*646*4*1*%d#" % i for i in range(0, 100)]),
         ("integrat", ["*120*99*987*10*%d#" % i for i in range(0, 100)]),

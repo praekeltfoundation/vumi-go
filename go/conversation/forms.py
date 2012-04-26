@@ -53,6 +53,11 @@ class BulkSendConversationForm(ConversationForm):
                         in models.get_server_init_tag_pool_names()]))
 
 class ConversationGroupForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        queryset = kwargs.pop('queryset')
+        super(ConversationGroupForm, self).__init__(*args, **kwargs)
+        self.fields['groups'].queryset = queryset
+
     groups = forms.ModelMultipleChoiceField(
             queryset=ContactGroup.objects.all(),
             widget=forms.CheckboxSelectMultiple)

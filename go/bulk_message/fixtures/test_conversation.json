@@ -1,0 +1,17 @@
+[{
+    "pk": 1,
+    "model": "conversation.Conversation",
+    "fields": {
+        "user": 1,
+        "subject": "Test Conversation",
+        "message": "Test message",
+        "start_date": "2011-08-26",
+        "start_time": "06:10",
+        "created_at": "2011-08-26 06:10",
+        "updated_at": "2011-08-26 06:10",
+        "delivery_class": "sms",
+        "delivery_tag_pool": "longcode",
+        "groups": [1],
+        "previewcontacts": [1]
+    }
+}]
