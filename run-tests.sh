@@ -28,7 +28,7 @@ else
 fi
 
 find ./go -name '*.pyc' -delete && \
-./go-admin.sh test --nocapture --with-coverage --cover-package=go --with-xunit && \
+./go-admin.sh test --settings=go.testsettings --nocapture --with-coverage --cover-package=go --with-xunit && \
 coverage run ve/bin/trial go/vumitools/ && \
 coverage xml --include="go/*" && \
 coverage html --include="go/*" && \

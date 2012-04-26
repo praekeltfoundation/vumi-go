@@ -18,7 +18,8 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
         self.setup_celery_for_tests()
         self.r_server = FakeRedis()
         self.api = VumiApi({
-            'redis_cls': lambda **config: self.r_server
+            'redis_cls': lambda **config: self.r_server,
+            'riak_manager': {'bucket_prefix': 'test.'},
             })
 
     def tearDown(self):
