@@ -25,17 +25,17 @@
 <body>
 
 	<!--[if lt IE 7]><p class=chromeframe>Your browser is <em>ancient!</em> <a href="http://browsehappy.com/">Upgrade to a different browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">install Google Chrome Frame</a> to experience this site.</p><![endif]-->
-	    
+
 	{% block header %}{% endblock %}
-	    
+
 	<div class="container">
-	 
+
 	    {% block content %}{% endblock %}
-	    
-	    {% block modals %}{% endblock %} 
-	    
+
+	    {% block modals %}{% endblock %}
+
 	    {% block footer %}{% endblock %}
-	    
+
 	</div><!--/container-->
 
 	<div class="modal hide fade" id="newConv">
@@ -47,8 +47,8 @@
 			<div class="modal-body">
 			    <select id="convtype" class="required">
 			        <option value="" selected="selected">Please choose</option>
-			        <option value="{% url conversations:new %}">Bulk SMS</option>
-			        <option value="{% url surveys:new %}">Survey</option>
+			        <option value="{% url bulk_message:new %}">Bulk SMS</option>
+			        <option value="{% url survey:new %}">Survey</option>
 			    </select>
 			</div>
 			<div class="modal-footer">
@@ -57,7 +57,7 @@
 			</div>
 		</form>
 	</div><!--/newConversation-->
-	
+
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
 	<script>window.jQuery || document.write('<script src="{{ STATIC_URL }}js/libs/jquery-1.7.1.min.js"><\/script>')</script>
 	<script src="{{ STATIC_URL }}js/libs/bootstrap/tooltip.js"></script>

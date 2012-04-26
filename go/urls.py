@@ -26,10 +26,13 @@ urlpatterns = patterns('',
     # vumi go!
     url(r'^$', RedirectView.as_view(url='/conversations/', permanent=False,
                                     query_string=True), name='home'),
-    url(r'^conversations/', include('go.conversation.urls',
-        namespace='conversations')),
+    url(r'^conversations/survey/',
+        include('go.surveys.urls', namespace='survey')),
+    url(r'^conversations/bulk_message/',
+        include('go.bulk_message.urls', namespace='bulk_message')),
+    url(r'^conversations/',
+        include('go.conversation.urls', namespace='conversations')),
     url(r'^contacts/', include('go.contacts.urls', namespace='contacts')),
-    url(r'^surveys/', include('go.surveys.urls', namespace='surveys')),
     url(r'^', include('vxpolls.urls')),
 )
 

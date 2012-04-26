@@ -46,7 +46,7 @@ def new(request):
             conversation.save()
             messages.add_message(request, messages.INFO,
                 'Survey Created')
-            return redirect(reverse('surveys:contents',
+            return redirect(reverse('survey:contents',
                 kwargs={'conversation_pk': conversation.pk}))
 
     else:
@@ -78,11 +78,11 @@ def contents(request, conversation_pk):
         if form.is_valid():
             pm.set(poll_id, form.export())
             if request.POST.get('_save_contents'):
-                return redirect(reverse('surveys:contents', kwargs={
+                return redirect(reverse('survey:contents', kwargs={
                     'conversation_pk': conversation.pk,
                 }))
             else:
-                return redirect(reverse('surveys:people', kwargs={
+                return redirect(reverse('survey:people', kwargs={
                     'conversation_pk': conversation.pk,
                 }))
     else:
@@ -117,10 +117,13 @@ def people(request, conversation_pk):
                                 'delivery_class': conversation.delivery_class,
                             }
                 messages.add_message(request, messages.ERROR, str(error))
-                return redirect(reverse('surveys:people', kwargs={
+                return redirect(reverse('survey:people', kwargs={
                     'conversation_pk': conversation.pk}))
-            messages.add_message(request, messages.INFO, 'Survey started')
-            return redirect(reverse('surveys:show', kwargs={
+
+            addresses = [tag[1] for tag in conversation.get_tags()]
+            messages.add_message(request, messages.INFO,
+                'Survey started on %s' % (', '.join(addresses),))
+            return redirect(reverse('survey:show', kwargs={
                 'conversation_pk': conversation.pk}))
         else:
             group_form = ConversationGroupForm(request.POST)
@@ -132,7 +135,7 @@ def people(request, conversation_pk):
                 conversation.groups.add(*group_ids)
                 messages.add_message(request, messages.INFO,
                     'The selected groups have been added to the survey')
-                return redirect(reverse('surveys:start', kwargs={
+                return redirect(reverse('survey:start', kwargs={
                                     'conversation_pk': conversation.pk}))
 
     survey_form = make_read_only_form(ConversationForm(instance=conversation))
@@ -155,10 +158,10 @@ def start(request, conversation_pk):
             conversation.start_survey()
         except ConversationSendError as error:
             messages.add_message(request, messages.ERROR, str(error))
-            return redirect(reverse('surveys:start', kwargs={
+            return redirect(reverse('survey:start', kwargs={
                 'conversation_pk': conversation.pk}))
         messages.add_message(request, messages.INFO, 'Survey started')
-        return redirect(reverse('surveys:show', kwargs={
+        return redirect(reverse('survey:show', kwargs={
             'conversation_pk': conversation.pk}))
     return render(request, 'surveys/start.html', {
         'conversation': conversation,
@@ -172,7 +175,7 @@ def end(request, conversation_pk):
     if request.method == 'POST':
         conversation.end_conversation()
         messages.add_message(request, messages.INFO, 'Survey ended')
-    return redirect(reverse('surveys:show', kwargs={
+    return redirect(reverse('survey:show', kwargs={
         'conversation_pk': conversation.pk}))
 
 
