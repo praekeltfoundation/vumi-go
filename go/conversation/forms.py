@@ -14,7 +14,7 @@ class ConversationForm(forms.ModelForm):
         attrs={'id': 'timepicker_1', 'class': 'txtbox txtbox-date'}))
     delivery_class = forms.CharField(required=True, widget=forms.RadioSelect(
         attrs={'class': 'delivery-class-radio'},
-        choices=[(dc,dc) for dc in models.get_delivery_class_names()]))
+        choices=[(dc, dc) for dc in models.get_delivery_class_names()]))
     delivery_tag_pool = forms.CharField(required=True, widget=forms.Select(
         attrs={'class': 'input-medium'},
         choices=[(tpn, tpn) for tpn in models.get_tag_pool_names()]))
@@ -39,18 +39,20 @@ class ConversationForm(forms.ModelForm):
             'delivery_tag_pool',
         )
 
+
 class BulkSendConversationForm(ConversationForm):
     """Same as the ConversationForm with the only difference being that
     this only only allows for delivery classes that allow for server
     initiated conversations."""
     delivery_class = forms.CharField(required=True, widget=forms.RadioSelect(
         attrs={'class': 'delivery-class-radio'},
-        choices=[(dc,dc) for dc
+        choices=[(dc, dc) for dc
                     in models.get_server_init_delivery_class_names()]))
     delivery_tag_pool = forms.CharField(required=True, widget=forms.Select(
         attrs={'class': 'input-medium'},
         choices=[(tpn, tpn) for tpn
                         in models.get_server_init_tag_pool_names()]))
+
 
 class ConversationGroupForm(forms.Form):
     def __init__(self, *args, **kwargs):
@@ -61,6 +63,7 @@ class ConversationGroupForm(forms.Form):
     groups = forms.ModelMultipleChoiceField(
             queryset=ContactGroup.objects.all(),
             widget=forms.CheckboxSelectMultiple)
+
 
 class ConversationSearchForm(forms.Form):
     query = forms.CharField(required=False, widget=forms.TextInput(attrs={
@@ -79,6 +82,7 @@ class ConversationSearchForm(forms.Form):
             ('draft', 'Draft'),
         ],
         widget=forms.Select(attrs={'class': 'input-small'}))
+
 
 class SelectDeliveryClassForm(forms.Form):
     delivery_class = forms.ChoiceField(

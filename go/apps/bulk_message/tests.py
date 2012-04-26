@@ -1,64 +1,31 @@
-from django.test import TestCase
+from datetime import datetime
+
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
-from django.conf import settings
+
 from go.conversation.models import Conversation
-from go.contacts.models import ContactGroup, Contact
-from go.base.utils import padded_queryset
-from go.base.tests.utils import override_settings
-from vumi.tests.utils import FakeRedis
-from vumi.message import TransportUserMessage
-from go.vumitools.tests.utils import CeleryTestMixIn, VumiApiCommand
-from datetime import datetime
-from os import path
+from go.contacts.models import ContactGroup
+from go.vumitools.tests.utils import VumiApiCommand
+from go.apps.tests.base import DjangoGoApplicationTestCase
 
 
 def reload_record(record):
     return record.__class__.objects.get(pk=record.pk)
 
 
-class BulkMessageTestCase(TestCase, CeleryTestMixIn):
+class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
     fixtures = ['test_user', 'test_conversation',
                     'test_group', 'test_contact']
 
     def setUp(self):
-        self.setup_api()
-        self.declare_longcode_tags()
-        self.setup_celery_for_tests()
-
+        super(BulkMessageTestCase, self).setUp()
         self.client = Client()
         self.client.login(username='username', password='password')
 
         self.user = User.objects.get(username='username')
         self.conversation = self.user.conversation_set.latest()
-
-    def tearDown(self):
-        self.teardown_api()
-
-    def setup_api(self):
-        self._fake_redis = FakeRedis()
-        self._old_vumi_api_config = settings.VUMI_API_CONFIG
-        settings.VUMI_API_CONFIG = {
-            'redis_cls': lambda **kws: self._fake_redis,
-            'message_store': {},
-            'message_sender': {},
-            }
-
-    def teardown_api(self):
-        settings.VUMI_API_CONFIG = self._old_vumi_api_config
-        self._fake_redis.teardown()
-
-    def declare_longcode_tags(self):
-        api = Conversation.vumi_api()
-        api.declare_tags([("longcode", "default%s" % i) for i
-                          in range(10001, 10001 + 4)])
-
-    def acquire_all_longcode_tags(self):
-        api = Conversation.vumi_api()
-        for _i in range(4):
-            api.acquire_tag("longcode")
 
     def test_new_conversation(self):
         """test the creation of a new conversation"""
@@ -103,7 +70,6 @@ class BulkMessageTestCase(TestCase, CeleryTestMixIn):
         response = self.client.post(reverse('bulk_message:people',
             kwargs={'conversation_pk': self.conversation.pk}), {
             'groups': [grp.pk for grp in ContactGroup.objects.all()],
-            'delivery_class': 'shortcode',
         })
         self.assertRedirects(response, reverse('bulk_message:send', kwargs={
             'conversation_pk': self.conversation.pk}))
@@ -112,15 +78,12 @@ class BulkMessageTestCase(TestCase, CeleryTestMixIn):
         """
         Test the start conversation view
         """
-        consumer = self.get_cmd_consumer()
-        # print 'consumer', consumer
 
         response = self.client.post(reverse('bulk_message:send', kwargs={
             'conversation_pk': self.conversation.pk}))
         self.assertRedirects(response, reverse('bulk_message:show', kwargs={
             'conversation_pk': self.conversation.pk}))
 
-        [cmd] = self.fetch_cmds(consumer)
         [batch] = self.conversation.message_batch_set.all()
         [contact] = self.conversation.people()
         conversation = self.conversation
@@ -131,6 +94,8 @@ class BulkMessageTestCase(TestCase, CeleryTestMixIn):
                        "conversation_id": conversation.pk,
                        "conversation_type": conversation.conversation_type,
                        }
+
+        [cmd] = self.get_api_commands_sent()
         self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
                                                   "Test message",
                                                   msg_options,
@@ -159,4 +124,3 @@ class BulkMessageTestCase(TestCase, CeleryTestMixIn):
             'conversation_pk': self.conversation.pk}))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.subject, 'Test Conversation')
-

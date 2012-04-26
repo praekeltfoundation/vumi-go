@@ -19,6 +19,7 @@ def get_tag_pool_names():
             pool_names.append(tag_pool)
     return pool_names
 
+
 def get_server_init_tag_pool_names():
     pool_names = []
     for delivery_class, tag_pools in get_server_init_delivery_classes():
@@ -26,17 +27,21 @@ def get_server_init_tag_pool_names():
             pool_names.append(tag_pool)
     return pool_names
 
+
 def get_delivery_class_names():
     return [delivery_class for delivery_class, tag_pools
                 in get_combined_delivery_classes()]
+
 
 def get_combined_delivery_classes():
     return (get_client_init_delivery_classes() +
                 get_server_init_delivery_classes())
 
+
 def get_server_init_delivery_class_names():
     return [delivery_class for delivery_class, tag_pools
                 in get_server_init_delivery_classes()]
+
 
 def get_server_init_delivery_classes():
     return [
@@ -49,6 +54,7 @@ def get_server_init_delivery_classes():
         ])
     ]
 
+
 def get_client_init_delivery_classes():
     return [
         ('ussd', [
@@ -56,6 +62,7 @@ def get_client_init_delivery_classes():
             ('integrat', '*120*99*987*10*...#'),
         ]),
     ]
+
 
 CONVERSATION_TYPES = [
     ('bulk_message', 'Send Bulk SMS and track replies'),
@@ -66,6 +73,7 @@ CONVERSATION_TYPES = [
 CONVERSATION_DRAFT = 'draft'
 CONVERSATION_RUNNING = 'running'
 CONVERSATION_FINISHED = 'finished'
+
 
 class Conversation(models.Model):
     """A conversation with an audience"""

@@ -2,6 +2,7 @@ from __future__ import with_statement
 from django.conf import settings, UserSettingsHolder
 from django.utils.functional import wraps
 
+
 class override_settings(object):
     """
     Acts as either a decorator, or a context manager.  If it's a decorator it

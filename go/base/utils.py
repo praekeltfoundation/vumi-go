@@ -1,5 +1,6 @@
 from django import forms
 
+
 def padded_queryset(queryset, size=6, padding=None):
     nr_of_results = queryset.count()
     if nr_of_results >= size:
@@ -9,6 +10,7 @@ def padded_queryset(queryset, size=6, padding=None):
     results = list(queryset)
     results.extend(filler)
     return results
+
 
 def make_read_only_form(form):
     """turn all fields in a form readonly"""
@@ -24,4 +26,3 @@ def make_read_only_form(form):
                 'readonly': 'readonly'
             })
     return form
-
