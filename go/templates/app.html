@@ -14,11 +14,10 @@
 	        <ul class="nav">
 	            <li><a href="{% url conversations:index %}">Conversations</a></li>
 	            <li><a href="{% url contacts:people %}">People</a></li>
-	            <li><a href="{% url todo %}apps.html">Apps</a></li> 
 	            <li><a href="#newConv" class="start" data-toggle="modal">New Conversation</a></li>
 	        </ul>
-	        <form id="search-form" name="search-form" action="{% url todo %}search-results.html" method="post" class="navbar-search pull-right">
-	            <input type="text" placeholder="Search" class="search-query" />
+	        <form id="search-form" name="search-form" action="{% url conversations:index %}" method="get" class="navbar-search pull-right">
+	            <input type="text" placeholder="Search" name="query" class="search-query" />
 	        </form>
 	        <ul class="nav pull-right">
 	            <li><a href="{% url todo %}help.html">Help</a></li>
