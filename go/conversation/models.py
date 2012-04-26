@@ -284,7 +284,6 @@ class Conversation(models.Model):
                                         " no more messages may be sent.")
         vumiapi = self.vumi_api()
         tagpool, transport_type = self.delivery_info(delivery_class)
-        print 'getting for', tagpool, transport_type
         addrs = [contact.addr_for(transport_type) for contact in contacts]
         addrs = [addr for addr in addrs if addr]
         tag = vumiapi.acquire_tag(tagpool)

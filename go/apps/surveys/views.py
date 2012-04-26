@@ -126,7 +126,8 @@ def people(request, conversation_pk):
             return redirect(reverse('survey:show', kwargs={
                 'conversation_pk': conversation.pk}))
         else:
-            group_form = ConversationGroupForm(request.POST)
+            group_form = ConversationGroupForm(request.POST,
+                                                queryset=groups_for_user)
             group_form.fields['groups'].queryset = groups_for_user
 
             if group_form.is_valid():

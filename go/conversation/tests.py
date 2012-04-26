@@ -39,29 +39,6 @@ class ConversationTestCase(TestCase):
         self.assertEqual(len(conversations), 10)
         self.assertEqual(len(filter(lambda v: v is not '', conversations)), 1)
 
-    def test_new_conversation(self):
-        """test the creation of a new conversation"""
-        # render the form
-        self.assertEqual(Conversation.objects.count(), 1)
-        response = self.client.get(reverse('conversations:new'))
-        self.assertEqual(response.status_code, 200)
-        # post the form
-        response = self.client.post(reverse('conversations:new'), {
-            'subject': 'the subject',
-            'message': 'the message',
-            'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
-            'start_time': datetime.utcnow().strftime('%H:%M'),
-            'delivery_class': 'sms',
-            'delivery_tag_pool': 'longcode',
-        })
-        self.assertEqual(Conversation.objects.count(), 2)
-        conversation = Conversation.objects.latest()
-        self.assertEqual(conversation.delivery_class, 'sms')
-        self.assertEqual(conversation.delivery_tag_pool, 'longcode')
-        self.assertRedirects(response, reverse('conversations:people', kwargs={
-            'conversation_pk': conversation.pk,
-        }))
-
 
 class ContactGroupForm(TestCase, CeleryTestMixIn):
 
@@ -98,22 +75,6 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         api = Conversation.vumi_api()
         api.declare_tags([("longcode", "default%s" % i) for i
                           in range(10001, 10001 + 4)])
-
-    def acquire_all_longcode_tags(self):
-        api = Conversation.vumi_api()
-        for _i in range(4):
-            api.acquire_tag("longcode")
-
-    def test_group_selection(self):
-        """Select an existing group and use that as the group for the
-        conversation"""
-        response = self.client.post(reverse('conversations:people',
-            kwargs={'conversation_pk': self.conversation.pk}), {
-            'groups': [grp.pk for grp in ContactGroup.objects.all()],
-            'delivery_class': 'shortcode',
-        })
-        self.assertRedirects(response, reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk}))
 
     def test_index(self):
         """Display all conversations"""
@@ -175,106 +136,6 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.assertContains(search('finished'),
                 self.conversation.message)
 
-    def test_contacts_upload(self):
-        """test uploading of contacts via CSV file"""
-        self.assertEqual(ContactGroup.objects.count(), 1)
-        response = self.client.post(reverse('conversations:upload',
-            kwargs={'conversation_pk': self.conversation.pk}), {
-            'name': 'Unit Test Group',
-            'file': self.csv_file,
-            'delivery_class': 'xmpp',
-        })
-        self.assertRedirects(response, reverse('conversations:send',
-            kwargs={'conversation_pk': self.conversation.pk}))
-        group = ContactGroup.objects.latest()
-        self.assertEqual(ContactGroup.objects.count(), 2)
-        self.assertEqual(group.name, 'Unit Test Group')
-        contacts = Contact.objects.filter(groups=group)
-        self.assertEquals(contacts.count(), 3)
-        for idx, contact in enumerate(contacts, start=1):
-            self.assertTrue(contact.name, 'Name %s' % idx)
-            self.assertTrue(contact.surname, 'Surname %s' % idx)
-            self.assertTrue(contact.msisdn.startswith('+2776123456%s' % idx))
-            self.assertIn(contact, group.contact_set.all())
-        self.assertIn(group, self.conversation.groups.all())
-
-    def test_contacts_upload_to_existing_group(self):
-        """It should be able to upload new contacts to an existing group"""
-        group = ContactGroup.objects.latest()
-        group.contact_set.clear()
-        response = self.client.post(reverse('conversations:upload',
-            kwargs={'conversation_pk': self.conversation.pk}), {
-            'contact_group': group.pk,
-            'file': self.csv_file,
-            'delivery_class': 'xmpp',
-        })
-        self.assertRedirects(response, reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        contacts = Contact.objects.filter(groups=group)
-        self.assertEqual(contacts.count(), 3)
-        self.assertIn(group, self.conversation.groups.all())
-
-    def test_priority_of_name_over_select_group_creation(self):
-        """Selected existing groups takes priority over creating
-        new groups"""
-        group = ContactGroup.objects.create(user=self.user, name='Test Group')
-        response = self.client.post(reverse('conversations:upload',
-            kwargs={'conversation_pk': self.conversation.pk}), {
-            'name': 'Name of Group',
-            'contact_group': group.pk,
-            'file': self.csv_file,
-            'delivery_class': 'xmpp',
-        })
-        self.assertRedirects(response, reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        new_group = ContactGroup.objects.latest()
-        self.assertNotEqual(new_group, group)
-        self.assertEqual(new_group.name, 'Name of Group')
-        contacts = Contact.objects.filter(groups=new_group)
-        self.assertEqual(contacts.count(), 3)
-        self.assertIn(new_group, self.conversation.groups.all())
-
-    def test_send(self):
-        """
-        Test the start conversation view
-        """
-        consumer = self.get_cmd_consumer()
-        response = self.client.post(reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        self.assertRedirects(response, reverse('conversations:show', kwargs={
-            'conversation_pk': self.conversation.pk}))
-
-        [cmd] = self.fetch_cmds(consumer)
-        [batch] = self.conversation.message_batch_set.all()
-        [contact] = self.conversation.people()
-        conversation = self.conversation
-        msg_options = {"from_addr": "default10001",
-                       "transport_type": "sms",
-                       "transport_name": "smpp_transport",
-                       "worker_name": "bulk_message_application",
-                       "conversation_id": conversation.pk,
-                       "conversation_type": conversation.conversation_type,
-                       }
-        self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
-                                                  "Test message",
-                                                  msg_options,
-                                                  contact.msisdn))
-
-    def test_send_fails(self):
-        """
-        Test failure to send messages
-        """
-        self.acquire_all_longcode_tags()
-        consumer = self.get_cmd_consumer()
-        response = self.client.post(reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk}), follow=True)
-        self.assertRedirects(response, reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        [] = self.fetch_cmds(consumer)
-        [] = self.conversation.preview_batch_set.all()
-        [msg] = response.context['messages']
-        self.assertEqual(str(msg), "No spare messaging tags.")
-
     def test_preview_status(self):
         """
         Test preview status helper function
@@ -322,15 +183,6 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.assertEqual(self.conversation.preview_status(),
                          [(contact, 'approved')])
 
-    def test_show(self):
-        """
-        Test showing the conversation
-        """
-        response = self.client.get(reverse('conversations:show', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.subject, 'Test Conversation')
-
     def test_replies(self):
         """
         Test replies helper function
@@ -361,20 +213,6 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
             'source': 'Long code',
             'type': u'sms',
             })
-
-    def test_end(self):
-        """
-        Test ending the conversation
-        """
-        self.assertFalse(self.conversation.ended())
-        response = self.client.post(reverse('conversations:end', kwargs={
-            'conversation_pk': self.conversation.pk}), follow=True)
-        self.assertRedirects(response, reverse('conversations:show', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        [msg] = response.context['messages']
-        self.assertEqual(str(msg), "Conversation ended")
-        self.conversation = reload_record(self.conversation)
-        self.assertTrue(self.conversation.ended())
 
     def test_end_conversation(self):
         """
