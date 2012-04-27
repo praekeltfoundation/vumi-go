@@ -9,6 +9,8 @@ fi
 echo "Activating virtualenv"
 source ve/bin/activate
 hasher=$(which md5 or md5sum)
+export DJANGO_SETTINGS_MODULE=go.settings
+export PYTHONPATH=.
 
 if [ -f 'requirements.pip.md5' ]; then
     current=$(cat requirements.pip | $hasher)
@@ -28,8 +30,8 @@ else
 fi
 
 find ./go -name '*.pyc' -delete && \
-./go-admin.sh test --nocapture --with-coverage --cover-package=go --with-xunit -evumitools && \
-coverage run ve/bin/trial go/vumitools/ && \
+coverage run --branch --include="go/*" ve/bin/django-admin.py test && \
+coverage run --branch --append --include="go/*" ve/bin/trial go/vumitools/ && \
 coverage xml --include="go/*" && \
 coverage html --include="go/*" && \
 (find ./go -name '*.py' | xargs pep8 --repeat --exclude='0*' > pep8.log || true) && \
