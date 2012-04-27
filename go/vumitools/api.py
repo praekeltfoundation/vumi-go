@@ -1,7 +1,11 @@
 # -*- test-case-name: go.vumitools.tests.test_api -*-
 # -*- coding: utf-8 -*-
 
-"""Vumi API for high-volume messaging."""
+"""Vumi API for high-volume messaging.
+
+NOTE: This uses the synchronous RiakManager, and is therefore unsuitable for
+use in Vumi workers.
+"""
 
 import redis
 import warnings
@@ -9,7 +13,8 @@ import warnings
 from vumi.message import Message
 
 from vumi.application import TagpoolManager
-from vumi.application import MessageStore
+from vumi.persist.riak_manager import RiakManager
+from vumi.persist.message_store import MessageStore
 
 
 def get_redis(config):
@@ -30,7 +35,8 @@ class VumiApi(object):
         # message store
         mdb_config = config.get('message_store', {})
         mdb_prefix = mdb_config.get('store_prefix', 'message_store')
-        self.mdb = MessageStore(r_server, mdb_prefix)
+        self.manager = RiakManager.from_config({'bucket_prefix': mdb_prefix})
+        self.mdb = MessageStore(self.manager, r_server, mdb_prefix)
         # message sending API
         mapi_config = config.get('message_sender', {})
         self.mapi = MessageSender(mapi_config)
@@ -129,8 +135,7 @@ class VumiApi(object):
         :rtype:
             list of message dictionaries.
         """
-        msg_ids = self.mdb.batch_messages(batch_id)
-        return [self.mdb.get_outbound_message(m_id) for m_id in msg_ids]
+        return self.mdb.batch_messages(batch_id)
 
     def batch_replies(self, batch_id):
         """Return a list of reply message dictionaries.
@@ -144,8 +149,7 @@ class VumiApi(object):
         :rtype:
             list of message dictionaries.
         """
-        reply_ids = self.mdb.batch_replies(batch_id)
-        return [self.mdb.get_inbound_message(r_id) for r_id in reply_ids]
+        return self.mdb.batch_replies(batch_id)
 
     def batch_tags(self, batch_id):
         """Return a list of tags associated with a given batch.
@@ -156,7 +160,7 @@ class VumiApi(object):
         :rtype:
             list of tags
         """
-        return self.mdb.batch_common(batch_id)['tags']
+        return list(self.mdb.get_batch(batch_id).tags)
 
     def acquire_tag(self, pool):
         """Acquire a tag from a given tag pool.

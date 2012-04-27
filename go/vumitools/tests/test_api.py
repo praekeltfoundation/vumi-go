@@ -23,6 +23,8 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
 
     def tearDown(self):
         self.restore_celery()
+        self.api.manager.purge_all()
+        self.r_server.teardown()
 
     def test_batch_start(self):
         tag = ("pool", "tag")
@@ -99,14 +101,15 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
     def test_start_batch_and_batch_done(self):
         tag = ("pool", "tag")
         self.api.declare_tags([tag])
-        self.assertEqual(self.api.mdb.tag_common(tag), {
-            "current_batch_id": None})
+
+        tag_batch = lambda t: self.api.mdb.get_tag_info(t).current_batch.key
+        self.assertEqual(tag_batch(tag), None)
+
         batch_id = self.api.batch_start([tag])
-        self.assertEqual(self.api.mdb.tag_common(tag), {
-            "current_batch_id": batch_id})
+        self.assertEqual(tag_batch(tag), batch_id)
+
         self.api.batch_done(batch_id)
-        self.assertEqual(self.api.mdb.tag_common(tag), {
-            "current_batch_id": None})
+        self.assertEqual(tag_batch(tag), None)
 
 
 class TestMessageSender(TestCase, CeleryTestMixIn):

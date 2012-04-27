@@ -232,8 +232,8 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.assertEqual(len(vumiapi.batch_tags(message_batch.batch_id)), 1)
         self.conversation.end_conversation()
         [msg_tag] = vumiapi.batch_tags(message_batch.batch_id)
-        self.assertEqual(vumiapi.mdb.tag_common(msg_tag)['current_batch_id'],
-                         None)
+        tag_batch = lambda t: vumiapi.mdb.get_tag_info(t).current_batch.key
+        self.assertEqual(tag_batch(msg_tag), None)
 
     # def test_pagination(self):
     #     raise NotImplementedError(
