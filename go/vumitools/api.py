@@ -8,7 +8,6 @@ use in Vumi workers.
 """
 
 import redis
-import warnings
 
 from vumi.message import Message
 
