@@ -24,9 +24,11 @@ class TestBulkSendApplication(ApplicationTestCase):
             'redis_cls': lambda **kw: self._fake_redis,
             })
 
+    @inlineCallbacks
     def tearDown(self):
         self._fake_redis.teardown()
-        super(TestBulkSendApplication, self).tearDown()
+        yield self.api.manager.purge_all()
+        yield super(TestBulkSendApplication, self).tearDown()
 
     def publish_command(self, cmd):
         return self.dispatch(cmd, rkey='%s.control' % (
@@ -38,9 +40,13 @@ class TestBulkSendApplication(ApplicationTestCase):
         d.addCallback(lambda _result: event)
         return d
 
+    def store_outbound(self, **kw):
+        return self.api.store.add_outbound_message(self.mkmsg_out(**kw))
+
     @inlineCallbacks
     def test_send(self):
-        yield self.publish_command(VumiApiCommand.send('batch1',
+        batch_id = yield self.api.store.batch_start([])
+        yield self.publish_command(VumiApiCommand.send(batch_id,
                                                        'content',
                                                        {"from_addr": "from"},
                                                        'to_addr'))
@@ -48,39 +54,43 @@ class TestBulkSendApplication(ApplicationTestCase):
         self.assertEqual(msg['to_addr'], 'to_addr')
         self.assertEqual(msg['content'], 'content')
 
-        self.assertEqual(self.api.store.batch_status('batch1'), {
-            'message': 1,
-            'sent': 1,
-            })
-        [msg_id] = self.api.store.batch_messages('batch1')
-        self.assertEqual(self.api.store.get_outbound_message(msg_id), msg)
+        self.assertEqual(self.api.store.batch_status(batch_id), {
+                'ack': 0,
+                'delivery_report': 0,
+                'message': 1,
+                'sent': 1,
+                })
+        [dbmsg] = yield self.api.store.batch_messages(batch_id)
+        self.assertEqual(dbmsg, msg)
 
     @inlineCallbacks
     def test_consume_ack(self):
+        yield self.store_outbound(message_id='123')
         ack_event = yield self.publish_event(user_message_id='123',
                                              event_type='ack',
                                              sent_message_id='xyz')
-        [event_id] = self.api.store.message_events('123')
-        self.assertEqual(self.api.store.get_event(event_id), ack_event)
+        [event] = yield self.api.store.message_events('123')
+        self.assertEqual(event, ack_event)
 
     @inlineCallbacks
     def test_consume_delivery_report(self):
+        yield self.store_outbound(message_id='123')
         dr_event = yield self.publish_event(user_message_id='123',
                                             event_type='delivery_report',
                                             delivery_status='delivered')
-        [event_id] = self.api.store.message_events('123')
-        self.assertEqual(self.api.store.get_event(event_id), dr_event)
+        [event] = yield self.api.store.message_events('123')
+        self.assertEqual(event, dr_event)
 
     @inlineCallbacks
     def test_consume_user_message(self):
         msg = self.mkmsg_in()
         yield self.dispatch(msg)
-        self.assertEqual(self.api.store.get_inbound_message(msg['message_id']),
-                         msg)
+        dbmsg = yield self.api.store.get_inbound_message(msg['message_id'])
+        self.assertEqual(dbmsg, msg)
 
     @inlineCallbacks
     def test_close_session(self):
         msg = self.mkmsg_in(session_event=TransportUserMessage.SESSION_CLOSE)
         yield self.dispatch(msg)
-        self.assertEqual(self.api.store.get_inbound_message(msg['message_id']),
-                         msg)
+        dbmsg = yield self.api.store.get_inbound_message(msg['message_id'])
+        self.assertEqual(dbmsg, msg)
