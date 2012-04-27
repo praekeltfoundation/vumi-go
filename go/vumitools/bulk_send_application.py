@@ -65,14 +65,18 @@ class GoApplication(ApplicationWorker):
         :param command_message:
             The command message received for this application.
         """
-        cmd_method_name = 'process_command_%s' % (
-            command_message.get('command'),)
-        cmd_method = getattr(self, cmd_method_name,
-                             self.process_unknown_cmd)
-        return cmd_method(command_message)
+        cmd_method_name = 'process_command_%(command)s' % command_message
+        args = command_message['args']
+        kwargs = command_message['kwargs']
+        cmd_method = getattr(self, cmd_method_name, None)
+        if cmd_method:
+            return cmd_method(*args, **kwargs)
+        else:
+            return self.process_unknown_cmd(cmd_method_name, )
 
-    def process_unknown_cmd(self, command_message):
-        log.error("Unknown vumi API command: %r" % (command_message,))
+    def process_unknown_cmd(self, method_name, *args, **kwargs):
+        log.error("Unknown vumi API command: %s(%s, %s)" % (
+            method_name, args, kwargs))
 
     def consume_user_message(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
@@ -97,12 +101,9 @@ class BulkSendApplication(GoApplication):
     worker_name = 'bulk_send_application'
 
     @inlineCallbacks
-    def process_command_send(self, cmd):
-        batch_id = cmd['batch_id']
-        content = cmd['content']
-        msg_options = cmd['msg_options']
-        to_addr = cmd['to_addr']
-        log.info('Sending to %s %s %s' % (to_addr, content, msg_options,))
-        msg = yield self.send_to(to_addr, content, **msg_options)
-        yield self.store.add_outbound_message(msg, batch_id=batch_id)
-        log.info('Stored outbound %s' % (msg,))
+    def process_command_start(self, batch_id, content, to_addresses,
+                                msg_options):
+        for to_addr in to_addresses:
+            msg = yield self.send_to(to_addr, content, **msg_options)
+            yield self.store.add_outbound_message(msg, batch_id=batch_id)
+            log.info('Stored outbound %s' % (msg,))

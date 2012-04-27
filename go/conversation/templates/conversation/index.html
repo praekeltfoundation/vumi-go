@@ -1,37 +1,53 @@
 {% extends "app.html" %}
 
 {% block main %}
-<div id="control-bar">
-    <div id="control-elements">
-        <h3>
-            Conversations
-        </h3>
-        <div id="control-bar-right">
-            &nbsp;
-        </div>
-    </div>
-</div>
-<div id="main">
-    <div class="inner">
-        {% include "base/includes/messages.html" %}
-        <form id="search-filter" name="search-filter" action="" method="get">
-            <input type="image" src="{{STATIC_URL}}pics/header/search-btn.png" id="search-filter-btn"><input type="text" id="search-filter-input" class="txt" name="q" value="{{query|default:"Find a conversation..."}}">
-        </form>
-        <div id="conversations">
-            {% for object in page.object_list %}
-                {% with conversation=object %}
-                <div class="grid_4">
-                    {% include "conversation/includes/conversation-box.html" %}
-                </div>
-                {% endwith %}
-            {% empty %}
-                <div>
-                    <p>Not conversations matching {{query}}</p>
-                </div>
+
+    {% if user.conversation_set.exists %}
+	    <div class="row">
+	        <div class="span12">
+	            <div id="welcome">
+	                <div class="pull-right start-button shadow">
+	                <h1><a data-toggle="modal" href="#newConv" tite="New Conversation"><i class="icon-plus"></i></a></h1></div>
+	                <h1>Hi {{user_profile}}, here are some of your newest conversations.</h1>
+	                {# TODO add user counter / user activity metrics #}
+	            </div>
+	        </div>
+	    </div>
+	    <div class="row">
+	        <div class="span12">
+	            {% include "base/includes/messages.html" %}
+	        </div>
+	    </div>
+	    <div class="row">
+	        <div class="span12">
+		        <form id="search-filter" name="search-filter" action="" method="get" class="well form-inline">
+                    {{search_form.query}}
+                    {{search_form.conversation_type}}
+                    {{search_form.conversation_status}}
+		            <button type="submit" class="btn" id="search-filter-btn">Search</button>
+		        </form>
+		    </div>
+	    </div>
+	    <div class="row">
+            {% for conversation in page.object_list %}
+                {% include "conversation/includes/conversation-box.html" %}
+                {% if forloop.counter|divisibleby:"3" %}
+                    </div>
+                    <div class="row">
+                {% endif %}
             {% endfor %}
-        </div>
-        {% include "base/includes/pagination.html" %}
-    </div>
-    {% include "footer.html" %}
-</div>
+	    </div>
+    {% else %}
+	    <div class="row">
+	        <div class="span12">
+	            <div id="welcome">
+	                <div class="pull-right start-button shadow">
+	                <h1><a data-toggle="modal" href="#newConv" tite="New Conversation"><i class="icon-plus"></i></a></h1></div>
+	                <h1>Hey {{user_profile}}, you must be new here.</h1>
+	                <h2><a href="#newConv" class="start">Start Your First Conversation</a></h2>
+	            </div>
+	        </div>
+	    </div>
+    {% endif %}
+    {% include "base/includes/pagination.html" %}
 {% endblock %}
