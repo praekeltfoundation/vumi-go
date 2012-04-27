@@ -88,18 +88,16 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         [contact] = self.conversation.people()
         conversation = self.conversation
         msg_options = {"from_addr": "default10001",
-                       "transport_type": "sms",
-                       "worker_name": "%s_application" % (
-                            conversation.conversation_type,),
-                       "conversation_id": conversation.pk,
-                       "conversation_type": conversation.conversation_type,
-                       }
+                       "transport_type": "sms"}
 
         [cmd] = self.get_api_commands_sent()
-        self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
-                                                  "Test message",
-                                                  msg_options,
-                                                  contact.msisdn))
+        self.assertEqual(cmd, VumiApiCommand.command(
+            '%s_application' % (conversation.conversation_type,), 'start',
+            conversation_type=self.conversation.conversation_type,
+            conversation_id=self.conversation.pk,
+            batch_id=batch.batch_id,
+            msg_options=msg_options
+            ))
 
     def test_send_fails(self):
         """

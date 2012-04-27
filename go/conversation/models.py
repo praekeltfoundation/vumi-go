@@ -191,9 +191,20 @@ class Conversation(models.Model):
         """
         Send the start command to this conversations application worker.
         """
-        batch = self.send_message(self.delivery_class, self.message,
-                                    self.people())
-        batch.message_batch = self
+        tag = self.acquire_tag()
+        batch_id = self.start_batch(tag)
+
+        self.dispatch_command('start',
+            batch_id=batch_id,
+            conversation_type=self.conversation_type,
+            conversation_id=self.pk,
+            msg_options={
+                'transport_type': self.delivery_class,
+                'from_addr': tag[1],
+            })
+
+        batch = MessageBatch.objects.create(batch_id=batch_id,
+                                                message_batch=self)
         batch.save()
 
     def delivery_class_description(self):
@@ -248,100 +259,22 @@ class Conversation(models.Model):
     def vumi_api():
         return VumiApi(settings.VUMI_API_CONFIG)
 
-    def delivery_info(self, delivery_class):
-        """Return a delivery information for a given delivery_class."""
-        # TODO: remove hard coded delivery class to tagpool and transport_type
-        #       mapping
-        if delivery_class == "shortcode":
-            return "shortcode", "sms"
-        elif delivery_class == "longcode":
-            return "longcode", "sms"
-        elif delivery_class == "xmpp":
-            return "xmpp", "xmpp"
-        elif delivery_class == "gtalk":
-            return "xmpp", "xmpp"
-        elif delivery_class == "sms":
-            return "longcode", "sms"
-        elif delivery_class == "ussd":
-            return "truteq", "ussd"
-        else:
-            raise ConversationSendError("Unknown delivery class %r"
-                                        % (delivery_class,))
-
-    def tag_message_options(self, tagpool, tag):
-        """Return message options for tagpool and tag."""
-        # TODO: this is hardcoded for ambient and gtalk pool currently
-        if tagpool == "shortcode":
-            return {
-                "from_addr": tag[1],
-                "transport_name": "smpp_transport",
-                "transport_type": "sms",
-            }
-        elif tagpool == "longcode":
-            return {
-                "from_addr": tag[1],
-                "transport_name": "smpp_transport",
-                "transport_type": "sms",
-            }
-        elif tagpool == "xmpp":
-            return {
-                "from_addr": tag[1],
-                "transport_name": "gtalk_vumigo",
-                "transport_type": "xmpp",
-            }
-        elif tagpool == "truteq":
-            return {
-                "from_addr": tag[1],
-                "transport_name": "truteq_transport",
-                "transport_type": "ussd",
-            }
-        else:
-            raise ConversationSendError("Unknown tagpool %r" % (tagpool,))
-
-    # def _send_command(self, cmd):
-    #     """
-    #     Send a command to this application's GoApplication worker
-    #     via its control channel.
-    #     """
-    #     vumiapi = self.vumi_api()
-    #     delivery_class = self.delivery_class
-    #     tag_pool = self.delivery_tag_pool
-    #     tag = vumiapi.acquire_tag(tagpool)
-
-    def send_message(self, delivery_class, message, contacts):
-        if delivery_class is None:
-            raise ConversationSendError("No delivery class specified.")
-        if self.ended():
-            raise ConversationSendError("Conversation has already ended --"
-                                        " no more messages may be sent.")
-
+    def dispatch_command(self, command, *args, **kwargs):
         vumiapi = self.vumi_api()
-        tag = vumiapi.acquire_tag(self.delivery_tag_pool)
+        worker_name = '%s_application' % (self.conversation_type,)
+        command = VumiApiCommand.command(worker_name, command, *args, **kwargs)
+        return vumiapi.send_command(command)
+
+    def acquire_tag(self, pool=None):
+        vumiapi = self.vumi_api()
+        tag = vumiapi.acquire_tag(pool or self.delivery_tag_pool)
         if tag is None:
             raise ConversationSendError("No spare messaging tags.")
-        batch_id = vumiapi.batch_start([tag])
+        return tag
 
-        msg_options = {
-            'conversation_id': self.pk,
-            'conversation_type': self.conversation_type,
-            'from_addr': tag[1],
-            'transport_type': self.delivery_class,
-            'worker_name': '%s_application' % (self.conversation_type,)
-        }
-
-        batch = MessageBatch(batch_id=batch_id)
-        batch.message_batch = self
-        batch.save()
-
-        addrs = [contact.addr_for(delivery_class) for contact in contacts]
-        addrs = [addr for addr in addrs if addr]
-
-        for address in addrs:
-            command = VumiApiCommand.send(batch_id, message,
-                                            msg_options, address)
-            vumiapi.send_command(command)
-
-        return batch
+    def start_batch(self, tag):
+        vumiapi = self.vumi_api()
+        return vumiapi.batch_start([tag])
 
     def _release_preview_tags(self):
         self._release_batches(self.preview_batch_set.all())
@@ -364,13 +297,12 @@ class Conversation(models.Model):
         """Return a list of (Contact, reply_msg) tuples."""
         if delivery_class is None:
             return []
-        _tagpool, transport_type = self.delivery_info(delivery_class)
 
         replies = []
         for batch in batches:
             for reply in batch_msg_func(batch.batch_id):
                 try:
-                    contact = Contact.for_addr(self.user, transport_type,
+                    contact = Contact.for_addr(self.user, self.delivery_class,
                                                addr_func(reply))
                 except (Contact.DoesNotExist,
                         Contact.MultipleObjectsReturned), e:
