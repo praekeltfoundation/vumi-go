@@ -187,6 +187,20 @@ class Conversation(models.Model):
             return int(status['ack'] / float(status['total'])) * 100
         return 0
 
+    def get_contacts_addresses(self, delivery_class=None):
+        """
+        Get the contacts assigned to this group with an address attribute
+        that is appropriate for the given delivery_class
+
+        :rtype: str
+        :param rtype: the name of the delivery class to use, if None then
+                    it will default to `self.delivery_class`
+        """
+        delivery_class = delivery_class or self.delivery_class
+        addrs = [contact.addr_for(delivery_class) for contact
+                    in self.people.all()]
+        return [addr for addr in addrs if addr]
+
     def start(self):
         """
         Send the start command to this conversations application worker.
@@ -260,6 +274,15 @@ class Conversation(models.Model):
         return VumiApi(settings.VUMI_API_CONFIG)
 
     def dispatch_command(self, command, *args, **kwargs):
+        """
+        Send a command to the GoApplication worker listening to this
+        conversation type's worker name. The *args and **kwargs
+        are expanded when the command is called.
+
+        :type command: str
+        :params command:
+            The name of the command to call
+        """
         vumiapi = self.vumi_api()
         worker_name = '%s_application' % (self.conversation_type,)
         command = VumiApiCommand.command(worker_name, command, *args, **kwargs)

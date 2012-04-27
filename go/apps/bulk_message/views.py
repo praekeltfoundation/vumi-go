@@ -2,10 +2,11 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.urlresolvers import reverse
 from django.contrib import messages
-from go.conversation.models import (Conversation, ConversationSendError,
+from go.conversation.models import (ConversationSendError,
                                     get_server_init_delivery_classes)
 from go.conversation.forms import ConversationGroupForm
 from go.apps.bulk_message.forms import BulkSendConversationForm
+from go.apps.bulk_message.models import BulkMessageConversation
 from go.contacts.models import ContactGroup
 from go.base.utils import make_read_only_form
 from datetime import datetime
@@ -37,8 +38,8 @@ def new(request):
 
 @login_required
 def people(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
+    conversation = get_object_or_404(BulkMessageConversation,
+        pk=conversation_pk, user=request.user)
     groups_for_user = ContactGroup.objects.filter(user=request.user)
 
     if request.method == 'POST':
@@ -67,8 +68,8 @@ def people(request, conversation_pk):
 
 @login_required
 def send(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
+    conversation = get_object_or_404(BulkMessageConversation,
+        pk=conversation_pk, user=request.user)
 
     if request.method == 'POST':
         try:
@@ -95,8 +96,8 @@ def send(request, conversation_pk):
 
 @login_required
 def show(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
+    conversation = get_object_or_404(BulkMessageConversation,
+        pk=conversation_pk, user=request.user)
     return render(request, 'bulk_message/show.html', {
         'conversation': conversation,
     })
@@ -104,8 +105,8 @@ def show(request, conversation_pk):
 
 @login_required
 def end(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
+    conversation = get_object_or_404(BulkMessageConversation,
+        pk=conversation_pk, user=request.user)
     if request.method == 'POST':
         conversation.end_conversation()
         messages.add_message(request, messages.INFO, 'Conversation ended')
