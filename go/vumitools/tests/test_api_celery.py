@@ -21,9 +21,9 @@ class TestTasks(TestCase, CeleryTestMixIn):
 
     def test_batch_send_task(self):
         consumer = self.get_consumer(**self.exchange_config)
-        batch_options = {"from_addr": "test1"},
-        result = self.api.batch_send_task.delay("b123", batch_options,
-                                                "hello world",
+        batch_options = {"from_addr": "test1", "worker_name": "dummy_worker"}
+        result = self.api.batch_send_task.delay("b123", "hello world",
+                                                batch_options,
                                                 ["+1234", "+5678"],
                                                 self.exchange_config)
         self.assertTrue(result.successful())
@@ -31,9 +31,9 @@ class TestTasks(TestCase, CeleryTestMixIn):
 
         [cmd1, cmd2] = self.fetch_cmds(consumer)
 
-        self.assertEqual(cmd1,
-                         VumiApiCommand.send("b123", batch_options,
-                                             "hello world", "+1234"))
-        self.assertEqual(cmd2,
-                         VumiApiCommand.send("b123", batch_options,
-                                             "hello world", "+5678"))
+        self.assertEqual(cmd1, VumiApiCommand.command('dummy_worker', 'send',
+            batch_id="b123", content="hello world", msg_options=batch_options,
+            to_addr="+1234"))
+        self.assertEqual(cmd2, VumiApiCommand.command('dummy_worker', 'send',
+            batch_id="b123", content="hello world", msg_options=batch_options,
+            to_addr="+5678"))

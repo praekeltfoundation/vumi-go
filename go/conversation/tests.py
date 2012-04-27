@@ -119,7 +119,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
                 self.conversation.message)
 
         # now it should be running
-        self.conversation.send_messages()
+        self.conversation.start()
         self.assertNotContains(search('draft'),
                 self.conversation.message)
         self.assertContains(search('running'),
@@ -136,52 +136,52 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.assertContains(search('finished'),
                 self.conversation.message)
 
-    def test_preview_status(self):
-        """
-        Test preview status helper function
-        """
-        vumiapi = Conversation.vumi_api()
-        [contact] = self.conversation.previewcontacts.all()
-        self.assertEqual(self.conversation.preview_status(),
-                         [(contact, 'waiting to send')])
+    # def test_preview_status(self):
+    #     """
+    #     Test preview status helper function
+    #     """
+    #     vumiapi = Conversation.vumi_api()
+    #     [contact] = self.conversation.previewcontacts.all()
+    #     self.assertEqual(self.conversation.preview_status(),
+    #                      [(contact, 'waiting to send')])
 
-        # Send the preview, find out what batch it was given
-        # and find the tag associated with it.
-        self.conversation.send_preview()
-        [batch] = self.conversation.preview_batch_set.all()
-        [tag] = vumiapi.batch_tags(batch.batch_id)
-        tagpool, msisdn = tag
+    #     # Send the preview, find out what batch it was given
+    #     # and find the tag associated with it.
+    #     self.conversation.send_preview()
+    #     [batch] = self.conversation.preview_batch_set.all()
+    #     [tag] = vumiapi.batch_tags(batch.batch_id)
+    #     tagpool, msisdn = tag
 
-        # Fake the msg that is sent to the preview users, we're faking
-        # this because we don't want to fire up the BulkSendApplication
-        # as part of a Django test case.
-        # This message is roughly what it would look like.
-        msg = TransportUserMessage(to_addr=contact.msisdn, from_addr=msisdn,
-            transport_name='dummy_transport', transport_type='sms',
-            content='approve? something something')
-        vumiapi.mdb.add_outbound_message(msg=msg, tag=tag)
+    #     # Fake the msg that is sent to the preview users, we're faking
+    #     # this because we don't want to fire up the BulkSendApplication
+    #     # as part of a Django test case.
+    #     # This message is roughly what it would look like.
+    #     msg = TransportUserMessage(to_addr=contact.msisdn, from_addr=msisdn,
+    #         transport_name='dummy_transport', transport_type='sms',
+    #         content='approve? something something')
+    #     vumiapi.mdb.add_outbound_message(msg=msg, tag=tag)
 
-        # Make sure we display the correct message in the UI when
-        # asked at this stage.
-        self.assertEqual(self.conversation.preview_status(),
-                         [(contact, 'awaiting reply')])
+    #     # Make sure we display the correct message in the UI when
+    #     # asked at this stage.
+    #     self.assertEqual(self.conversation.preview_status(),
+    #                      [(contact, 'awaiting reply')])
 
-        # Fake an inbound message received on our number
-        to_addr = "+123" + tag[1][-5:]
+    #     # Fake an inbound message received on our number
+    #     to_addr = "+123" + tag[1][-5:]
 
-        # unknown contact, since we haven't sent the from_addr correctly
-        msg = self.mkmsg_in('hello', to_addr=to_addr)
-        vumiapi.mdb.add_inbound_message(msg, tag=tag)
-        self.assertEqual(self.conversation.preview_status(),
-                         [(contact, 'awaiting reply')])
+    #     # unknown contact, since we haven't sent the from_addr correctly
+    #     msg = self.mkmsg_in('hello', to_addr=to_addr)
+    #     vumiapi.mdb.add_inbound_message(msg, tag=tag)
+    #     self.assertEqual(self.conversation.preview_status(),
+    #                      [(contact, 'awaiting reply')])
 
-        # known contact, which was in the preview_batch_set and now the status
-        # should display 'approved'
-        msg = self.mkmsg_in('approve', to_addr=to_addr,
-                            from_addr=contact.msisdn.lstrip('+'))
-        vumiapi.mdb.add_inbound_message(msg, tag=tag)
-        self.assertEqual(self.conversation.preview_status(),
-                         [(contact, 'approved')])
+    #     # known contact, which was in the preview_batch_set and now the status
+    #     # should display 'approved'
+    #     msg = self.mkmsg_in('approve', to_addr=to_addr,
+    #                         from_addr=contact.msisdn.lstrip('+'))
+    #     vumiapi.mdb.add_inbound_message(msg, tag=tag)
+    #     self.assertEqual(self.conversation.preview_status(),
+    #                      [(contact, 'approved')])
 
     def test_replies(self):
         """
@@ -190,7 +190,7 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         vumiapi = Conversation.vumi_api()
         [contact] = self.conversation.people()
         self.assertEqual(self.conversation.replies(), [])
-        self.conversation.send_messages()
+        self.conversation.start()
         [batch] = self.conversation.message_batch_set.all()
         self.assertEqual(self.conversation.replies(), [])
         [tag] = vumiapi.batch_tags(batch.batch_id)
@@ -227,16 +227,14 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         Test that tags are released when a conversation is ended.
         """
         vumiapi = Conversation.vumi_api()
-        self.conversation.send_preview()
-        self.conversation.send_messages()
-        [preview_batch] = self.conversation.preview_batch_set.all()
+        self.conversation.start()
         [message_batch] = self.conversation.message_batch_set.all()
-        self.assertEqual(len(vumiapi.batch_tags(preview_batch.batch_id)), 1)
         self.assertEqual(len(vumiapi.batch_tags(message_batch.batch_id)), 1)
         self.conversation.end_conversation()
-        [pre_tag] = vumiapi.batch_tags(preview_batch.batch_id)
         [msg_tag] = vumiapi.batch_tags(message_batch.batch_id)
-        self.assertEqual(vumiapi.mdb.tag_common(pre_tag)['current_batch_id'],
-                         None)
         self.assertEqual(vumiapi.mdb.tag_common(msg_tag)['current_batch_id'],
                          None)
+
+    # def test_pagination(self):
+    #     raise NotImplementedError(
+    #             'Still needs to be implemented, does not work yet.')
