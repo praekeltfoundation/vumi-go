@@ -33,84 +33,16 @@ class TestConcersationStore(TestCase):
         self.assertFalse(model_eq(m1, m2),
                          "Models unexpectedly equal:\na: %r\nb: %r" % (m1, m2))
 
-    # @inlineCallbacks
-    # def test_new_group(self):
-    #     self.assertEqual(None, (yield self.store.get_group(u'group1')))
+    @inlineCallbacks
+    def test_new_conversation(self):
+        self.assertEqual([], (yield self.store.list_conversations()))
 
-    #     group = yield self.store.new_group(u'group1')
-    #     self.assertEqual(u'group1', group.key)
+        conv = yield self.store.new_conversation(
+            u'bulk_message', u'subject', u'message')
+        self.assertEqual(u'bulk_message', conv.conversation_type)
+        self.assertEqual(u'subject', conv.subject)
+        self.assertEqual(u'message', conv.message)
+        self.assertEqual([], conv.batches.keys())
 
-    #     dbgroup = yield self.store.get_group(u'group1')
-    #     self.assertEqual(u'group1', dbgroup.key)
-
-    #     self.assert_models_equal(group, dbgroup)
-
-    # @inlineCallbacks
-    # def test_new_group_exists(self):
-    #     self.assertEqual(None, (yield self.store.get_group(u'group1')))
-
-    #     group = yield self.store.new_group(u'group1')
-    #     self.assertEqual(u'group1', group.key)
-
-    #     try:
-    #         yield self.store.new_group(u'group1')
-    #         self.fail("Expected ValueError.")
-    #     except ValueError:
-    #         pass
-
-    #     dbgroup = yield self.store.get_group(u'group1')
-    #     self.assert_models_equal(group, dbgroup)
-
-    # @inlineCallbacks
-    # def test_per_user_groups(self):
-    #     self.assertEqual(None, (yield self.store.get_group(u'group1')))
-    #     self.assertEqual(None, (yield self.store_alt.get_group(u'group1')))
-    #     group = yield self.store.new_group(u'group1')
-
-    #     self.assertNotEqual(None, (yield self.store.get_group(u'group1')))
-    #     self.assertEqual(None, (yield self.store_alt.get_group(u'group1')))
-    #     group_alt = yield self.store_alt.new_group(u'group1')
-
-    #     dbgroup = yield self.store.get_group(u'group1')
-    #     dbgroup_alt = yield self.store_alt.get_group(u'group1')
-    #     self.assert_models_equal(group, dbgroup)
-    #     self.assert_models_equal(group_alt, dbgroup_alt)
-    #     self.assert_models_not_equal(group, group_alt)
-
-    # @inlineCallbacks
-    # def test_new_contact(self):
-    #     contact = yield self.store.new_contact(
-    #         u'J Random', u'Person', msisdn=u'27831234567')
-    #     self.assertEqual(u'J Random', contact.name)
-    #     self.assertEqual(u'Person', contact.surname)
-    #     self.assertEqual(u'27831234567', contact.msisdn)
-
-    #     dbcontact = yield self.store.get_contact_by_key(contact.key)
-
-    #     self.assert_models_equal(contact, dbcontact)
-
-    # @inlineCallbacks
-    # def test_add_contact_to_group(self):
-    #     contact = yield self.store.new_contact(
-    #         u'J Random', u'Person', msisdn=u'27831234567')
-    #     group1 = yield self.store.new_group(u'group1')
-    #     group2 = yield self.store.new_group(u'group2')
-
-    #     self.assertEqual([], contact.groups.keys())
-    #     contact.add_to_group(group1)
-    #     self.assertEqual([u'group1'], contact.groups.keys())
-    #     contact.add_to_group(group2.key)
-    #     self.assertEqual([u'group1', u'group2'], contact.groups.keys())
-
-    #     yield contact.save()
-    #     dbcontact = yield self.store.get_contact_by_key(contact.key)
-    #     self.assert_models_equal(contact, dbcontact)
-
-    #     group1 = yield self.store.get_group(u'group1')
-    #     group2 = yield self.store.get_group(u'group2')
-
-    #     self.assertEqual([contact.key],
-    #                      [c.key for c in (yield group1.backlinks.contacts())])
-
-    #     self.assertEqual([contact.key],
-    #                      [c.key for c in (yield group2.backlinks.contacts())])
+        dbconv = yield self.store.get_conversation_by_key(conv.key)
+        self.assert_models_equal(conv, dbconv)

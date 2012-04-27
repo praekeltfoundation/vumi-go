@@ -115,10 +115,12 @@ class ContactStore(PerAccountStore):
         return self.groups.load(name)
 
     def list_contacts(self):
-        return self.get_user_account().backlinks.contacts(self.manager)
+        # Not stale, because we're using backlinks.
+        return self.user_account.backlinks.contacts(self.manager)
 
     def list_groups(self):
-        return self.get_user_account().backlinks.contactgroups(self.manager)
+        # Not stale, because we're using backlinks.
+        return self.user_account.backlinks.contactgroups(self.manager)
 
     @Manager.calls_manager
     def contact_for_addr(self, transport_type, addr):

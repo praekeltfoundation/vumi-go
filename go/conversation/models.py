@@ -86,15 +86,15 @@ class Conversation(models.Model):
     end_time = models.TimeField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    groups = models.ManyToManyField('contacts.ContactGroup')
-    previewcontacts = models.ManyToManyField('contacts.Contact')
+    # groups = models.ManyToManyField('contacts.ContactGroup')
+    # previewcontacts = models.ManyToManyField('contacts.Contact')
     conversation_type = models.CharField('Conversation Type', max_length=255,
         choices=CONVERSATION_TYPES, default='bulk_message')
     delivery_class = models.CharField(max_length=255, null=True)
     delivery_tag_pool = models.CharField(max_length=255, null=True)
 
-    def people(self):
-        return Contact.objects.filter(groups__in=self.groups.all())
+    # def people(self):
+    #     return Contact.objects.filter(groups__in=self.groups.all())
 
     def ended(self):
         return self.end_time is not None

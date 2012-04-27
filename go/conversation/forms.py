@@ -1,6 +1,6 @@
 from django import forms
 from go.conversation import models
-from go.contacts.models import ContactGroup
+# from go.contacts.models import ContactGroup
 
 
 class ConversationForm(forms.ModelForm):
@@ -60,9 +60,9 @@ class ConversationGroupForm(forms.Form):
         super(ConversationGroupForm, self).__init__(*args, **kwargs)
         self.fields['groups'].queryset = queryset
 
-    groups = forms.ModelMultipleChoiceField(
-            queryset=ContactGroup.objects.all(),
-            widget=forms.CheckboxSelectMultiple)
+    # groups = forms.ModelMultipleChoiceField(
+    #         queryset=ContactGroup.objects.all(),
+    #         widget=forms.CheckboxSelectMultiple)
 
 
 class ConversationSearchForm(forms.Form):
