@@ -5,7 +5,9 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.application import ApplicationWorker, MessageStore
+from vumi.application import ApplicationWorker
+from vumi.persist.message_store import MessageStore
+from vumi.persist.txriak_manager import TxRiakManager
 from vumi.dispatchers.base import BaseDispatchRouter
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
@@ -82,7 +84,9 @@ class GoApplicationRouter(BaseDispatchRouter):
         mdb_config = self.config.get('message_store', {})
         self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
         r_server = get_redis(self.config)
-        self.store = MessageStore(r_server, self.mdb_prefix)
+        self.manager = TxRiakManager.from_config({
+                'bucket_prefix': self.mdb_prefix})
+        self.store = MessageStore(self.manager, r_server, self.mdb_prefix)
 
     def get_conversation_for_tag(self, tag):
         from go.conversation.models import MessageBatch
