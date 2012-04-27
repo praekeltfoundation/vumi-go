@@ -65,7 +65,9 @@ class GoApplication(ApplicationWorker):
             command_message.get('command'),)
         cmd_method = getattr(self, cmd_method_name,
                              self.process_unknown_cmd)
-        return cmd_method(command_message)
+        args = command_message['args']
+        kwargs = command_message['kwargs']
+        return cmd_method(*args, **kwargs)
 
     def process_unknown_cmd(self, command_message):
         log.error("Unknown vumi API command: %r" % (command_message,))
@@ -93,11 +95,7 @@ class BulkSendApplication(GoApplication):
     worker_name = 'bulk_send_application'
 
     @inlineCallbacks
-    def process_command_send(self, cmd):
-        batch_id = cmd['batch_id']
-        content = cmd['content']
-        msg_options = cmd['msg_options']
-        to_addr = cmd['to_addr']
+    def process_command_send(self, batch_id, content, msg_options, to_addr):
         log.info('Sending to %s %s %s' % (to_addr, content, msg_options,))
         msg = yield self.send_to(to_addr, content, **msg_options)
         self.store.add_outbound_message(msg, batch_id=batch_id)

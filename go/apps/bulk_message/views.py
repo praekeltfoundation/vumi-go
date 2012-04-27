@@ -72,7 +72,7 @@ def send(request, conversation_pk):
 
     if request.method == 'POST':
         try:
-            conversation.send_messages()
+            conversation.start()
         except ConversationSendError as error:
             messages.add_message(request, messages.ERROR, str(error))
             return redirect(reverse('bulk_message:send', kwargs={
@@ -90,25 +90,6 @@ def send(request, conversation_pk):
         'conversation': conversation,
         'conversation_form': conversation_form,
         'group_form': group_form,
-    })
-
-
-@login_required
-def start(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
-    if request.method == 'POST':
-        try:
-            conversation.send_messages()
-        except ConversationSendError as error:
-            messages.add_message(request, messages.ERROR, str(error))
-            return redirect(reverse('bulk_message:start', kwargs={
-                'conversation_pk': conversation.pk}))
-        messages.add_message(request, messages.INFO, 'Conversation started')
-        return redirect(reverse('bulk_message:show', kwargs={
-            'conversation_pk': conversation.pk}))
-    return render(request, 'bulk_message/start.html', {
-        'conversation': conversation,
     })
 
 

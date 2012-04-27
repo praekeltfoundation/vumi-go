@@ -7,6 +7,7 @@ from django.conf import settings
 
 from go.contacts.models import Contact
 from go.vumitools import VumiApi
+from go.vumitools.api import VumiApiCommand
 
 
 redis = redis.Redis(**settings.VXPOLLS_REDIS_CONFIG)
@@ -106,53 +107,56 @@ class Conversation(models.Model):
         self.save()
         self._release_tags()
 
-    def send_preview(self):
-        approval_message = "APPROVE? " + self.message
-        batch = self._send_batch(self.delivery_class, approval_message,
-                                 self.previewcontacts.all())
-        batch.preview_batch = self
-        batch.save()
-
     def is_client_initiated(self):
+        """
+        Check whether this conversation can only be initiated by a client.
+
+        :rtype: bool
+        """
         return (self.delivery_class not in
                     get_server_init_delivery_class_names())
 
-    def preview_status(self):
-        batches = self.preview_batch_set.all()
-        messages = self._get_messages(self.delivery_class, batches)
-        replies = self._get_replies(self.delivery_class, batches)
-        contacts = dict((c, 'waiting to send') for c in
-                        self.previewcontacts.all())
-        awaiting_reply = 'awaiting reply'
-        for contact, msg in messages:
-            if contact in contacts:
-                contacts[contact] = awaiting_reply
-        for contact, reply in replies:
-            if contact in contacts and contacts[contact] == awaiting_reply:
-                contents = (reply['content'] or '').strip().lower()
-                contacts[contact] = ('approved'
-                                     if contents in ('approve', 'yes')
-                                     else 'denied')
-                if contacts[contact] == 'approved':
-                    self._release_preview_tags()
-        return sorted(contacts.items())
-
     def get_status(self):
+        """
+        Get the status of this conversation
+
+        :rtype: str, (CONVERSATION_FINISHED, CONVERSATION_RUNNING, or
+            CONVERSATION_DRAFT)
+
+        """
         if self.ended():
             return CONVERSATION_FINISHED
         elif self.message_batch_set.exists():
             return CONVERSATION_RUNNING
         else:
-            return CONVERSATION_RUNNING
+            return CONVERSATION_DRAFT
 
     def get_tags(self):
-        if self.get_status() == CONVERSATION_RUNNING:
-            batch = self.message_batch_set.latest('pk')
-            vumiapi = self.vumi_api()
-            tags = vumiapi.batch_tags(batch.batch_id)
-            return tags
+        """
+        Return any tags associated with this conversation.
+
+        :rtype:
+            Returns a list of tags `[(tagpool, tag), ... ]`
+        """
+        tags = []
+        vumiapi = self.vumi_api()
+        for batch in self.message_batch_set.all():
+            tags.extend(vumiapi.batch_tags(batch.batch_id))
+        return tags
 
     def get_progress_status(self):
+        """
+        Get an overview of the progress of this conversation
+
+        :rtype: dict
+            *total* The number of messages in this conversation.
+            *sent* The number of messages sent.
+            *queued* The number of messages yet to be sent out.
+            *ack* The number of messages that have been acknowledged
+                    by the network for delivery
+            *delivery_report* The number of messages we've received
+                    a delivery report for.
+        """
         default = {
             'total': 0,
             'queued': 0,
@@ -172,25 +176,30 @@ class Conversation(models.Model):
         return default
 
     def get_progress_percentage(self):
+        """
+        Get a percentage indication of how far along the sending
+        of messages in this conversation is.
+
+        :rtype: int
+        """
         status = self.get_progress_status()
         if self.people().exists():
             return int(status['ack'] / float(status['total'])) * 100
         return 0
 
-    def send_messages(self):
-        batch = self._send_batch(
-            self.delivery_class, self.message, self.people())
-        batch.message_batch = self
-        batch.save()
-
-    def start_survey(self):
-        batch = self._send_batch(
-            self.delivery_class, '', self.people()
-        )
+    def start(self):
+        """
+        Send the start command to this conversations application worker.
+        """
+        batch = self.send_message(self.delivery_class, self.message,
+                                    self.people())
         batch.message_batch = self
         batch.save()
 
     def delivery_class_description(self):
+        """
+        FIXME: this is a hack
+        """
         delivery_classes = dict(get_combined_delivery_classes())
         tag_pools = dict(delivery_classes.get(self.delivery_class))
         description = tag_pools.get(self.delivery_tag_pool)
@@ -199,6 +208,11 @@ class Conversation(models.Model):
         return description
 
     def replies(self):
+        """
+        FIXME: this requires a contact to already exist in the database
+                before it can show up as a reply. Isn't going to work
+                for things like USSD and in some cases SMS.
+        """
         batches = self.message_batch_set.all()
         reply_statuses = []
         for contact, reply in self._get_replies(self.delivery_class, batches):
@@ -284,31 +298,49 @@ class Conversation(models.Model):
         else:
             raise ConversationSendError("Unknown tagpool %r" % (tagpool,))
 
-    def _send_batch(self, delivery_class, message, contacts):
+    # def _send_command(self, cmd):
+    #     """
+    #     Send a command to this application's GoApplication worker
+    #     via its control channel.
+    #     """
+    #     vumiapi = self.vumi_api()
+    #     delivery_class = self.delivery_class
+    #     tag_pool = self.delivery_tag_pool
+    #     tag = vumiapi.acquire_tag(tagpool)
+
+    def send_message(self, delivery_class, message, contacts):
         if delivery_class is None:
             raise ConversationSendError("No delivery class specified.")
         if self.ended():
             raise ConversationSendError("Conversation has already ended --"
                                         " no more messages may be sent.")
+
         vumiapi = self.vumi_api()
-        tagpool, transport_type = self.delivery_info(delivery_class)
-        addrs = [contact.addr_for(transport_type) for contact in contacts]
-        addrs = [addr for addr in addrs if addr]
-        tag = vumiapi.acquire_tag(tagpool)
+        tag = vumiapi.acquire_tag(self.delivery_tag_pool)
         if tag is None:
             raise ConversationSendError("No spare messaging tags.")
-        msg_options = self.tag_message_options(tagpool, tag)
-        # Add the worker_name so our command dispatcher knows where
-        # to send stuff to.
-        msg_options.update({
-            'worker_name': '%s_application' % (self.conversation_type,),
+        batch_id = vumiapi.batch_start([tag])
+
+        msg_options = {
             'conversation_id': self.pk,
             'conversation_type': self.conversation_type,
-        })
-        batch_id = vumiapi.batch_start([tag])
+            'from_addr': tag[1],
+            'transport_type': self.delivery_class,
+            'worker_name': '%s_application' % (self.conversation_type,)
+        }
+
         batch = MessageBatch(batch_id=batch_id)
+        batch.message_batch = self
         batch.save()
-        vumiapi.batch_send(batch_id, message, msg_options, addrs)
+
+        addrs = [contact.addr_for(delivery_class) for contact in contacts]
+        addrs = [addr for addr in addrs if addr]
+
+        for address in addrs:
+            command = VumiApiCommand.send(batch_id, message,
+                                            msg_options, address)
+            vumiapi.send_command(command)
+
         return batch
 
     def _release_preview_tags(self):
