@@ -1,0 +1,204 @@
+#login {
+margin: 			0 auto;
+float:				none;
+width:				280px;
+}
+
+#login form {
+margin:				20px 0 0 20px;
+}
+
+#login form label.error {
+text-align: 		left;
+}
+
+.remember {
+margin-top:			10px;
+}
+
+
+#login h4 {
+margin-bottom:		10px;
+}
+
+
+#login img {
+display:			block;
+margin-bottom: 		20px
+}
+
+.footer-pre {
+text-align: 		center;
+}
+
+.brand {
+float: 				left;
+display: 			block;
+padding: 			3px 5px 3px 20px!important;
+margin-left: 		-20px; // negative indent to left-align the text down the page
+font-size: 			20px;
+font-weight: 		200;
+line-height: 		1;
+color: 				@white;
+}
+  
+a.start { 
+color: 				@white!important;
+font-weight: 		bold;
+}
+
+#welcome {
+margin:				10px 0 30px 0;
+}
+
+.shadow { 
+box-shadow: 		(0 1px 1px rgba(0,0,0,.075)); 
+-webkit-box-shadow: (0 1px 1px rgba(0,0,0,.075)); 
+-moz-box-shadow: 	(0 1px 1px rgba(0,0,0,.075)) 
+}
+
+.start-button { 
+background-color:	#fff; 
+border-radius: 		5px; 
+border: 			1px solid #ddd; 
+margin-left: 		15px;
+text-align: 		center;
+font-weight: 		bold;
+vertical-align: 	middle;
+margin-top: 		-15px 
+}
+
+.start-button h1 { font-size: 36px;  color: @green; font-weight: bold; display: block; vertical-align: middle; padding: 10px 15px }
+.start-button h1 a { text-decoration: none }
+.start-button:hover { background-color: @grayDarker  }
+.start-button:hover h1 a { color: @white }
+
+.span4 .convos, .span4 .box, .span8 .convos, .span8 .box { 
+margin-bottom: 		30px; 
+padding: 			15px; 
+background-color: 	#fff; 
+border-radius: 		5px; 
+border: 			1px solid #ddd; 
+min-height: 		110px 
+}
+
+.conv-disabled {
+box-shadow: 		none; 
+-webkit-box-shadow: none; 
+-moz-box-shadow: 	none;
+border: 			1px solid #eee;
+background-color:	#fcfcfc!important;
+}
+
+.conv-disabled h3, .conv-disabled label, .conv-disabled select {
+color:				@grayLight;
+}
+
+.span4 .convos h3 a, .span8 .convos h3 a { 
+color: 				@black 
+}
+
+.empty { 
+background: 		#fff url(../img/logo-fade.png) center center no-repeat; 
+min-height: 		110px;
+border: 			1px solid #f5f5f5!important 
+}
+
+.span4 .convos p { 
+overflow: 			hidden; 
+text-overflow: 		ellipsis; 
+height: 			3em
+}
+
+#preview-pane { 
+color: 				#fff; 
+padding: 			90px 65px 0 53px; 
+overflow-x: 		hidden
+}
+
+img.avatar { 
+max-width: 			70px; 
+max-height: 		70px 
+}
+
+@media (max-width: 980px) { #new-conv-right { display: none }}
+
+@media (min-width: 980px) { .span4 .box { height: 675px!important;  }}
+
+@media (min-width: 980px) { .span4 .survey-box, .span8 .survey-box { height: auto!important; min-height: 450px!important }}
+
+#surveyUSSDNum {
+display: 			none;
+}
+
+div.time-picker {
+position: 			absolute;
+height: 			191px;
+width:				4em; /* needed for IE */
+overflow: 			auto;
+background: 		#fff;
+border: 			1px solid #aaa;
+z-index: 			99;
+margin: 			0
+}
+
+div.time-picker-12hours {
+width:				6em; /* needed for IE */
+}
+
+div.time-picker ul {
+list-style-type: 	none;
+margin: 			0;
+padding: 			0
+}
+
+div.time-picker li {
+cursor: 			pointer;
+height: 			10px;
+font: 				12px/1 Helvetica, Arial, sans-serif;
+padding: 			4px 3px
+}
+
+div.time-picker li.selected {
+background: 		#0063CE;
+color: 				#fff
+}
+
+#bal { 
+margin-right: 		15px; 
+display: 			inline-block 
+}
+
+#paypal { 
+background-color: 	@white; 
+border: 			1px solid #ddd; 
+padding: 			1em; 
+min-height: 		200px 
+}
+
+label.error { 
+color: 				#f00; 
+margin: 			0.5em 0 
+}
+
+table.cost td.right, table.cost th.right {
+text-align: 		right;
+}
+
+table.cost small {
+margin:				0;
+}
+
+table.cost .buy-credits {
+margin:				12px 0 0 0;
+}
+
+.insufficient h1 {
+color:				@red!important;
+}
+
+.padtop { padding-top: 20px; }
+#conv-message { width: 250px; height: 60px; }
+
+.survey-questions input["text"] { width: 70%; }
+.survey-questions textarea { width: 80%; height: 60px; }

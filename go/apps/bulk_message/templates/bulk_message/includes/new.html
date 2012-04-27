@@ -1,0 +1,61 @@
+<div class="control-group">
+    <label class="control-label" for="input01">Conversation Name</label>
+    <div class="controls">{{form.subject}}{{form.subject.errors}}</div>
+</div>
+<div class="control-group">
+    <label class="control-label" for="cmessage">Message <span id="charcount" class="label label-info">0</span></label>
+    <div class="controls">{{form.message}}{{form.message.errors}}</div>
+</div>
+<div class="control-group">
+    <label class="control-label" for="inlineCheckboxes">Conversation Locations</label>
+    <table class="table table-condensed" style="width: 90%">
+    <tbody>
+    {% for choice in form.delivery_class_widgets %}
+        {% cycle '<tr>' '' %}
+        <td>
+            {{choice.tag}}
+            <label class="checkbox inline" for="inlineCheckbox-{{ choice.choice_label }}">{{ choice.choice_label|title }}</label>
+        </td>
+        {% cycle '' '</tr>' %}
+    {% endfor %}
+    <tr>
+        <td colspan="3">
+            <label for="channel" class="error" style="display: none">Please select at least one channel for your message.</label>
+        </td>
+    </tr>
+    </tbody>
+    </table>
+</div>
+{% for delivery_class, tag_pools in delivery_classes %}
+<div class="control-group delivery-class-selection" style="display:none" 
+        id="{{delivery_class}}_tag_pool_selection">
+    <label class="control-label" for="{{delivery_class}}_tagpool">
+        Pick a method delivery via {{delivery_class}}
+    </label>
+    <div class="controls">
+        <select id="{{delivery_class}}_tag_pool" name="delivery_tag_pool" class="input-medium">
+            {% for tag_pool, label in tag_pools %}
+            <option value="{{tag_pool}}">{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+{% endfor %}
+<div class="control-group">
+    <label class="control-label" for="cdate">Date</label>
+    <div class="controls">
+        <div class="input-prepend">
+            <span class="add-on"><i class="icon-calendar"></i></span>
+            {{form.start_date}}
+        </div>
+    </div>          
+</div>
+<div class="control-group">
+    <label class="control-label" for="ctime">Time</label>
+    <div class="controls">
+        <div class="input-prepend">
+        <span class="add-on"><i class="icon-time"></i></span>
+      {{form.start_time}}
+        </div>
+    </div>          
+</div>

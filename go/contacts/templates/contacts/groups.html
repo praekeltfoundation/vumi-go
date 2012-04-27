@@ -1,46 +1,56 @@
 {% extends "app.html" %}
+{% load go_tags %}
 
 {% block main %}
-<div id="control-bar">
-    <div id="control-elements">
-        <h3>
-            Groups
-        </h3>
-        {% include "contacts/includes/menu.html" %}
-    </div>
-</div>
-<div id="main">
-    <div class="inner">
-        {% include "base/includes/messages.html" %}
-        {% include "contacts/includes/tools.html" %}
-        <div class="wide-box people-box">
-            <div id="steps" class="two-step">
-                <div id="main-left-groups" class="step groups-active">
-                    <a href="{% url contacts:groups %}">Groups</a>
-                </div>
-                <div id="people" class="step" style="border-right: none">
-                    <a href="{% url contacts:people %}">People</a>
-                </div>
-            </div>
-            <div class="inner-box">
-                <div id="groups-list">
-                    {% for group in page.object_list %}
-                    <div class="group {% if forloop.first %}first{% endif %} {% if forloop.last %}last{% endif %}">
-                        <span class="group-name">
-                            <a href="{% url contacts:group group_name=group.key %}">{{group.key}}</a>
-                        </span>
-                        <span class="group-member-count">{{group.contact_set.count}}</span>
-                    </div>
-                    {% empty %}
-                    <div class="group last">
-                        <p>You don't have any groups yet.</p>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% include "base/includes/pagination.html" %}
+    <div class="row">
+        <div class="span12">
+            {% include "contacts/includes/menu.html" %}
+            <div id="welcome">
+                <h1>People &amp; Groups</h1>
             </div>
         </div>
-        {% include "footer.html" %}
     </div>
-</div>
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+      			<ul class="nav nav-tabs">
+      			    <li><a href="{% url contacts:people %}"><strong>People</strong></a></li>
+      			    <li class="active"><a href="{% url contacts:groups %}">Groups</a></li>
+      			</ul>
+      			<form id="search-filter" name="search-filter" action="" method="get" class="well form-search">
+                <input type="text" id="search-filter-input" name="q" value="{{query|default_if_none:"Search..."}}" class="input-large search-query">
+                <button type="submit" id="search-filter-btn" class="btn">Search</button>
+            </form>
+            <table class="table table-bordered table-striped">
+            <thead>
+            <tr>
+              <th>Name</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for group in page.object_list %}
+               <tr>
+                     <td>
+                         <a href="{% url contacts:group group_pk=group.pk %}">{{group.name}}</a>
+                    <span class="label label-info pull-right">{{group.contact_set.count}}</span>
+                     </td>
+               </tr>
+            {% empty %}
+                 <tr>
+                     <td>You don't have any groups yet.</td>
+                 </tr>
+              {% endfor %}
+            </tbody>
+            </table>
+        </div>
+    </div>
+    {% include "base/includes/pagination.html" %}
+{% endblock %}
+
+{% block modals %}
+    {% include "contacts/includes/tools.html" %}
 {% endblock %}

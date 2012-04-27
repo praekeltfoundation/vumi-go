@@ -5,7 +5,7 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 
 from go.base.models import User
-from go.test_utils import VumiGoDjangoTestCase
+from go.base.tests.utils import VumiGoDjangoTestCase
 from go.vumitools.contact import ContactStore
 
 

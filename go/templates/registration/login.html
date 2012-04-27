@@ -1,34 +1,35 @@
 {% extends "base.html" %}
 
-{% block extra_header %}
-<script>
-    $(document).ready(function(){
-        $("#signin-form").validate();
-    });
-</script>
+{% block content %}
+	<div class="row">
+	    <div class="span12">
+	        <div id="login">
+	            <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go">
+	            <form id="signin-form" name="signin-form" action="/accounts/login/" method="post" class="form-horizontal">
+	               {% csrf_token %}
+	               <input type="hidden" name="next" value="{{next}}">
+	               <fieldset>
+		               <div class="control-group"><input type="text" class="input-large email required" id="signin-input-email" name="username" placeholder="Email Address"></div>
+		               <div class="control-group"><input type="password" class="input-large required" id="signin-input-password" name="password" placeholder="Password"></div>
+		               <div class="control-group">
+		                   <input type="submit" class="btn" name="submit" value="sign in">
+		                   <div class="remember">
+		                       <label class="checkbox"><input type="checkbox"> Keep me signed in</label>
+		                   </div>
+		                   <p><a href="{% url todo %}forgot-password.html">Forgot your password?</a></p>
+		               </div>
+	               </fieldset>
+	               <p>&copy; 2012 <a href="http://praekelt.com">Praekelt Group</a>. <a href="mailto:hello@vumi.org">Contact</a>. <a href="https://github.com/praekelt/vumi">Github</a></p>
+	            </form>
+	        </div>
+	    </div>
+	</div>
 {% endblock %}
 
-{% block content %}
-    <div id="header">
-        <div id="header-elements-creds"><a href="{% url home %}"title="Go Vumi"><img src="{{STATIC_URL}}pics/header/logo.png"></a></div>
-    </div>
-    <div id="main" class="main-alt">
-        <div id="forgot-box">
-            <form name="signin-form" action="" method="post" id="signin-form">
-                <label for="signin-email" id="signin-label-email">Email Address</label>
-                <input type="text" id="signin-input-email" class="txtbox required email" name="username" autocomplete="on">
-
-                <label for="signin-email" id="signin-label-password">Password</label>
-                <input id="signin-input-password" type="password" name="password" autocomplete="off" class="txtbox password required" />
-
-                <input type="submit" name="signin" class="btn" value="Sign in">
-                <input type="hidden" name="next" value="{{next}}">
-                {% csrf_token %}
-
-                <!-- <span><a href="{% url todo %}forgot.html">Forgot your password?</a> <a href="{% url todo %}contact.html">Need Help?</a> <a href="{% url todo %}signup.html">Sign up for a Vumi Go account</a> </span> -->
-            </form>
-        </div>
-    </div>
-    <div id="ie">Please upgrade your browser. We recommend <a href="http://www.microsoft.com/windows/internet-explorer/default.aspx">Internet Explorer 8+</a>, <a href="http://www.mozilla.com/en-US/firefox/">Firefox</a> or <a href="http://www.google.com/chrome/index.html">Chrome</a></div>
-
+{% block extra_js %}
+    <script>
+        $(document).ready(function(){
+            $("#signin-form").validate();
+        });
+    </script>
 {% endblock %}

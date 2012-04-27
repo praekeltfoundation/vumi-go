@@ -41,7 +41,7 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
 
     def test_batch_send(self):
         consumer = self.get_cmd_consumer()
-        msg_options = {"from_addr": "+100"}
+        msg_options = {"from_addr": "+100", "worker_name": "dummy_worker"}
         self.api.batch_send("b123", "Hello!", msg_options,
                             ["+12", "+34", "+56"])
         [cmd1, cmd2, cmd3] = self.fetch_cmds(consumer)
@@ -123,8 +123,14 @@ class TestMessageSender(TestCase, CeleryTestMixIn):
 
     def test_batch_send(self):
         consumer = self.get_cmd_consumer()
-        msg_options = {"from_addr": "+56"}
-        self.mapi.batch_send("b123", "Hello!", msg_options, ["+12", "+34"])
+        msg_options = {"from_addr": "+56", "worker_name": "dummy_worker"}
+
+        for addr in ["+12", "+34"]:
+            cmd = VumiApiCommand.command("dummy_worker", "send",
+                    batch_id="b123", content="Hello!",
+                    msg_options={'from_addr': '+56'}, to_addr=addr)
+            self.mapi.send_command(cmd)
+
         [cmd1, cmd2] = self.fetch_cmds(consumer)
         send_msg = lambda to_addr: VumiApiCommand.send("b123", "Hello!",
                                                        msg_options, to_addr)
@@ -139,10 +145,17 @@ class TestVumiApiCommand(TestCase):
                          set(['exchange', 'exchange_type', 'routing_key']))
 
     def test_send(self):
-        cmd = VumiApiCommand.send('b123', 'content', {"from_addr": "+89"},
-                                  '+4567')
+        cmd = VumiApiCommand.send('b123', 'content', {
+                "from_addr": "+89",
+                "worker_name": "dummy_worker"
+            }, '+4567')
         self.assertEqual(cmd['command'], 'send')
-        self.assertEqual(cmd['batch_id'], 'b123')
-        self.assertEqual(cmd['content'], 'content')
-        self.assertEqual(cmd['msg_options'], {"from_addr": "+89"})
-        self.assertEqual(cmd['to_addr'], '+4567')
+        self.assertEqual(cmd['worker_name'], 'dummy_worker')
+        self.assertEqual(cmd['kwargs'], {
+            'batch_id': 'b123',
+            'content': 'content',
+            'msg_options': {
+                'from_addr': '+89',
+            },
+            'to_addr': '+4567'
+        })

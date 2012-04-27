@@ -7,13 +7,13 @@ from django.contrib.auth.models import User
 from django.conf import settings
 
 from vumi.tests.utils import FakeRedis
-from vumi.message import TransportUserMessage
 
-from go.test_utils import VumiGoDjangoTestCase
-from go.vumitools.tests.utils import CeleryTestMixIn, VumiApiCommand
+from go.base.tests.utils import VumiGoDjangoTestCase
+from go.vumitools.tests.utils import CeleryTestMixIn
 from go.conversation.models import Conversation
-from go.contacts.models import ContactGroup, Contact
 from go.base.utils import padded_queryset
+
+from go.conversation.views import CONVERSATIONS_PER_PAGE
 
 
 def reload_record(record):
@@ -40,21 +40,6 @@ class ConversationTestCase(VumiGoDjangoTestCase):
         self.assertEqual(len(conversations), 10)
         self.assertEqual(len(filter(lambda v: v is not '', conversations)), 1)
 
-    def test_new_conversation(self):
-        """test the creation of a new conversation"""
-        # render the form
-        self.assertEqual(Conversation.objects.count(), 1)
-        response = self.client.get(reverse('conversations:new'))
-        self.assertEqual(response.status_code, 200)
-        # post the form
-        response = self.client.post(reverse('conversations:new'), {
-            'subject': 'the subject',
-            'message': 'the message',
-            'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
-            'start_time': datetime.utcnow().strftime('%H:%M'),
-        })
-        self.assertEqual(Conversation.objects.count(), 2)
-
 
 class ContactGroupForm(VumiGoDjangoTestCase, CeleryTestMixIn):
 
@@ -79,33 +64,14 @@ class ContactGroupForm(VumiGoDjangoTestCase, CeleryTestMixIn):
 
     def setup_api(self):
         self._fake_redis = FakeRedis()
-        self.patch_setting('VUMI_API_CONFIG', {
-                'redis_cls': lambda **kws: self._fake_redis,
-                'message_store': {},
-                'message_sender': {},
-                'riak_manager': {'bucket_prefix': 'test.'},
-                })
+        vumi_config = settings.VUMI_API_CONFIG.copy()
+        vumi_config['redis_cls'] = lambda **kws: self._fake_redis
+        self.patch_settings(VUMI_API_CONFIG=vumi_config)
 
     def declare_longcode_tags(self):
         api = Conversation.vumi_api()
         api.declare_tags([("longcode", "default%s" % i) for i
                           in range(10001, 10001 + 4)])
-
-    def acquire_all_longcode_tags(self):
-        api = Conversation.vumi_api()
-        for _i in range(4):
-            api.acquire_tag("longcode")
-
-    def test_group_selection(self):
-        """Select an existing group and use that as the group for the
-        conversation"""
-        response = self.client.post(reverse('conversations:people',
-            kwargs={'conversation_pk': self.conversation.pk}), {
-            'groups': [grp.pk for grp in ContactGroup.objects.all()],
-            'delivery_class': 'shortcode',
-        })
-        self.assertRedirects(response, reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk}))
 
     def test_index(self):
         """Display all conversations"""
@@ -115,207 +81,57 @@ class ContactGroupForm(VumiGoDjangoTestCase, CeleryTestMixIn):
     def test_index_search(self):
         """Filter conversations based on query string"""
         response = self.client.get(reverse('conversations:index'), {
-            'q': 'something that does not exist in the fixtures'})
+            'query': 'something that does not exist in the fixtures'})
         self.assertNotContains(response, self.conversation.subject)
 
-    def test_contacts_upload(self):
-        """test uploading of contacts via CSV file"""
-        self.assertEqual(ContactGroup.objects.count(), 1)
-        response = self.client.post(reverse('conversations:upload',
-            kwargs={'conversation_pk': self.conversation.pk}), {
-            'name': 'Unit Test Group',
-            'file': self.csv_file,
-            'delivery_class': 'xmpp',
-        })
-        self.assertRedirects(response, reverse('conversations:send',
-            kwargs={'conversation_pk': self.conversation.pk}))
-        group = ContactGroup.objects.latest()
-        self.assertEqual(ContactGroup.objects.count(), 2)
-        self.assertEqual(group.name, 'Unit Test Group')
-        contacts = Contact.objects.filter(groups=group)
-        self.assertEquals(contacts.count(), 3)
-        for idx, contact in enumerate(contacts, start=1):
-            self.assertTrue(contact.name, 'Name %s' % idx)
-            self.assertTrue(contact.surname, 'Surname %s' % idx)
-            self.assertTrue(contact.msisdn.startswith('+2776123456%s' % idx))
-            self.assertIn(contact, group.contact_set.all())
-        self.assertIn(group, self.conversation.groups.all())
+    def test_index_search_on_type(self):
+        self.conversation.conversation_type = 'survey'
+        self.conversation.save()
 
-    def test_contacts_upload_to_existing_group(self):
-        """It should be able to upload new contacts to an existing group"""
-        group = ContactGroup.objects.latest()
-        group.contact_set.clear()
-        response = self.client.post(reverse('conversations:upload',
-            kwargs={'conversation_pk': self.conversation.pk}), {
-            'contact_group': group.pk,
-            'file': self.csv_file,
-            'delivery_class': 'xmpp',
-        })
-        self.assertRedirects(response, reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        contacts = Contact.objects.filter(groups=group)
-        self.assertEqual(contacts.count(), 3)
-        self.assertIn(group, self.conversation.groups.all())
+        def search(conversation_type):
+            return self.client.get(reverse('conversations:index'), {
+                'query': self.conversation.subject,
+                'conversation_type': conversation_type,
+                })
 
-    def test_priority_of_name_over_select_group_creation(self):
-        """Selected existing groups takes priority over creating
-        new groups"""
-        group = ContactGroup.objects.create(user=self.user, name='Test Group')
-        response = self.client.post(reverse('conversations:upload',
-            kwargs={'conversation_pk': self.conversation.pk}), {
-            'name': 'Name of Group',
-            'contact_group': group.pk,
-            'file': self.csv_file,
-            'delivery_class': 'xmpp',
-        })
-        self.assertRedirects(response, reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        new_group = ContactGroup.objects.latest()
-        self.assertNotEqual(new_group, group)
-        self.assertEqual(new_group.name, 'Name of Group')
-        contacts = Contact.objects.filter(groups=new_group)
-        self.assertEqual(contacts.count(), 3)
-        self.assertIn(new_group, self.conversation.groups.all())
+        self.assertNotContains(search('bulk_message'),
+                self.conversation.message)
+        self.assertContains(search('survey'),
+                self.conversation.message)
 
-    def test_sending_preview(self):
-        """test sending of conversation to a selected set of preview
-        contacts"""
-        consumer = self.get_cmd_consumer()
-        response = self.client.post(reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk,
-        }), {
-            'contact': [c.pk for c in Contact.objects.all()]
-        })
-        self.assertRedirects(response, reverse('conversations:start', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        [cmd] = self.fetch_cmds(consumer)
-        [batch] = self.conversation.preview_batch_set.all()
-        [contact] = self.conversation.previewcontacts.all()
-        conversation = self.conversation
-        msg_options = {"from_addr": "default10001",
-                       "transport_type": "sms",
-                       "transport_name": "smpp_transport",
-                       "worker_name": "bulk_message_application",
-                       "conversation_id": conversation.pk,
-                       "conversation_type": conversation.conversation_type,
-                    }
-        self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
-                                                  "APPROVE? Test message",
-                                                  msg_options,
-                                                  contact.msisdn))
+    def test_index_search_on_status(self):
 
-    def test_sending_preview_fails(self):
-        """test failure to send previews"""
-        self.acquire_all_longcode_tags()
-        consumer = self.get_cmd_consumer()
-        response = self.client.post(reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk,
-        }), {
-            'contact': [c.pk for c in Contact.objects.all()]
-        }, follow=True)
-        self.assertRedirects(response, reverse('conversations:send', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        [] = self.fetch_cmds(consumer)
-        [] = self.conversation.preview_batch_set.all()
-        [msg] = response.context['messages']
-        self.assertEqual(str(msg), "No spare messaging tags.")
+        def search(conversation_status):
+            return self.client.get(reverse('conversations:index'), {
+                'query': self.conversation.subject,
+                'conversation_status': conversation_status,
+                })
 
-    def test_start(self):
-        """
-        Test the start conversation view
-        """
-        consumer = self.get_cmd_consumer()
-        response = self.client.post(reverse('conversations:start', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        self.assertRedirects(response, reverse('conversations:show', kwargs={
-            'conversation_pk': self.conversation.pk}))
+        # it should be draft
+        self.assertContains(search('draft'),
+                self.conversation.message)
+        self.assertNotContains(search('running'),
+                self.conversation.message)
+        self.assertNotContains(search('finished'),
+                self.conversation.message)
 
-        [cmd] = self.fetch_cmds(consumer)
-        [batch] = self.conversation.message_batch_set.all()
-        [contact] = self.conversation.people()
-        conversation = self.conversation
-        msg_options = {"from_addr": "default10001",
-                       "transport_type": "sms",
-                       "transport_name": "smpp_transport",
-                       "worker_name": "bulk_message_application",
-                       "conversation_id": conversation.pk,
-                       "conversation_type": conversation.conversation_type,
-                       }
-        self.assertEqual(cmd, VumiApiCommand.send(batch.batch_id,
-                                                  "Test message",
-                                                  msg_options,
-                                                  contact.msisdn))
+        # now it should be running
+        self.conversation.start()
+        self.assertNotContains(search('draft'),
+                self.conversation.message)
+        self.assertContains(search('running'),
+                self.conversation.message)
+        self.assertNotContains(search('finished'),
+                self.conversation.message)
 
-    def test_start_fails(self):
-        """
-        Test failure to send messages
-        """
-        self.acquire_all_longcode_tags()
-        consumer = self.get_cmd_consumer()
-        response = self.client.post(reverse('conversations:start', kwargs={
-            'conversation_pk': self.conversation.pk}), follow=True)
-        self.assertRedirects(response, reverse('conversations:start', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        [] = self.fetch_cmds(consumer)
-        [] = self.conversation.preview_batch_set.all()
-        [msg] = response.context['messages']
-        self.assertEqual(str(msg), "No spare messaging tags.")
-
-    def test_preview_status(self):
-        """
-        Test preview status helper function
-        """
-        vumiapi = Conversation.vumi_api()
-        [contact] = self.conversation.previewcontacts.all()
-        self.assertEqual(self.conversation.preview_status(),
-                         [(contact, 'waiting to send')])
-
-        # Send the preview, find out what batch it was given
-        # and find the tag associated with it.
-        self.conversation.send_preview()
-        [batch] = self.conversation.preview_batch_set.all()
-        [tag] = vumiapi.batch_tags(batch.batch_id)
-        tagpool, msisdn = tag
-
-        # Fake the msg that is sent to the preview users, we're faking
-        # this because we don't want to fire up the BulkSendApplication
-        # as part of a Django test case.
-        # This message is roughly what it would look like.
-        msg = TransportUserMessage(to_addr=contact.msisdn, from_addr=msisdn,
-            transport_name='dummy_transport', transport_type='sms',
-            content='approve? something something')
-        vumiapi.mdb.add_outbound_message(msg=msg, tag=tag)
-
-        # Make sure we display the correct message in the UI when
-        # asked at this stage.
-        self.assertEqual(self.conversation.preview_status(),
-                         [(contact, 'awaiting reply')])
-
-        # Fake an inbound message received on our number
-        to_addr = "+123" + tag[1][-5:]
-
-        # unknown contact, since we haven't sent the from_addr correctly
-        msg = self.mkmsg_in('hello', to_addr=to_addr)
-        vumiapi.mdb.add_inbound_message(msg, tag=tag)
-        self.assertEqual(self.conversation.preview_status(),
-                         [(contact, 'awaiting reply')])
-
-        # known contact, which was in the preview_batch_set and now the status
-        # should display 'approved'
-        msg = self.mkmsg_in('approve', to_addr=to_addr,
-                            from_addr=contact.msisdn.lstrip('+'))
-        vumiapi.mdb.add_inbound_message(msg, tag=tag)
-        self.assertEqual(self.conversation.preview_status(),
-                         [(contact, 'approved')])
-
-    def test_show(self):
-        """
-        Test showing the conversation
-        """
-        response = self.client.get(reverse('conversations:show', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.subject, 'Test Conversation')
+        # now it shouldn't be
+        self.conversation.end_conversation()
+        self.assertNotContains(search('draft'),
+                self.conversation.message)
+        self.assertNotContains(search('running'),
+                self.conversation.message)
+        self.assertContains(search('finished'),
+                self.conversation.message)
 
     def test_replies(self):
         """
@@ -324,7 +140,7 @@ class ContactGroupForm(VumiGoDjangoTestCase, CeleryTestMixIn):
         vumiapi = Conversation.vumi_api()
         [contact] = self.conversation.people()
         self.assertEqual(self.conversation.replies(), [])
-        self.conversation.send_messages()
+        self.conversation.start()
         [batch] = self.conversation.message_batch_set.all()
         self.assertEqual(self.conversation.replies(), [])
         [tag] = vumiapi.batch_tags(batch.batch_id)
@@ -344,23 +160,9 @@ class ContactGroupForm(VumiGoDjangoTestCase, CeleryTestMixIn):
         self.assertEqual(reply, {
             'contact': contact,
             'content': u'hello',
-            'source': 'SMS Long code',
-            'type': u'longcode',
+            'source': 'Long code',
+            'type': u'sms',
             })
-
-    def test_end(self):
-        """
-        Test ending the conversation
-        """
-        self.assertFalse(self.conversation.ended())
-        response = self.client.post(reverse('conversations:end', kwargs={
-            'conversation_pk': self.conversation.pk}), follow=True)
-        self.assertRedirects(response, reverse('conversations:show', kwargs={
-            'conversation_pk': self.conversation.pk}))
-        [msg] = response.context['messages']
-        self.assertEqual(str(msg), "Conversation ended")
-        self.conversation = reload_record(self.conversation)
-        self.assertTrue(self.conversation.ended())
 
     def test_end_conversation(self):
         """
@@ -375,15 +177,27 @@ class ContactGroupForm(VumiGoDjangoTestCase, CeleryTestMixIn):
         Test that tags are released when a conversation is ended.
         """
         vumiapi = Conversation.vumi_api()
-        self.conversation.send_preview()
-        self.conversation.send_messages()
-        [preview_batch] = self.conversation.preview_batch_set.all()
+        self.conversation.start()
         [message_batch] = self.conversation.message_batch_set.all()
-        self.assertEqual(len(vumiapi.batch_tags(preview_batch.batch_id)), 1)
         self.assertEqual(len(vumiapi.batch_tags(message_batch.batch_id)), 1)
         self.conversation.end_conversation()
-        [pre_tag] = vumiapi.batch_tags(preview_batch.batch_id)
         [msg_tag] = vumiapi.batch_tags(message_batch.batch_id)
         tag_batch = lambda t: vumiapi.mdb.get_tag_info(t).current_batch.key
-        self.assertEqual(tag_batch(pre_tag), None)
         self.assertEqual(tag_batch(msg_tag), None)
+
+    def test_pagination(self):
+        # start with a clean state
+        Conversation.objects.all().delete()
+        # Create 10
+        for i in range(10):
+            Conversation.objects.create(user=self.user,
+                subject='Test Conversation', message='',
+                start_date=datetime.now().date(),
+                start_time=datetime.now().time())
+        response = self.client.get(reverse('conversations:index'))
+        self.assertContains(response, 'Test Conversation',
+            count=CONVERSATIONS_PER_PAGE)
+        response = self.client.get(reverse('conversations:index'), {
+            'p': 2})
+        self.assertContains(response, 'Test Conversation',
+            count=4)
