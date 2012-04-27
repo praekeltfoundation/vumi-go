@@ -30,7 +30,7 @@ else
 fi
 
 find ./go -name '*.pyc' -delete && \
-coverage run --branch --include="go/*" ve/bin/django-admin.py test && \
+coverage run --branch --include="go/*" ve/bin/django-admin.py test -evumitools && \
 coverage run --branch --append --include="go/*" ve/bin/trial go/vumitools/ && \
 coverage xml --include="go/*" && \
 coverage html --include="go/*" && \
