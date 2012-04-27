@@ -29,7 +29,7 @@ class CommandDispatcherTestCase(ApplicationTestCase):
 
     def tearDown(self):
         self._fake_redis.teardown()
-        super(CommandDispatcherTestCase, self).tearDown()
+        return super(CommandDispatcherTestCase, self).tearDown()
 
     def publish_command(self, cmd):
         return self.dispatch(cmd, rkey='vumi.api')
@@ -109,6 +109,11 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
             }
         })
         self.router = self.dispatcher._router
+
+    @inlineCallbacks
+    def tearDown(self):
+        yield self.router.manager.purge_all()
+        yield super(GoApplicationRouterTestCase, self).tearDown()
 
     @inlineCallbacks
     def test_tag_retrieval_and_dispatching(self):
