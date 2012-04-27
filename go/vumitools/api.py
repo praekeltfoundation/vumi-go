@@ -4,7 +4,6 @@
 """Vumi API for high-volume messaging."""
 
 import redis
-import warnings
 
 from vumi.message import Message
 

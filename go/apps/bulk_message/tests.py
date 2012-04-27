@@ -93,8 +93,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         [cmd] = self.get_api_commands_sent()
         self.assertEqual(cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,), 'start',
-            conversation_type=self.conversation.conversation_type,
-            conversation_id=self.conversation.pk,
+            content=conversation.message,
+            to_addresses=conversation.get_contacts_addresses(),
             batch_id=batch.batch_id,
             msg_options=msg_options
             ))

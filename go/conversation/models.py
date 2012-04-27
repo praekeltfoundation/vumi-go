@@ -198,7 +198,7 @@ class Conversation(models.Model):
         """
         delivery_class = delivery_class or self.delivery_class
         addrs = [contact.addr_for(delivery_class) for contact
-                    in self.people.all()]
+                    in self.people().all()]
         return [addr for addr in addrs if addr]
 
     def start(self):

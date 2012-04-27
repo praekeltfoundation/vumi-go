@@ -29,7 +29,7 @@
 		    </div>
 	    </div>
 	    <div class="row">
-            {% for conversation in conversations %}
+            {% for conversation in page.object_list %}
                 {% include "conversation/includes/conversation-box.html" %}
                 {% if forloop.counter|divisibleby:"3" %}
                     </div>
