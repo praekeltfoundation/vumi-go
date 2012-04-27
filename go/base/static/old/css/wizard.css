@@ -1,0 +1,20 @@
+.creating-main{}
+.creating{width:495px;margin:250px auto}
+.creating h2{font-size:2.2em;line-height:1.2em;text-shadow:1px 1px 1px #FFF;color:#333;padding-top:13px}
+img.loading{display:block;margin:20px auto}
+img.creating-logo{margin-left:210px}
+#wizard {margin:0 0 20px 0}
+#wizard h1{font-size:2.2em;line-height:1.2em;text-shadow:1px 1px 1px white;color:#87847c;font-weight:bold;margin-top:1em;text-align:center}
+#wizard h2{font-size:1.4em;line-height:1.2em;text-shadow:1px 1px 1px white;color:#333}
+#wizard p.big{font-size:1.4em;text-align:center}
+#wizard-box{background-color:#f9f9f9;border:15px solid #fff;box-shadow:1px 1px 2px #ccc;width:930px;margin:2em 0}
+#wizard-steps{background-color:#fff;position:relative;float:left;width:370px;z-index:1}
+.wizard-step-item{position:relative;z-index:2;padding:18px 10px 12px 15px;border-bottom:1px solid #fff;height:20px;width:345px;font-size:1.1em;background-color:#f9f9f9;}
+.wizard-step-item-active{position:relative;z-index:3;top:0;left:0;padding:18px 4px 12px 15px;width:363px;height:20px;font-size:1.1em;border-bottom: 1px solid #fff}
+.wizard-step-item-active{background-color:#f2f2f2;background-image: url(../pics/wizard/active.png); background-repeat:no-repeat; background-position: center right}
+.wizard-step-item-active a{text-decoration:none;color:#000}
+.wizard-step-no-icon{padding-left:15px!important;width:205px!important}
+.wizard-step-no-icon-active{padding-left:20px!important;width:210px!important}
+#wizard-actions{background-color:#fff;float:left;width:520px;color:#000;padding:20px;min-height:226px}
+#wizard-actions .notification{width:464px}
+#wizard-actions p.intro{margin:0 0 0.5em 0;font-size:1.2em}

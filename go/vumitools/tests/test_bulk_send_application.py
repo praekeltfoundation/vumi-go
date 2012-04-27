@@ -15,6 +15,7 @@ from go.vumitools.api import VumiApiCommand
 class TestBulkSendApplication(ApplicationTestCase):
 
     application_class = BulkSendApplication
+    timeout = 1
 
     @inlineCallbacks
     def setUp(self):
@@ -44,12 +45,17 @@ class TestBulkSendApplication(ApplicationTestCase):
         return self.api.store.add_outbound_message(self.mkmsg_out(**kw))
 
     @inlineCallbacks
-    def test_send(self):
+    def test_start(self):
         batch_id = yield self.api.store.batch_start([])
-        yield self.publish_command(VumiApiCommand.send(batch_id,
-                                                       'content',
-                                                       {"from_addr": "from"},
-                                                       'to_addr'))
+        cmd = VumiApiCommand.command('dummy_worker', 'start',
+            batch_id=batch_id,
+            to_addresses=['to_addr'],
+            content='content',
+            msg_options={
+                'transport_type': 'sms',
+                'from_addr': 'from_addr',
+            })
+        yield self.publish_command(cmd)
         [msg] = yield self.get_dispatched_messages()
         self.assertEqual(msg['to_addr'], 'to_addr')
         self.assertEqual(msg['content'], 'content')

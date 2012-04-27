@@ -27,8 +27,8 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'go',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'go.db',
         'USER': 'go',
         'PASSWORD': 'go',
         'HOST': 'localhost',
@@ -78,11 +78,6 @@ STATIC_ROOT = abspath('static')
 # Example: "http://media.lawrence.com/static/"
 STATIC_URL = '/static/'
 
-# URL prefix for admin static files -- CSS, JavaScript and images.
-# Make sure to use a trailing slash.
-# Examples: "http://foo.com/static/admin/", "/static/admin/".
-ADMIN_MEDIA_PREFIX = '/static/admin/'
-
 # Additional locations of static files
 STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
@@ -123,7 +118,8 @@ TEMPLATE_DIRS = (
     abspath("base", "templates"),
     abspath("conversation", "templates"),
     abspath("contacts", "templates"),
-    abspath("surveys", "templates"),
+    abspath("apps", "surveys", "templates"),
+    abspath("apps", "bulk_message", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -221,6 +217,7 @@ VXPOLLS_CONFIG = yaml.load(open(VXPOLLS_CONFIG_PATH, 'r'))
 VXPOLLS_QUESTIONS = VXPOLLS_CONFIG.get('questions', [])
 VXPOLLS_POLL_ID = VXPOLLS_CONFIG.get('poll_id')
 VXPOLLS_TRANSPORT_NAME = 'vxpolls_transport'
+VXPOLLS_WORKER_NAME = 'vxpolls_worker'
 
 
 if os.environ.get('VUMIGO_FAST_TESTS'):

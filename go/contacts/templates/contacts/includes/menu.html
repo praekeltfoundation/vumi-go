@@ -1,11 +1,11 @@
-<div id="control-bar-right">
-    <div id="new-group-button" class="new-group">
-        <a href="#">New Group</a>
-    </div>
-    <div id="new-person-button" class="new-group">
-        <a href="{% url contacts:new_person %}">New Contact</a>
-    </div>
-    <div id="upload-contacts-button" class="new-group">
-        <a href="#">Upload Contacts</a>
+<div class="pull-right padtop">
+    <div class="btn-group">
+        <a class="btn btn-success" href="#"><i class="icon-user white"></i> New</a>
+        <a class="btn btn-success dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
+        <ul class="dropdown-menu">
+            <li><a href="{% url contacts:new_person %}"><i class="icon-user"></i> New Contact</a></li>
+            <li><a data-toggle="modal" href="#newGroup"><i class="icon-user"></i> New Group</a></li>
+            <li><a data-toggle="modal" href="#uplContacts"><i class="icon-upload"></i> Upload Contacts</a></li>
+        </ul>
     </div>
 </div>

@@ -69,6 +69,18 @@ class VumiApi(object):
         """
         return self.mdb.batch_done(batch_id)
 
+    def send_command(self, command):
+        """Send a command to the GoApplication via the control
+        channel.
+
+        :type command: VumiApiCommand
+        :param command:
+            The command to send
+        :rtype:
+            None.
+        """
+        self.mapi.send_command(command)
+
     def batch_send(self, batch_id, msg, msg_options, addresses):
         """Send a batch of text message to a list of addresses.
 
@@ -93,7 +105,9 @@ class VumiApi(object):
         :rtype:
             None.
         """
-        return self.mapi.batch_send(batch_id, msg, msg_options, addresses)
+        for address in addresses:
+            command = VumiApiCommand.send(batch_id, msg, msg_options, address)
+            self.send_command(command)
 
     def batch_status(self, batch_id):
         """Check the status of a batch of messages.
@@ -209,10 +223,8 @@ class MessageSender(object):
         self.sender_api = api_celery
         self.publisher_config = VumiApiCommand.default_routing_config()
 
-    def batch_send(self, batch_id, msg, msg_options, addresses):
-        self.sender_api.batch_send_task.delay(batch_id, msg,
-                                              msg_options, addresses,
-                                              self.publisher_config)
+    def send_command(self, command):
+        self.sender_api.send_command_task.delay(command, self.publisher_config)
 
 
 class VumiApiCommand(Message):
@@ -228,11 +240,17 @@ class VumiApiCommand(Message):
         return cls._DEFAULT_ROUTING_CONFIG.copy()
 
     @classmethod
-    def send(cls, batch_id, msg, msg_options, address):
+    def command(cls, worker_name, command_name, *args, **kwargs):
         return cls(**{
-            'command': 'send',
-            'batch_id': batch_id,
-            'msg_options': msg_options,
-            'content': msg,
-            'to_addr': address,
-            })
+            'worker_name': worker_name,
+            'command': command_name,
+            'args': args,
+            'kwargs': kwargs,
+        })
+
+    @classmethod
+    def send(cls, batch_id, msg, msg_options, address):
+        options = msg_options.copy()
+        worker_name = options.pop('worker_name')
+        return cls.command(worker_name, 'send', batch_id=batch_id,
+            content=msg, to_addr=address, msg_options=options)

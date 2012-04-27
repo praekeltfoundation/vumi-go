@@ -34,6 +34,6 @@ coverage run --branch --include="go/*" ve/bin/django-admin.py test && \
 coverage run --branch --append --include="go/*" ve/bin/trial go/vumitools/ && \
 coverage xml --include="go/*" && \
 coverage html --include="go/*" && \
-(find ./go -name '*.py' | xargs pep8 --exclude='0*' > pep8.log || true) && \
+(find ./go -name '*.py' | xargs pep8 --repeat --exclude='0*' > pep8.log || true) && \
 cat pep8.log && \
 deactivate
