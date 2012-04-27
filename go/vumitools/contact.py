@@ -14,7 +14,6 @@ from go.vumitools.account import UserAccount, PerAccountStore
 class ContactGroup(Model):
     """A group of contacts"""
     # key is group name
-    # name = Unicode(max_length=255)
     user_account = ForeignKey(UserAccount)
     created_at = Timestamp(default=datetime.utcnow)
 
@@ -30,11 +29,12 @@ class ContactGroup(Model):
 
 class Contact(Model):
     """A contact"""
+    # key is UUID
     user_account = ForeignKey(UserAccount)
     name = Unicode(max_length=255, null=True)
     surname = Unicode(max_length=255, null=True)
-    email_address = Unicode(null=True)  # EmailField, blank=True
-    msisdn = Unicode(max_length=255)    # blank=False
+    email_address = Unicode(null=True)  # EmailField?
+    msisdn = Unicode(max_length=255)
     dob = Timestamp(null=True)
     twitter_handle = Unicode(max_length=100, null=True)
     facebook_id = Unicode(max_length=100, null=True)
@@ -85,9 +85,16 @@ class ContactStore(PerAccountStore):
     @Manager.calls_manager
     def new_contact(self, name, surname, **fields):
         contact_id = uuid4().get_hex()
+
+        # These are foreign keys.
+        groups = fields.pop('groups', [])
+
         contact = self.contacts(
             contact_id, user_account=self.user_account, name=name,
             surname=surname, **fields)
+        for group in groups:
+            contact.add_to_group(group)
+
         yield contact.save()
         returnValue(contact)
 
@@ -106,6 +113,12 @@ class ContactStore(PerAccountStore):
 
     def get_group(self, name):
         return self.groups.load(name)
+
+    def list_contacts(self):
+        return self.get_user_account().backlinks.contacts(self.manager)
+
+    def list_groups(self):
+        return self.get_user_account().backlinks.contactgroups(self.manager)
 
     @Manager.calls_manager
     def contact_for_addr(self, transport_type, addr):

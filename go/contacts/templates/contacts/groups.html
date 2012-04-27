@@ -27,7 +27,7 @@
                     {% for group in page.object_list %}
                     <div class="group {% if forloop.first %}first{% endif %} {% if forloop.last %}last{% endif %}">
                         <span class="group-name">
-                            <a href="{% url contacts:group group_pk=group.pk %}">{{group.name}}</a>
+                            <a href="{% url contacts:group group_name=group.key %}">{{group.key}}</a>
                         </span>
                         <span class="group-member-count">{{group.contact_set.count}}</span>
                     </div>

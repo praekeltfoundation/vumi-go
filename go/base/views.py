@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from go.conversation.models import Conversation
+
 from go.base.utils import padded_queryset
 
 

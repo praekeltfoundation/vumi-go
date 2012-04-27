@@ -16,7 +16,7 @@
     <div id="control-bar">
         <div id="control-elements">
             <h3>
-                <a href="{% url contacts:groups %}">Group</a> » {{group.name}}
+                <a href="{% url contacts:groups %}">Group</a> » {{group.key}}
             </h3>
             {% include "contacts/includes/menu.html" %}
         </div>
@@ -41,7 +41,7 @@
                     </form>
                     <div id="groups-list">
                         <div class="group first">
-                            <span class="group-name"><strong>{{group.name}}</strong></span><span class="group-member-count">{{group.contact_set.count}} Members {# Todo: implement <a href="#">Empty Group</a> <a href="#">Delete Group</a> #}</span>
+                            <span class="group-name"><strong>{{group.key}}</strong></span><span class="group-member-count">{{group.contact_set.count}} Members {# Todo: implement <a href="#">Empty Group</a> <a href="#">Delete Group</a> #}</span>
                         </div>
                         <ul class="people-filter">
                             {% load_alphabet as alphabet %}
@@ -66,7 +66,7 @@
                                 {% if forloop.first %}first{% endif %}
                                 {% if forloop.last %}last{% endif %}
                                 {% endspaceless %}">
-                                <span class="group-name"><a href="{% url contacts:person person_pk=contact.pk %}">{{contact}}</a></span>
+                                <span class="group-name"><a href="{% url contacts:person person_key=contact.key %}">{{contact}}</a></span>
                             </div>
                         {% empty %}
                             <div class="group">

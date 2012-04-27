@@ -36,11 +36,20 @@ class PerAccountStore(object):
     def __init__(self, user_account):
         self.set_user(user_account)
 
+    @classmethod
+    def from_django_user(cls, user):
+        """Convenience constructor for using this from Django."""
+        return cls(user.userprofile.get_user_account())
+
     def set_user(self, user_account):
         self.base_manager = user_account.manager
         self.user_account = user_account
         self.manager = self.base_manager.sub_manager(user_account.key)
         self.setup_proxies()
+
+    def get_user_account(self):
+        store = AccountStore(self.base_manager)
+        return store.users.load(self.user_account.key)
 
     def setup_proxies(self):
         pass

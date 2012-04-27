@@ -5,33 +5,11 @@
 from twisted.internet.defer import inlineCallbacks
 from twisted.trial.unittest import TestCase
 
-from vumi.persist.fields import ForeignKeyProxy, ManyToManyProxy
 from vumi.persist.txriak_manager import TxRiakManager
 
+from go.vumitools.tests.utils import model_eq
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
-
-
-def field_eq(f1, f2):
-    if f1 == f2:
-        return True
-    if isinstance(f1, ManyToManyProxy) and isinstance(f2, ManyToManyProxy):
-        return f1.keys() == f2.keys()
-    if isinstance(f1, ForeignKeyProxy) and isinstance(f2, ForeignKeyProxy):
-        return f1.key == f2.key
-    return False
-
-
-def model_eq(m1, m2):
-    fields = m1.field_descriptors.keys()
-    if fields != m2.field_descriptors.keys():
-        return False
-    if m1.key != m2.key:
-        return False
-    for field in fields:
-        if not field_eq(getattr(m1, field), getattr(m2, field)):
-            return False
-    return True
 
 
 class TestContactStore(TestCase):
