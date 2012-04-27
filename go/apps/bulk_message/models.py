@@ -15,8 +15,7 @@ class BulkMessageConversation(Conversation):
 
         self.dispatch_command('start',
             batch_id=batch_id,
-            conversation_type=self.conversation_type,
-            conversation_id=self.pk,
+            content=self.message,
             to_addresses=self.get_contacts_addresses(),
             msg_options={
                 'transport_type': self.delivery_class,

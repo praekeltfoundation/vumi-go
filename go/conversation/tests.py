@@ -4,6 +4,7 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.conf import settings
 from go.conversation.models import Conversation
+from go.conversation.views import CONVERSATIONS_PER_PAGE
 from go.contacts.models import ContactGroup, Contact
 from go.base.utils import padded_queryset
 from vumi.tests.utils import FakeRedis
@@ -136,53 +137,6 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.assertContains(search('finished'),
                 self.conversation.message)
 
-    # def test_preview_status(self):
-    #     """
-    #     Test preview status helper function
-    #     """
-    #     vumiapi = Conversation.vumi_api()
-    #     [contact] = self.conversation.previewcontacts.all()
-    #     self.assertEqual(self.conversation.preview_status(),
-    #                      [(contact, 'waiting to send')])
-
-    #     # Send the preview, find out what batch it was given
-    #     # and find the tag associated with it.
-    #     self.conversation.send_preview()
-    #     [batch] = self.conversation.preview_batch_set.all()
-    #     [tag] = vumiapi.batch_tags(batch.batch_id)
-    #     tagpool, msisdn = tag
-
-    #     # Fake the msg that is sent to the preview users, we're faking
-    #     # this because we don't want to fire up the BulkSendApplication
-    #     # as part of a Django test case.
-    #     # This message is roughly what it would look like.
-    #     msg = TransportUserMessage(to_addr=contact.msisdn, from_addr=msisdn,
-    #         transport_name='dummy_transport', transport_type='sms',
-    #         content='approve? something something')
-    #     vumiapi.mdb.add_outbound_message(msg=msg, tag=tag)
-
-    #     # Make sure we display the correct message in the UI when
-    #     # asked at this stage.
-    #     self.assertEqual(self.conversation.preview_status(),
-    #                      [(contact, 'awaiting reply')])
-
-    #     # Fake an inbound message received on our number
-    #     to_addr = "+123" + tag[1][-5:]
-
-    #     # unknown contact, since we haven't sent the from_addr correctly
-    #     msg = self.mkmsg_in('hello', to_addr=to_addr)
-    #     vumiapi.mdb.add_inbound_message(msg, tag=tag)
-    #     self.assertEqual(self.conversation.preview_status(),
-    #                      [(contact, 'awaiting reply')])
-
-    #     # known contact, which was in the preview_batch_set and now the status
-    #     # should display 'approved'
-    #     msg = self.mkmsg_in('approve', to_addr=to_addr,
-    #                         from_addr=contact.msisdn.lstrip('+'))
-    #     vumiapi.mdb.add_inbound_message(msg, tag=tag)
-    #     self.assertEqual(self.conversation.preview_status(),
-    #                      [(contact, 'approved')])
-
     def test_replies(self):
         """
         Test replies helper function
@@ -235,6 +189,19 @@ class ContactGroupForm(TestCase, CeleryTestMixIn):
         self.assertEqual(vumiapi.mdb.tag_common(msg_tag)['current_batch_id'],
                          None)
 
-    # def test_pagination(self):
-    #     raise NotImplementedError(
-    #             'Still needs to be implemented, does not work yet.')
+    def test_pagination(self):
+        # start with a clean state
+        Conversation.objects.all().delete()
+        # Create 10
+        for i in range(10):
+            Conversation.objects.create(user=self.user,
+                subject='Test Conversation', message='',
+                start_date=datetime.now().date(),
+                start_time=datetime.now().time())
+        response = self.client.get(reverse('conversations:index'))
+        self.assertContains(response, 'Test Conversation',
+            count=CONVERSATIONS_PER_PAGE)
+        response = self.client.get(reverse('conversations:index'), {
+            'p': 2})
+        self.assertContains(response, 'Test Conversation',
+            count=4)
