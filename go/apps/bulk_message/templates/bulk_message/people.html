@@ -1,0 +1,61 @@
+{% extends "app.html" %}
+
+{% block main %}
+    {# TODO: this big form is a bad idea, it causes too much complexity on the backend #}
+    <form name="conversation" enctype="multipart/form-data" method="post" action="" id="conversation">
+    <div class="row">
+        <div class="span12">
+            <!--
+            <div class="pull-right padtop">
+                <a class="btn btn-success" data-toggle="modal" href="#previewConv">Send Preview</a>
+            </div>
+            <div class="pull-right padtop" style="margin-right: 10px">
+                <a class="btn" href="#">Save Draft</a>
+            </div>
+            -->
+            <div id="welcome">
+                <h1>New Conversation</h1>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="span4">
+            <div class="box shadow conv-disabled">
+                <h3>1. Message Details</h3>
+                <br>
+                <fieldset>
+                    {% include "bulk_message/includes/new.html" with form=conversation_form %}
+                </fieldset>
+            </div>
+        </div>
+        <div class="span4">
+            <div class="box shadow">
+                <h3>2. Message Recipients</h3>
+                <br><a name="step2" id="step2"></a>
+                {% include "conversation/includes/groups.html" with form=group_form %}
+                <div class="btn-toolbar">
+                    <div class="btn-group"><input type="submit" class="btn btn-primary" value="Next &rarr;"></div>
+                    <div class="btn-group"><input type="reset" class="btn" onClick="javascript:history.go(-1)" value="Go Back"></div>
+                    <div class="btn-group"><input type="reset" class="btn" value="Cancel"></div>
+                </div>
+            </div>
+        </div>
+        <div class="span4">
+            <div class="box shadow conv-disabled">
+                <h3>3. Send Message</h3>
+            </div>
+        </div>
+    </div>
+    {% csrf_token %}
+</form>
+{% endblock %}
+
+
+{% block modals %}
+    {% include "conversation/includes/tools.html" %}
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "app.html" %}
+
+{% block main %}
+<form name="conversation" method="post" action="" id="conversation">
+    {% csrf_token %}
+    <div class="row">
+        <div class="span12">
+            <div class="pull-right padtop">
+                <input type="submit" name="submit" class="btn btn-success" value="Next">
+            </div>
+            <div class="pull-right padtop" style="margin-right: 10px">
+                <input type="button" class="btn" value="Back" onclick="javascript:history.go(-1)">
+            </div>
+            <div id="welcome">
+                <h1>New Survey</h1>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            <p>You are about to start the <strong>{{conversation.subject}}</strong> survey with {{conversation.people.count}} participants.</p>
+            <p><input type="submit" value="Start Survey" class="btn btn-success btn-large" /></p>
+        </div>
+    </div>
+</form>
+{% endblock %}
