@@ -10,20 +10,8 @@ from celery.app import app_or_default
 
 from vumi.persist.fields import ForeignKeyProxy, ManyToManyProxy
 from vumi.message import TransportUserMessage
-from vumi.tests.utils import get_stubbed_worker
 
 from go.vumitools.api import VumiApiCommand
-from go.vumitools.api_worker import CommandDispatcher
-from go.vumitools.bulk_send_application import BulkSendApplication
-
-
-# class DummyApiWorker(CommandDispatcher):
-
-#     def send_to(self, to_addr, content, **msg_options):
-#         msg_options.setdefault('transport_name', 'dummy_transport')
-#         msg_options.setdefault('transport_type', 'sms')
-#         return TransportUserMessage(to_addr=to_addr, content=content,
-#                                     **msg_options)
 
 
 def field_eq(f1, f2):
