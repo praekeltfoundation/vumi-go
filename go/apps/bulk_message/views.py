@@ -68,11 +68,10 @@ def people(request, conversation_key):
     user_api = vumi_api_for_user(request.user)
     conversation = conversation_or_404(user_api, conversation_key)
     contact_store = ContactStore.from_django_user(request.user)
-    group_names = [g.key for g in contact_store.list_groups()]
+    groups = contact_store.list_groups()
 
     if request.method == 'POST':
-        group_form = ConversationGroupForm(request.POST,
-                                           group_names=group_names)
+        group_form = ConversationGroupForm(request.POST, groups=groups)
         if group_form.is_valid():
             for group in group_form.cleaned_data['groups']:
                 conversation.groups.add_key(group)
@@ -83,7 +82,7 @@ def people(request, conversation_key):
                 'conversation_key': conversation.key}))
 
     conversation_form = make_read_only_form(BulkSendConversationForm())
-    group_form = ConversationGroupForm(request.POST, group_names=group_names)
+    group_form = ConversationGroupForm(request.POST, groups=groups)
     return render(request, 'bulk_message/people.html', {
         'conversation': conversation,
         'conversation_form': conversation_form,
@@ -110,11 +109,9 @@ def send(request, conversation_key):
             'conversation_key': conversation.key}))
 
     contact_store = ContactStore.from_django_user(request.user)
-    group_names = [g.key for g in contact_store.list_groups()]
-
     conversation_form = make_read_only_form(BulkSendConversationForm())
     group_form = make_read_only_form(
-        ConversationGroupForm(group_names=group_names))
+        ConversationGroupForm(groups=contact_store.list_groups()))
 
     return render(request, 'bulk_message/send.html', {
         'conversation': conversation,

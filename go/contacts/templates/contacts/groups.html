@@ -35,7 +35,7 @@
             {% for group in page.object_list %}
                <tr>
                      <td>
-                         <a href="{% url contacts:group group_name=group.key %}">{{group.name}}</a>
+                         <a href="{% url contacts:group group_key=group.key %}">{{group.name}}</a>
                     <span class="label label-info pull-right">{{group.contact_set.count}}</span>
                      </td>
                </tr>
