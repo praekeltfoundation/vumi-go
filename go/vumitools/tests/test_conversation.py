@@ -14,13 +14,15 @@ from go.vumitools.conversation import ConversationStore
 
 class TestConcersationStore(TestCase):
 
+    timeout = 10
+
     @inlineCallbacks
     def setUp(self):
         self.manager = TxRiakManager.from_config({'bucket_prefix': 'test.'})
         yield self.manager.purge_all()
         self.account_store = AccountStore(self.manager)
         account = yield self.account_store.new_user(u'user')
-        self.store = ConversationStore(account)
+        self.store = ConversationStore.from_user_account(account)
 
     def tearDown(self):
         return self.manager.purge_all()
@@ -35,7 +37,8 @@ class TestConcersationStore(TestCase):
 
     @inlineCallbacks
     def test_new_conversation(self):
-        self.assertEqual([], (yield self.store.list_conversations()))
+        conversations = yield self.store.list_conversations()
+        self.assertEqual([], conversations)
 
         conv = yield self.store.new_conversation(
             u'bulk_message', u'subject', u'message')

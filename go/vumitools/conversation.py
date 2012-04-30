@@ -147,8 +147,9 @@ class ConversationStore(PerAccountStore):
     @Manager.calls_manager
     def list_conversations(self):
         # Not stale, because we're using backlinks.
-        user_account = yield self.get_user_account()
-        returnValue(user_account.backlinks.conversations(self.manager))
+        account = yield self.get_user_account()
+        conversations = yield account.backlinks.conversations(self.manager)
+        returnValue(conversations)
 
     def get_conversation_by_key(self, key):
         return self.conversations.load(key)
