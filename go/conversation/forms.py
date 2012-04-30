@@ -21,6 +21,10 @@ class ConversationForm(forms.Form):
         attrs={'class': 'input-medium'},
         choices=[(tpn, tpn) for tpn in get_tag_pool_names()]))
 
+    def __init__(self, user_api, *args, **kw):
+        self.user_api = user_api
+        super(ConversationForm, self).__init__(*args, **kw)
+
     def delivery_class_widgets(self):
         # Backported hack from Django 1.4 to allow me to iterate
         # over RadioInputs. Django 1.4 isn't happy yet with our nose tests

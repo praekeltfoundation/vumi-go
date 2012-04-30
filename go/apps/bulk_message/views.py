@@ -21,7 +21,7 @@ from go.base.utils import (make_read_only_form, vumi_api_for_user,
 def new(request):
     user_api = vumi_api_for_user(request.user)
     if request.POST:
-        form = BulkSendConversationForm(request.POST)
+        form = BulkSendConversationForm(user_api, request.POST)
         if form.is_valid():
             conversation_data = {}
             copy_keys = [
@@ -51,7 +51,7 @@ def new(request):
         else:
             print form.errors
     else:
-        form = BulkSendConversationForm(initial={
+        form = BulkSendConversationForm(user_api, initial={
             'start_date': datetime.utcnow().date(),
             'start_time': datetime.utcnow().time().replace(second=0,
                                                             microsecond=0),
@@ -81,7 +81,7 @@ def people(request, conversation_key):
             return redirect(reverse('bulk_message:send', kwargs={
                 'conversation_key': conversation.key}))
 
-    conversation_form = make_read_only_form(BulkSendConversationForm())
+    conversation_form = make_read_only_form(BulkSendConversationForm(user_api))
     group_form = ConversationGroupForm(request.POST, groups=groups)
     return render(request, 'bulk_message/people.html', {
         'conversation': conversation,
@@ -109,7 +109,7 @@ def send(request, conversation_key):
             'conversation_key': conversation.key}))
 
     contact_store = ContactStore.from_django_user(request.user)
-    conversation_form = make_read_only_form(BulkSendConversationForm())
+    conversation_form = make_read_only_form(BulkSendConversationForm(user_api))
     group_form = make_read_only_form(
         ConversationGroupForm(groups=contact_store.list_groups()))
 
