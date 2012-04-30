@@ -15,10 +15,9 @@ class ContactForm(forms.Form):
     facebook_id = forms.CharField(widget=widebox, required=False)
     bbm_pin = forms.CharField(widget=widebox, required=False)
     gtalk_id = forms.CharField(widget=widebox, required=False)
-    # dob = forms.CharField(widget=widebox, required=False)
+    dob = forms.DateTimeField(widget=widebox, required=False)
 
     # groups is a special magic field that we add in __init__
-
     def __init__(self, *args, **kw):
         groups = kw.pop('groups')
         super(ContactForm, self).__init__(*args, **kw)

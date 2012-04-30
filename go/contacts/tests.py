@@ -136,6 +136,8 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertEqual(contact.name, 'changed name')
         self.assertEqual(contact.surname, 'changed surname')
         self.assertEqual(contact.msisdn, '112')
+        self.assertEqual(set([g.key for g in contact.groups.get_all()]),
+                    set([g.key for g in self.contact_store.list_groups()]))
 
     def test_contact_upload_into_new_group(self):
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
