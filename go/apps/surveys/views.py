@@ -155,9 +155,8 @@ def people(request, conversation_key):
                 'conversation_key': conversation.key}))
         else:
             contact_store = ContactStore.from_django_user(request.user)
-            group_names = [g.key for g in contact_store.list_groups()]
-            group_form = ConversationGroupForm(request.POST,
-                                               group_names=group_names)
+            group_form = ConversationGroupForm(
+                request.POST, groups=contact_store.list_groups())
 
             if group_form.is_valid():
                 for group in group_form.cleaned_data['groups']:

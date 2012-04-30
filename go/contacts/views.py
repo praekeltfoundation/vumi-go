@@ -133,10 +133,9 @@ def people(request):
                         new_group_form.cleaned_data['name'])
 
             # We could be using an existing contact group.
-            group_names = [g.key for g in contact_store.list_groups()]
             if request.POST.get('contact_group'):
                 select_group_form = SelectContactGroupForm(
-                    request.POST, group_names=group_names)
+                    request.POST, groups=contact_store.list_groups())
                 if select_group_form.is_valid():
                     group = contact_store.get_group(
                         select_group_form.cleaned_data['contact_group'])
@@ -164,9 +163,9 @@ def person(request, person_key):
     contact = contact_store.get_contact_by_key(person_key)
     if contact is None:
         raise Http404
-    group_names = [g.key for g in contact_store.list_groups()]
+    groups = contact_store.list_groups()
     if request.POST:
-        form = ContactForm(request.POST, group_names=group_names)
+        form = ContactForm(request.POST, groups=groups)
         if form.is_valid():
             for k, v in form.cleaned_data.items():
                 if k == 'groups':
@@ -183,7 +182,7 @@ def person(request, person_key):
             messages.add_message(request, messages.ERROR,
                 'Please correct the problem below.')
     else:
-        form = ContactForm(group_names=group_names)
+        form = ContactForm(groups=groups)
     return render(request, 'contacts/person.html', {
         'contact': contact,
         'form': form,
@@ -194,9 +193,9 @@ def person(request, person_key):
 @login_required
 def new_person(request):
     contact_store = ContactStore.from_django_user(request.user)
-    group_names = [g.key for g in contact_store.list_groups()]
+    groups = contact_store.list_groups()
     if request.POST:
-        form = ContactForm(request.POST, group_names=group_names)
+        form = ContactForm(request.POST, groups=groups)
         if form.is_valid():
             contact = contact_store.new_contact(**form.cleaned_data)
             messages.add_message(request, messages.INFO, 'Profile Created')
@@ -206,7 +205,7 @@ def new_person(request):
             messages.add_message(request, messages.ERROR,
                 'Please correct the problem below.')
     else:
-        form = ContactForm(group_names=group_names)
+        form = ContactForm(groups=groups)
     return render(request, 'contacts/new_person.html', {
         'form': form,
         'country_code': settings.VUMI_COUNTRY_CODE,

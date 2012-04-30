@@ -44,11 +44,11 @@ class ConversationForm(forms.Form):
 
 class ConversationGroupForm(forms.Form):
     def __init__(self, *args, **kw):
-        group_names = kw.pop('group_names')
+        groups = kw.pop('groups')
         super(ConversationGroupForm, self).__init__(*args, **kw)
         self.fields['groups'] = forms.MultipleChoiceField(
             widget=forms.CheckboxSelectMultiple,
-            choices=[(n, n) for n in group_names])
+            choices=[(g.key, g.name) for g in groups])
 
 
 class ConversationSearchForm(forms.Form):

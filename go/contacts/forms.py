@@ -20,10 +20,10 @@ class ContactForm(forms.Form):
     # groups is a special magic field that we add in __init__
 
     def __init__(self, *args, **kw):
-        group_names = kw.pop('group_names')
+        groups = kw.pop('groups')
         super(ContactForm, self).__init__(*args, **kw)
         self.fields['groups'] = forms.MultipleChoiceField(
-            widget=wideselect, choices=[(n, n) for n in group_names])
+            widget=wideselect, choices=[(g.key, g.name) for g in groups])
 
 
 class NewContactGroupForm(forms.Form):
@@ -40,7 +40,7 @@ class SelectContactGroupForm(forms.Form):
     # contact_group is a special magic field that we add in __init__
 
     def __init__(self, *args, **kw):
-        group_names = kw.pop('group_names')
+        groups = kw.pop('groups')
         super(SelectContactGroupForm, self).__init__(*args, **kw)
         self.fields['contact_group'] = forms.ChoiceField(
-            choices=[(n, n) for n in group_names])
+            choices=[(g.key, g.name) for g in groups])
