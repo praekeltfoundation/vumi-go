@@ -69,7 +69,7 @@ def new(request):
         form = ConversationForm(user_api, initial={
             'start_date': datetime.utcnow().date(),
             'start_time': datetime.utcnow().time().replace(second=0,
-															microsecond=0),
+                                                            microsecond=0),
         })
     return render(request, 'surveys/new.html', {
         'form': form,
@@ -104,11 +104,11 @@ def contents(request, conversation_key):
     else:
         form = forms.make_form(data=config, initial=config)
 
-    survey_form = make_read_only_form(ConversationForm(user_api, instance=
-		conversation, initial={
-			'start_date': conversation.start_timestamp.date(),
-			'start_time': conversation.start_timestamp.time(),
-		}))
+    survey_form = make_read_only_form(ConversationForm(user_api,
+        instance=conversation, initial={
+            'start_date': conversation.start_timestamp.date(),
+            'start_time': conversation.start_timestamp.time(),
+        }))
     return render(request, 'surveys/contents.html', {
         'form': form,
         'survey_form': survey_form,
