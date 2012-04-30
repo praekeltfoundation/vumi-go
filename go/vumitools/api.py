@@ -45,6 +45,14 @@ class ConversationWrapper(object):
         self.tpm = self.api.tpm
         self.manager = self.c.manager
         self.base_manager = self.api.manager
+        self._tagpool_metadata = None
+
+    @property
+    def tagpool_metdata(self):
+        if self._tagpool_metadata is None:
+            self._tagpool_metadata = self.api.tpm.get_metadata(
+                    self.delivery_tag_pool)
+        return self._tagpool_metadata
 
     @Manager.calls_manager
     def end_conversation(self):
@@ -191,12 +199,9 @@ class ConversationWrapper(object):
         for reply in replies:
             contact = yield self.user_api.contact_store.contact_for_addr(
                     self.delivery_class, reply['from_addr'])
-            tagpool_metadata = self.api.tpm.get_metadata(
-                    self.delivery_tag_pool)
             reply_statuses.append({
                 'type': self.delivery_class,
-                'source': tagpool_metadata.get('display_name',
-                                               self.delivery_tag_pool),
+                'source': self.delivery_class_description(),
                 'contact': contact,
                 'time': reply['timestamp'],
                 'content': reply['content'],
@@ -216,12 +221,9 @@ class ConversationWrapper(object):
         for message in messages:
             contact = yield self.user_api.contact_store.contact_for_addr(
                     self.delivery_class, message['to_addr'])
-            tagpool_metadata = self.api.tpm.get_metadata(
-                    self.delivery_tag_pool)
             outbound_statuses.append({
                 'type': self.delivery_class,
-                'source': tagpool_metadata.get('display_name',
-                                               self.delivery_tag_pool),
+                'source': self.delivery_class_description(),
                 'contact': contact,
                 'time': message['timestamp'],
                 'content': message['content']
@@ -249,6 +251,23 @@ class ConversationWrapper(object):
         worker_name = '%s_application' % (self.conversation_type,)
         command = VumiApiCommand.command(worker_name, command, *args, **kwargs)
         return self.api.send_command(command)
+
+    def delivery_class_description(self):
+        """
+        FIXME: This actually returns the tagpool display name.
+               The function itself is probably correct -- the
+               name of the function is probably wrong.
+        """
+        return self.tagpool_metadata.get('display_name',
+                                         self.delivery_tag_pool)
+
+    def is_client_initiated(self):
+        """
+        Check whether this conversation can only be initiated by a client.
+
+        :rtype: bool
+        """
+        return self.tagpool_metadata.get('client_initiated', False)
 
 
 class TagpoolSet(object):
