@@ -1,8 +1,7 @@
 from django import forms
 
 from go.vumitools.conversation import (
-    CONVERSATION_TYPES, get_tag_pool_names, get_delivery_class_names,
-    get_combined_delivery_classes)
+    CONVERSATION_TYPES, get_combined_delivery_classes)
 
 
 class ConversationForm(forms.Form):
@@ -16,14 +15,21 @@ class ConversationForm(forms.Form):
         attrs={'id': 'timepicker_1', 'class': 'txtbox txtbox-date'}))
     delivery_class = forms.CharField(required=True, widget=forms.RadioSelect(
         attrs={'class': 'delivery-class-radio'},
-        choices=[(dc, dc) for dc in get_delivery_class_names()]))
+        choices=[]))  # choices populated in __init__
     delivery_tag_pool = forms.CharField(required=True, widget=forms.Select(
         attrs={'class': 'input-medium'},
-        choices=[(tpn, tpn) for tpn in get_tag_pool_names()]))
+        choices=[]))  # choices populated in __init__
 
     def __init__(self, user_api, *args, **kw):
         self.user_api = user_api
         super(ConversationForm, self).__init__(*args, **kw)
+        tagpool_set = self.user_api.tagpools()
+        self.fields['delivery_tag_pool'].widget.choices = [
+            (pool, tagpool_set.tagpool_display_name(pool))
+            for pool in tagpool_set.pools()]
+        self.fields['delivery_class'].widget.choices = [
+            (delivery_class, tagpool_set.delivery_class_name(delivery_class))
+            for delivery_class in tagpool_set.delivery_classes()]
 
     def delivery_class_widgets(self):
         # Backported hack from Django 1.4 to allow me to iterate
