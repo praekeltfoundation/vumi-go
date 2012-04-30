@@ -98,16 +98,27 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
     def test_client_or_server_init_distinction(self):
         """A survey should not ask for recipients if the transport
         used only supports client initiated sessions (i.e. USSD)"""
-        def get_people_page(delivery_class):
+
+        self.api.set_pool_metadata("pool1", {
+            "delivery_class": "sms",
+            "server_initiated": True,
+            })
+
+        self.api.set_pool_metadata("pool2", {
+            "delivery_class": "ussd",
+            "client_initiated": True,
+            })
+
+        def get_people_page(tag_pool):
             conversation = self.get_wrapped_conv()
-            conversation.c.delivery_class = delivery_class
+            conversation.c.delivery_tag_pool = tag_pool
             conversation.save()
             return self.client.get(reverse('survey:people', kwargs={
                 'conversation_key': conversation.key,
                 }))
 
-        self.assertContains(get_people_page(u'sms'), 'Survey Recipients')
-        self.assertNotContains(get_people_page(u'ussd'), 'Survey Recipients')
+        self.assertContains(get_people_page(u'pool1'), 'Survey Recipients')
+        self.assertNotContains(get_people_page(u'pool2'), 'Survey Recipients')
 
     def test_group_selection(self):
         """Select an existing group and use that as the group for the

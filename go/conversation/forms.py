@@ -1,9 +1,7 @@
 from django import forms
 from django.forms.util import ErrorList
 
-from go.vumitools.conversation import (
-    CONVERSATION_TYPES, get_tag_pool_names, get_delivery_class_names,
-    get_combined_delivery_classes)
+from go.vumitools.conversation import CONVERSATION_TYPES
 from vumi.persist.fields import (ListProxy, ForeignKeyProxy, ManyToManyProxy)
 
 
@@ -52,10 +50,34 @@ class ConversationForm(VumiModelForm):
         attrs={'id': 'timepicker_1', 'class': 'txtbox txtbox-date'}))
     delivery_class = forms.CharField(required=True, widget=forms.RadioSelect(
         attrs={'class': 'delivery-class-radio'},
-        choices=[(dc, dc) for dc in get_delivery_class_names()]))
+        choices=[]))  # choices populated in __init__
     delivery_tag_pool = forms.CharField(required=True, widget=forms.Select(
         attrs={'class': 'input-medium'},
-        choices=[(tpn, tpn) for tpn in get_tag_pool_names()]))
+        choices=[]))  # choices populated in __init__
+
+    def __init__(self, user_api, *args, **kw):
+        self.user_api = user_api
+        tagpool_filter = kw.pop('tagpool_filter', None)
+        super(ConversationForm, self).__init__(*args, **kw)
+        self.tagpool_set = self.user_api.tagpools()
+        if tagpool_filter is not None:
+            self.tagpool_set = self.tagpool_set.select(tagpool_filter)
+        self.fields['delivery_tag_pool'].widget.choices = [
+            (pool, self.tagpool_set.tagpool_display_name(pool))
+            for pool in self.tagpool_set.pools()]
+        self.fields['delivery_class'].widget.choices = [
+            (delivery_class,
+             self.tagpool_set.delivery_class_name(delivery_class))
+            for delivery_class in self.tagpool_set.delivery_classes()]
+
+    def tagpools_by_delivery_class(self):
+        delivery_classes = {}
+        for pool in self.tagpool_set.pools():
+            delivery_class = self.tagpool_set.delivery_class(pool)
+            if delivery_class is None:
+                continue
+            delivery_classes.setdefault(delivery_class, []).append(pool)
+        return delivery_classes
 
     def delivery_class_widgets(self):
         # Backported hack from Django 1.4 to allow me to iterate
@@ -65,17 +87,6 @@ class ConversationForm(VumiModelForm):
         for widget in field.field.widget.get_renderer(field.html_name,
                                                         field.value()):
             yield widget
-
-    # class Meta:
-    #     model = models.Conversation
-    #     fields = (
-    #         'subject',
-    #         'message',
-    #         'start_date',
-    #         'start_time',
-    #         'delivery_class',
-    #         'delivery_tag_pool',
-    #     )
 
 
 class ConversationGroupForm(forms.Form):
@@ -104,8 +115,3 @@ class ConversationSearchForm(forms.Form):
             ('draft', 'Draft'),
         ],
         widget=forms.Select(attrs={'class': 'input-small'}))
-
-
-class SelectDeliveryClassForm(forms.Form):
-    delivery_class = forms.ChoiceField(
-                        choices=get_combined_delivery_classes())

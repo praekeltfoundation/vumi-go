@@ -30,8 +30,8 @@
     </tbody>
     </table>
 </div>
-{% for delivery_class, tag_pools in delivery_classes %}
-<div class="control-group delivery-class-selection" style="display:none"
+{% for delivery_class, tag_pools in form.tagpools_by_delivery_class %}
+<div class="control-group delivery-class-selection" style="display:none" 
         id="{{delivery_class}}_tag_pool_selection">
     <label class="control-label" for="{{delivery_class}}_tagpool">
         Pick a method delivery via {{delivery_class}}

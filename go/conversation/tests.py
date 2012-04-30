@@ -10,9 +10,7 @@ from vumi.tests.utils import FakeRedis
 
 from go.vumitools.api import VumiApi
 from go.vumitools.tests.utils import CeleryTestMixIn
-from go.vumitools.contact import ContactStore
-from go.vumitools.conversation import ConversationStore
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.utils import VumiGoDjangoTestCase, declare_longcode_tags
 from go.base.utils import vumi_api_for_user
 
 
@@ -82,8 +80,7 @@ class ConversationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         self.api = VumiApi(settings.VUMI_API_CONFIG)
 
     def declare_longcode_tags(self):
-        self.api.declare_tags([("longcode", "default%s" % i) for i
-                               in range(10001, 10001 + 4)])
+        declare_longcode_tags(self.api)
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
