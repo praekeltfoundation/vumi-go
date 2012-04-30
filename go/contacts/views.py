@@ -193,17 +193,14 @@ def person(request, person_key):
 def new_person(request):
     contact_store = ContactStore.from_django_user(request.user)
     group_names = [g.key for g in contact_store.list_groups()]
-    print group_names
     if request.POST:
         form = ContactForm(request.POST, group_names=group_names)
         if form.is_valid():
-            print form.cleaned_data
             contact = contact_store.new_contact(**form.cleaned_data)
             messages.add_message(request, messages.INFO, 'Profile Created')
             return redirect(reverse('contacts:person', kwargs={
                 'person_key': contact.key}))
         else:
-            print form._errors
             messages.add_message(request, messages.ERROR,
                 'Please correct the problem below.')
     else:
