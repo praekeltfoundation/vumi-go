@@ -2,7 +2,6 @@ from django import forms
 
 from go.vumitools.conversation import (
     CONVERSATION_TYPES, get_tag_pool_names, get_delivery_class_names,
-    get_server_init_delivery_class_names, get_server_init_tag_pool_names,
     get_combined_delivery_classes)
 
 
