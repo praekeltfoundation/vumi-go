@@ -14,7 +14,7 @@ def get_account_store():
 
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
-        account = get_account_store().new_user(instance.username)
+        account = get_account_store().new_user(unicode(instance.username))
         UserProfile.objects.create(user=instance, user_account=account.key)
 
 
