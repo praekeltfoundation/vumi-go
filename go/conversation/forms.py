@@ -80,8 +80,3 @@ class ConversationSearchForm(forms.Form):
             ('draft', 'Draft'),
         ],
         widget=forms.Select(attrs={'class': 'input-small'}))
-
-
-class SelectDeliveryClassForm(forms.Form):
-    delivery_class = forms.ChoiceField(
-                        choices=get_combined_delivery_classes())
