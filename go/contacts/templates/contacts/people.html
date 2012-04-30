@@ -49,7 +49,7 @@
             <tbody>
             {% for contact in selected_contacts %}
                  <tr>
-                    <td colspan="3"><a href="{% url contacts:person person_pk=contact.pk %}">{{contact}}</a></td>
+                    <td colspan="3"><a href="{% url contacts:person person_key=contact.key %}">{{contact}}</a></td>
                  </tr>
             {% empty %}
                 <tr>

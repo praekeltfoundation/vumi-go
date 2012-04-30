@@ -32,7 +32,6 @@ def new(request):
         form = BulkSendConversationForm(request.POST)
         if form.is_valid():
             conv_store = ConversationStore.from_django_user(request.user)
-            print form.cleaned_data
             conversation = conv_store.new_conversation(
                 u'bulk_message', **form.cleaned_data)
             messages.add_message(request, messages.INFO,
