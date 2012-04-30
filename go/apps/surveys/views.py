@@ -10,7 +10,6 @@ from django.contrib.auth.decorators import login_required
 from go.base.utils import (make_read_only_form, vumi_api_for_user,
                            conversation_or_404)
 from go.vumitools.api import ConversationSendError
-from go.vumitools.conversation import get_combined_delivery_classes
 from go.conversation.forms import (
     ConversationForm, ConversationGroupForm, SelectDeliveryClassForm)
 
@@ -74,7 +73,6 @@ def new(request):
         })
     return render(request, 'surveys/new.html', {
         'form': form,
-        'delivery_classes': get_combined_delivery_classes(),
     })
 
 
