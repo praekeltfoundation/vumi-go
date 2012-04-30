@@ -153,8 +153,10 @@ class ConversationStore(PerAccountStore):
     def get_conversation_by_key(self, key):
         return self.conversations.load(key)
 
-    def new_conversation(self, conversation_type, subject, message, **fields):
+    def new_conversation(self, conversation_type, subject, message,
+        start_timestamp=None, **fields):
         conversation_id = uuid4().get_hex()
+        start_timestamp = start_timestamp or datetime.utcnow()
 
         # These are foreign keys.
         groups = fields.pop('groups', [])
@@ -163,7 +165,7 @@ class ConversationStore(PerAccountStore):
             conversation_id, user_account=self.user_account_key,
             conversation_type=conversation_type,
             subject=subject, message=message,
-            start_timestamp=datetime.utcnow(),
+            start_timestamp=start_timestamp,
             **fields)
 
         for group in groups:
