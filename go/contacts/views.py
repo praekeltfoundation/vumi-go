@@ -63,7 +63,7 @@ def _create_contacts_from_csv_file(contact_store, csvfile, country_code):
 
 
 def _group_url(group_key):
-    return reverse('contacts:group', kwargs={'group_name': group_key})
+    return reverse('contacts:group', kwargs={'group_key': group_key})
 
 
 @login_required
@@ -96,8 +96,8 @@ def groups(request):
 
 
 @login_required
-def group(request, group_name):
-    group = ContactStore.from_django_user(request.user).get_group(group_name)
+def group(request, group_key):
+    group = ContactStore.from_django_user(request.user).get_group(group_key)
     if group is None:
         raise Http404
 
@@ -112,6 +112,8 @@ def group(request, group_name):
 @login_required
 def people(request):
     contact_store = ContactStore.from_django_user(request.user)
+
+    # TODO: Error handling in here.
 
     if request.POST:
         # first parse the CSV file and create Contact instances

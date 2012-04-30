@@ -30,17 +30,24 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.contact_store = ContactStore.from_django_user(self.user)
         self.contact_store.contacts.enable_search()
         self.conv_store = ConversationStore.from_django_user(self.user)
+
+        # We need a group
         group = self.contact_store.new_group(TEST_GROUP_NAME)
+        self.group_key = group.key
+
+        # Also a contact
         contact = self.contact_store.new_contact(
             name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
             msisdn=u"+27761234567")
         contact.add_to_group(group)
         contact.save()
         self.contact_key = contact.key
+
+        # And a conversation
         conversation = self.conv_store.new_conversation(
             conversation_type=u'bulk_message', subject=TEST_SUBJECT,
             message=u"Test message", delivery_class=u"sms",
-            delivery_tag_pool=u"longcode", groups=[TEST_GROUP_NAME])
+            delivery_tag_pool=u"longcode", groups=[self.group_key])
         self.conv_key = conversation.key
 
     def get_wrapped_conv(self):
