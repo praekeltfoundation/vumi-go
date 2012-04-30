@@ -51,8 +51,28 @@ def new(request):
         form = ConversationForm(request.POST)
         if form.is_valid():
             conv_store = ConversationStore.from_django_user(request.user)
+
+            conversation_data = {}
+            copy_keys = [
+                'subject',
+                'message',
+                'delivery_class',
+                'delivery_tag_pool',
+            ]
+
+            for key in copy_keys:
+                conversation_data[key] = form.cleaned_data[key]
+
+            start_date = form.cleaned_data['start_date'] or datetime.utcnow()
+            start_time = (form.cleaned_data['start_time'] or
+                            datetime.utcnow().time())
+            conversation_data['start_timestamp'] = datetime(
+                start_date.year, start_date.month, start_date.day,
+                start_time.hour, start_time.minute, start_time.second,
+                start_time.microsecond)
+
             conversation = conv_store.new_conversation(
-                u'survey', **form.cleaned_data)
+                u'survey', **conversation_data)
             messages.add_message(request, messages.INFO,
                 'Survey Created')
             return redirect(reverse('survey:contents',
