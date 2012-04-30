@@ -63,3 +63,15 @@ class VumiGoDjangoTestCase(TestCase):
         patch = override_settings(**kwargs)
         patch.enable()
         self._settings_patches.append(patch)
+
+
+def declare_longcode_tags(api):
+    """Declare a set of long codes to the tag pool."""
+    api.declare_tags([("longcode", "default%s" % i) for i
+                      in range(10001, 10001 + 4)])
+    api.set_pool_metadata("longcode", {
+        "display_name": "Long code",
+        "delivery_class": "sms",
+        "transport_type": "sms",
+        "server_initiated": True,
+        })

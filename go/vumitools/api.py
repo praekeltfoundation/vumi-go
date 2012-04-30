@@ -48,7 +48,7 @@ class ConversationWrapper(object):
         self._tagpool_metadata = None
 
     @property
-    def tagpool_metdata(self):
+    def tagpool_metadata(self):
         if self._tagpool_metadata is None:
             self._tagpool_metadata = self.api.tpm.get_metadata(
                     self.delivery_tag_pool)
@@ -544,6 +544,18 @@ class VumiApi(object):
             None
         """
         return self.tpm.declare_tags(tags)
+
+    def set_pool_metadata(self, pool, metadata):
+        """Set the metadata for a tag pool.
+
+        :param str pool:
+            Name of the pool set metadata form.
+        :param dict metadata:
+            Metadata to set.
+        :rtype:
+            None
+        """
+        return self.tpm.set_metadata(pool, metadata)
 
     def purge_pool(self, pool):
         """Completely remove a pool with all its contents.
