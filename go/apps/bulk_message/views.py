@@ -83,7 +83,6 @@ def people(request, conversation_key):
         'conversation': conversation,
         'conversation_form': conversation_form,
         'group_form': group_form,
-        'delivery_classes': get_server_init_delivery_classes(),
     })
 
 
