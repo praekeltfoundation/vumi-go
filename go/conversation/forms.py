@@ -1,7 +1,6 @@
 from django import forms
 
-from go.vumitools.conversation import (
-    CONVERSATION_TYPES, get_combined_delivery_classes)
+from go.vumitools.conversation import CONVERSATION_TYPES
 
 
 class ConversationForm(forms.Form):
