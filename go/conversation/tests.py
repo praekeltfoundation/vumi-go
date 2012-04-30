@@ -155,8 +155,8 @@ class ConversationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         self.api.mdb.add_inbound_message(msg, tag=tag)
         [reply] = conversation.replies()
         self.assertTrue(isinstance(reply.pop('time'), datetime))
+        self.assertEqual(reply.pop('contact').key, contact.key)
         self.assertEqual(reply, {
-            'contact': contact,
             'content': u'hello',
             'source': 'Long code',
             'type': u'sms',
