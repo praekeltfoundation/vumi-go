@@ -288,9 +288,11 @@ class TagpoolSet(object):
     def tagpool_name(self, pool):
         return self._pools[pool].get('display_name', pool)
 
+    def delivery_class(self, pool):
+        return self._pools[pool].get('delivery_class', None)
+
     def delivery_classes(self):
-        classes = set(md.get('delivery_class')
-                      for md in self._pools.iteritems())
+        classes = set(self.delivery_class(pool) for pool in self.pools())
         classes.discard(None)
         return list(classes)
 
