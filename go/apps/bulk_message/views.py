@@ -1,15 +1,17 @@
+from datetime import datetime
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.urlresolvers import reverse
 from django.contrib import messages
-from go.conversation.models import (ConversationSendError,
-                                    get_server_init_delivery_classes)
-from go.conversation.forms import ConversationGroupForm
-from go.apps.bulk_message.forms import BulkSendConversationForm
-from go.apps.bulk_message.models import BulkMessageConversation
-from go.contacts.models import ContactGroup
-from go.base.utils import make_read_only_form
-from datetime import datetime
+
+# from go.conversation.models import (ConversationSendError,
+#                                     get_server_init_delivery_classes)
+# from go.conversation.forms import ConversationGroupForm
+# from go.apps.bulk_message.forms import BulkSendConversationForm
+# from go.apps.bulk_message.models import BulkMessageConversation
+# from go.contacts.models import ContactGroup
+# from go.base.utils import make_read_only_form
 
 
 @login_required

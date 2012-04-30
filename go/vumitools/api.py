@@ -8,12 +8,18 @@ use in Vumi workers.
 """
 
 import redis
+from datetime import datetime
+
+from twisted.internet.defer import returnValue
 
 from vumi.message import Message
-
 from vumi.application import TagpoolManager
+from vumi.persist.model import Manager
 from vumi.persist.riak_manager import RiakManager
 from vumi.persist.message_store import MessageStore
+
+from go.vumitools.account import AccountStore
+from go.vumitools.conversation import get_combined_delivery_classes
 
 
 def get_redis(config):
@@ -22,22 +28,241 @@ def get_redis(config):
     return redis_cls(**config.get('redis', {}))
 
 
+class ConversationSendError(Exception):
+    """Raised if there are no tags available for a given conversation."""
+
+
+class ConversationWrapper(object):
+    """Wrapper around a conversation, providing extended functionality.
+    """
+
+    def __init__(self, conversation, api):
+        self.c = conversation
+        self.api = api
+        self.mdb = api.mdb
+        self.tpm = api.tpm
+        self.manager = self.c.manager
+        self.base_manager = self.api.manager
+
+    @Manager.calls_manager
+    def end_conversation(self):
+        self.c.end_timestamp = datetime.utcnow()
+        yield self.c.save()
+        yield self._release_batches()
+
+    @Manager.calls_manager
+    def _release_batches(self):
+        for batch in (yield self.get_batches()):
+            yield self.mdb.batch_done(batch.key)  # TODO: why key?
+            for tag in batch.tags:
+                yield self.tpm.release_tag(tag)
+
+    def __getattr__(self, name):
+        # Proxy anything we don't have back to the wrapped conversation.
+        return getattr(self.c, name)
+
+    # TODO: Something about setattr?
+
+    def start_batch(self, tag):
+        return self.mdb.batch_start([tag])
+
+    def get_batches(self):
+        return self.c.batches.get_all(self.base_manager)
+
+    @Manager.calls_manager
+    def get_tags(self):
+        """
+        Return any tags associated with this conversation.
+
+        :rtype:
+            Returns a list of tags `[(tagpool, tag), ... ]`
+        """
+        tags = []
+        for batch in (yield self.get_batches()):
+            tags.extend((yield batch.tags))
+        returnValue(tags)
+
+    @Manager.calls_manager
+    def people(self):
+        people = []
+        for group in (yield self.c.groups.get_all()):
+            people.extend((yield group.backlinks.contacts()))
+        returnValue(people)
+
+    @Manager.calls_manager
+    def get_progress_status(self):
+        """
+        Get an overview of the progress of this conversation
+
+        :rtype: dict
+            *total* The number of messages in this conversation.
+            *sent* The number of messages sent.
+            *queued* The number of messages yet to be sent out.
+            *ack* The number of messages that have been acknowledged
+                    by the network for delivery
+            *delivery_report* The number of messages we've received
+                    a delivery report for.
+        """
+        default = {
+            'total': 0,
+            'queued': 0,
+            'ack': 0,
+            'sent': 0,
+            'delivery_report': 0,
+        }
+
+        for batch in (yield self.c.batches.get_all()):
+            for k, v in (yield self.mdb.batch_status(batch.key)):
+                default[k] += v
+        total = len((yield self.people()))
+        default.update({
+            'total': total,
+            'queued': total - default['sent'],
+        })
+        returnValue(default)
+
+    @Manager.calls_manager
+    def get_progress_percentage(self):
+        """
+        Get a percentage indication of how far along the sending
+        of messages in this conversation is.
+
+        :rtype: int
+        """
+        status = yield self.get_progress_status()
+        if status['total'] == 0:
+            returnValue(0)
+        returnValue(int(status['ack'] / float(status['total'])) * 100)
+
+    @Manager.calls_manager
+    def get_contacts_addresses(self, delivery_class=None):
+        """
+        Get the contacts assigned to this group with an address attribute
+        that is appropriate for the given delivery_class
+
+        :rtype: str
+        :param rtype: the name of the delivery class to use, if None then
+                    it will default to `self.delivery_class`
+        """
+        delivery_class = delivery_class or self.c.delivery_class
+        addrs = [contact.addr_for(delivery_class)
+                 for contact in (yield self.people())]
+        returnValue([addr for addr in addrs if addr])
+
+    @Manager.calls_manager
+    def start(self):
+        """
+        Send the start command to this conversations application worker.
+        """
+        tag = yield self.acquire_tag()
+        batch_id = yield self.start_batch(tag)
+
+        yield self.dispatch_command('start',
+            batch_id=batch_id,
+            conversation_type=self.c.conversation_type,
+            conversation_id=self.c.key,
+            msg_options={
+                'transport_type': self.c.delivery_class,
+                'from_addr': tag[1],
+            })
+        self.c.batches.add_key(batch_id)
+        yield self.c.save()
+
+    @Manager.calls_manager
+    def replies(self):
+        """
+        FIXME: this requires a contact to already exist in the database
+                before it can show up as a reply. Isn't going to work
+                for things like USSD and in some cases SMS.
+        """
+        batches = yield self.get_batches()
+        reply_statuses = []
+        replies = []
+        for batch in batches:
+            # TODO: Not look up the batch by key again.
+            replies.extend((yield self.mdb.batch_replies(batch.key)))
+        for reply in replies:
+            contact = None  # TODO: Add contact if we have.
+            delivery_classes = dict(get_combined_delivery_classes())
+            tag_pools = dict(delivery_classes.get(self.delivery_class))
+            reply_statuses.append({
+                'type': self.delivery_class,
+                'source': tag_pools.get(self.delivery_tag_pool, 'Unknown'),
+                'contact': contact,
+                'time': reply['timestamp'],
+                'content': reply['content'],
+                })
+        returnValue(sorted(reply_statuses,
+                           key=lambda reply: reply['time'],
+                           reverse=True))
+
+    @Manager.calls_manager
+    def sent_messages(self):
+        batches = yield self.get_batches()
+        outbound_statuses = []
+        messages = []
+        for batch in batches:
+            # TODO: Not look up the batch by key again.
+            messages.extend((yield self.mdb.batch_messages(batch.key)))
+        for message in messages:
+            contact = None  # TODO: Add contact if we have.
+            delivery_classes = dict(get_combined_delivery_classes())
+            outbound_statuses.append({
+                'type': self.delivery_class,
+                'source': delivery_classes.get(self.delivery_class, 'Unknown'),
+                'contact': contact,
+                'time': message['timestamp'],
+                'content': message['content']
+                })
+        returnValue(sorted(outbound_statuses, key=lambda sent: sent['time'],
+                           reverse=True))
+
+    @Manager.calls_manager
+    def acquire_tag(self, pool=None):
+        tag = yield self.api.acquire_tag(pool or self.delivery_tag_pool)
+        if tag is None:
+            raise ConversationSendError("No spare messaging tags.")
+        returnValue(tag)
+
+    def dispatch_command(self, command, *args, **kwargs):
+        """
+        Send a command to the GoApplication worker listening to this
+        conversation type's worker name. The *args and **kwargs
+        are expanded when the command is called.
+
+        :type command: str
+        :params command:
+            The name of the command to call
+        """
+        worker_name = '%s_application' % (self.conversation_type,)
+        command = VumiApiCommand.command(worker_name, command, *args, **kwargs)
+        return self.api.send_command(command)
+
+
 class VumiApi(object):
+    conversation_wrapper = ConversationWrapper
 
     def __init__(self, config):
+        # TODO: Split the config up better.
         config = config.copy()  # So we can modify it.
         riak_config = config.pop('riak_manager')
+
         r_server = get_redis(config)
+        self.manager = RiakManager.from_config(riak_config)
 
         # tagpool manager
         tpm_config = config.get('tagpool_manager', {})
         tpm_prefix = tpm_config.get('tagpool_prefix', 'tagpool_store')
         self.tpm = TagpoolManager(r_server, tpm_prefix)
+
         # message store
         mdb_config = config.get('message_store', {})
         mdb_prefix = mdb_config.get('store_prefix', 'message_store')
-        self.manager = RiakManager.from_config(riak_config)
         self.mdb = MessageStore(self.manager, r_server, mdb_prefix)
+
+        # account store
+        self.account_store = AccountStore(self.manager)
+
         # message sending API
         mapi_config = config.get('message_sender', {})
         self.mapi = MessageSender(mapi_config)
@@ -216,6 +441,18 @@ class VumiApi(object):
             None.
         """
         return self.tpm.purge_pool(pool)
+
+    def wrap_conversation(self, conversation):
+        """Wrap a conversation with a ConversationWrapper.
+
+        What it says on the tin, really.
+
+        :param Conversation conversation:
+            Conversation object to wrap.
+        :rtype:
+            ConversationWrapper.
+        """
+        return self.conversation_wrapper(conversation, self)
 
 
 class MessageSender(object):
