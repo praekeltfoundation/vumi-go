@@ -1,3 +1,4 @@
+# -*- coding: utf8 -*-
 from os import path
 
 from django.conf import settings
@@ -47,6 +48,16 @@ class ContactsTestCase(VumiGoDjangoTestCase):
     def test_groups_creation(self):
         response = self.client.post(reverse('contacts:groups'), {
             'name': 'a new group',
+        })
+        group = self.contact_store.get_group(u'a new group')
+        self.assertNotEqual(group, None)
+        self.assertRedirects(response, reverse('contacts:group', kwargs={
+            'group_name': group.key,
+        }))
+
+    def test_groups_creation_with_funny_chars(self):
+        response = self.client.post(reverse('contacts:groups'), {
+            'name': 'a new group! with cüte chars\'s',
         })
         group = self.contact_store.get_group(u'a new group')
         self.assertNotEqual(group, None)
