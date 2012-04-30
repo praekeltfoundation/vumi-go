@@ -58,8 +58,6 @@ def new(request):
                 'Conversation Created')
             return redirect(reverse('bulk_message:people',
                 kwargs={'conversation_key': conversation.key}))
-        else:
-            print form.errors
     else:
         form = BulkSendConversationForm(initial={
             'start_date': datetime.utcnow().date(),
@@ -91,12 +89,15 @@ def people(request, conversation_key):
             return redirect(reverse('bulk_message:send', kwargs={
                 'conversation_key': conversation.key}))
 
-    conversation_form = make_read_only_form(BulkSendConversationForm())
-    group_form = ConversationGroupForm(request.POST, groups=groups)
+    conversation_form = make_read_only_form(BulkSendConversationForm(
+        instance=conversation, initial={
+            'start_date': conversation.start_timestamp.date(),
+            'start_time': conversation.start_timestamp.time(),
+        }))
     return render(request, 'bulk_message/people.html', {
         'conversation': conversation,
         'conversation_form': conversation_form,
-        'group_form': group_form,
+        'groups': groups,
         'delivery_classes': get_server_init_delivery_classes(),
     })
 
@@ -118,15 +119,22 @@ def send(request, conversation_key):
         return redirect(reverse('bulk_message:show', kwargs={
             'conversation_key': conversation.key}))
 
+    conversation_form = make_read_only_form(
+        BulkSendConversationForm(instance=conversation, initial={
+            'start_date': conversation.start_timestamp.date(),
+            'start_time': conversation.start_timestamp.time(),
+            }))
     contact_store = ContactStore.from_django_user(request.user)
-    conversation_form = make_read_only_form(BulkSendConversationForm())
+    groups = contact_store.list_groups()
     group_form = make_read_only_form(
-        ConversationGroupForm(groups=contact_store.list_groups()))
+        ConversationGroupForm(groups=groups))
 
     return render(request, 'bulk_message/send.html', {
         'conversation': conversation,
         'conversation_form': conversation_form,
         'group_form': group_form,
+        'groups': conversation.groups.get_all(),
+        'people': conversation.people(),
     })
 
 

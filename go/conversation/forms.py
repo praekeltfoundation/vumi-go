@@ -1,11 +1,47 @@
 from django import forms
+from django.forms.util import ErrorList
 
 from go.vumitools.conversation import (
     CONVERSATION_TYPES, get_tag_pool_names, get_delivery_class_names,
     get_combined_delivery_classes)
+from vumi.persist.fields import (ListProxy, ForeignKeyProxy, ManyToManyProxy)
 
 
-class ConversationForm(forms.Form):
+class VumiModelForm(forms.Form):
+
+    FETCH_RELATED_MAP = {
+        ListProxy: lambda attribute: iter(attribute),
+        ForeignKeyProxy: lambda attribute: attribute.get(),
+        ManyToManyProxy: lambda attribute: attribute.get_all(),
+    }
+
+    def __init__(self, data=None, files=None, auto_id='id_%s', prefix=None,
+                 initial=None, error_class=ErrorList, label_suffix=':',
+                 empty_permitted=False, instance=None, fetch_related=[]):
+        self.fetch_related = fetch_related
+        if instance:
+            obj_data = self.model_to_dict(instance)
+            obj_data.update(initial or {})
+        else:
+            obj_data = None
+
+        super(VumiModelForm, self).__init__(data, files, auto_id, prefix,
+                obj_data, error_class, label_suffix, empty_permitted)
+
+    def model_to_dict(self, model):
+        values = []
+        for field in model.field_descriptors.keys():
+            attr = getattr(model, field)
+            if isinstance(attr, tuple(self.FETCH_RELATED_MAP.keys())):
+                if field in self.fetch_related:
+                    lookup = self.FETCH_RELATED_MAP[attr.__class__]
+                    values.append((field, lookup(attr)))
+            else:
+                values.append((field, attr))
+        return dict(values)
+
+
+class ConversationForm(VumiModelForm):
     subject = forms.CharField(required=True, widget=forms.TextInput(attrs={
         'class': 'input required'}))
     message = forms.CharField(required=True, widget=forms.Textarea(attrs={
