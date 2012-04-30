@@ -13,25 +13,12 @@ from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.contact import ContactGroup
 
 
-def get_tag_pool_names():
-    pool_names = []
-    for delivery_class, tag_pools in get_combined_delivery_classes():
-        for tag_pool, label in tag_pools:
-            pool_names.append(tag_pool)
-    return pool_names
-
-
 def get_server_init_tag_pool_names():
     pool_names = []
     for delivery_class, tag_pools in get_server_init_delivery_classes():
         for tag_pool, label in tag_pools:
             pool_names.append(tag_pool)
     return pool_names
-
-
-def get_delivery_class_names():
-    return [delivery_class for delivery_class, tag_pools
-                in get_combined_delivery_classes()]
 
 
 def get_combined_delivery_classes():
