@@ -20,8 +20,7 @@ from vumi.persist.message_store import MessageStore
 
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
-from go.vumitools.conversation import (ConversationStore,
-                                       get_combined_delivery_classes)
+from go.vumitools.conversation import ConversationStore
 
 
 def get_redis(config):
@@ -46,6 +45,14 @@ class ConversationWrapper(object):
         self.tpm = self.api.tpm
         self.manager = self.c.manager
         self.base_manager = self.api.manager
+        self._tagpool_metadata = None
+
+    @property
+    def tagpool_metadata(self):
+        if self._tagpool_metadata is None:
+            self._tagpool_metadata = self.api.tpm.get_metadata(
+                    self.delivery_tag_pool)
+        return self._tagpool_metadata
 
     @Manager.calls_manager
     def end_conversation(self):
@@ -192,11 +199,9 @@ class ConversationWrapper(object):
         for reply in replies:
             contact = yield self.user_api.contact_store.contact_for_addr(
                     self.delivery_class, reply['from_addr'])
-            delivery_classes = dict(get_combined_delivery_classes())
-            tag_pools = dict(delivery_classes.get(self.delivery_class))
             reply_statuses.append({
                 'type': self.delivery_class,
-                'source': tag_pools.get(self.delivery_tag_pool, 'Unknown'),
+                'source': self.delivery_class_description(),
                 'contact': contact,
                 'time': reply['timestamp'],
                 'content': reply['content'],
@@ -216,10 +221,9 @@ class ConversationWrapper(object):
         for message in messages:
             contact = yield self.user_api.contact_store.contact_for_addr(
                     self.delivery_class, message['to_addr'])
-            delivery_classes = dict(get_combined_delivery_classes())
             outbound_statuses.append({
                 'type': self.delivery_class,
-                'source': delivery_classes.get(self.delivery_class, 'Unknown'),
+                'source': self.delivery_class_description(),
                 'contact': contact,
                 'time': message['timestamp'],
                 'content': message['content']
@@ -248,6 +252,72 @@ class ConversationWrapper(object):
         command = VumiApiCommand.command(worker_name, command, *args, **kwargs)
         return self.api.send_command(command)
 
+    def delivery_class_description(self):
+        """
+        FIXME: This actually returns the tagpool display name.
+               The function itself is probably correct -- the
+               name of the function is probably wrong.
+        """
+        return self.tagpool_metadata.get('display_name',
+                                         self.delivery_tag_pool)
+
+    def is_client_initiated(self):
+        """
+        Check whether this conversation can only be initiated by a client.
+
+        :rtype: bool
+        """
+        return self.tagpool_metadata.get('client_initiated', False)
+
+
+class TagpoolSet(object):
+    """Holder for helper methods for retrieving tag pool information.
+
+    :param dict pools:
+        Dictionary of `tagpool name` -> `tagpool metadat` mappings.
+    """
+
+    # TODO: this should ideally need to be moved somewhere else
+    #       but it's purely cosmetic so it can live here for now
+    _DELIVERY_CLASS_NAMES = {
+        'sms': 'SMS',
+        'ussd': 'USSD',
+        'gtalk': 'Gtalk',
+        }
+
+    def __init__(self, pools):
+        self._pools = pools
+
+    def select(self, filter_func):
+        """Return a new :class:`TagpoolSet` that contains only pools
+        that satisfy filter_func.
+
+        :param function filter_func:
+            A function f(pool, metadata) that should return True if the
+            pool should be kept and False if it should be discarded.
+        """
+        new_pools = dict((pool, metadata)
+                         for pool, metadata in self._pools.iteritems()
+                         if filter_func(pool, metadata))
+        return self.__class__(new_pools)
+
+    def pools(self):
+        return self._pools.keys()
+
+    def tagpool_name(self, pool):
+        return self._pools[pool].get('display_name', pool)
+
+    def delivery_class(self, pool):
+        return self._pools[pool].get('delivery_class', None)
+
+    def delivery_classes(self):
+        classes = set(self.delivery_class(pool) for pool in self.pools())
+        classes.discard(None)
+        return list(classes)
+
+    def delivery_class_name(self, delivery_class):
+        return self._DELIVERY_CLASS_NAMES.get(delivery_class, delivery_class)
+
 
 class VumiUserApi(object):
 
@@ -255,6 +325,7 @@ class VumiUserApi(object):
 
     def __init__(self, user_account_key, config):
         self.api = VumiApi(config)
+        self.manager = self.api.manager
         self.user_account_key = user_account_key
         self.conversation_store = ConversationStore(self.api.manager,
                                                     self.user_account_key)
@@ -272,6 +343,18 @@ class VumiUserApi(object):
             ConversationWrapper.
         """
         return self.conversation_wrapper(conversation, self)
+
+    @Manager.calls_manager
+    def tagpools(self):
+        account_store = self.api.account_store
+        user_account = yield account_store.get_user(self.user_account_key)
+        user_tagpools = yield user_account.tagpools.get_all()
+        allowed_set = set([tp.tagpool for tp in user_tagpools])
+        available_set = self.api.tpm.list_pools()
+        pool_names = list(allowed_set & available_set)
+        pool_data = dict((pool, self.api.tpm.get_metadata(pool))
+                         for pool in pool_names)
+        returnValue(TagpoolSet(pool_data))
 
 
 class VumiApi(object):
@@ -461,6 +544,18 @@ class VumiApi(object):
             None
         """
         return self.tpm.declare_tags(tags)
+
+    def set_pool_metadata(self, pool, metadata):
+        """Set the metadata for a tag pool.
+
+        :param str pool:
+            Name of the pool set metadata form.
+        :param dict metadata:
+            Metadata to set.
+        :rtype:
+            None
+        """
+        return self.tpm.set_metadata(pool, metadata)
 
     def purge_pool(self, pool):
         """Completely remove a pool with all its contents.

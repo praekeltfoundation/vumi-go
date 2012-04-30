@@ -10,11 +10,7 @@ from django.contrib.auth.decorators import login_required
 from go.base.utils import (make_read_only_form, vumi_api_for_user,
                            conversation_or_404)
 from go.vumitools.api import ConversationSendError
-from go.vumitools.contact import ContactStore
-from go.vumitools.conversation import (
-    ConversationStore, get_combined_delivery_classes)
-from go.conversation.forms import (
-    ConversationForm, ConversationGroupForm, SelectDeliveryClassForm)
+from go.conversation.forms import ConversationForm, ConversationGroupForm
 
 from vxpolls.content import forms
 from vxpolls.manager import PollManager
@@ -41,9 +37,8 @@ def get_poll_config(poll_id):
 def new(request):
     user_api = vumi_api_for_user(request.user)
     if request.POST:
-        form = ConversationForm(request.POST)
+        form = ConversationForm(user_api, request.POST)
         if form.is_valid():
-
             conversation_data = {}
             copy_keys = [
                 'subject',
@@ -71,14 +66,13 @@ def new(request):
                 kwargs={'conversation_key': conversation.key}))
 
     else:
-        form = ConversationForm(initial={
+        form = ConversationForm(user_api, initial={
             'start_date': datetime.utcnow().date(),
             'start_time': datetime.utcnow().time().replace(second=0,
-                                                            microsecond=0),
+															microsecond=0),
         })
     return render(request, 'surveys/new.html', {
         'form': form,
-        'delivery_classes': get_combined_delivery_classes(),
     })
 
 
@@ -110,11 +104,11 @@ def contents(request, conversation_key):
     else:
         form = forms.make_form(data=config, initial=config)
 
-    survey_form = make_read_only_form(ConversationForm(instance=conversation,
-        initial={
-            'start_date': conversation.start_timestamp.date(),
-            'start_time': conversation.start_timestamp.time(),
-        }))
+    survey_form = make_read_only_form(ConversationForm(user_api, instance=
+		conversation, initial={
+			'start_date': conversation.start_timestamp.date(),
+			'start_time': conversation.start_timestamp.time(),
+		}))
     return render(request, 'surveys/contents.html', {
         'form': form,
         'survey_form': survey_form,
@@ -151,9 +145,8 @@ def people(request, conversation_key):
             return redirect(reverse('survey:show', kwargs={
                 'conversation_key': conversation.key}))
         else:
-            contact_store = ContactStore.from_django_user(request.user)
             group_form = ConversationGroupForm(
-                request.POST, groups=contact_store.list_groups())
+                request.POST, groups=user_api.contact_store.list_groups())
 
             if group_form.is_valid():
                 for group in group_form.cleaned_data['groups']:
@@ -163,12 +156,11 @@ def people(request, conversation_key):
                 return redirect(reverse('survey:start', kwargs={
                                     'conversation_key': conversation.key}))
 
-    survey_form = make_read_only_form(ConversationForm(instance=conversation))
+    survey_form = make_read_only_form(ConversationForm(user_api))
     content_form = forms.make_form(data=config, initial=config, extra=0)
     read_only_content_form = make_read_only_form(content_form)
     return render(request, 'surveys/people.html', {
         'conversation': conversation,
-        'delivery_class': SelectDeliveryClassForm(),
         'survey_form': survey_form,
         'content_form': read_only_content_form,
     })

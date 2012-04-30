@@ -13,63 +13,10 @@ from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.contact import ContactGroup
 
 
-def get_tag_pool_names():
-    pool_names = []
-    for delivery_class, tag_pools in get_combined_delivery_classes():
-        for tag_pool, label in tag_pools:
-            pool_names.append(tag_pool)
-    return pool_names
-
-
-def get_server_init_tag_pool_names():
-    pool_names = []
-    for delivery_class, tag_pools in get_server_init_delivery_classes():
-        for tag_pool, label in tag_pools:
-            pool_names.append(tag_pool)
-    return pool_names
-
-
-def get_delivery_class_names():
-    return [delivery_class for delivery_class, tag_pools
-                in get_combined_delivery_classes()]
-
-
-def get_combined_delivery_classes():
-    return (get_client_init_delivery_classes() +
-                get_server_init_delivery_classes())
-
-
-def get_server_init_delivery_class_names():
-    return [delivery_class for delivery_class, tag_pools
-                in get_server_init_delivery_classes()]
-
-
-def get_server_init_delivery_classes():
-    return [
-        ('sms', [
-            ('shortcode', 'Short code'),
-            ('longcode', 'Long code'),
-        ]),
-        ('gtalk', [
-            ('xmpp', 'Google Talk'),
-        ])
-    ]
-
-
-def get_client_init_delivery_classes():
-    return [
-        ('ussd', [
-            ('truteq', '*120*646*4*1*...#'),
-            ('integrat', '*120*99*987*10*...#'),
-        ]),
-    ]
-
-
 CONVERSATION_TYPES = [
     ('bulk_message', 'Send Bulk SMS and track replies'),
     ('survey', 'Interactive Survey'),
 ]
-
 
 CONVERSATION_DRAFT = 'draft'
 CONVERSATION_RUNNING = 'running'
@@ -95,15 +42,6 @@ class Conversation(Model):
     def ended(self):
         return self.end_timestamp is not None
 
-    def is_client_initiated(self):
-        """
-        Check whether this conversation can only be initiated by a client.
-
-        :rtype: bool
-        """
-        return (self.delivery_class not in
-                get_server_init_delivery_class_names())
-
     def get_status(self):
         """
         Get the status of this conversation
@@ -118,17 +56,6 @@ class Conversation(Model):
             return CONVERSATION_RUNNING
         else:
             return CONVERSATION_DRAFT
-
-    def delivery_class_description(self):
-        """
-        FIXME: this is a hack
-        """
-        delivery_classes = dict(get_combined_delivery_classes())
-        tag_pools = dict(delivery_classes.get(self.delivery_class))
-        description = tag_pools.get(self.delivery_tag_pool)
-        if description is None:
-            description = "Unknown"
-        return description
 
     def add_group(self, group):
         if isinstance(group, ContactGroup):
