@@ -111,8 +111,10 @@ class ConversationWrapper(object):
             'delivery_report': 0,
         }
 
-        for batch in (yield self.c.batches.get_all()):
-            for k, v in (yield self.mdb.batch_status(batch.key)):
+        for batch in (yield self.get_batches()):
+            for k, v in (yield self.mdb.batch_status(batch.key)).items():
+                if k == 'message':
+                    k = 'sent'
                 default[k] += v
         total = len((yield self.people()))
         default.update({
@@ -150,7 +152,7 @@ class ConversationWrapper(object):
         returnValue([addr for addr in addrs if addr])
 
     @Manager.calls_manager
-    def start(self):
+    def start(self, **extra_params):
         """
         Send the start command to this conversations application worker.
         """
@@ -164,7 +166,7 @@ class ConversationWrapper(object):
             msg_options={
                 'transport_type': self.c.delivery_class,
                 'from_addr': tag[1],
-            })
+            }, **extra_params)
         self.c.batches.add_key(batch_id)
         yield self.c.save()
 
