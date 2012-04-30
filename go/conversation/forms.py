@@ -1,9 +1,12 @@
 from django import forms
-from go.conversation import models
-# from go.contacts.models import ContactGroup
+
+from go.vumitools.conversation import (
+    CONVERSATION_TYPES, get_tag_pool_names, get_delivery_class_names,
+    get_server_init_delivery_class_names, get_server_init_tag_pool_names,
+    get_combined_delivery_classes)
 
 
-class ConversationForm(forms.ModelForm):
+class ConversationForm(forms.Form):
     subject = forms.CharField(required=True, widget=forms.TextInput(attrs={
         'class': 'input required'}))
     message = forms.CharField(required=True, widget=forms.Textarea(attrs={
@@ -14,10 +17,10 @@ class ConversationForm(forms.ModelForm):
         attrs={'id': 'timepicker_1', 'class': 'txtbox txtbox-date'}))
     delivery_class = forms.CharField(required=True, widget=forms.RadioSelect(
         attrs={'class': 'delivery-class-radio'},
-        choices=[(dc, dc) for dc in models.get_delivery_class_names()]))
+        choices=[(dc, dc) for dc in get_delivery_class_names()]))
     delivery_tag_pool = forms.CharField(required=True, widget=forms.Select(
         attrs={'class': 'input-medium'},
-        choices=[(tpn, tpn) for tpn in models.get_tag_pool_names()]))
+        choices=[(tpn, tpn) for tpn in get_tag_pool_names()]))
 
     def delivery_class_widgets(self):
         # Backported hack from Django 1.4 to allow me to iterate
@@ -28,16 +31,16 @@ class ConversationForm(forms.ModelForm):
                                                         field.value()):
             yield widget
 
-    class Meta:
-        model = models.Conversation
-        fields = (
-            'subject',
-            'message',
-            'start_date',
-            'start_time',
-            'delivery_class',
-            'delivery_tag_pool',
-        )
+    # class Meta:
+    #     model = models.Conversation
+    #     fields = (
+    #         'subject',
+    #         'message',
+    #         'start_date',
+    #         'start_time',
+    #         'delivery_class',
+    #         'delivery_tag_pool',
+    #     )
 
 
 class BulkSendConversationForm(ConversationForm):
@@ -47,11 +50,11 @@ class BulkSendConversationForm(ConversationForm):
     delivery_class = forms.CharField(required=True, widget=forms.RadioSelect(
         attrs={'class': 'delivery-class-radio'},
         choices=[(dc, dc) for dc
-                    in models.get_server_init_delivery_class_names()]))
+                    in get_server_init_delivery_class_names()]))
     delivery_tag_pool = forms.CharField(required=True, widget=forms.Select(
         attrs={'class': 'input-medium'},
         choices=[(tpn, tpn) for tpn
-                        in models.get_server_init_tag_pool_names()]))
+                        in get_server_init_tag_pool_names()]))
 
 
 class ConversationGroupForm(forms.Form):
@@ -72,7 +75,7 @@ class ConversationSearchForm(forms.Form):
         'placeholder': 'Search conversations...',
         }))
     conversation_type = forms.ChoiceField(required=False,
-        choices=([('', 'Type ...')] + models.CONVERSATION_TYPES),
+        choices=([('', 'Type ...')] + CONVERSATION_TYPES),
         widget=forms.Select(attrs={'class': 'input-small'}))
     conversation_status = forms.ChoiceField(required=False,
         choices=[
@@ -86,4 +89,4 @@ class ConversationSearchForm(forms.Form):
 
 class SelectDeliveryClassForm(forms.Form):
     delivery_class = forms.ChoiceField(
-                        choices=models.get_combined_delivery_classes())
+                        choices=get_combined_delivery_classes())
