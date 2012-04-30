@@ -12,7 +12,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
     def setUp(self):
         super(DjangoGoApplicationTestCase, self).setUp()
         self.setup_api()
-        self.declare_longcode_tags(self.api)
+        self.declare_longcode_tags()
         self.setup_celery_for_tests()
 
     def tearDown(self):
