@@ -10,8 +10,7 @@ from django.contrib.auth.decorators import login_required
 from go.base.utils import (make_read_only_form, vumi_api_for_user,
                            conversation_or_404)
 from go.vumitools.api import ConversationSendError
-from go.conversation.forms import (
-    ConversationForm, ConversationGroupForm, SelectDeliveryClassForm)
+from go.conversation.forms import ConversationForm, ConversationGroupForm
 
 from vxpolls.content import forms
 from vxpolls.manager import PollManager
@@ -157,7 +156,6 @@ def people(request, conversation_key):
     read_only_content_form = make_read_only_form(content_form)
     return render(request, 'surveys/people.html', {
         'conversation': conversation,
-        'delivery_class': SelectDeliveryClassForm(),
         'survey_form': survey_form,
         'content_form': read_only_content_form,
     })
