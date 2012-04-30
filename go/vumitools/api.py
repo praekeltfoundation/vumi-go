@@ -20,8 +20,7 @@ from vumi.persist.message_store import MessageStore
 
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
-from go.vumitools.conversation import (ConversationStore,
-                                       get_combined_delivery_classes)
+from go.vumitools.conversation import ConversationStore
 
 
 def get_redis(config):
@@ -192,11 +191,12 @@ class ConversationWrapper(object):
         for reply in replies:
             contact = yield self.user_api.contact_store.contact_for_addr(
                     self.delivery_class, reply['from_addr'])
-            delivery_classes = dict(get_combined_delivery_classes())
-            tag_pools = dict(delivery_classes.get(self.delivery_class))
+            tagpool_metadata = self.api.tpm.get_metadata(
+                    self.delivery_tag_pool)
             reply_statuses.append({
                 'type': self.delivery_class,
-                'source': tag_pools.get(self.delivery_tag_pool, 'Unknown'),
+                'source': tagpool_metadata.get('display_name',
+                                               self.delivery_tag_pool),
                 'contact': contact,
                 'time': reply['timestamp'],
                 'content': reply['content'],
@@ -216,10 +216,12 @@ class ConversationWrapper(object):
         for message in messages:
             contact = yield self.user_api.contact_store.contact_for_addr(
                     self.delivery_class, message['to_addr'])
-            delivery_classes = dict(get_combined_delivery_classes())
+            tagpool_metadata = self.api.tpm.get_metadata(
+                    self.delivery_tag_pool)
             outbound_statuses.append({
                 'type': self.delivery_class,
-                'source': delivery_classes.get(self.delivery_class, 'Unknown'),
+                'source': tagpool_metadata.get('display_name',
+                                               self.delivery_tag_pool),
                 'contact': contact,
                 'time': message['timestamp'],
                 'content': message['content']
