@@ -11,9 +11,9 @@ class Command(BaseCommand):
     help = "Create a Vumi Go user"
 
     PARAMS = [
-        ('email-address', 'Email address to account to be created',
+        ('email-address', 'Email address for account to be created',
                 raw_input),
-        ('password', 'Password to account to be created',
+        ('password', 'Password for account to be created',
                 getpass.getpass),
         ('name', 'Name of the account holder',
                 raw_input),
