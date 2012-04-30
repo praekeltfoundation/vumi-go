@@ -7,6 +7,8 @@ from vumi.persist.model import Model
 from vumi.persist.message_store import Batch
 from vumi.persist.fields import Unicode, ManyToMany, ForeignKey, Timestamp
 
+from twisted.internet.defer import returnValue
+
 from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.contact import ContactGroup
 
@@ -142,9 +144,11 @@ class ConversationStore(PerAccountStore):
     def setup_proxies(self):
         self.conversations = self.manager.proxy(Conversation)
 
+    @Manager.calls_manager
     def list_conversations(self):
         # Not stale, because we're using backlinks.
-        return self.user_account.backlinks.conversations(self.manager)
+        user_account = yield self.get_user_account()
+        returnValue(user_account.backlinks.conversations(self.manager))
 
     def get_conversation_by_key(self, key):
         return self.conversations.load(key)
@@ -156,7 +160,7 @@ class ConversationStore(PerAccountStore):
         groups = fields.pop('groups', [])
 
         conversation = self.conversations(
-            conversation_id, user_account=self.user_account,
+            conversation_id, user_account=self.user_account_key,
             conversation_type=conversation_type,
             subject=subject, message=message,
             start_timestamp=datetime.utcnow(),
