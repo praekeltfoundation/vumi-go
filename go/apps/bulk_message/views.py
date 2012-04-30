@@ -6,7 +6,6 @@ from django.core.urlresolvers import reverse
 from django.contrib import messages
 
 from go.vumitools.api import ConversationSendError
-from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import get_server_init_delivery_classes
 from go.conversation.forms import ConversationGroupForm
 from go.apps.bulk_message.forms import BulkSendConversationForm
@@ -67,8 +66,7 @@ def new(request):
 def people(request, conversation_key):
     user_api = vumi_api_for_user(request.user)
     conversation = conversation_or_404(user_api, conversation_key)
-    contact_store = ContactStore.from_django_user(request.user)
-    groups = contact_store.list_groups()
+    groups = user_api.contact_store.list_groups()
 
     if request.method == 'POST':
         group_form = ConversationGroupForm(request.POST, groups=groups)
@@ -108,10 +106,9 @@ def send(request, conversation_key):
         return redirect(reverse('bulk_message:show', kwargs={
             'conversation_key': conversation.key}))
 
-    contact_store = ContactStore.from_django_user(request.user)
     conversation_form = make_read_only_form(BulkSendConversationForm(user_api))
     group_form = make_read_only_form(
-        ConversationGroupForm(groups=contact_store.list_groups()))
+        ConversationGroupForm(groups=user_api.contact_store.list_groups()))
 
     return render(request, 'bulk_message/send.html', {
         'conversation': conversation,
