@@ -21,8 +21,8 @@ class TestContactStore(TestCase):
         self.account_store = AccountStore(self.manager)
         account = yield self.account_store.new_user(u'user')
         account_alt = yield self.account_store.new_user(u'other_user')
-        self.store = ContactStore(account)
-        self.store_alt = ContactStore(account_alt)
+        self.store = ContactStore.from_user_account(account)
+        self.store_alt = ContactStore.from_user_account(account_alt)
 
     def tearDown(self):
         return self.manager.purge_all()
