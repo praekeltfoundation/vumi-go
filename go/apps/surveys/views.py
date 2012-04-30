@@ -1,16 +1,15 @@
 import redis
 from datetime import datetime
 
-from django.http import Http404
 from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
 
-from go.base.utils import make_read_only_form
-from go.vumitools.api import (
-    VumiApi, ConversationWrapper, ConversationSendError)
+from go.base.utils import (make_read_only_form, vumi_api_for_user,
+                           conversation_or_404)
+from go.vumitools.api import ConversationSendError
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import (
     ConversationStore, get_combined_delivery_classes)
@@ -38,20 +37,12 @@ def get_poll_config(poll_id):
     return pm, config
 
 
-def _conv_or_404(store, key):
-    conversation = store.get_conversation_by_key(key)
-    if conversation is None:
-        raise Http404
-    return ConversationWrapper(conversation, VumiApi(settings.VUMI_API_CONFIG))
-
-
 @login_required
 def new(request):
+    user_api = vumi_api_for_user(request.user)
     if request.POST:
         form = ConversationForm(request.POST)
         if form.is_valid():
-            conv_store = ConversationStore.from_django_user(request.user)
-
             conversation_data = {}
             copy_keys = [
                 'subject',
@@ -71,7 +62,7 @@ def new(request):
                 start_time.hour, start_time.minute, start_time.second,
                 start_time.microsecond)
 
-            conversation = conv_store.new_conversation(
+            conversation = user_api.conversation_store.new_conversation(
                 u'survey', **conversation_data)
             messages.add_message(request, messages.INFO,
                 'Survey Created')
@@ -91,8 +82,8 @@ def new(request):
 
 @login_required
 def contents(request, conversation_key):
-    conv_store = ConversationStore.from_django_user(request.user)
-    conversation = _conv_or_404(conv_store, conversation_key)
+    user_api = vumi_api_for_user(request.user)
+    conversation = conversation_or_404(user_api, conversation_key)
 
     poll_id = 'poll-%s' % (conversation.key,)
     pm, config = get_poll_config(poll_id)
@@ -126,8 +117,8 @@ def contents(request, conversation_key):
 
 @login_required
 def people(request, conversation_key):
-    conv_store = ConversationStore.from_django_user(request.user)
-    conversation = _conv_or_404(conv_store, conversation_key)
+    user_api = vumi_api_for_user(request.user)
+    conversation = conversation_or_404(user_api, conversation_key)
 
     poll_id = "poll-%s" % (conversation.key,)
     pm, config = get_poll_config(poll_id)
@@ -179,8 +170,8 @@ def people(request, conversation_key):
 
 @login_required
 def start(request, conversation_key):
-    conv_store = ConversationStore.from_django_user(request.user)
-    conversation = _conv_or_404(conv_store, conversation_key)
+    user_api = vumi_api_for_user(request.user)
+    conversation = conversation_or_404(user_api, conversation_key)
     if request.method == 'POST':
         try:
             conversation.start()
@@ -198,8 +189,8 @@ def start(request, conversation_key):
 
 @login_required
 def end(request, conversation_key):
-    conv_store = ConversationStore.from_django_user(request.user)
-    conversation = _conv_or_404(conv_store, conversation_key)
+    user_api = vumi_api_for_user(request.user)
+    conversation = conversation_or_404(user_api, conversation_key)
     if request.method == 'POST':
         conversation.end_conversation()
         messages.add_message(request, messages.INFO, 'Survey ended')
@@ -209,8 +200,8 @@ def end(request, conversation_key):
 
 @login_required
 def show(request, conversation_key):
-    conv_store = ConversationStore.from_django_user(request.user)
-    conversation = _conv_or_404(conv_store, conversation_key)
+    user_api = vumi_api_for_user(request.user)
+    conversation = conversation_or_404(user_api, conversation_key)
     poll_id = 'poll-%s' % (conversation.key,)
     return render(request, 'surveys/show.html', {
         'conversation': conversation,

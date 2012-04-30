@@ -6,6 +6,7 @@ from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.base.utils import vumi_api_for_user
 
 
 TEST_GROUP_NAME = u"Test Group"
@@ -27,9 +28,10 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
     def setup_riak_fixtures(self):
         self.user = User.objects.get(username='username')
-        self.contact_store = ContactStore.from_django_user(self.user)
+        self.user_api = vumi_api_for_user(self.user)
+        self.contact_store = self.user_api.contact_store
         self.contact_store.contacts.enable_search()
-        self.conv_store = ConversationStore.from_django_user(self.user)
+        self.conv_store = self.user_api.conversation_store
 
         # We need a group
         group = self.contact_store.new_group(TEST_GROUP_NAME)
@@ -52,7 +54,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
-        return self.api.wrap_conversation(conv)
+        return self.user_api.wrap_conversation(conv)
 
     def test_new_conversation(self):
         """test the creation of a new conversation"""
