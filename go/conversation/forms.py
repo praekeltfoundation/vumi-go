@@ -22,8 +22,11 @@ class ConversationForm(forms.Form):
 
     def __init__(self, user_api, *args, **kw):
         self.user_api = user_api
+        tagpool_filter = kw.pop('tagpool_filter', None)
         super(ConversationForm, self).__init__(*args, **kw)
         tagpool_set = self.user_api.tagpools()
+        if tagpool_filter is not None:
+            tagpool_set = tagpool_set.select(tagpool_filter)
         self.fields['delivery_tag_pool'].widget.choices = [
             (pool, tagpool_set.tagpool_display_name(pool))
             for pool in tagpool_set.pools()]
