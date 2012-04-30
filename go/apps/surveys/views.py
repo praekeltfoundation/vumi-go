@@ -43,8 +43,27 @@ def new(request):
     if request.POST:
         form = ConversationForm(request.POST)
         if form.is_valid():
+            conversation_data = {}
+            copy_keys = [
+                'subject',
+                'message',
+                'delivery_class',
+                'delivery_tag_pool',
+            ]
+
+            for key in copy_keys:
+                conversation_data[key] = form.cleaned_data[key]
+
+            start_date = form.cleaned_data['start_date'] or datetime.utcnow()
+            start_time = (form.cleaned_data['start_time'] or
+                            datetime.utcnow().time())
+            conversation_data['start_timestamp'] = datetime(
+                start_date.year, start_date.month, start_date.day,
+                start_time.hour, start_time.minute, start_time.second,
+                start_time.microsecond)
+
             conversation = user_api.conversation_store.new_conversation(
-                u'survey', **form.cleaned_data)
+                u'survey', **conversation_data)
             messages.add_message(request, messages.INFO,
                 'Survey Created')
             return redirect(reverse('survey:contents',
@@ -127,9 +146,8 @@ def people(request, conversation_key):
                 'conversation_key': conversation.key}))
         else:
             contact_store = ContactStore.from_django_user(request.user)
-            group_names = [g.key for g in contact_store.list_groups()]
-            group_form = ConversationGroupForm(request.POST,
-                                               group_names=group_names)
+            group_form = ConversationGroupForm(
+                request.POST, groups=contact_store.list_groups())
 
             if group_form.is_valid():
                 for group in group_form.cleaned_data['groups']:

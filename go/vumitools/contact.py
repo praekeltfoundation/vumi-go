@@ -13,7 +13,8 @@ from go.vumitools.account import UserAccount, PerAccountStore
 
 class ContactGroup(Model):
     """A group of contacts"""
-    # key is group name
+    # key is UUID
+    name = Unicode()
     user_account = ForeignKey(UserAccount)
     created_at = Timestamp(default=datetime.utcnow)
 
@@ -84,11 +85,12 @@ class ContactStore(PerAccountStore):
 
     @Manager.calls_manager
     def new_group(self, name):
-        existing_group = yield self.groups.load(name)
-        if existing_group is not None:
-            raise ValueError(
-                "A group with this name already exists: %s" % (name,))
-        group = self.groups(name, user_account=self.user_account_key)
+        group_id = uuid4().get_hex()
+
+        # TODO: Do we want to check for name uniqueness?
+
+        group = self.groups(
+            group_id, name=name, user_account=self.user_account_key)
         yield group.save()
         returnValue(group)
 

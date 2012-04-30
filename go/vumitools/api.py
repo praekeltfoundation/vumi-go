@@ -89,6 +89,9 @@ class ConversationWrapper(object):
     def people(self):
         people = []
         for group in (yield self.c.groups.get_all()):
+            if group is None:
+                # TODO: Something sane here.
+                continue
             people.extend((yield group.backlinks.contacts()))
         returnValue(people)
 

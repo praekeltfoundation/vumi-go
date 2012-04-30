@@ -19,7 +19,7 @@ def standard_forms(request):
 
         contact_store = ContactStore.from_django_user(request.user)
         select_contact_group_form = forms.SelectContactGroupForm(
-            group_names=[g.key for g in contact_store.list_groups()])
+            groups=contact_store.list_groups())
 
         return {
             'upload_contacts_form': upload_contacts_form,
