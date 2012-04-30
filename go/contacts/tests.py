@@ -181,6 +181,23 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertRedirects(response, group_url)
         self.assertEqual(len(list(self.group.backlinks.contacts())), 3)
 
+    def test_graceful_error_handling_on_upload_failure(self):
+        group_url = reverse('contacts:group', kwargs={
+            'group_key': self.group_key
+        })
+        wrong_file = open(path.join(settings.PROJECT_ROOT, 'base',
+            'fixtures', 'test_user.json'))
+        contact = self.contact_store.get_contact_by_key(self.contact_key)
+        contact.groups.clear()
+        contact.save()
+
+        response = self.client.post(group_url, {
+            'file': wrong_file
+            })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Something is wrong with the file')
+
     def test_contact_upload_failure(self):
         self.assertEqual(len(self.contact_store.list_groups()), 1)
         response = self.client.post(reverse('contacts:people'), {

@@ -55,7 +55,7 @@ def _create_contacts_from_csv_file(contact_store, csvfile, country_code):
     csvfile.seek(0)
     reader = _unicode_csv_reader(csvfile, dialect)
     for name, surname, msisdn in reader:
-        # TODO: normalize msisdn (?)
+        # TODO: none of these fields are mandatory.
         msisdn = normalize_msisdn(msisdn, country_code=country_code)
         msisdn = unicode(msisdn, 'utf-8')
         contact = contact_store.new_contact(name, surname, msisdn=msisdn)
@@ -105,16 +105,19 @@ def group(request, group_key):
     if request.method == 'POST':
         upload_contacts_form = UploadContactsForm(request.POST, request.FILES)
         if upload_contacts_form.is_valid():
-            contacts = list(_create_contacts_from_csv_file(
-                contact_store, request.FILES['file'],
-                settings.VUMI_COUNTRY_CODE))
+            try:
+                contacts = list(_create_contacts_from_csv_file(
+                    contact_store, request.FILES['file'],
+                    settings.VUMI_COUNTRY_CODE))
 
-            group.add_contacts(contacts)
-            messages.info(request, '%s contacts added' % (len(contacts,)))
-            return redirect(_group_url(group.key))
-        else:
-            messages.error(request, '%s something is wrong with the '
-                                    'file you have uploaded')
+                group.add_contacts(contacts)
+                messages.info(request, '%s contacts added' % (len(contacts,)))
+                return redirect(_group_url(group.key))
+            except ValueError:
+                pass
+
+        messages.error(request, 'Something is wrong with the '
+                                'file you have uploaded')
     context = {
         'group': group,
         'country_code': settings.VUMI_COUNTRY_CODE,
