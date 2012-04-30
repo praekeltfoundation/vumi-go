@@ -34,7 +34,7 @@
             <div class="box shadow conv-disabled">
                 <h3>2. Message Recipients</h3>
                 <br>
-                {% include "conversation/includes/groups-selected.html" with form=group_form %}
+                {% include "conversation/includes/groups-selected.html" with groups=groups %}
             </div>
         </div>
         <div class="span4">
@@ -57,18 +57,18 @@
                         </tr>
                         <tr>
                             <td>{{conversation.delivery_class}}</td>
-                            <td class="right">{{conversation.people.count}}</td>
+                            <td class="right">{{people|length}}</td>
                             <td class="right">1</td>
-                            <td class="right">{{conversation.people.count}}</td>
+                            <td class="right">{{people|length}}</td>
                         </tr>
                         <tr>
-                            <th colspan="4" class="right"><h1>{{conversation.people.count}}</h1><small style="display: block">Vumi Credits Required</small></th>
+                            <th colspan="4" class="right"><h1>{{people|length}}</h1><small style="display: block">Vumi Credits Required</small></th>
                         </tr>
                         <tr>
-                            <th colspan="4" class="right"><h1>{{conversation.people.count}}</h1><small style="display: block">Total Recipients</small></th>
+                            <th colspan="4" class="right"><h1>{{people|length}}</h1><small style="display: block">Total Recipients</small></th>
                         </tr>
                     </tbody>
-                </table>                  
+                </table>
                 <div class="btn-toolbar">
                     <div class="btn-group"><input type="submit" class="btn btn-success btn-large" value="Send Message &rarr;"></div>
                     <div class="btn-group"><input type="reset" class="btn" onClick="javascript:history.go(-1)" value="Go Back"></div>
