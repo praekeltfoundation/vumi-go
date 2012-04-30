@@ -30,17 +30,6 @@ class ConversationForm(forms.Form):
                                                         field.value()):
             yield widget
 
-    # class Meta:
-    #     model = models.Conversation
-    #     fields = (
-    #         'subject',
-    #         'message',
-    #         'start_date',
-    #         'start_time',
-    #         'delivery_class',
-    #         'delivery_tag_pool',
-    #     )
-
 
 class ConversationGroupForm(forms.Form):
     def __init__(self, *args, **kw):
