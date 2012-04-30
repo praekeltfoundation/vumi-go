@@ -24,7 +24,7 @@
                {% if conversation.ended %}
                     <h4 class="btn btn-info"><i class="icon-ok icon-white"></i> Survey ended on {{conversation.end_date|date:"d F Y"}}</h4>
                 {% else %}
-                    <form id="conversation-end" name="conversation-end" method="post" action="{% url survey:end conversation_pk=conversation.pk %}">
+                    <form id="conversation-end" name="conversation-end" method="post" action="{% url survey:end conversation_key=conversation.key %}">
                         {% csrf_token %}
                         <a href="javascript: document.getElementById('conversation-end').submit();" class="btn btn-danger"><i class="icon-remove-sign icon-white"></i> End Survey</a>
                     </form>
@@ -119,7 +119,7 @@
                     <tr>
                         <td><i class="icon-repeat"></i> {{reply.type}}</td>
                         <td>
-                            <h6><a href="{% url contacts:person person_pk=reply.contact.pk %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}}</h6>
+                            <h6><a href="{% url contacts:person person_key=reply.contact.key %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}}</h6>
                             <p>{{reply.content}}</p></td>
                         <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
                     </tr>
@@ -190,7 +190,7 @@
                     <tr>
                         <td><i class="icon-repeat"></i> {{reply.type}}</td>
                         <td>
-                            <h6><a href="{% url contacts:person person_pk=reply.contact.pk %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}}</h6>
+                            <h6><a href="{% url contacts:person person_key=reply.contact.key %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}}</h6>
                             <p>{{reply.content}}</p></td>
                         <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
                     </tr>

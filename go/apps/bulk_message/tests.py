@@ -4,8 +4,6 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 
-# from go.conversation.models import Conversation
-# from go.contacts.models import ContactGroup
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.tests.utils import VumiApiCommand

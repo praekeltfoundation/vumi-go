@@ -4,89 +4,115 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 
-from go.conversation.models import Conversation
-from go.contacts.models import ContactGroup
+from go.vumitools.contact import ContactStore
+from go.vumitools.conversation import ConversationStore
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
 
 
-def reload_record(record):
-    return record.__class__.objects.get(pk=record.pk)
+TEST_GROUP_NAME = u"Test Group"
+TEST_CONTACT_NAME = u"Name"
+TEST_CONTACT_SURNAME = u"Surname"
+TEST_SUBJECT = u"Test Conversation"
 
 
 class SurveyTestCase(DjangoGoApplicationTestCase):
 
-    fixtures = ['test_user', 'test_conversation',
-                    'test_group', 'test_contact']
+    fixtures = ['test_user']
 
     def setUp(self):
         super(SurveyTestCase, self).setUp()
         self.client = Client()
         self.client.login(username='username', password='password')
 
+        self.setup_riak_fixtures()
+
+    def setup_riak_fixtures(self):
         self.user = User.objects.get(username='username')
-        self.conversation = self.user.conversation_set.latest()
+        self.contact_store = ContactStore.from_django_user(self.user)
+        self.contact_store.contacts.enable_search()
+        self.conv_store = ConversationStore.from_django_user(self.user)
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        contact = self.contact_store.new_contact(
+            name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
+            msisdn=u"+27761234567")
+        contact.add_to_group(group)
+        contact.save()
+        self.contact_key = contact.key
+        conversation = self.conv_store.new_conversation(
+            conversation_type=u'bulk_message', subject=TEST_SUBJECT,
+            message=u"Test message", delivery_class=u"sms",
+            delivery_tag_pool=u"longcode", groups=[TEST_GROUP_NAME])
+        self.conv_key = conversation.key
+
+    def get_wrapped_conv(self):
+        conv = self.conv_store.get_conversation_by_key(self.conv_key)
+        return self.api.wrap_conversation(conv)
 
     def test_new_conversation(self):
         """test the creation of a new conversation"""
         # render the form
-        self.assertEqual(Conversation.objects.count(), 1)
+        self.assertEqual(len(self.conv_store.list_conversations()), 1)
         response = self.client.get(reverse('survey:new'))
         self.assertEqual(response.status_code, 200)
         # post the form
         response = self.client.post(reverse('survey:new'), {
             'subject': 'the subject',
             'message': 'the message',
-            'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
-            'start_time': datetime.utcnow().strftime('%H:%M'),
+            # 'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
+            # 'start_time': datetime.utcnow().strftime('%H:%M'),
             'delivery_class': 'sms',
             'delivery_tag_pool': 'longcode',
         })
-        self.assertEqual(Conversation.objects.count(), 2)
-        conversation = Conversation.objects.latest()
+        self.assertEqual(len(self.conv_store.list_conversations()), 2)
+        conversation = max(self.conv_store.list_conversations(),
+                           key=lambda c: c.created_at)
         self.assertEqual(conversation.delivery_class, 'sms')
         self.assertEqual(conversation.delivery_tag_pool, 'longcode')
         self.assertRedirects(response, reverse('survey:contents', kwargs={
-            'conversation_pk': conversation.pk,
+            'conversation_key': conversation.key,
         }))
 
     def test_end(self):
         """
         Test ending the conversation
         """
-        self.assertFalse(self.conversation.ended())
+        conversation = self.get_wrapped_conv()
+        self.assertFalse(conversation.ended())
         response = self.client.post(reverse('survey:end', kwargs={
-            'conversation_pk': self.conversation.pk}), follow=True)
+            'conversation_key': conversation.key}), follow=True)
         self.assertRedirects(response, reverse('survey:show', kwargs={
-            'conversation_pk': self.conversation.pk}))
+            'conversation_key': conversation.key}))
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "Survey ended")
-        self.conversation = reload_record(self.conversation)
-        self.assertTrue(self.conversation.ended())
+        conversation = self.get_wrapped_conv()
+        self.assertTrue(conversation.ended())
 
     def test_client_or_server_init_distinction(self):
         """A survey should not ask for recipients if the transport
         used only supports client initiated sessions (i.e. USSD)"""
-        def render_people_page(delivery_class):
-            self.conversation.delivery_class = delivery_class
-            self.conversation.save()
+        def get_people_page(delivery_class):
+            conversation = self.get_wrapped_conv()
+            conversation.c.delivery_class = delivery_class
+            conversation.save()
             return self.client.get(reverse('survey:people', kwargs={
-                'conversation_pk': self.conversation.pk,
+                'conversation_key': conversation.key,
                 }))
 
-        self.assertContains(render_people_page('sms'), 'Survey Recipients')
-        self.assertNotContains(render_people_page('ussd'), 'Survey Recipients')
+        self.assertContains(get_people_page(u'sms'), 'Survey Recipients')
+        self.assertNotContains(get_people_page(u'ussd'), 'Survey Recipients')
 
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
         conversation"""
-        self.assertFalse(self.conversation.is_client_initiated())
+        conversation = self.get_wrapped_conv()
+        self.assertFalse(conversation.is_client_initiated())
         response = self.client.post(reverse('survey:people',
-            kwargs={'conversation_pk': self.conversation.pk}), {
-            'groups': [grp.pk for grp in ContactGroup.objects.all()],
+            kwargs={'conversation_key': conversation.key}), {
+            'groups': [grp.key for grp in self.contact_store.list_groups()],
         })
         self.assertRedirects(response, reverse('survey:start', kwargs={
-            'conversation_pk': self.conversation.pk}))
+            'conversation_key': conversation.key}))
 
     def test_start(self):
         """
@@ -95,23 +121,23 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         consumer = self.get_cmd_consumer()
 
         response = self.client.post(reverse('survey:start', kwargs={
-            'conversation_pk': self.conversation.pk}))
+            'conversation_key': self.conv_key}))
         self.assertRedirects(response, reverse('survey:show', kwargs={
-            'conversation_pk': self.conversation.pk}))
+            'conversation_key': self.conv_key}))
 
+        conversation = self.get_wrapped_conv()
         [cmd] = self.fetch_cmds(consumer)
-        [batch] = self.conversation.message_batch_set.all()
-        [contact] = self.conversation.people()
-        conversation = self.conversation
+        [batch] = conversation.get_batches()
+        [contact] = conversation.people()
         msg_options = {"from_addr": "default10001",
                        "transport_type": "sms",
                        }
 
         self.assertEqual(cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,), 'start',
-            conversation_type=self.conversation.conversation_type,
-            conversation_id=self.conversation.pk,
-            batch_id=batch.batch_id,
+            conversation_type=conversation.conversation_type,
+            conversation_id=conversation.key,
+            batch_id=batch.key,
             msg_options=msg_options
             ))
 
@@ -122,11 +148,10 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.acquire_all_longcode_tags()
         consumer = self.get_cmd_consumer()
         response = self.client.post(reverse('survey:start', kwargs={
-            'conversation_pk': self.conversation.pk}), follow=True)
+            'conversation_key': self.conv_key}), follow=True)
         self.assertRedirects(response, reverse('survey:start', kwargs={
-            'conversation_pk': self.conversation.pk}))
+            'conversation_key': self.conv_key}))
         [] = self.fetch_cmds(consumer)
-        [] = self.conversation.preview_batch_set.all()
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "No spare messaging tags.")
 
@@ -135,6 +160,6 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         Test showing the conversation
         """
         response = self.client.get(reverse('survey:show', kwargs={
-            'conversation_pk': self.conversation.pk}))
+            'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.subject, 'Test Conversation')
