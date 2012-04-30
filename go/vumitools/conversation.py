@@ -156,7 +156,7 @@ class ConversationStore(PerAccountStore):
         groups = fields.pop('groups', [])
 
         conversation = self.conversations(
-            conversation_id, user_account=self.user_account,
+            conversation_id, user_account=self.user_account_key,
             conversation_type=conversation_type,
             subject=subject, message=message,
             start_timestamp=datetime.utcnow(),
