@@ -98,13 +98,17 @@ class ContactStore(PerAccountStore):
     def get_group(self, name):
         return self.groups.load(name)
 
+    @Manager.calls_manager
     def list_contacts(self):
         # Not stale, because we're using backlinks.
-        return self.user_account.backlinks.contacts(self.manager)
+        user_account = yield self.get_user_account()
+        returnValue(user_account.backlinks.contacts(self.manager))
 
+    @Manager.calls_manager
     def list_groups(self):
         # Not stale, because we're using backlinks.
-        return self.user_account.backlinks.contactgroups(self.manager)
+        user_account = yield self.get_user_account()
+        returnValue(user_account.backlinks.contactgroups(self.manager))
 
     @Manager.calls_manager
     def contact_for_addr(self, transport_type, addr):
