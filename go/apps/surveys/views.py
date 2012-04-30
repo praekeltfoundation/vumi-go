@@ -1,18 +1,21 @@
 import redis
 from datetime import datetime
 
+from django.http import Http404
 from django.conf import settings
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
 
-# from go.conversation.models import (Conversation, ConversationSendError,
-#                                     get_combined_delivery_classes)
-# from go.conversation.forms import (ConversationForm, SelectDeliveryClassForm,
-#                                     ConversationGroupForm)
-# from go.contacts.models import ContactGroup
-# from go.base.utils import make_read_only_form
+from go.base.utils import make_read_only_form
+from go.vumitools.api import (
+    VumiApi, ConversationWrapper, ConversationSendError)
+from go.vumitools.contact import ContactStore
+from go.vumitools.conversation import (
+    ConversationStore, get_combined_delivery_classes)
+from go.conversation.forms import (
+    ConversationForm, ConversationGroupForm, SelectDeliveryClassForm)
 
 from vxpolls.content import forms
 from vxpolls.manager import PollManager
@@ -35,19 +38,25 @@ def get_poll_config(poll_id):
     return pm, config
 
 
+def _conv_or_404(store, key):
+    conversation = store.get_conversation_by_key(key)
+    if conversation is None:
+        raise Http404
+    return ConversationWrapper(conversation, VumiApi(settings.VUMI_API_CONFIG))
+
+
 @login_required
 def new(request):
     if request.POST:
         form = ConversationForm(request.POST)
         if form.is_valid():
-            conversation = form.save(commit=False)
-            conversation.conversation_type = 'survey'
-            conversation.user = request.user
-            conversation.save()
+            conv_store = ConversationStore.from_django_user(request.user)
+            conversation = conv_store.new_conversation(
+                u'survey', **form.cleaned_data)
             messages.add_message(request, messages.INFO,
                 'Survey Created')
             return redirect(reverse('survey:contents',
-                kwargs={'conversation_pk': conversation.pk}))
+                kwargs={'conversation_key': conversation.key}))
 
     else:
         form = ConversationForm(initial={
@@ -61,11 +70,11 @@ def new(request):
 
 
 @login_required
-def contents(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
+def contents(request, conversation_key):
+    conv_store = ConversationStore.from_django_user(request.user)
+    conversation = _conv_or_404(conv_store, conversation_key)
 
-    poll_id = 'poll-%s' % (conversation.pk,)
+    poll_id = 'poll-%s' % (conversation.key,)
     pm, config = get_poll_config(poll_id)
     if request.method == 'POST':
         post_data = request.POST.copy()
@@ -79,16 +88,16 @@ def contents(request, conversation_pk):
             pm.set(poll_id, form.export())
             if request.POST.get('_save_contents'):
                 return redirect(reverse('survey:contents', kwargs={
-                    'conversation_pk': conversation.pk,
+                    'conversation_key': conversation.key,
                 }))
             else:
                 return redirect(reverse('survey:people', kwargs={
-                    'conversation_pk': conversation.pk,
+                    'conversation_key': conversation.key,
                 }))
     else:
         form = forms.make_form(data=config, initial=config)
 
-    survey_form = make_read_only_form(ConversationForm(instance=conversation))
+    survey_form = make_read_only_form(ConversationForm())
     return render(request, 'surveys/contents.html', {
         'form': form,
         'survey_form': survey_form,
@@ -96,12 +105,11 @@ def contents(request, conversation_pk):
 
 
 @login_required
-def people(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
-    groups_for_user = ContactGroup.objects.filter(user=request.user)
+def people(request, conversation_key):
+    conv_store = ConversationStore.from_django_user(request.user)
+    conversation = _conv_or_404(conv_store, conversation_key)
 
-    poll_id = "poll-%s" % (conversation.pk,)
+    poll_id = "poll-%s" % (conversation.key,)
     pm, config = get_poll_config(poll_id)
 
     if request.method == 'POST':
@@ -118,28 +126,28 @@ def people(request, conversation_pk):
                             }
                 messages.add_message(request, messages.ERROR, str(error))
                 return redirect(reverse('survey:people', kwargs={
-                    'conversation_pk': conversation.pk}))
+                    'conversation_key': conversation.key}))
 
             addresses = [tag[1] for tag in conversation.get_tags()]
             messages.add_message(request, messages.INFO,
                 'Survey started on %s' % (', '.join(addresses),))
             return redirect(reverse('survey:show', kwargs={
-                'conversation_pk': conversation.pk}))
+                'conversation_key': conversation.key}))
         else:
+            contact_store = ContactStore.from_django_user(request.user)
+            group_names = [g.key for g in contact_store.list_groups()]
             group_form = ConversationGroupForm(request.POST,
-                                                queryset=groups_for_user)
-            group_form.fields['groups'].queryset = groups_for_user
+                                               group_names=group_names)
 
             if group_form.is_valid():
-                groups = group_form.cleaned_data['groups']
-                group_ids = [grp.pk for grp in groups]
-                conversation.groups.add(*group_ids)
+                for group in group_form.cleaned_data['groups']:
+                    conversation.groups.add_key(group)
                 messages.add_message(request, messages.INFO,
                     'The selected groups have been added to the survey')
                 return redirect(reverse('survey:start', kwargs={
-                                    'conversation_pk': conversation.pk}))
+                                    'conversation_key': conversation.key}))
 
-    survey_form = make_read_only_form(ConversationForm(instance=conversation))
+    survey_form = make_read_only_form(ConversationForm())
     content_form = forms.make_form(data=config, initial=config, extra=0)
     read_only_content_form = make_read_only_form(content_form)
     return render(request, 'surveys/people.html', {
@@ -151,40 +159,40 @@ def people(request, conversation_pk):
 
 
 @login_required
-def start(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
+def start(request, conversation_key):
+    conv_store = ConversationStore.from_django_user(request.user)
+    conversation = _conv_or_404(conv_store, conversation_key)
     if request.method == 'POST':
         try:
             conversation.start()
         except ConversationSendError as error:
             messages.add_message(request, messages.ERROR, str(error))
             return redirect(reverse('survey:start', kwargs={
-                'conversation_pk': conversation.pk}))
+                'conversation_key': conversation.key}))
         messages.add_message(request, messages.INFO, 'Survey started')
         return redirect(reverse('survey:show', kwargs={
-            'conversation_pk': conversation.pk}))
+            'conversation_key': conversation.key}))
     return render(request, 'surveys/start.html', {
         'conversation': conversation,
     })
 
 
 @login_required
-def end(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
+def end(request, conversation_key):
+    conv_store = ConversationStore.from_django_user(request.user)
+    conversation = _conv_or_404(conv_store, conversation_key)
     if request.method == 'POST':
         conversation.end_conversation()
         messages.add_message(request, messages.INFO, 'Survey ended')
     return redirect(reverse('survey:show', kwargs={
-        'conversation_pk': conversation.pk}))
+        'conversation_key': conversation.key}))
 
 
 @login_required
-def show(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
-    poll_id = 'poll-%s' % (conversation.pk,)
+def show(request, conversation_key):
+    conv_store = ConversationStore.from_django_user(request.user)
+    conversation = _conv_or_404(conv_store, conversation_key)
+    poll_id = 'poll-%s' % (conversation.key,)
     return render(request, 'surveys/show.html', {
         'conversation': conversation,
         'poll_id': poll_id,
