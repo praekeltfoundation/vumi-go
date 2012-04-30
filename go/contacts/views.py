@@ -97,10 +97,24 @@ def groups(request):
 
 @login_required
 def group(request, group_key):
+    contact_store = ContactStore.from_django_user(request.user)
     group = ContactStore.from_django_user(request.user).get_group(group_key)
     if group is None:
         raise Http404
 
+    if request.method == 'POST':
+        upload_contacts_form = UploadContactsForm(request.POST, request.FILES)
+        if upload_contacts_form.is_valid():
+            contacts = list(_create_contacts_from_csv_file(
+                contact_store, request.FILES['file'],
+                settings.VUMI_COUNTRY_CODE))
+
+            group.add_contacts(contacts)
+            messages.info(request, '%s contacts added' % (len(contacts,)))
+            return redirect(_group_url(group.key))
+        else:
+            messages.error(request, '%s something is wrong with the '
+                                    'file you have uploaded')
     context = {
         'group': group,
         'country_code': settings.VUMI_COUNTRY_CODE,

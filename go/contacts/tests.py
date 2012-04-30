@@ -42,14 +42,14 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.contact_store = ContactStore.from_django_user(self.user)
 
         # We need a group
-        group = self.contact_store.new_group(TEST_GROUP_NAME)
-        self.group_key = group.key
+        self.group = self.contact_store.new_group(TEST_GROUP_NAME)
+        self.group_key = self.group.key
 
         # Also a contact
         contact = self.contact_store.new_contact(
             name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
             msisdn=u"+27761234567")
-        contact.add_to_group(group)
+        contact.add_to_group(self.group)
         contact.save()
         self.contact_key = contact.key
 
@@ -163,6 +163,23 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertRedirects(response, group_url(self.group_key))
         group = self.contact_store.get_group(self.group_key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
+
+    def test_contact_upload_from_group_page(self):
+        group_url = reverse('contacts:group', kwargs={
+            'group_key': self.group_key
+        })
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+            'fixtures', 'sample-contacts.csv'))
+        contact = self.contact_store.get_contact_by_key(self.contact_key)
+        contact.groups.clear()
+        contact.save()
+
+        response = self.client.post(group_url, {
+            'file': csv_file
+            })
+
+        self.assertRedirects(response, group_url)
+        self.assertEqual(len(list(self.group.backlinks.contacts())), 3)
 
     def test_contact_upload_failure(self):
         self.assertEqual(len(self.contact_store.list_groups()), 1)
