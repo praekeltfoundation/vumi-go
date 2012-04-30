@@ -20,7 +20,8 @@ from vumi.persist.message_store import MessageStore
 
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
-from go.vumitools.conversation import get_combined_delivery_classes
+from go.vumitools.conversation import (ConversationStore,
+                                       get_combined_delivery_classes)
 
 
 def get_redis(config):
@@ -37,15 +38,14 @@ class ConversationWrapper(object):
     """Wrapper around a conversation, providing extended functionality.
     """
 
-    def __init__(self, conversation, api):
+    def __init__(self, conversation, user_api):
         self.c = conversation
-        self.api = api
-        self.mdb = api.mdb
-        self.tpm = api.tpm
+        self.user_api = user_api
+        self.api = user_api.api
+        self.mdb = self.api.mdb
+        self.tpm = self.api.tpm
         self.manager = self.c.manager
         self.base_manager = self.api.manager
-        self.contact_store = ContactStore(self.base_manager,
-                                          self.c.user_account.key)
 
     @Manager.calls_manager
     def end_conversation(self):
@@ -187,7 +187,7 @@ class ConversationWrapper(object):
             # TODO: Not look up the batch by key again.
             replies.extend((yield self.mdb.batch_replies(batch.key)))
         for reply in replies:
-            contact = yield self.contact_store.contact_for_addr(
+            contact = yield self.user_api.contact_store.contact_for_addr(
                     self.delivery_class, reply['from_addr'])
             delivery_classes = dict(get_combined_delivery_classes())
             tag_pools = dict(delivery_classes.get(self.delivery_class))
@@ -211,7 +211,7 @@ class ConversationWrapper(object):
             # TODO: Not look up the batch by key again.
             messages.extend((yield self.mdb.batch_messages(batch.key)))
         for message in messages:
-            contact = yield self.contact_store.contact_for_addr(
+            contact = yield self.user_api.contact_store.contact_for_addr(
                     self.delivery_class, message['to_addr'])
             delivery_classes = dict(get_combined_delivery_classes())
             outbound_statuses.append({
@@ -246,9 +246,32 @@ class ConversationWrapper(object):
         return self.api.send_command(command)
 
 
-class VumiApi(object):
+class VumiUserApi(object):
+
     conversation_wrapper = ConversationWrapper
 
+    def __init__(self, user_account_key, config):
+        self.api = VumiApi(config)
+        self.user_account_key = user_account_key
+        self.conversation_store = ConversationStore(self.api.manager,
+                                                    self.user_account_key)
+        self.contact_store = ContactStore(self.api.manager,
+                                          self.user_account_key)
+
+    def wrap_conversation(self, conversation):
+        """Wrap a conversation with a ConversationWrapper.
+
+        What it says on the tin, really.
+
+        :param Conversation conversation:
+            Conversation object to wrap.
+        :rtype:
+            ConversationWrapper.
+        """
+        return self.conversation_wrapper(conversation, self)
+
+
+class VumiApi(object):
     def __init__(self, config):
         # TODO: Split the config up better.
         config = config.copy()  # So we can modify it.
@@ -448,18 +471,6 @@ class VumiApi(object):
             None.
         """
         return self.tpm.purge_pool(pool)
-
-    def wrap_conversation(self, conversation):
-        """Wrap a conversation with a ConversationWrapper.
-
-        What it says on the tin, really.
-
-        :param Conversation conversation:
-            Conversation object to wrap.
-        :rtype:
-            ConversationWrapper.
-        """
-        return self.conversation_wrapper(conversation, self)
 
 
 class MessageSender(object):
