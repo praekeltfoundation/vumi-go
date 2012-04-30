@@ -40,10 +40,9 @@ class ConversationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
 
     def setup_riak_fixtures(self):
         self.user = User.objects.get(username='username')
-        user_account = self.user.userprofile.get_user_account()
-        self.contact_store = ContactStore.from_user_account(user_account)
+        self.contact_store = ContactStore.from_django_user(self.user)
         self.contact_store.contacts.enable_search()
-        self.conv_store = ConversationStore.from_user_account(user_account)
+        self.conv_store = ConversationStore.from_django_user(self.user)
         group = self.contact_store.new_group(TEST_GROUP_NAME)
         contact = self.contact_store.new_contact(
             name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
