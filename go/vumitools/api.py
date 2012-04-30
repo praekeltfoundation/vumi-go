@@ -19,6 +19,7 @@ from vumi.persist.riak_manager import RiakManager
 from vumi.persist.message_store import MessageStore
 
 from go.vumitools.account import AccountStore
+from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import get_combined_delivery_classes
 
 
@@ -43,6 +44,8 @@ class ConversationWrapper(object):
         self.tpm = api.tpm
         self.manager = self.c.manager
         self.base_manager = self.api.manager
+        self.contact_store = ContactStore(self.base_manager,
+                                          self.c.user_account.key)
 
     @Manager.calls_manager
     def end_conversation(self):
@@ -184,7 +187,8 @@ class ConversationWrapper(object):
             # TODO: Not look up the batch by key again.
             replies.extend((yield self.mdb.batch_replies(batch.key)))
         for reply in replies:
-            contact = None  # TODO: Add contact if we have.
+            contact = yield self.contact_store.contact_for_addr(
+                    self.delivery_class, reply['from_addr'])
             delivery_classes = dict(get_combined_delivery_classes())
             tag_pools = dict(delivery_classes.get(self.delivery_class))
             reply_statuses.append({
@@ -207,7 +211,8 @@ class ConversationWrapper(object):
             # TODO: Not look up the batch by key again.
             messages.extend((yield self.mdb.batch_messages(batch.key)))
         for message in messages:
-            contact = None  # TODO: Add contact if we have.
+            contact = yield self.contact_store.contact_for_addr(
+                    self.delivery_class, message['to_addr'])
             delivery_classes = dict(get_combined_delivery_classes())
             outbound_statuses.append({
                 'type': self.delivery_class,

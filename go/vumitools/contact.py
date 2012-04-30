@@ -74,7 +74,7 @@ class ContactStore(PerAccountStore):
         groups = fields.pop('groups', [])
 
         contact = self.contacts(
-            contact_id, user_account=self.user_account, name=name,
+            contact_id, user_account=self.user_account_key, name=name,
             surname=surname, **fields)
         for group in groups:
             contact.add_to_group(group)
@@ -88,7 +88,7 @@ class ContactStore(PerAccountStore):
         if existing_group is not None:
             raise ValueError(
                 "A group with this name already exists: %s" % (name,))
-        group = self.groups(name, user_account=self.user_account)
+        group = self.groups(name, user_account=self.user_account_key)
         yield group.save()
         returnValue(group)
 
@@ -98,25 +98,34 @@ class ContactStore(PerAccountStore):
     def get_group(self, name):
         return self.groups.load(name)
 
+    @Manager.calls_manager
     def list_contacts(self):
         # Not stale, because we're using backlinks.
-        return self.user_account.backlinks.contacts(self.manager)
+        user_account = yield self.get_user_account()
+        returnValue(user_account.backlinks.contacts(self.manager))
 
+    @Manager.calls_manager
     def list_groups(self):
         # Not stale, because we're using backlinks.
-        return self.user_account.backlinks.contactgroups(self.manager)
+        user_account = yield self.get_user_account()
+        returnValue(user_account.backlinks.contactgroups(self.manager))
 
     @Manager.calls_manager
     def contact_for_addr(self, transport_type, addr):
-        # TODO: Implement this.
-        pass
-        # if transport_type == 'sms':
-        #     addr = '+' + addr.lstrip('+')
-        #     return cls.objects.filter(user=user, msisdn=addr).latest()
-        # elif transport_type == 'xmpp':
-        #     return cls.objects.filter(user=user,
-        #             gtalk_id=addr.partition('/')[0]).latest()
-        # else:
-        #     raise Contact.DoesNotExist("Contact for address %r, transport"
-        #                                " type %r does not exist."
-        #                                % (addr, transport_type))
+        if transport_type == 'sms':
+            addr = '+' + addr.lstrip('+')
+            contacts = yield self.contacts.search(msisdn=addr)
+            if contacts:
+                returnValue(contacts[0])
+            returnValue(self.contacts(user_account=self.user_account_key,
+                                      msisdn=addr))
+        elif transport_type == 'xmpp':
+            addr = addr.partition('/')[0]
+            contacts = yield self.contacts.search(gtalk_id=addr)
+            if contacts:
+                returnValue(contacts[0])
+            returnValue(self.contacts(user_account=self.user_account_key,
+                                      xmpp=addr))
+        else:
+            raise RuntimeError("Unsupported transport_type %r"
+                               % (transport_type,))
