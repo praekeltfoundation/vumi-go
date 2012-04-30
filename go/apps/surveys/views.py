@@ -41,7 +41,7 @@ def get_poll_config(poll_id):
 def new(request):
     user_api = vumi_api_for_user(request.user)
     if request.POST:
-        form = ConversationForm(request.POST)
+        form = ConversationForm(user_api, request.POST)
         if form.is_valid():
             conversation_data = {}
             copy_keys = [
@@ -70,7 +70,7 @@ def new(request):
                 kwargs={'conversation_key': conversation.key}))
 
     else:
-        form = ConversationForm(initial={
+        form = ConversationForm(user_api, initial={
             'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
             'start_time': datetime.utcnow().strftime('%H:%M'),
         })
@@ -108,7 +108,7 @@ def contents(request, conversation_key):
     else:
         form = forms.make_form(data=config, initial=config)
 
-    survey_form = make_read_only_form(ConversationForm())
+    survey_form = make_read_only_form(ConversationForm(user_api))
     return render(request, 'surveys/contents.html', {
         'form': form,
         'survey_form': survey_form,
@@ -157,7 +157,7 @@ def people(request, conversation_key):
                 return redirect(reverse('survey:start', kwargs={
                                     'conversation_key': conversation.key}))
 
-    survey_form = make_read_only_form(ConversationForm())
+    survey_form = make_read_only_form(ConversationForm(user_api))
     content_form = forms.make_form(data=config, initial=config, extra=0)
     read_only_content_form = make_read_only_form(content_form)
     return render(request, 'surveys/people.html', {
