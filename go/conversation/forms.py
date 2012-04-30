@@ -23,7 +23,7 @@ class VumiModelForm(forms.Form):
             obj_data = self.model_to_dict(instance)
             obj_data.update(initial or {})
         else:
-            obj_data = None
+            obj_data = initial
 
         super(VumiModelForm, self).__init__(data, files, auto_id, prefix,
                 obj_data, error_class, label_suffix, empty_permitted)
