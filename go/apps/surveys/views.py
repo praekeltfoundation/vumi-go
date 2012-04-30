@@ -43,6 +43,7 @@ def new(request):
     if request.POST:
         form = ConversationForm(request.POST)
         if form.is_valid():
+
             conversation_data = {}
             copy_keys = [
                 'subject',
@@ -71,8 +72,9 @@ def new(request):
 
     else:
         form = ConversationForm(initial={
-            'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
-            'start_time': datetime.utcnow().strftime('%H:%M'),
+            'start_date': datetime.utcnow().date(),
+            'start_time': datetime.utcnow().time().replace(second=0,
+                                                            microsecond=0),
         })
     return render(request, 'surveys/new.html', {
         'form': form,
@@ -108,7 +110,11 @@ def contents(request, conversation_key):
     else:
         form = forms.make_form(data=config, initial=config)
 
-    survey_form = make_read_only_form(ConversationForm())
+    survey_form = make_read_only_form(ConversationForm(instance=conversation,
+        initial={
+            'start_date': conversation.start_timestamp.date(),
+            'start_time': conversation.start_timestamp.time(),
+        }))
     return render(request, 'surveys/contents.html', {
         'form': form,
         'survey_form': survey_form,
@@ -157,7 +163,7 @@ def people(request, conversation_key):
                 return redirect(reverse('survey:start', kwargs={
                                     'conversation_key': conversation.key}))
 
-    survey_form = make_read_only_form(ConversationForm())
+    survey_form = make_read_only_form(ConversationForm(instance=conversation))
     content_form = forms.make_form(data=config, initial=config, extra=0)
     read_only_content_form = make_read_only_form(content_form)
     return render(request, 'surveys/people.html', {
@@ -202,8 +208,6 @@ def end(request, conversation_key):
 def show(request, conversation_key):
     user_api = vumi_api_for_user(request.user)
     conversation = conversation_or_404(user_api, conversation_key)
-    poll_id = 'poll-%s' % (conversation.key,)
     return render(request, 'surveys/show.html', {
         'conversation': conversation,
-        'poll_id': poll_id,
     })
