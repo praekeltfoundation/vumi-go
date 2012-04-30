@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
