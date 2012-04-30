@@ -6,13 +6,23 @@ from datetime import datetime
 from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager
-from vumi.persist.fields import Unicode, Timestamp
+from vumi.persist.fields import Integer, Unicode, Timestamp, ManyToMany
+
+
+class UserTagPermission(Model):
+    """A description of a tag a user account is allowed access to."""
+    # key is uuid
+    tagpool = Unicode(max_length=255)
+    max_keys = Integer(null=True)
 
 
 class UserAccount(Model):
     """A user account."""
     # key is uuid
     username = Unicode(max_length=255)
+    # TODO: tagpools can be made OneToMany once vumi.persist.fields
+    #       gains a OneToMany field
+    tagpools = ManyToMany(UserTagPermission)
     created_at = Timestamp(default=datetime.utcnow)
 
 
