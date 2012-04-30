@@ -267,6 +267,19 @@ class TagpoolSet(object):
     def __init__(self, pools):
         self._pools = pools
 
+    def select(self, filter_func):
+        """Return a new :class:`TagpoolSet` that contains only pools
+        that satisfy filter_func.
+
+        :param function filter_func:
+            A function f(pool, metadata) that should return True if the
+            pool should be kept and False if it should be discarded.
+        """
+        new_pools = dict((pool, metadata)
+                         for pool, metadata in self._pools.iteritems()
+                         if filter_func(pool, metadata))
+        return self.__class__(new_pools)
+
     def pools(self):
         return self._pools.keys()
 
