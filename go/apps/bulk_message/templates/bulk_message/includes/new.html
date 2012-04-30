@@ -27,13 +27,13 @@
     </table>
 </div>
 {% for delivery_class, tag_pools in delivery_classes %}
-<div class="control-group delivery-class-selection" style="display:none" 
+<div class="control-group delivery-class-selection" style="display:none"
         id="{{delivery_class}}_tag_pool_selection">
     <label class="control-label" for="{{delivery_class}}_tagpool">
         Pick a method delivery via {{delivery_class}}
     </label>
     <div class="controls">
-        <select id="{{delivery_class}}_tag_pool" name="delivery_tag_pool" class="input-medium">
+        <select id="{{delivery_class}}_tag_pool"  disabled="disabled" name="delivery_tag_pool" class="input-medium">
             {% for tag_pool, label in tag_pools %}
             <option value="{{tag_pool}}">{{ label }}</option>
             {% endfor %}
@@ -48,14 +48,14 @@
             <span class="add-on"><i class="icon-calendar"></i></span>
             {{form.start_date}}
         </div>
-    </div>          
+    </div>
 </div>
 <div class="control-group">
     <label class="control-label" for="ctime">Time</label>
     <div class="controls">
         <div class="input-prepend">
-        <span class="add-on"><i class="icon-time"></i></span>
-      {{form.start_time}}
+            <span class="add-on"><i class="icon-time"></i></span>
+            {{form.start_time}}
         </div>
-    </div>          
+    </div>
 </div>
