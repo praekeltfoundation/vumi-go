@@ -249,12 +249,47 @@ class ConversationWrapper(object):
         return self.api.send_command(command)
 
 
+class TagpoolSet(object):
+    """Holder for helper methods for retrieving tag pool information.
+
+    :param dict pools:
+        Dictionary of `tagpool name` -> `tagpool metadat` mappings.
+    """
+
+    # TODO: this should ideally need to be moved somewhere else
+    #       but it's purely cosmetic so it can live here for now
+    _DELIVERY_CLASS_NAMES = {
+        'sms': 'SMS',
+        'ussd': 'USSD',
+        'gtalk': 'Gtalk',
+        }
+
+    def __init__(self, pools):
+        self._pools = pools
+
+    def pools(self):
+        return self._pools.keys()
+
+    def tagpool_name(self, pool):
+        return self._pools[pool].get('display_name', pool)
+
+    def delivery_classes(self):
+        classes = set(md.get('delivery_class')
+                      for md in self._pools.iteritems())
+        classes.discard(None)
+        return list(classes)
+
+    def delivery_class_name(self, delivery_class):
+        return self._DELIVERY_CLASS_NAMES.get(delivery_class, delivery_class)
+
+
 class VumiUserApi(object):
 
     conversation_wrapper = ConversationWrapper
 
     def __init__(self, user_account_key, config):
         self.api = VumiApi(config)
+        self.manager = self.api.manager
         self.user_account_key = user_account_key
         self.conversation_store = ConversationStore(self.api.manager,
                                                     self.user_account_key)
@@ -272,6 +307,18 @@ class VumiUserApi(object):
             ConversationWrapper.
         """
         return self.conversation_wrapper(conversation, self)
+
+    @Manager.calls_manager
+    def tagpools(self):
+        account_store = self.api.account_store
+        user_account = yield account_store.get_user(self.user_account_key)
+        user_tagpools = yield user_account.tagpools.get_all()
+        allowed_set = set([tp.tagpool for tp in user_tagpools])
+        available_set = self.api.tpm.list_pools()
+        pool_names = list(allowed_set & available_set)
+        pool_data = dict((pool, self.api.tpm.get_metadata(pool))
+                         for pool in pool_names)
+        returnValue(TagpoolSet(pool_data))
 
 
 class VumiApi(object):
