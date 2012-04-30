@@ -2,7 +2,7 @@ from django.conf import settings
 
 from vumi.tests.utils import FakeRedis
 
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.utils import VumiGoDjangoTestCase, declare_longcode_tags
 from go.vumitools.tests.utils import CeleryTestMixIn
 from go.vumitools.api import VumiApi
 
@@ -12,7 +12,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
     def setUp(self):
         super(DjangoGoApplicationTestCase, self).setUp()
         self.setup_api()
-        self.declare_longcode_tags()
+        self.declare_longcode_tags(self.api)
         self.setup_celery_for_tests()
 
     def tearDown(self):
@@ -30,8 +30,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         self._fake_redis.teardown()
 
     def declare_longcode_tags(self):
-        self.api.declare_tags([("longcode", "default%s" % i) for i
-                               in range(10001, 10001 + 4)])
+        declare_longcode_tags(self.api)
 
     def acquire_all_longcode_tags(self):
         for _i in range(4):
