@@ -24,15 +24,25 @@ class ConversationForm(forms.Form):
         self.user_api = user_api
         tagpool_filter = kw.pop('tagpool_filter', None)
         super(ConversationForm, self).__init__(*args, **kw)
-        tagpool_set = self.user_api.tagpools()
+        self.tagpool_set = self.user_api.tagpools()
         if tagpool_filter is not None:
-            tagpool_set = tagpool_set.select(tagpool_filter)
+            self.tagpool_set = self.tagpool_set.select(tagpool_filter)
         self.fields['delivery_tag_pool'].widget.choices = [
-            (pool, tagpool_set.tagpool_display_name(pool))
-            for pool in tagpool_set.pools()]
+            (pool, self.tagpool_set.tagpool_display_name(pool))
+            for pool in self.tagpool_set.pools()]
         self.fields['delivery_class'].widget.choices = [
-            (delivery_class, tagpool_set.delivery_class_name(delivery_class))
-            for delivery_class in tagpool_set.delivery_classes()]
+            (delivery_class,
+             self.tagpool_set.delivery_class_name(delivery_class))
+            for delivery_class in self.tagpool_set.delivery_classes()]
+
+    def tagpools_by_delivery_class(self):
+        delivery_classes = {}
+        for pool in self.tagpool_set.pools():
+            delivery_class = self.tagpool_set.delivery_class(pool)
+            if delivery_class is None:
+                continue
+            delivery_classes.setdefault(delivery_class, []).append(pool)
+        return delivery_classes
 
     def delivery_class_widgets(self):
         # Backported hack from Django 1.4 to allow me to iterate
