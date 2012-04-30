@@ -7,12 +7,12 @@ from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
 
-from go.conversation.models import (Conversation, ConversationSendError,
-                                    get_combined_delivery_classes)
-from go.conversation.forms import (ConversationForm, SelectDeliveryClassForm,
-                                    ConversationGroupForm)
-from go.contacts.models import ContactGroup
-from go.base.utils import make_read_only_form
+# from go.conversation.models import (Conversation, ConversationSendError,
+#                                     get_combined_delivery_classes)
+# from go.conversation.forms import (ConversationForm, SelectDeliveryClassForm,
+#                                     ConversationGroupForm)
+# from go.contacts.models import ContactGroup
+# from go.base.utils import make_read_only_form
 
 from vxpolls.content import forms
 from vxpolls.manager import PollManager

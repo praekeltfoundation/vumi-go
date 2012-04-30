@@ -49,22 +49,6 @@ class Contact(Model):
         else:
             self.groups.add_key(group)
 
-    # TODO: Move this elsewhere
-    # @classmethod
-    # def create_from_csv_file(cls, user, csvfile, country_code):
-    #     dialect = csv.Sniffer().sniff(csvfile.read(1024))
-    #     csvfile.seek(0)
-    #     reader = csv.reader(csvfile, dialect)
-    #     for name, surname, msisdn in reader:
-    #         # TODO: normalize msisdn
-    #         msisdn = normalize_msisdn(msisdn, country_code=country_code)
-    #         contact, _ = Contact.objects.get_or_create(user=user,
-    #             msisdn=msisdn)
-    #         contact.name = name
-    #         contact.surname = surname
-    #         contact.save()
-    #         yield contact
-
     def addr_for(self, transport_type):
         if transport_type == 'sms':
             return self.msisdn
