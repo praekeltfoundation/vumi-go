@@ -6,7 +6,6 @@ from django.core.urlresolvers import reverse
 from django.contrib import messages
 
 from go.vumitools.api import ConversationSendError
-from go.vumitools.conversation import get_server_init_delivery_classes
 from go.conversation.forms import ConversationGroupForm
 from go.apps.bulk_message.forms import BulkSendConversationForm
 from go.base.utils import (make_read_only_form, vumi_api_for_user,
@@ -58,7 +57,6 @@ def new(request):
 
     return render(request, 'bulk_message/new.html', {
         'form': form,
-        'delivery_classes': get_server_init_delivery_classes(),
     })
 
 
