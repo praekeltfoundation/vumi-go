@@ -10,9 +10,7 @@ from django.contrib.auth.decorators import login_required
 from go.base.utils import (make_read_only_form, vumi_api_for_user,
                            conversation_or_404)
 from go.vumitools.api import ConversationSendError
-from go.vumitools.contact import ContactStore
-from go.vumitools.conversation import (
-    ConversationStore, get_combined_delivery_classes)
+from go.vumitools.conversation import get_combined_delivery_classes
 from go.conversation.forms import (
     ConversationForm, ConversationGroupForm, SelectDeliveryClassForm)
 
@@ -145,9 +143,8 @@ def people(request, conversation_key):
             return redirect(reverse('survey:show', kwargs={
                 'conversation_key': conversation.key}))
         else:
-            contact_store = ContactStore.from_django_user(request.user)
             group_form = ConversationGroupForm(
-                request.POST, groups=contact_store.list_groups())
+                request.POST, groups=user_api.contact_store.list_groups())
 
             if group_form.is_valid():
                 for group in group_form.cleaned_data['groups']:
