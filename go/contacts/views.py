@@ -55,7 +55,7 @@ def _create_contacts_from_csv_file(contact_store, csvfile, country_code):
     csvfile.seek(0)
     reader = _unicode_csv_reader(csvfile, dialect)
     for name, surname, msisdn in reader:
-        # TODO: normalize msisdn (?)
+        # TODO: none of these fields are mandatory.
         msisdn = normalize_msisdn(msisdn, country_code=country_code)
         msisdn = unicode(msisdn, 'utf-8')
         contact = contact_store.new_contact(name, surname, msisdn=msisdn)
@@ -97,10 +97,27 @@ def groups(request):
 
 @login_required
 def group(request, group_key):
+    contact_store = ContactStore.from_django_user(request.user)
     group = ContactStore.from_django_user(request.user).get_group(group_key)
     if group is None:
         raise Http404
 
+    if request.method == 'POST':
+        upload_contacts_form = UploadContactsForm(request.POST, request.FILES)
+        if upload_contacts_form.is_valid():
+            try:
+                contacts = list(_create_contacts_from_csv_file(
+                    contact_store, request.FILES['file'],
+                    settings.VUMI_COUNTRY_CODE))
+
+                group.add_contacts(contacts)
+                messages.info(request, '%s contacts added' % (len(contacts,)))
+                return redirect(_group_url(group.key))
+            except ValueError:
+                pass
+
+        messages.error(request, 'Something is wrong with the '
+                                'file you have uploaded')
     context = {
         'group': group,
         'country_code': settings.VUMI_COUNTRY_CODE,
@@ -182,7 +199,19 @@ def person(request, person_key):
             messages.add_message(request, messages.ERROR,
                 'Please correct the problem below.')
     else:
-        form = ContactForm(groups=groups)
+        form = ContactForm(groups=groups, initial={
+            'name': contact.name,
+            'surname': contact.surname,
+            'email_address': contact.email_address,
+            'msisdn': contact.msisdn,
+            'twitter_handle': contact.twitter_handle,
+            'facebook_id': contact.facebook_id,
+            'bbm_pin': contact.bbm_pin,
+            'gtalk_id': contact.gtalk_id,
+            'dob': contact.dob,
+            'groups': [group.key for group in contact.groups.get_all()],
+        })
+
     return render(request, 'contacts/person.html', {
         'contact': contact,
         'form': form,
