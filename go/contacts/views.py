@@ -199,7 +199,19 @@ def person(request, person_key):
             messages.add_message(request, messages.ERROR,
                 'Please correct the problem below.')
     else:
-        form = ContactForm(groups=groups)
+        form = ContactForm(groups=groups, initial={
+            'name': contact.name,
+            'surname': contact.surname,
+            'email_address': contact.email_address,
+            'msisdn': contact.msisdn,
+            'twitter_handle': contact.twitter_handle,
+            'facebook_id': contact.facebook_id,
+            'bbm_pin': contact.bbm_pin,
+            'gtalk_id': contact.gtalk_id,
+            'dob': contact.dob,
+            'groups': [group.key for group in contact.groups.get_all()],
+        })
+
     return render(request, 'contacts/person.html', {
         'contact': contact,
         'form': form,
