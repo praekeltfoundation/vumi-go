@@ -11,10 +11,10 @@ class ConversationForm(forms.Form):
         'class': 'input required'}))
     message = forms.CharField(required=True, widget=forms.Textarea(attrs={
         'class': 'input-xlarge required valid', 'id': 'conv-message'}))
-    start_date = forms.DateField(required=False, widget=forms.TextInput(
-        attrs={'id': 'datepicker', 'class': 'txtbox txtbox-date'}))
-    start_time = forms.TimeField(required=False, widget=forms.TextInput(
-        attrs={'id': 'timepicker_1', 'class': 'txtbox txtbox-date'}))
+    # start_date = forms.DateField(required=False, widget=forms.TextInput(
+    #     attrs={'id': 'datepicker', 'class': 'txtbox txtbox-date'}))
+    # start_time = forms.TimeField(required=False, widget=forms.TextInput(
+    #     attrs={'id': 'timepicker_1', 'class': 'txtbox txtbox-date'}))
     delivery_class = forms.CharField(required=True, widget=forms.RadioSelect(
         attrs={'class': 'delivery-class-radio'},
         choices=[(dc, dc) for dc in get_delivery_class_names()]))
@@ -43,29 +43,13 @@ class ConversationForm(forms.Form):
     #     )
 
 
-class BulkSendConversationForm(ConversationForm):
-    """Same as the ConversationForm with the only difference being that
-    this only only allows for delivery classes that allow for server
-    initiated conversations."""
-    delivery_class = forms.CharField(required=True, widget=forms.RadioSelect(
-        attrs={'class': 'delivery-class-radio'},
-        choices=[(dc, dc) for dc
-                    in get_server_init_delivery_class_names()]))
-    delivery_tag_pool = forms.CharField(required=True, widget=forms.Select(
-        attrs={'class': 'input-medium'},
-        choices=[(tpn, tpn) for tpn
-                        in get_server_init_tag_pool_names()]))
-
-
 class ConversationGroupForm(forms.Form):
-    def __init__(self, *args, **kwargs):
-        queryset = kwargs.pop('queryset')
-        super(ConversationGroupForm, self).__init__(*args, **kwargs)
-        self.fields['groups'].queryset = queryset
-
-    # groups = forms.ModelMultipleChoiceField(
-    #         queryset=ContactGroup.objects.all(),
-    #         widget=forms.CheckboxSelectMultiple)
+    def __init__(self, *args, **kw):
+        group_names = kw.pop('group_names')
+        super(ConversationGroupForm, self).__init__(*args, **kw)
+        self.fields['groups'] = forms.MultipleChoiceField(
+            widget=forms.CheckboxSelectMultiple,
+            choices=[(n, n) for n in group_names])
 
 
 class ConversationSearchForm(forms.Form):

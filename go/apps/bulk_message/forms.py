@@ -1,5 +1,7 @@
 from django import forms
-from go.conversation import models
+
+from go.vumitools.conversation import (
+    get_server_init_delivery_class_names, get_server_init_tag_pool_names)
 from go.conversation.forms import ConversationForm
 
 
@@ -9,9 +11,7 @@ class BulkSendConversationForm(ConversationForm):
     initiated conversations."""
     delivery_class = forms.CharField(required=True, widget=forms.RadioSelect(
         attrs={'class': 'delivery-class-radio'},
-        choices=[(dc, dc) for dc
-                    in models.get_server_init_delivery_class_names()]))
+        choices=[(dc, dc) for dc in get_server_init_delivery_class_names()]))
     delivery_tag_pool = forms.CharField(required=True, widget=forms.Select(
         attrs={'class': 'input-medium'},
-        choices=[(tpn, tpn) for tpn
-                        in models.get_server_init_tag_pool_names()]))
+        choices=[(tpn, tpn) for tpn in get_server_init_tag_pool_names()]))

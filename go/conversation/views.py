@@ -25,10 +25,8 @@ def index(request):
                          if query.lower() in c.subject.lower()]
 
     if conversation_type:
-        print conversations
         conversations = [c for c in conversations
                          if c.conversation_type == conversation_type]
-        print conversation_type, conversations
 
     if conversation_status:
         if conversation_status == 'running':
