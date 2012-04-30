@@ -43,7 +43,6 @@ class VumiGoDjangoTestCase(TestCase):
     USE_RIAK = True
 
     def get_riak_manager(self, config=None):
-        print settings.VUMI_API_CONFIG
         if config is None:
             config = settings.VUMI_API_CONFIG['riak_manager']
         return RiakManager.from_config(config)
