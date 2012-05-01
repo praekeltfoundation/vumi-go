@@ -2,6 +2,8 @@
 
 """Tests for go.vumitools.bulk_send_application"""
 
+import json
+
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportEvent, TransportUserMessage
@@ -10,6 +12,7 @@ from vumi.tests.utils import FakeRedis
 from vumi.persist.txriak_manager import TxRiakManager
 
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
+from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import CeleryTestMixIn, DummyConsumerFactory
 from go.vumitools.account import AccountStore
@@ -35,6 +38,10 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
         self.app = yield self.get_application({
             'redis_cls': lambda **kw: self._fake_redis,
             })
+        self.cmd_dispatcher = yield self.get_application({
+            'transport_name': 'cmd_dispatcher',
+            'worker_names': ['bulk_message_application'],
+            }, cls=CommandDispatcher)
         self.manager = self.app.store.manager  # YOINK!
         self.account_store = AccountStore(self.manager)
         self.VUMI_COMMANDS_CONSUMER = dummy_consumer_factory_factory_factory(
@@ -48,9 +55,16 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
         yield self.app.manager.purge_all()
         yield super(TestBulkMessageApplication, self).tearDown()
 
-    def publish_command(self, cmd):
-        return self.dispatch(cmd, rkey='%s.control' % (
-                self.application_class.worker_name,))
+    def publish_command(self, cmd_dict):
+        data = json.dumps(cmd_dict)
+        self._amqp.publish_raw('vumi', 'vumi.api', data)
+
+    def get_dispatcher_commands(self):
+        return self._amqp.get_messages('vumi', 'vumi.api')
+
+    def get_bulk_message_commands(self):
+        return self._amqp.get_messages('vumi',
+                                       "%s.control" % self.app.worker_name)
 
     def publish_event(self, **kw):
         event = TransportEvent(**kw)
@@ -80,29 +94,14 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
         conversation = yield user_api.new_conversation(
             u'bulk_message', u'Subject', u'Message', delivery_tag_pool=u"pool")
         conversation = user_api.wrap_conversation(conversation)
-        # TODO: 1) I need to acquire a tag here so it is linked to
-        #       a batch_id
-        #       2) I need to have an actual conversation so I can
-        #       pass in the conversation_type and the conversation_key
-        #       3) I need to have a contact that is part of this conversation
-        #       and has a relevant to_addr set for the tag assigned
-        #       4) I need to have an account object so I can add
-        #       that info with DebitAccountMiddleware.add_user_to_payload
-        #       5) msg_options can go since that info should be coming
-        #       from the tagpool metadata and the app worker can extract
-        #       that info.
 
         yield conversation.start()
 
-        # batch_id = yield self.app.store.batch_start([])
-        # cmd = VumiApiCommand.command(
-        #     'dummy_worker', 'start',
-        #     batch_id=batch_id,
-        #     conversation_key=conversation.key,
-        #     conversation_type=conversation.conversation_type,
-        #     msg_options={})
-        # # publishes it to the app worker, handled by `process_start_command`
-        # yield self.publish_command(cmd)
+        # check commands made it through to the dispatcher and the vumi_app
+        [disp_cmd] = self.get_dispatcher_commands()
+        self.assertEqual(disp_cmd['command'], 'start')
+        [bulk_cmd] = self.get_bulk_message_commands()
+        self.assertEqual(bulk_cmd['command'], 'start')
 
         # assert that we've sent the message to the one contact
         [msg] = yield self.get_dispatched_messages()
