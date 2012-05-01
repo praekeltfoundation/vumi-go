@@ -50,10 +50,16 @@ class DebitAccountMiddleware(TransportMiddleware):
         go_metadata = msg['helper_metadata'].setdefault('go', {})
         go_metadata['user_account'] = user_account_key
 
+    @staticmethod
+    def add_user_to_payload(payload, user_account_key):
+        """Convenience method for adding a user to a message."""
+        helper_metadata = payload.setdefault('helper_metadata', {})
+        go_metadata = helper_metadata.setdefault('go', {})
+        go_metadata['user_account'] = user_account_key
+
     def handle_outbound(self, msg, endpoint):
         # TODO: what actually happens when we raise an exception from
         #       inside middleware?
-        # TODO: add the user_account to the message somewhere
         user_account_key = self.map_msg_to_user(msg)
         if user_account_key is None:
             raise NoUserError(msg)
