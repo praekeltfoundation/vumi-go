@@ -1,0 +1,8 @@
+{% extends "app.html" %}
+{% load markup %}
+
+{% block page_title %}{{flatpage.title}}{% endblock %}
+
+{% block main %}
+{{flatpage.content|markdown}}
+{% endblock %}

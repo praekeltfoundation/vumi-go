@@ -34,6 +34,11 @@ urlpatterns = patterns('',
     url(r'^', include('vxpolls.urls')),
 )
 
+urlpatterns += patterns('django.contrib.flatpages.views',
+    url(r'^credits/$', 'flatpage', {'url': '/credits/'}, name='credits'),
+    url(r'^help/$', 'flatpage', {'url': '/help/'}, name='help'),
+)
+
 # HAProxy health check
 urlpatterns += patterns('',
     url(r'^health/$', health, name='health'),
