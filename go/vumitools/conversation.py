@@ -29,7 +29,7 @@ class Conversation(Model):
     subject = Unicode(max_length=255)
     message = Unicode()
     start_timestamp = Timestamp()
-    end_timestamp = Timestamp(null=True)
+    end_timestamp = Timestamp(null=True, index=True)
     created_at = Timestamp(default=datetime.utcnow)
 
     groups = ManyToMany(ContactGroup)
