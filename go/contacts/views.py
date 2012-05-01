@@ -10,7 +10,6 @@ from django.conf import settings
 
 from vumi.utils import normalize_msisdn
 
-from go.vumitools.contact import ContactStore
 from go.contacts.forms import (
     ContactForm, NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
@@ -73,7 +72,7 @@ def index(request):
 
 @login_required
 def groups(request):
-    contact_store = ContactStore.from_django_user(request.user)
+    contact_store = request.user_api.contact_store
     if request.POST:
         new_contact_group_form = NewContactGroupForm(request.POST)
         if new_contact_group_form.is_valid():
@@ -97,8 +96,8 @@ def groups(request):
 
 @login_required
 def group(request, group_key):
-    contact_store = ContactStore.from_django_user(request.user)
-    group = ContactStore.from_django_user(request.user).get_group(group_key)
+    contact_store = request.user_api.contact_store
+    group = contact_store.get_group(group_key)
     if group is None:
         raise Http404
 
@@ -128,7 +127,7 @@ def group(request, group_key):
 
 @login_required
 def people(request):
-    contact_store = ContactStore.from_django_user(request.user)
+    contact_store = request.user_api.contact_store
 
     # TODO: Error handling in here.
 
@@ -176,7 +175,7 @@ def people(request):
 
 @login_required
 def person(request, person_key):
-    contact_store = ContactStore.from_django_user(request.user)
+    contact_store = request.user_api.contact_store
     contact = contact_store.get_contact_by_key(person_key)
     if contact is None:
         raise Http404
@@ -221,7 +220,7 @@ def person(request, person_key):
 
 @login_required
 def new_person(request):
-    contact_store = ContactStore.from_django_user(request.user)
+    contact_store = request.user_api.contact_store
     groups = contact_store.list_groups()
     if request.POST:
         form = ContactForm(request.POST, groups=groups)

@@ -2,7 +2,6 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.core.paginator import Paginator
 
-from go.vumitools.conversation import ConversationStore
 from go.conversation.forms import ConversationSearchForm
 
 
@@ -11,7 +10,7 @@ CONVERSATIONS_PER_PAGE = 6
 
 @login_required
 def index(request):
-    conv_store = ConversationStore.from_django_user(request.user)
+    conv_store = request.user_api.conversation_store
     conversations = conv_store.list_conversations()
     search_form = ConversationSearchForm(request.GET)
     search_form.is_valid()

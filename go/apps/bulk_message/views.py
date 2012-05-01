@@ -8,18 +8,13 @@ from django.contrib import messages
 from go.vumitools.api import ConversationSendError
 from go.conversation.forms import ConversationGroupForm
 from go.apps.bulk_message.forms import BulkSendConversationForm
-from go.base.utils import (make_read_only_form, vumi_api_for_user,
-                           conversation_or_404)
-
-
-# TODO: to_addresses in conv.start()
+from go.base.utils import make_read_only_form, conversation_or_404
 
 
 @login_required
 def new(request):
-    user_api = vumi_api_for_user(request.user)
     if request.POST:
-        form = BulkSendConversationForm(user_api, request.POST)
+        form = BulkSendConversationForm(request.user_api, request.POST)
         if form.is_valid():
             conversation_data = {}
             copy_keys = [
@@ -40,14 +35,14 @@ def new(request):
                 start_time.hour, start_time.minute, start_time.second,
                 start_time.microsecond)
 
-            conversation = user_api.conversation_store.new_conversation(
+            conversation = request.user_api.new_conversation(
                 u'bulk_message', **conversation_data)
             messages.add_message(request, messages.INFO,
                 'Conversation Created')
             return redirect(reverse('bulk_message:people',
                 kwargs={'conversation_key': conversation.key}))
     else:
-        form = BulkSendConversationForm(user_api, initial={
+        form = BulkSendConversationForm(request.user_api, initial={
             'start_date': datetime.utcnow().date(),
             'start_time': datetime.utcnow().time().replace(second=0,
                                                             microsecond=0),
@@ -60,9 +55,8 @@ def new(request):
 
 @login_required
 def people(request, conversation_key):
-    user_api = vumi_api_for_user(request.user)
-    conversation = conversation_or_404(user_api, conversation_key)
-    groups = user_api.contact_store.list_groups()
+    conversation = conversation_or_404(request.user_api, conversation_key)
+    groups = request.user_api.list_groups()
 
     if request.method == 'POST':
         group_form = ConversationGroupForm(request.POST, groups=groups)
@@ -76,10 +70,10 @@ def people(request, conversation_key):
                 'conversation_key': conversation.key}))
 
     conversation_form = make_read_only_form(BulkSendConversationForm(
-        user_api, instance=conversation, initial={
-            'start_date': conversation.start_timestamp.date(),
-            'start_time': conversation.start_timestamp.time(),
-        }))
+            request.user_api, instance=conversation, initial={
+                'start_date': conversation.start_timestamp.date(),
+                'start_time': conversation.start_timestamp.time(),
+                }))
     return render(request, 'bulk_message/people.html', {
         'conversation': conversation,
         'conversation_form': conversation_form,
@@ -89,8 +83,7 @@ def people(request, conversation_key):
 
 @login_required
 def send(request, conversation_key):
-    user_api = vumi_api_for_user(request.user)
-    conversation = conversation_or_404(user_api, conversation_key)
+    conversation = conversation_or_404(request.user_api, conversation_key)
 
     if request.method == 'POST':
         try:
@@ -105,11 +98,12 @@ def send(request, conversation_key):
             'conversation_key': conversation.key}))
 
     conversation_form = make_read_only_form(
-        BulkSendConversationForm(user_api, instance=conversation, initial={
-            'start_date': conversation.start_timestamp.date(),
-            'start_time': conversation.start_timestamp.time(),
-            }))
-    groups = user_api.contact_store.list_groups()
+        BulkSendConversationForm(
+            request.user_api, instance=conversation, initial={
+                'start_date': conversation.start_timestamp.date(),
+                'start_time': conversation.start_timestamp.time(),
+                }))
+    groups = request.user_api.list_groups()
     group_form = make_read_only_form(
         ConversationGroupForm(groups=groups))
 
@@ -124,8 +118,7 @@ def send(request, conversation_key):
 
 @login_required
 def show(request, conversation_key):
-    user_api = vumi_api_for_user(request.user)
-    conversation = conversation_or_404(user_api, conversation_key)
+    conversation = conversation_or_404(request.user_api, conversation_key)
     return render(request, 'bulk_message/show.html', {
         'conversation': conversation,
     })
@@ -133,8 +126,7 @@ def show(request, conversation_key):
 
 @login_required
 def end(request, conversation_key):
-    user_api = vumi_api_for_user(request.user)
-    conversation = conversation_or_404(user_api, conversation_key)
+    conversation = conversation_or_404(request.user_api, conversation_key)
     if request.method == 'POST':
         conversation.end_conversation()
         messages.add_message(request, messages.INFO, 'Conversation ended')
