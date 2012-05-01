@@ -9,13 +9,14 @@ from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import FakeRedis
 
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
-from go.vumitools.api import VumiApiCommand
+from go.vumitools.api import VumiApiCommand, VumiUserApi
+from go.vumitools.account import AccountStore
 
 
 class TestBulkMessageApplication(ApplicationTestCase):
 
     application_class = BulkMessageApplication
-    timeout = 1
+    timeout = 2
 
     @inlineCallbacks
     def setUp(self):
@@ -24,6 +25,8 @@ class TestBulkMessageApplication(ApplicationTestCase):
         self.app = yield self.get_application({
             'redis_cls': lambda **kw: self._fake_redis,
             })
+        self.manager = self.app.store.manager  # YOINK!
+        self.account_store = AccountStore(self.manager)
 
     @inlineCallbacks
     def tearDown(self):
@@ -46,6 +49,18 @@ class TestBulkMessageApplication(ApplicationTestCase):
 
     @inlineCallbacks
     def test_start(self):
+        user_account = yield self.account_store.new_user(u'testuser')
+        user_api = VumiUserApi(user_account.key, {
+                'redis_cls': lambda **kw: self._fake_redis,
+                'riak_manager': {},
+                }, self.manager)
+        group = yield user_api.contact_store.new_group(u'test group')
+        contact1 = yield user_api.contact_store.new_contact(
+            u'First', u'Contact', msisdn=u'27831234567', groups=[group])
+        contact2 = yield user_api.contact_store.new_contact(
+            u'Second', u'Contact', msisdn=u'27831234568', groups=[group])
+        conversation = yield user_api.new_conversation(
+            u'bulk_message', u'Subject', u'Message')
         # TODO: 1) I need to acquire a tag here so it is linked to
         #       a batch_id
         #       2) I need to have an actual conversation so I can
@@ -58,10 +73,12 @@ class TestBulkMessageApplication(ApplicationTestCase):
         #       from the tagpool metadata and the app worker can extract
         #       that info.
         batch_id = yield self.app.store.batch_start([])
-        cmd = VumiApiCommand.command('dummy_worker', 'start',
+        cmd = VumiApiCommand.command(
+            'dummy_worker', 'start',
             batch_id=batch_id,
             conversation_key=conversation.key,
-            conversation_type=conversation.conversation_type)
+            conversation_type=conversation.conversation_type,
+            msg_options={})
         # publishes it to the app worker, handled by `process_start_command`
         yield self.publish_command(cmd)
         # assert that we've sent the message to the one contact
