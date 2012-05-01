@@ -79,6 +79,12 @@ class DebitAccountMiddleware(TransportMiddleware):
         return user_account
 
     @staticmethod
+    def map_payload_to_user(payload):
+        """Convenience method for retrieving a user from a payload."""
+        go_metadata = payload.get('helper_metadata', {}).get('go', {})
+        return go_metadata.get('user_account')
+
+    @staticmethod
     def add_user_to_message(msg, user_account_key):
         """Convenience method for adding a user to a message."""
         go_metadata = msg['helper_metadata'].setdefault('go', {})
@@ -86,7 +92,7 @@ class DebitAccountMiddleware(TransportMiddleware):
 
     @staticmethod
     def add_user_to_payload(payload, user_account_key):
-        """Convenience method for adding a user to a message."""
+        """Convenience method for adding a user to a message payload."""
         helper_metadata = payload.setdefault('helper_metadata', {})
         go_metadata = helper_metadata.setdefault('go', {})
         go_metadata['user_account'] = user_account_key
