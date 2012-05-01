@@ -11,9 +11,8 @@ CONVERSATIONS_PER_PAGE = 6
 @login_required
 def index(request):
     conv_store = request.user_api.conversation_store
-    api = request.user_api.api
-    conversations = [api.wrap_conversation(conversation)
-                        for conversation in conv_store.list_conversations()]
+    conversations = [request.user_api.wrap_conversation(conversation)
+                     for conversation in conv_store.list_conversations()]
     search_form = ConversationSearchForm(request.GET)
     search_form.is_valid()
 

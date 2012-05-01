@@ -128,7 +128,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             batch_id=batch.key,
             msg_options=msg_options,
             conversation_type=u"bulk_message",
-            conversation_id=conversation.key,
+            conversation_key=conversation.key,
             )
         self.assertEqual(cmd, expected_cmd)
 
