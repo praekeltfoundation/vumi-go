@@ -1,4 +1,4 @@
-# -*- test-case-name: go.vumitools.tests.test_bulk_send_application -*-
+# -*- test-case-name: go.apps.bulk_message.tests.test_bulk_message_application -*-
 # -*- coding: utf-8 -*-
 
 """Vumi application worker for the vumitools API."""
@@ -93,12 +93,12 @@ class GoApplication(ApplicationWorker):
         return self.store.add_inbound_message(msg, tag=tag)
 
 
-class BulkSendApplication(GoApplication):
+class BulkMessageApplication(GoApplication):
     """
     Application that accepts 'send message' commands and does exactly that.
     """
     SEND_TO_TAGS = frozenset(['default'])
-    worker_name = 'bulk_send_application'
+    worker_name = 'bulk_message_application'
 
     @inlineCallbacks
     def process_command_start(self, batch_id, content, to_addresses,
