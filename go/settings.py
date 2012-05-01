@@ -209,6 +209,9 @@ VUMI_API_CONFIG = {
     'tagpool_manager': {
         'tagpool_prefix': 'vumigo',
     },
+    'credit_manager': {
+        'credit_prefix': 'vumigo',
+    },
     'message_sender': {},
     'riak_manager': {'bucket_prefix': 'vumigo.'}
     }

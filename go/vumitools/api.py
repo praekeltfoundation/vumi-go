@@ -24,6 +24,7 @@ from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.middleware import DebitAccountMiddleware
+from go.vumitools.credit import CreditManager
 
 
 def get_redis(config):
@@ -308,8 +309,8 @@ class VumiUserApi(object):
 
     conversation_wrapper = ConversationWrapper
 
-    def __init__(self, user_account_key, config):
-        self.api = VumiApi(config)
+    def __init__(self, user_account_key, config, manager=None):
+        self.api = VumiApi(config, manager=manager)
         self.manager = self.api.manager
         self.user_account_key = user_account_key
         self.conversation_store = ConversationStore(self.api.manager,
@@ -362,18 +363,25 @@ class VumiUserApi(object):
 
 
 class VumiApi(object):
-    def __init__(self, config):
+    def __init__(self, config, manager=None):
         # TODO: Split the config up better.
         config = config.copy()  # So we can modify it.
         riak_config = config.pop('riak_manager')
 
         r_server = get_redis(config)
-        self.manager = RiakManager.from_config(riak_config)
+        if manager is None:
+            manager = RiakManager.from_config(riak_config)
+        self.manager = manager
 
         # tagpool manager
         tpm_config = config.get('tagpool_manager', {})
         tpm_prefix = tpm_config.get('tagpool_prefix', 'tagpool_store')
         self.tpm = TagpoolManager(r_server, tpm_prefix)
+
+        # credit manager
+        cm_config = config.get('credit_manager', {})
+        cm_prefix = cm_config.get('credit_prefix', 'credit_store')
+        self.cm = CreditManager(r_server, cm_prefix)
 
         # message store
         mdb_config = config.get('message_store', {})
