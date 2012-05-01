@@ -45,7 +45,7 @@ class CommandDispatcherTestCase(ApplicationTestCase):
     def test_unknown_worker_name(self):
         with LogCatcher() as logs:
             yield self.publish_command(
-                VumiApiCommand(worker_name='no-worker', command='foo'))
+                VumiApiCommand.command('no-worker', 'foo'))
             [error] = logs.errors
             self.assertTrue("No worker publisher available" in
                                 error['message'][0])
