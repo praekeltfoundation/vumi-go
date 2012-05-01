@@ -2,7 +2,6 @@
 from vumi.middleware import TransportMiddleware, TaggingMiddleware
 from vumi.utils import normalize_msisdn
 
-from go.vumitools.api import VumiApi
 
 class NormalizeMsisdnMiddleware(TransportMiddleware):
 
