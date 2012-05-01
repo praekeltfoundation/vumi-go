@@ -37,6 +37,9 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
         self._fake_redis = FakeRedis()
         self.app = yield self.get_application({
             'redis_cls': lambda **kw: self._fake_redis,
+            'riak': {
+                'bucket_prefix': 'test.',
+                },
             })
         self.cmd_dispatcher = yield self.get_application({
             'transport_name': 'cmd_dispatcher',
@@ -92,7 +95,10 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
         contact2 = yield user_api.contact_store.new_contact(
             u'Second', u'Contact', msisdn=u'27831234568', groups=[group])
         conversation = yield user_api.new_conversation(
-            u'bulk_message', u'Subject', u'Message', delivery_tag_pool=u"pool")
+            u'bulk_message', u'Subject', u'Message', delivery_tag_pool=u"pool",
+            delivery_class=u'sms')
+        conversation.add_group(group)
+        yield conversation.save()
         conversation = user_api.wrap_conversation(conversation)
 
         yield conversation.start()
