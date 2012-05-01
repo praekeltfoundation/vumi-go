@@ -359,6 +359,12 @@ class VumiUserApi(object):
                          for pool in pool_names)
         returnValue(TagpoolSet(pool_data))
 
+    def list_groups(self):
+        return self.contact_store.list_groups()
+
+    def new_conversation(self, *args, **kw):
+        return self.conversation_store.new_conversation(*args, **kw)
+
 
 class VumiApi(object):
     def __init__(self, config):
