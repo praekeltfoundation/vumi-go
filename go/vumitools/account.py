@@ -30,6 +30,7 @@ class AccountStore(object):
     def __init__(self, manager):
         self.manager = manager
         self.users = self.manager.proxy(UserAccount)
+        self.tag_permissions = self.manager.proxy(UserTagPermission)
 
     @Manager.calls_manager
     def new_user(self, username):
