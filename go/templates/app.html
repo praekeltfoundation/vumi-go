@@ -28,10 +28,6 @@
 	                   <li><a href="{% url credits %}#Balance"><strong>Balance: {{account_credits}} Credits</strong></a></li>
 	                   <li class="divider"></li>
 	                   <li><a href="{% url credits %}#Buy"><i class="icon-shopping-cart"></i> Buy More Credits</a></li>
-	                   <!--
-	                   <li><a href="{% url todo %}credits-history.html"><i class="icon-time"></i> Purchase History</a></li>
-	                   <li><a href="{% url todo %}credits-spending.html"><i class="icon-time"></i> Spending History</a></li>
-		               -->
 	                   <li><a href="{% url credits %}#FAQ"><i class="icon-info-sign"></i> Credits FAQ</a></li>
 	               </ul>
 	            </li>
@@ -57,9 +53,7 @@
 {% endblock %}
 
 {% block content %}
-    
     {% block main %}{% endblock %}
-    
 {% endblock %}
 
 {% block footer %}

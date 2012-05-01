@@ -119,6 +119,7 @@ TEMPLATE_DIRS = (
     abspath("base", "templates"),
     abspath("conversation", "templates"),
     abspath("contacts", "templates"),
+    abspath("account", "templates"),
     abspath("apps", "surveys", "templates"),
     abspath("apps", "bulk_message", "templates"),
 )
@@ -144,6 +145,7 @@ INSTALLED_APPS = (
     'go.base',
     'go.conversation',
     'go.contacts',
+    'go.account',
     'vxpolls.djdashboard',
 )
 
