@@ -12,7 +12,7 @@
     </div>
     <div class="row">
         <div class="span12">
-            {% include "base/includes/messages.html" %}
+            {% include "base/includes/messages.html" with error_form=upload_contacts_form %}
         </div>
     </div>
     <div class="row">
@@ -71,5 +71,5 @@
 {% endblock %}
 
 {% block modals %}
-    {% include "contacts/includes/tools.html" %}
+    {% include "contacts/includes/tools.html" with show_groups=1 save_group=1 %}
 {% endblock %}

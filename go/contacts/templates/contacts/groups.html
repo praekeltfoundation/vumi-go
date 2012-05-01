@@ -36,7 +36,7 @@
                <tr>
                      <td>
                          <a href="{% url contacts:group group_key=group.key %}">{{group.name}}</a>
-                    <span class="label label-info pull-right">{{group.contact_set.count}}</span>
+                    <span class="label label-info pull-right">{{group.backlinks.contacts|length}}</span>
                      </td>
                </tr>
             {% empty %}
