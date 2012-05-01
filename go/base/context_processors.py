@@ -26,3 +26,13 @@ def standard_forms(request):
             'new_contact_group_form': new_contact_group_form,
             'select_contact_group_form': select_contact_group_form,
         }
+
+
+def credit(request):
+    if request.user.is_authenticated() and hasattr(request, 'user_api'):
+        profile = request.user.get_profile()
+        api = request.user_api.api
+        return {
+            'account_credits': api.cm.get_credit(profile.user_account),
+        }
+    return {}
