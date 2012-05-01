@@ -31,7 +31,8 @@ def _filter_contacts(contacts, request_params):
     return {
         'query': query,
         'selected_letter': selected_letter,
-        'selected_contacts': contacts,
+        'selected_contacts': sorted(contacts,
+                                    key=lambda c: c.name.lower()[0]),
         }
 
 
