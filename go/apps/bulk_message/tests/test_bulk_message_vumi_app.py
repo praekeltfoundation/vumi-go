@@ -7,13 +7,15 @@ from twisted.internet.defer import inlineCallbacks
 from vumi.message import TransportEvent, TransportUserMessage
 from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import FakeRedis
+from vumi.persist.txriak_manager import TxRiakManager
 
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
-from go.vumitools.api import VumiApiCommand, VumiUserApi
+from go.vumitools.api import VumiUserApi
+from go.vumitools.tests.utils import CeleryTestMixIn
 from go.vumitools.account import AccountStore
 
 
-class TestBulkMessageApplication(ApplicationTestCase):
+class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
 
     application_class = BulkMessageApplication
     timeout = 2
@@ -27,9 +29,11 @@ class TestBulkMessageApplication(ApplicationTestCase):
             })
         self.manager = self.app.store.manager  # YOINK!
         self.account_store = AccountStore(self.manager)
+        self.setup_celery_for_tests()
 
     @inlineCallbacks
     def tearDown(self):
+        self.restore_celery()
         self._fake_redis.teardown()
         yield self.app.manager.purge_all()
         yield super(TestBulkMessageApplication, self).tearDown()
@@ -52,8 +56,9 @@ class TestBulkMessageApplication(ApplicationTestCase):
         user_account = yield self.account_store.new_user(u'testuser')
         user_api = VumiUserApi(user_account.key, {
                 'redis_cls': lambda **kw: self._fake_redis,
-                'riak_manager': {},
-                }, self.manager)
+                'riak_manager': {'bucket_prefix': 'test.'},
+                }, TxRiakManager)
+        user_api.api.send_command = self.publish_command  # KERPLONK!
         group = yield user_api.contact_store.new_group(u'test group')
         contact1 = yield user_api.contact_store.new_contact(
             u'First', u'Contact', msisdn=u'27831234567', groups=[group])
@@ -61,6 +66,7 @@ class TestBulkMessageApplication(ApplicationTestCase):
             u'Second', u'Contact', msisdn=u'27831234568', groups=[group])
         conversation = yield user_api.new_conversation(
             u'bulk_message', u'Subject', u'Message')
+        conversation = user_api.wrap_conversation(conversation)
         # TODO: 1) I need to acquire a tag here so it is linked to
         #       a batch_id
         #       2) I need to have an actual conversation so I can
@@ -72,15 +78,19 @@ class TestBulkMessageApplication(ApplicationTestCase):
         #       5) msg_options can go since that info should be coming
         #       from the tagpool metadata and the app worker can extract
         #       that info.
-        batch_id = yield self.app.store.batch_start([])
-        cmd = VumiApiCommand.command(
-            'dummy_worker', 'start',
-            batch_id=batch_id,
-            conversation_key=conversation.key,
-            conversation_type=conversation.conversation_type,
-            msg_options={})
-        # publishes it to the app worker, handled by `process_start_command`
-        yield self.publish_command(cmd)
+
+        yield conversation.start()
+
+        # batch_id = yield self.app.store.batch_start([])
+        # cmd = VumiApiCommand.command(
+        #     'dummy_worker', 'start',
+        #     batch_id=batch_id,
+        #     conversation_key=conversation.key,
+        #     conversation_type=conversation.conversation_type,
+        #     msg_options={})
+        # # publishes it to the app worker, handled by `process_start_command`
+        # yield self.publish_command(cmd)
+
         # assert that we've sent the message to the one contact
         [msg] = yield self.get_dispatched_messages()
         # check that the right to_addr & from_addr are set and that the content
