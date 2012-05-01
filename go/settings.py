@@ -154,6 +154,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "django.contrib.messages.context_processors.messages",
     "go.base.context_processors.user_profile",
     "go.base.context_processors.standard_forms",
+    "go.base.context_processors.credit",
 )
 
 # A sample logging configuration. The only tangible logging
