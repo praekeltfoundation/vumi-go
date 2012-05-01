@@ -8,18 +8,18 @@ from vumi.message import TransportEvent, TransportUserMessage
 from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import FakeRedis
 
-from go.vumitools.bulk_send_application import BulkSendApplication
+from go.apps.bulk_message.vumi_app import BulkMessageApplication
 from go.vumitools.api import VumiApiCommand
 
 
-class TestBulkSendApplication(ApplicationTestCase):
+class TestBulkMessageApplication(ApplicationTestCase):
 
-    application_class = BulkSendApplication
+    application_class = BulkMessageApplication
     timeout = 1
 
     @inlineCallbacks
     def setUp(self):
-        super(TestBulkSendApplication, self).setUp()
+        super(TestBulkMessageApplication, self).setUp()
         self._fake_redis = FakeRedis()
         self.api = yield self.get_application({
             'redis_cls': lambda **kw: self._fake_redis,
@@ -29,7 +29,7 @@ class TestBulkSendApplication(ApplicationTestCase):
     def tearDown(self):
         self._fake_redis.teardown()
         yield self.api.manager.purge_all()
-        yield super(TestBulkSendApplication, self).tearDown()
+        yield super(TestBulkMessageApplication, self).tearDown()
 
     def publish_command(self, cmd):
         return self.dispatch(cmd, rkey='%s.control' % (

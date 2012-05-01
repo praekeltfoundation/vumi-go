@@ -154,7 +154,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,), 'start',
             conversation_type=conversation.conversation_type,
-            conversation_id=conversation.key,
+            conversation_key=conversation.key,
             batch_id=batch.key,
             msg_options=msg_options
             ))

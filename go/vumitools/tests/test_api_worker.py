@@ -36,9 +36,7 @@ class CommandDispatcherTestCase(ApplicationTestCase):
 
     @inlineCallbacks
     def test_forwarding_to_worker_name(self):
-        api_cmd = VumiApiCommand(msg_options={
-            'worker_name': 'worker_1'
-        })
+        api_cmd = VumiApiCommand(worker_name='worker_1', command='foo')
         yield self.publish_command(api_cmd)
         [dispatched] = self._amqp.get_messages('vumi', 'worker_1.control')
         self.assertEqual(dispatched, api_cmd)
@@ -46,9 +44,8 @@ class CommandDispatcherTestCase(ApplicationTestCase):
     @inlineCallbacks
     def test_unknown_worker_name(self):
         with LogCatcher() as logs:
-            yield self.publish_command(VumiApiCommand(msg_options={
-                'worker_name': 'non-existent-worker'
-            }))
+            yield self.publish_command(
+                VumiApiCommand(worker_name='no-worker', command='foo'))
             [error] = logs.errors
             self.assertTrue("No worker publisher available" in
                                 error['message'][0])
