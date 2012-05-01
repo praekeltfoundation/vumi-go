@@ -69,6 +69,9 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
                 'riak_manager': {'bucket_prefix': 'test.'},
                 }, TxRiakManager)
         user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
+        user_api.api.set_pool_metadata("pool", {
+            "transport_type": "sphex",
+            })
         group = yield user_api.contact_store.new_group(u'test group')
         contact1 = yield user_api.contact_store.new_contact(
             u'First', u'Contact', msisdn=u'27831234567', groups=[group])
