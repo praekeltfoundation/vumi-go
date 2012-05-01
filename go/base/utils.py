@@ -15,7 +15,7 @@ def conversation_or_404(user_api, key):
 
 def vumi_api_for_user(user):
     """Return a Vumi API instance for the given user."""
-    return VumiUserApi(user.userprofile.user_account,
+    return VumiUserApi(user.get_profile().user_account,
                        settings.VUMI_API_CONFIG)
 
 
