@@ -1,0 +1,58 @@
+{% extends "app.html" %}
+{% load markup %}
+{% load flatpages %}
+
+{% block page_title %}
+    {% get_flatpages '/account/' as account_pages %}
+    {% for account_page in account_pages %}
+        {{ account_page.title }}
+    {% endfor %}
+{% endblock %}
+
+{% block main %}
+<div class="row">
+    <div class="span12">
+        {% include "base/includes/messages.html" %}
+    </div>
+</div>
+<div class="row">
+    {% get_flatpages '/account/' as account_pages %}
+    {% for account_page in account_pages %}
+        <div class="span6">
+            {{ account_page.content|markdown }}
+        </div>
+    {% endfor %}
+
+    <div class="span6">
+        <form method="post" action="">
+            <h1>Contact Us</h1>
+            <br>
+            <fieldset>
+                {% for field in form.visible_fields %}
+                    <div class="control-group {% if field.errors %}error{% endif %}">
+                        <label class="control-label" for="{{field.name}}">
+                            {{field.label}}
+                        </label>
+                        <div class="controls">
+                            {{field}}
+                            <span class="help-inline">
+                                {% if field.errors %}
+                                    {{field.errors|join:" "}}
+                                {% endif %}
+                                {% if field.help_text %}
+                                    ({{field.help_text}})
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                {% endfor %}
+                <div class="btn-toolbar">
+                    <div class="btn-group"><input type="submit" class="btn btn-primary" value="Send Email &rarr;"></div>
+                    <div class="btn-group"><input type="reset" class="btn" value="Cancel"></div>
+                </div>
+            </fieldset>
+            {% csrf_token %}
+        </form>
+    </div>
+</div>
+{% endblock %}
