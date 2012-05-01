@@ -24,7 +24,7 @@ pools:
   integrat:
     tags: '["*120*99*987*10*%d#" % i for i in range(0, 100)]'
     metadata:
-      display_name: "*120*99"987*10*...#"
+      display_name: "*120*99*987*10*...#"
       delivery_class: ussd
       transport_type: ussd
       client_initiated: true
