@@ -10,49 +10,240 @@
 {% endblock %}
 
 {% block main %}
+
+<h2>Manage Profile</h2><br>
+
 <div class="row">
     <div class="span12">
         {% include "base/includes/messages.html" %}
     </div>
 </div>
-<div class="row">
-    {% get_flatpages '/account/' as account_pages %}
-    {% for account_page in account_pages %}
-        <div class="span6">
-            {{ account_page.content|markdown }}
-        </div>
-    {% endfor %}
 
-    <div class="span6">
-        <form method="post" action="">
-            <h1>Contact Us</h1>
-            <br>
-            <fieldset>
-                {% for field in form.visible_fields %}
-                    <div class="control-group {% if field.errors %}error{% endif %}">
-                        <label class="control-label" for="{{field.name}}">
-                            {{field.label}}
-                        </label>
-                        <div class="controls">
-                            {{field}}
-                            <span class="help-inline">
-                                {% if field.errors %}
-                                    {{field.errors|join:" "}}
-                                {% endif %}
-                                {% if field.help_text %}
-                                    ({{field.help_text}})
-                                {% endif %}
-                            </span>
-                        </div>
-                    </div>
-                {% endfor %}
-                <div class="btn-toolbar">
-                    <div class="btn-group"><input type="submit" class="btn btn-primary" value="Send Email &rarr;"></div>
-                    <div class="btn-group"><input type="reset" class="btn" value="Cancel"></div>
+<div class="tabbable">
+  <ul class="nav nav-tabs">
+    <li class="active"><a href="#1" data-toggle="tab">Info</a></li>
+    <li><a href="#2" data-toggle="tab">Social</a></li>
+    <li><a href="#3" data-toggle="tab">IM</a></li>
+    <!-- <li><a href="#4" data-toggle="tab">Email</a></li> -->
+    <li><a href="#5" data-toggle="tab">Team</a></li>
+    <li><a href="#6" data-toggle="tab">Contact Us</a></li>
+  </ul>
+   <div class="tab-content">
+    <div class="tab-pane active" id="1">
+        <h3>Account Information</h3><br>
+        <form class="form-horizontal" action="" method="post" id="accountinfo">
+          <fieldset>
+            {% for field in account_form.visible_fields %}
+                <div class="control-group {% if field.errors %}error{% endif %}">
+                  <label class="control-label" for="input01">{{field.label}}</label>
+                  <div class="controls {% if field.name == 'email_address' or field.name == 'password' %}input-prepend{% endif %}">
+                    {% if field.name == 'email_address' %}<span class="add-on"><i class="icon-envelope"></i></span>{% endif %}
+                    {% if field.name == 'password' %}<span class="add-on"><i class="icon-key"></i></span>{% endif %}
+                    {{field}}
+                    {% if field.errors %}
+                        {% for error in field.errors %}
+                            <span class="help-inline">{{error}}</span>
+                        {% endfor %}
+                    {% endif %}
+                  </div>
                 </div>
-            </fieldset>
-            {% csrf_token %}
+            {% endfor %}
+
+            <div class="control-group">
+                <label class="control-label">
+                    Credits Available
+                </label>
+                <div class="controls">
+                    <input class="input-xlarge" readonly="readonly" value="{{account_credits}}">
+                    <span class="help-inline">
+                        Use the 'Contact Us' form to email us if you want to
+                        buy more credits.
+                    </span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <input type="submit" class="btn btn-primary" data-loading-text="saving..." name="_account" value="Save changes">
+            </div>
+          </fieldset>
+          {% csrf_token %}
         </form>
     </div>
+
+    <div class="tab-pane" id="2">
+
+        <h3>Social Networks</h3>
+        <p>Adding social networks will let you message your followers and fans from Vumi</p>
+        <br>
+
+        <div class="well span3" style="height: 100px">
+
+            <h4>Add your Facebook profile</h4>
+            <p>This will allow you to post messages to your wall.</p>
+            <p> 
+                <i>
+                    This is still being developed and will become available here
+                    immediately when released.
+                </i>
+            </p>
+<!--             <div id="fb-root"></div>
+                        <script src="http://connect.facebook.net/en_US/all.js"></script>
+                        <script>
+                           FB.init({
+                              appId:'YOUR_APP_ID', cookie:true,
+                              status:true, xfbml:true
+                           });
+                        </script>
+                        <fb:login-button>Login with Facebook</fb:login-button>
+ -->
+        </div>
+        <div class="well span3" style="height: 100px">
+
+            <h4>Add your Twitter profile</h4>
+
+            <p>This will allow you to tweet on your twitter timeline.</p>
+            <p> 
+                <i>
+                    This is still being developed and will become available here
+                    immediately when released.
+                </i>
+            </p>
+
+            <!-- <img src="img/sign-in-with-twitter-l.png"> -->
+
+        </div>
+
+    </div>
+
+    <div class="tab-pane" id="3">
+        <h3>Instant Messaging</h3>
+        <p>Adding instant messaging services will let you send instant chat messages to friends and contacts.</p>
+        <br>
+
+        <form class="well span5">
+            <h4>GTalk ID</h4>
+            <p>
+                Shortly we will allow you to provide your own Jabber / GTalk account
+                to use for messaging with Vumi.
+            </p>
+        </form>
+
+        <form class="well span5">
+            <h4>Facebook Chat</h4>
+            <p>
+                Shortly we will allow you to connect your Facebook account
+                to use for messaging with Vumi.
+            </p>
+        </form>
+
+    </div>
+
+    <div class="tab-pane" id="4">
+
+        <h3>Email Messaging</h3>
+        <p>Adding email messaging services will let you send simple messages to your email contacts</p>
+        <br>
+        <form class="form-horizontal">
+                  <fieldset>
+
+                    <div class="control-group">
+                      <label class="control-label" for="input01">From Address</label>
+                      <div class="controls input-prepend">
+                        <span class="add-on"><i class="icon-envelope"></i></span>
+                        <input type="text" class="input-xlarge" id="input01" value="gustav@praekelt.com">
+                      </div>
+                    </div>
+                    <div class="control-group">
+                      <label class="control-label" for="input02">Reply-to Address</label>
+                      <div class="controls input-prepend">
+                        <span class="add-on"><i class="icon-envelope"></i></span>
+                        <input type="text" class="input-xlarge" id="input02" value="gustav@praekelt.com">
+                      </div>
+                    </div>
+                    <div class="control-group">
+                      <label class="control-label" for="input03">From Name</label>
+                      <div class="controls">
+                        <input type="text" class="input-xlarge" id="input03" value="Praekelt Group">
+                      </div>
+                    </div>
+
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" data-loading-text="saving...">Save changes</button>
+                    </div>
+                  </fieldset>
+                </form>
+
+    </div>
+
+    <div class="tab-pane" id="5">
+
+        <h3>Account Owner</h3>
+
+        <table class="table table-striped table-bordered">
+          <tr>
+            <th colspan="2"><strong>Account Owner</strong></th>
+          </tr>
+          <tr>
+          <td width="200">{{user_profile}}</td>
+            <td>{{user_profile.user.username}}</td>
+          </tr>
+        </table>
+
+        <hr>
+
+        <h4>Team Members</h4>
+        <br>
+
+        <form>
+
+        <table class="table table-striped table-bordered">
+          <tr>
+            <th colspan="4"><strong>Current Team Members</strong></th>
+          </tr>
+          <tr>
+            <td colspan="4">None yet</td>
+          </tr>
+        </table>
+
+        </form>
+
+    </div>
+
+    <div class="tab-pane" id="6">
+
+        <div class="span6">
+            <form method="post" action="">
+                <h1>Contact Us</h1>
+                <br>
+                <fieldset>
+                    {% for field in email_form.visible_fields %}
+                        <div class="control-group {% if field.errors %}error{% endif %}">
+                            <label class="control-label" for="{{field.name}}">
+                                {{field.label}}
+                            </label>
+                            <div class="controls">
+                                {{field}}
+                                <span class="help-inline">
+                                    {% if field.errors %}
+                                        {{field.errors|join:" "}}
+                                    {% endif %}
+                                    {% if field.help_text %}
+                                        ({{field.help_text}})
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    <div class="btn-toolbar">
+                        <div class="btn-group"><input type="submit" class="btn btn-primary" name="_email" value="Send Email &rarr;"></div>
+                        <div class="btn-group"><input type="reset" class="btn" value="Cancel"></div>
+                    </div>
+                </fieldset>
+                {% csrf_token %}
+            </form>
+        </div>
+    </div>
+  </div>
 </div>
+
 {% endblock %}
