@@ -309,8 +309,8 @@ class VumiUserApi(object):
 
     conversation_wrapper = ConversationWrapper
 
-    def __init__(self, user_account_key, config, manager=None):
-        self.api = VumiApi(config, manager=manager)
+    def __init__(self, user_account_key, config, manager_cls=None):
+        self.api = VumiApi(config, manager_cls=manager_cls)
         self.manager = self.api.manager
         self.user_account_key = user_account_key
         self.conversation_store = ConversationStore(self.api.manager,
@@ -363,15 +363,16 @@ class VumiUserApi(object):
 
 
 class VumiApi(object):
-    def __init__(self, config, manager=None):
+    def __init__(self, config, manager_cls=None):
         # TODO: Split the config up better.
         config = config.copy()  # So we can modify it.
         riak_config = config.pop('riak_manager')
 
         r_server = get_redis(config)
-        if manager is None:
-            manager = RiakManager.from_config(riak_config)
-        self.manager = manager
+
+        if manager_cls is None:
+            manager_cls = RiakManager
+        self.manager = manager_cls.from_config(riak_config)
 
         # tagpool manager
         tpm_config = config.get('tagpool_manager', {})
