@@ -14,7 +14,7 @@
         {% cycle '<tr>' '' %}
         <td>
             {{choice.tag}}
-            <label class="checkbox inline" for="inlineCheckbox-{{ choice.choice_label }}">{{ choice.choice_label|title }}</label>
+            <label class="checkbox inline" for="inlineCheckbox-{{ choice.choice_label }}">{{ choice.choice_label }}</label>
         </td>
         {% cycle '' '</tr>' %}
     {% endfor %}
