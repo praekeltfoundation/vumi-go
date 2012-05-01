@@ -10,7 +10,7 @@ from go.base.utils import vumi_api_for_user
 class Command(BaseCommand):
     help = "Give a Vumi Go user access to a certain tagpool"
 
-    LOCAL_OPTIONS = (
+    LOCAL_OPTIONS = [
         make_option('--email-address',
             dest='email-address',
             help='Email address for the Vumi Go user'),
@@ -26,18 +26,18 @@ class Command(BaseCommand):
             action='store_true',
             default=False,
             help='Update an existing permission with a new max-keys value'),
-    )
-    option_list = BaseCommand.option_list + LOCAL_OPTIONS
+    ]
+    option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
 
     def handle(self, *args, **options):
         options = options.copy()
-        for key in [opt.dest for opt in self.LOCAL_OPTIONS]:
-            if options.get(key) is None:
-                value = raw_input("%s: " % (help,))
+        for opt in self.LOCAL_OPTIONS:
+            if options.get(opt.dest) is None:
+                value = raw_input("%s: " % (opt.help,))
                 if value:
-                    options[key] = value
+                    options[opt.dest] = value
                 else:
-                    raise CommandError('Please provide %s:' % (key,))
+                    raise CommandError('Please provide %s:' % (opt.dest,))
 
         self.handle_validated(*args, **options)
 

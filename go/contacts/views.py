@@ -35,28 +35,16 @@ def _filter_contacts(contacts, request_params):
         }
 
 
-def _unicode_csv_reader(unicode_csv_data, dialect, **kwargs):
-    # csv.py doesn't do Unicode; encode temporarily as UTF-8:
-    csv_reader = csv.reader(_utf_8_encoder(unicode_csv_data),
-                            dialect=dialect, **kwargs)
-    for row in csv_reader:
-        # decode UTF-8 back to Unicode, cell by cell:
-        yield [unicode(cell, 'utf-8') for cell in row]
-
-
-def _utf_8_encoder(unicode_csv_data):
-    for line in unicode_csv_data:
-        yield line.encode('utf-8')
-
-
 def _create_contacts_from_csv_file(contact_store, csvfile, country_code):
     dialect = csv.Sniffer().sniff(csvfile.read(1024))
     csvfile.seek(0)
-    reader = _unicode_csv_reader(csvfile, dialect)
+    reader = csv.reader(csvfile, dialect=dialect)
     for name, surname, msisdn in reader:
         # TODO: none of these fields are mandatory.
         msisdn = normalize_msisdn(msisdn, country_code=country_code)
         msisdn = unicode(msisdn, 'utf-8')
+        name = unicode(name, 'utf-8')
+        surname = unicode(surname, 'utf-8')
         contact = contact_store.new_contact(name, surname, msisdn=msisdn)
         yield contact
 
@@ -129,43 +117,51 @@ def group(request, group_key):
 def people(request):
     contact_store = request.user_api.contact_store
 
-    # TODO: Error handling in here.
-
-    if request.POST:
+    if request.method == 'POST':
         # first parse the CSV file and create Contact instances
         # from them for attaching to a group later
         upload_contacts_form = UploadContactsForm(request.POST, request.FILES)
         if upload_contacts_form.is_valid():
-            contacts = _create_contacts_from_csv_file(
-                contact_store, request.FILES['file'],
-                settings.VUMI_COUNTRY_CODE)
-            group = None
+            try:
+                contacts = _create_contacts_from_csv_file(
+                    contact_store, request.FILES['file'],
+                    settings.VUMI_COUNTRY_CODE)
+                group = None
 
-            # We could be creating a new contact group.
-            if request.POST.get('name'):
-                new_group_form = NewContactGroupForm(request.POST)
-                if new_group_form.is_valid():
-                    group = contact_store.new_group(
-                        new_group_form.cleaned_data['name'])
+                # We could be creating a new contact group.
+                if request.POST.get('name'):
+                    new_group_form = NewContactGroupForm(request.POST)
+                    if new_group_form.is_valid():
+                        group = contact_store.new_group(
+                            new_group_form.cleaned_data['name'])
 
-            # We could be using an existing contact group.
-            if request.POST.get('contact_group'):
-                select_group_form = SelectContactGroupForm(
-                    request.POST, groups=contact_store.list_groups())
-                if select_group_form.is_valid():
-                    group = contact_store.get_group(
-                        select_group_form.cleaned_data['contact_group'])
+                # We could be using an existing contact group.
+                if request.POST.get('contact_group'):
+                    select_group_form = SelectContactGroupForm(
+                        request.POST, groups=contact_store.list_groups())
+                    if select_group_form.is_valid():
+                        group = contact_store.get_group(
+                            select_group_form.cleaned_data['contact_group'])
 
-            if group is not None:
-                group.add_contacts(contacts)
-                return redirect(_group_url(group.key))
+                if group is not None:
+                    group.add_contacts(contacts)
+                    return redirect(_group_url(group.key))
+                else:
+                    messages.error(request, 'Please select a group or provide '
+                        'a new group name.')
+            except UnicodeDecodeError:
+                messages.error(request, 'Something went wrong trying to read '
+                    'the information from your CSV file. '
+                    'Make sure it is saved using the UTF-8 encoding')
 
         else:
-            messages.add_message(request, messages.ERROR,
-                'Something went wrong with the upload.')
+            messages.error(request, 'Something went wrong with the upload.')
+    else:
+        upload_contacts_form = UploadContactsForm()
 
     contacts = contact_store.list_contacts()
     context = {
+        'upload_contacts_form': upload_contacts_form,
         'contacts': contacts,
         'country_code': settings.VUMI_COUNTRY_CODE,
         }

@@ -35,9 +35,15 @@
         {% csrf_token %}
         <div class="modal-body">
             <fieldset>
-            {{upload_contacts_form.errors}}
-            <div class="control-group">
+            <div class="control-group {% if upload_contacts_form.errors %}error{% endif %}">
                 <label class="control-label" for="input01">Upload your data file:<br />Use this <a href="{{ STATIC_URL }}contacts-upload-template.csv">Template</a></label>
+                {% if upload_contacts_form.file.errors %}
+                  <span class="help-inline">
+                    {% for error in upload_contacts_form.file.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </span>
+                {% endif %}
                 <div class="controls">{{upload_contacts_form.file}}</div>
             </div>
             {% if show_groups %}

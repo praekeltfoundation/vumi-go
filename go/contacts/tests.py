@@ -166,6 +166,39 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         group = self.contact_store.get_group(self.group_key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
 
+    def test_uploading_unicode_chars_in_csv(self):
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+            'fixtures', 'sample-unicode-contacts.csv'))
+        contact = self.contact_store.get_contact_by_key(self.contact_key)
+        contact.groups.clear()
+        contact.save()
+
+        response = self.client.post(reverse('contacts:people'), {
+            'contact_group': self.group_key,
+            'file': csv_file,
+        })
+        self.assertRedirects(response, group_url(self.group_key))
+        group = self.contact_store.get_group(self.group_key)
+        self.assertEqual(len(group.backlinks.contacts()), 3)
+
+    def test_uploading_unicode_chars_in_csv_into_new_group(self):
+        new_group_name = u'Testing a ünicode grøüp'
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+            'fixtures', 'sample-unicode-contacts.csv'))
+        contact = self.contact_store.get_contact_by_key(self.contact_key)
+        contact.groups.clear()
+        contact.save()
+
+        response = self.client.post(reverse('contacts:people'), {
+            'name': new_group_name,
+            'file': csv_file,
+        })
+
+        group = newest(self.contact_store.list_groups())
+        self.assertEqual(group.name, new_group_name)
+        self.assertRedirects(response, group_url(group.key))
+        self.assertEqual(len(group.backlinks.contacts()), 3)
+
     def test_contact_upload_from_group_page(self):
         group_url = reverse('contacts:group', kwargs={
             'group_key': self.group_key
