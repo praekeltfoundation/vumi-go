@@ -1,6 +1,10 @@
 # -*- test-case-name: go.vumitools.tests.test_credit -*-
 
 
+# TODO: create management command
+# TODO: update django settings
+# TODO: create worker that updates Riak
+
 class CreditManager(object):
     def __init__(self, r_server, r_prefix):
         self.r_server = r_server
