@@ -628,7 +628,9 @@ class VumiApiCommand(Message):
         return cls(**{
             'worker_name': worker_name,
             'command': command_name,
-            'args': args,
+            'args': list(args),  # turn to list to make sure input & output
+                                 # stay the same when encoded & decoded as
+                                 # JSON.
             'kwargs': kwargs,
         })
 
