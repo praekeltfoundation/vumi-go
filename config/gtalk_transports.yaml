@@ -21,6 +21,10 @@ defaults:
       tagname_pattern: '.*'
       msg_template: {}
 
+  storing_mw:
+    riak:
+      bucket_prefix: vumigo.
+
 gtalk_dev_1:
   transport_name: gtalk_dev_1
   username: user@xmpp.org
