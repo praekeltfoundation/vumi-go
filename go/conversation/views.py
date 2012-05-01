@@ -43,7 +43,11 @@ def index(request):
             raise ValueError(
                 "Unknown conversation status: %s" % (conversation_status,))
 
-    # TODO: Decide if we need to put the padding back.
+    # We want to pad with None to a multiple of the conversation size.
+    # NOTE: If we have no conversations, we don't pad.
+    last_page_size = len(conversations) % CONVERSATIONS_PER_PAGE
+    padding = [None] * (CONVERSATIONS_PER_PAGE - last_page_size)
+    conversations += padding
 
     paginator = Paginator(conversations, CONVERSATIONS_PER_PAGE)
     page = paginator.page(request.GET.get('p', 1))
