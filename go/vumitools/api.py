@@ -18,6 +18,7 @@ from vumi.application import TagpoolManager
 from vumi.persist.model import Manager
 from vumi.persist.riak_manager import RiakManager
 from vumi.persist.message_store import MessageStore
+from vumi.middleware import TaggingMiddleware
 
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
@@ -173,14 +174,16 @@ class ConversationWrapper(object):
         tag = yield self.acquire_tag()
         batch_id = yield self.start_batch(tag)
 
+        msg_options = []
+        msg_options['transport_type'] = self.tagpool_metadata['transport_type']
+        TaggingMiddleware.add_tag_to_payload(msg_options, tag)
+
         yield self.dispatch_command('start',
             batch_id=batch_id,
             conversation_type=self.c.conversation_type,
             conversation_key=self.c.key,
-            msg_options={
-                'transport_type': self.c.delivery_class,
-                'from_addr': tag[1],
-            }, **extra_params)
+            msg_options=msg_options,
+            **extra_params)
         self.c.batches.add_key(batch_id)
         yield self.c.save()
 
