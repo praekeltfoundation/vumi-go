@@ -21,14 +21,14 @@ class TestBulkMessageApplication(ApplicationTestCase):
     def setUp(self):
         super(TestBulkMessageApplication, self).setUp()
         self._fake_redis = FakeRedis()
-        self.api = yield self.get_application({
+        self.app = yield self.get_application({
             'redis_cls': lambda **kw: self._fake_redis,
             })
 
     @inlineCallbacks
     def tearDown(self):
         self._fake_redis.teardown()
-        yield self.api.manager.purge_all()
+        yield self.app.manager.purge_all()
         yield super(TestBulkMessageApplication, self).tearDown()
 
     def publish_command(self, cmd):
@@ -42,31 +42,43 @@ class TestBulkMessageApplication(ApplicationTestCase):
         return d
 
     def store_outbound(self, **kw):
-        return self.api.store.add_outbound_message(self.mkmsg_out(**kw))
+        return self.app.store.add_outbound_message(self.mkmsg_out(**kw))
 
     @inlineCallbacks
     def test_start(self):
-        batch_id = yield self.api.store.batch_start([])
+        # TODO: 1) I need to acquire a tag here so it is linked to
+        #       a batch_id
+        #       2) I need to have an actual conversation so I can
+        #       pass in the conversation_type and the conversation_key
+        #       3) I need to have a contact that is part of this conversation
+        #       and has a relevant to_addr set for the tag assigned
+        #       4) I need to have an account object so I can add
+        #       that info with DebitAccountMiddleware.add_user_to_payload
+        #       5) msg_options can go since that info should be coming
+        #       from the tagpool metadata and the app worker can extract
+        #       that info.
+        batch_id = yield self.app.store.batch_start([])
         cmd = VumiApiCommand.command('dummy_worker', 'start',
             batch_id=batch_id,
-            to_addresses=['to_addr'],
-            content='content',
-            msg_options={
-                'transport_type': 'sms',
-                'from_addr': 'from_addr',
-            })
+            conversation_key=conversation.key,
+            conversation_type=conversation.conversation_type)
+        # publishes it to the app worker, handled by `process_start_command`
         yield self.publish_command(cmd)
+        # assert that we've sent the message to the one contact
         [msg] = yield self.get_dispatched_messages()
+        # check that the right to_addr & from_addr are set and that the content
+        # of the message equals conversation.message
         self.assertEqual(msg['to_addr'], 'to_addr')
+        self.assertEqual(msg['from_addr'], 'from_addr')
         self.assertEqual(msg['content'], 'content')
 
-        self.assertEqual(self.api.store.batch_status(batch_id), {
+        self.assertEqual(self.app.store.batch_status(batch_id), {
                 'ack': 0,
                 'delivery_report': 0,
                 'message': 1,
                 'sent': 1,
                 })
-        [dbmsg] = yield self.api.store.batch_messages(batch_id)
+        [dbmsg] = yield self.app.store.batch_messages(batch_id)
         self.assertEqual(dbmsg, msg)
 
     @inlineCallbacks
@@ -75,7 +87,7 @@ class TestBulkMessageApplication(ApplicationTestCase):
         ack_event = yield self.publish_event(user_message_id='123',
                                              event_type='ack',
                                              sent_message_id='xyz')
-        [event] = yield self.api.store.message_events('123')
+        [event] = yield self.app.store.message_events('123')
         self.assertEqual(event, ack_event)
 
     @inlineCallbacks
@@ -84,19 +96,19 @@ class TestBulkMessageApplication(ApplicationTestCase):
         dr_event = yield self.publish_event(user_message_id='123',
                                             event_type='delivery_report',
                                             delivery_status='delivered')
-        [event] = yield self.api.store.message_events('123')
+        [event] = yield self.app.store.message_events('123')
         self.assertEqual(event, dr_event)
 
     @inlineCallbacks
     def test_consume_user_message(self):
         msg = self.mkmsg_in()
         yield self.dispatch(msg)
-        dbmsg = yield self.api.store.get_inbound_message(msg['message_id'])
+        dbmsg = yield self.app.store.get_inbound_message(msg['message_id'])
         self.assertEqual(dbmsg, msg)
 
     @inlineCallbacks
     def test_close_session(self):
         msg = self.mkmsg_in(session_event=TransportUserMessage.SESSION_CLOSE)
         yield self.dispatch(msg)
-        dbmsg = yield self.api.store.get_inbound_message(msg['message_id'])
+        dbmsg = yield self.app.store.get_inbound_message(msg['message_id'])
         self.assertEqual(dbmsg, msg)
