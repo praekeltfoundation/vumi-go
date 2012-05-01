@@ -23,6 +23,7 @@ from vumi.middleware import TaggingMiddleware
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
+from go.vumitoools.middleware import DebitAccountMiddleware
 
 
 def get_redis(config):
@@ -177,6 +178,8 @@ class ConversationWrapper(object):
         msg_options = []
         msg_options['transport_type'] = self.tagpool_metadata['transport_type']
         TaggingMiddleware.add_tag_to_payload(msg_options, tag)
+        DebitAccountMiddleware.add_user_to_payload(msg_options,
+                                                   self.c.user_account_key)
 
         yield self.dispatch_command('start',
             batch_id=batch_id,
