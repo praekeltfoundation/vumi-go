@@ -66,6 +66,31 @@ class Conversation(Model):
     def __unicode__(self):
         return self.subject
 
+    @Manager.calls_manager
+    def people(self):
+        people = []
+        for group in (yield self.groups.get_all()):
+            if group is None:
+                # TODO: Something sane here.
+                continue
+            people.extend((yield group.backlinks.contacts()))
+        returnValue(people)
+
+    @Manager.calls_manager
+    def get_contacts_addresses(self, delivery_class=None):
+        """
+        Get the contacts assigned to this group with an address attribute
+        that is appropriate for the given delivery_class
+
+        :rtype: str
+        :param rtype: the name of the delivery class to use, if None then
+                    it will default to `self.delivery_class`
+        """
+        delivery_class = delivery_class or self.delivery_class
+        addrs = [contact.addr_for(delivery_class)
+                 for contact in (yield self.people())]
+        returnValue([addr for addr in addrs if addr])
+
 
 class ConversationStore(PerAccountStore):
     def setup_proxies(self):

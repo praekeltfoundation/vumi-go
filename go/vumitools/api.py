@@ -96,16 +96,6 @@ class ConversationWrapper(object):
         returnValue(tags)
 
     @Manager.calls_manager
-    def people(self):
-        people = []
-        for group in (yield self.c.groups.get_all()):
-            if group is None:
-                # TODO: Something sane here.
-                continue
-            people.extend((yield group.backlinks.contacts()))
-        returnValue(people)
-
-    @Manager.calls_manager
     def get_progress_status(self):
         """
         Get an overview of the progress of this conversation
@@ -151,21 +141,6 @@ class ConversationWrapper(object):
         if status['total'] == 0:
             returnValue(0)
         returnValue(int(status['ack'] / float(status['total'])) * 100)
-
-    @Manager.calls_manager
-    def get_contacts_addresses(self, delivery_class=None):
-        """
-        Get the contacts assigned to this group with an address attribute
-        that is appropriate for the given delivery_class
-
-        :rtype: str
-        :param rtype: the name of the delivery class to use, if None then
-                    it will default to `self.delivery_class`
-        """
-        delivery_class = delivery_class or self.c.delivery_class
-        addrs = [contact.addr_for(delivery_class)
-                 for contact in (yield self.people())]
-        returnValue([addr for addr in addrs if addr])
 
     @Manager.calls_manager
     def start(self, **extra_params):
