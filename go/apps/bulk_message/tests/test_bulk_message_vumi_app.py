@@ -11,8 +11,16 @@ from vumi.persist.txriak_manager import TxRiakManager
 
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
 from go.vumitools.api import VumiUserApi
-from go.vumitools.tests.utils import CeleryTestMixIn
+from go.vumitools.tests.utils import CeleryTestMixIn, DummyConsumerFactory
 from go.vumitools.account import AccountStore
+
+
+def dummy_consumer_factory_factory_factory(publish_func):
+    def dummy_consumer_factory_factory():
+        dummy_consumer_factory = DummyConsumerFactory()
+        dummy_consumer_factory.publish = publish_func
+        return dummy_consumer_factory
+    return dummy_consumer_factory_factory
 
 
 class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
@@ -29,6 +37,8 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
             })
         self.manager = self.app.store.manager  # YOINK!
         self.account_store = AccountStore(self.manager)
+        self.VUMI_COMMANDS_CONSUMER = dummy_consumer_factory_factory_factory(
+            self.publish_command)
         self.setup_celery_for_tests()
 
     @inlineCallbacks
@@ -58,14 +68,14 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
                 'redis_cls': lambda **kw: self._fake_redis,
                 'riak_manager': {'bucket_prefix': 'test.'},
                 }, TxRiakManager)
-        user_api.api.send_command = self.publish_command  # KERPLONK!
+        user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
         group = yield user_api.contact_store.new_group(u'test group')
         contact1 = yield user_api.contact_store.new_contact(
             u'First', u'Contact', msisdn=u'27831234567', groups=[group])
         contact2 = yield user_api.contact_store.new_contact(
             u'Second', u'Contact', msisdn=u'27831234568', groups=[group])
         conversation = yield user_api.new_conversation(
-            u'bulk_message', u'Subject', u'Message')
+            u'bulk_message', u'Subject', u'Message', delivery_tag_pool=u"pool")
         conversation = user_api.wrap_conversation(conversation)
         # TODO: 1) I need to acquire a tag here so it is linked to
         #       a batch_id
