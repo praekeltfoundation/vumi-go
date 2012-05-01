@@ -175,7 +175,7 @@ class ConversationWrapper(object):
         yield self.dispatch_command('start',
             batch_id=batch_id,
             conversation_type=self.c.conversation_type,
-            conversation_id=self.c.key,
+            conversation_key=self.c.key,
             msg_options={
                 'transport_type': self.c.delivery_class,
                 'from_addr': tag[1],
@@ -268,6 +268,9 @@ class ConversationWrapper(object):
         :rtype: bool
         """
         return self.tagpool_metadata.get('client_initiated', False)
+
+    def get_absolute_url(self):
+        return u'/app/%s/%s' % (self.conversation_type, self.key)
 
 
 class TagpoolSet(object):
