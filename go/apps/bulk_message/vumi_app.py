@@ -13,6 +13,7 @@ from vumi import log
 
 from go.vumitools.api import VumiApiCommand, get_redis
 from go.vumitools.conversation import ConversationStore
+from go.vumitools.middleware import DebitAccountMiddleware
 
 
 class GoApplication(ApplicationWorker):
@@ -112,7 +113,12 @@ class BulkMessageApplication(GoApplication):
         conversation_key, msg_options, **extra_params):
         batch = yield self.store.get_batch(batch_id)
         if batch:
-            account_key = msg_options['helper_metadata']['go']['user_account']
+            account_key = DebitAccountMiddleware.map_payload_to_user(
+                msg_options)
+            if account_key is None:
+                log.error('No account key in message options'
+                          ' (batch: %r): %r' % (batch_id, msg_options))
+                return
             conv_store = ConversationStore(self.manager, account_key)
             conv = yield conv_store.get_conversation_by_key(conversation_key)
 
