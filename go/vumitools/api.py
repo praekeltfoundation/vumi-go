@@ -9,6 +9,7 @@ use in Vumi workers.
 
 import redis
 from datetime import datetime
+from collections import defaultdict
 
 from twisted.internet.defer import returnValue
 
@@ -347,12 +348,25 @@ class VumiUserApi(object):
         """
         return self.conversation_wrapper(conversation, self)
 
+    def active_conversations(self):
+        conversations = self.conversation_store.conversations
+        return conversations.by_index(end_timestamp=None)
+
     @Manager.calls_manager
     def tagpools(self):
         account_store = self.api.account_store
         user_account = yield account_store.get_user(self.user_account_key)
         user_tagpools = yield user_account.tagpools.get_all()
-        allowed_set = set([tp.tagpool for tp in user_tagpools])
+        active_conversations = yield self.active_conversations()
+
+        tp_usage = defaultdict(int)
+        for conv in active_conversations:
+            tp_usage[conv.delivery_tag_pool] += 1
+
+        allowed_set = set(tp.tagpool for tp in user_tagpools
+                          if (tp.max_keys is None
+                              or tp.max_keys > tp_usage[tp.tagpool]))
+
         available_set = self.api.tpm.list_pools()
         pool_names = list(allowed_set & available_set)
         pool_data = dict((pool, self.api.tpm.get_metadata(pool))
