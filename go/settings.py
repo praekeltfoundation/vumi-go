@@ -109,6 +109,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'go.base.middleware.VumiUserApiMiddleware',
 )
 
 ROOT_URLCONF = 'go.urls'
@@ -204,7 +205,8 @@ SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
 #       configuration file so that configuration values aren't
 #       duplicated
 VUMI_API_CONFIG = {
-    'message_store': {
+    'message_store': {},
+    'tagpool_manager': {
         'tagpool_prefix': 'vumigo',
     },
     'message_sender': {},

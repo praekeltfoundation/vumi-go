@@ -63,7 +63,7 @@ class ConversationForm(VumiModelForm):
         if tagpool_filter is not None:
             self.tagpool_set = self.tagpool_set.select(tagpool_filter)
         self.fields['delivery_tag_pool'].widget.choices = [
-            (pool, self.tagpool_set.tagpool_display_name(pool))
+            (pool, self.tagpool_set.tagpool_name(pool))
             for pool in self.tagpool_set.pools()]
         self.fields['delivery_class'].widget.choices = [
             (delivery_class,
@@ -76,8 +76,9 @@ class ConversationForm(VumiModelForm):
             delivery_class = self.tagpool_set.delivery_class(pool)
             if delivery_class is None:
                 continue
-            delivery_classes.setdefault(delivery_class, []).append(pool)
-        return delivery_classes
+            delivery_classes.setdefault(delivery_class, []).append((
+                pool, self.tagpool_set.tagpool_name(pool)))
+        return delivery_classes.items()
 
     def delivery_class_widgets(self):
         # Backported hack from Django 1.4 to allow me to iterate

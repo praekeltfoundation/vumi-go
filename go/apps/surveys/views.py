@@ -7,8 +7,7 @@ from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
 
-from go.base.utils import (make_read_only_form, vumi_api_for_user,
-                           conversation_or_404)
+from go.base.utils import make_read_only_form, conversation_or_404
 from go.vumitools.api import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
 
@@ -35,9 +34,8 @@ def get_poll_config(poll_id):
 
 @login_required
 def new(request):
-    user_api = vumi_api_for_user(request.user)
     if request.POST:
-        form = ConversationForm(user_api, request.POST)
+        form = ConversationForm(request.user_api, request.POST)
         if form.is_valid():
             conversation_data = {}
             copy_keys = [
@@ -58,7 +56,7 @@ def new(request):
                 start_time.hour, start_time.minute, start_time.second,
                 start_time.microsecond)
 
-            conversation = user_api.conversation_store.new_conversation(
+            conversation = request.user_api.new_conversation(
                 u'survey', **conversation_data)
             messages.add_message(request, messages.INFO,
                 'Survey Created')
@@ -66,7 +64,7 @@ def new(request):
                 kwargs={'conversation_key': conversation.key}))
 
     else:
-        form = ConversationForm(user_api, initial={
+        form = ConversationForm(request.user_api, initial={
             'start_date': datetime.utcnow().date(),
             'start_time': datetime.utcnow().time().replace(second=0,
                                                             microsecond=0),
@@ -78,8 +76,7 @@ def new(request):
 
 @login_required
 def contents(request, conversation_key):
-    user_api = vumi_api_for_user(request.user)
-    conversation = conversation_or_404(user_api, conversation_key)
+    conversation = conversation_or_404(request.user_api, conversation_key)
 
     poll_id = 'poll-%s' % (conversation.key,)
     pm, config = get_poll_config(poll_id)
@@ -104,7 +101,7 @@ def contents(request, conversation_key):
     else:
         form = forms.make_form(data=config, initial=config)
 
-    survey_form = make_read_only_form(ConversationForm(user_api,
+    survey_form = make_read_only_form(ConversationForm(request.user_api,
         instance=conversation, initial={
             'start_date': conversation.start_timestamp.date(),
             'start_time': conversation.start_timestamp.time(),
@@ -117,8 +114,7 @@ def contents(request, conversation_key):
 
 @login_required
 def people(request, conversation_key):
-    user_api = vumi_api_for_user(request.user)
-    conversation = conversation_or_404(user_api, conversation_key)
+    conversation = conversation_or_404(request.user_api, conversation_key)
 
     poll_id = "poll-%s" % (conversation.key,)
     pm, config = get_poll_config(poll_id)
@@ -146,7 +142,7 @@ def people(request, conversation_key):
                 'conversation_key': conversation.key}))
         else:
             group_form = ConversationGroupForm(
-                request.POST, groups=user_api.contact_store.list_groups())
+                request.POST, groups=request.user_api.list_groups())
 
             if group_form.is_valid():
                 for group in group_form.cleaned_data['groups']:
@@ -156,7 +152,7 @@ def people(request, conversation_key):
                 return redirect(reverse('survey:start', kwargs={
                                     'conversation_key': conversation.key}))
 
-    survey_form = make_read_only_form(ConversationForm(user_api))
+    survey_form = make_read_only_form(ConversationForm(request.user_api))
     content_form = forms.make_form(data=config, initial=config, extra=0)
     read_only_content_form = make_read_only_form(content_form)
     return render(request, 'surveys/people.html', {
@@ -168,8 +164,7 @@ def people(request, conversation_key):
 
 @login_required
 def start(request, conversation_key):
-    user_api = vumi_api_for_user(request.user)
-    conversation = conversation_or_404(user_api, conversation_key)
+    conversation = conversation_or_404(request.user_api, conversation_key)
     if request.method == 'POST':
         try:
             conversation.start()
@@ -187,8 +182,7 @@ def start(request, conversation_key):
 
 @login_required
 def end(request, conversation_key):
-    user_api = vumi_api_for_user(request.user)
-    conversation = conversation_or_404(user_api, conversation_key)
+    conversation = conversation_or_404(request.user_api, conversation_key)
     if request.method == 'POST':
         conversation.end_conversation()
         messages.add_message(request, messages.INFO, 'Survey ended')
@@ -198,8 +192,7 @@ def end(request, conversation_key):
 
 @login_required
 def show(request, conversation_key):
-    user_api = vumi_api_for_user(request.user)
-    conversation = conversation_or_404(user_api, conversation_key)
+    conversation = conversation_or_404(request.user_api, conversation_key)
     return render(request, 'surveys/show.html', {
         'conversation': conversation,
     })
