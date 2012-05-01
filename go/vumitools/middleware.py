@@ -1,6 +1,15 @@
 # -*- test-case-name: go.vumitools.tests.test_middleware -*-
+import sys
+
+from twisted.internet.defer import inlineCallbacks
+
 from vumi.middleware import TransportMiddleware, TaggingMiddleware
+from vumi.application import TagpoolManager
+from vumi.persist.txriak_manager import TxRiakManager
 from vumi.utils import normalize_msisdn
+
+from go.vumitools.api import get_redis
+from go.vumitools.account import AccountStore
 
 
 class NormalizeMsisdnMiddleware(TransportMiddleware):
@@ -27,14 +36,39 @@ class NoTagError(DebitAccountError):
     """Account could not be debited because no tag was found."""
 
 
+class BadTagPool(DebitAccountError):
+    """Account could not be debited because the tag pool doesn't
+       specify a cost."""
+
+
 class DebitAccountMiddleware(TransportMiddleware):
 
     def setup_middleware(self):
-        pass
+        # TODO: There really needs to be a helper function to
+        #       turn this config into a manager.
+        mdb_config = self.config.get('message_store', {})
+        mdb_prefix = mdb_config.get('store_prefix', 'message_store')
+        manager = TxRiakManager.from_config({'bucket_prefix': mdb_prefix})
+        self.accounts_store = AccountStore(manager)
+        r_server = get_redis(self.config)
+        tpm_config = self.config.get('tagpool_manager', {})
+        tpm_prefix = tpm_config.get('tagpool_prefix', 'tagpool_store')
+        self.tpm = TagpoolManager(r_server, tpm_prefix)
 
+    @inlineCallbacks
     def _debit_account(self, user_account_key, pool):
-        # TODO: implement
-        pass
+        user = yield self.accounts_store.get_user(user_account_key)
+        tagpool_metadata = self.tpm.get_metadata(pool)
+        credits_per_message = tagpool_metadata.get('credits_per_message')
+        try:
+            credits_per_message = int(credits_per_message)
+            assert credits_per_message >= 0
+        except Exception:
+            exc_tb = sys.exc_info()[2]
+            raise (BadTagPool,
+                   BadTagPool("Invalid credits_per_message for pool %r"
+                              % (pool,)),
+                   exc_tb)
 
     @staticmethod
     def map_msg_to_user(msg):
