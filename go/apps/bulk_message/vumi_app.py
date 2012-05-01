@@ -43,8 +43,7 @@ class GoApplication(ApplicationWorker):
     @inlineCallbacks
     def setup_application(self):
         r_server = get_redis(self.config)
-        self.manager = TxRiakManager.from_config({
-                'bucket_prefix': self.mdb_prefix})
+        self.manager = TxRiakManager.from_config(self.config.get('riak'))
         self.store = MessageStore(self.manager, r_server, self.mdb_prefix)
         self.control_consumer = yield self.consume(
             '%s.control' % (self.worker_name,),
