@@ -12,6 +12,7 @@ from vumi.middleware import TaggingMiddleware
 from vumi import log
 
 from go.vumitools.api import VumiApiCommand, get_redis
+from go.vumitools.conversation import ConversationStore
 
 
 class GoApplication(ApplicationWorker):
@@ -101,9 +102,23 @@ class BulkMessageApplication(GoApplication):
     worker_name = 'bulk_message_application'
 
     @inlineCallbacks
-    def process_command_start(self, batch_id, content, to_addresses,
-                                msg_options):
-        for to_addr in to_addresses:
-            msg = yield self.send_to(to_addr, content, **msg_options)
-            yield self.store.add_outbound_message(msg, batch_id=batch_id)
-            log.info('Stored outbound %s' % (msg,))
+    def send_message(self, batch_id, to_addr, content, msg_options):
+        msg = yield self.send_to(to_addr, content, **msg_options)
+        yield self.store.add_outbound_message(msg, batch_id=batch_id)
+        log.info('Stored outbound %s' % (msg,))
+
+    @inlineCallbacks
+    def process_command_start(self, batch_id, conversation_type,
+        conversation_key, msg_options, **extra_params):
+        batch = yield self.store.get_batch(batch_id)
+        if batch:
+            account_key = msg_options['helper_metadata']['go']['user_account']
+            conv_store = ConversationStore(self.manager, account_key)
+            conv = yield conv_store.get_conversation_by_key(conversation_key)
+
+            to_addresses = yield conv.get_contacts_addresses()
+            for to_addr in to_addresses:
+                yield self.send_message(batch_id, to_addr,
+                    conv.message, msg_options)
+        else:
+            log.error('Cannot find batch for batch_id %s' % (batch_id,))

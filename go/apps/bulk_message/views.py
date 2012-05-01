@@ -87,8 +87,7 @@ def send(request, conversation_key):
 
     if request.method == 'POST':
         try:
-            conversation.start(
-                to_addresses=conversation.get_contacts_addresses())
+            conversation.start()
         except ConversationSendError as error:
             messages.add_message(request, messages.ERROR, str(error))
             return redirect(reverse('bulk_message:send', kwargs={
