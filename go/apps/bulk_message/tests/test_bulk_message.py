@@ -116,9 +116,15 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
         conversation = self.get_wrapped_conv()
         [batch] = conversation.get_batches()
+        [tag] = list(batch.tags)
         [contact] = conversation.people()
-        msg_options = {"from_addr": "default10001",
-                       "transport_type": "sms"}
+        msg_options = {
+            "transport_type": "sms",
+            "helper_metadata": {
+                "tag": {"tag": list(tag)},
+                "go": {"user_account": conversation.user_account.key},
+                },
+            }
 
         [cmd] = self.get_api_commands_sent()
         # TODO: Is this what we actually want to send?

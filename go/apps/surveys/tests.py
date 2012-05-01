@@ -146,10 +146,15 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         conversation = self.get_wrapped_conv()
         [cmd] = self.fetch_cmds(consumer)
         [batch] = conversation.get_batches()
+        [tag] = list(batch.tags)
         [contact] = conversation.people()
-        msg_options = {"from_addr": "default10001",
-                       "transport_type": "sms",
-                       }
+        msg_options = {
+            "transport_type": "sms",
+            "helper_metadata": {
+                "tag": {"tag": list(tag)},
+                "go": {"user_account": conversation.user_account.key},
+                },
+            }
 
         self.assertEqual(cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,), 'start',
