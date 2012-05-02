@@ -1,3 +1,5 @@
+message_store:
+    store_prefix: vumigo.
 transport_names:
   - vumigo_router
 exposed_names:

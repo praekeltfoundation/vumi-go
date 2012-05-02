@@ -37,4 +37,4 @@ pools:
       transport_type: xmpp
       server_initiated: true
       msg_options:
-        transport_name: vumigo_gtalk
+        transport_name: gtalk_vumigo
