@@ -103,28 +103,38 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
 
         yield conversation.start()
 
+        # batch_id
+        [batch_id] = conversation.batches.keys()
+
         # check commands made it through to the dispatcher and the vumi_app
         [disp_cmd] = self.get_dispatcher_commands()
         self.assertEqual(disp_cmd['command'], 'start')
         [bulk_cmd] = self.get_bulk_message_commands()
         self.assertEqual(bulk_cmd['command'], 'start')
+        yield self._amqp.kick_delivery()
 
-        # assert that we've sent the message to the one contact
-        [msg] = yield self.get_dispatched_messages()
+        # assert that we've sent the message to the two contacts
+        msgs = yield self.get_dispatched_messages()
+        msgs.sort(key=lambda msg: msg['to_addr'])
+        [msg1, msg2] = msgs
+
         # check that the right to_addr & from_addr are set and that the content
         # of the message equals conversation.message
-        self.assertEqual(msg['to_addr'], 'to_addr')
-        self.assertEqual(msg['from_addr'], 'from_addr')
-        self.assertEqual(msg['content'], 'content')
+        self.assertEqual(msg1['to_addr'], contact1.msisdn)
+        self.assertEqual(msg2['to_addr'], contact2.msisdn)
+        # TODO: test other message options, e.g. tag and user_account
 
         self.assertEqual(self.app.store.batch_status(batch_id), {
                 'ack': 0,
                 'delivery_report': 0,
-                'message': 1,
-                'sent': 1,
+                'message': 2,
+                'sent': 2,
                 })
-        [dbmsg] = yield self.app.store.batch_messages(batch_id)
-        self.assertEqual(dbmsg, msg)
+        dbmsgs = yield self.app.store.batch_messages(batch_id)
+        dbmsgs.sort(key=lambda msg: msg['to_addr'])
+        [dbmsg1, dbmsg2] = dbmsgs
+        self.assertEqual(dbmsg1, msg1)
+        self.assertEqual(dbmsg2, msg2)
 
     @inlineCallbacks
     def test_consume_ack(self):
