@@ -13,3 +13,5 @@ if os.environ.get('VUMIGO_FAST_TESTS'):
             'NAME': ':memory:',
         }
     }
+
+NOSE_ARGS = ['-evumitools', '-evumi_app', '-m^test']

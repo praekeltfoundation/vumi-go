@@ -29,11 +29,17 @@ else
     cat requirements.pip | $hasher > requirements.pip.md5
 fi
 
-find ./go -name '*.pyc' -delete && \
-coverage run --branch --include="go/*" ve/bin/django-admin.py test --settings=go.testsettings -evumitools && \
-coverage run --branch --append --include="go/*" ve/bin/trial go/vumitools/ && \
-coverage xml --include="go/*" && \
-coverage html --include="go/*" && \
+vumi_tests="go/vumitools `find ./go -name 'test*vumi_app*.py'`"
+
+coverage erase
+export COVERAGE_COMMAND="coverage run --branch --append --include='go/*'"
+
+./run-tests-base.sh || exit 1
+
+coverage xml --include="go/*"
+coverage html --include="go/*"
+
 (find ./go -name '*.py' | xargs pep8 --repeat --exclude='0*' > pep8.log || true) && \
-cat pep8.log && \
+cat pep8.log
+
 deactivate
