@@ -153,6 +153,7 @@ class ConversationWrapper(object):
 
         msg_options = {}
         msg_options['transport_type'] = self.tagpool_metadata['transport_type']
+        msg_options.update(self.tagpool_metadata.get('msg_options', {}))
         TaggingMiddleware.add_tag_to_payload(msg_options, tag)
         DebitAccountMiddleware.add_user_to_payload(msg_options,
                                                    self.c.user_account.key)
