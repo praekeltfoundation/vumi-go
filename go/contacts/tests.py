@@ -46,12 +46,12 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.group_key = self.group.key
 
         # Also a contact
-        contact = self.contact_store.new_contact(
+        self.contact = self.contact_store.new_contact(
             name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
             msisdn=u"+27761234567")
-        contact.add_to_group(self.group)
-        contact.save()
-        self.contact_key = contact.key
+        self.contact.add_to_group(self.group)
+        self.contact.save()
+        self.contact_key = self.contact.key
 
     def test_redirect_index(self):
         response = self.client.get(reverse('contacts:index'))
@@ -286,3 +286,10 @@ class ContactsTestCase(VumiGoDjangoTestCase):
             'q': TEST_CONTACT_NAME,
         })
         self.assertContains(response, person_url(self.contact_key))
+
+    def test_contact_key_value_query(self):
+        people_url = reverse('contacts:people')
+        response = self.client.get(people_url, {
+            'q': 'name:%s' % (self.contact.name,)
+        })
+        print response.content

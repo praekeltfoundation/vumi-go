@@ -1,4 +1,5 @@
 import csv
+import re
 
 from django.http import Http404
 from django.shortcuts import render, redirect
@@ -13,6 +14,12 @@ from vumi.utils import normalize_msisdn
 from go.contacts.forms import (
     ContactForm, NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
+
+
+def _query_to_kwargs(query):
+    pattern = r'(?P<key>[^ :]+):[ ]*(?P<value>[^:]*[^ :])(?:(?=( [^:]+:)|$))'
+    tuples = re.findall(pattern, query)
+    return dict([(t[0], t[1]) for t in tuples])
 
 
 def _filter_contacts(contacts, request_params):
@@ -72,12 +79,22 @@ def groups(request):
     else:
         new_contact_group_form = NewContactGroupForm()
 
-    groups = contact_store.list_groups()
+    query = request.GET.get('q', None)
+    if query:
+        query_kwargs = _query_to_kwargs(query)
+        if query_kwargs:
+            groups = contact_store.groups.search(**query_kwargs)
+        else:
+            groups = []
+    else:
+        groups = contact_store.list_groups()
+
     paginator = Paginator(groups, 5)
     page = paginator.page(request.GET.get('p', 1))
     return render(request, 'contacts/groups.html', {
         'paginator': paginator,
         'page': page,
+        'query': query,
         'new_contact_group_form': new_contact_group_form,
         'country_code': settings.VUMI_COUNTRY_CODE,
     })
@@ -91,33 +108,52 @@ def group(request, group_key):
         raise Http404
 
     if request.method == 'POST':
-        upload_contacts_form = UploadContactsForm(request.POST, request.FILES)
-        if upload_contacts_form.is_valid():
-            try:
-                contacts = list(_create_contacts_from_csv_file(
-                    contact_store, request.FILES['file'],
-                    settings.VUMI_COUNTRY_CODE))
+        if '_save_group' in request.POST:
+            group_form = NewContactGroupForm(request.POST)
+            if group_form.is_valid():
+                group.name = group_form.cleaned_data['name']
+                group.save()
+            messages.info(request, 'The group name has been updated')
+        else:
+            upload_contacts_form = UploadContactsForm(request.POST,
+                                                        request.FILES)
+            if upload_contacts_form.is_valid():
+                try:
+                    contacts = list(_create_contacts_from_csv_file(
+                        contact_store, request.FILES['file'],
+                        settings.VUMI_COUNTRY_CODE))
 
-                group.add_contacts(contacts)
-                messages.info(request, '%s contacts added' % (len(contacts,)))
-                return redirect(_group_url(group.key))
-            except ValueError:
-                pass
+                    group.add_contacts(contacts)
+                    messages.info(request, '%s contacts added' % (
+                        len(contacts,)))
+                    return redirect(_group_url(group.key))
+                except ValueError:
+                    pass
 
-        messages.error(request, 'Something is wrong with the '
-                                'file you have uploaded')
+            messages.error(request, 'Something is wrong with the '
+                                    'file you have uploaded')
     context = {
         'group': group,
         'country_code': settings.VUMI_COUNTRY_CODE,
         }
-    context.update(_filter_contacts(group.backlinks.contacts(), request.GET))
+
+    if ':' in request.GET.get('q', ''):
+        query = request.GET['q']
+        query_kwargs = _query_to_kwargs(query)
+        context.update({
+            'query': query,
+            'selected_contacts': [contact for contact in
+                            contact_store.contacts.search(**query_kwargs)],
+        })
+    else:
+        context.update(_filter_contacts(group.backlinks.contacts(),
+                                            request.GET))
     return render(request, 'contacts/group.html', context)
 
 
 @login_required
 def people(request):
     contact_store = request.user_api.contact_store
-
     if request.method == 'POST':
         # first parse the CSV file and create Contact instances
         # from them for attaching to a group later
@@ -166,7 +202,17 @@ def people(request):
         'contacts': contacts,
         'country_code': settings.VUMI_COUNTRY_CODE,
         }
-    context.update(_filter_contacts(contacts, request.GET))
+
+    if ':' in request.GET.get('q', ''):
+        query = request.GET['q']
+        query_kwargs = _query_to_kwargs(query)
+        context.update({
+            'query': query,
+            'selected_contacts': [contact for contact in
+                            contact_store.contacts.search(**query_kwargs)],
+        })
+    else:
+        context.update(_filter_contacts(contacts, request.GET))
     return render(request, 'contacts/people.html', context)
 
 
