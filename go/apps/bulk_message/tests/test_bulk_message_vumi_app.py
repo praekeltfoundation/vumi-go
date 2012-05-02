@@ -122,7 +122,13 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
         # of the message equals conversation.message
         self.assertEqual(msg1['to_addr'], contact1.msisdn)
         self.assertEqual(msg2['to_addr'], contact2.msisdn)
-        # TODO: test other message options, e.g. tag and user_account
+
+        # check tags and user accounts
+        for msg in msgs:
+            tag = msg['helper_metadata']['tag']['tag']
+            user_account_key = msg['helper_metadata']['go']['user_account']
+            self.assertEqual(tag, ["pool", "tag1"])
+            self.assertEqual(user_account_key, user_account.key)
 
         self.assertEqual(self.app.store.batch_status(batch_id), {
                 'ack': 0,
