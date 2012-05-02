@@ -69,7 +69,8 @@ class Conversation(Model):
     @Manager.calls_manager
     def people(self):
         people = []
-        for group in (yield self.groups.get_all()):
+        groups = yield self.groups.get_all()
+        for group in groups:
             if group is None:
                 # TODO: Something sane here.
                 continue
@@ -77,7 +78,7 @@ class Conversation(Model):
         returnValue(people)
 
     @Manager.calls_manager
-    def get_contacts_addresses(self, delivery_class=None):
+    def get_contacts_addresses(self):
         """
         Get the contacts assigned to this group with an address attribute
         that is appropriate for the given delivery_class
@@ -86,9 +87,8 @@ class Conversation(Model):
         :param rtype: the name of the delivery class to use, if None then
                     it will default to `self.delivery_class`
         """
-        delivery_class = delivery_class or self.delivery_class
-        addrs = [contact.addr_for(delivery_class)
-                 for contact in (yield self.people())]
+        people = yield self.people()
+        addrs = [contact.addr_for(self.delivery_class) for contact in people]
         returnValue([addr for addr in addrs if addr])
 
 
