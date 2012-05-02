@@ -58,6 +58,19 @@ class Contact(Model):
         else:
             return None
 
+    @classmethod
+    def search_group(cls, manager, group, return_keys=False, **kw):
+        mr = manager.riak_map_reduce()
+
+        # TODO: populate map/reduce
+
+        if return_keys:
+            mapper = lambda manager, result: result.get_key()
+        else:
+            mapper = lambda manager, result: cls.load(manager,
+                                                      result.get_key())
+        return manager.run(mr, mapper)
+
     def __unicode__(self):
         return u' '.join([self.name, self.surname])
 
@@ -99,6 +112,10 @@ class ContactStore(PerAccountStore):
 
     def get_group(self, name):
         return self.groups.load(name)
+
+    def search_group(self, group, return_keys=False, **kw):
+        return self.contacts.search_group(self.manager, group,
+                                          return_keys=return_keys, **kw)
 
     @Manager.calls_manager
     def list_contacts(self):
