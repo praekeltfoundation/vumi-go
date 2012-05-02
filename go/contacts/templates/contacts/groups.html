@@ -40,9 +40,15 @@
                      </td>
                </tr>
             {% empty %}
+                {% if query %}
+                 <tr>
+                     <td>No group names match <strong>{{query}}</strong>.</td>
+                 </tr>
+                {% else %}
                  <tr>
                      <td>You don't have any groups yet.</td>
                  </tr>
+                 {% endif %}
               {% endfor %}
             </tbody>
             </table>
