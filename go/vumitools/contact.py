@@ -50,10 +50,11 @@ class Contact(Model):
         else:
             self.groups.add_key(group)
 
-    def addr_for(self, transport_type):
-        if transport_type == 'sms':
+    def addr_for(self, delivery_class):
+        # TODO: delivery classes need to be defined somewhere
+        if delivery_class in ('sms', 'ussd'):
             return self.msisdn
-        elif transport_type == 'xmpp':
+        elif delivery_class == 'gtalk':
             return self.gtalk_id
         else:
             return None
