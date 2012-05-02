@@ -150,6 +150,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         [contact] = conversation.people()
         msg_options = {
             "transport_type": "sms",
+            "from_addr": "default10001",
             "helper_metadata": {
                 "tag": {"tag": list(tag)},
                 "go": {"user_account": conversation.user_account.key},
