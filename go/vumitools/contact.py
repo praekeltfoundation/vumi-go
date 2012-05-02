@@ -73,7 +73,10 @@ class Contact(Model):
         return manager.run(mr, mapper)
 
     def __unicode__(self):
-        return u' '.join([self.name, self.surname])
+        if self.name and self.surname:
+            return u' '.join([self.name, self.surname])
+        else:
+            return self.surname or self.name or u'Unknown User'
 
 
 class ContactStore(PerAccountStore):
@@ -137,15 +140,20 @@ class ContactStore(PerAccountStore):
             contacts = yield self.contacts.search(msisdn=addr)
             if contacts:
                 returnValue(contacts[0])
-            returnValue(self.contacts(user_account=self.user_account_key,
+            contact_id = uuid4().get_hex()
+            returnValue(self.contacts(contact_id,
+                                      user_account=self.user_account_key,
                                       msisdn=addr))
         elif delivery_class == 'gtalk':
             addr = addr.partition('/')[0]
             contacts = yield self.contacts.search(gtalk_id=addr)
             if contacts:
                 returnValue(contacts[0])
-            returnValue(self.contacts(user_account=self.user_account_key,
-                                      xmpp=addr))
+            contact_id = uuid4().get_hex()
+            contact = self.contacts(contact_id,
+                                    user_account=self.user_account_key,
+                                    gtalk_id=addr, msisdn=u'unknown')
+            returnValue(contact)
         else:
             raise RuntimeError("Unsupported transport_type %r"
                                % (delivery_class,))
