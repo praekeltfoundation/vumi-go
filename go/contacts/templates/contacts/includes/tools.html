@@ -138,20 +138,20 @@
       <a class="close" data-dismiss="modal">×</a>
       <h3>Edit Group</h3>
   </div>
-  <form class="form-horizontal">
+  <form class="form-horizontal" action="" method="post">
   <div class="modal-body">
         <fieldset>
           <div class="control-group">
             <label class="control-label" for="input01">Group name:</label>
             <div class="controls">
-              <input type="text" class="input-xlarge" id="input01" value="Tomato Farmers">
+              <input type="text" class="input-xlarge" id="input01" name="name" value="{{group.name}}">
             </div>
           </div>
         </fieldset>
   </div>
   <div class="modal-footer">
   <a href="#" class="btn" data-dismiss="modal">Cancel</a>
-  <button type="submit" class="btn btn-primary" data-loading-text="saving..."  data-dismiss="modal" data-toggle="modal" >Save Details</button>
+  <input type="submit" class="btn btn-primary" name="_save_group" data-loading-text="saving..." value="Save Details" data-dismiss="modal" data-toggle="modal" >
   </div>
   </form>
 </div><!--/editGroup-->
