@@ -152,7 +152,11 @@ class ConversationWrapper(object):
         batch_id = yield self.start_batch(tag)
 
         msg_options = {}
+        # TODO: transport_type is probably irrelevant
         msg_options['transport_type'] = self.tagpool_metadata['transport_type']
+        # TODO: not sure whether to declare that tag names must always be
+        #       valid from_addr values or whether to put in a mapping somewhere
+        msg_options['from_addr'] = tag[1]
         msg_options.update(self.tagpool_metadata.get('msg_options', {}))
         TaggingMiddleware.add_tag_to_payload(msg_options, tag)
         DebitAccountMiddleware.add_user_to_payload(msg_options,
