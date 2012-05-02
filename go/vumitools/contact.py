@@ -131,15 +131,15 @@ class ContactStore(PerAccountStore):
         returnValue(user_account.backlinks.contactgroups(self.manager))
 
     @Manager.calls_manager
-    def contact_for_addr(self, transport_type, addr):
-        if transport_type == 'sms':
+    def contact_for_addr(self, delivery_class, addr):
+        if delivery_class in ('sms', 'ussd'):
             addr = '+' + addr.lstrip('+')
             contacts = yield self.contacts.search(msisdn=addr)
             if contacts:
                 returnValue(contacts[0])
             returnValue(self.contacts(user_account=self.user_account_key,
                                       msisdn=addr))
-        elif transport_type == 'xmpp':
+        elif delivery_class == 'gtalk':
             addr = addr.partition('/')[0]
             contacts = yield self.contacts.search(gtalk_id=addr)
             if contacts:
@@ -148,4 +148,4 @@ class ContactStore(PerAccountStore):
                                       xmpp=addr))
         else:
             raise RuntimeError("Unsupported transport_type %r"
-                               % (transport_type,))
+                               % (delivery_class,))
