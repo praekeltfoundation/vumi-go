@@ -40,18 +40,18 @@ class CommandDispatcher(ApplicationWorker):
 
     @inlineCallbacks
     def setup_application(self):
-        self.api_consumer = yield self.consume(
-            self.api_routing_config['routing_key'],
-            self.consume_api_command,
-            exchange_name=self.api_routing_config['exchange'],
-            exchange_type=self.api_routing_config['exchange_type'],
-            message_class=VumiApiCommand)
-
         self.worker_publishers = {}
         for worker_name in self.worker_names:
             worker_publisher = yield self.publish_to('%s.control' % (
                 worker_name,))
             self.worker_publishers[worker_name] = worker_publisher
+
+        self.api_consumer = yield self.consume(
+            self.api_routing_config['routing_key'],
+            self.consume_control_command,
+            exchange_name=self.api_routing_config['exchange'],
+            exchange_type=self.api_routing_config['exchange_type'],
+            message_class=VumiApiCommand)
 
     @inlineCallbacks
     def teardown_application(self):
@@ -60,15 +60,14 @@ class CommandDispatcher(ApplicationWorker):
             self.api_consumer = None
 
     @inlineCallbacks
-    def consume_api_command(self, cmd):
-        msg_options = cmd.get('msg_options', {})
-        worker_name = msg_options.get('worker_name')
+    def consume_control_command(self, cmd):
+        worker_name = cmd.get('worker_name')
         publisher = self.worker_publishers.get(worker_name)
         if publisher:
             yield publisher.publish_message(cmd)
             log.info('Sent %s to %s' % (cmd, worker_name))
         else:
-            log.error('No worker publisher available for %s' % (worker_name,))
+            log.error('No worker publisher available for %s' % (cmd,))
 
 
 class GoApplicationRouter(BaseDispatchRouter):

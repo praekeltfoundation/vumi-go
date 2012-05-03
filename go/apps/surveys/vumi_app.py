@@ -1,7 +1,8 @@
 from twisted.internet.defer import inlineCallbacks
 from go.vumitools.api import VumiApiCommand, get_redis
 from vxpolls.example import PollApplication
-from vumi.application import MessageStore
+from vumi.persist.message_store import MessageStore
+from vumi.persist.txriak_manager import TxRiakManager
 from vumi.message import TransportUserMessage
 from vumi import log
 
@@ -24,7 +25,9 @@ class SurveyApplication(PollApplication):
     def setup_application(self):
         yield super(SurveyApplication, self).setup_application()
         r_server = get_redis(self.config)
-        self.store = MessageStore(r_server, self.mdb_prefix)
+        self.manager = TxRiakManager.from_config({
+                'bucket_prefix': self.mdb_prefix})
+        self.store = MessageStore(self.manager, r_server, self.mdb_prefix)
         self.control_consumer = yield self.consume(
             '%s.control' % (self.worker_name,),
             self.consume_control_command,

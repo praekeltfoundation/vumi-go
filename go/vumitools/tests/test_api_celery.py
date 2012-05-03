@@ -19,21 +19,13 @@ class TestTasks(TestCase, CeleryTestMixIn):
     def tearDown(self):
         self.restore_celery()
 
-    def test_batch_send_task(self):
+    def test_send_command_task(self):
         consumer = self.get_consumer(**self.exchange_config)
-        batch_options = {"from_addr": "test1", "worker_name": "dummy_worker"}
-        result = self.api.batch_send_task.delay("b123", "hello world",
-                                                batch_options,
-                                                ["+1234", "+5678"],
-                                                self.exchange_config)
+        cmd = VumiApiCommand(worker_name='worker_1', command='foo')
+        result = self.api.send_command_task.delay(cmd, self.exchange_config)
         self.assertTrue(result.successful())
         self.assertEqual(result.result, None)
 
-        [cmd1, cmd2] = self.fetch_cmds(consumer)
+        [cmd1] = self.fetch_cmds(consumer)
 
-        self.assertEqual(cmd1, VumiApiCommand.command('dummy_worker', 'send',
-            batch_id="b123", content="hello world", msg_options=batch_options,
-            to_addr="+1234"))
-        self.assertEqual(cmd2, VumiApiCommand.command('dummy_worker', 'send',
-            batch_id="b123", content="hello world", msg_options=batch_options,
-            to_addr="+5678"))
+        self.assertEqual(cmd1, cmd)

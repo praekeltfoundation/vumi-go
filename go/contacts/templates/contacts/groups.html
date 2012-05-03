@@ -35,14 +35,20 @@
             {% for group in page.object_list %}
                <tr>
                      <td>
-                         <a href="{% url contacts:group group_pk=group.pk %}">{{group.name}}</a>
-                    <span class="label label-info pull-right">{{group.contact_set.count}}</span>
+                         <a href="{% url contacts:group group_key=group.key %}">{{group.name}}</a>
+                    <span class="label label-info pull-right">{{group.backlinks.contacts|length}}</span>
                      </td>
                </tr>
             {% empty %}
+                {% if query %}
+                 <tr>
+                     <td>No group names match <strong>{{query}}</strong>.</td>
+                 </tr>
+                {% else %}
                  <tr>
                      <td>You don't have any groups yet.</td>
                  </tr>
+                 {% endif %}
               {% endfor %}
             </tbody>
             </table>

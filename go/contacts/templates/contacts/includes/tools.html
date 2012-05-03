@@ -31,16 +31,22 @@
         <a class="close" data-dismiss="modal">×</a>
         <h3>Upload Contacts</h3>
     </div>
-    <form id="frm-upload-contacts" name="frm-upload-contacts" enctype="multipart/form-data" method="post" action="{% url contacts:people %}" class="form-horizontal">
+    <form id="frm-upload-contacts" name="frm-upload-contacts" enctype="multipart/form-data" method="post" action="" class="form-horizontal">
         {% csrf_token %}
         <div class="modal-body">
             <fieldset>
-            {{upload_contacts_form.errors}}
-            <div class="control-group">
+            <div class="control-group {% if upload_contacts_form.errors %}error{% endif %}">
                 <label class="control-label" for="input01">Upload your data file:<br />Use this <a href="{{ STATIC_URL }}contacts-upload-template.csv">Template</a></label>
+                {% if upload_contacts_form.file.errors %}
+                  <span class="help-inline">
+                    {% for error in upload_contacts_form.file.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </span>
+                {% endif %}
                 <div class="controls">{{upload_contacts_form.file}}</div>
             </div>
-            {% if user.contactgroup_set.exists %}
+            {% if show_groups %}
             <div class="control-group">
                 <label class="control-label" for="input02">Choose which group you want to add new contacts to:</label>
                 <div class="controls">
@@ -50,16 +56,14 @@
             </div>
             {% endif %}
             {{new_contact_group_form.errors}}
-            <div class="control-group">
-                <label class="control-label">
-                    {% if user.contactgroup_set.exists %}
-                        <strong>Or,</strong> specify a new group:
-                    {% else %}
+            {% if save_group %}
+                <div class="control-group">
+                    <label class="control-label">
                         Save as group
-                    {% endif %}
-                </label>
-                <div class="controls">{{new_contact_group_form.name}}</div>
-            </div>
+                    </label>
+                    <div class="controls">{{new_contact_group_form.name}}</div>
+                </div>
+            {% endif %}
             </fieldset>
         </div>
         <div class="modal-footer">
@@ -134,20 +138,20 @@
       <a class="close" data-dismiss="modal">×</a>
       <h3>Edit Group</h3>
   </div>
-  <form class="form-horizontal">
+  <form class="form-horizontal" action="" method="post">
   <div class="modal-body">
         <fieldset>
           <div class="control-group">
             <label class="control-label" for="input01">Group name:</label>
             <div class="controls">
-              <input type="text" class="input-xlarge" id="input01" value="Tomato Farmers">
+              <input type="text" class="input-xlarge" id="input01" name="name" value="{{group.name}}">
             </div>
           </div>
         </fieldset>
   </div>
   <div class="modal-footer">
   <a href="#" class="btn" data-dismiss="modal">Cancel</a>
-  <button type="submit" class="btn btn-primary" data-loading-text="saving..."  data-dismiss="modal" data-toggle="modal" >Save Details</button>
+  <input type="submit" class="btn btn-primary" name="_save_group" data-loading-text="saving..." value="Save Details" data-dismiss="modal" data-toggle="modal" >
   </div>
   </form>
 </div><!--/editGroup-->

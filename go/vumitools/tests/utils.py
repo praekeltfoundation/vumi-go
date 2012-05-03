@@ -8,20 +8,32 @@ from contextlib import contextmanager
 from twisted.python. monkey import MonkeyPatcher
 from celery.app import app_or_default
 
-from go.vumitools.api import VumiApiCommand
-from go.vumitools.api_worker import CommandDispatcher
-from go.vumitools.bulk_send_application import BulkSendApplication
+from vumi.persist.fields import ForeignKeyProxy, ManyToManyProxy
 from vumi.message import TransportUserMessage
-from vumi.tests.utils import get_stubbed_worker
+
+from go.vumitools.api import VumiApiCommand
 
 
-# class DummyApiWorker(CommandDispatcher):
+def field_eq(f1, f2):
+    if f1 == f2:
+        return True
+    if isinstance(f1, ManyToManyProxy) and isinstance(f2, ManyToManyProxy):
+        return f1.keys() == f2.keys()
+    if isinstance(f1, ForeignKeyProxy) and isinstance(f2, ForeignKeyProxy):
+        return f1.key == f2.key
+    return False
 
-#     def send_to(self, to_addr, content, **msg_options):
-#         msg_options.setdefault('transport_name', 'dummy_transport')
-#         msg_options.setdefault('transport_type', 'sms')
-#         return TransportUserMessage(to_addr=to_addr, content=content,
-#                                     **msg_options)
+
+def model_eq(m1, m2):
+    fields = m1.field_descriptors.keys()
+    if fields != m2.field_descriptors.keys():
+        return False
+    if m1.key != m2.key:
+        return False
+    for field in fields:
+        if not field_eq(getattr(m1, field), getattr(m2, field)):
+            return False
+    return True
 
 
 class RabbitConsumerFactory(object):

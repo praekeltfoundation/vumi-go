@@ -1,5 +1,0 @@
-worker_name: bulk_message_application
-transport_name: bulk_message_transport
-send_to:
-  default:
-    transport_name: "invalid broken transport"

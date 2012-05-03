@@ -2,17 +2,14 @@ import redis
 from datetime import datetime
 
 from django.conf import settings
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
 
-from go.conversation.models import (Conversation, ConversationSendError,
-                                    get_combined_delivery_classes)
-from go.conversation.forms import (ConversationForm, SelectDeliveryClassForm,
-                                    ConversationGroupForm)
-from go.contacts.models import ContactGroup
-from go.base.utils import make_read_only_form
+from go.base.utils import make_read_only_form, conversation_or_404
+from go.vumitools.api import ConversationSendError
+from go.conversation.forms import ConversationForm, ConversationGroupForm
 
 from vxpolls.content import forms
 from vxpolls.manager import PollManager
@@ -38,34 +35,50 @@ def get_poll_config(poll_id):
 @login_required
 def new(request):
     if request.POST:
-        form = ConversationForm(request.POST)
+        form = ConversationForm(request.user_api, request.POST)
         if form.is_valid():
-            conversation = form.save(commit=False)
-            conversation.conversation_type = 'survey'
-            conversation.user = request.user
-            conversation.save()
+            conversation_data = {}
+            copy_keys = [
+                'subject',
+                'message',
+                'delivery_class',
+                'delivery_tag_pool',
+            ]
+
+            for key in copy_keys:
+                conversation_data[key] = form.cleaned_data[key]
+
+            start_date = form.cleaned_data['start_date'] or datetime.utcnow()
+            start_time = (form.cleaned_data['start_time'] or
+                            datetime.utcnow().time())
+            conversation_data['start_timestamp'] = datetime(
+                start_date.year, start_date.month, start_date.day,
+                start_time.hour, start_time.minute, start_time.second,
+                start_time.microsecond)
+
+            conversation = request.user_api.new_conversation(
+                u'survey', **conversation_data)
             messages.add_message(request, messages.INFO,
                 'Survey Created')
             return redirect(reverse('survey:contents',
-                kwargs={'conversation_pk': conversation.pk}))
+                kwargs={'conversation_key': conversation.key}))
 
     else:
-        form = ConversationForm(initial={
-            'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
-            'start_time': datetime.utcnow().strftime('%H:%M'),
+        form = ConversationForm(request.user_api, initial={
+            'start_date': datetime.utcnow().date(),
+            'start_time': datetime.utcnow().time().replace(second=0,
+                                                            microsecond=0),
         })
     return render(request, 'surveys/new.html', {
         'form': form,
-        'delivery_classes': get_combined_delivery_classes(),
     })
 
 
 @login_required
-def contents(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
+def contents(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
 
-    poll_id = 'poll-%s' % (conversation.pk,)
+    poll_id = 'poll-%s' % (conversation.key,)
     pm, config = get_poll_config(poll_id)
     if request.method == 'POST':
         post_data = request.POST.copy()
@@ -79,16 +92,20 @@ def contents(request, conversation_pk):
             pm.set(poll_id, form.export())
             if request.POST.get('_save_contents'):
                 return redirect(reverse('survey:contents', kwargs={
-                    'conversation_pk': conversation.pk,
+                    'conversation_key': conversation.key,
                 }))
             else:
                 return redirect(reverse('survey:people', kwargs={
-                    'conversation_pk': conversation.pk,
+                    'conversation_key': conversation.key,
                 }))
     else:
         form = forms.make_form(data=config, initial=config)
 
-    survey_form = make_read_only_form(ConversationForm(instance=conversation))
+    survey_form = make_read_only_form(ConversationForm(request.user_api,
+        instance=conversation, initial={
+            'start_date': conversation.start_timestamp.date(),
+            'start_time': conversation.start_timestamp.time(),
+        }))
     return render(request, 'surveys/contents.html', {
         'form': form,
         'survey_form': survey_form,
@@ -96,12 +113,10 @@ def contents(request, conversation_pk):
 
 
 @login_required
-def people(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
-    groups_for_user = ContactGroup.objects.filter(user=request.user)
+def people(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
 
-    poll_id = "poll-%s" % (conversation.pk,)
+    poll_id = "poll-%s" % (conversation.key,)
     pm, config = get_poll_config(poll_id)
 
     if request.method == 'POST':
@@ -118,74 +133,66 @@ def people(request, conversation_pk):
                             }
                 messages.add_message(request, messages.ERROR, str(error))
                 return redirect(reverse('survey:people', kwargs={
-                    'conversation_pk': conversation.pk}))
+                    'conversation_key': conversation.key}))
 
             addresses = [tag[1] for tag in conversation.get_tags()]
             messages.add_message(request, messages.INFO,
                 'Survey started on %s' % (', '.join(addresses),))
             return redirect(reverse('survey:show', kwargs={
-                'conversation_pk': conversation.pk}))
+                'conversation_key': conversation.key}))
         else:
-            group_form = ConversationGroupForm(request.POST,
-                                                queryset=groups_for_user)
-            group_form.fields['groups'].queryset = groups_for_user
+            group_form = ConversationGroupForm(
+                request.POST, groups=request.user_api.list_groups())
 
             if group_form.is_valid():
-                groups = group_form.cleaned_data['groups']
-                group_ids = [grp.pk for grp in groups]
-                conversation.groups.add(*group_ids)
+                for group in group_form.cleaned_data['groups']:
+                    conversation.groups.add_key(group)
                 messages.add_message(request, messages.INFO,
                     'The selected groups have been added to the survey')
                 return redirect(reverse('survey:start', kwargs={
-                                    'conversation_pk': conversation.pk}))
+                                    'conversation_key': conversation.key}))
 
-    survey_form = make_read_only_form(ConversationForm(instance=conversation))
+    survey_form = make_read_only_form(ConversationForm(request.user_api))
     content_form = forms.make_form(data=config, initial=config, extra=0)
     read_only_content_form = make_read_only_form(content_form)
     return render(request, 'surveys/people.html', {
         'conversation': conversation,
-        'delivery_class': SelectDeliveryClassForm(),
         'survey_form': survey_form,
         'content_form': read_only_content_form,
     })
 
 
 @login_required
-def start(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
+def start(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
     if request.method == 'POST':
         try:
             conversation.start()
         except ConversationSendError as error:
             messages.add_message(request, messages.ERROR, str(error))
             return redirect(reverse('survey:start', kwargs={
-                'conversation_pk': conversation.pk}))
+                'conversation_key': conversation.key}))
         messages.add_message(request, messages.INFO, 'Survey started')
         return redirect(reverse('survey:show', kwargs={
-            'conversation_pk': conversation.pk}))
+            'conversation_key': conversation.key}))
     return render(request, 'surveys/start.html', {
         'conversation': conversation,
     })
 
 
 @login_required
-def end(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
+def end(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
     if request.method == 'POST':
         conversation.end_conversation()
         messages.add_message(request, messages.INFO, 'Survey ended')
     return redirect(reverse('survey:show', kwargs={
-        'conversation_pk': conversation.pk}))
+        'conversation_key': conversation.key}))
 
 
 @login_required
-def show(request, conversation_pk):
-    conversation = get_object_or_404(Conversation, pk=conversation_pk,
-        user=request.user)
-    poll_id = 'poll-%s' % (conversation.pk,)
+def show(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
     return render(request, 'surveys/show.html', {
         'conversation': conversation,
-        'poll_id': poll_id,
     })

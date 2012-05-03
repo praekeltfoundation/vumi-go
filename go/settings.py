@@ -109,6 +109,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'go.base.middleware.VumiUserApiMiddleware',
 )
 
 ROOT_URLCONF = 'go.urls'
@@ -118,6 +119,7 @@ TEMPLATE_DIRS = (
     abspath("base", "templates"),
     abspath("conversation", "templates"),
     abspath("contacts", "templates"),
+    abspath("account", "templates"),
     abspath("apps", "surveys", "templates"),
     abspath("apps", "bulk_message", "templates"),
 )
@@ -129,6 +131,8 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.flatpages',
+    'django.contrib.markup',
     # Uncomment the next line to enable the admin:
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
@@ -141,6 +145,7 @@ INSTALLED_APPS = (
     'go.base',
     'go.conversation',
     'go.contacts',
+    'go.account',
     'vxpolls.djdashboard',
 )
 
@@ -153,6 +158,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "django.contrib.messages.context_processors.messages",
     "go.base.context_processors.user_profile",
     "go.base.context_processors.standard_forms",
+    "go.base.context_processors.credit",
 )
 
 # A sample logging configuration. The only tangible logging
@@ -205,7 +211,14 @@ SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
 #       duplicated
 VUMI_API_CONFIG = {
     'message_store': {},
+    'tagpool_manager': {
+        'tagpool_prefix': 'vumigo',
+    },
+    'credit_manager': {
+        'credit_prefix': 'vumigo',
+    },
     'message_sender': {},
+    'riak_manager': {'bucket_prefix': 'vumigo.'}
     }
 
 VUMI_COUNTRY_CODE = '27'
@@ -218,12 +231,3 @@ VXPOLLS_QUESTIONS = VXPOLLS_CONFIG.get('questions', [])
 VXPOLLS_POLL_ID = VXPOLLS_CONFIG.get('poll_id')
 VXPOLLS_TRANSPORT_NAME = 'vxpolls_transport'
 VXPOLLS_WORKER_NAME = 'vxpolls_worker'
-
-
-if os.environ.get('VUMIGO_FAST_TESTS'):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:',
-        }
-    }
