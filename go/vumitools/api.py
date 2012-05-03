@@ -129,12 +129,11 @@ class ConversationWrapper(object):
                 k = k.replace('.', '_')
                 statuses[k] += v
         total = len((yield self.people()))
-        statuses = dict(statuses)  # convert back from defaultdict
         statuses.update({
             'total': total,
             'queued': total - statuses['sent'],
         })
-        returnValue(statuses)
+        returnValue(dict(statuses))  # convert back from defaultdict
 
     @Manager.calls_manager
     def get_progress_percentage(self):
