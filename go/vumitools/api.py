@@ -78,7 +78,8 @@ class ConversationWrapper(object):
     # TODO: Something about setattr?
 
     def start_batch(self, tag):
-        return self.mdb.batch_start([tag])
+        user_account = unicode(self.c.user_account.key)
+        return self.mdb.batch_start([tag], user_account=user_account)
 
     def get_batches(self):
         return self.c.batches.get_all(self.base_manager)
