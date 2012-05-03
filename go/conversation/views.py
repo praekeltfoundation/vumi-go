@@ -1,8 +1,8 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.core.paginator import Paginator
+
 from go.conversation.forms import ConversationSearchForm
-from go.base.utils import padded_queryset
 
 
 CONVERSATIONS_PER_PAGE = 6
@@ -10,7 +10,9 @@ CONVERSATIONS_PER_PAGE = 6
 
 @login_required
 def index(request):
-    conversations = request.user.conversation_set.all()
+    conv_store = request.user_api.conversation_store
+    conversations = [request.user_api.wrap_conversation(conversation)
+                     for conversation in conv_store.list_conversations()]
     search_form = ConversationSearchForm(request.GET)
     search_form.is_valid()
 
@@ -19,26 +21,34 @@ def index(request):
     conversation_status = search_form.cleaned_data['conversation_status']
 
     if query:
-        conversations = conversations.filter(subject__icontains=query)
+        conversations = [c for c in conversations
+                         if query.lower() in c.subject.lower()]
 
     if conversation_type:
-        conversations = conversations.filter(
-            conversation_type=conversation_type)
+        conversations = [c for c in conversations
+                         if c.conversation_type == conversation_type]
 
     if conversation_status:
-        status_map = {
-            'running': lambda c: c.filter(end_time__isnull=True,
-                message_batch_set__isnull=False),
-            'finished': lambda c: c.filter(end_time__isnull=False),
-            'draft': lambda c: c.filter(end_time__isnull=True,
-                message_batch_set__isnull=True)
-        }
+        if conversation_status == 'running':
+            conversations = [c for c in conversations
+                             if c.end_timestamp is None
+                             and len(c.batches.keys()) > 0]
+        elif conversation_status == 'finished':
+            conversations = [c for c in conversations
+                             if c.end_timestamp is not None]
+        elif conversation_status == 'draft':
+            conversations = [c for c in conversations
+                             if c.end_timestamp is None
+                             and len(c.batches.keys()) == 0]
+        else:
+            raise ValueError(
+                "Unknown conversation status: %s" % (conversation_status,))
 
-        filter_cb = status_map.get(conversation_status, lambda c: c)
-        conversations = filter_cb(conversations)
-
-    if conversations.count() < CONVERSATIONS_PER_PAGE:
-        conversations = padded_queryset(conversations, CONVERSATIONS_PER_PAGE)
+    # We want to pad with None to a multiple of the conversation size.
+    # NOTE: If we have no conversations, we don't pad.
+    last_page_size = len(conversations) % CONVERSATIONS_PER_PAGE
+    padding = [None] * (CONVERSATIONS_PER_PAGE - last_page_size)
+    conversations += padding
 
     paginator = Paginator(conversations, CONVERSATIONS_PER_PAGE)
     page = paginator.page(request.GET.get('p', 1))

@@ -1,4 +1,5 @@
 from go.contacts import forms
+from go.vumitools.contact import ContactStore
 
 
 def user_profile(request):
@@ -16,14 +17,22 @@ def standard_forms(request):
         upload_contacts_form = forms.UploadContactsForm()
         new_contact_group_form = forms.NewContactGroupForm()
 
-        user = request.user
-        queryset = user.contactgroup_set.all()
-
-        select_contact_group_form = forms.SelectContactGroupForm()
-        select_contact_group_form['contact_group'].queryset = queryset
+        contact_store = ContactStore.from_django_user(request.user)
+        select_contact_group_form = forms.SelectContactGroupForm(
+            groups=contact_store.list_groups())
 
         return {
             'upload_contacts_form': upload_contacts_form,
             'new_contact_group_form': new_contact_group_form,
             'select_contact_group_form': select_contact_group_form,
         }
+
+
+def credit(request):
+    if request.user.is_authenticated() and hasattr(request, 'user_api'):
+        profile = request.user.get_profile()
+        api = request.user_api.api
+        return {
+            'account_credits': api.cm.get_credit(profile.user_account),
+        }
+    return {}

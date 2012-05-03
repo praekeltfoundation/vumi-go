@@ -20,8 +20,8 @@
                 <li><a href="{% url contacts:people %}"><strong>People</strong></a></li>
                 <li class="active"><a href="{% url contacts:groups %}">Groups</a></li>
             </ul>
-            <form id="search-filter" name="search-filter" action="" method="get" class="well form-search">
-                <input type="text" id="search-filter-input" name="q" value="{{query|default_if_none:"Find people..."}}" class="input-large search-query">
+            <form id="search-filter" name="search-filter" action="{% url contacts:groups %}" method="get" class="well form-search">
+                <input type="text" id="search-filter-input" name="q" value="{{query|default_if_none:"Find groups..."}}" class="input-large search-query">
                 <button type="submit" id="search-filter-btn" class="btn">Search</button>
             </form>
         </div>
@@ -35,18 +35,18 @@
 		            <ul class="dropdown-menu">
                         <li><a href="{% url contacts:new_person %}"><i class="icon-user"></i> New Contact</a></li>
                         <li><a data-toggle="modal" href="#uplContactFrm"><i class="icon-upload"></i> Upload Contacts</a></li>
-                        <li><a data-toggle="modal" href="#editGroup"><i class="icon-edit"></i> Edit Group</a></li>
+<!--                         <li><a data-toggle="modal" href="#editGroup"><i class="icon-edit"></i> Edit Group</a></li>
                         <li><a data-toggle="modal" href="#emptyGroup"><i class="icon-fire"></i> Empty Group</a></li>
                         <li><a data-toggle="modal" href="#delGroup"><i class="icon-trash"></i> Remove Group</a></li>
-		            </ul>
+ -->		            </ul>
 		        </div>
 	        </div>
-	        <div class="pull-right" style="margin-right: 10px">
+<!-- 	        <div class="pull-right" style="margin-right: 10px">
 	            <div class="btn">
 	               <a data-toggle="modal" href="#newConv">Message this group</a>
 	            </div>
 	        </div>
-            <h3>{{group.name}} <span class="label label-info">{{group.contact_set.count}} Members</span></h3><br />
+ -->            <h3>{{group.name}} <span class="label label-info">{{group.contact_set.count}} Members</span></h3><br />
         </div>
     </div>
     <div class="row">
@@ -75,7 +75,7 @@
             <tbody>
             {% for contact in selected_contacts %}
                  <tr>
-                    <td colspan="3"><a href="{% url contacts:person person_pk=contact.pk %}">{{contact}}</a></td>
+                    <td colspan="3"><a href="{% url contacts:person person_key=contact.key %}">{{contact}}</a></td>
                  </tr>
             {% empty %}
                 <tr>

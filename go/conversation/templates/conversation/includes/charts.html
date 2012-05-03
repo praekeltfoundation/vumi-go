@@ -1,0 +1,28 @@
+<script src="{{ STATIC_URL }}js/libs/highcharts.js"></script>
+<script>
+
+var conversation_status_chart;
+
+$(document).ready(function() {
+
+      conversation_status_char = new Highcharts.Chart({
+         chart: {
+            renderTo: 'conversation-status-chart',
+            type: 'pie'
+         },
+         title: {
+            text: 'Conversation Status'
+         },
+         series: [{
+            type: 'pie',
+            name: 'Progress',
+            data: [
+                ['Acknowledged By Network', {{conversation.get_status.ack}}],
+                ['Delivery Report Received', {{conversation.get_status.delivery_report}}],
+                ['Queued in Vumi', {{conversation.get_status.queued}}]
+            ]
+        }]
+      });
+  });
+
+</script>
