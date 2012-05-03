@@ -9,7 +9,6 @@ from vumi.dispatchers.tests.test_base import DispatcherTestCase
 from vumi.dispatchers.base import BaseDispatchWorker
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.utils import FakeRedis, LogCatcher
-from vumi.application.tagpool import TagpoolManager
 
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiApiCommand
@@ -86,8 +85,6 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
                 'survey': 'app_2',
             }
         })
-        self.tpm = TagpoolManager(self.r_server, 'testpool')
-        self.tpm.declare_tags([('xmpp', 'test1@xmpp.org')])
 
         # get the router to test
         self.router = self.dispatcher._router
@@ -111,7 +108,7 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
         msg = self.mkmsg_in(transport_type='xmpp',
                                 transport_name=self.transport_name)
 
-        tag = self.tpm.acquire_tag('xmpp')
+        tag = ('xmpp', 'test1@xmpp.org')
         batch_id = yield self.message_store.batch_start([tag],
             user_account=unicode(self.account.key))
         self.conversation.batches.add_key(batch_id)
