@@ -11,9 +11,8 @@ from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.utils import FakeRedis, LogCatcher
 from vumi.application.tagpool import TagpoolManager
 
-from go.vumitools.api_worker import CommandDispatcher, GoApplicationRouter
+from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiApiCommand
-from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
 
 
