@@ -17,10 +17,12 @@ $(document).ready(function() {
             type: 'pie',
             name: 'Progress',
             data: [
-                ['Acknowledged By Network', {{conversation.get_status.ack}}],
-                ['Delivery Report Received', {{conversation.get_status.delivery_report}}],
-                ['Queued in Vumi', {{conversation.get_status.queued}}]
+{% with status=conversation.get_progress_status %}
+                ['Acknowledged By Network', {{status.ack}}],
+                ['Delivery Report Received', {{status.delivery_report}}],
+                ['Queued in Vumi', {{status.queued}}]
             ]
+{% endwith %}
         }]
       });
   });
