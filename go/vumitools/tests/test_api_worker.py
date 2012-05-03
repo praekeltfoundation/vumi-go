@@ -70,8 +70,10 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(GoApplicationRouterTestCase, self).setUp()
+        self.r_server = FakeRedis()
         self.dispatcher = yield self.get_dispatcher({
             'router_class': 'go.vumitools.api_worker.GoApplicationRouter',
+            'redis_clr': lambda: self.r_server,
             'transport_names': [
                 self.transport_name,
             ],
@@ -84,17 +86,13 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
                 'survey': 'app_2',
             }
         })
-        self.r_server = FakeRedis()
         self.tpm = TagpoolManager(self.r_server, 'testpool')
         self.tpm.declare_tags([('xmpp', 'test1@xmpp.org')])
 
         # get the router to test
         self.router = self.dispatcher._router
         self.manager = self.router.manager
-        # monkey patch the redis server
         self.message_store = self.router.message_store
-        self.message_store.r_server = self.r_server
-
         self.account_store = self.router.account_store
 
         self.account = yield self.account_store.new_user(u'user')
