@@ -11,7 +11,6 @@ from vumi.persist.txriak_manager import TxRiakManager
 from vumi.dispatchers.base import BaseDispatchRouter
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
-from vumi.errors import VumiError
 
 from go.vumitools.api import VumiApiCommand, get_redis
 from go.vumitools.account import AccountStore
