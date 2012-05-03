@@ -89,11 +89,8 @@ class GoApplicationRouter(BaseDispatchRouter):
                 'bucket_prefix': self.mdb_prefix})
         self.store = MessageStore(self.manager, r_server, self.mdb_prefix)
 
-    # @inlineCallbacks
+    @inlineCallbacks
     def get_conversation_for_tag(self, tag):
-        raise VumiError('eeeeep')
-        print 'get_conversation_for_tag', tag
-        print 'hoi'
         tag_info = self.store.get_tag_info(tag)
         batch_id = tag_info.current_batch.key
         print 'batch_id', batch_id
@@ -120,13 +117,14 @@ class GoApplicationRouter(BaseDispatchRouter):
 
     def find_application_for_msg(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
-        print 'calling self.get_conversation_for_tag(%s)' % (tag,)
-        conv_info = self.get_conversation_for_tag(tag)
-        print 'conv_info', conv_info
-        conv_metadata = msg['helper_metadata'].setdefault('conversations', {})
-        conv_metadata.update(conv_info)
-        conv_type = conv_metadata.get('conversation_type')
-        return self.conversation_mappings.get(conv_type)
+        if tag:
+            conv_info = self.get_conversation_for_tag(tag)
+            conv_metadata = msg['helper_metadata'].get['conversations']
+            conv_metadata.update(conv_info)
+            conv_type = conv_metadata.get('conversation_type')
+            return self.conversation_mappings.get(conv_type)
+        else:
+            return None
 
     @inlineCallbacks
     def dispatch_inbound_message(self, msg):
