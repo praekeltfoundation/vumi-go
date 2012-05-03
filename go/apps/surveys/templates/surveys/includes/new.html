@@ -30,7 +30,7 @@
     </tbody>
     </table>
 </div>
-{% for delivery_class, tag_pools in delivery_classes %}
+{% for delivery_class, tag_pools in form.tagpools_by_delivery_class %}
 <div class="control-group delivery-class-selection" style="display:none" 
         id="{{delivery_class}}_tag_pool_selection">
     <label class="control-label" for="{{delivery_class}}_tagpool">
@@ -52,14 +52,14 @@
             <span class="add-on"><i class="icon-calendar"></i></span>
             {{form.start_date}}
         </div>
-    </div>          
+    </div>
 </div>
 <div class="control-group">
     <label class="control-label" for="ctime">Time</label>
     <div class="controls">
         <div class="input-prepend">
-        <span class="add-on"><i class="icon-time"></i></span>
-      {{form.start_time}}
+            <span class="add-on"><i class="icon-time"></i></span>
+            {{form.start_time}}
         </div>
-    </div>          
+    </div>
 </div>

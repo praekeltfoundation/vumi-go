@@ -11,8 +11,8 @@ $('#conv-message').keyup(function(){
 
 $('.typeahead').typeahead();
 
-$(function() { $( "#datepicker" ).datepicker({ minDate: 0, dateFormat: 'dd MM yy' }); });
-$(function() { $( "#dob" ).datepicker({ minDate: 0, dateFormat: 'dd MM yy' }); });
+$(function() { $( "#datepicker" ).datepicker({ minDate: 0, dateFormat: 'yy-mm-dd' }); });
+$(function() { $( "#dob" ).datepicker({ minDate: 0, dateFormat: 'yy-mm-dd' }); });
 
 $('#surveyUSSD').click(function() {
 	if($('#surveyUSSD').attr('checked')) { $('#surveyUSSDNum').show(); } else { $('#surveyUSSDNum').hide(); }
@@ -33,6 +33,13 @@ $('.delivery-class-radio').change(function() {
     delivery_classes.each(function(index, element) {
         var deliveryClass = $(element);
         var tagPoolDiv = $('#' + deliveryClass.val() + '_tag_pool_selection');
-        element.checked ? tagPoolDiv.show() : tagPoolDiv.hide();
+        if($(deliveryClass).attr('checked')) {
+            tagPoolDiv.show();
+            $('#' + deliveryClass.val() + '_tag_pool_selection select').removeAttr('disabled');
+        } else {
+            tagPoolDiv.hide();
+            $('#' + deliveryClass.val() + '_tag_pool_selection select').attr('disabled', 'disabled');
+        }
     });
+
 })

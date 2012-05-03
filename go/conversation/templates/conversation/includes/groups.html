@@ -2,24 +2,22 @@
     <label class="control-label" for="input01">Select which contact(s) you'd like to message:</label>
     <table class="table table-condensed">
     <tbody>
-    {% if user.contactgroup_set.exists %}
-        {% for group in user.contactgroup_set.all %}
+    {% for group in groups %}
         <tr>
         <td>
             <label class="checkbox inline">
-                <input type="checkbox" name="groups" value="{{group.pk}}" class="group-check"> {{group.name}}
+                <input type="checkbox" name="groups" value="{{group.key}}" class="group-check"> {{group.name}}
             </label>
-            <span class="label label-info pull-right">{{group.contact_set.count}}</span>
+            <span class="label label-info pull-right">{{group.backlinks.contacts|length}}</span>
         </td>
         </tr>
-        {% endfor %}
-    {% else %}
+    {% empty %}
         <tr>
         <td>
             You don't have any groups defined yet. <a href="{% url contacts:people %}">Upload a set of contacts</a> to create your first group.
         </td>
         </tr>
-    {% endif %}
+    {% endfor %}
     </tbody>
     </table>
 </fieldset>
