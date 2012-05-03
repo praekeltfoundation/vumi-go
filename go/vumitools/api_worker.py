@@ -101,8 +101,10 @@ class GoApplicationRouter(BaseDispatchRouter):
                 conversation_store = ConversationStore(self.manager,
                     account_key)
                 account_submanager = conversation_store.manager
-                conversations = yield batch.backlinks.conversations(
+                all_conversations = yield batch.backlinks.conversations(
                                                         account_submanager)
+                conversations = [c for c in all_conversations if not
+                                    c.ended()]
                 if conversations:
                     if len(conversations) > 1:
                         conv_keys = [c.key for c in conversations]
