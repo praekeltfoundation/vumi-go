@@ -147,7 +147,7 @@ class ConversationWrapper(object):
         status = yield self.get_progress_status()
         if status['total'] == 0:
             returnValue(0)
-        returnValue(int(status['ack'] / float(status['total'])) * 100)
+        returnValue(int(status['ack'] / float(status['total']) * 100))
 
     @Manager.calls_manager
     def start(self, **extra_params):
