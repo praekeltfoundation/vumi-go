@@ -111,7 +111,7 @@ class GoApplicationRouter(BaseDispatchRouter):
                     conversation = sorted(conversations, reverse=True,
                         key=lambda c: c.start_timestamp)[0]
                     returnValue(conversation)
-                log.error('Conversation found for %r' % (batch,))
+                log.error('No conversations found for %r' % (batch,))
             log.error('No account_key found for tag: %r, batch: %r' % (
                 current_tag, batch))
         else:
