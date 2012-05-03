@@ -3,7 +3,7 @@
 
 """Vumi application worker for the vumitools API."""
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application import ApplicationWorker
 from vumi.persist.message_store import MessageStore
@@ -88,36 +88,50 @@ class GoApplicationRouter(BaseDispatchRouter):
                 'bucket_prefix': self.mdb_prefix})
         self.store = MessageStore(self.manager, r_server, self.mdb_prefix)
 
+    # @inlineCallbacks
     def get_conversation_for_tag(self, tag):
-        from go.conversation.models import MessageBatch
-        batch_id = self.store.tag_common(tag)['current_batch_id']
-        try:
-            batch = MessageBatch.objects.get(batch_id=batch_id)
-            conversation = batch.preview_batch or batch.message_batch
-            if conversation:
-                return {
-                    'conversation_id': conversation.pk,
-                    'conversation_type': conversation.conversation_type,
-                }
-            else:
-                log.error('Cannot find conversation for %s' % (batch_id,))
-        except MessageBatch.DoesNotExist:
-            log.error('Cannot find batch for %s' % (batch_id,))
-        return {}
+        print 'get_conversation_for_tag', tag
+        tag_info = self.store.get_tag_info(tag)
+        print tag_info
+        # tag_info = yield self.store.get_tag_info(tag)
+        # print 'tag_info', tag_info
+        # batch_id = tag_info.current_batch.key
+        # print 'batch_id', batch_id
+        # raise Exception('eeeop')
+        # print 'excception raised and ignored?'
+        # try:
+        #     batch = MessageBatch.objects.get(batch_id=batch_id)
+        #     conversation = batch.preview_batch or batch.message_batch
+        #     if conversation:
+        #         returnValue({
+        #             'conversation_id': conversation.pk,
+        #             'conversation_type': conversation.conversation_type,
+        #         })
+        #     else:
+        #         log.error('Cannot find conversation for %s' % (batch_id,))
+        # except MessageBatch.DoesNotExist:
+        #     log.error('Cannot find batch for %s' % (batch_id,))
+        # returnValue({})
 
+    @inlineCallbacks
     def find_application_for_msg(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
-        conv_info = self.get_conversation_for_tag(tag)
+        print 'calling self.get_conversation_for_tag(%s)' % (tag,)
+        d = self.get_conversation_for_tag(tag)
+        print 'd', d
+        d.addErrback(log.error)
+        conv_info = yield d
+        print 'conv_info', conv_info
         conv_metadata = msg['helper_metadata'].setdefault('conversations', {})
         conv_metadata.update(conv_info)
         conv_type = conv_metadata.get('conversation_type')
-        return self.conversation_mappings.get(conv_type)
+        returnValue(self.conversation_mappings.get(conv_type))
 
     @inlineCallbacks
     def dispatch_inbound_message(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
         self.store.add_inbound_message(msg, tag=tag)
-        application = self.find_application_for_msg(msg)
+        application = yield self.find_application_for_msg(msg)
         if application:
             publisher = self.dispatcher.exposed_publisher[application]
             yield publisher.publish_message(msg)
