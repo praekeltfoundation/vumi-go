@@ -91,9 +91,14 @@ class GoApplicationRouter(BaseDispatchRouter):
 
     @inlineCallbacks
     def get_conversation_for_tag(self, tag):
-        tag_info = self.store.get_tag_info(tag)
-        batch_id = tag_info.current_batch.key
-        print 'batch_id', batch_id
+        tag_info = yield self.store.get_tag_info(tag)
+        if tag_info:
+            batch_id = tag_info.current_batch.key
+            print 'batch_id', batch_id
+            returnValue({'something': 'relevant'})
+        else:
+            log.error('Cannot find tag info for %s' % (tag,))
+        returnValue({})
         # raise Exception('eeeeep')
         # returnValue({})
         # print 'tag_info', tag_info
@@ -115,16 +120,16 @@ class GoApplicationRouter(BaseDispatchRouter):
         #     log.error('Cannot find batch for %s' % (batch_id,))
         # returnValue({})
 
+    @inlineCallbacks
     def find_application_for_msg(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
         if tag:
-            conv_info = self.get_conversation_for_tag(tag)
-            conv_metadata = msg['helper_metadata'].get['conversations']
+            conv_info = yield self.get_conversation_for_tag(tag)
+            metadata = msg['helper_metadata']
+            conv_metadata = metadata.setdefault('conversations', {})
             conv_metadata.update(conv_info)
             conv_type = conv_metadata.get('conversation_type')
-            return self.conversation_mappings.get(conv_type)
-        else:
-            return None
+            returnValue(self.conversation_mappings.get(conv_type))
 
     @inlineCallbacks
     def dispatch_inbound_message(self, msg):
