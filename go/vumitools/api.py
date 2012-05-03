@@ -122,8 +122,8 @@ class ConversationWrapper(object):
         """
         statuses = defaultdict(int)
 
-        for batch in self.c.batches.keys():
-            for k, v in self.mdb.batch_status(batch.key).items():
+        for batch_id in self.get_batch_keys():
+            for k, v in self.mdb.batch_status(batch_id).items():
                 if k == 'message':
                     k = 'sent'
                 k = k.replace('.', '_')
