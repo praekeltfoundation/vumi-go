@@ -81,8 +81,8 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
                 'app_2',
             ],
             'conversation_mappings': {
-                'type_1': 'app_1',
-                'type_2': 'app_2',
+                'bulk_message': 'app_1',
+                'survey': 'app_2',
             }
         })
         self.r_server = FakeRedis()
@@ -118,6 +118,7 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
         batch_id = yield self.message_store.batch_start([tag],
             user_account=unicode(self.account.key))
         self.conversation.batches.add_key(batch_id)
+        self.conversation.save()
 
         TaggingMiddleware.add_tag_to_msg(msg, tag)
         with LogCatcher() as log:
@@ -127,8 +128,8 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
                                                     direction='inbound')
         conv_metadata = dispatched['helper_metadata']['conversations']
         self.assertEqual(conv_metadata, {
-            'conversation_id': '1',
-            'conversation_type': 'type_1',
+            'conversation_key': self.conversation.key,
+            'conversation_type': self.conversation.conversation_type,
         })
 
     @inlineCallbacks
@@ -148,5 +149,6 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
         with LogCatcher() as log:
             yield self.dispatch(msg, self.transport_name)
             [err1, err2] = log.errors
-            self.assertTrue('Cannot find tag info for' in err1['message'][0])
+            self.assertTrue('Cannot find current tag for' in
+                                    err1['message'][0])
             self.assertTrue('No application setup' in err2['message'][0])

@@ -101,47 +101,37 @@ class GoApplicationRouter(BaseDispatchRouter):
             if account_key:
                 conversation_store = ConversationStore(self.manager,
                     account_key)
-                print (yield conversation_store.list_conversations())
                 account_submanager = conversation_store.manager
                 conversations = yield batch.backlinks.conversations(
                                                         account_submanager)
-                print conversations
+                if conversations:
+                    if len(conversations) > 1:
+                        conv_keys = [c.key for c in conversations]
+                        log.warning('Multiple conversations found '
+                            'going with most recent: %r' % (conv_keys,))
+                    conversation = sorted(conversations, reverse=True,
+                        key=lambda c: c.start_timestamp)[0]
+                    returnValue(conversation)
+                log.error('Conversation found for %r' % (batch,))
             log.error('No account_key found for tag: %r, batch: %r' % (
                 current_tag, batch))
         else:
-            log.error('Cannot find tag info for %s' % (tag,))
-        returnValue({})
-        # raise Exception('eeeeep')
-        # returnValue({})
-        # print 'tag_info', tag_info
-        # batch_id = tag_info.current_batch.key
-        # print 'batch_id', batch_id
-        # raise Exception('eeeop')
-        # print 'excception raised and ignored?'
-        # try:
-        #     batch = MessageBatch.objects.get(batch_id=batch_id)
-        #     conversation = batch.preview_batch or batch.message_batch
-        #     if conversation:
-        #         returnValue({
-        #             'conversation_id': conversation.pk,
-        #             'conversation_type': conversation.conversation_type,
-        #         })
-        #     else:
-        #         log.error('Cannot find conversation for %s' % (batch_id,))
-        # except MessageBatch.DoesNotExist:
-        #     log.error('Cannot find batch for %s' % (batch_id,))
-        # returnValue({})
+            log.error('Cannot find current tag for %s' % (tag,))
 
     @inlineCallbacks
     def find_application_for_msg(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
         if tag:
-            conv_info = yield self.get_conversation_for_tag(tag)
-            metadata = msg['helper_metadata']
-            conv_metadata = metadata.setdefault('conversations', {})
-            conv_metadata.update(conv_info)
-            conv_type = conv_metadata.get('conversation_type')
-            returnValue(self.conversation_mappings.get(conv_type))
+            conversation = yield self.get_conversation_for_tag(tag)
+            if conversation:
+                metadata = msg['helper_metadata']
+                conv_metadata = metadata.setdefault('conversations', {})
+                conv_metadata.update({
+                    'conversation_key': conversation.key,
+                    'conversation_type': conversation.conversation_type,
+                })
+                conv_type = conv_metadata.get('conversation_type')
+                returnValue(self.conversation_mappings.get(conv_type))
 
     @inlineCallbacks
     def dispatch_inbound_message(self, msg):
