@@ -46,7 +46,13 @@
                 {% if conversation.is_client_initiated %}
                     {% include "surveys/includes/no_recipients_needed.html" %}
                 {% else %}
-                    {% include "surveys/includes/recipients.html" %}
+                    <h3>2. Message Recipients</h3>
+                    <br>
+                    {% include "conversation/includes/groups.html" with groups=groups %}
+                    <div class="btn-toolbar">
+                        <div class="btn-group"><input type="submit" class="btn btn-primary" value="Add groups and Start Survey &rarr;"></div>
+                        <div class="btn-group"><input type="reset" class="btn" onClick="javascript:history.go(-1)" value="Go Back"></div>
+                    </div>
                 {% endif %}
             </div>
         </div>
