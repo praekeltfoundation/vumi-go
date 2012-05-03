@@ -11,6 +11,7 @@ from vumi.persist.txriak_manager import TxRiakManager
 from vumi.dispatchers.base import BaseDispatchRouter
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
+from vumi.errors import VumiError
 
 from go.vumitools.api import VumiApiCommand, get_redis
 
@@ -90,10 +91,14 @@ class GoApplicationRouter(BaseDispatchRouter):
 
     # @inlineCallbacks
     def get_conversation_for_tag(self, tag):
+        raise VumiError('eeeeep')
         print 'get_conversation_for_tag', tag
+        print 'hoi'
         tag_info = self.store.get_tag_info(tag)
-        print tag_info
-        # tag_info = yield self.store.get_tag_info(tag)
+        batch_id = tag_info.current_batch.key
+        print 'batch_id', batch_id
+        # raise Exception('eeeeep')
+        # returnValue({})
         # print 'tag_info', tag_info
         # batch_id = tag_info.current_batch.key
         # print 'batch_id', batch_id
@@ -113,19 +118,15 @@ class GoApplicationRouter(BaseDispatchRouter):
         #     log.error('Cannot find batch for %s' % (batch_id,))
         # returnValue({})
 
-    @inlineCallbacks
     def find_application_for_msg(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
         print 'calling self.get_conversation_for_tag(%s)' % (tag,)
-        d = self.get_conversation_for_tag(tag)
-        print 'd', d
-        d.addErrback(log.error)
-        conv_info = yield d
+        conv_info = self.get_conversation_for_tag(tag)
         print 'conv_info', conv_info
         conv_metadata = msg['helper_metadata'].setdefault('conversations', {})
         conv_metadata.update(conv_info)
         conv_type = conv_metadata.get('conversation_type')
-        returnValue(self.conversation_mappings.get(conv_type))
+        return self.conversation_mappings.get(conv_type)
 
     @inlineCallbacks
     def dispatch_inbound_message(self, msg):
