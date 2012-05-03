@@ -43,6 +43,13 @@ class SurveyApplication(PollApplication):
             yield self.control_consumer.stop()
             self.control_consumer = None
 
+    def consume_user_message(self, message):
+        helper_metadata = message['helper_metadata']
+        conv_info = helper_metadata.get('conversations')
+        helper_metadata['poll_id'] = 'poll-%s' % (
+            conv_info.get('conversation_key'),)
+        super(SurveyApplication, self).consume_user_message(message)
+
     def consume_control_command(self, command_message):
         """
         Handle a VumiApiCommand message that has arrived.
@@ -67,8 +74,13 @@ class SurveyApplication(PollApplication):
 
     def start_survey(self, to_addr, conversation, **msg_options):
         log.info('Starting %s -> %s' % (conversation.subject, to_addr))
+
         helper_metadata = msg_options.setdefault('helper_metadata', {})
-        helper_metadata['poll_id'] = 'poll-%s' % (conversation.key,)
+        helper_metadata['conversations'] = {
+            'conversation_key': conversation.key,
+            'conversation_type': conversation.conversation_type,
+        }
+
         # We reverse the to_addr & from_addr since we're faking input
         # from the client to start the survey.
         from_addr = msg_options.pop('from_addr')
