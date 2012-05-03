@@ -35,9 +35,8 @@ class TestVumiApi(ApplicationTestCase, CeleryTestMixIn):
     def test_batch_status(self):
         tag = ("pool", "tag")
         batch_id = self.api.mdb.batch_start([tag])
-        self.assertEqual(self.api.batch_status(batch_id), {
-            'ack': 0, 'delivery_report': 0, 'message': 0, 'sent': 0,
-            })
+        batch_status = self.api.batch_status(batch_id)
+        self.assertEqual(batch_status['sent'], 0)
 
     def test_batch_send(self):
         consumer = self.get_cmd_consumer()
