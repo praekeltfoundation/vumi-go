@@ -113,26 +113,28 @@ class ConversationWrapper(object):
                     by the network for delivery
             *delivery_report* The number of messages we've received
                     a delivery report for.
+            *delivery_report_delivered* The number of delivery reports
+                    indicating successful delivery.
+            *delivery_report_failed* The number of delivery reports
+                    indicating failed delivery.
+            *delivery_report_pending* The number of delivery reports
+                    indicating ongoing attempts to deliver the message.
         """
-        default = {
-            'total': 0,
-            'queued': 0,
-            'ack': 0,
-            'sent': 0,
-            'delivery_report': 0,
-        }
+        statuses = defaultdict(int)
 
-        for batch in (yield self.get_batches()):
-            for k, v in (yield self.mdb.batch_status(batch.key)).items():
+        for batch in self.c.batches.keys():
+            for k, v in self.mdb.batch_status(batch.key).items():
                 if k == 'message':
                     k = 'sent'
-                default[k] += v
+                k = k.replace('.', '_')
+                statuses[k] += v
         total = len((yield self.people()))
-        default.update({
+        statuses = dict(statuses)  # convert back from defaultdict
+        statuses.update({
             'total': total,
-            'queued': total - default['sent'],
+            'queued': total - statuses['sent'],
         })
-        returnValue(default)
+        returnValue(statuses)
 
     @Manager.calls_manager
     def get_progress_percentage(self):
