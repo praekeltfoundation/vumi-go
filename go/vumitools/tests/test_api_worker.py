@@ -62,28 +62,6 @@ class CommandDispatcherTestCase(ApplicationTestCase):
                                 error['message'][0])
 
 
-class TestGoApplicationRouter(GoApplicationRouter):
-
-    def __init__(self, *args, **kwargs):
-        super(TestGoApplicationRouter, self).__init__(*args, **kwargs)
-        self.tag_to_batch_ids_map = {
-            ('xmpp', 'test1@xmpp.org'): 'batch-id-1',
-            ('xmpp', 'test2@xmpp.org'): 'batch-id-2',
-        }
-        self.batch_id_to_conversations_map = {
-            'batch-id-1': {
-                'conversation_id': '1', 'conversation_type': 'type_1',
-            },
-            'batch-id-2': {
-                'conversation_type': '2', 'conversation_type': 'type_2',
-            }
-        }
-
-    def get_conversation_for_tag(self, tag):
-        batch_id = self.tag_to_batch_ids_map.get(tag)
-        return self.batch_id_to_conversations_map.get(batch_id, {})
-
-
 class GoApplicationRouterTestCase(DispatcherTestCase):
 
     dispatcher_class = BaseDispatchWorker
@@ -94,8 +72,7 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
     def setUp(self):
         yield super(GoApplicationRouterTestCase, self).setUp()
         self.dispatcher = yield self.get_dispatcher({
-            'router_class': 'go.vumitools.tests.test_api_worker.' \
-                                'TestGoApplicationRouter',
+            'router_class': 'go.vumitools.api_worker.GoApplicationRouter',
             'transport_names': [
                 self.transport_name,
             ],
