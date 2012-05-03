@@ -12,7 +12,7 @@ from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
 
 
-class TestConcersationStore(TestCase):
+class TestConversationStore(TestCase):
 
     timeout = 10
 
