@@ -124,8 +124,6 @@ class ConversationWrapper(object):
 
         for batch_id in self.get_batch_keys():
             for k, v in self.mdb.batch_status(batch_id).items():
-                if k == 'message':
-                    k = 'sent'
                 k = k.replace('.', '_')
                 statuses[k] += v
         total = len((yield self.people()))
