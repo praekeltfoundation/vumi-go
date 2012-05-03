@@ -23,17 +23,20 @@
                 <fieldset>
                 <legend>{{contact}}</legend>
                     {% for field in form.visible_fields %}
-                    <div class="control-group">
-                        {{field.errors}}
+                    <div class="control-group {% if field.errors %}error{% endif %}">
                         <label class="control-label" for="{{field.name}}">
                             {{field.label}}
-                            {% if field.field.required %}{% endif %}
-                            {% if field.help_text %}
-                                ({{field.help_text}})
-                            {% endif %}
                         </label>
                         <div class="controls">
                             {{field}}
+                            <span class="help-inline">
+                                {% if field.errors %}
+                                    {{field.errors|join:" "}}
+                                {% endif %}
+                                {% if field.help_text %}
+                                    ({{field.help_text}})
+                                {% endif %}
+                            </span>
                         </div>
                     </div>
                     {% endfor %}
