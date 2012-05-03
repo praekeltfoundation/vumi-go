@@ -130,12 +130,8 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
             self.assertEqual(tag, ["pool", "tag1"])
             self.assertEqual(user_account_key, user_account.key)
 
-        self.assertEqual(self.app.store.batch_status(batch_id), {
-                'ack': 0,
-                'delivery_report': 0,
-                'message': 2,
-                'sent': 2,
-                })
+        batch_status = self.app.store.batch_status(batch_id)
+        self.assertEqual(batch_status['sent'], 2)
         dbmsgs = yield self.app.store.batch_messages(batch_id)
         dbmsgs.sort(key=lambda msg: msg['to_addr'])
         [dbmsg1, dbmsg2] = dbmsgs
