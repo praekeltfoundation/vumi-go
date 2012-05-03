@@ -168,6 +168,7 @@ class ConversationWrapper(object):
             conversation_type=self.c.conversation_type,
             conversation_key=self.c.key,
             msg_options=msg_options,
+            is_client_initiated=self.is_client_initiated(),
             **extra_params)
         self.c.batches.add_key(batch_id)
         yield self.c.save()

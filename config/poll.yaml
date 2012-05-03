@@ -1,3 +1,7 @@
+message_store:
+    store_prefix: vumigo.
+riak:
+    bucket_prefix: vumigo.
 worker_name: survey_application
 transport_name: survey_transport
 dashboard_port: 8101
