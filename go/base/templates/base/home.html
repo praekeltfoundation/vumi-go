@@ -1,0 +1,64 @@
+{% extends "app.html" %}
+
+{% block main %}
+
+    {% if user.conversation_set.exists %}
+	    <div class="row">
+	        <div class="span12">
+	            <div id="welcome">
+	                <div class="pull-right start-button shadow">
+	                <h1><a data-toggle="modal" href="#newConv" tite="New Conversation"><i class="icon-plus"></i></a></h1></div>
+	                <h1>Hi {{user_profile}}, here are some of your newest conversations.</h1>
+	                {# TODO add user counter / user activity metrics #}
+	            </div>
+	        </div>
+	    </div>
+	    <div class="row">
+	        <div class="span12">
+	            {% include "base/includes/messages.html" %}
+	        </div>
+	    </div>
+	    <div class="row">
+	        <div class="span12">
+		        <form id="search-filter" name="search-filter" action="" method="get" class="well form-inline">
+		            <input type="text" class="input-xlarge" name="q" id="search-filter-input" value="{{query}}" placeholder="Search conversations…">
+                    <select name="search02" class="input-small">
+                        <option value="1">All Types</option>
+                        <option value="2">Bulk Message</option>
+                        <option value="3">Survey</option>
+                        <option value="4">Interactive SMS</option>
+                        <option value="5">Star Menu</option>
+                    </select>
+                    <select name="search03" class="input-small">
+                        <option value="1">All Status</option>
+                        <option value="2">Running</option>
+                        <option value="3">Finished</option>
+                        <option value="4">Draft</option>
+                    </select>
+		            <button type="submit" class="btn" id="search-filter-btn">Search</button>
+		        </form>
+		    </div>
+	    </div>
+	    <div class="row">
+            {% for conversation in latest_conversations %}
+                {% include "conversation/includes/conversation-box.html" %}
+                {% if forloop.counter|divisibleby:"3" %}
+                    </div>
+                    <div class="row">
+                {% endif %}
+            {% endfor %}
+	    </div>
+    {% else %}
+	    <div class="row">
+	        <div class="span12">
+	            <div id="welcome">
+	                <div class="pull-right start-button shadow">
+	                <h1><a data-toggle="modal" href="#newConv" tite="New Conversation"><i class="icon-plus"></i></a></h1></div>
+	                <h1>Hey {{user_profile}}, you must be new here.</h1>
+	                <h2><a href="#newConv" class="start">Start Your First Conversation</a></h2>
+	            </div>
+	        </div>
+	    </div>
+    {% endif %}
+    {% include "base/includes/pagination.html" %}
+{% endblock %}

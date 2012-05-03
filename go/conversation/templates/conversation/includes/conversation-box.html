@@ -1,0 +1,23 @@
+{% if conversation %}
+	<div class="span4">
+	    <div class="convos shadow">
+	        <span class="label label-info">{{conversation.start_timestamp}}</span>
+	        {% if conversation.ended %}
+	        	<span class="label label-important"><i class="icon-ok-circle icon-white"></i> Finished</span>
+	        {% else %}
+	        	<span class="label label-success"><i class="icon-ok-circle icon-white"></i> {{conversation.get_status|title}}</span>
+	        {% endif %}
+	        <h3><a href="{{ conversation.get_absolute_url }}">{{conversation.subject}}</a></h3>
+	        <p>{{conversation.message}}</p>
+	        <div>
+	        	<span class="label">{{conversation.delivery_class_description}}</span>
+	        	<span class="label"><i class="icon-user icon-white"></i> {{conversation.people|length}}</span>
+	        	<span class="label"><i class="icon-repeat icon-white"></i> {{conversation.replies|length}}</span>
+	       </div>
+	    </div>
+	</div>
+{% else %}
+    <div class="span4">
+        <div class="convos empty"></div>
+    </div>
+{% endif %}

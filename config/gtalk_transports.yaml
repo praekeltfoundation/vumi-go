@@ -1,0 +1,44 @@
+defaults:
+  host: talk.google.com
+  port: 5222
+  status: "status"
+  # debug: 1
+  middleware:
+    - logging_mw: vumi.middleware.LoggingMiddleware
+    - storing_mw: vumi.middleware.StoringMiddleware
+    - gtalk_tagging_mw: vumi.middleware.TaggingMiddleware
+
+  # Configure the middlewares
+  logging_mw:
+    log_level: debug
+
+  gtalk_tagging_mw:
+    incoming:
+      addr_pattern: '^(.+\@.+)/?.*$'
+      tagpool_template: 'xmpp'
+      tagname_template: '\1'
+    outgoing:
+      tagname_pattern: '.*'
+      msg_template: {}
+
+  storing_mw:
+    riak:
+      bucket_prefix: vumigo.
+
+gtalk_dev_1:
+  transport_name: gtalk_dev_1
+  username: user@xmpp.org
+  password: 'your-password'
+
+vumigo_gtalk_dispatch:
+  transport_names:
+    - gtalk_dev_1
+  exposed_names:
+    - gtalk_vumigo
+  router_class: vumi.dispatchers.base.FromAddrMultiplexRouter
+  fromaddr_mappings:
+    "user@xmpp.org": gtalk_dev_1
+
+workers:
+  gtalk_dev_1: vumi.transports.xmpp.XMPPTransport
+  vumigo_gtalk_dispatch: vumi.dispatchers.base.BaseDispatchWorker

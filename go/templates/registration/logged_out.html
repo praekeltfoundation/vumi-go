@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="row">
+        <div class="span12">
+            <div id="login">
+                <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go">
+                <div class="alert alert-success"><a class="close" data-dismiss="alert">×</a>You've been logged out.</div>
+                <form id="signin-form" name="signin-form" action="/accounts/login/" method="post" class="form-horizontal">
+                   {% csrf_token %}
+                   <input type="hidden" name="next" value="{{next}}">
+                   <fieldset>
+                       <div class="control-group"><input type="text" class="input-large email required" id="signin-input-email" placeholder="Email Address"></div>
+                       <div class="control-group"><input type="password" class="input-large required" id="signin-input-password" placeholder="Password"></div>
+                       <div class="control-group">
+                           <input type="submit" class="btn" name="submit" value="sign in">
+                           <div class="remember">
+                               <label class="checkbox"><input type="checkbox"> Keep me signed in</label>
+                           </div>
+                           <p><a href="{% url todo %}forgot-password.html">Forgot your password?</a></p>
+                       </div>
+                   </fieldset>
+                   <p>&copy; 2012 <a href="http://praekelt.com">Praekelt Group</a>. <a href="mailto:hello@vumi.org">Contact</a>. <a href="https://github.com/praekelt/vumi">Github</a></p>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        $(document).ready(function(){
+            $("#signin-form").validate();
+        });
+    </script>
+{% endblock %}

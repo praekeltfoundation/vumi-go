@@ -1,0 +1,193 @@
+
+<div class="modal hide fade" id="uplContacts">
+    <div class="modal-header">
+        <a class="close" data-dismiss="modal">×</a>
+        <h3>Upload Contacts</h3>
+    </div>
+	<div class="modal-body">
+	    <p>Choose how you'd you like to upload contacts:</p>
+	    <div class="row">
+	        <div class="span3">
+	            <div class="well"><h4>Import a spreadsheet</h4><p>XLS,CSV or tab-delimited TXT</p>
+	                <form action="">
+	                    <button type="submit" class="btn btn-primary" data-dismiss="modal" data-toggle="modal" href="#uplContactFrm">Select</button>
+	                </form>
+	            </div>
+	        </div>
+	        <div class="span3">
+	            <div class="well"><h4>Import from Google Docs</h4><img src="{{ STATIC_URL }}img/google_docs_icon.png" />
+	                <form action="">
+	                    <button type="submit" class="btn btn-primary disabled">Coming Soon!</button>
+	                </form>
+	            </div>
+	        </div>
+	    </div>
+	</div>
+	<div class="modal-footer"></div>
+</div><!--/uplContacts-->
+    
+<div class="modal hide fade" id="uplContactFrm">
+    <div class="modal-header">
+        <a class="close" data-dismiss="modal">×</a>
+        <h3>Upload Contacts</h3>
+    </div>
+    <form id="frm-upload-contacts" name="frm-upload-contacts" enctype="multipart/form-data" method="post" action="" class="form-horizontal">
+        {% csrf_token %}
+        <div class="modal-body">
+            <fieldset>
+            <div class="control-group {% if upload_contacts_form.errors %}error{% endif %}">
+                <label class="control-label" for="input01">Upload your data file:<br />Use this <a href="{{ STATIC_URL }}contacts-upload-template.csv">Template</a></label>
+                {% if upload_contacts_form.file.errors %}
+                  <span class="help-inline">
+                    {% for error in upload_contacts_form.file.errors %}
+                      {{ error }}
+                    {% endfor %}
+                  </span>
+                {% endif %}
+                <div class="controls">{{upload_contacts_form.file}}</div>
+            </div>
+            {% if show_groups %}
+            <div class="control-group">
+                <label class="control-label" for="input02">Choose which group you want to add new contacts to:</label>
+                <div class="controls">
+	               {{select_contact_group_form.errors}}
+	               {{select_contact_group_form.contact_group}}
+                </div>
+            </div>
+            {% endif %}
+            {{new_contact_group_form.errors}}
+            {% if save_group %}
+                <div class="control-group">
+                    <label class="control-label">
+                        Save as group
+                    </label>
+                    <div class="controls">{{new_contact_group_form.name}}</div>
+                </div>
+            {% endif %}
+            </fieldset>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" class="btn btn-primary" data-loading-text="uploading...">Upload contacts</button>
+        </div>
+    </form>
+</div><!--/uplContactFrm-->
+    
+<!-- 
+<div class="modal hide fade" id="recMatchFrm">
+	<div class="modal-header">
+	    <a class="close" data-dismiss="modal">×</a>
+	    <h3>Please match the sample to the fields provided</h3>
+	</div>
+	<form class="form-horizontal" action="people.html">
+	    <div class="modal-body">
+	        <div class="alert alert-success">
+	            <a class="close" data-dismiss="alert">×</a>
+	            <strong>Success!</strong> 55 records found.
+	        </div>
+			<fieldset>
+			<table class="table table-bordered table-striped">
+			  <tbody>
+			    <tr>
+			      <td>
+					<select name="input02">
+					    <option value="">Please Select:</option>
+					    <option value="1">Mobile</option>
+					    <option value="1">Email</option>
+					    <option value="1">Name</option>
+					    <option value="1">Surname</option>
+					</select>
+			      </td>
+			      <td>gustav@praekelt.com</td>
+			    </tr>
+			  </tbody>
+			</table>
+			</fieldset>
+	    </div>
+	    <div class="modal-footer">
+	       <button type="submit" class="btn btn-primary" data-loading-text="saving...">Finish</button>
+	    </div>
+    </form>
+</div>
+-->
+ 
+<div class="modal hide fade" id="newGroup">
+    <div class="modal-header">
+        <a class="close" data-dismiss="modal">×</a>
+        <h3>New Group</h3>
+    </div>
+    <form name="frm-new-group" id="frm-new-group" method="post" action="{% url contacts:groups %}" class="form-horizontal">
+    {% csrf_token %}
+    <div class="modal-body">
+	    <fieldset>
+	      <div class="control-group">
+	        <label class="control-label">New group name:</label>
+	        <div class="controls">
+	           {{new_contact_group_form.name}}
+	        </div>
+	      </div>
+	    </fieldset>
+    </div>
+    <div class="modal-footer">
+        <button type="submit" class="btn btn-primary" data-loading-text="uploading..." >Add New Group</button>
+    </div>
+    </form>
+</div><!--/newGroup-->
+
+<div class="modal hide fade" id="editGroup">
+  <div class="modal-header">
+      <a class="close" data-dismiss="modal">×</a>
+      <h3>Edit Group</h3>
+  </div>
+  <form class="form-horizontal" action="" method="post">
+  <div class="modal-body">
+        <fieldset>
+          <div class="control-group">
+            <label class="control-label" for="input01">Group name:</label>
+            <div class="controls">
+              <input type="text" class="input-xlarge" id="input01" name="name" value="{{group.name}}">
+            </div>
+          </div>
+        </fieldset>
+  </div>
+  <div class="modal-footer">
+  <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+  <input type="submit" class="btn btn-primary" name="_save_group" data-loading-text="saving..." value="Save Details" data-dismiss="modal" data-toggle="modal" >
+  </div>
+  </form>
+</div><!--/editGroup-->
+        
+<div class="modal hide fade" id="delGroup">
+	<div class="modal-header">
+	  <a class="close" data-dismiss="modal">×</a>
+	  <h3>Remove Group</h3>
+	</div>
+	<form class="form-horizontal">
+	<div class="modal-body">
+	      <fieldset>
+	        <p><strong>Are you sure you want to remove this group?</strong><br>The group members will not be deleted.</p>
+	      </fieldset>
+	</div>
+	<div class="modal-footer">
+	<a href="#" class="btn" data-dismiss="modal">Cancel</a>
+	<button type="submit" class="btn btn-primary" data-loading-text="saving..."  data-dismiss="modal" data-toggle="modal" >Remove Group</button>
+	</div>
+	</form>
+</div><!--/delGroup-->
+      
+<div class="modal hide fade" id="emptyGroup">
+	<div class="modal-header">
+	  <a class="close" data-dismiss="modal">×</a>
+	  <h3>Empty Group</h3>
+	</div>
+    <form class="form-horizontal">
+    <div class="modal-body">
+          <fieldset>
+            <p><strong>Are you sure you want to remove all members from this group?</strong><br>The group members being removed will not be deleted.</p>
+          </fieldset>
+    </div>
+    <div class="modal-footer">
+    <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+    <button type="submit" class="btn btn-primary" data-loading-text="saving..."  data-dismiss="modal" data-toggle="modal" >Empty Group</button>
+    </div>
+    </form>
+</div><!--/emptyGroup-->
