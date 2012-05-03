@@ -1,4 +1,4 @@
-# -*- test-case-name: go.apps.bulk_message.tests.test_bulk_message_vumi_app -*-
+# -*- test-case-name: go.apps.bulk_message.tests.test_vumi_app -*-
 # -*- coding: utf-8 -*-
 
 """Vumi application worker for the vumitools API."""
