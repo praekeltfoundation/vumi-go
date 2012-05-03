@@ -14,6 +14,8 @@ from vumi import log
 from vumi.errors import VumiError
 
 from go.vumitools.api import VumiApiCommand, get_redis
+from go.vumitools.account import AccountStore
+from go.vumitools.conversation import ConversationStore
 
 
 class CommandDispatcher(ApplicationWorker):
@@ -86,15 +88,26 @@ class GoApplicationRouter(BaseDispatchRouter):
         r_server = get_redis(self.config)
         self.manager = TxRiakManager.from_config({
                 'bucket_prefix': self.mdb_prefix})
-        self.store = MessageStore(self.manager, r_server, self.mdb_prefix)
+        self.account_store = AccountStore(self.manager)
+        self.message_store = MessageStore(self.manager, r_server,
+                                            self.mdb_prefix)
 
     @inlineCallbacks
     def get_conversation_for_tag(self, tag):
-        tag_info = yield self.store.get_tag_info(tag)
-        if tag_info:
-            batch_id = tag_info.current_batch.key
-            print 'batch_id', batch_id
-            returnValue({'something': 'relevant'})
+        current_tag = yield self.message_store.get_tag_info(tag)
+        if current_tag:
+            batch = yield current_tag.current_batch.get()
+            account_key = batch.metadata.user_account
+            if account_key:
+                conversation_store = ConversationStore(self.manager,
+                    account_key)
+                print (yield conversation_store.list_conversations())
+                account_submanager = conversation_store.manager
+                conversations = yield batch.backlinks.conversations(
+                                                        account_submanager)
+                print conversations
+            log.error('No account_key found for tag: %r, batch: %r' % (
+                current_tag, batch))
         else:
             log.error('Cannot find tag info for %s' % (tag,))
         returnValue({})
@@ -133,7 +146,7 @@ class GoApplicationRouter(BaseDispatchRouter):
     @inlineCallbacks
     def dispatch_inbound_message(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
-        self.store.add_inbound_message(msg, tag=tag)
+        self.message_store.add_inbound_message(msg, tag=tag)
         application = yield self.find_application_for_msg(msg)
         if application:
             publisher = self.dispatcher.exposed_publisher[application]
@@ -144,7 +157,7 @@ class GoApplicationRouter(BaseDispatchRouter):
 
     def dispatch_inbound_event(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
-        self.store.add_event(msg, tag=tag)
+        self.message_store.add_event(msg, tag=tag)
         application = self.find_application_for_msg(msg)
         if application:
             publisher = self.dispatcher.exposed_event_publisher[application]
@@ -155,6 +168,6 @@ class GoApplicationRouter(BaseDispatchRouter):
 
     def dispatch_outbound_message(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
-        self.store.add_outbound_message(msg, tag=tag)
+        self.message_store.add_outbound_message(msg, tag=tag)
         upstream = self.dispatcher.transport_publisher.keys()[0]
         self.dispatcher.transport_publisher[upstream].publish_message(msg)
