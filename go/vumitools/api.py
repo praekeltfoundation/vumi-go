@@ -84,6 +84,9 @@ class ConversationWrapper(object):
     def get_batches(self):
         return self.c.batches.get_all(self.base_manager)
 
+    def get_batch_keys(self):
+        return self.c.batches.keys()
+
     @Manager.calls_manager
     def get_tags(self):
         """
@@ -179,12 +182,12 @@ class ConversationWrapper(object):
                 before it can show up as a reply. Isn't going to work
                 for things like USSD and in some cases SMS.
         """
-        batches = yield self.get_batches()
+        batch_keys = self.get_batch_keys()
         reply_statuses = []
         replies = []
-        for batch in batches:
+        for batch_id in batch_keys:
             # TODO: Not look up the batch by key again.
-            replies.extend((yield self.mdb.batch_replies(batch.key)))
+            replies.extend((yield self.mdb.batch_replies(batch_id)))
         for reply in replies:
             contact = yield self.user_api.contact_store.contact_for_addr(
                     self.delivery_class, reply['from_addr'])
@@ -201,12 +204,12 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def sent_messages(self):
-        batches = yield self.get_batches()
+        batch_keys = self.get_batch_keys()
         outbound_statuses = []
         messages = []
-        for batch in batches:
+        for batch_id in batch_keys:
             # TODO: Not look up the batch by key again.
-            messages.extend((yield self.mdb.batch_messages(batch.key)))
+            messages.extend((yield self.mdb.batch_messages(batch_id)))
         for message in messages:
             contact = yield self.user_api.contact_store.contact_for_addr(
                     self.delivery_class, message['to_addr'])
