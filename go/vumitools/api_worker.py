@@ -126,13 +126,13 @@ class GoApplicationRouter(BaseDispatchRouter):
         if tag:
             conversation = yield self.get_conversation_for_tag(tag)
             if conversation:
+                conv_type = conversation.conversation_type
                 metadata = msg['helper_metadata']
                 conv_metadata = metadata.setdefault('conversations', {})
                 conv_metadata.update({
                     'conversation_key': conversation.key,
-                    'conversation_type': conversation.conversation_type,
+                    'conversation_type': conv_type,
                 })
-                conv_type = conv_metadata.get('conversation_type')
                 returnValue(self.conversation_mappings.get(conv_type))
 
     @inlineCallbacks
