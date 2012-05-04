@@ -10,8 +10,9 @@ from vumi.dispatchers.base import BaseDispatchWorker
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.utils import FakeRedis, LogCatcher
 
-from go.vumitools.api_worker import CommandDispatcher, GoApplicationRouter
+from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiApiCommand
+from go.vumitools.conversation import ConversationStore
 
 
 class CommandDispatcherTestCase(ApplicationTestCase):
@@ -59,28 +60,6 @@ class CommandDispatcherTestCase(ApplicationTestCase):
                                 error['message'][0])
 
 
-class TestGoApplicationRouter(GoApplicationRouter):
-
-    def __init__(self, *args, **kwargs):
-        super(TestGoApplicationRouter, self).__init__(*args, **kwargs)
-        self.tag_to_batch_ids_map = {
-            ('xmpp', 'test1@xmpp.org'): 'batch-id-1',
-            ('xmpp', 'test2@xmpp.org'): 'batch-id-2',
-        }
-        self.batch_id_to_conversations_map = {
-            'batch-id-1': {
-                'conversation_id': '1', 'conversation_type': 'type_1',
-            },
-            'batch-id-2': {
-                'conversation_type': '2', 'conversation_type': 'type_2',
-            }
-        }
-
-    def get_conversation_for_tag(self, tag):
-        batch_id = self.tag_to_batch_ids_map.get(tag)
-        return self.batch_id_to_conversations_map.get(batch_id, {})
-
-
 class GoApplicationRouterTestCase(DispatcherTestCase):
 
     dispatcher_class = BaseDispatchWorker
@@ -90,9 +69,10 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(GoApplicationRouterTestCase, self).setUp()
+        self.r_server = FakeRedis()
         self.dispatcher = yield self.get_dispatcher({
-            'router_class': 'go.vumitools.tests.test_api_worker.' \
-                                'TestGoApplicationRouter',
+            'router_class': 'go.vumitools.api_worker.GoApplicationRouter',
+            'redis_clr': lambda: self.r_server,
             'transport_names': [
                 self.transport_name,
             ],
@@ -101,29 +81,49 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
                 'app_2',
             ],
             'conversation_mappings': {
-                'type_1': 'app_1',
-                'type_2': 'app_2',
+                'bulk_message': 'app_1',
+                'survey': 'app_2',
             }
         })
+
+        # get the router to test
         self.router = self.dispatcher._router
+        self.manager = self.router.manager
+        self.message_store = self.router.message_store
+        self.account_store = self.router.account_store
+
+        self.account = yield self.account_store.new_user(u'user')
+        self.conversation_store = ConversationStore.from_user_account(
+                                                                self.account)
+        self.conversation = yield self.conversation_store.new_conversation(
+            u'bulk_message', u'subject', u'message')
 
     @inlineCallbacks
     def tearDown(self):
-        yield self.router.manager.purge_all()
+        yield self.manager.purge_all()
         yield super(GoApplicationRouterTestCase, self).tearDown()
 
     @inlineCallbacks
     def test_tag_retrieval_and_dispatching(self):
         msg = self.mkmsg_in(transport_type='xmpp',
-                                transport_name='xmpp_transport')
-        TaggingMiddleware.add_tag_to_msg(msg, ('xmpp', 'test1@xmpp.org'))
-        yield self.dispatch(msg, self.transport_name)
+                                transport_name=self.transport_name)
+
+        tag = ('xmpp', 'test1@xmpp.org')
+        batch_id = yield self.message_store.batch_start([tag],
+            user_account=unicode(self.account.key))
+        self.conversation.batches.add_key(batch_id)
+        self.conversation.save()
+
+        TaggingMiddleware.add_tag_to_msg(msg, tag)
+        with LogCatcher() as log:
+            yield self.dispatch(msg, self.transport_name)
+            self.assertEqual(log.errors, [])
         [dispatched] = self.get_dispatched_messages('app_1',
                                                     direction='inbound')
         conv_metadata = dispatched['helper_metadata']['conversations']
         self.assertEqual(conv_metadata, {
-            'conversation_id': '1',
-            'conversation_type': 'type_1',
+            'conversation_key': self.conversation.key,
+            'conversation_type': self.conversation.conversation_type,
         })
 
     @inlineCallbacks
@@ -142,5 +142,7 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, ('this', 'does not exist'))
         with LogCatcher() as log:
             yield self.dispatch(msg, self.transport_name)
-            [error] = log.errors
-            self.assertTrue('No application setup' in error['message'][0])
+            [err1, err2] = log.errors
+            self.assertTrue('Cannot find current tag for' in
+                                    err1['message'][0])
+            self.assertTrue('No application setup' in err2['message'][0])

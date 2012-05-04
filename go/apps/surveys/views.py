@@ -115,6 +115,7 @@ def contents(request, conversation_key):
 @login_required
 def people(request, conversation_key):
     conversation = conversation_or_404(request.user_api, conversation_key)
+    groups = request.user_api.list_groups()
 
     poll_id = "poll-%s" % (conversation.key,)
     pm, config = get_poll_config(poll_id)
@@ -147,6 +148,7 @@ def people(request, conversation_key):
             if group_form.is_valid():
                 for group in group_form.cleaned_data['groups']:
                     conversation.groups.add_key(group)
+                conversation.save()
                 messages.add_message(request, messages.INFO,
                     'The selected groups have been added to the survey')
                 return redirect(reverse('survey:start', kwargs={
@@ -159,6 +161,7 @@ def people(request, conversation_key):
         'conversation': conversation,
         'survey_form': survey_form,
         'content_form': read_only_content_form,
+        'groups': groups,
     })
 
 
