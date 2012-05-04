@@ -103,7 +103,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, reverse('bulk_message:send', kwargs={
             'conversation_key': self.conv_key}))
 
-    def test_send(self):
+    def test_start(self):
         """
         Test the start conversation view
         """
@@ -134,6 +134,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             msg_options=msg_options,
             conversation_type=conversation.conversation_type,
             conversation_key=conversation.key,
+            is_client_initiated=conversation.is_client_initiated(),
             )
         self.assertEqual(cmd, expected_cmd)
 

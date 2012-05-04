@@ -109,7 +109,13 @@ class BulkMessageApplication(GoApplication):
 
     @inlineCallbacks
     def process_command_start(self, batch_id, conversation_type,
-        conversation_key, msg_options, **extra_params):
+        conversation_key, msg_options, is_client_initiated, **extra_params):
+
+        if is_client_initiated:
+            log.warning('Trying to start a client initiated conversation '
+                'on a bulk message send.')
+            return
+
         batch = yield self.store.get_batch(batch_id)
         if batch:
             account_key = DebitAccountMiddleware.map_payload_to_user(

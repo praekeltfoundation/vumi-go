@@ -1,5 +1,6 @@
 from twisted.internet.defer import inlineCallbacks
 from go.vumitools.api import VumiApiCommand, get_redis
+from go.vumitools.conversation import ConversationStore
 from vxpolls.example import PollApplication
 from vumi.persist.message_store import MessageStore
 from vumi.persist.txriak_manager import TxRiakManager
@@ -46,7 +47,7 @@ class SurveyApplication(PollApplication):
         helper_metadata = message['helper_metadata']
         conv_info = helper_metadata.get('conversations')
         helper_metadata['poll_id'] = 'poll-%s' % (
-                conv_info.get('conversation_id'),)
+            conv_info.get('conversation_key'),)
         super(SurveyApplication, self).consume_user_message(message)
 
     def consume_control_command(self, command_message):
@@ -57,28 +58,57 @@ class SurveyApplication(PollApplication):
         :param command_message:
             The command message received for this application.
         """
-        cmd_method_name = 'process_command_%s' % (
-            command_message.get('command'),)
-        cmd_method = getattr(self, cmd_method_name,
-                             self.process_unknown_cmd)
-        return cmd_method(command_message)
+        cmd_method_name = 'process_command_%(command)s' % command_message
+        args = command_message['args']
+        kwargs = command_message['kwargs']
+        cmd_method = getattr(self, cmd_method_name, None)
+        if cmd_method:
+            return cmd_method(*args, **kwargs)
+        else:
+            return self.process_unknown_cmd(cmd_method_name, *args, **kwargs)
 
-    def process_unknown_cmd(self, command_message):
-        log.error("Unknown vumi API command: %r" % (command_message,))
+    def process_unknown_cmd(self, method_name, *args, **kwargs):
+        log.error("Unknown vumi API command: %s(%s, %s)" % (
+            method_name, args, kwargs))
 
-    def process_command_send(self, cmd):
-        message_options = cmd.get('msg_options', {})
-        conversation_id = message_options['conversation_id']
-        conversation_type = message_options['conversation_type']
-        msg = TransportUserMessage(from_addr=cmd['to_addr'],
-                to_addr=cmd['msg_options']['from_addr'],
-                content=cmd['content'],
-                transport_name=message_options['transport_name'],
-                transport_type=message_options['transport_type'],
-                helper_metadata={
-                    'conversations': {
-                        'conversation_id': conversation_id,
-                        'conversation_type': conversation_type,
-                    }
-                })
+    def start_survey(self, to_addr, conversation, **msg_options):
+        log.debig('Starting %r -> %s' % (conversation, to_addr))
+
+        helper_metadata = msg_options.setdefault('helper_metadata', {})
+        helper_metadata['conversations'] = {
+            'conversation_key': conversation.key,
+            'conversation_type': conversation.conversation_type,
+        }
+
+        # We reverse the to_addr & from_addr since we're faking input
+        # from the client to start the survey.
+        from_addr = msg_options.pop('from_addr')
+        msg = TransportUserMessage(from_addr=to_addr, to_addr=from_addr,
+                content='', **msg_options)
         self.consume_user_message(msg)
+
+    @inlineCallbacks
+    def process_command_start(self, batch_id, conversation_type,
+        conversation_key, msg_options, is_client_initiated, **extra_params):
+
+        if is_client_initiated:
+            log.debug('Conversation %r is client initiated, no need to notify '
+                'the application worker' % (conversation_key,))
+            return
+
+        batch = yield self.store.get_batch(batch_id)
+        if batch:
+            account_key = batch.metadata.user_account
+            if account_key is None:
+                log.error("No account key in batch metadata: %r" % (
+                    batch,))
+                return
+
+            conv_store = ConversationStore(self.manager, account_key)
+            conv = yield conv_store.get_conversation_by_key(conversation_key)
+
+            to_addresses = yield conv.get_contacts_addresses()
+            for to_addr in to_addresses:
+                yield self.start_survey(to_addr, conv, **msg_options)
+        else:
+            log.error('No batch found for %s' % (batch_id,))

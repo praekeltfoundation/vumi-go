@@ -2,8 +2,6 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 
-from go.vumitools.contact import ContactStore
-from go.vumitools.conversation import ConversationStore
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.utils import vumi_api_for_user
@@ -161,6 +159,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             '%s_application' % (conversation.conversation_type,), 'start',
             conversation_type=conversation.conversation_type,
             conversation_key=conversation.key,
+            is_client_initiated=conversation.is_client_initiated(),
             batch_id=batch.key,
             msg_options=msg_options
             ))
