@@ -11,6 +11,9 @@ Other stuff that's required:
 
     * Redis_
     * RabbitMQ_, after you've installed this run `sudo ./ve/src/vumi/utils/rabbitmq.setup.sh` to set the correct permissions for the vumi RabbitMQ user.
+    * Riak_, install as described in: http://wiki.basho.com/Installation.html
+
+After installing Riak_, you will need to edit the /etc/riak/app.config file: set the storage backend to eleveldb instead of bitcask, and enable riak_search.
 
 To ease local development we are using GTalk, you will need at least one GTalk account available to run Vumi Go.
 
