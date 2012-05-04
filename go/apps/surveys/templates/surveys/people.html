@@ -46,7 +46,7 @@
                 {% if conversation.is_client_initiated %}
                     {% include "surveys/includes/no_recipients_needed.html" %}
                 {% else %}
-                    <h3>2. Message Recipients</h3>
+                    <h3>2. Survey Recipients</h3>
                     <br>
                     {% include "conversation/includes/groups.html" with groups=groups %}
                     <div class="btn-toolbar">
