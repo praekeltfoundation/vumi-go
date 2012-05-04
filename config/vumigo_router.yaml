@@ -1,5 +1,7 @@
 message_store:
     store_prefix: vumigo.
+riak:
+    bucket_prefix: vumigo.
 transport_names:
   - smpp_transport
   - gtalk_vumigo
