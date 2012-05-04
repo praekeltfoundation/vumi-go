@@ -62,18 +62,17 @@ class SurveyApplication(PollApplication):
         args = command_message['args']
         kwargs = command_message['kwargs']
         cmd_method = getattr(self, cmd_method_name, None)
-        print '%s(%r, %r)' % (cmd_method_name, args, kwargs)
         if cmd_method:
             return cmd_method(*args, **kwargs)
         else:
-            return self.process_unknown_cmd(cmd_method_name, )
+            return self.process_unknown_cmd(cmd_method_name, *args, **kwargs)
 
     def process_unknown_cmd(self, method_name, *args, **kwargs):
         log.error("Unknown vumi API command: %s(%s, %s)" % (
             method_name, args, kwargs))
 
     def start_survey(self, to_addr, conversation, **msg_options):
-        log.info('Starting %s -> %s' % (conversation.subject, to_addr))
+        log.debig('Starting %r -> %s' % (conversation, to_addr))
 
         helper_metadata = msg_options.setdefault('helper_metadata', {})
         helper_metadata['conversations'] = {
@@ -91,6 +90,12 @@ class SurveyApplication(PollApplication):
     @inlineCallbacks
     def process_command_start(self, batch_id, conversation_type,
         conversation_key, msg_options, is_client_initiated, **extra_params):
+
+        if is_client_initiated:
+            log.debug('Conversation %r is client initiated, no need to notify '
+                'the application worker' % (conversation_key,))
+            return
+
         batch = yield self.store.get_batch(batch_id)
         if batch:
             account_key = batch.metadata.user_account
@@ -102,9 +107,8 @@ class SurveyApplication(PollApplication):
             conv_store = ConversationStore(self.manager, account_key)
             conv = yield conv_store.get_conversation_by_key(conversation_key)
 
-            if not is_client_initiated:
-                to_addresses = yield conv.get_contacts_addresses()
-                for to_addr in to_addresses:
-                    yield self.start_survey(to_addr, conv, **msg_options)
+            to_addresses = yield conv.get_contacts_addresses()
+            for to_addr in to_addresses:
+                yield self.start_survey(to_addr, conv, **msg_options)
         else:
             log.error('No batch found for %s' % (batch_id,))
