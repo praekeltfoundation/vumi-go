@@ -59,3 +59,4 @@ Final steps are:
 
 .. _Redis: http://redis.io
 .. _RabbitMQ: http://rabbitmq.com
+.. _Riak: http://wiki.basho.com/Riak.html
