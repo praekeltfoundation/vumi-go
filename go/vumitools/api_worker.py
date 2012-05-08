@@ -96,27 +96,30 @@ class GoApplicationRouter(BaseDispatchRouter):
         current_tag = yield self.message_store.get_tag_info(tag)
         if current_tag:
             batch = yield current_tag.current_batch.get()
-            account_key = batch.metadata.user_account
-            if account_key:
-                conversation_store = ConversationStore(self.manager,
-                    account_key)
-                account_submanager = conversation_store.manager
-                all_conversations = yield batch.backlinks.conversations(
-                                                        account_submanager)
-                conversations = [c for c in all_conversations if not
-                                    c.ended()]
-                if conversations:
-                    if len(conversations) > 1:
-                        conv_keys = [c.key for c in conversations]
-                        log.warning('Multiple conversations found '
-                            'going with most recent: %r' % (conv_keys,))
-                    conversation = sorted(conversations, reverse=True,
-                        key=lambda c: c.start_timestamp)[0]
-                    returnValue(conversation)
-                log.error('No conversations found for %r' % (batch,))
+            if batch:
+                account_key = batch.metadata.user_account
+                if account_key:
+                    conversation_store = ConversationStore(self.manager,
+                        account_key)
+                    account_submanager = conversation_store.manager
+                    all_conversations = yield batch.backlinks.conversations(
+                                                            account_submanager)
+                    conversations = [c for c in all_conversations if not
+                                        c.ended()]
+                    if conversations:
+                        if len(conversations) > 1:
+                            conv_keys = [c.key for c in conversations]
+                            log.warning('Multiple conversations found '
+                                'going with most recent: %r' % (conv_keys,))
+                        conversation = sorted(conversations, reverse=True,
+                            key=lambda c: c.start_timestamp)[0]
+                        returnValue(conversation)
+                    log.error('No conversations found for %r' % (batch,))
+                else:
+                    log.error('No account_key found for tag: %r, batch: %r' % (
+                        current_tag, batch))
             else:
-                log.error('No account_key found for tag: %r, batch: %r' % (
-                    current_tag, batch))
+                log.error("No batch found for tag: %r" % (current_tag,))
         else:
             log.error('Cannot find current tag for %s' % (tag,))
 
