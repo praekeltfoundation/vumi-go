@@ -72,7 +72,7 @@ class SurveyApplication(PollApplication):
             method_name, args, kwargs))
 
     def start_survey(self, to_addr, conversation, **msg_options):
-        log.debig('Starting %r -> %s' % (conversation, to_addr))
+        log.debug('Starting %r -> %s' % (conversation, to_addr))
 
         helper_metadata = msg_options.setdefault('helper_metadata', {})
         helper_metadata['conversations'] = {
