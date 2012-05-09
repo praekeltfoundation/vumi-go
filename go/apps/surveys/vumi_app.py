@@ -1,3 +1,5 @@
+# -*- test-case-name: go.apps.surveys.tests.test_vumi_app -*-
+
 from twisted.internet.defer import inlineCallbacks
 from go.vumitools.api import VumiApiCommand, get_redis
 from go.vumitools.conversation import ConversationStore
