@@ -38,23 +38,23 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         'copy': 'What is your favorite color? 1. Red 2. Yellow '
                 '3. Blue',
         'label': 'favorite color',
-        'valid_responses': [1, 2, 3],
+        'valid_responses': [u'1', u'2', u'3'],
     }, {
         'checks': {
-            'equal': {'favorite color': 1}
+            'equal': {'favorite color': u'1'}
         },
         'copy': 'What shade of red? 1. Dark or 2. Light',
         'label': 'what shade',
-        'valid_responses': [1, 2],
+        'valid_responses': [u'1', u'2'],
     }, {
         'copy': 'What is your favorite fruit? 1. Apples 2. Oranges '
                 '3. Bananas',
         'label': 'favorite fruit',
-        'valid_responses': [1, 2, 3],
+        'valid_responses': [u'1', u'2', u'3'],
     }, {
         'copy': 'What is your favorite editor? 1. Vim 2. Emacs '
                 '3. Other',
-        'valid_responses': [1, 2, 3]
+        'valid_responses': [u'1', u'2', u'3']
     }]
 
     @inlineCallbacks
@@ -188,7 +188,7 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
     @inlineCallbacks
     def wait_for_messages(self, nr_of_messages, total_length):
         msgs = yield self.wait_for_dispatched_messages(total_length)
-        returnValue(msgs[:nr_of_messages])
+        returnValue(msgs[-1 * nr_of_messages:])
 
     @inlineCallbacks
     def tearDown(self):
@@ -214,19 +214,32 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         self.assertEqual(msg2['content'], self.default_questions[0]['copy'])
 
     @inlineCallbacks
-    def test_survey_completion(self):
-        yield self.create_contact(u'First', u'Contact',
-            msisdn=u'27831234567', groups=[self.group])
-        self.create_survey(self.conversation)
-        yield self.conversation.start()
-        for i in range(len(self.default_questions)):
+    def complete_survey(self, questions):
+        for i in range(len(questions)):
             [msg] = yield self.wait_for_messages(1, i + 1)
-            self.assertEqual(msg['content'], self.default_questions[0]['copy'])
-            response = self.default_questions[i]['valid_responses'][0]
-            yield self.reply_to(msg, str(response))
+            self.assertEqual(msg['content'], questions[i]['copy'])
+            response = str(questions[i]['valid_responses'][0])
+            yield self.reply_to(msg, response)
 
         last_msg = self.get_dispatched_messages()[-1]
         self.assertEqual(last_msg['content'],
             'Thanks for completing the survey')
         self.assertEqual(last_msg['session_event'],
             TransportUserMessage.SESSION_CLOSE)
+
+    @inlineCallbacks
+    def test_survey_completion(self):
+        yield self.create_contact(u'First', u'Contact',
+            msisdn=u'27831234567', groups=[self.group])
+        self.create_survey(self.conversation)
+        yield self.conversation.start()
+        yield self.complete_survey(self.default_questions)
+
+    @inlineCallbacks
+    def test_surveys_in_succession(self):
+        yield self.create_contact(u'First', u'Contact',
+            msisdn=u'27831234567', groups=[self.group])
+        self.create_survey(self.conversation)
+        yield self.conversation.start()
+        for i in range(3):
+            yield self.complete_survey(self.default_questions)
