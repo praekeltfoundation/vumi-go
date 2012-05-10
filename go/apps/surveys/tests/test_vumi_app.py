@@ -5,7 +5,7 @@
 import json
 import uuid
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import TransportEvent, TransportUserMessage
 from vumi.application.tests.test_base import ApplicationTestCase
@@ -20,9 +20,6 @@ from go.vumitools.account import AccountStore
 
 from vxpolls.manager import PollManager
 
-from twisted.internet.base import DelayedCall
-DelayedCall.debug = True
-
 
 def dummy_consumer_factory_factory_factory(publish_func):
     def dummy_consumer_factory_factory():
@@ -35,7 +32,7 @@ def dummy_consumer_factory_factory_factory(publish_func):
 class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
 
     application_class = SurveyApplication
-    transport_type = 'sms'
+    transport_type = u'sms'
     timeout = 2
     default_questions = [{
         'copy': 'What is your favorite color? 1. Red 2. Yellow '
@@ -118,23 +115,55 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         self.user_api.api.account_store.tag_permissions(uuid.uuid4().hex,
             tagpool=u"pool", max_keys=None)
 
-        # Create a group, contacts and a conversation
-        self.group = yield self.user_api.contact_store.new_group(u'test group')
-        yield self.group.save()
-        self.contact1 = yield self.user_api.contact_store.new_contact(
-            u'First', u'Contact', msisdn=u'27831234567', groups=[self.group])
-        yield self.contact1.save()
-        self.contact2 = yield self.user_api.contact_store.new_contact(
-            u'Second', u'Contact', msisdn=u'27831234568', groups=[self.group])
-        yield self.contact2.save()
-        conversation = yield self.user_api.new_conversation(
-            u'survey', u'Subject', u'Message', delivery_tag_pool=u"pool",
-            delivery_class=u'sms')
-        conversation.add_group(self.group)
-        yield conversation.save()
-        self.conversation = self.user_api.wrap_conversation(conversation)
+        # Create a group and a conversation
+        self.group = yield self.create_group(u'test group')
 
-    def create_survey(self, conversation, questions=None):
+        self.conversation = yield self.create_conversation(u'survey',
+            u'Subject', u'Message',
+            delivery_tag_pool=u'pool',
+            delivery_class=self.transport_type)
+        self.conversation.add_group(self.group)
+        yield self.conversation.save()
+
+    @inlineCallbacks
+    def create_group(self, name):
+        group = yield self.user_api.contact_store.new_group(name)
+        yield group.save()
+        returnValue(group)
+
+    @inlineCallbacks
+    def create_contact(self, name, surname, **kwargs):
+        contact = yield self.user_api.contact_store.new_contact(name,
+            surname, **kwargs)
+        yield contact.save()
+        returnValue(contact)
+
+    @inlineCallbacks
+    def create_conversation(self, conversation_type, subject, message,
+        **kwargs):
+        conversation = yield self.user_api.new_conversation(
+            conversation_type, subject, message, **kwargs)
+        yield conversation.save()
+        returnValue(self.user_api.wrap_conversation(conversation))
+
+    @inlineCallbacks
+    def reply_to(self, msg, content, continue_session=True, **kwargs):
+        session_event = None if continue_session else 'close'
+        reply = TransportUserMessage(
+            to_addr=msg['from_addr'],
+            from_addr=msg['to_addr'],
+            group=msg['group'],
+            in_reply_to=msg['message_id'],
+            content=content,
+            session_event=session_event,
+            transport_name=msg['transport_name'],
+            transport_type=msg['transport_type'],
+            transport_metadata=msg['transport_metadata'],
+            helper_metadata=msg['helper_metadata'],
+            **kwargs)
+        yield self.dispatch(reply)
+
+    def create_survey(self, conversation, questions=None, end_response=None):
         # Create a sample survey
         questions = questions or self.default_questions
         poll_id = 'poll-%s' % (conversation.key,)
@@ -147,13 +176,18 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         })
 
         config.setdefault('survey_completed_response',
-                        'Thanks for completing the survey')
+            (end_response or 'Thanks for completing the survey'))
         self.pm.set(poll_id, config)
         return self.pm.get(poll_id)
 
     def publish_command(self, cmd_dict):
         data = json.dumps(cmd_dict)
         self._amqp.publish_raw('vumi', 'vumi.api', data)
+
+    @inlineCallbacks
+    def wait_for_messages(self, nr_of_messages, total_length):
+        msgs = yield self.wait_for_dispatched_messages(total_length)
+        returnValue(msgs[:nr_of_messages])
 
     @inlineCallbacks
     def tearDown(self):
@@ -165,6 +199,10 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
 
     @inlineCallbacks
     def test_start(self):
+        self.contact1 = yield self.create_contact(u'First', u'Contact',
+            msisdn=u'27831234567', groups=[self.group])
+        self.contact2 = yield self.create_contact(u'Second', u'Contact',
+            msisdn=u'27831234568', groups=[self.group])
         self.create_survey(self.conversation)
         with LogCatcher() as log:
             yield self.conversation.start()
@@ -173,3 +211,17 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         [msg1, msg2] = (yield self.wait_for_dispatched_messages(2))
         self.assertEqual(msg1['content'], self.default_questions[0]['copy'])
         self.assertEqual(msg2['content'], self.default_questions[0]['copy'])
+
+    @inlineCallbacks
+    def test_survey_completion(self):
+        yield self.create_contact(u'First', u'Contact',
+            msisdn=u'27831234567', groups=[self.group])
+        self.create_survey(self.conversation)
+        yield self.conversation.start()
+
+        [msg] = yield self.wait_for_dispatched_messages(1)
+        self.assertEqual(msg['content'], self.default_questions[0]['copy'])
+        yield self.reply_to(msg, '1')  # Red
+        [msg] = yield self.wait_for_messages(1, 2)
+        self.assertEqual(msg['content'], self.default_questions[1]['copy'])
+        yield self.reply_to(msg, '1')  # Dark
