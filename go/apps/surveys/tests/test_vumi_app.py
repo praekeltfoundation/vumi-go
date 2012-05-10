@@ -148,7 +148,8 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
 
     @inlineCallbacks
     def reply_to(self, msg, content, continue_session=True, **kwargs):
-        session_event = None if continue_session else 'close'
+        session_event = (None if continue_session
+                            else TransportUserMessage.SESSION_CLOSE)
         reply = TransportUserMessage(
             to_addr=msg['from_addr'],
             from_addr=msg['to_addr'],
@@ -218,11 +219,14 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
             msisdn=u'27831234567', groups=[self.group])
         self.create_survey(self.conversation)
         yield self.conversation.start()
-        print ''
         for i in range(len(self.default_questions)):
             [msg] = yield self.wait_for_messages(1, i + 1)
-            print msg['content'], '->', self.default_questions[i]['copy']
             self.assertEqual(msg['content'], self.default_questions[0]['copy'])
             response = self.default_questions[i]['valid_responses'][0]
-            print 'replied with', response
-            yield self.reply_to(msg, response)
+            yield self.reply_to(msg, str(response))
+
+        last_msg = self.get_dispatched_messages()[-1]
+        self.assertEqual(last_msg['content'],
+            'Thanks for completing the survey')
+        self.assertEqual(last_msg['session_event'],
+            TransportUserMessage.SESSION_CLOSE)
