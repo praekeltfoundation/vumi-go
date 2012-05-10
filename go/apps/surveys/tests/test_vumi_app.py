@@ -218,10 +218,11 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
             msisdn=u'27831234567', groups=[self.group])
         self.create_survey(self.conversation)
         yield self.conversation.start()
-
-        [msg] = yield self.wait_for_dispatched_messages(1)
-        self.assertEqual(msg['content'], self.default_questions[0]['copy'])
-        yield self.reply_to(msg, '1')  # Red
-        [msg] = yield self.wait_for_messages(1, 2)
-        self.assertEqual(msg['content'], self.default_questions[1]['copy'])
-        yield self.reply_to(msg, '1')  # Dark
+        print ''
+        for i in range(len(self.default_questions)):
+            [msg] = yield self.wait_for_messages(1, i + 1)
+            print msg['content'], '->', self.default_questions[i]['copy']
+            self.assertEqual(msg['content'], self.default_questions[0]['copy'])
+            response = self.default_questions[i]['valid_responses'][0]
+            print 'replied with', response
+            yield self.reply_to(msg, response)
