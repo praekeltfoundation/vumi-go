@@ -214,9 +214,9 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         self.assertEqual(msg2['content'], self.default_questions[0]['copy'])
 
     @inlineCallbacks
-    def complete_survey(self, questions):
+    def complete_survey(self, questions, start_at=0):
         for i in range(len(questions)):
-            [msg] = yield self.wait_for_messages(1, i + 1)
+            [msg] = yield self.wait_for_messages(1, i + start_at + 1)
             self.assertEqual(msg['content'], questions[i]['copy'])
             response = str(questions[i]['valid_responses'][0])
             yield self.reply_to(msg, response)
@@ -226,6 +226,7 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
             'Thanks for completing the survey')
         self.assertEqual(last_msg['session_event'],
             TransportUserMessage.SESSION_CLOSE)
+        returnValue(last_msg)
 
     @inlineCallbacks
     def test_survey_completion(self):
@@ -242,4 +243,6 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         self.create_survey(self.conversation)
         yield self.conversation.start()
         for i in range(3):
-            yield self.complete_survey(self.default_questions)
+            last_msg = yield self.complete_survey(self.default_questions,
+                start_at=(i * len(self.default_questions)))
+            yield self.reply_to(last_msg, 'hi')
