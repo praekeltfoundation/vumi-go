@@ -245,4 +245,5 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         for i in range(3):
             last_msg = yield self.complete_survey(self.default_questions,
                 start_at=(i * len(self.default_questions)))
+            # any input will restart the survey
             yield self.reply_to(last_msg, 'hi')
