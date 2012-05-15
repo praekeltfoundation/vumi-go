@@ -1,7 +1,10 @@
+# -*- test-case-name: go.apps.surveys.tests.test_vumi_app -*-
+
 from twisted.internet.defer import inlineCallbacks
 from go.vumitools.api import VumiApiCommand, get_redis
 from go.vumitools.conversation import ConversationStore
 from vxpolls.example import PollApplication
+from vxpolls.manager import PollManager
 from vumi.persist.message_store import MessageStore
 from vumi.persist.txriak_manager import TxRiakManager
 from vumi.message import TransportUserMessage
@@ -12,8 +15,10 @@ class SurveyApplication(PollApplication):
 
     def validate_config(self):
         super(SurveyApplication, self).validate_config()
-
-        self.worker_name = self.config.get('worker_name')
+        self.worker_name = self.config['worker_name']
+        #vxpolls
+        vxp_config = self.config.get('vxpolls', {})
+        self.poll_prefix = vxp_config.get('prefix')
         # message store
         mdb_config = self.config.get('message_store', {})
         self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
@@ -24,10 +29,10 @@ class SurveyApplication(PollApplication):
 
     @inlineCallbacks
     def setup_application(self):
-        yield super(SurveyApplication, self).setup_application()
         r_server = get_redis(self.config)
-        self.manager = TxRiakManager.from_config({
-                'bucket_prefix': self.mdb_prefix})
+        self.pm = PollManager(r_server, self.poll_prefix)
+        self.manager = TxRiakManager.from_config(
+            self.config.get('riak_manager'))
         self.store = MessageStore(self.manager, r_server, self.mdb_prefix)
         self.control_consumer = yield self.consume(
             '%s.control' % (self.worker_name,),
@@ -38,7 +43,7 @@ class SurveyApplication(PollApplication):
 
     @inlineCallbacks
     def teardown_application(self):
-        yield super(SurveyApplication, self).teardown_application()
+        self.pm.stop()
         if self.control_consumer is not None:
             yield self.control_consumer.stop()
             self.control_consumer = None
