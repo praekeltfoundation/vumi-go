@@ -1,9 +1,9 @@
-# -*- test-case-name: go.apps.surveys.tests.test_vumi_app -*-
 
 from twisted.internet.defer import inlineCallbacks
 from go.vumitools.api import VumiApiCommand, get_redis
+from go.vumitools.middleware import DebitAccountMiddleware
 from go.vumitools.conversation import ConversationStore
-from vxpolls.example import PollApplication
+from vxpolls.multipoll_example import MultiPollApplication
 from vxpolls.manager import PollManager
 from vumi.persist.message_store import MessageStore
 from vumi.persist.txriak_manager import TxRiakManager
@@ -11,10 +11,10 @@ from vumi.message import TransportUserMessage
 from vumi import log
 
 
-class SurveyApplication(PollApplication):
+class MultiSurveyApplication(MultiPollApplication):
 
     def validate_config(self):
-        super(SurveyApplication, self).validate_config()
+        super(MultiSurveyApplication, self).validate_config()
         self.worker_name = self.config['worker_name']
         #vxpolls
         vxp_config = self.config.get('vxpolls', {})
@@ -48,12 +48,22 @@ class SurveyApplication(PollApplication):
             yield self.control_consumer.stop()
             self.control_consumer = None
 
+    @inlineCallbacks
     def consume_user_message(self, message):
+        print message
+        participant = self.pm.get_participant(message.user())
+        user = DebitAccountMiddleware.map_msg_to_user(message)
+        conv_store = ConversationStore(self.manager, user)
+        conversations = yield conv_store.list_conversations()
+        self.poll_id_map = {}
+        for c in conversations:
+            self.poll_id_map[c.subject] = 'poll-%s' % c.key
+        self.poll_id_list = [self.poll_id_map[poll_name] for poll_name in self.poll_name_list]
         helper_metadata = message['helper_metadata']
         conv_info = helper_metadata.get('conversations')
         helper_metadata['poll_id'] = 'poll-%s' % (
             conv_info.get('conversation_key'),)
-        super(SurveyApplication, self).consume_user_message(message)
+        super(MultiSurveyApplication, self).consume_user_message(message)
 
     def consume_control_command(self, command_message):
         """

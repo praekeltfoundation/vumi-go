@@ -16,6 +16,7 @@ from go.vumitools.contact import ContactGroup
 CONVERSATION_TYPES = [
     ('bulk_message', 'Send Bulk SMS and track replies'),
     ('survey', 'Interactive Survey'),
+    ('multi_survey', 'Multi-stage Interactive Survey'),
 ]
 
 CONVERSATION_DRAFT = 'draft'
