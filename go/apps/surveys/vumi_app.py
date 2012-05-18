@@ -124,7 +124,7 @@ class SurveyApplication(PollApplication):
 class MultiSurveyApplication(MultiPollApplication):
 
     def validate_config(self):
-        super(SurveyApplication, self).validate_config()
+        super(MultiSurveyApplication, self).validate_config()
         self.worker_name = self.config['worker_name']
         #vxpolls
         vxp_config = self.config.get('vxpolls', {})
@@ -185,7 +185,7 @@ class MultiSurveyApplication(MultiPollApplication):
             conv_info.get('conversation_key'),)
         helper_metadata['poll_id'] = 'poll-ceb83fce3afb4c2587c88b0504d58b4e'
         print "HELPER_METADATA", helper_metadata
-        super(SurveyApplication, self).consume_user_message(message)
+        super(MultiSurveyApplication, self).consume_user_message(message)
 
     def consume_control_command(self, command_message):
         """
