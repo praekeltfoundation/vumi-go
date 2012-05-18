@@ -2,8 +2,10 @@
 
 from twisted.internet.defer import inlineCallbacks
 from go.vumitools.api import VumiApiCommand, get_redis
+from go.vumitools.middleware import DebitAccountMiddleware
 from go.vumitools.conversation import ConversationStore
 from vxpolls.example import PollApplication
+from vxpolls.multipoll_example import MultiPollApplication
 from vxpolls.manager import PollManager
 from vumi.persist.message_store import MessageStore
 from vumi.persist.txriak_manager import TxRiakManager
@@ -53,6 +55,136 @@ class SurveyApplication(PollApplication):
         conv_info = helper_metadata.get('conversations')
         helper_metadata['poll_id'] = 'poll-%s' % (
             conv_info.get('conversation_key'),)
+        super(SurveyApplication, self).consume_user_message(message)
+
+    def consume_control_command(self, command_message):
+        """
+        Handle a VumiApiCommand message that has arrived.
+
+        :type command_message: VumiApiCommand
+        :param command_message:
+            The command message received for this application.
+        """
+        cmd_method_name = 'process_command_%(command)s' % command_message
+        args = command_message['args']
+        kwargs = command_message['kwargs']
+        cmd_method = getattr(self, cmd_method_name, None)
+        if cmd_method:
+            return cmd_method(*args, **kwargs)
+        else:
+            return self.process_unknown_cmd(cmd_method_name, *args, **kwargs)
+
+    def process_unknown_cmd(self, method_name, *args, **kwargs):
+        log.error("Unknown vumi API command: %s(%s, %s)" % (
+            method_name, args, kwargs))
+
+    def start_survey(self, to_addr, conversation, **msg_options):
+        log.debug('Starting %r -> %s' % (conversation, to_addr))
+
+        helper_metadata = msg_options.setdefault('helper_metadata', {})
+        helper_metadata['conversations'] = {
+            'conversation_key': conversation.key,
+            'conversation_type': conversation.conversation_type,
+        }
+
+        # We reverse the to_addr & from_addr since we're faking input
+        # from the client to start the survey.
+        from_addr = msg_options.pop('from_addr')
+        msg = TransportUserMessage(from_addr=to_addr, to_addr=from_addr,
+                content='', **msg_options)
+        self.consume_user_message(msg)
+
+    @inlineCallbacks
+    def process_command_start(self, batch_id, conversation_type,
+        conversation_key, msg_options, is_client_initiated, **extra_params):
+
+        if is_client_initiated:
+            log.debug('Conversation %r is client initiated, no need to notify '
+                'the application worker' % (conversation_key,))
+            return
+
+        batch = yield self.store.get_batch(batch_id)
+        if batch:
+            account_key = batch.metadata.user_account
+            if account_key is None:
+                log.error("No account key in batch metadata: %r" % (
+                    batch,))
+                return
+
+            conv_store = ConversationStore(self.manager, account_key)
+            conv = yield conv_store.get_conversation_by_key(conversation_key)
+
+            to_addresses = yield conv.get_contacts_addresses()
+            for to_addr in to_addresses:
+                yield self.start_survey(to_addr, conv, **msg_options)
+        else:
+            log.error('No batch found for %s' % (batch_id,))
+
+
+class MultiSurveyApplication(MultiPollApplication):
+
+    def validate_config(self):
+        super(SurveyApplication, self).validate_config()
+        self.worker_name = self.config['worker_name']
+        #vxpolls
+        vxp_config = self.config.get('vxpolls', {})
+        self.poll_prefix = vxp_config.get('prefix')
+        # message store
+        mdb_config = self.config.get('message_store', {})
+        self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
+        # api worker
+        self.api_routing_config = VumiApiCommand.default_routing_config()
+        self.api_routing_config.update(self.config.get('api_routing', {}))
+        self.control_consumer = None
+
+    @inlineCallbacks
+    def setup_application(self):
+        r_server = get_redis(self.config)
+        self.pm = PollManager(r_server, self.poll_prefix)
+        self.manager = TxRiakManager.from_config(
+            self.config.get('riak_manager'))
+        self.store = MessageStore(self.manager, r_server, self.mdb_prefix)
+        self.control_consumer = yield self.consume(
+            '%s.control' % (self.worker_name,),
+            self.consume_control_command,
+            exchange_name=self.api_routing_config['exchange'],
+            exchange_type=self.api_routing_config['exchange_type'],
+            message_class=VumiApiCommand)
+
+    @inlineCallbacks
+    def teardown_application(self):
+        self.pm.stop()
+        if self.control_consumer is not None:
+            yield self.control_consumer.stop()
+            self.control_consumer = None
+
+    @inlineCallbacks
+    def consume_user_message(self, message):
+        print "\nAPP DICT", self.__dict__, "\n"
+        participant = self.pm.get_participant(message.user())
+        print "PARTICIPANT", participant.dump()
+        print message
+        user = DebitAccountMiddleware.map_msg_to_user(message)
+        print "USER", user
+        conv_store = ConversationStore(self.manager, user)
+        conversations = yield conv_store.list_conversations()
+        #print  "CONVERSATIONS", conversations
+        print self.poll_name_list
+        self.poll_id_map = {}
+        for c in conversations:
+            self.poll_id_map[c.subject] = 'poll-%s' % c.key
+            print c.subject, c.key
+        print self.poll_id_map
+        self.poll_id_list = [self.poll_id_map[poll_name] for poll_name in self.poll_name_list]
+        print self.poll_id_list
+        helper_metadata = message['helper_metadata']
+        print "HELPER_MEATADATA", helper_metadata
+        conv_info = helper_metadata.get('conversations')
+        print "CONV_INFO", conv_info
+        helper_metadata['poll_id'] = 'poll-%s' % (
+            conv_info.get('conversation_key'),)
+        helper_metadata['poll_id'] = 'poll-ceb83fce3afb4c2587c88b0504d58b4e'
+        print "HELPER_METADATA", helper_metadata
         super(SurveyApplication, self).consume_user_message(message)
 
     def consume_control_command(self, command_message):
