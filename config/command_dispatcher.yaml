@@ -2,3 +2,4 @@ transport_name: command_dispatcher
 worker_names:
     - bulk_message_application
     - survey_application
+    - multi_survey_application

@@ -4,7 +4,7 @@ batch_size: 2
 
 message_store:
   store_prefix: vumigo.
-riak:
+riak_manager:
   bucket_prefix: vumigo.
 vxpolls:
-  prefix: vumigo.
+  prefix: poll_manager
