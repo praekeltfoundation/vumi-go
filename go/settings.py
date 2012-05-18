@@ -27,8 +27,10 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'go.db',
+        #'ENGINE': 'django.db.backends.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        #'NAME': 'go.db',
+        'NAME': 'go',
         'USER': 'go',
         'PASSWORD': 'go',
         'HOST': 'localhost',
@@ -121,6 +123,7 @@ TEMPLATE_DIRS = (
     abspath("contacts", "templates"),
     abspath("account", "templates"),
     abspath("apps", "surveys", "templates"),
+    abspath("apps", "multi_surveys", "templates"),
     abspath("apps", "bulk_message", "templates"),
 )
 
