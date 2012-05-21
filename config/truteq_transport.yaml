@@ -1,0 +1,5 @@
+transport_name: truteq_transport
+username: username
+password: password
+host: localhost
+port: 1234
