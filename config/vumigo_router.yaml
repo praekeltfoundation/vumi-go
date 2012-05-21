@@ -5,6 +5,7 @@ riak:
 transport_names:
   - smpp_transport
   - gtalk_vumigo
+  - truteq_transport
 exposed_names:
   - vumigo_router
 router_class: vumi.dispatchers.base.SimpleDispatchRouter
@@ -12,4 +13,6 @@ route_mappings:
   smpp_transport:
     - vumigo_router
   gtalk_vumigo:
+    - vumigo_router
+  truteq_transport:
     - vumigo_router

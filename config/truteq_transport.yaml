@@ -3,3 +3,29 @@ username: username
 password: password
 host: localhost
 port: 1234
+
+middleware:
+  - logging_mw: vumi.middleware.LoggingMiddleware
+  - storing_mw: vumi.middleware.StoringMiddleware
+  - ussd_tagging_mw: vumi.middleware.TaggingMiddleware
+  - normalize_msisdn_mw: go.vumitools.middleware.NormalizeMsisdnMiddleware
+
+# Configure the middlewares
+logging_mw:
+  log_level: debug
+
+ussd_tagging_mw:
+  incoming:
+    addr_pattern: '^(.*)$'
+    tagpool_template: 'truteq'
+    tagname_template: '\1'
+  outgoing:
+    tagname_pattern: '.*'
+    msg_template: {}
+
+storing_mw:
+  riak:
+    bucket_prefix: vumigo.
+
+normalize_msisdn_mw:
+  country_code: '27'
