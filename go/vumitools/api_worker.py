@@ -98,7 +98,7 @@ class GoApplicationRouter(BaseDispatchRouter):
         if current_tag:
             batch = yield current_tag.current_batch.get()
             if batch:
-                account_key = batch.metadata.user_account
+                account_key = batch.metadata['user_account']
                 if account_key:
                     conversation_store = ConversationStore(self.manager,
                         account_key)
