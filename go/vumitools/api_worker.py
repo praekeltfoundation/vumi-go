@@ -15,6 +15,7 @@ from vumi import log
 from go.vumitools.api import VumiApiCommand, get_redis
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
+from go.vumitools.middleware import DebitAccountMiddleware
 
 
 class CommandDispatcher(ApplicationWorker):
@@ -130,6 +131,8 @@ class GoApplicationRouter(BaseDispatchRouter):
             conversation = yield self.get_conversation_for_tag(tag)
             if conversation:
                 conv_type = conversation.conversation_type
+                DebitAccountMiddleware.add_user_to_message(msg,
+                        conversation.user_account.key)
                 metadata = msg['helper_metadata']
                 conv_metadata = metadata.setdefault('conversations', {})
                 conv_metadata.update({
