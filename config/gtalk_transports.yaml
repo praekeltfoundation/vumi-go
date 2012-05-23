@@ -1,8 +1,9 @@
 defaults:
   host: talk.google.com
   port: 5222
-  status: "status"
-  # debug: 1
+  status: "chat"
+  status_message: "Vumi Go!"
+  debug: 1
   middleware:
     - logging_mw: vumi.middleware.LoggingMiddleware
     - storing_mw: vumi.middleware.StoringMiddleware
