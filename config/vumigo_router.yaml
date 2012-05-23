@@ -6,6 +6,8 @@ transport_names:
   - smpp_transport
   - gtalk_vumigo
   - truteq_transport
+  - safaricom_sna_smpp_transport
+  - afropinions_smpp_transport
 exposed_names:
   - vumigo_router
 router_class: vumi.dispatchers.base.SimpleDispatchRouter
@@ -15,4 +17,8 @@ route_mappings:
   gtalk_vumigo:
     - vumigo_router
   truteq_transport:
+    - vumigo_router
+  safaricom_sna_smpp_transport:
+    - vumigo_router
+  afropinions_smpp_transport:
     - vumigo_router
