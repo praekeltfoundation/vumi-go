@@ -7,6 +7,7 @@ transport_names:
   - gtalk_vumigo
   - truteq_transport
   - safaricom_sna_smpp_transport
+  - safaricom_sna_ussd_transport
   - afropinions_smpp_transport
 exposed_names:
   - vumigo_router
@@ -19,6 +20,8 @@ route_mappings:
   truteq_transport:
     - vumigo_router
   safaricom_sna_smpp_transport:
+    - vumigo_router
+  safaricom_sna_ussd_transport:
     - vumigo_router
   afropinions_smpp_transport:
     - vumigo_router
