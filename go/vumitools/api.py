@@ -262,7 +262,7 @@ class ConversationWrapper(object):
         return self.tagpool_metadata.get('client_initiated', False)
 
     def get_absolute_url(self):
-        return u'/app/%s/%s' % (self.conversation_type, self.key)
+        return u'/app/%s/%s/' % (self.conversation_type, self.key)
 
 
 class TagpoolSet(object):

@@ -1,79 +1,64 @@
 {% extends "app.html" %}
 
-{% block extra_header %}
+{% block main %}
+
+    <div class="row">
+        <div class="span12">
+            <div id="welcome">
+                <h1><a href="{% url contacts:people %}">People &amp; Groups</a> &raquo; New Contact</h1>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="span1">
+            <img src="{{ STATIC_URL }}img/avatar-empty.png" class="avatar" />
+        </div>
+        <div class="span11">
+            <form name="frm-person" id="frm-person" method="post" action="" class="form-horizontal">
+             {% csrf_token %}
+                <fieldset>
+                <legend>{{contact}}</legend>
+                    {% for field in form.visible_fields %}
+                    <div class="control-group {% if field.errors %}error{% endif %}">
+                        <label class="control-label" for="{{field.name}}">
+                            {{field.label}}
+                        </label>
+                        <div class="controls">
+                            {{field}}
+                            <span class="help-inline">
+                                {% if field.errors %}
+                                    {{field.errors|join:" "}}
+                                {% endif %}
+                                {% if field.help_text %}
+                                    ({{field.help_text}})
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" data-loading-text="saving...">Save changes</button>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
     <script type="text/javascript">
       $(document).ready(function(){
           $('#frm-new-group').validate();
           $('#frm-upload-contacts').validate();
+          $("#frm-person").validate();
       });
     </script>
     <link type="text/css" href="{{ STATIC_URL }}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
     <link type="text/css" href="{{ STATIC_URL }}css/jquery-ui-timepicker.css" rel="stylesheet" />
-{% endblock %}
-
-{% block main %}
-    <div id="control-bar">
-        <div id="control-elements">
-            <h3>
-                <a href="{% url contacts:people %}">People</a>
-            </h3>
-            {% include "contacts/includes/menu.html" %}
-        </div>
-    </div>
-    <div id="main">
-        <div class="inner">
-            {% include "base/includes/messages.html" %}
-            {% include "contacts/includes/tools.html" %}
-            <div class="wide-box people-box">
-                <div id="steps" class="two-step">
-                    <div id="main-left-groups" class="step">
-                        <a href="{% url contacts:groups %}">Groups</a>
-                    </div>
-                    <div id="people" class="step people-active" style="border-right: none">
-                        <a href="{% url contacts:people %}">People</a>
-                    </div>
-                </div>
-                <div class="inner-box">
-                    <div class="person">
-                        <h3 style="margin">
-                            Add New Contact
-                        </h3>
-                        <p class="byline">
-                            * = Required
-                        </p>
-                    </div><!-- provision for avatar, replies history and more fields  -->
-                    <form name="frm-person" id="frm-person" method="post" action="">
-                        {% for field in form.visible_fields %}
-                        <div class="field-row">
-                            <label for="{{field.name}}">
-                                {{field.label}}
-                                {% if field.field.required %}*{% endif %}
-                                {% if field.help_text %}
-                                    ({{field.help_text}})
-                                {% endif %}
-                            </label>
-                            {{field}}
-                            <label for="email" generated="true" class="error">
-                                {{field.errors}}
-                            </label>
-                            <div class="clear"></div>
-                        </div>
-                        {% endfor %}
-                        {# TODO opt-ins #}
-                        {# <div class="field-row"> #}
-                        {#     <label class="wide">Opt-Ins:</label> <input type="checkbox" name="opt-mobile" class="chkbox" checked="checked"> Mobile <input type="checkbox" name="opt-email" class="chkbox" checked="checked"> Email <input type="checkbox" name="opt-bbm" class="chkbox" checked="checked"> BBM <input type="checkbox" name="opt-gtalk" class="chkbox" checked="checked"> GTalk #}
-                        {#     <div class="clear"></div> #}
-                        {# </div> #}
-                        <div class="field-row">
-                            <input type="submit" name="submit" class="btn" value="Save">
-                            <div class="clear"></div>
-                        </div>
-                        {% csrf_token %}
-                    </form>
-                </div>
-            </div>
-            {% include "footer.html" %}
-        </div>
-    </div>
-    
 {% endblock %}
