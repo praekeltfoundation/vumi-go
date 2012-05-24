@@ -1,4 +1,5 @@
 <!doctype html>
+{% load url from future %}
 <!--[if lt IE 7]> <html class="no-js lt-ie9 lt-ie8 lt-ie7" lang="en"> <![endif]-->
 <!--[if IE 7]>    <html class="no-js lt-ie9 lt-ie8" lang="en"> <![endif]-->
 <!--[if IE 8]>    <html class="no-js lt-ie9" lang="en"> <![endif]-->
@@ -24,68 +25,69 @@
 </head>
 <body>
 
-	<!--[if lt IE 7]><p class=chromeframe>Your browser is <em>ancient!</em> <a href="http://browsehappy.com/">Upgrade to a different browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">install Google Chrome Frame</a> to experience this site.</p><![endif]-->
+    <!--[if lt IE 7]><p class=chromeframe>Your browser is <em>ancient!</em> <a href="http://browsehappy.com/">Upgrade to a different browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">install Google Chrome Frame</a> to experience this site.</p><![endif]-->
 
-	{% block header %}{% endblock %}
+    {% block header %}{% endblock %}
 
-	<div class="container">
+    <div class="container">
 
-	    {% block content %}{% endblock %}
+        {% block content %}{% endblock %}
 
-	    {% block modals %}{% endblock %}
+        {% block modals %}{% endblock %}
 
-	    {% block footer %}{% endblock %}
+        {% block footer %}{% endblock %}
 
-	</div><!--/container-->
+    </div><!--/container-->
 
-	<div class="modal hide fade" id="newConv">
-		<div class="modal-header">
-		   <a class="close" data-dismiss="modal">×</a>
-		   <h3>What type of conversation would you like to start?</h3>
-		</div>
-		<form id="newConversationType" action="">
-			<div class="modal-body">
-			    <select id="convtype" class="required">
-			        <option value="" selected="selected">Please choose</option>
-			        <option value="{% url bulk_message:new %}">Group Message</option>
-			        <option value="{% url survey:new %}">Survey</option>
-			    </select>
-			</div>
-			<div class="modal-footer">
-			   <button type="submit" class="btn btn-primary">Next &rarr;</button>
-			   <a data-dismiss="modal" class="btn">Cancel</a>
-			</div>
-		</form>
-	</div><!--/newConversation-->
+    <div class="modal hide fade" id="newConv">
+        <div class="modal-header">
+           <a class="close" data-dismiss="modal">×</a>
+           <h3>What type of conversation would you like to start?</h3>
+        </div>
+        <form id="newConversationType" action="">
+            <div class="modal-body">
+                <select id="convtype" class="required">
+                    <option value="" selected="selected">Please choose</option>
+                    {% for application, settings in user_api.applications.items %}
+                        <option value="{% url settings.namespace|add:':new' %}">{{settings.display_name}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="modal-footer">
+               <button type="submit" class="btn btn-primary">Next &rarr;</button>
+               <a data-dismiss="modal" class="btn">Cancel</a>
+            </div>
+        </form>
+    </div><!--/newConversation-->
 
-	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-	<script>window.jQuery || document.write('<script src="{{ STATIC_URL }}js/libs/jquery-1.7.1.min.js"><\/script>')</script>
-	<script src="{{ STATIC_URL }}js/libs/bootstrap/tooltip.js"></script>
-	<script src="{{ STATIC_URL }}js/libs/bootstrap/transition.js"></script>
-	<script src="{{ STATIC_URL }}js/libs/bootstrap/collapse.js"></script>
-	<script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-dropdown.js"></script>
-	<script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-modal.js"></script>
-	<script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-popover.js"></script>
-	<script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-alert.js"></script>
-	<script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-typeahead.js"></script>
-	<script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-tab.js"></script>
-	<script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-button.js"></script>
-	<script src="{{ STATIC_URL }}js/libs/jquery.timePicker.min.js"></script>
-	<script src="{{ STATIC_URL }}js/libs/jquery-ui-1.8.17.custom.min.js"></script>
-	<script src="{{ STATIC_URL }}js/libs/jquery.validate.js"></script>
-	<script src="{{ STATIC_URL }}js/script.js"></script>
-	<script>
-	var _gaq=[['_setAccount','UA-XXXXX-X'],['_trackPageview']];
-	(function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
-	g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
-	s.parentNode.insertBefore(g,s)}(document,'script'));
-	</script>
-	<script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script>window.jQuery || document.write('<script src="{{ STATIC_URL }}js/libs/jquery-1.7.1.min.js"><\/script>')</script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/tooltip.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/transition.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/collapse.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-dropdown.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-modal.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-popover.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-alert.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-typeahead.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-tab.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-button.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/jquery.timePicker.min.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/jquery-ui-1.8.17.custom.min.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/jquery.validate.js"></script>
+    <script src="{{ STATIC_URL }}js/script.js"></script>
+    <script>
+    var _gaq=[['_setAccount','UA-XXXXX-X'],['_trackPageview']];
+    (function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+    g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
+    s.parentNode.insertBefore(g,s)}(document,'script'));
+    </script>
+    <script>
     $(document).ready(function(){
         $("#newConversationType").validate();
     });
-	</script>
-	{% block extra_js %}{% endblock %}
+    </script>
+    {% block extra_js %}{% endblock %}
 
 </body>
 </html>

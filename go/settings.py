@@ -222,6 +222,16 @@ VUMI_API_CONFIG = {
     }
 
 VUMI_COUNTRY_CODE = '27'
+VUMI_INSTALLED_APPS = {
+    'go.apps.bulk_message': {
+        'namespace': 'bulk_message',
+        'display_name': 'Group Message',
+    },
+    'go.apps.surveys': {
+        'namespace': 'survey',
+        'display_name': 'Dialogue',
+    },
+}
 
 VXPOLLS_REDIS_CONFIG = {}
 VXPOLLS_PREFIX = 'vumigo.'
