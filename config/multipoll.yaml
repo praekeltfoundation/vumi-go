@@ -7,7 +7,7 @@ message_store:
 riak_manager:
   bucket_prefix: vumigo.
 vxpolls:
-  prefix: poll_manager
+  prefix: vumigo.
 poll_name_list:
   - XXX
   - YYY
