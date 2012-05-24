@@ -5,7 +5,8 @@ from datetime import datetime
 
 from vumi.persist.model import Model, Manager
 from vumi.persist.message_store import Batch
-from vumi.persist.fields import Unicode, ManyToMany, ForeignKey, Timestamp
+from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
+                                Json)
 
 from twisted.internet.defer import returnValue
 
@@ -39,6 +40,7 @@ class Conversation(Model):
     delivery_tag_pool = Unicode(null=True)
 
     batches = ManyToMany(Batch)
+    metadata = Json(null=True)
 
     def ended(self):
         return self.end_timestamp is not None
