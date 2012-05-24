@@ -13,9 +13,8 @@ from vumi import log
 class MultiSurveyApplication(MultiPollApplication):
 
     def validate_config(self):
-        super(MultiSurveyApplication, self).validate_config()
         self.worker_name = self.config['worker_name']
-        #vxpolls
+        # vxpolls
         vxp_config = self.config.get('vxpolls', {})
         self.poll_prefix = vxp_config.get('prefix')
         # message store
@@ -102,7 +101,7 @@ class MultiSurveyApplication(MultiPollApplication):
 
         batch = yield self.store.get_batch(batch_id)
         if batch:
-            account_key = batch.metadata.user_account
+            account_key = batch.metadata["user_account"]
             if account_key is None:
                 log.error("No account key in batch metadata: %r" % (
                     batch,))
