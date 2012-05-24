@@ -27,18 +27,34 @@ $('#convtype').change(function() {
 	$('#newConversationType').attr('action', newAction);
 });
 
+function addOptGroupLabel(selectField) {
+    stripOptGroupLabel(selectField);
+    var selectedOpt = selectField.find('option:selected');
+    var optGroupLabel = selectedOpt.closest('optgroup').attr('label');
+    selectedOpt.prepend("<span class='optgroup-label'>"
+                        + optGroupLabel + ": </span>");
+}
+
+function stripOptGroupLabel(selectField) {
+    selectField.find('.optgroup-label').remove();
+}
+
 /* show or hide the tag pool options depending on the delivery class chosen */
 $('.delivery-class-radio').change(function() {
     delivery_classes = $('.delivery-class-radio[name=delivery_class]');
     delivery_classes.each(function(index, element) {
         var deliveryClass = $(element);
         var tagPoolDiv = $('#' + deliveryClass.val() + '_tag_pool_selection');
+        var selectField = $('#' + deliveryClass.val() + '_tag_pool_selection select');
         if($(deliveryClass).attr('checked')) {
             tagPoolDiv.show();
-            $('#' + deliveryClass.val() + '_tag_pool_selection select').removeAttr('disabled');
+            selectField.removeAttr('disabled');
+            selectField.blur(function() { addOptGroupLabel(selectField); });
+            selectField.focus(function() { stripOptGroupLabel(selectField); });
+            addOptGroupLabel(selectField);
         } else {
             tagPoolDiv.hide();
-            $('#' + deliveryClass.val() + '_tag_pool_selection select').attr('disabled', 'disabled');
+            selectField.attr('disabled', 'disabled');
         }
     });
 
