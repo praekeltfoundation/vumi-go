@@ -1,7 +1,6 @@
 
 from twisted.internet.defer import inlineCallbacks
 from go.vumitools.api import VumiApiCommand, get_redis
-from go.vumitools.middleware import DebitAccountMiddleware
 from go.vumitools.conversation import ConversationStore
 from vxpolls.multipoll_example import MultiPollApplication
 from vxpolls.manager import PollManager
@@ -14,9 +13,8 @@ from vumi import log
 class MultiSurveyApplication(MultiPollApplication):
 
     def validate_config(self):
-        super(MultiSurveyApplication, self).validate_config()
         self.worker_name = self.config['worker_name']
-        #vxpolls
+        # vxpolls
         vxp_config = self.config.get('vxpolls', {})
         self.poll_prefix = vxp_config.get('prefix')
         # message store
@@ -48,17 +46,7 @@ class MultiSurveyApplication(MultiPollApplication):
             yield self.control_consumer.stop()
             self.control_consumer = None
 
-    @inlineCallbacks
     def consume_user_message(self, message):
-        print message
-        participant = self.pm.get_participant(message.user())
-        user = DebitAccountMiddleware.map_msg_to_user(message)
-        conv_store = ConversationStore(self.manager, user)
-        conversations = yield conv_store.list_conversations()
-        self.poll_id_map = {}
-        for c in conversations:
-            self.poll_id_map[c.subject] = 'poll-%s' % c.key
-        self.poll_id_list = [self.poll_id_map[poll_name] for poll_name in self.poll_name_list]
         helper_metadata = message['helper_metadata']
         conv_info = helper_metadata.get('conversations')
         helper_metadata['poll_id'] = 'poll-%s' % (
@@ -113,7 +101,7 @@ class MultiSurveyApplication(MultiPollApplication):
 
         batch = yield self.store.get_batch(batch_id)
         if batch:
-            account_key = batch.metadata.user_account
+            account_key = batch.metadata["user_account"]
             if account_key is None:
                 log.error("No account key in batch metadata: %r" % (
                     batch,))
