@@ -67,13 +67,14 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             # 'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
             # 'start_time': datetime.utcnow().strftime('%H:%M'),
             'delivery_class': 'sms',
-            'delivery_tag_pool': 'longcode',
+            'delivery_tag_pool': 'longcode:',
         })
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
         conversation = max(self.conv_store.list_conversations(),
                            key=lambda c: c.created_at)
         self.assertEqual(conversation.delivery_class, 'sms')
         self.assertEqual(conversation.delivery_tag_pool, 'longcode')
+        self.assertEqual(conversation.delivery_tag, None)
         self.assertRedirects(response, reverse('survey:contents', kwargs={
             'conversation_key': conversation.key,
         }))
