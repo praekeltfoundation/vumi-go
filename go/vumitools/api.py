@@ -26,6 +26,8 @@ from go.vumitools.conversation import ConversationStore
 from go.vumitools.middleware import DebitAccountMiddleware
 from go.vumitools.credit import CreditManager
 
+from django.conf import settings
+
 
 def get_redis(config):
     """Get a possibly fake redis."""
@@ -363,6 +365,18 @@ class VumiUserApi(object):
         pool_data = dict((pool, self.api.tpm.get_metadata(pool))
                          for pool in pool_names)
         returnValue(TagpoolSet(pool_data))
+
+    @Manager.calls_manager
+    def applications(self):
+        account_store = self.api.account_store
+        user_account = yield account_store.get_user(self.user_account_key)
+        permissions = yield user_account.applications.get_all()
+        applications = [p.application for p in permissions]
+        app_settings = settings.VUMI_INSTALLED_APPS
+        returnValue(dict([(application,
+                        app_settings[application])
+                        for application in applications
+                        if application in app_settings]))
 
     def list_groups(self):
         return self.contact_store.list_groups()
