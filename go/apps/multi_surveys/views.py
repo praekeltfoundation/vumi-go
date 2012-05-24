@@ -246,7 +246,11 @@ def people(request, conversation_key):
                 return redirect(reverse('multi_survey:start', kwargs={
                                     'conversation_key': conversation.key}))
 
-    survey_form = make_read_only_form(ConversationForm(request.user_api))
+    survey_form = make_read_only_form(ConversationForm(request.user_api,
+        instance=conversation, initial={
+            'start_date': conversation.start_timestamp.date(),
+            'start_time': conversation.start_timestamp.time(),
+        }))
     content_form = forms.make_form(data=config, initial=config, extra=0)
     read_only_content_form = make_read_only_form(content_form)
     return render(request, 'multi_surveys/people.html', {
@@ -254,6 +258,7 @@ def people(request, conversation_key):
         'survey_form': survey_form,
         'content_form': read_only_content_form,
         'groups': groups,
+        'polls': get_polls_for_conversation(conversation),
     })
 
 

@@ -34,10 +34,29 @@
         </div>
         <div class="span4">
             <div class="box shadow survey-box survey-questions">
+                <h3>2. Surveys</h3>
+                <br>
+                <fieldset>
+                    <table class="table table-condensed">
+                    <tbody>
+                    {% for friendly_name, poll_id in polls.items %}
+                        <tr>
+                            <td>
+                                {{conversation.subject}}, survey: {{friendly_name}}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    </table>
+                </fieldset>
+            </div>
+        </div>
+        <div class="span4">
+            <div class="box shadow survey-box survey-questions">
                 {% if conversation.is_client_initiated %}
                     {% include "multi_surveys/includes/no_recipients_needed.html" %}
                 {% else %}
-                    <h3>2. Survey Recipients</h3>
+                    <h3>3. Survey Recipients</h3>
                     <br>
                     {% include "conversation/includes/groups.html" with groups=groups %}
                     <div class="btn-toolbar">
