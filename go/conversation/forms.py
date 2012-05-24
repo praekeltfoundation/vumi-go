@@ -76,9 +76,11 @@ class ConversationForm(VumiModelForm):
             delivery_class = self.tagpool_set.delivery_class(pool)
             if delivery_class is None:
                 continue
-            delivery_classes.setdefault(delivery_class, []).append((
-                pool, self.tagpool_set.tagpool_name(pool)))
-        return delivery_classes.items()
+            tag_pool_name = self.tagpool_set.tagpool_name(pool)
+            tag_options = [(pool, "Random")]
+            tag_pools = delivery_classes.setdefault(delivery_class, [])
+            tag_pools.append((tag_pool_name, tag_options))
+        return sorted(delivery_classes.items())
 
     def delivery_class_widgets(self):
         # Backported hack from Django 1.4 to allow me to iterate
