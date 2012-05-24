@@ -11,6 +11,6 @@ psycopg2==2.4
 Fabric==1.2.2
 django-celery==2.4.2
 django-celery-email
--e git+git://github.com/praekelt/vumi@fb0261dd0f8caea484ee2351fe6e854814776753#egg=vumi
+-e git+git://github.com/praekelt/vumi@develop#egg=vumi
 -e git+git://github.com/praekelt/vxpolls.git@develop#egg=vxpolls
 Markdown==2.1.1
