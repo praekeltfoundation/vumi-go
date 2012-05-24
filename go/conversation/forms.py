@@ -62,13 +62,26 @@ class ConversationForm(VumiModelForm):
         self.tagpool_set = self.user_api.tagpools()
         if tagpool_filter is not None:
             self.tagpool_set = self.tagpool_set.select(tagpool_filter)
-        self.fields['delivery_tag_pool'].widget.choices = [
-            (pool, self.tagpool_set.tagpool_name(pool))
-            for pool in self.tagpool_set.pools()]
+        self.fields['delivery_tag_pool'].widget.choices = \
+                                                        self.all_tag_options()
         self.fields['delivery_class'].widget.choices = [
             (delivery_class,
              self.tagpool_set.delivery_class_name(delivery_class))
             for delivery_class in self.tagpool_set.delivery_classes()]
+
+    def all_tag_options(self):
+        tag_options = []
+        for pool in self.tagpool_set.pools():
+            tag_options.extend(self.tag_options(pool))
+        return tag_options
+
+    def tag_options(self, pool):
+        if self.tagpool_set.user_selects_tag(pool):
+            tag_options = [("%s:%s" % tag, tag[1]) for tag
+                           in self.user_api.api.tpm.freetags(pool)]
+        else:
+            tag_options = [("%s:" % pool, "Random")]
+        return tag_options
 
     def tagpools_by_delivery_class(self):
         delivery_classes = {}
@@ -76,10 +89,9 @@ class ConversationForm(VumiModelForm):
             delivery_class = self.tagpool_set.delivery_class(pool)
             if delivery_class is None:
                 continue
-            tag_pool_name = self.tagpool_set.tagpool_name(pool)
-            tag_options = [(pool, "Random")]
+            display_name = self.tagpool_set.display_name(pool)
             tag_pools = delivery_classes.setdefault(delivery_class, [])
-            tag_pools.append((tag_pool_name, tag_options))
+            tag_pools.append((display_name, self.tag_options(pool)))
         return sorted(delivery_classes.items())
 
     def delivery_class_widgets(self):
