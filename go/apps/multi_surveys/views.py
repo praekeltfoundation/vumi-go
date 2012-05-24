@@ -18,17 +18,39 @@ from vxpolls.manager import PollManager
 redis = redis.Redis(**settings.VXPOLLS_REDIS_CONFIG)
 
 
+def link_poll_to_conversation(poll_name, poll_id, conversation):
+    metadata = conversation.metadata or {}
+    vxpolls_metadata = metadata.setdefault('vxpolls', {})
+    polls = vxpolls_metadata.setdefault('polls', {})
+    polls.update({
+        poll_name: poll_id,
+    })
+    conversation.metadata = metadata
+    conversation.save()
+    print 'conversation.metadata', conversation.metadata
+
+
+def get_polls_for_conversation(conversation):
+    print 'conversation', conversation
+    print 'meteadata', conversation.metadata
+    metadata = conversation.metadata or {}
+    vxpolls_metadata = metadata.setdefault('vxpolls', {})
+    return vxpolls_metadata.get('polls', {})
+
+
+def generate_poll_id(conversation, suffix):
+    return 'poll-%s_%s' % (conversation.key, suffix)
+
+
 def get_poll_config(poll_id):
     pm = PollManager(redis, settings.VXPOLLS_PREFIX)
     config = pm.get_config(poll_id)
     config.update({
         'poll_id': poll_id,
-        'transport_name': settings.VXPOLLS_TRANSPORT_NAME,
-        'worker_name': settings.VXPOLLS_WORKER_NAME,
     })
 
-    config.setdefault('survey_completed_response',
-                        'Thanks for completing the survey')
+    # config.setdefault('survey_completed_response',
+    #                     'Thanks for completing the survey')
     return pm, config
 
 
@@ -60,7 +82,7 @@ def new(request):
                 u'multi_survey', **conversation_data)
             messages.add_message(request, messages.INFO,
                 'Survey Created')
-            return redirect(reverse('multi_survey:people',
+            return redirect(reverse('multi_survey:surveys',
                 kwargs={'conversation_key': conversation.key}))
 
     else:
@@ -71,6 +93,101 @@ def new(request):
         })
     return render(request, 'multi_surveys/new.html', {
         'form': form,
+    })
+
+
+@login_required
+def surveys(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
+    polls = get_polls_for_conversation(conversation)
+
+    survey_form = make_read_only_form(ConversationForm(request.user_api,
+        instance=conversation, initial={
+            'start_date': conversation.start_timestamp.date(),
+            'start_time': conversation.start_timestamp.time(),
+        }))
+
+    return render(request, 'multi_surveys/surveys.html', {
+        'survey_form': survey_form,
+        'conversation': conversation,
+        'polls': polls,
+    })
+
+
+@login_required
+def new_survey(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
+    initial_config = {
+        'poll_name': '',
+    }
+    if request.method == 'POST':
+        pm = PollManager(redis, settings.VXPOLLS_PREFIX)
+        post_data = request.POST.copy()
+        form = forms.make_form(data=post_data, initial=initial_config)
+        form.fields['poll_name'].required = True
+        if form.is_valid():
+            poll_name = form.cleaned_data['poll_name']
+            poll_id = generate_poll_id(conversation, poll_name)
+            link_poll_to_conversation(poll_name, poll_id, conversation)
+            pm.set(poll_id, form.export())
+            if request.POST.get('_save_contents'):
+                return redirect(reverse('multi_survey:survey', kwargs={
+                    'conversation_key': conversation.key,
+                    'poll_name': poll_name,
+                }))
+            else:
+                return redirect(reverse('multi_survey:surveys', kwargs={
+                    'conversation_key': conversation.key,
+                }))
+    else:
+        form = forms.make_form(data=initial_config, initial=initial_config)
+        form.fields['poll_name'].required = True
+
+    survey_form = make_read_only_form(ConversationForm(request.user_api,
+        instance=conversation, initial={
+            'start_date': conversation.start_timestamp.date(),
+            'start_time': conversation.start_timestamp.time(),
+        }))
+    return render(request, 'surveys/contents.html', {
+        'form': form,
+        'survey_form': survey_form,
+    })
+
+
+@login_required
+def survey(request, conversation_key, poll_name):
+    conversation = conversation_or_404(request.user_api, conversation_key)
+    poll_id = generate_poll_id(conversation, poll_name)
+    pm, config = get_poll_config(poll_id)
+    if request.method == 'POST':
+        post_data = request.POST.copy()
+        post_data.update({
+            'poll_id': poll_id,
+        })
+        form = forms.make_form(data=post_data, initial=config)
+        if form.is_valid():
+            pm.set(poll_id, form.export())
+            link_poll_to_conversation(poll_name, poll_id, conversation)
+            if request.POST.get('_save_contents'):
+                return redirect(reverse('multi_survey:survey', kwargs={
+                    'conversation_key': conversation.key,
+                    'poll_name': poll_name,
+                }))
+            else:
+                return redirect(reverse('multi_survey:surveys', kwargs={
+                    'conversation_key': conversation.key,
+                }))
+    else:
+        form = forms.make_form(data=config, initial=config)
+
+    survey_form = make_read_only_form(ConversationForm(request.user_api,
+        instance=conversation, initial={
+            'start_date': conversation.start_timestamp.date(),
+            'start_time': conversation.start_timestamp.time(),
+        }))
+    return render(request, 'surveys/contents.html', {
+        'form': form,
+        'survey_form': survey_form,
     })
 
 
