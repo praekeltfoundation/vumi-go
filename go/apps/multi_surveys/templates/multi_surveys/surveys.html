@@ -64,7 +64,9 @@
                     {% if polls %}
                         <div class="btn-toolbar">
                             <a class="btn btn-primary" href="{% url multi_survey:new_survey conversation_key=conversation.key %}">Add Another Survey</a>
-                            <input type="submit" value="Add Recipients &rarr;" class="btn" />
+                            <a class="btn" href="{% url multi_survey:people conversation_key=conversation.key %}">
+                                Add Recipients &rarr;
+                            </a>
                         </div>
                     {% endif %}
                 </fieldset>
