@@ -11,7 +11,7 @@ def get_publisher(app, **options):
     return publisher
 
 
-@task
+@task(ignore_result=True)
 def send_command_task(command, publisher_config):
     logger = send_command_task.get_logger()
     with get_publisher(send_command_task.app, serializer="json",
