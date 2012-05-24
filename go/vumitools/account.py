@@ -16,6 +16,11 @@ class UserTagPermission(Model):
     max_keys = Integer(null=True)
 
 
+class UserAppPermission(Model):
+    """An application that provides a certain conversation_type"""
+    application = Unicode(max_length=255)
+
+
 class UserAccount(Model):
     """A user account."""
     # key is uuid
@@ -23,6 +28,7 @@ class UserAccount(Model):
     # TODO: tagpools can be made OneToMany once vumi.persist.fields
     #       gains a OneToMany field
     tagpools = ManyToMany(UserTagPermission)
+    applications = ManyToMany(UserAppPermission)
     created_at = Timestamp(default=datetime.utcnow)
 
 
@@ -31,6 +37,7 @@ class AccountStore(object):
         self.manager = manager
         self.users = self.manager.proxy(UserAccount)
         self.tag_permissions = self.manager.proxy(UserTagPermission)
+        self.application_permissions = self.manager.proxy(UserAppPermission)
 
     @Manager.calls_manager
     def new_user(self, username):
