@@ -131,7 +131,8 @@ class ContactStore(PerAccountStore):
     def list_groups(self):
         # Not stale, because we're using backlinks.
         user_account = yield self.get_user_account()
-        returnValue(user_account.backlinks.contactgroups(self.manager))
+        groups = user_account.backlinks.contactgroups(self.manager)
+        returnValue(sorted(groups, key=lambda group: group.name))
 
     @Manager.calls_manager
     def contact_for_addr(self, delivery_class, addr):
