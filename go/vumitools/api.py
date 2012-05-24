@@ -365,7 +365,8 @@ class VumiUserApi(object):
         returnValue(TagpoolSet(pool_data))
 
     def list_groups(self):
-        return self.contact_store.list_groups()
+        return sorted(self.contact_store.list_groups(),
+            key=lambda group: group.name)
 
     def new_conversation(self, *args, **kw):
         return self.conversation_store.new_conversation(*args, **kw)
