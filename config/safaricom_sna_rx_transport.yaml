@@ -1,0 +1,46 @@
+transport_name: safaricom_sna_smpp_rx_transport
+
+system_id: "system-id"
+password: "password"
+host: 10.226.7.111
+port: 6692
+system_type: smpp
+
+interface_version: "34"
+registered_delivery: "1"
+
+smpp_bind_timeout: 10
+smpp_enquire_link_interval: 10
+
+middleware:
+  - logging_mw: vumi.middleware.LoggingMiddleware
+  - storing_mw: vumi.middleware.StoringMiddleware
+  - longcode_tagging_mw: vumi.middleware.TaggingMiddleware
+  - shortcode_tagging_mw: vumi.middleware.TaggingMiddleware
+  - normalize_msisdns_mw: go.vumitools.middleware.NormalizeMsisdnMiddleware
+
+longcode_tagging_mw:
+  incoming:
+    addr_pattern: '^(\d{6,20})$'
+    tagpool_template: 'sisi_ni_amani_longcode'
+    tagname_template: '\1'
+  outgoing:
+    tagname_pattern: '.*'
+    msg_template: {}
+
+shortcode_tagging_mw:
+  incoming:
+    addr_pattern: '^(\d{4,5})$'
+    tagpool_template: 'sisi_ni_amani_shortcode'
+    tagname_template: '\1'
+  outgoing:
+    tagname_pattern: '.*'
+    msg_template: {}
+
+normalize_msisdns_mw:
+  country_code: '254'
+
+storing_mw:
+  riak:
+    bucket_prefix: vumigo.
+

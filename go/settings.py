@@ -227,7 +227,7 @@ VUMI_API_CONFIG = {
 VUMI_COUNTRY_CODE = '27'
 
 VXPOLLS_REDIS_CONFIG = {}
-VXPOLLS_PREFIX = 'poll_manager'
+VXPOLLS_PREFIX = 'vumigo.'
 VXPOLLS_CONFIG_PATH = join(PROJECT_ROOT, '..', 'config', 'poll.yaml')
 VXPOLLS_CONFIG = yaml.load(open(VXPOLLS_CONFIG_PATH, 'r'))
 VXPOLLS_QUESTIONS = VXPOLLS_CONFIG.get('questions', [])

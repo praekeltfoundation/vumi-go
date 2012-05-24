@@ -14,6 +14,8 @@ pools:
       delivery_class: sms
       transport_type: sms
       server_initiated: true
+      msg_options:
+        transport_name: smpp_transport
   truteq:
     tags: '["*120*646*4*1*%d#" % i for i in range(0, 100)]'
     metadata:
@@ -21,6 +23,8 @@ pools:
       delivery_class: ussd
       transport_type: ussd
       client_initiated: true
+      msg_options:
+        transport_name: truteq_transport
   integrat:
     tags: '["*120*99*987*10*%d#" % i for i in range(0, 100)]'
     metadata:
