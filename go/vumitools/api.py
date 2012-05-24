@@ -77,6 +77,12 @@ class ConversationWrapper(object):
 
     # TODO: Something about setattr?
 
+    def get_metadata(self, default=None):
+        return self.c.metadata or default
+
+    def set_metadata(self, metadata):
+        self.c.metadata = metadata
+
     def start_batch(self, tag):
         user_account = unicode(self.c.user_account.key)
         return self.mdb.batch_start([tag], user_account=user_account)

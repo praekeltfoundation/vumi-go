@@ -19,21 +19,27 @@ redis = redis.Redis(**settings.VXPOLLS_REDIS_CONFIG)
 
 
 def link_poll_to_conversation(poll_name, poll_id, conversation):
-    metadata = conversation.metadata or {}
+    metadata = conversation.get_metadata(default={})
     vxpolls_metadata = metadata.setdefault('vxpolls', {})
     polls = vxpolls_metadata.setdefault('polls', {})
     polls.update({
         poll_name: poll_id,
     })
-    conversation.metadata = metadata
+    conversation.set_metadata(metadata)
     conversation.save()
-    print 'conversation.metadata', conversation.metadata
+
+
+def unlink_poll_from_conversation(poll_name, conversation):
+    metadata = conversation.get_metadata(default={})
+    vxpolls_metadata = metadata.setdefault('vxpolls', {})
+    polls = vxpolls_metadata.setdefault('polls', {})
+    del polls[poll_name]
+    conversation.set_metadata(metadata)
+    conversation.save()
 
 
 def get_polls_for_conversation(conversation):
-    print 'conversation', conversation
-    print 'meteadata', conversation.metadata
-    metadata = conversation.metadata or {}
+    metadata = conversation.get_metadata(default={})
     vxpolls_metadata = metadata.setdefault('vxpolls', {})
     return vxpolls_metadata.get('polls', {})
 
@@ -148,7 +154,7 @@ def new_survey(request, conversation_key):
             'start_date': conversation.start_timestamp.date(),
             'start_time': conversation.start_timestamp.time(),
         }))
-    return render(request, 'surveys/contents.html', {
+    return render(request, 'multi_surveys/contents.html', {
         'form': form,
         'survey_form': survey_form,
     })
@@ -160,6 +166,13 @@ def survey(request, conversation_key, poll_name):
     poll_id = generate_poll_id(conversation, poll_name)
     pm, config = get_poll_config(poll_id)
     if request.method == 'POST':
+
+        if request.POST.get('_delete_survey'):
+            unlink_poll_from_conversation(poll_name, conversation)
+            return redirect(reverse('multi_survey:surveys', kwargs={
+                'conversation_key': conversation.key,
+            }))
+
         post_data = request.POST.copy()
         post_data.update({
             'poll_id': poll_id,
@@ -185,7 +198,7 @@ def survey(request, conversation_key, poll_name):
             'start_date': conversation.start_timestamp.date(),
             'start_time': conversation.start_timestamp.time(),
         }))
-    return render(request, 'surveys/contents.html', {
+    return render(request, 'multi_surveys/contents.html', {
         'form': form,
         'survey_form': survey_form,
     })
