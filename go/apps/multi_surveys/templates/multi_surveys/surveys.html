@@ -46,8 +46,8 @@
                     {% for friendly_name, poll_id in polls.items %}
                         <tr>
                             <td>
-                                <a href="{% url multi_survey:survey conversation_key=conversation.key,poll_id=poll_id">
-                                    {{friendly_name}}
+                                <a href="{% url multi_survey:survey conversation_key=conversation.key,poll_name=friendly_name %}">
+                                    {{conversation.subject}}, survey: {{friendly_name}}
                                 </a>
                             </td>
                         </tr>
@@ -61,10 +61,10 @@
                     {% endfor %}
                     </tbody>
                     </table>
-                    {% if poll_ids %}
+                    {% if polls %}
                         <div class="btn-toolbar">
-                            <input type="submit" name="_save_contents" value="Save and another Question" class="btn btn-primary" />
-                            <input type="submit" value="Continue &rarr;" class="btn" />
+                            <a class="btn btn-primary" href="{% url multi_survey:new_survey conversation_key=conversation.key %}">Add Another Survey</a>
+                            <input type="submit" value="Add Recipients &rarr;" class="btn" />
                         </div>
                     {% endif %}
                 </fieldset>
