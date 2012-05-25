@@ -5,7 +5,8 @@ from datetime import datetime
 
 from vumi.persist.model import Model, Manager
 from vumi.persist.message_store import Batch
-from vumi.persist.fields import Unicode, ManyToMany, ForeignKey, Timestamp
+from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
+                                Json)
 
 from twisted.internet.defer import returnValue
 
@@ -16,6 +17,7 @@ from go.vumitools.contact import ContactGroup
 CONVERSATION_TYPES = [
     ('bulk_message', 'Send Bulk SMS and track replies'),
     ('survey', 'Interactive Survey'),
+    ('multi_survey', 'Multi-stage Interactive Survey'),
 ]
 
 CONVERSATION_DRAFT = 'draft'
@@ -39,6 +41,7 @@ class Conversation(Model):
     delivery_tag = Unicode(null=True)
 
     batches = ManyToMany(Batch)
+    metadata = Json(null=True)
 
     def ended(self):
         return self.end_timestamp is not None

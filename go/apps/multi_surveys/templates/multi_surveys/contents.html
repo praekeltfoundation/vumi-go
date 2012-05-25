@@ -1,0 +1,70 @@
+{% extends "app.html" %}
+
+{% block extra_header %}
+<link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
+<link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
+{% endblock %}
+
+{% block main %}
+<form name="conversation" id="conversation" method="post" action="">
+    {% csrf_token %}
+    <div class="row">
+        <div class="span12">
+            <div class="pull-right padtop">
+                <input type="submit" name="submit" class="btn btn-success" value="Next">
+            </div>
+            <div class="pull-right padtop" style="margin-right: 10px">
+                <input type="reset" class="btn" value="Cancel">
+            </div>
+            <div id="welcome">
+                <h1>New Multi Survey</h1>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="span4">
+            <div class="box shadow survey-box conv-disabled">
+                <h3>1. Survey Details</h3>
+                <br>
+                <fieldset>
+                    {% include "surveys/includes/new.html" with form=survey_form %}
+                </fieldset>
+            </div>
+        </div>
+        <div class="span4">
+            <div class="box shadow survey-box survey-questions">
+                <h3>2. Survey Questions</h3>
+                <br>
+                <fieldset>
+                    {% include "surveys/includes/contents.html" with form=form %}
+                    <div class="btn-toolbar">
+                        <input type="submit" name="_save_contents" value="Save and Add another Question" class="btn btn-primary" />
+                        <input type="submit" value="Continue &rarr;" class="btn" />
+                    </div>
+                    <div class="btn-toolbar">
+                        <input type="submit" name="_delete_survey" value="Remove !" class="btn btn-danger" />
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+        <div class="span4">
+            <div class="box shadow survey-box conv-disabled">
+                <h3>3. Survey Recipients</h3>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function(){
+        $("#conversation").validate();
+    });
+</script>
+{% endblock %}

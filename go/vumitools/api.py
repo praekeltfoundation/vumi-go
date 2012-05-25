@@ -79,6 +79,12 @@ class ConversationWrapper(object):
 
     # TODO: Something about setattr?
 
+    def get_metadata(self, default=None):
+        return self.c.metadata or default
+
+    def set_metadata(self, metadata):
+        self.c.metadata = metadata
+
     def start_batch(self, tag):
         user_account = unicode(self.c.user_account.key)
         return self.mdb.batch_start([tag], user_account=user_account)
@@ -388,7 +394,8 @@ class VumiUserApi(object):
                         if application in app_settings]))
 
     def list_groups(self):
-        return self.contact_store.list_groups()
+        return sorted(self.contact_store.list_groups(),
+            key=lambda group: group.name)
 
     def new_conversation(self, *args, **kw):
         return self.conversation_store.new_conversation(*args, **kw)
