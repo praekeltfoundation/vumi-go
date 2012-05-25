@@ -29,9 +29,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': 'go.db',
-        'USER': 'go',
-        'PASSWORD': 'go',
-        'HOST': 'localhost',
+        'USER': '',
+        'PASSWORD': '',
+        'HOST': '',
         'PORT': '',
     }
 }
@@ -121,6 +121,7 @@ TEMPLATE_DIRS = (
     abspath("contacts", "templates"),
     abspath("account", "templates"),
     abspath("apps", "surveys", "templates"),
+    abspath("apps", "multi_surveys", "templates"),
     abspath("apps", "bulk_message", "templates"),
 )
 
