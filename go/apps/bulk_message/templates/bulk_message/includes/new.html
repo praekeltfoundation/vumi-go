@@ -33,7 +33,7 @@
         Pick a method delivery via {{delivery_class}}
     </label>
     <div class="controls">
-        <select id="{{delivery_class}}_tag_pool"  disabled="disabled" name="delivery_tag_pool" class="input-medium">
+        <select id="{{delivery_class}}_tag_pool" disabled="disabled" name="delivery_tag_pool" class="input-medium">
             {% for tag_pool_name, tag_options in tag_pools %}
             <optgroup label="{{tag_pool_name}}">
               {% for tag, label in tag_options %}
