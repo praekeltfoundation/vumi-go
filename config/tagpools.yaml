@@ -42,3 +42,21 @@ pools:
       server_initiated: true
       msg_options:
         transport_name: gtalk_vumigo
+  mama1:
+    tags:
+      - '*120*646*MAMA1'
+    metadata:
+      display_name: "MAMA USSD 1"
+      delivery_class: ussd
+      transport_type: ussd
+      client_intiated: true
+      user_selects_tag: true
+  mama2:
+    tags:
+      - '*120*646*MAMA2'
+    metadata:
+      display_name: "MAMA USSD 2"
+      delivery_class: ussd
+      transport_type: ussd
+      client_intiated: true
+      user_selects_tag: true
