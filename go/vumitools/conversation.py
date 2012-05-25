@@ -36,6 +36,7 @@ class Conversation(Model):
     conversation_type = Unicode()
     delivery_class = Unicode(null=True)
     delivery_tag_pool = Unicode(null=True)
+    delivery_tag = Unicode(null=True)
 
     batches = ManyToMany(Batch)
 
