@@ -45,10 +45,10 @@ class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
             }],
         }
     end_of_survey_copy = {
-        0: (u'You have completed registration, dial in again to start the'
-            ' surveys.'),
-        1: (u'You have completed this weeks questions please dial in again'
-            ' next week for more.'),
+        0: (u'Thank you!'),
+        1: (u"You've done this week's 2 quiz questions. "
+            "Please dial *120*646*4*6262# again next week "
+            "for new questions. Stay well! Visit askmama.mobi"),
         }
 
     @inlineCallbacks
