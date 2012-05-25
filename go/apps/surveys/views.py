@@ -196,6 +196,8 @@ def end(request, conversation_key):
 @login_required
 def show(request, conversation_key):
     conversation = conversation_or_404(request.user_api, conversation_key)
+    poll_id = 'poll-%s' % (conversation.key,)
     return render(request, 'surveys/show.html', {
         'conversation': conversation,
+        'poll_id': poll_id,
     })
