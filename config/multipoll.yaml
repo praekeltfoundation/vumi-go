@@ -8,7 +8,4 @@ riak_manager:
   bucket_prefix: vumigo.
 vxpolls:
   prefix: vumigo.
-poll_name_list:
-  - XXX
-  - YYY
-  - ZZZ
+poll_prefix: vumigo.
