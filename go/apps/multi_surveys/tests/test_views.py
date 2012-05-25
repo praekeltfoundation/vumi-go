@@ -74,11 +74,10 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(conversation.delivery_class, 'sms')
         self.assertEqual(conversation.delivery_tag_pool, pool)
         self.assertEqual(conversation.delivery_tag, tag)
-        # TODO: figure out what this should look like for multi_surveys
-        #self.assertRedirects(response, reverse('multi_survey:survey',
-        #                                       kwargs={
-        #    'conversation_key': conversation.key,
-        #}))
+        self.assertRedirects(response, reverse('multi_survey:surveys',
+                                               kwargs={
+            'conversation_key': conversation.key,
+        }))
 
     def test_new_conversation(self):
         """test the creation of a new conversation"""
