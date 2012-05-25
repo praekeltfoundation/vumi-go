@@ -45,7 +45,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
 
         # And a conversation
         conversation = self.conv_store.new_conversation(
-            conversation_type=u'bulk_message', subject=TEST_SUBJECT,
+            conversation_type=u'survey', subject=TEST_SUBJECT,
             message=u"Test message", delivery_class=u"sms",
             delivery_tag_pool=u"longcode", groups=[self.group_key])
         self.conv_key = conversation.key
