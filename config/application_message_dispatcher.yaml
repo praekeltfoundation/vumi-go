@@ -5,7 +5,9 @@ transport_names:
 exposed_names:
   - bulk_message_transport
   - survey_transport
+  - multi_survey_transport
 router_class: go.vumitools.api_worker.GoApplicationRouter
 conversation_mappings:
     survey: survey_transport
+    multi_survey: multi_survey_transport
     bulk_message: bulk_message_transport

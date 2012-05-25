@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Tests for go.vumitools.bulk_send_application"""
+"""Tests for go.apps.multi_surveys.vumi_app"""
 
 import json
 import uuid
@@ -12,7 +12,7 @@ from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import FakeRedis, LogCatcher
 from vumi.persist.txriak_manager import TxRiakManager
 
-from go.apps.surveys.vumi_app import SurveyApplication
+from go.apps.multi_surveys.vumi_app import MultiSurveyApplication
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import CeleryTestMixIn, DummyConsumerFactory
@@ -29,42 +29,36 @@ def dummy_consumer_factory_factory_factory(publish_func):
     return dummy_consumer_factory_factory
 
 
-class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
+class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
 
-    application_class = SurveyApplication
+    application_class = MultiSurveyApplication
     transport_type = u'sms'
     timeout = 2
-    default_questions = [{
-        'copy': 'What is your favorite color? 1. Red 2. Yellow '
-                '3. Blue',
-        'label': 'favorite color',
-        'valid_responses': [u'1', u'2', u'3'],
-    }, {
-        'checks': {
-            'equal': {'favorite color': u'1'}
-        },
-        'copy': 'What shade of red? 1. Dark or 2. Light',
-        'label': 'what shade',
-        'valid_responses': [u'1', u'2'],
-    }, {
-        'copy': 'What is your favorite fruit? 1. Apples 2. Oranges '
-                '3. Bananas',
-        'label': 'favorite fruit',
-        'valid_responses': [u'1', u'2', u'3'],
-    }, {
-        'copy': 'What is your favorite editor? 1. Vim 2. Emacs '
-                '3. Other',
-        'valid_responses': [u'1', u'2', u'3']
-    }]
+    default_polls = {
+        0: [{
+            'copy': 'Color? 1. Red 2. Blue', 'label': 'color',
+            'valid_responses': [u'1', u'2'],
+            }],
+        1: [{
+            'copy': 'Favorite? 1. Foo 2. Bar', 'label': 'favorite',
+            'valid_responses': [u'1', u'2'],
+            }],
+        }
+    end_of_survey_copy = {
+        0: (u'Thank you!'),
+        1: (u"You've done this week's 2 quiz questions. "
+            "Please dial *120*646*4*6262# again next week "
+            "for new questions. Stay well! Visit askmama.mobi"),
+        }
 
     @inlineCallbacks
     def setUp(self):
-        super(TestSurveyApplication, self).setUp()
+        super(TestMultiSurveyApplication, self).setUp()
 
         self._fake_redis = FakeRedis()
         self.config = {
             'redis_cls': lambda **kw: self._fake_redis,
-            'worker_name': 'survey_application',
+            'worker_name': 'multi_survey_application',
             'message_store': {
                 'store_prefix': 'test.',
             },
@@ -82,7 +76,7 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         # Setup the command dispatcher so we cand send it commands
         self.cmd_dispatcher = yield self.get_application({
             'transport_name': 'cmd_dispatcher',
-            'worker_names': ['survey_application'],
+            'worker_names': ['multi_survey_application'],
             }, cls=CommandDispatcher)
 
         # Setup Celery so that it uses FakeAMQP instead of the real one.
@@ -117,7 +111,7 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         # Create a group and a conversation
         self.group = yield self.create_group(u'test group')
 
-        self.conversation = yield self.create_conversation(u'survey',
+        self.conversation = yield self.create_conversation(u'multi_survey',
             u'Subject', u'Message',
             delivery_tag_pool=u'pool',
             delivery_class=self.transport_type)
@@ -163,22 +157,23 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
             **kwargs)
         yield self.dispatch(reply)
 
-    def create_survey(self, conversation, questions=None, end_response=None):
+    def create_survey(self, conversation, polls=None, end_response=None):
         # Create a sample survey
-        questions = questions or self.default_questions
-        poll_id = 'poll-%s' % (conversation.key,)
-        config = self.pm.get_config(poll_id)
-        config.update({
-            'poll_id': poll_id,
-            'transport_name': self.transport_name,
-            'worker_name': 'survey_application',
-            'questions': questions
-        })
-
-        config.setdefault('survey_completed_response',
-            (end_response or 'Thanks for completing the survey'))
-        self.pm.set(poll_id, config)
-        return self.pm.get(poll_id)
+        polls = polls or self.default_polls
+        poll_id_prefix = 'poll-%s' % (conversation.key,)
+        for poll_number, questions in polls.iteritems():
+            poll_id = "%s_%d" % (poll_id_prefix, poll_number)
+            config = self.pm.get_config(poll_id)
+            config.update({
+                'poll_id': poll_id,
+                'transport_name': self.transport_name,
+                'worker_name': 'multi_survey_application',
+                'questions': questions,
+                })
+            config.setdefault('survey_completed_response',
+                              (end_response or
+                               'Thanks for completing the survey'))
+            self.pm.set(poll_id, config)
 
     def publish_command(self, cmd_dict):
         data = json.dumps(cmd_dict)
@@ -195,7 +190,7 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         self._fake_redis.teardown()
         self.pm.stop()
         yield self.app.manager.purge_all()
-        yield super(TestSurveyApplication, self).tearDown()
+        yield super(TestMultiSurveyApplication, self).tearDown()
 
     @inlineCallbacks
     def test_start(self):
@@ -209,23 +204,30 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
             self.assertEqual(log.errors, [])
 
         [msg1, msg2] = (yield self.wait_for_dispatched_messages(2))
-        self.assertEqual(msg1['content'], self.default_questions[0]['copy'])
-        self.assertEqual(msg2['content'], self.default_questions[0]['copy'])
+        self.assertEqual(msg1['content'], self.default_polls[0][0]['copy'])
+        self.assertEqual(msg2['content'], self.default_polls[0][0]['copy'])
 
     @inlineCallbacks
-    def complete_survey(self, questions, start_at=0):
-        for i in range(len(questions)):
-            [msg] = yield self.wait_for_messages(1, i + start_at + 1)
-            self.assertEqual(msg['content'], questions[i]['copy'])
-            response = str(questions[i]['valid_responses'][0])
-            yield self.reply_to(msg, response)
+    def complete_survey(self, polls, start_at=0):
+        questions = []
+        for poll_number in sorted(polls.keys()):
+            questions.extend(polls[poll_number])
+            questions.append({
+                'copy': self.end_of_survey_copy[poll_number],
+                'valid_responses': [u''],
+                'session_event': 'close',
+                })
 
-        last_msg = self.get_dispatched_messages()[-1]
-        self.assertEqual(last_msg['content'],
-            'Thanks for completing the survey')
-        self.assertEqual(last_msg['session_event'],
-            TransportUserMessage.SESSION_CLOSE)
-        returnValue(last_msg)
+        for i, question in enumerate(questions):
+            [msg] = yield self.wait_for_messages(1, i + start_at + 1)
+            self.assertEqual(msg['content'], question['copy'])
+            self.assertEqual(msg['session_event'],
+                             question.get('session_event'))
+            if i != len(questions) - 1:
+                yield self.reply_to(msg, question['valid_responses'][0])
+
+        msgs = self.get_dispatched_messages()[-len(questions):]
+        returnValue(msgs)
 
     @inlineCallbacks
     def test_survey_completion(self):
@@ -233,7 +235,7 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
             msisdn=u'27831234567', groups=[self.group])
         self.create_survey(self.conversation)
         yield self.conversation.start()
-        yield self.complete_survey(self.default_questions)
+        yield self.complete_survey(self.default_polls)
 
     @inlineCallbacks
     def test_surveys_in_succession(self):
@@ -241,8 +243,10 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
             msisdn=u'27831234567', groups=[self.group])
         self.create_survey(self.conversation)
         yield self.conversation.start()
+        start_at = 0
         for i in range(3):
-            last_msg = yield self.complete_survey(self.default_questions,
-                start_at=(i * len(self.default_questions)))
+            msgs = yield self.complete_survey(self.default_polls,
+                                              start_at=start_at)
+            start_at += len(msgs)
             # any input will restart the survey
-            yield self.reply_to(last_msg, 'hi')
+            yield self.reply_to(msgs[-1], 'hi')
