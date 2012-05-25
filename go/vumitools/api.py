@@ -226,10 +226,16 @@ class ConversationWrapper(object):
                            reverse=True))
 
     @Manager.calls_manager
-    def acquire_tag(self, pool=None):
-        tag = yield self.api.acquire_tag(pool or self.delivery_tag_pool)
-        if tag is None:
-            raise ConversationSendError("No spare messaging tags.")
+    def acquire_tag(self):
+        if self.c.delivery_tag is None:
+            tag = yield self.api.acquire_tag(self.c.delivery_tag_pool)
+            if tag is None:
+                raise ConversationSendError("No spare messaging tags.")
+        else:
+            tag = (self.c.delivery_tag_pool, self.c.delivery_tag)
+            tag = yield self.api.acquire_specific_tag(tag)
+            if tag is None:
+                raise ConversationSendError("Requested tag not available.")
         returnValue(tag)
 
     def dispatch_command(self, command, *args, **kwargs):
@@ -271,7 +277,7 @@ class TagpoolSet(object):
     """Holder for helper methods for retrieving tag pool information.
 
     :param dict pools:
-        Dictionary of `tagpool name` -> `tagpool metadat` mappings.
+        Dictionary of `tagpool name` -> `tagpool metadata` mappings.
     """
 
     # TODO: this should ideally need to be moved somewhere else
@@ -301,8 +307,11 @@ class TagpoolSet(object):
     def pools(self):
         return self._pools.keys()
 
-    def tagpool_name(self, pool):
+    def display_name(self, pool):
         return self._pools[pool].get('display_name', pool)
+
+    def user_selects_tag(self, pool):
+        return self._pools[pool].get('user_selects_tag', False)
 
     def delivery_class(self, pool):
         return self._pools[pool].get('delivery_class', None)
@@ -549,9 +558,22 @@ class VumiApi(object):
         :param pool:
             name of the pool to retrieve tags from.
         :rtype:
-            str containing the tag
+            The tag acquired or None if no tag was available.
         """
         return self.tpm.acquire_tag(pool)
+
+    def acquire_specific_tag(self, tag):
+        """Acquire a specific tag.
+
+        Tags should be held for the duration of a conversation.
+
+        :type tag: tag tuple
+        :param tag:
+            The tag to acquire.
+        :rtype:
+            The tag acquired or None if the tag was not available.
+        """
+        return self.tpm.acquire_specific_tag(tag)
 
     def release_tag(self, tag):
         """Release a tag back to the pool it came from.

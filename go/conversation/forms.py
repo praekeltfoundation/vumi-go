@@ -1,3 +1,5 @@
+import itertools
+
 from django import forms
 from django.forms.util import ErrorList
 
@@ -62,13 +64,28 @@ class ConversationForm(VumiModelForm):
         self.tagpool_set = self.user_api.tagpools()
         if tagpool_filter is not None:
             self.tagpool_set = self.tagpool_set.select(tagpool_filter)
-        self.fields['delivery_tag_pool'].widget.choices = [
-            (pool, self.tagpool_set.tagpool_name(pool))
-            for pool in self.tagpool_set.pools()]
+        self.tag_options = self._load_tag_options()
+        self.fields['delivery_tag_pool'].widget.choices = list(
+            itertools.chain(self.tag_options.itervalues()))
         self.fields['delivery_class'].widget.choices = [
             (delivery_class,
              self.tagpool_set.delivery_class_name(delivery_class))
             for delivery_class in self.tagpool_set.delivery_classes()]
+
+    def _load_tag_options(self):
+        tag_options = {}
+        for pool in self.tagpool_set.pools():
+            tag_options[pool] = self._tag_options(pool)
+        return tag_options
+
+    def _tag_options(self, pool):
+        if self.tagpool_set.user_selects_tag(pool):
+            tag_options = [("%s:%s" % tag, tag[1]) for tag
+                           in self.user_api.api.tpm.free_tags(pool)]
+        else:
+            tag_options = [("%s:" % pool,
+                            "%s (auto)" % self.tagpool_set.display_name(pool))]
+        return tag_options
 
     def tagpools_by_delivery_class(self):
         delivery_classes = {}
@@ -76,9 +93,10 @@ class ConversationForm(VumiModelForm):
             delivery_class = self.tagpool_set.delivery_class(pool)
             if delivery_class is None:
                 continue
-            delivery_classes.setdefault(delivery_class, []).append((
-                pool, self.tagpool_set.tagpool_name(pool)))
-        return delivery_classes.items()
+            display_name = self.tagpool_set.display_name(pool)
+            tag_pools = delivery_classes.setdefault(delivery_class, [])
+            tag_pools.append((display_name, self.tag_options[pool]))
+        return sorted(delivery_classes.items())
 
     def delivery_class_widgets(self):
         # Backported hack from Django 1.4 to allow me to iterate
