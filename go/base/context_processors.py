@@ -1,5 +1,6 @@
 from go.contacts import forms
 from go.vumitools.contact import ContactStore
+from go.base.utils import vumi_api_for_user
 
 
 def user_profile(request):
@@ -7,6 +8,7 @@ def user_profile(request):
         return {}
     return {
         'user_profile': request.user.get_profile(),
+        'user_api': vumi_api_for_user(request.user),
     }
 
 
