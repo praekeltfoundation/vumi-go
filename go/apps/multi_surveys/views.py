@@ -67,11 +67,15 @@ def new(request):
                 'subject',
                 'message',
                 'delivery_class',
-                'delivery_tag_pool',
             ]
 
             for key in copy_keys:
                 conversation_data[key] = form.cleaned_data[key]
+
+            tag_info = form.cleaned_data['delivery_tag_pool'].partition(':')
+            conversation_data['delivery_tag_pool'] = tag_info[0]
+            if tag_info[2]:
+                conversation_data['delivery_tag'] = tag_info[2]
 
             start_date = form.cleaned_data['start_date'] or datetime.utcnow()
             start_time = (form.cleaned_data['start_time'] or
