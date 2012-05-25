@@ -10,7 +10,7 @@ class ContactForm(forms.Form):
     surname = forms.CharField(widget=widebox)
 
     email_address = forms.CharField(widget=widebox, required=False)
-    msisdn = forms.CharField(help_text='The phone number',
+    msisdn = forms.CharField(label='Contact number',
         widget=widebox, required=False)
     twitter_handle = forms.CharField(widget=widebox, required=False)
     facebook_id = forms.CharField(widget=widebox, required=False)
