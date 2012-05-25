@@ -309,7 +309,7 @@ class TagpoolSet(object):
         return self._pools[pool].get('display_name', pool)
 
     def user_selects_tag(self, pool):
-        return self._pools[pool].get('user_select_tag', False)
+        return self._pools[pool].get('user_selects_tag', False)
 
     def delivery_class(self, pool):
         return self._pools[pool].get('delivery_class', None)
