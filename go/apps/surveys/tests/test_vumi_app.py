@@ -7,7 +7,7 @@ import uuid
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.message import TransportEvent, TransportUserMessage
+from vumi.message import TransportUserMessage
 from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import FakeRedis, LogCatcher
 from vumi.persist.txriak_manager import TxRiakManager
@@ -64,7 +64,6 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         self._fake_redis = FakeRedis()
         self.config = {
             'redis_cls': lambda **kw: self._fake_redis,
-            'poll_id': '1',
             'worker_name': 'survey_application',
             'message_store': {
                 'store_prefix': 'test.',
