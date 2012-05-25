@@ -1,0 +1,19 @@
+<div class="row">
+    <div class="span12">
+        <h3>Download Survey Data</h3>
+    </div>
+</div>
+<div class="row padtop">
+    <div class="span12">
+        <table>
+            <tr>
+                <td>Download <a href="{% url dashboard:export_users poll_id=poll_id %}">User data</a></td>
+            </tr>
+            <tr>
+                <td>Download <a href="{% url dashboard:export_results poll_id=poll_id %}">Poll results</a></td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<hr>

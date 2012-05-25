@@ -33,12 +33,13 @@ $('.delivery-class-radio').change(function() {
     delivery_classes.each(function(index, element) {
         var deliveryClass = $(element);
         var tagPoolDiv = $('#' + deliveryClass.val() + '_tag_pool_selection');
+        var selectField = $('#' + deliveryClass.val() + '_tag_pool_selection select');
         if($(deliveryClass).attr('checked')) {
             tagPoolDiv.show();
-            $('#' + deliveryClass.val() + '_tag_pool_selection select').removeAttr('disabled');
+            selectField.removeAttr('disabled');
         } else {
             tagPoolDiv.hide();
-            $('#' + deliveryClass.val() + '_tag_pool_selection select').attr('disabled', 'disabled');
+            selectField.attr('disabled', 'disabled');
         }
     });
 
