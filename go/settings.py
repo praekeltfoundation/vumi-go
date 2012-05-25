@@ -232,6 +232,10 @@ VUMI_INSTALLED_APPS = {
         'namespace': 'survey',
         'display_name': 'Dialogue',
     },
+    'go.apps.multi_surveys': {
+        'namespace': 'multi_survey',
+        'display_name': 'Multiple Dialogues',
+    }
 }
 
 VXPOLLS_REDIS_CONFIG = {}
