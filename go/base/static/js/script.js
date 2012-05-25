@@ -27,18 +27,6 @@ $('#convtype').change(function() {
 	$('#newConversationType').attr('action', newAction);
 });
 
-function addOptGroupLabel(selectField) {
-    stripOptGroupLabel(selectField);
-    var selectedOpt = selectField.find('option:selected');
-    var optGroupLabel = selectedOpt.closest('optgroup').attr('label');
-    selectedOpt.prepend("<span class='optgroup-label'>"
-                        + optGroupLabel + ": </span>");
-}
-
-function stripOptGroupLabel(selectField) {
-    selectField.find('.optgroup-label').remove();
-}
-
 /* show or hide the tag pool options depending on the delivery class chosen */
 $('.delivery-class-radio').change(function() {
     delivery_classes = $('.delivery-class-radio[name=delivery_class]');
@@ -49,9 +37,6 @@ $('.delivery-class-radio').change(function() {
         if($(deliveryClass).attr('checked')) {
             tagPoolDiv.show();
             selectField.removeAttr('disabled');
-            selectField.blur(function() { addOptGroupLabel(selectField); });
-            selectField.focus(function() { stripOptGroupLabel(selectField); });
-            addOptGroupLabel(selectField);
         } else {
             tagPoolDiv.hide();
             selectField.attr('disabled', 'disabled');
