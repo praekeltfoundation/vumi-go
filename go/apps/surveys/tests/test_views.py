@@ -63,8 +63,6 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         response = self.client.post(reverse('survey:new'), {
             'subject': 'the subject',
             'message': 'the message',
-            # 'start_date': datetime.utcnow().strftime('%Y-%m-%d'),
-            # 'start_time': datetime.utcnow().strftime('%H:%M'),
             'delivery_class': 'sms',
             'delivery_tag_pool': selected_option,
         })
