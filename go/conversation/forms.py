@@ -78,7 +78,7 @@ class ConversationForm(VumiModelForm):
     def tag_options(self, pool):
         if self.tagpool_set.user_selects_tag(pool):
             tag_options = [("%s:%s" % tag, tag[1]) for tag
-                           in self.user_api.api.tpm.freetags(pool)]
+                           in self.user_api.api.tpm.free_tags(pool)]
         else:
             tag_options = [("%s:" % pool, "Random")]
         return tag_options
