@@ -10,7 +10,18 @@ from vumi.message import TransportUserMessage
 from vumi import log
 
 
-class MultiSurveyApplication(MultiPollApplication):
+class MamaPollApplication(MultiPollApplication):
+    registration_partial_response = "Please dial back in to " \
+                                    "complete registration."
+    registration_completed_response = "Thank you!"
+    batch_completed_response = "Please dial in again to " \
+                                "complete the rest of this weeks questions."
+    survey_completed_response = "You've done this week's 2 quiz questions. " \
+                                "Please dial *120*646*4*6262# again next " \
+                                "week for new questions. Stay well! " \
+                                "Visit askmama.mobi"
+
+class MultiSurveyApplication(MamaPollApplication):
 
     def validate_config(self):
         self.worker_name = self.config['worker_name']
