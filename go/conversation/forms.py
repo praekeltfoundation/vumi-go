@@ -1,3 +1,5 @@
+import itertools
+
 from django import forms
 from django.forms.util import ErrorList
 
@@ -62,20 +64,21 @@ class ConversationForm(VumiModelForm):
         self.tagpool_set = self.user_api.tagpools()
         if tagpool_filter is not None:
             self.tagpool_set = self.tagpool_set.select(tagpool_filter)
-        self.fields['delivery_tag_pool'].widget.choices = \
-                                                        self.all_tag_options()
+        self.tag_options = self._load_tag_options()
+        self.fields['delivery_tag_pool'].widget.choices = list(
+            itertools.chain(self.tag_options.itervalues()))
         self.fields['delivery_class'].widget.choices = [
             (delivery_class,
              self.tagpool_set.delivery_class_name(delivery_class))
             for delivery_class in self.tagpool_set.delivery_classes()]
 
-    def all_tag_options(self):
-        tag_options = []
+    def _load_tag_options(self):
+        tag_options = {}
         for pool in self.tagpool_set.pools():
-            tag_options.extend(self.tag_options(pool))
+            tag_options[pool] = self._tag_options(pool)
         return tag_options
 
-    def tag_options(self, pool):
+    def _tag_options(self, pool):
         if self.tagpool_set.user_selects_tag(pool):
             tag_options = [("%s:%s" % tag, tag[1]) for tag
                            in self.user_api.api.tpm.free_tags(pool)]
@@ -91,7 +94,7 @@ class ConversationForm(VumiModelForm):
                 continue
             display_name = self.tagpool_set.display_name(pool)
             tag_pools = delivery_classes.setdefault(delivery_class, [])
-            tag_pools.append((display_name, self.tag_options(pool)))
+            tag_pools.append((display_name, self.tag_options[pool]))
         return sorted(delivery_classes.items())
 
     def delivery_class_widgets(self):
