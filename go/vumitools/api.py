@@ -185,12 +185,17 @@ class ConversationWrapper(object):
         batch_keys = self.get_batch_keys()
         reply_statuses = []
         replies = []
+        cache = {}
         for batch_id in batch_keys:
             # TODO: Not look up the batch by key again.
             replies.extend((yield self.mdb.batch_replies(batch_id)))
         for reply in replies:
-            contact = yield self.user_api.contact_store.contact_for_addr(
+            cache_key = '/'.join([self.delivery_class, reply['from_addr']])
+            contact = cache.get(cache_key, None)
+            if not contact:
+                contact = yield self.user_api.contact_store.contact_for_addr(
                     self.delivery_class, reply['from_addr'])
+                cache[cache_key] = contact
             reply_statuses.append({
                 'type': self.delivery_class,
                 'source': self.delivery_class_description(),
