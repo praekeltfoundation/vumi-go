@@ -108,15 +108,12 @@ class ConversationWrapper(object):
             tags.extend((yield batch.tags))
         returnValue(tags)
 
-    @Manager.calls_manager
     def get_progress_status(self):
         """
         Get an overview of the progress of this conversation
 
         :rtype: dict
-            *total* The number of messages in this conversation.
             *sent* The number of messages sent.
-            *queued* The number of messages yet to be sent out.
             *ack* The number of messages that have been acknowledged
                     by the network for delivery
             *delivery_report* The number of messages we've received
@@ -134,14 +131,9 @@ class ConversationWrapper(object):
             for k, v in self.mdb.batch_status(batch_id).items():
                 k = k.replace('.', '_')
                 statuses[k] += v
-        total = len((yield self.people()))
-        statuses.update({
-            'total': total,
-            'queued': total - statuses['sent'],
-        })
-        returnValue(dict(statuses))  # convert back from defaultdict
 
-    @Manager.calls_manager
+        return dict(statuses)  # convert back from defaultdict
+
     def get_progress_percentage(self):
         """
         Get a percentage indication of how far along the sending
@@ -149,10 +141,10 @@ class ConversationWrapper(object):
 
         :rtype: int
         """
-        status = yield self.get_progress_status()
-        if status['total'] == 0:
-            returnValue(0)
-        returnValue(int(status['ack'] / float(status['total']) * 100))
+        status = self.get_progress_status()
+        if status['sent'] == 0:
+            return 0
+        return int(status['ack'] / float(status['sent']) * 100)
 
     @Manager.calls_manager
     def start(self, **extra_params):
