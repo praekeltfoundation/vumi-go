@@ -196,11 +196,14 @@ def people(request):
     else:
         upload_contacts_form = UploadContactsForm()
 
+    select_contact_group_form = SelectContactGroupForm(
+        groups=contact_store.list_groups())
     contacts = contact_store.list_contacts()
     context = {
         'upload_contacts_form': upload_contacts_form,
         'contacts': contacts,
         'country_code': settings.VUMI_COUNTRY_CODE,
+        'select_contact_group_form': select_contact_group_form,
         }
 
     if ':' in request.GET.get('q', ''):

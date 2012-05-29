@@ -20,9 +20,9 @@ $(document).ready(function() {
 {% with status=conversation.get_progress_status %}
                 ['Acknowledged By Network', {{status.ack}}],
                 ['Delivery Report Received', {{status.delivery_report}}],
-                ['Queued in Vumi', {{status.queued}}]
-            ]
+                ['Sent by Vumi', {{status.sent}}]
 {% endwith %}
+            ]
         }]
       });
   });
