@@ -43,6 +43,8 @@ class Conversation(Model):
     batches = ManyToMany(Batch)
     metadata = Json(null=True)
 
+    _people_cache = None
+
     def ended(self):
         return self.end_timestamp is not None
 
@@ -71,7 +73,9 @@ class Conversation(Model):
         return self.subject
 
     @Manager.calls_manager
-    def people(self):
+    def people(self, use_cache=True):
+        if self._people_cache is not None and use_cache:
+            returnValue(self._people_cache)
         people = []
         groups = yield self.groups.get_all()
         for group in groups:
@@ -79,6 +83,7 @@ class Conversation(Model):
                 # TODO: Something sane here.
                 continue
             people.extend((yield group.backlinks.contacts()))
+        self._people_cache = people
         returnValue(people)
 
     @Manager.calls_manager
