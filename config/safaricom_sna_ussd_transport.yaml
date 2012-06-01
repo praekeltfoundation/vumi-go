@@ -1,3 +1,0 @@
-transport_name: safaricom_sna_ussd_transport
-web_path: /api/v1/safaricom/ussd
-web_port: 8075

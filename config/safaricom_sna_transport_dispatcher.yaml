@@ -1,8 +1,0 @@
-transport_names:
-    - safaricom_sna_smpp_rx_transport
-    - safaricom_sna_smpp_tx_transport
-exposed_names:
-    - safaricom_sna_smpp_transport
-
-router_class: vumi.dispatchers.base.RedirectOutboundRouter
-outbound: safaricom_sna_smpp_tx_transport
