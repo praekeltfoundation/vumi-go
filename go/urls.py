@@ -23,6 +23,10 @@ urlpatterns = patterns('',
     # simple todo view for stuff that's not completed yet
     url(r'^todo/.*$', 'go.base.views.todo', name='todo'),
 
+    # redirect equivalents of nginx rules for development setups
+    url(r'^favicon\.ico$', 'django.views.generic.simple.redirect_to',
+        {'url': '/static/img/favicon.ico'}),
+
     # vumi go!
     url(r'^$', RedirectView.as_view(url='/conversations/', permanent=False,
                                     query_string=True), name='home'),
