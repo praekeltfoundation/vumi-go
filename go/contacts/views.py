@@ -135,11 +135,10 @@ def _guess_headers_and_row(csv_data):
         SortedDict([(column, None) for column in first_row]))
 
 
-def _get_file_hints(file_object):
+def _get_file_hints(content_file):
     # Save the file object temporarily so we can present
     # some UI to help the user figure out which columns are
     # what of what type.
-    content_file = ContentFile(file_object.read())
     temp_file_name = uuid.uuid4().hex
     temp_file_path = default_storage.save(os.path.join('tmp',
         '%s.csv' % (temp_file_name,)), content_file)
