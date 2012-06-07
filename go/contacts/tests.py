@@ -145,17 +145,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         contact.groups.clear()
         contact.save()
 
-    def upload_file(self, csv_file, group_key=None, request_kwargs=None):
-        group_url = reverse('contacts:group', kwargs={
-            'group_key': group_key or self.group_key
-        })
-        kwargs = {
-            'file': csv_file
-        }
-        if request_kwargs:
-            kwargs.update(request_kwargs)
-        return self.client.post(group_url, kwargs)
-
     def specify_columns(self, group_key=None, columns=None):
         group_url = reverse('contacts:group', kwargs={
             'group_key': group_key or self.group_key
@@ -173,22 +162,29 @@ class ContactsTestCase(VumiGoDjangoTestCase):
     def test_contact_upload_into_new_group(self):
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
             'fixtures', 'sample-contacts.csv'))
+
+        self.clear_groups()
         response = self.client.post(reverse('contacts:people'), {
-            'name': 'a new group',
             'file': csv_file,
+            'name': 'a new group',
         })
+
         group = newest(self.contact_store.list_groups())
         self.assertEqual(group.name, u"a new group")
         self.assertRedirects(response, group_url(group.key))
+        self.assertEqual(len(group.backlinks.contacts()), 0)
+
+        self.specify_columns(group_key=group.key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
 
     def test_contact_upload_into_existing_group(self):
 
         self.clear_groups()
-        response = self.upload_file(open(
-            path.join(settings.PROJECT_ROOT, 'base',
-            'fixtures', 'sample-contacts.csv'), 'r'),
-            request_kwargs={
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+            'fixtures', 'sample-contacts.csv'), 'r')
+        response = self.client.post(reverse('contacts:people'),
+            {
+                'file': csv_file,
                 'contact_group': self.group_key
             }
         )
@@ -243,7 +239,9 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         csv_file = open(
             path.join(settings.PROJECT_ROOT, 'base',
                 'fixtures', 'sample-contacts.csv'), 'r')
-        response = self.upload_file(csv_file)
+        response = self.client.post(group_url, {
+            'file': csv_file,
+        })
 
         # It should redirect to the group page
         self.assertRedirects(response, group_url)
