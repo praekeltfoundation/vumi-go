@@ -94,6 +94,7 @@
         </div>
     </div>
     {% include "base/includes/pagination.html" %}
+
 {% endblock %}
 
 {% block extra_js %}
@@ -101,6 +102,11 @@
       $(document).ready(function(){
           $('#frm-new-group').validate();
           $('#frm-upload-contacts').validate();
+
+        {% if csv_data_row %}
+            $('#recMatchFrm').modal('show');
+        {% endif %}
+
       });
     </script>
     <link type="text/css" href="{{ STATIC_URL }}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
