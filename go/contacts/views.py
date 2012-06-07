@@ -222,15 +222,14 @@ def _import_csv_file(group, csv_path, field_names, has_header):
         # Populate this with whatever we'll be sending to the
         # contact to be saved
         contact_dictionary = {}
-        dynamic_fields = {}
         for key, value in data_dictionary.items():
             if key in known_attributes:
                 contact_dictionary[key] = value
             else:
-                dynamic_fields[key] = value
+                extra = contact_dictionary.setdefault('extra', {})
+                extra[key] = value
 
-        yield ((counter if has_header else counter + 1),
-                contact_dictionary, dynamic_fields)
+        yield (counter if has_header else counter + 1, contact_dictionary)
 
 
 @login_required
@@ -261,10 +260,8 @@ def group(request, group_key):
 
                 for csv_data in _import_csv_file(group, csv_path, field_names,
                                                     has_header):
-                    [count, contact_dictionary, dynamic_fields] = csv_data
-                    contact = contact_store.new_contact(**contact_dictionary)
-                    contact.extra.update(dynamic_fields)
-                    contact.save()
+                    [count, contact_dictionary] = csv_data
+                    contact_store.new_contact(**contact_dictionary)
 
                 messages.info(request,
                     'Success! %s contacts imported.' % (
