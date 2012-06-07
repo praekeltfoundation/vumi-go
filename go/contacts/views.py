@@ -178,6 +178,60 @@ def _has_uncompleted_csv_import(request):
         and ('uploaded_csv_path' in request.session))
 
 
+def _import_csv_file(csv_path, field_names, has_header):
+    full_path = os.path.join(settings.MEDIA_ROOT, csv_path)
+    # open in Universal mode to allow us to reed files with Windows,
+    # MacOS9 & Unix line-endings
+    csv_file = open(full_path, 'rU')
+    data_dictionaries = _read_data_from_csv_file(csv_file,
+                                field_names)
+
+    # We need to know what we can an cannot set and
+    # what fields need to go into the 'extra' Dynamic field
+    excluded_attributes = ['user_account',
+                            'created_at',
+                            'extra']
+
+    known_attributes = [attribute
+        for attribute in Contact.field_descriptors.keys()
+        if attribute not in excluded_attributes]
+
+    # It's a generator so loop over it and save as contacts
+    # in the contact_store, normalizing anything we need to
+    for counter, data_dictionary in enumerate(data_dictionaries):
+
+        # If we've determined that the first line of the file is
+        # a header then skip it.
+        if has_header and counter == 0:
+            continue
+
+        # Make sure we set this group they're being uploaded in to
+        groups = data_dictionary.setdefault('groups', [])
+        groups.append(group.key)
+
+        # Make sure we normalize the msisdn before saving in the db
+        if 'msisdn' in data_dictionary:
+            msisdn = data_dictionary['msisdn']
+            normalized_msisdn = normalize_msisdn(msisdn,
+                country_code=settings.VUMI_COUNTRY_CODE)
+            data_dictionary.update({
+                'msisdn': unicode(normalized_msisdn, 'utf-8')
+            })
+
+        # Populate this with whatever we'll be sending to the
+        # contact to be saved
+        contact_dictionary = {}
+        dynamic_fields = {}
+        for key, value in data_dictionary.items():
+            if key in known_attributes:
+                contact_dictionary[key] = value
+            else:
+                dynamic_fields[key] = value
+
+        yield ((counter if has_header else counter + 1),
+                contact_dictionary, dynamic_fields)
+
+
 @login_required
 def group(request, group_key):
     contact_store = request.user_api.contact_store
@@ -194,72 +248,33 @@ def group(request, group_key):
             messages.info(request, 'The group name has been updated')
             return redirect(_group_url(group.key))
         elif '_complete_csv_upload' in request.POST:
-            csv_path, csv_data = _get_file_hints_from_session(request)
-            has_header, _, sample_row = _guess_headers_and_row(csv_data)
-            full_path = os.path.join(settings.MEDIA_ROOT, csv_path)
-            # open in Universal mode to allow us to reed files with Windows,
-            # MacOS9 & Unix line-endings
-            csv_file = open(full_path, 'rU')
-            # Grab the selected field names from the submitted form
-            # by looping over the expect n number of `column-n` keys being
-            # posted
-            field_names = [request.POST.get('column-%s' % i) for i in
-                            range(len(sample_row))]
-            data_dictionaries = _read_data_from_csv_file(csv_file,
-                                        field_names)
+            try:
+                csv_path, csv_data = _get_file_hints_from_session(request)
+                has_header, _, sample_row = _guess_headers_and_row(csv_data)
 
-            # We need to know what we can an cannot set and
-            # what fields need to go into the 'extra' Dynamic field
-            excluded_attributes = ['user_account',
-                                    'created_at',
-                                    'extra']
+                # Grab the selected field names from the submitted form
+                # by looping over the expect n number of `column-n` keys being
+                # posted
+                field_names = [request.POST.get('column-%s' % i) for i in
+                                range(len(sample_row))]
 
-            known_attributes = [attribute
-                for attribute in Contact.field_descriptors.keys()
-                if attribute not in excluded_attributes]
+                for csv_data in _import_csv_file(csv_path, field_names,
+                                                    has_header):
+                    [count, contact_dictionary, dynamic_fields] = csv_data
+                    contact = contact_store.new_contact(**contact_dictionary)
+                    contact.extra.update(dynamic_fields)
+                    contact.save()
 
-            # It's a generator so loop over it and save as contacts
-            # in the contact_store, normalizing anything we need to
-            for counter, data_dictionary in enumerate(data_dictionaries):
+                messages.info(request,
+                    '<strong>Success!</strong> %s contacts imported.' % (
+                        count,))
 
-                # If we've determined that the first line of the file is
-                # a header then skip it.
-                if has_header and counter == 0:
-                    continue
+                _clear_file_hints_from_session(request)
+                return redirect(_group_url(group.key))
 
-                # Make sure we set this group they're being uploaded in to
-                groups = data_dictionary.setdefault('groups', [])
-                groups.append(group.key)
+            except ValueError:
+                messages.error(request, 'Something is wrong with the file')
 
-                # Make sure we normalize the msisdn before saving in the db
-                if 'msisdn' in data_dictionary:
-                    msisdn = data_dictionary['msisdn']
-                    normalized_msisdn = normalize_msisdn(msisdn,
-                        country_code=settings.VUMI_COUNTRY_CODE)
-                    data_dictionary.update({
-                        'msisdn': unicode(normalized_msisdn, 'utf-8')
-                    })
-
-                # Populate this with whatever we'll be sending to the
-                # contact to be saved
-                contact_dictionary = {}
-                dynamic_fields = {}
-                for key, value in data_dictionary.items():
-                    if key in known_attributes:
-                        contact_dictionary[key] = value
-                    else:
-                        dynamic_fields[key] = value
-
-                contact = contact_store.new_contact(**contact_dictionary)
-                contact.extra.update(dynamic_fields)
-                contact.save()
-
-            messages.info(request,
-                '<strong>Success!</strong> %s contacts imported.' %
-                    (counter if has_header else counter + 1,))
-
-            _clear_file_hints_from_session(request)
-            return redirect(_group_url(group.key))
         else:
             upload_contacts_form = UploadContactsForm(request.POST,
                                                         request.FILES)
@@ -279,12 +294,15 @@ def group(request, group_key):
         del request.session['uploaded_csv_data']
 
     if _has_uncompleted_csv_import(request):
-        csv_path, csv_data = _get_file_hints_from_session(request)
-        has_header, headers, row = _guess_headers_and_row(csv_data)
-        context.update({
-            'csv_data_headers': headers,
-            'csv_data_row': row,
-        })
+        try:
+            csv_path, csv_data = _get_file_hints_from_session(request)
+            has_header, headers, row = _guess_headers_and_row(csv_data)
+            context.update({
+                'csv_data_headers': headers,
+                'csv_data_row': row,
+            })
+        except ValueError:
+            messages.error(request, 'Something is wrong with the file')
 
     if ':' in request.GET.get('q', ''):
         query = request.GET['q']
