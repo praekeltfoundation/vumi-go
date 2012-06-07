@@ -4,7 +4,7 @@ import uuid
 import os.path
 from StringIO import StringIO
 
-from django.http import Http404, HttpResponseBadRequest
+from django.http import Http404
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator
