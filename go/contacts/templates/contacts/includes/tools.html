@@ -71,7 +71,8 @@
         </div>
     </form>
 </div><!--/uplContactFrm-->
-    
+
+{% if csv_data_headers and csv_data_row %}
 <div class="modal hide fade" id="recMatchFrm" style="display: block; ">
     <div class="modal-header">
         <a class="close" data-dismiss="modal">×</a>
@@ -105,6 +106,7 @@
         {% csrf_token %}
     </form>
 </div>
+{% endif %}
 
 <div class="modal hide fade" id="newGroup">
     <div class="modal-header">

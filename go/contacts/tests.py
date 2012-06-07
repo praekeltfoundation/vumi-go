@@ -213,7 +213,39 @@ class ContactsTestCase(VumiGoDjangoTestCase):
             'file': csv_file
             })
 
+        # It should redirect to the group page
         self.assertRedirects(response, group_url)
+        # Wich should show the column-matching dialogue
+        response = self.client.get(group_url)
+        self.assertContains(response,
+            'Please match the sample to the fields provided')
+
+        # The path of the uploaded file should have been set
+        self.assertTrue('uploaded_csv_path' in self.client.session)
+
+        # And it should store the first two lines as sample data
+        # in the session in order to do the CSV column matching.
+        csv_file.seek(0)
+        expected_two_lines = '\n'.join([csv_file.readline().strip()
+                                            for i in range(2)])
+        first_two_lines = self.client.session['uploaded_csv_data']
+        self.assertEqual(first_two_lines, expected_two_lines)
+
+        # Nothing should have been written to the db by now.
+        self.assertEqual(len(list(self.group.backlinks.contacts())), 0)
+
+        # Now submit the column names and check that things have been written
+        # to the db
+        response = self.client.post(group_url, {
+            'column-0': 'name',
+            'column-1': 'surname',
+            'column-2': 'msisdn',
+            '_complete_csv_upload': '1',
+        })
+
+        # Check the redirect
+        self.assertRedirects(response, group_url)
+        # 3 records should have been written to the db.
         self.assertEqual(len(list(self.group.backlinks.contacts())), 3)
 
     def test_graceful_error_handling_on_upload_failure(self):
