@@ -40,6 +40,24 @@
                         </div>
                     </div>
                     {% endfor %}
+
+                    {% if contact_extra_items %}
+                        <strong>Extra Fields</strong>
+                        <p>
+                            These were fields that were either imported
+                            via CSV or assigned during a Vumi conversation.
+                        </p>
+                        <hr/>
+                        {% for field, value in contact_extra_items %}
+                        <div class="control-group">
+                            <label class="control-label">{{field}}</label>
+                            <div class="controls">
+                                <input type="text" readonly="readonly" value="{{value}}"/>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary" data-loading-text="saving...">Save changes</button>
                     </div>

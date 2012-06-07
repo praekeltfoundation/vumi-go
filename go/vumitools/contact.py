@@ -6,7 +6,8 @@ from datetime import datetime
 from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager
-from vumi.persist.fields import Unicode, ManyToMany, ForeignKey, Timestamp
+from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
+                                    Dynamic)
 
 from go.vumitools.account import UserAccount, PerAccountStore
 
@@ -43,6 +44,7 @@ class Contact(Model):
     gtalk_id = Unicode(null=True)
     created_at = Timestamp(default=datetime.utcnow)
     groups = ManyToMany(ContactGroup)
+    extra = Dynamic()
 
     def add_to_group(self, group):
         if isinstance(group, ContactGroup):
@@ -85,15 +87,14 @@ class ContactStore(PerAccountStore):
         self.groups = self.manager.proxy(ContactGroup)
 
     @Manager.calls_manager
-    def new_contact(self, name, surname, **fields):
+    def new_contact(self, **fields):
         contact_id = uuid4().get_hex()
 
         # These are foreign keys.
         groups = fields.pop('groups', [])
 
         contact = self.contacts(
-            contact_id, user_account=self.user_account_key, name=name,
-            surname=surname, **fields)
+            contact_id, user_account=self.user_account_key, **fields)
         for group in groups:
             contact.add_to_group(group)
 
