@@ -139,6 +139,37 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertEqual(set([g.key for g in contact.groups.get_all()]),
                     set([g.key for g in self.contact_store.list_groups()]))
 
+    def clear_groups(self, contact_key=None):
+        contact = self.contact_store.get_contact_by_key(
+            contact_key or self.contact_key)
+        contact.groups.clear()
+        contact.save()
+
+    def upload_file(self, csv_file, group_key=None, request_kwargs=None):
+        group_url = reverse('contacts:group', kwargs={
+            'group_key': group_key or self.group_key
+        })
+        kwargs = {
+            'file': csv_file
+        }
+        if request_kwargs:
+            kwargs.update(request_kwargs)
+        return self.client.post(group_url, kwargs)
+
+    def specify_columns(self, group_key=None, columns=None):
+        group_url = reverse('contacts:group', kwargs={
+            'group_key': group_key or self.group_key
+        })
+        defaults = {
+            'column-0': 'name',
+            'column-1': 'surname',
+            'column-2': 'msisdn',
+            '_complete_csv_upload': '1',
+        }
+        if columns:
+            defaults.update(columns)
+        return self.client.post(group_url, defaults)
+
     def test_contact_upload_into_new_group(self):
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
             'fixtures', 'sample-contacts.csv'))
@@ -152,18 +183,21 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertEqual(len(group.backlinks.contacts()), 3)
 
     def test_contact_upload_into_existing_group(self):
-        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
-            'fixtures', 'sample-contacts.csv'))
-        contact = self.contact_store.get_contact_by_key(self.contact_key)
-        contact.groups.clear()
-        contact.save()
 
-        response = self.client.post(reverse('contacts:people'), {
-            'contact_group': self.group_key,
-            'file': csv_file,
-        })
+        self.clear_groups()
+        response = self.upload_file(open(
+            path.join(settings.PROJECT_ROOT, 'base',
+            'fixtures', 'sample-contacts.csv'), 'r'),
+            request_kwargs={
+                'contact_group': self.group_key
+            }
+        )
+
         self.assertRedirects(response, group_url(self.group_key))
         group = self.contact_store.get_group(self.group_key)
+        self.assertEqual(len(group.backlinks.contacts()), 0)
+
+        self.specify_columns()
         self.assertEqual(len(group.backlinks.contacts()), 3)
 
     def test_uploading_unicode_chars_in_csv(self):
@@ -200,21 +234,20 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertEqual(len(group.backlinks.contacts()), 3)
 
     def test_contact_upload_from_group_page(self):
+
         group_url = reverse('contacts:group', kwargs={
             'group_key': self.group_key
         })
-        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
-            'fixtures', 'sample-contacts.csv'))
-        contact = self.contact_store.get_contact_by_key(self.contact_key)
-        contact.groups.clear()
-        contact.save()
 
-        response = self.client.post(group_url, {
-            'file': csv_file
-            })
+        self.clear_groups()
+        csv_file = open(
+            path.join(settings.PROJECT_ROOT, 'base',
+                'fixtures', 'sample-contacts.csv'), 'r')
+        response = self.upload_file(csv_file)
 
         # It should redirect to the group page
         self.assertRedirects(response, group_url)
+
         # Wich should show the column-matching dialogue
         response = self.client.get(group_url)
         self.assertContains(response,
@@ -236,13 +269,7 @@ class ContactsTestCase(VumiGoDjangoTestCase):
 
         # Now submit the column names and check that things have been written
         # to the db
-        response = self.client.post(group_url, {
-            'column-0': 'name',
-            'column-1': 'surname',
-            'column-2': 'msisdn',
-            '_complete_csv_upload': '1',
-        })
-
+        response = self.specify_columns()
         # Check the redirect
         self.assertRedirects(response, group_url)
         # 3 records should have been written to the db.
