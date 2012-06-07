@@ -179,7 +179,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertEqual(len(group.backlinks.contacts()), 3)
 
     def test_contact_upload_into_existing_group(self):
-
         self.clear_groups()
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
             'fixtures', 'sample-contacts.csv'), 'r')
@@ -198,17 +197,17 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertEqual(len(group.backlinks.contacts()), 3)
 
     def test_uploading_unicode_chars_in_csv(self):
+        self.clear_groups()
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
             'fixtures', 'sample-unicode-contacts.csv'))
-        contact = self.contact_store.get_contact_by_key(self.contact_key)
-        contact.groups.clear()
-        contact.save()
 
         response = self.client.post(reverse('contacts:people'), {
             'contact_group': self.group_key,
             'file': csv_file,
         })
         self.assertRedirects(response, group_url(self.group_key))
+
+        self.specify_columns()
         group = self.contact_store.get_group(self.group_key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
 
