@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from os import path
+from StringIO import StringIO
 
 from django.conf import settings
 from django.test.client import Client
@@ -277,16 +278,17 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         group_url = reverse('contacts:group', kwargs={
             'group_key': self.group_key
         })
-        wrong_file = open(path.join(settings.PROJECT_ROOT, 'base',
-            'fixtures', 'test_user.json'))
-        contact = self.contact_store.get_contact_by_key(self.contact_key)
-        contact.groups.clear()
-        contact.save()
+
+        wrong_file = StringIO('fubar')
+        wrong_file.name = 'fubar.csv'
+
+        self.clear_groups()
 
         response = self.client.post(group_url, {
             'file': wrong_file
             })
 
+        response = self.specify_columns()
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Something is wrong with the file')
 
