@@ -243,15 +243,17 @@ def group(request, group_key):
                 # Populate this with whatever we'll be sending to the
                 # contact to be saved
                 contact_dictionary = {}
+                dynamic_fields = {}
                 for key, value in data_dictionary.items():
                     if key in known_attributes:
                         contact_dictionary[key] = value
                     else:
-                        extra = contact_dictionary.setdefault('extra', {})
-                        extra[key] = value
+                        dynamic_fields[key] = value
 
-                print 'contact_dictionary', contact_dictionary
-                # contact_store.new_contact(**contact_dictionary)
+                contact = contact_store.new_contact(**contact_dictionary)
+                contact.extra.update(dynamic_fields)
+                contact.save()
+
             messages.info(request,
                 '<strong>Success!</strong> %s contacts imported.' %
                     (counter if has_header else counter + 1,))
