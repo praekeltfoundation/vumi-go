@@ -266,7 +266,7 @@ def group(request, group_key):
                     contact.save()
 
                 messages.info(request,
-                    '<strong>Success!</strong> %s contacts imported.' % (
+                    'Success! %s contacts imported.' % (
                         count,))
 
                 _clear_file_hints_from_session(request)
