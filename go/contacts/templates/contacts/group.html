@@ -94,6 +94,7 @@
         </div>
     </div>
     {% include "base/includes/pagination.html" %}
+
 {% endblock %}
 
 {% block extra_js %}
@@ -101,6 +102,7 @@
       $(document).ready(function(){
           $('#frm-new-group').validate();
           $('#frm-upload-contacts').validate();
+          $('#recMatchFrm').modal('show');
       });
     </script>
     <link type="text/css" href="{{ STATIC_URL }}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />

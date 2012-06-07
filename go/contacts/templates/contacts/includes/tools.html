@@ -71,45 +71,43 @@
         </div>
     </form>
 </div><!--/uplContactFrm-->
-    
-<!-- 
-<div class="modal hide fade" id="recMatchFrm">
-	<div class="modal-header">
-	    <a class="close" data-dismiss="modal">×</a>
-	    <h3>Please match the sample to the fields provided</h3>
-	</div>
-	<form class="form-horizontal" action="people.html">
-	    <div class="modal-body">
-	        <div class="alert alert-success">
-	            <a class="close" data-dismiss="alert">×</a>
-	            <strong>Success!</strong> 55 records found.
-	        </div>
-			<fieldset>
-			<table class="table table-bordered table-striped">
-			  <tbody>
-			    <tr>
-			      <td>
-					<select name="input02">
-					    <option value="">Please Select:</option>
-					    <option value="1">Mobile</option>
-					    <option value="1">Email</option>
-					    <option value="1">Name</option>
-					    <option value="1">Surname</option>
-					</select>
-			      </td>
-			      <td>gustav@praekelt.com</td>
-			    </tr>
-			  </tbody>
-			</table>
-			</fieldset>
-	    </div>
-	    <div class="modal-footer">
-	       <button type="submit" class="btn btn-primary" data-loading-text="saving...">Finish</button>
-	    </div>
+
+{% if csv_data_headers and csv_data_row %}
+<div class="modal hide fade" id="recMatchFrm" style="display: block; ">
+    <div class="modal-header">
+        <a class="close" data-dismiss="modal">×</a>
+        <h3>Please match the sample to the fields provided</h3>
+    </div>
+    <form class="form-horizontal" action="{% url contacts:group group_key=group.key %}" method="POST">
+        <div class="modal-body">
+            <fieldset>
+              <table class="table table-bordered table-striped">
+                <tbody>
+                    {% for value, column in csv_data_row.items %}
+                      <tr>
+                        <td>
+                            <select name="column-{{ forloop.counter0 }}">
+                                <option value="">Please Select:</option>
+                                {% for header, label in csv_data_headers.items %}
+                                <option {% if header == column %}selected="true"{% endif %}value="{{ header }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>{{ value }}</td>
+                      </tr>
+                    {% endfor %}
+                </tbody>
+              </table>
+            </fieldset>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" class="btn btn-primary" name="_complete_csv_upload" data-loading-text="saving...">Finish</button>
+        </div>
+        {% csrf_token %}
     </form>
 </div>
--->
- 
+{% endif %}
+
 <div class="modal hide fade" id="newGroup">
     <div class="modal-header">
         <a class="close" data-dismiss="modal">×</a>
