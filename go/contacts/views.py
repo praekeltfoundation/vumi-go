@@ -178,7 +178,7 @@ def _has_uncompleted_csv_import(request):
         and ('uploaded_csv_path' in request.session))
 
 
-def _import_csv_file(csv_path, field_names, has_header):
+def _import_csv_file(group, csv_path, field_names, has_header):
     full_path = os.path.join(settings.MEDIA_ROOT, csv_path)
     # open in Universal mode to allow us to reed files with Windows,
     # MacOS9 & Unix line-endings
@@ -258,7 +258,7 @@ def group(request, group_key):
                 field_names = [request.POST.get('column-%s' % i) for i in
                                 range(len(sample_row))]
 
-                for csv_data in _import_csv_file(csv_path, field_names,
+                for csv_data in _import_csv_file(group, csv_path, field_names,
                                                     has_header):
                     [count, contact_dictionary, dynamic_fields] = csv_data
                     contact = contact_store.new_contact(**contact_dictionary)
