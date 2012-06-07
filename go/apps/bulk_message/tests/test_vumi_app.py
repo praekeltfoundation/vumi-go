@@ -91,9 +91,11 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
             })
         group = yield user_api.contact_store.new_group(u'test group')
         contact1 = yield user_api.contact_store.new_contact(
-            u'First', u'Contact', msisdn=u'27831234567', groups=[group])
+            name=u'First', surname=u'Contact', msisdn=u'27831234567',
+            groups=[group])
         contact2 = yield user_api.contact_store.new_contact(
-            u'Second', u'Contact', msisdn=u'27831234568', groups=[group])
+            name=u'Second', surname=u'Contact', msisdn=u'27831234568',
+            groups=[group])
         conversation = yield user_api.new_conversation(
             u'bulk_message', u'Subject', u'Message', delivery_tag_pool=u"pool",
             delivery_class=u'sms')

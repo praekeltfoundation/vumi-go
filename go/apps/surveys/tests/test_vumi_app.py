@@ -132,8 +132,8 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
 
     @inlineCallbacks
     def create_contact(self, name, surname, **kwargs):
-        contact = yield self.user_api.contact_store.new_contact(name,
-            surname, **kwargs)
+        contact = yield self.user_api.contact_store.new_contact(name=name,
+            surname=surname, **kwargs)
         yield contact.save()
         returnValue(contact)
 
@@ -199,10 +199,10 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
 
     @inlineCallbacks
     def test_start(self):
-        self.contact1 = yield self.create_contact(u'First', u'Contact',
-            msisdn=u'27831234567', groups=[self.group])
-        self.contact2 = yield self.create_contact(u'Second', u'Contact',
-            msisdn=u'27831234568', groups=[self.group])
+        self.contact1 = yield self.create_contact(name=u'First',
+            surname=u'Contact', msisdn=u'27831234567', groups=[self.group])
+        self.contact2 = yield self.create_contact(name=u'Second',
+            surname=u'Contact', msisdn=u'27831234568', groups=[self.group])
         self.create_survey(self.conversation)
         with LogCatcher() as log:
             yield self.conversation.start()
