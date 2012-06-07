@@ -80,7 +80,7 @@ class TestContactStore(TestCase):
     @inlineCallbacks
     def test_new_contact(self):
         contact = yield self.store.new_contact(
-            u'J Random', u'Person', msisdn=u'27831234567')
+            name=u'J Random', surname=u'Person', msisdn=u'27831234567')
         self.assertEqual(u'J Random', contact.name)
         self.assertEqual(u'Person', contact.surname)
         self.assertEqual(u'27831234567', contact.msisdn)
@@ -92,7 +92,7 @@ class TestContactStore(TestCase):
     @inlineCallbacks
     def test_add_contact_to_group(self):
         contact = yield self.store.new_contact(
-            u'J Random', u'Person', msisdn=u'27831234567')
+            name=u'J Random', surname=u'Person', msisdn=u'27831234567')
         group1 = yield self.store.new_group(u'group1')
         group2 = yield self.store.new_group(u'group2')
 

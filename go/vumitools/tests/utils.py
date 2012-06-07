@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from twisted.python. monkey import MonkeyPatcher
 from celery.app import app_or_default
 
-from vumi.persist.fields import ForeignKeyProxy, ManyToManyProxy
+from vumi.persist.fields import ForeignKeyProxy, ManyToManyProxy, DynamicProxy
 from vumi.message import TransportUserMessage
 
 from go.vumitools.api import VumiApiCommand
@@ -21,6 +21,8 @@ def field_eq(f1, f2):
         return f1.keys() == f2.keys()
     if isinstance(f1, ForeignKeyProxy) and isinstance(f2, ForeignKeyProxy):
         return f1.key == f2.key
+    if isinstance(f1, DynamicProxy) and isinstance(f2, DynamicProxy):
+        return f1.items() == f2.items()
     return False
 
 
