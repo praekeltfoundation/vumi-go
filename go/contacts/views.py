@@ -366,7 +366,7 @@ def person(request, person_key):
     if contact is None:
         raise Http404
     groups = contact_store.list_groups()
-    if request.POST:
+    if request.method == 'POST':
         form = ContactForm(request.POST, groups=groups)
         if form.is_valid():
             for k, v in form.cleaned_data.items():
@@ -399,6 +399,7 @@ def person(request, person_key):
 
     return render(request, 'contacts/person.html', {
         'contact': contact,
+        'contact_extra_items': contact.extra.items(),
         'form': form,
         'country_code': settings.VUMI_COUNTRY_CODE,
     })
