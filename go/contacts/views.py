@@ -211,6 +211,8 @@ def _import_csv_file(group, csv_path, field_names, has_header):
         # Make sure we normalize the msisdn before saving in the db
         if 'msisdn' in data_dictionary:
             msisdn = data_dictionary['msisdn']
+            # TODO: fix normalization, Vumi Go won't be bound to a single
+            #       country code which can be used for normalization.
             normalized_msisdn = normalize_msisdn(msisdn,
                 country_code=settings.VUMI_COUNTRY_CODE)
             data_dictionary.update({
