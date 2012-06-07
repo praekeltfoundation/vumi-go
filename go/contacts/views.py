@@ -186,8 +186,8 @@ def _import_csv_file(group, csv_path, field_names, has_header):
     data_dictionaries = _read_data_from_csv_file(csv_file,
                                 field_names)
 
-    # We need to know what we can an cannot set and
-    # what fields need to go into the 'extra' Dynamic field
+    # We need to know what we cannot set to avoid a
+    # CSV import overwriting things like account details.
     excluded_attributes = ['user_account',
                             'created_at',
                             'extra']
