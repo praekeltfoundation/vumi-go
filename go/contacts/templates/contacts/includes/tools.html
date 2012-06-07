@@ -88,8 +88,8 @@
                         <td>
                             <select name="column-{{ forloop.counter0 }}">
                                 <option value="">Please Select:</option>
-                                {% for header_type, label in csv_data_headers.items %}
-                                <option {% if header_type == column %}selected="true"{% endif %}value="{{ header_type }}">{{ label }}</option>
+                                {% for header, label in csv_data_headers.items %}
+                                <option {% if header == column %}selected="true"{% endif %}value="{{ header }}">{{ label }}</option>
                                 {% endfor %}
                             </select>
                         </td>
