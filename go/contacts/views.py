@@ -127,8 +127,8 @@ def _guess_headers_and_row(csv_data):
     }
 
     if _is_header_row(first_row):
+        sample_row = SortedDict(zip(second_row, first_row))
         for column in first_row:
-            sample_row = SortedDict(zip(second_row, first_row))
             default_headers.setdefault(column, column)
         return True, default_headers, sample_row
     return (False, default_headers,
