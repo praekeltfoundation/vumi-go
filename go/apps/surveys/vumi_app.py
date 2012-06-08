@@ -1,8 +1,9 @@
 # -*- test-case-name: go.apps.surveys.tests.test_vumi_app -*-
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 from go.vumitools.api import VumiApiCommand, get_redis
 from go.vumitools.conversation import ConversationStore
+from go.vumitools.contact import ContactStore
 from vxpolls.example import PollApplication
 from vxpolls.manager import PollManager
 from vumi.persist.message_store import MessageStore
@@ -47,11 +48,42 @@ class SurveyApplication(PollApplication):
             yield self.control_consumer.stop()
             self.control_consumer = None
 
+    @inlineCallbacks
+    def get_contact_for_message(self, message):
+        helper_metadata = message.get('helper_metadata', {})
+
+        go_metadata = helper_metadata.get('go', {})
+        account_key = go_metadata.get('user_account', None)
+
+        conversation_metadata = helper_metadata.get('conversations', {})
+        conversation_key = conversation_metadata.get('conversation_key', None)
+
+        if account_key and conversation_key:
+            conv_store = ConversationStore(self.manager, account_key)
+            conv = yield conv_store.get_conversation_by_key(conversation_key)
+
+            contact_store = ContactStore(self.manager, account_key)
+            contact = yield contact_store.contact_for_addr(conv.delivery_class,
+                message.user())
+
+            returnValue(contact)
+
+    @inlineCallbacks
     def consume_user_message(self, message):
         helper_metadata = message['helper_metadata']
-        conv_info = helper_metadata.get('conversations')
-        helper_metadata['poll_id'] = 'poll-%s' % (
-            conv_info.get('conversation_key'),)
+        conv_info = helper_metadata.get('conversations', {})
+        poll_id = 'poll-%s' % (conv_info.get('conversation_key'),)
+        helper_metadata['poll_id'] = poll_id
+
+        # If we've found a contact, grab it's dynamic-extra values
+        # and update the participant with those before sending it
+        # to the PollApplication
+        contact = yield self.get_contact_for_message(message)
+        if contact:
+            participant = self.pm.get_participant(poll_id, message.user())
+            participant.labels.update(contact.extra)
+            self.pm.save_participant(poll_id, participant)
+
         super(SurveyApplication, self).consume_user_message(message)
 
     def consume_control_command(self, command_message):
@@ -90,6 +122,23 @@ class SurveyApplication(PollApplication):
         msg = TransportUserMessage(from_addr=to_addr, to_addr=from_addr,
                 content='', **msg_options)
         self.consume_user_message(msg)
+
+    @inlineCallbacks
+    def end_session(self, participant, poll, message):
+        # At the end of a session we want to store the user's responses
+        # as dynamic values on the contact's record in the contact database.
+        # This does that.
+        helper_metadata = message.get('helper_metadata', {})
+        poll_id = helper_metadata.get('poll_id')
+
+        contact = yield self.get_contact_for_message(message)
+        if contact:
+            survey_results = poll.results_manager.get_user(poll_id,
+                                                        participant.user_id)
+            contact.extra.update(survey_results)
+            contact.save()
+
+        super(SurveyApplication, self).end_session(participant, poll, message)
 
     @inlineCallbacks
     def process_command_start(self, batch_id, conversation_type,
