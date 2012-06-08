@@ -220,7 +220,10 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
             response = str(questions[i]['valid_responses'][0])
             yield self.reply_to(msg, response)
 
-        last_msg = self.get_dispatched_messages()[-1]
+        expected_replies = 1 + len(questions)
+        all_messages = (yield self.wait_for_messages(expected_replies,
+                                                        expected_replies))
+        last_msg = all_messages[-1]
         self.assertEqual(last_msg['content'],
             'Thanks for completing the survey')
         self.assertEqual(last_msg['session_event'],
