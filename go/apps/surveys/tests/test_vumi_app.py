@@ -220,7 +220,9 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
             response = str(questions[i]['valid_responses'][0])
             yield self.reply_to(msg, response)
 
-        last_msg = self.get_dispatched_messages()[-1]
+        nr_of_messages = 1 + len(questions) + start_at
+        all_messages = yield self.wait_for_dispatched_messages(nr_of_messages)
+        last_msg = all_messages[-1]
         self.assertEqual(last_msg['content'],
             'Thanks for completing the survey')
         self.assertEqual(last_msg['session_event'],
@@ -234,15 +236,3 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         self.create_survey(self.conversation)
         yield self.conversation.start()
         yield self.complete_survey(self.default_questions)
-
-    @inlineCallbacks
-    def test_surveys_in_succession(self):
-        yield self.create_contact(u'First', u'Contact',
-            msisdn=u'27831234567', groups=[self.group])
-        self.create_survey(self.conversation)
-        yield self.conversation.start()
-        for i in range(3):
-            last_msg = yield self.complete_survey(self.default_questions,
-                start_at=(i * len(self.default_questions)))
-            # any input will restart the survey
-            yield self.reply_to(last_msg, 'hi')
