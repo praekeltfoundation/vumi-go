@@ -236,15 +236,3 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         self.create_survey(self.conversation)
         yield self.conversation.start()
         yield self.complete_survey(self.default_questions)
-
-    @inlineCallbacks
-    def test_surveys_in_succession(self):
-        yield self.create_contact(u'First', u'Contact',
-            msisdn=u'27831234567', groups=[self.group])
-        self.create_survey(self.conversation)
-        yield self.conversation.start()
-        for i in range(3):
-            last_msg = yield self.complete_survey(self.default_questions,
-                start_at=(i * len(self.default_questions)))
-            # any input will restart the survey
-            yield self.reply_to(last_msg, 'hi')
