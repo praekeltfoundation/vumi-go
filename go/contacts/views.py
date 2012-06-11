@@ -30,6 +30,7 @@ def _query_to_kwargs(query):
 
 
 def _filter_contacts(contacts, request_params):
+    contacts = [c for c in contacts if (c.name or c.surname)]
     query = request_params.get('q', None)
     selected_letter = None
 
