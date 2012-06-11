@@ -46,7 +46,7 @@ def index(request):
             raise ValueError(
                 "Unknown conversation status: %s" % (conversation_status,))
 
-    if not (conversation_type and conversation_status):
+    if not (conversation_type or conversation_status):
         conversations = request.user_api.active_conversations()
 
     # We want to pad with None to a multiple of the conversation size.
