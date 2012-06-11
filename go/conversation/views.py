@@ -46,6 +46,9 @@ def index(request):
             raise ValueError(
                 "Unknown conversation status: %s" % (conversation_status,))
 
+    if not (conversation_type and conversation_status):
+        conversations = request.user_api.active_conversations()
+
     # We want to pad with None to a multiple of the conversation size.
     # NOTE: If we have no conversations, we don't pad.
     last_page_size = len(conversations) % CONVERSATIONS_PER_PAGE
