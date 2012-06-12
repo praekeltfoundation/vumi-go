@@ -20,6 +20,7 @@ from go.vumitools.contact import Contact
 from go.contacts.forms import (
     ContactForm, NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
+from go.contacts import tasks
 
 
 def _query_to_kwargs(query):
@@ -247,6 +248,11 @@ def group(request, group_key):
                 group.save()
             messages.info(request, 'The group name has been updated')
             return redirect(_group_url(group.key))
+        elif '_delete_group' in request.POST:
+            tasks.delete_group(request.user_api.user_account_key,
+                group.key)
+            messages.info(request, 'The group will be deleted shortly.')
+            return redirect(reverse('contacts:index'))
         elif '_complete_csv_upload' in request.POST:
             try:
                 csv_path, csv_data = _get_file_hints_from_session(request)

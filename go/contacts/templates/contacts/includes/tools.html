@@ -25,7 +25,7 @@
 	</div>
 	<div class="modal-footer"></div>
 </div><!--/uplContacts-->
-    
+
 <div class="modal hide fade" id="uplContactFrm">
     <div class="modal-header">
         <a class="close" data-dismiss="modal">×</a>
@@ -153,13 +153,14 @@
   </div>
   </form>
 </div><!--/editGroup-->
-        
+
+{% if group %}
 <div class="modal hide fade" id="delGroup">
 	<div class="modal-header">
 	  <a class="close" data-dismiss="modal">×</a>
 	  <h3>Remove Group</h3>
 	</div>
-	<form class="form-horizontal">
+	<form class="form-horizontal" method="POST" action="{% url contacts:group group_key=group.key %}">
 	<div class="modal-body">
 	      <fieldset>
 	        <p><strong>Are you sure you want to remove this group?</strong><br>The group members will not be deleted.</p>
@@ -167,11 +168,13 @@
 	</div>
 	<div class="modal-footer">
 	<a href="#" class="btn" data-dismiss="modal">Cancel</a>
-	<button type="submit" class="btn btn-primary" data-loading-text="saving..."  data-dismiss="modal" data-toggle="modal" >Remove Group</button>
+	<button type="submit" name='_delete_group' class="btn btn-primary" data-loading-text="saving...">Remove Group</button>
 	</div>
+  {% csrf_token %}
 	</form>
 </div><!--/delGroup-->
-      
+{% endif %}
+
 <div class="modal hide fade" id="emptyGroup">
 	<div class="modal-header">
 	  <a class="close" data-dismiss="modal">×</a>
