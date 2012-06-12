@@ -44,7 +44,7 @@ class Contact(Model):
     gtalk_id = Unicode(null=True)
     created_at = Timestamp(default=datetime.utcnow)
     groups = ManyToMany(ContactGroup)
-    extra = Dynamic()
+    extra = Dynamic(prefix='extras-')
 
     def add_to_group(self, group):
         if isinstance(group, ContactGroup):
