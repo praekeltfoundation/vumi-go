@@ -383,22 +383,26 @@ def person(request, person_key):
         raise Http404
     groups = contact_store.list_groups()
     if request.method == 'POST':
-        form = ContactForm(request.POST, groups=groups)
-        if form.is_valid():
-            for k, v in form.cleaned_data.items():
-                if k == 'groups':
-                    contact.groups.clear()
-                    for group in v:
-                        contact.add_to_group(group)
-                    continue
-                setattr(contact, k, v)
-            contact.save()
-            messages.add_message(request, messages.INFO, 'Profile Updated')
-            return redirect(reverse('contacts:person', kwargs={
-                'person_key': contact.key}))
+        if '_delete_contact' in request.POST:
+            contact.delete()
+            messages.info(request, 'Contact deleted')
+            return redirect(reverse('contacts:index'))
         else:
-            messages.add_message(request, messages.ERROR,
-                'Please correct the problem below.')
+            form = ContactForm(request.POST, groups=groups)
+            if form.is_valid():
+                for k, v in form.cleaned_data.items():
+                    if k == 'groups':
+                        contact.groups.clear()
+                        for group in v:
+                            contact.add_to_group(group)
+                        continue
+                    setattr(contact, k, v)
+                contact.save()
+                messages.add_message(request, messages.INFO, 'Profile Updated')
+                return redirect(reverse('contacts:person', kwargs={
+                    'person_key': contact.key}))
+            else:
+                messages.error(request, 'Please correct the problem below.')
     else:
         form = ContactForm(groups=groups, initial={
             'name': contact.name,
