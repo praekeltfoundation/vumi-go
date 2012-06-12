@@ -5,7 +5,7 @@ from django.conf import settings
 from go.vumitools.api import VumiUserApi
 
 
-@task
+@task(ignore_result=True)
 def delete_group(account_key, group_key):
     api = VumiUserApi(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
