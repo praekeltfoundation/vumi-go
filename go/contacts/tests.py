@@ -124,6 +124,21 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         contact = max(contacts, key=lambda c: c.created_at)
         self.assertRedirects(response, person_url(contact.key))
 
+    def test_contact_deleting(self):
+        person_url = reverse('contacts:person', kwargs={
+            'person_key': self.contact.key,
+            })
+        response = self.client.post(person_url, {
+            '_delete_contact': True,
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].endswith(
+            reverse('contacts:index')))
+
+        # After deleting the person should return a 404 page
+        response = self.client.get(person_url)
+        self.assertEqual(response.status_code, 404)
+
     def test_contact_update(self):
         response = self.client.post(person_url(self.contact_key), {
             'name': 'changed name',
@@ -139,6 +154,35 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertEqual(contact.msisdn, '112')
         self.assertEqual(set([g.key for g in contact.groups.get_all()]),
                     set([g.key for g in self.contact_store.list_groups()]))
+
+    def test_group_deletion(self):
+        # Create a contact in the group
+        response = self.client.post(reverse('contacts:new_person'), {
+            'name': 'New',
+            'surname': 'Person',
+            'msisdn': '27761234567',
+            'groups': [self.group_key],
+            })
+
+        contacts = self.contact_store.list_contacts()
+        contact = max(contacts, key=lambda c: c.created_at)
+        self.assertRedirects(response, person_url(contact.key))
+
+        # Delete the group
+        group_url = reverse('contacts:group', kwargs={
+            'group_key': self.group.key,
+        })
+        response = self.client.post(group_url, {
+                '_delete_group': True,
+            })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].endswith(
+            reverse('contacts:index')))
+
+        reloaded_contacts = self.contact_store.list_contacts()
+        reloaded_contact = max(reloaded_contacts, key=lambda c: c.created_at)
+        self.assertEqual(reloaded_contact.key, contact.key)
+        self.assertEqual(reloaded_contact.groups.get_all(), [])
 
     def clear_groups(self, contact_key=None):
         contact = self.contact_store.get_contact_by_key(
@@ -350,3 +394,4 @@ class ContactsTestCase(VumiGoDjangoTestCase):
             'q': 'name:%s' % (self.contact.name,)
         })
         print response.content
+
