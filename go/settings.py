@@ -1,3 +1,4 @@
+
 # Django settings for go project.
 import os
 import djcelery
@@ -235,7 +236,11 @@ VUMI_INSTALLED_APPS = {
     'go.apps.multi_surveys': {
         'namespace': 'multi_survey',
         'display_name': 'Multiple Dialogues',
-    }
+    },
+    'go.apps.jsbox': {
+        'namespace': 'jsbox',
+        'display_name': 'Javascript App',
+    },
 }
 
 VXPOLLS_REDIS_CONFIG = {}
