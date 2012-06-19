@@ -1,13 +1,42 @@
-message_store:
+message_store: &MESSAGE_STORE
     store_prefix: vumigo.
+
 transport_names:
   - vumigo_router
 exposed_names:
   - bulk_message_transport
   - survey_transport
   - multi_survey_transport
+  - account_opt_out_transport
+
 router_class: go.vumitools.api_worker.GoApplicationRouter
 conversation_mappings:
     survey: survey_transport
     multi_survey: multi_survey_transport
     bulk_message: bulk_message_transport
+
+# NOTE: the order is important
+middleware:
+  - tagging_middleware: vumi.middleware.TaggingMiddleware
+  - account_middleware: go.vumitools.middleware.LookupAccountMiddleware
+  - batch_middleware: go.vumitools.middleware.LookupBatchMiddleware
+  - conversation_middleware: go.vumitools.middleware.LookupConversationMiddleware
+  - debit_middleware: go.vumitools.middleware.DebitAccountMiddleware
+  - opt_out_middleware: go.vumitools.middleware.OptOutMiddleware
+  - storing_middleware: vumi.middleware.StoringMiddleware
+
+tagging_middleware:
+  message_store: *MESSAGE_STORE
+account_middleware:
+  message_store: *MESSAGE_STORE
+batch_middleware:
+  message_store: *MESSAGE_STORE
+conversation_middleware:
+  message_store: *MESSAGE_STORE
+debit_middleware:
+  message_store: *MESSAGE_STORE
+storing_middleware:
+  message_store: *MESSAGE_STORE
+opt_out_middleware:
+  transport_name: account_opt_out_transport
+  message_store: *MESSAGE_STORE

@@ -15,7 +15,7 @@ from vumi import log
 from go.vumitools.api import VumiApiCommand, get_redis
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
-from go.vumitools.middleware import DebitAccountMiddleware
+from go.vumitools.middleware import LookupConversationMiddleware
 
 
 class CommandDispatcher(ApplicationWorker):
@@ -82,70 +82,18 @@ class GoApplicationRouter(BaseDispatchRouter):
     def setup_routing(self):
         # map conversation types to applications that deal with them
         self.conversation_mappings = self.config['conversation_mappings']
-        # setup the message_store
-        mdb_config = self.config.get('message_store', {})
-        self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
-        r_server = get_redis(self.config)
-        self.manager = TxRiakManager.from_config({
-                'bucket_prefix': self.mdb_prefix})
-        self.account_store = AccountStore(self.manager)
-        self.message_store = MessageStore(self.manager, r_server,
-                                            self.mdb_prefix)
 
-    @inlineCallbacks
-    def get_conversation_for_tag(self, tag):
-        current_tag = yield self.message_store.get_tag_info(tag)
-        if current_tag:
-            batch = yield current_tag.current_batch.get()
-            if batch:
-                account_key = batch.metadata['user_account']
-                if account_key:
-                    conversation_store = ConversationStore(self.manager,
-                        account_key)
-                    account_submanager = conversation_store.manager
-                    all_conversations = yield batch.backlinks.conversations(
-                                                            account_submanager)
-                    conversations = [c for c in all_conversations if not
-                                        c.ended()]
-                    if conversations:
-                        if len(conversations) > 1:
-                            conv_keys = [c.key for c in conversations]
-                            log.warning('Multiple conversations found '
-                                'going with most recent: %r' % (conv_keys,))
-                        conversation = sorted(conversations, reverse=True,
-                            key=lambda c: c.start_timestamp)[0]
-                        returnValue(conversation)
-                    log.error('No conversations found for %r' % (batch,))
-                else:
-                    log.error('No account_key found for tag: %r, batch: %r' % (
-                        current_tag, batch))
-            else:
-                log.error("No batch found for tag: %r" % (current_tag,))
-        else:
-            log.error('Cannot find current tag for %s' % (tag,))
-
-    @inlineCallbacks
     def find_application_for_msg(self, msg):
-        tag = TaggingMiddleware.map_msg_to_tag(msg)
-        if tag:
-            conversation = yield self.get_conversation_for_tag(tag)
-            if conversation:
-                conv_type = conversation.conversation_type
-                DebitAccountMiddleware.add_user_to_message(msg,
-                        conversation.user_account.key)
-                metadata = msg['helper_metadata']
-                conv_metadata = metadata.setdefault('conversations', {})
-                conv_metadata.update({
-                    'conversation_key': conversation.key,
-                    'conversation_type': conv_type,
-                })
-                returnValue(self.conversation_mappings.get(conv_type))
+        # Sometimes I don't like pep8
+        helper = LookupConversationMiddleware.map_message_to_conversation_info
+        conversation_info = helper(msg)
+        if conversation_info:
+            conversation_key, conversation_type = conversation_info
+            return self.conversation_mappings[conversation_type]
 
     @inlineCallbacks
     def dispatch_inbound_message(self, msg):
-        tag = TaggingMiddleware.map_msg_to_tag(msg)
-        self.message_store.add_inbound_message(msg, tag=tag)
-        application = yield self.find_application_for_msg(msg)
+        application = self.find_application_for_msg(msg)
         if application:
             publisher = self.dispatcher.exposed_publisher[application]
             yield publisher.publish_message(msg)
@@ -153,9 +101,8 @@ class GoApplicationRouter(BaseDispatchRouter):
             log.error('No application setup for type: %s' % (
                         msg,))
 
+    @inlineCallbacks
     def dispatch_inbound_event(self, msg):
-        tag = TaggingMiddleware.map_msg_to_tag(msg)
-        self.message_store.add_event(msg, tag=tag)
         application = self.find_application_for_msg(msg)
         if application:
             publisher = self.dispatcher.exposed_event_publisher[application]
@@ -165,7 +112,5 @@ class GoApplicationRouter(BaseDispatchRouter):
                         msg,))
 
     def dispatch_outbound_message(self, msg):
-        tag = TaggingMiddleware.map_msg_to_tag(msg)
-        self.message_store.add_outbound_message(msg, tag=tag)
         upstream = self.dispatcher.transport_publisher.keys()[0]
         self.dispatcher.transport_publisher[upstream].publish_message(msg)
