@@ -10,7 +10,8 @@ from vumi.dispatchers.base import BaseDispatchRouter
 from vumi import log
 
 from go.vumitools.api import VumiApiCommand
-from go.vumitools.middleware import LookupConversationMiddleware
+from go.vumitools.middleware import (LookupConversationMiddleware,
+    OptOutMiddleware)
 
 
 class CommandDispatcher(ApplicationWorker):
@@ -77,6 +78,8 @@ class GoApplicationRouter(BaseDispatchRouter):
     def setup_routing(self):
         # map conversation types to applications that deal with them
         self.conversation_mappings = self.config['conversation_mappings']
+        self.upstream_transport = self.config['upstream_transport']
+        self.optout_transport = self.config['optout_transport']
 
     def find_application_for_msg(self, msg):
         # Sometimes I don't like pep8
@@ -89,12 +92,17 @@ class GoApplicationRouter(BaseDispatchRouter):
     @inlineCallbacks
     def dispatch_inbound_message(self, msg):
         application = self.find_application_for_msg(msg)
-        if application:
-            publisher = self.dispatcher.exposed_publisher[application]
+        if OptOutMiddleware.is_optout_message(msg):
+            publisher = self.dispatcher.exposed_publisher[
+                self.optout_transport]
             yield publisher.publish_message(msg)
         else:
-            log.error('No application setup for inbound message type: %s' % (
-                        msg,))
+            if application:
+                publisher = self.dispatcher.exposed_publisher[application]
+                yield publisher.publish_message(msg)
+            else:
+                log.error('No application setup for inbound message '
+                            'type: %s' % (msg,))
 
     @inlineCallbacks
     def dispatch_inbound_event(self, msg):
@@ -107,5 +115,5 @@ class GoApplicationRouter(BaseDispatchRouter):
                         msg,))
 
     def dispatch_outbound_message(self, msg):
-        upstream = self.dispatcher.transport_publisher.keys()[0]
-        self.dispatcher.transport_publisher[upstream].publish_message(msg)
+        pub = self.dispatcher.transport_publisher[self.upstream_transport]
+        yield pub.publish_message(msg)

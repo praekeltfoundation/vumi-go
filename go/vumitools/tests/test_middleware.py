@@ -177,7 +177,7 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
         self.config = self.default_config.copy()
         self.config.update({
             'keyword_separator': '-',
-            'opt_out_keywords': ['STOP', 'HALT', 'QUIT']
+            'optout_keywords': ['STOP', 'HALT', 'QUIT']
         })
         self.mw = self.create_middleware(OptOutMiddleware, config=self.config)
 
@@ -190,11 +190,11 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_optout_flag(self):
-        for keyword in self.config['opt_out_keywords']:
+        for keyword in self.config['optout_keywords']:
             yield self.send_keyword(self.mw, keyword, {
                 'optout': {
-                    'opt_out': True,
-                    'opt_out_keyword': keyword.lower(),
+                    'optout': True,
+                    'optout_keyword': keyword.lower(),
                 }
             })
 
@@ -203,7 +203,7 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
         for keyword in ['THESE', 'DO', 'NOT', 'OPT', 'OUT']:
             yield self.send_keyword(self.mw, keyword, {
                 'optout': {
-                    'opt_out': False,
+                    'optout': False,
                 }
             })
 
@@ -217,13 +217,13 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
 
         yield self.send_keyword(mw, 'STOP', {
             'optout': {
-                'opt_out': True,
-                'opt_out_keyword': 'STOP',
+                'optout': True,
+                'optout_keyword': 'STOP',
             }
         })
 
         yield self.send_keyword(mw, 'stop', {
             'optout': {
-                'opt_out': False,
+                'optout': False,
             }
         })
