@@ -119,6 +119,8 @@ class LookupAccountMiddleware(GoApplicationRouterMiddleware):
 
     @inlineCallbacks
     def find_account_key_for_message(self, message):
+        # NOTE: there is probably a better way of doing this when given a
+        #       batch key but I'm not seeing it right now.
         tag = TaggingMiddleware.map_msg_to_tag(message)
         if tag:
             current_tag = yield self.message_store.get_tag_info(tag)

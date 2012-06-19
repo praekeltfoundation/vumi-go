@@ -163,7 +163,5 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, ('this', 'does not exist'))
         with LogCatcher() as log:
             yield self.dispatch(msg, self.transport_name)
-            [err1, err2] = log.errors
-            self.assertTrue('Cannot find current tag for' in
-                                    err1['message'][0])
-            self.assertTrue('No application setup' in err2['message'][0])
+            [error] = log.errors
+            self.assertTrue('No application setup' in error['message'][0])
