@@ -234,8 +234,8 @@ class OptOutMiddleware(BaseMiddleware):
     def setup_middleware(self):
         self.keyword_separator = self.config.get('keyword_separator', ' ')
         self.case_sensitive = self.config.get('case_sensitive', False)
-        keywords = self.config.get('opt_out_keywords', [])
-        self.opt_out_keywords = set([self.casing(word)
+        keywords = self.config.get('optout_keywords', [])
+        self.optout_keywords = set([self.casing(word)
                                         for word in keywords])
 
     def casing(self, word):
@@ -244,15 +244,19 @@ class OptOutMiddleware(BaseMiddleware):
         return word
 
     def handle_inbound(self, message, endpoint):
-        content = message['content']
-        keyword, _, _ = content.partition(self.keyword_separator)
+        keyword = message['content'].strip()
         helper_metadata = message['helper_metadata']
         optout_metadata = helper_metadata.setdefault('optout', {})
-        if self.casing(keyword) in self.opt_out_keywords:
-            optout_metadata['opt_out'] = True
-            optout_metadata['opt_out_keyword'] = self.casing(keyword)
+        if self.casing(keyword) in self.optout_keywords:
+            optout_metadata['optout'] = True
+            optout_metadata['optout_keyword'] = self.casing(keyword)
         else:
-            optout_metadata['opt_out'] = False
+            optout_metadata['optout'] = False
+        return message
+
+    @staticmethod
+    def is_optout_message(message):
+        return message['helper_metadata'].setdefault('optout').get('optout')
 
 
 class DebitAccountMiddleware(TransportMiddleware):

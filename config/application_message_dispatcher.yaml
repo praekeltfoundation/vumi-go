@@ -7,7 +7,10 @@ exposed_names:
   - bulk_message_transport
   - survey_transport
   - multi_survey_transport
-  - account_opt_out_transport
+  - optout_transport
+
+upstream_transport: vumigo_router
+optout_transport: optout_transport
 
 router_class: go.vumitools.api_worker.GoApplicationRouter
 conversation_mappings:
@@ -22,7 +25,7 @@ middleware:
   - batch_middleware: go.vumitools.middleware.LookupBatchMiddleware
   - conversation_middleware: go.vumitools.middleware.LookupConversationMiddleware
   - debit_middleware: go.vumitools.middleware.DebitAccountMiddleware
-  - opt_out_middleware: go.vumitools.middleware.OptOutMiddleware
+  - optout_middleware: go.vumitools.middleware.OptOutMiddleware
   - storing_middleware: vumi.middleware.StoringMiddleware
 
 tagging_middleware:
@@ -37,6 +40,8 @@ debit_middleware:
   message_store: *MESSAGE_STORE
 storing_middleware:
   message_store: *MESSAGE_STORE
-opt_out_middleware:
-  transport_name: account_opt_out_transport
-  message_store: *MESSAGE_STORE
+optout_middleware:
+  keyword_separator: ' '
+  case_sensitive: False
+  optout_keywords:
+    - stop

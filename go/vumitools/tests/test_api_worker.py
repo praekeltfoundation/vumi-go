@@ -88,7 +88,10 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
             'exposed_names': [
                 'app_1',
                 'app_2',
+                'optout_app',
             ],
+            'upstream_transport': self.transport_name,
+            'optout_transport': 'optout_app',
             'conversation_mappings': {
                 'bulk_message': 'app_1',
                 'survey': 'app_2',
@@ -100,10 +103,15 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
                     'go.vumitools.middleware.LookupBatchMiddleware'},
                 {'conversation_mw':
                     'go.vumitools.middleware.LookupConversationMiddleware'},
+                {'optout_mw':
+                    'go.vumitools.middleware.OptOutMiddleware'},
             ],
             'account_mw': self.message_store_config,
             'batch_mw': self.message_store_config,
             'conversation_mw': self.message_store_config,
+            'optout_mw': {
+                'optout_keywords': ['stop']
+            }
         })
 
         # get the router to test
@@ -165,3 +173,26 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
             yield self.dispatch(msg, self.transport_name)
             [error] = log.errors
             self.assertTrue('No application setup' in error['message'][0])
+
+    @inlineCallbacks
+    def test_optout_message(self):
+        msg = self.mkmsg_in(transport_type='xmpp',
+                                transport_name='xmpp_transport')
+        msg['content'] = 'stop'
+        tag = ('xmpp', 'test1@xmpp.org')
+        batch_id = yield self.message_store.batch_start([tag],
+            user_account=unicode(self.account.key))
+        self.conversation.batches.add_key(batch_id)
+        self.conversation.save()
+
+        TaggingMiddleware.add_tag_to_msg(msg, tag)
+        yield self.dispatch(msg, self.transport_name)
+
+        [dispatched] = self.get_dispatched_messages('optout_app',
+                                                direction='inbound')
+        helper_metadata = dispatched.get('helper_metadata', {})
+        optout_metadata = helper_metadata.get('optout')
+        self.assertEqual(optout_metadata, {
+            'optout': True,
+            'optout_keyword': 'stop',
+        })
