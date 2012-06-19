@@ -13,7 +13,7 @@ from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.middleware import (NormalizeMsisdnMiddleware,
     LookupAccountMiddleware, LookupBatchMiddleware,
-    LookupConversationMiddleware)
+    LookupConversationMiddleware, OptOutMiddleware)
 
 
 class MiddlewareTestCase(TestCase):
@@ -165,5 +165,65 @@ class LookupConversationMiddlewareTestCase(MiddlewareTestCase):
             'conversations': {
                 'conversation_key': conversation.key,
                 'conversation_type': conversation.conversation_type,
+            }
+        })
+
+
+class OptOutMiddlewareTestCase(MiddlewareTestCase):
+
+    @inlineCallbacks
+    def setUp(self):
+        yield super(OptOutMiddlewareTestCase, self).setUp()
+        self.config = self.default_config.copy()
+        self.config.update({
+            'keyword_separator': '-',
+            'opt_out_keywords': ['STOP', 'HALT', 'QUIT']
+        })
+        self.mw = self.create_middleware(OptOutMiddleware, config=self.config)
+
+    def send_keyword(self, mw, word, expected_response):
+        msg = self.mk_msg('to@domain.org', 'from@domain.org')
+        msg['content'] = '%s%sfoo' % (
+            word, self.config['keyword_separator'])
+        yield mw.handle_inbound(msg, 'dummy_endpoint')
+        self.assertEqual(msg['helper_metadata'], expected_response)
+
+    @inlineCallbacks
+    def test_optout_flag(self):
+        for keyword in self.config['opt_out_keywords']:
+            yield self.send_keyword(self.mw, keyword, {
+                'optout': {
+                    'opt_out': True,
+                    'opt_out_keyword': keyword.lower(),
+                }
+            })
+
+    @inlineCallbacks
+    def test_non_optout_keywords(self):
+        for keyword in ['THESE', 'DO', 'NOT', 'OPT', 'OUT']:
+            yield self.send_keyword(self.mw, keyword, {
+                'optout': {
+                    'opt_out': False,
+                }
+            })
+
+    @inlineCallbacks
+    def test_case_sensitivity(self):
+        config = self.config.copy()
+        config.update({
+            'case_sensitive': True,
+        })
+        mw = self.create_middleware(OptOutMiddleware, config=config)
+
+        yield self.send_keyword(mw, 'STOP', {
+            'optout': {
+                'opt_out': True,
+                'opt_out_keyword': 'STOP',
+            }
+        })
+
+        yield self.send_keyword(mw, 'stop', {
+            'optout': {
+                'opt_out': False,
             }
         })
