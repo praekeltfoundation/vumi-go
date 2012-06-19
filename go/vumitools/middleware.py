@@ -229,6 +229,32 @@ class LookupConversationMiddleware(GoApplicationRouterMiddleware):
             )
 
 
+class OptOutMiddleware(BaseMiddleware):
+
+    def setup_middleware(self):
+        self.keyword_separator = self.config.get('keyword_separator', ' ')
+        self.case_sensitive = self.config.get('case_sensitive', False)
+        keywords = self.config.get('opt_out_keywords', [])
+        self.opt_out_keywords = set([self.casing(word)
+                                        for word in keywords])
+
+    def casing(self, word):
+        if not self.case_sensitive:
+            return word.lower()
+        return word
+
+    def handle_inbound(self, message, endpoint):
+        content = message['content']
+        keyword, _, _ = content.partition(self.keyword_separator)
+        helper_metadata = message['helper_metadata']
+        optout_metadata = helper_metadata.setdefault('optout', {})
+        if self.casing(keyword) in self.opt_out_keywords:
+            optout_metadata['opt_out'] = True
+            optout_metadata['opt_out_keyword'] = self.casing(keyword)
+        else:
+            optout_metadata['opt_out'] = False
+
+
 class DebitAccountMiddleware(TransportMiddleware):
 
     def setup_middleware(self):
