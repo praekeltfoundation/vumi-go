@@ -120,11 +120,12 @@ class LookupAccountMiddleware(GoApplicationRouterMiddleware):
     @inlineCallbacks
     def find_account_key_for_message(self, message):
         tag = TaggingMiddleware.map_msg_to_tag(message)
-        current_tag = yield self.message_store.get_tag_info(tag)
-        if current_tag:
-            batch = yield current_tag.current_batch.get()
-            if batch:
-                returnValue(batch.metadata['user_account'])
+        if tag:
+            current_tag = yield self.message_store.get_tag_info(tag)
+            if current_tag:
+                batch = yield current_tag.current_batch.get()
+                if batch:
+                    returnValue(batch.metadata['user_account'])
 
     @inlineCallbacks
     def add_metadata_to_message(self, message):
@@ -152,10 +153,11 @@ class LookupBatchMiddleware(GoApplicationRouterMiddleware):
     @inlineCallbacks
     def find_batch_for_message(self, message):
         tag = TaggingMiddleware.map_msg_to_tag(message)
-        current_tag = yield self.message_store.get_tag_info(tag)
-        if current_tag:
-            batch = yield current_tag.current_batch.get()
-            returnValue(batch)
+        if tag:
+            current_tag = yield self.message_store.get_tag_info(tag)
+            if current_tag:
+                batch = yield current_tag.current_batch.get()
+                returnValue(batch)
 
     @inlineCallbacks
     def add_metadata_to_message(self, message):
