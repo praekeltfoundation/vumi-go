@@ -75,10 +75,9 @@ class OptOutApplication(ApplicationWorker):
         if message.get('transport_type') == 'http_api':
             self.reply_to(message,
                 '{"msisdn":"%s",'
-                '"service": "",'
                 '"opted_in": false}' % (from_addr,))
         else:
-            self.reply_to(message, "YOU HAVE OPTED OUT")
+            self.reply_to(message, "You have opted out")
 
     def consume_control_command(self, command_message):
         """
