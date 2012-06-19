@@ -3,18 +3,13 @@
 
 """Vumi application worker for the vumitools API."""
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
 from vumi.application import ApplicationWorker
-from vumi.persist.message_store import MessageStore
-from vumi.persist.txriak_manager import TxRiakManager
 from vumi.dispatchers.base import BaseDispatchRouter
-from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
-from go.vumitools.api import VumiApiCommand, get_redis
-from go.vumitools.account import AccountStore
-from go.vumitools.conversation import ConversationStore
+from go.vumitools.api import VumiApiCommand
 from go.vumitools.middleware import LookupConversationMiddleware
 
 
