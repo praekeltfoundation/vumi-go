@@ -93,7 +93,7 @@ class GoApplicationRouter(BaseDispatchRouter):
             publisher = self.dispatcher.exposed_publisher[application]
             yield publisher.publish_message(msg)
         else:
-            log.error('No application setup for type: %s' % (
+            log.error('No application setup for inbound message type: %s' % (
                         msg,))
 
     @inlineCallbacks
@@ -103,7 +103,7 @@ class GoApplicationRouter(BaseDispatchRouter):
             publisher = self.dispatcher.exposed_event_publisher[application]
             yield publisher.publish_message(msg)
         else:
-            log.error('No application setup for type: %s' % (
+            log.error('No application setup for inbount event type: %s' % (
                         msg,))
 
     def dispatch_outbound_message(self, msg):

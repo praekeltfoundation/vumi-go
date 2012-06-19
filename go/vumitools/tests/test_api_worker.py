@@ -8,11 +8,14 @@ from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.dispatchers.tests.test_base import DispatcherTestCase
 from vumi.dispatchers.base import BaseDispatchWorker
 from vumi.middleware.tagger import TaggingMiddleware
+from vumi.persist.txriak_manager import TxRiakManager
+from vumi.persist.message_store import MessageStore
 from vumi.tests.utils import FakeRedis, LogCatcher
 
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation import ConversationStore
+from go.vumitools.account import AccountStore
 
 
 class CommandDispatcherTestCase(ApplicationTestCase):
@@ -70,6 +73,12 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
     def setUp(self):
         yield super(GoApplicationRouterTestCase, self).setUp()
         self.r_server = FakeRedis()
+        self.mdb_prefix = 'test_message_store'
+        self.message_store_config = {
+            'message_store': {
+                'store_prefix': self.mdb_prefix,
+            }
+        }
         self.dispatcher = yield self.get_dispatcher({
             'router_class': 'go.vumitools.api_worker.GoApplicationRouter',
             'redis_clr': lambda: self.r_server,
@@ -83,14 +92,26 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
             'conversation_mappings': {
                 'bulk_message': 'app_1',
                 'survey': 'app_2',
-            }
+            },
+            'middleware': [
+                {'account_mw':
+                    'go.vumitools.middleware.LookupAccountMiddleware'},
+                {'batch_mw':
+                    'go.vumitools.middleware.LookupBatchMiddleware'},
+                {'conversation_mw':
+                    'go.vumitools.middleware.LookupConversationMiddleware'},
+            ],
+            'account_mw': self.message_store_config,
+            'batch_mw': self.message_store_config,
+            'conversation_mw': self.message_store_config,
         })
 
         # get the router to test
-        self.router = self.dispatcher._router
-        self.manager = self.router.manager
-        self.message_store = self.router.message_store
-        self.account_store = self.router.account_store
+        self.manager = TxRiakManager.from_config({
+                'bucket_prefix': self.mdb_prefix})
+        self.account_store = AccountStore(self.manager)
+        self.message_store = MessageStore(self.manager, self.r_server,
+                                            self.mdb_prefix)
 
         self.account = yield self.account_store.new_user(u'user')
         self.conversation_store = ConversationStore.from_user_account(
