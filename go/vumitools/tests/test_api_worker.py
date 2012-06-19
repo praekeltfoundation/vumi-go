@@ -8,11 +8,14 @@ from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.dispatchers.tests.test_base import DispatcherTestCase
 from vumi.dispatchers.base import BaseDispatchWorker
 from vumi.middleware.tagger import TaggingMiddleware
+from vumi.persist.txriak_manager import TxRiakManager
+from vumi.persist.message_store import MessageStore
 from vumi.tests.utils import FakeRedis, LogCatcher
 
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation import ConversationStore
+from go.vumitools.account import AccountStore
 
 
 class CommandDispatcherTestCase(ApplicationTestCase):
@@ -70,6 +73,12 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
     def setUp(self):
         yield super(GoApplicationRouterTestCase, self).setUp()
         self.r_server = FakeRedis()
+        self.mdb_prefix = 'test_message_store'
+        self.message_store_config = {
+            'message_store': {
+                'store_prefix': self.mdb_prefix,
+            }
+        }
         self.dispatcher = yield self.get_dispatcher({
             'router_class': 'go.vumitools.api_worker.GoApplicationRouter',
             'redis_clr': lambda: self.r_server,
@@ -79,18 +88,38 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
             'exposed_names': [
                 'app_1',
                 'app_2',
+                'optout_app',
             ],
+            'upstream_transport': self.transport_name,
+            'optout_transport': 'optout_app',
             'conversation_mappings': {
                 'bulk_message': 'app_1',
                 'survey': 'app_2',
+            },
+            'middleware': [
+                {'account_mw':
+                    'go.vumitools.middleware.LookupAccountMiddleware'},
+                {'batch_mw':
+                    'go.vumitools.middleware.LookupBatchMiddleware'},
+                {'conversation_mw':
+                    'go.vumitools.middleware.LookupConversationMiddleware'},
+                {'optout_mw':
+                    'go.vumitools.middleware.OptOutMiddleware'},
+            ],
+            'account_mw': self.message_store_config,
+            'batch_mw': self.message_store_config,
+            'conversation_mw': self.message_store_config,
+            'optout_mw': {
+                'optout_keywords': ['stop']
             }
         })
 
         # get the router to test
-        self.router = self.dispatcher._router
-        self.manager = self.router.manager
-        self.message_store = self.router.message_store
-        self.account_store = self.router.account_store
+        self.manager = TxRiakManager.from_config({
+                'bucket_prefix': self.mdb_prefix})
+        self.account_store = AccountStore(self.manager)
+        self.message_store = MessageStore(self.manager, self.r_server,
+                                            self.mdb_prefix)
 
         self.account = yield self.account_store.new_user(u'user')
         self.conversation_store = ConversationStore.from_user_account(
@@ -142,7 +171,28 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, ('this', 'does not exist'))
         with LogCatcher() as log:
             yield self.dispatch(msg, self.transport_name)
-            [err1, err2] = log.errors
-            self.assertTrue('Cannot find current tag for' in
-                                    err1['message'][0])
-            self.assertTrue('No application setup' in err2['message'][0])
+            [error] = log.errors
+            self.assertTrue('No application setup' in error['message'][0])
+
+    @inlineCallbacks
+    def test_optout_message(self):
+        msg = self.mkmsg_in(transport_type='xmpp',
+                                transport_name='xmpp_transport')
+        msg['content'] = 'stop'
+        tag = ('xmpp', 'test1@xmpp.org')
+        batch_id = yield self.message_store.batch_start([tag],
+            user_account=unicode(self.account.key))
+        self.conversation.batches.add_key(batch_id)
+        self.conversation.save()
+
+        TaggingMiddleware.add_tag_to_msg(msg, tag)
+        yield self.dispatch(msg, self.transport_name)
+
+        [dispatched] = self.get_dispatched_messages('optout_app',
+                                                direction='inbound')
+        helper_metadata = dispatched.get('helper_metadata', {})
+        optout_metadata = helper_metadata.get('optout')
+        self.assertEqual(optout_metadata, {
+            'optout': True,
+            'optout_keyword': 'stop',
+        })
