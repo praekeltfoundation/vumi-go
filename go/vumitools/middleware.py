@@ -92,16 +92,19 @@ class GoApplicationRouterMiddleware(BaseMiddleware):
                                     "implemented by the subclass")
 
     @inlineCallbacks
-    def dispatch_inbound_message(self, message):
+    def handle_inbound(self, message, endpoint):
         yield self.add_metadata_to_message(message)
+        returnValue(message)
 
     @inlineCallbacks
-    def dispatch_inbound_event(self, event):
+    def handle_event(self, event, endpoint):
         yield self.add_metadata_to_message(event)
+        returnValue(event)
 
     @inlineCallbacks
-    def dispatch_outbound_message(self, message):
+    def handle_outbound(self, message, endpoint):
         yield self.add_metadata_to_message(message)
+        returnValue(message)
 
 
 class LookupAccountMiddleware(GoApplicationRouterMiddleware):
@@ -121,19 +124,19 @@ class LookupAccountMiddleware(GoApplicationRouterMiddleware):
         if current_tag:
             batch = yield current_tag.current_batch.get()
             if batch:
-                returnValue(batch.metadata.get('user_account', None))
+                returnValue(batch.metadata['user_account'])
 
     @inlineCallbacks
     def add_metadata_to_message(self, message):
         account_key = yield self.find_account_key_for_message(message)
         if account_key:
-            helper_metadata = message.setdefault('helper_metadata', {})
+            helper_metadata = message.get('helper_metadata', {})
             go_metadata = helper_metadata.setdefault('go', {})
             go_metadata['user_account'] = account_key
 
     @staticmethod
     def map_message_to_account_key(message):
-        go_metadata = message.setdefault('helper_metadata').setdefault('go')
+        go_metadata = message.get('helper_metadata', {}).setdefault('go', {})
         return go_metadata.get('user_account')
 
 
@@ -158,7 +161,7 @@ class LookupBatchMiddleware(GoApplicationRouterMiddleware):
     def add_metadata_to_message(self, message):
         batch = yield self.find_batch_for_message(message)
         if batch:
-            helper_metadata = message.setdefault('helper_metadata', {})
+            helper_metadata = message.get('helper_metadata', {})
             go_metadata = helper_metadata.setdefault('go', {})
             go_metadata['batch_key'] = batch.key
 
@@ -206,13 +209,13 @@ class LookupConversationMiddleware(GoApplicationRouterMiddleware):
     def add_metadata_to_message(self, message):
         conversation = yield self.find_conversation_for_message(message)
         if conversation:
-            helper_metadata = message.setdefault('helper_metadata', {})
+            helper_metadata = message.get('helper_metadata', {})
             conv_metadata = helper_metadata.setdefault('conversations', {})
             conv_metadata['conversation_key'] = conversation.key
             conv_metadata['conversation_type'] = conversation.conversation_type
 
     @staticmethod
-    def map_message_to_conversation_info(self, message):
+    def map_message_to_conversation_info(message):
         helper_metadata = message.get('helper_metadata', {})
         conv_metadata = helper_metadata.get('conversations', {})
         if conv_metadata:
