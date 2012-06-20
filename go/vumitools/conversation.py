@@ -86,10 +86,6 @@ class Conversation(Model):
         """
         Get the contacts assigned to this group with an address attribute
         that is appropriate for the given delivery_class
-
-        :rtype: str
-        :param rtype: the name of the delivery class to use, if None then
-                    it will default to `self.delivery_class`
         """
         people = yield self.people()
         addrs = [contact.addr_for(self.delivery_class) for contact in people]
