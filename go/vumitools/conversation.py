@@ -10,7 +10,7 @@ from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
 
 from twisted.internet.defer import returnValue
 
-from go.vumitools.account import UserAccount, PerAccountStore, AccountStore
+from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.contact import ContactGroup
 
 
@@ -105,10 +105,9 @@ class Conversation(Model):
         *NOTE*  This is a work around because it is currently not possible
                 to get back to the parents manager.
         """
-        # FIXME:    Need to import this to make sure the backlinks are created
-        #           even though it isn't used directly.
         from go.vumitools.opt_out import OptOutStore
-        optouts = yield user_account.backlinks.optouts(manager=self.manager)
+        opt_out_store = OptOutStore.from_user_account(user_account)
+        optouts = yield opt_out_store.list_opt_outs()
         optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
                             if optout.key.startswith('msisdn:')]
         all_addrs = yield self.get_contacts_addresses()

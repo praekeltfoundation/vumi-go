@@ -46,4 +46,5 @@ class OptOutStore(PerAccountStore):
     def list_opt_outs(self):
         # Not stale, because we're using backlinks.
         user_account = yield self.get_user_account()
-        returnValue(user_account.backlinks.opt_outs(self.manager))
+        opt_outs = yield user_account.backlinks.optouts(self.manager)
+        returnValue(opt_outs)

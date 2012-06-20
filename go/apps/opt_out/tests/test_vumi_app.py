@@ -9,7 +9,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import TransportUserMessage
 from vumi.application.tests.test_base import ApplicationTestCase
-from vumi.tests.utils import FakeRedis, LogCatcher
+from vumi.tests.utils import FakeRedis
 from vumi.persist.txriak_manager import TxRiakManager
 
 from go.apps.opt_out.vumi_app import OptOutApplication
@@ -128,7 +128,6 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn):
         self._fake_redis.teardown()
         yield self.app.manager.purge_all()
         yield super(TestOptOutApplication, self).tearDown()
-
 
     @inlineCallbacks
     def test_sms_opt_out(self):
