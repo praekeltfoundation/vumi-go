@@ -136,6 +136,22 @@ class ContactStore(PerAccountStore):
         returnValue(sorted(groups, key=lambda group: group.name))
 
     @Manager.calls_manager
+    def contact_has_opted_out(self, contact):
+        # FIXME:    Need to import this to make sure the backlinks are created
+        #           even though it isn't used directly.
+        from go.vumitools.opt_out import OptOutStore
+
+        # FIXME:    opt-outs are currently had coded to only work for msisdns
+        if not contact.msisdn:
+            return
+
+        user_account = yield self.get_user_account()
+        optouts = yield user_account.backlinks.optouts(manager=contact.manager)
+        optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
+                        if optout.key.startswith('msisdn:')]
+        returnValue(contact.msisdn in optout_addrs)
+
+    @Manager.calls_manager
     def contact_for_addr(self, delivery_class, addr):
         if delivery_class in ('sms', 'ussd'):
             addr = '+' + addr.lstrip('+')

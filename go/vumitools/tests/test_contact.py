@@ -10,6 +10,7 @@ from vumi.persist.txriak_manager import TxRiakManager
 from go.vumitools.tests.utils import model_eq
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
+from go.vumitools.opt_out import OptOutStore
 
 
 class TestContactStore(TestCase):
@@ -19,10 +20,10 @@ class TestContactStore(TestCase):
         self.manager = TxRiakManager.from_config({'bucket_prefix': 'test.'})
         yield self.manager.purge_all()
         self.account_store = AccountStore(self.manager)
-        account = yield self.account_store.new_user(u'user')
-        account_alt = yield self.account_store.new_user(u'other_user')
-        self.store = ContactStore.from_user_account(account)
-        self.store_alt = ContactStore.from_user_account(account_alt)
+        self.account = yield self.account_store.new_user(u'user')
+        self.account_alt = yield self.account_store.new_user(u'other_user')
+        self.store = ContactStore.from_user_account(self.account)
+        self.store_alt = ContactStore.from_user_account(self.account_alt)
 
     def tearDown(self):
         return self.manager.purge_all()
@@ -114,3 +115,19 @@ class TestContactStore(TestCase):
 
         self.assertEqual([contact.key],
                          [c.key for c in (yield group2.backlinks.contacts())])
+
+    @inlineCallbacks
+    def test_check_for_opted_out_contact(self):
+        contact1 = yield self.store.new_contact(
+            name=u'J Random', surname=u'Person', msisdn=u'27831234567')
+        contact2 = yield self.store.new_contact(
+            name=u'J Random', surname=u'Person', msisdn=u'27830000000')
+
+        # Opt out the first contact
+        optout_store = OptOutStore.from_user_account(self.account)
+        yield optout_store.new_opt_out(u'msisdn', contact1.msisdn, {
+            'message_id': u'the-message-id'
+        })
+
+        self.assertTrue((yield self.store.contact_has_opted_out(contact1)))
+        self.assertFalse((yield self.store.contact_has_opted_out(contact2)))
