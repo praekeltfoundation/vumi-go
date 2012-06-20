@@ -27,6 +27,7 @@ middleware:
   - conversation_middleware: go.vumitools.middleware.LookupConversationMiddleware
   - optout_middleware: go.vumitools.middleware.OptOutMiddleware
   - storing_middleware: vumi.middleware.StoringMiddleware
+  - logging_middleware: vumi.middleware.LoggingMiddleware
 
 tagging_middleware:
   message_store: *MESSAGE_STORE
@@ -51,3 +52,5 @@ optout_middleware:
   case_sensitive: False
   optout_keywords:
     - stop
+logging_middleware:
+  log_level: debug
