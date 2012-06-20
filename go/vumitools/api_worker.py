@@ -114,6 +114,7 @@ class GoApplicationRouter(BaseDispatchRouter):
             log.error('No application setup for inbount event type: %s' % (
                         msg,))
 
+    @inlineCallbacks
     def dispatch_outbound_message(self, msg):
         pub = self.dispatcher.transport_publisher[self.upstream_transport]
         yield pub.publish_message(msg)
