@@ -17,6 +17,7 @@ from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import CeleryTestMixIn, DummyConsumerFactory
 from go.vumitools.account import AccountStore
+from go.vumitools.opt_out import OptOutStore
 
 
 def dummy_consumer_factory_factory_factory(publish_func):
@@ -136,6 +137,9 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn):
         [msg] = yield self.wait_for_dispatched_messages(1)
         self.assertEqual(msg.get('content'),
                 "You have opted out")
+        opt_out_store = OptOutStore(self.manager, "testuser")
+        opt_out = yield opt_out_store.get_opt_out("msisdn", "12345")
+        self.assertNotEqual(opt_out, None)
 
     @inlineCallbacks
     def test_http_opt_out(self):
@@ -144,3 +148,6 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn):
         [msg] = yield self.wait_for_dispatched_messages(1)
         self.assertEqual(msg.get('content'),
                 '{"msisdn":"12345","opted_in": false}')
+        opt_out_store = OptOutStore(self.manager, "testuser")
+        opt_out = yield opt_out_store.get_opt_out("msisdn", "12345")
+        self.assertNotEqual(opt_out, None)
