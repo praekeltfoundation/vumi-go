@@ -5,7 +5,7 @@ from datetime import datetime
 from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager
-from vumi.persist.fields import ForeignKey, Timestamp
+from vumi.persist.fields import ForeignKey, Timestamp, Unicode
 
 from go.vumitools.account import UserAccount, PerAccountStore
 
@@ -15,6 +15,7 @@ class OptOut(Model):
     user_account = ForeignKey(UserAccount)
     message = Unicode(null=True)
     created_at = Timestamp(default=datetime.utcnow)
+
 
 class OptOutStore(PerAccountStore):
     def setup_proxies(self):
@@ -27,8 +28,8 @@ class OptOutStore(PerAccountStore):
     def new_opt_out(self, addr_type, addr_value, message):
         opt_out_id = self.opt_out_id(addr_type, addr_value)
         opt_out = self.opt_outs(opt_out_id,
-                user_account=self.user_account_key
-                message=messagei.get('message_id'))
+                user_account=self.user_account_key,
+                message=message.get('message_id'))
         yield opt_out.save()
         returnValue(opt_out)
 

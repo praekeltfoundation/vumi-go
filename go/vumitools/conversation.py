@@ -85,7 +85,7 @@ class Conversation(Model):
     def get_contacts_addresses(self):
         """
         Get the contacts assigned to this group with an address attribute
-        that is appropriate for the given delivery_class
+        that is appropriate for the conversation's delivery_class
         """
         people = yield self.people()
         addrs = [contact.addr_for(self.delivery_class) for contact in people]
