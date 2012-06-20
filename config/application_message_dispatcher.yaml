@@ -1,5 +1,7 @@
 message_store: &MESSAGE_STORE
     store_prefix: vumigo.
+riak: &RIAK
+  bucket_prefix: vumigo.
 
 transport_names:
   - vumigo_router
@@ -29,16 +31,22 @@ middleware:
 
 tagging_middleware:
   message_store: *MESSAGE_STORE
+  riak: *RIAK
 account_middleware:
   message_store: *MESSAGE_STORE
+  riak: *RIAK
 batch_middleware:
   message_store: *MESSAGE_STORE
+  riak: *RIAK
 conversation_middleware:
   message_store: *MESSAGE_STORE
+  riak: *RIAK
 debit_middleware:
   message_store: *MESSAGE_STORE
+  riak: *RIAK
 storing_middleware:
   message_store: *MESSAGE_STORE
+  riak: *RIAK
 optout_middleware:
   keyword_separator: ' '
   case_sensitive: False
