@@ -1,5 +1,7 @@
 message_store: &MESSAGE_STORE
     store_prefix: vumigo.
+riak: &RIAK
+  bucket_prefix: vumigo.
 
 transport_names:
   - vumigo_router
@@ -20,28 +22,35 @@ conversation_mappings:
 
 # NOTE: the order is important
 middleware:
-  - tagging_middleware: vumi.middleware.TaggingMiddleware
   - account_middleware: go.vumitools.middleware.LookupAccountMiddleware
   - batch_middleware: go.vumitools.middleware.LookupBatchMiddleware
   - conversation_middleware: go.vumitools.middleware.LookupConversationMiddleware
-  - debit_middleware: go.vumitools.middleware.DebitAccountMiddleware
   - optout_middleware: go.vumitools.middleware.OptOutMiddleware
   - storing_middleware: vumi.middleware.StoringMiddleware
+  - logging_middleware: vumi.middleware.LoggingMiddleware
 
 tagging_middleware:
   message_store: *MESSAGE_STORE
+  riak: *RIAK
 account_middleware:
   message_store: *MESSAGE_STORE
+  riak: *RIAK
 batch_middleware:
   message_store: *MESSAGE_STORE
+  riak: *RIAK
 conversation_middleware:
   message_store: *MESSAGE_STORE
+  riak: *RIAK
 debit_middleware:
   message_store: *MESSAGE_STORE
+  riak: *RIAK
 storing_middleware:
   message_store: *MESSAGE_STORE
+  riak: *RIAK
 optout_middleware:
   keyword_separator: ' '
   case_sensitive: False
   optout_keywords:
     - stop
+logging_middleware:
+  log_level: debug
