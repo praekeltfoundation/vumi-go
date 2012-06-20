@@ -25,7 +25,6 @@ middleware:
   - account_middleware: go.vumitools.middleware.LookupAccountMiddleware
   - batch_middleware: go.vumitools.middleware.LookupBatchMiddleware
   - conversation_middleware: go.vumitools.middleware.LookupConversationMiddleware
-  - debit_middleware: go.vumitools.middleware.DebitAccountMiddleware
   - optout_middleware: go.vumitools.middleware.OptOutMiddleware
   - storing_middleware: vumi.middleware.StoringMiddleware
 
