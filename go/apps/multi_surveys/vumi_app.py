@@ -121,7 +121,8 @@ class MultiSurveyApplication(MamaPollApplication):
             conv_store = ConversationStore(self.manager, account_key)
             conv = yield conv_store.get_conversation_by_key(conversation_key)
 
-            to_addresses = yield conv.get_contacts_addresses()
+            user_account = conv_store.get_user_account()
+            to_addresses = yield conv.get_opted_in_addresses(user_account)
             for to_addr in to_addresses:
                 yield self.start_survey(to_addr, conv, **msg_options)
         else:

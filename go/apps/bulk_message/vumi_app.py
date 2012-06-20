@@ -127,7 +127,8 @@ class BulkMessageApplication(GoApplication):
             conv_store = ConversationStore(self.manager, account_key)
             conv = yield conv_store.get_conversation_by_key(conversation_key)
 
-            to_addresses = yield conv.get_contacts_addresses()
+            user_account = yield conv_store.get_user_account()
+            to_addresses = yield conv.get_opted_in_addresses(user_account)
             for to_addr in to_addresses:
                 yield self.send_message(batch_id, to_addr,
                     conv.message, msg_options)
