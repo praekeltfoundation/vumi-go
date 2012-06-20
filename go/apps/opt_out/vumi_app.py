@@ -1,9 +1,10 @@
-# -*- test-case-name: go.apps.surveys.tests.test_vumi_app -*-
+# -*- test-case-name: go.apps.opt_out.tests.test_vumi_app -*-
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 from go.vumitools.api import VumiApiCommand, get_redis
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.contact import ContactStore
+from go.vumitools.opt_out import OptOutStore
 from vumi.application import ApplicationWorker
 from vumi.persist.message_store import MessageStore
 from vumi.persist.txriak_manager import TxRiakManager
@@ -67,10 +68,11 @@ class OptOutApplication(ApplicationWorker):
         helper_metadata = message.get('helper_metadata', {})
         go_metadata = helper_metadata.get('go', {})
         account_key = go_metadata.get('user_account', None)
+        opt_out_store = OptOutStore(self.manager, account_key)
         from_addr = message.get("from_addr")
-
-        # we need to either update a contact
-        # or add to an account wide blacklist here
+        # Note: for now we are hardcoding addr_type as 'msisdn'
+        # as only msisdn's are opting out currently
+        opt_out = yield opt_out_store.new_opt_out("msisdn", from_addr)
 
         if message.get('transport_type') == 'http_api':
             self.reply_to(message,
