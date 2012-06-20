@@ -423,6 +423,9 @@ def person(request, person_key):
             'groups': [group.key for group in contact.groups.get_all()],
         })
 
+    if contact_store.contact_has_opted_out(contact):
+        messages.error(request, 'This contact has opted out.')
+
     return render(request, 'contacts/person.html', {
         'contact': contact,
         'contact_extra_items': contact.extra.items(),
