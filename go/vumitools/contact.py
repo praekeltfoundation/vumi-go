@@ -10,6 +10,7 @@ from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
                                     Dynamic)
 
 from go.vumitools.account import UserAccount, PerAccountStore
+from go.vumitools.opt_out import OptOutStore
 
 
 class ContactGroup(Model):
@@ -137,19 +138,14 @@ class ContactStore(PerAccountStore):
 
     @Manager.calls_manager
     def contact_has_opted_out(self, contact):
-        # FIXME:    Need to import this to make sure the backlinks are created
-        #           even though it isn't used directly.
-        from go.vumitools.opt_out import OptOutStore
-
         # FIXME:    opt-outs are currently had coded to only work for msisdns
         if not contact.msisdn:
             return
 
         user_account = yield self.get_user_account()
-        optouts = yield user_account.backlinks.optouts(manager=contact.manager)
-        optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
-                        if optout.key.startswith('msisdn:')]
-        returnValue(contact.msisdn in optout_addrs)
+        opt_out_store = OptOutStore.from_user_account(user_account)
+        opt_out = yield opt_out_store.get_opt_out('msisdn', contact.msisdn)
+        returnValue(opt_out)
 
     @Manager.calls_manager
     def contact_for_addr(self, delivery_class, addr):
