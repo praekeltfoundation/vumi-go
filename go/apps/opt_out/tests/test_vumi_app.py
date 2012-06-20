@@ -98,7 +98,9 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn):
         returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
-    def opt_out(self, from_addr, to_addr, content):
+    def opt_out(self, from_addr, to_addr, content, transport_type=None):
+        if transport_type:
+            self.transport_type = transport_type
         msg = TransportUserMessage(
             to_addr=to_addr,
             from_addr=from_addr,
@@ -128,8 +130,17 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn):
 
 
     @inlineCallbacks
-    def test_opt_out(self):
+    def test_sms_opt_out(self):
         yield self.conversation.start()
-        yield self.opt_out("666", "12345", "STOP")
+        yield self.opt_out("12345", "666", "STOP")
         [msg] = yield self.wait_for_dispatched_messages(1)
-        self.assertEqual(msg.get('content'), "You have opted out")
+        self.assertEqual(msg.get('content'),
+                "You have opted out")
+
+    @inlineCallbacks
+    def test_http_opt_out(self):
+        yield self.conversation.start()
+        yield self.opt_out("12345", "666", "STOP", "http_api")
+        [msg] = yield self.wait_for_dispatched_messages(1)
+        self.assertEqual(msg.get('content'),
+                '{"msisdn":"12345","opted_in": false}')
