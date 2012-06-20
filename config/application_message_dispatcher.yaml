@@ -7,10 +7,10 @@ exposed_names:
   - bulk_message_transport
   - survey_transport
   - multi_survey_transport
-  - optout_transport
+  - opt_out_transport
 
 upstream_transport: vumigo_router
-optout_transport: optout_transport
+optout_transport: opt_out_transport
 
 router_class: go.vumitools.api_worker.GoApplicationRouter
 conversation_mappings:
