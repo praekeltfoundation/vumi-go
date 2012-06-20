@@ -1,4 +1,4 @@
-# -*- test-case-name: go.vumitools.tests.test_opt_out -*-
+# -*- test-case-name: go.apps.opt_out.tests.test_vumi_app -*-
 
 from datetime import datetime
 
