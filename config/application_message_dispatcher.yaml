@@ -20,7 +20,6 @@ conversation_mappings:
 
 # NOTE: the order is important
 middleware:
-  - tagging_middleware: vumi.middleware.TaggingMiddleware
   - account_middleware: go.vumitools.middleware.LookupAccountMiddleware
   - batch_middleware: go.vumitools.middleware.LookupBatchMiddleware
   - conversation_middleware: go.vumitools.middleware.LookupConversationMiddleware
