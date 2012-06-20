@@ -72,8 +72,7 @@ class OptOutApplication(ApplicationWorker):
         from_addr = message.get("from_addr")
         # Note: for now we are hardcoding addr_type as 'msisdn'
         # as only msisdn's are opting out currently
-        opt_out = yield opt_out_store.new_opt_out(
-                "msisdn", from_addr, message)
+        yield opt_out_store.new_opt_out("msisdn", from_addr, message)
 
         if message.get('transport_type') == 'http_api':
             self.reply_to(message,

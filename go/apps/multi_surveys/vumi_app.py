@@ -22,6 +22,7 @@ class MamaPollApplication(MultiPollApplication):
                                 "week for new questions. Stay well! " \
                                 "Visit askmama.mobi"
 
+
 class MultiSurveyApplication(MamaPollApplication):
 
     def validate_config(self):
