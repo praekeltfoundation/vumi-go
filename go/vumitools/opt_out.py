@@ -1,13 +1,11 @@
 # -*- test-case-name: go.vumitools.tests.test_opt_out -*-
 
-from uuid import uuid4
 from datetime import datetime
 
 from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager
-from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
-                                    Dynamic)
+from vumi.persist.fields import ForeignKey, Timestamp
 
 from go.vumitools.account import UserAccount, PerAccountStore
 
@@ -34,7 +32,7 @@ class OptOutStore(PerAccountStore):
         returnValue(opt_out)
 
     def get_opt_out(self, addr_type, addr_value):
-        return self.opt_outs.load(self.opt_out_id(addr_type, addr_value)
+        return self.opt_outs.load(self.opt_out_id(addr_type, addr_value))
 
     @Manager.calls_manager
     def delete_opt_out(self, addr_type, addr_value):
