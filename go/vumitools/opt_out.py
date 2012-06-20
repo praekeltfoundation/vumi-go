@@ -1,3 +1,4 @@
+# -*- test-case-name: go.vumitools.tests.test_opt_out -*-
 
 from uuid import uuid4
 from datetime import datetime
@@ -28,7 +29,7 @@ class OptOutStore(PerAccountStore):
     def new_opt_out(self, addr_type, addr_value):
         opt_out_id = self.opt_out_id(addr_type, addr_value)
         opt_out = self.opt_outs(
-            opt_out_id, user_account=self.user_account_key, **fields)
+            opt_out_id, user_account=self.user_account_key)
         yield opt_out.save()
         returnValue(opt_out)
 
