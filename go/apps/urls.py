@@ -7,4 +7,6 @@ urlpatterns = patterns('',
         include('go.apps.multi_surveys.urls', namespace='multi_survey')),
     url(r'^bulk_message/',
         include('go.apps.bulk_message.urls', namespace='bulk_message')),
+    url(r'^opt_out/',
+        include('go.apps.opt_out.urls', namespace='opt_out')),
 )
