@@ -137,8 +137,7 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn):
         yield self.conversation.start()
         yield self.opt_out("12345", "666", "STOP")
         [msg] = self.get_dispatched_messages()
-        self.assertEqual(msg.get('content'),
-                "You have opted out")
+        self.assertEqual(msg.get('content'), "You have opted out")
         opt_out_store = OptOutStore(self.manager, "testuser")
         opt_out = yield opt_out_store.get_opt_out("msisdn", "12345")
         self.assertNotEqual(opt_out, None)
@@ -147,7 +146,10 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn):
     def test_sms_opt_out_no_account(self):
         yield self.conversation.start()
         yield self.opt_out("12345", "666", "STOP", helper_metadata={})
-        self.assertEqual([], self.get_dispatched_messages())
+        [msg] = self.get_dispatched_messages()
+        self.assertEqual(msg.get('content'),
+                         "Your opt-out was received but we failed to link it "
+                         "to a specific service, please try again later.")
 
     @inlineCallbacks
     def test_http_opt_out(self):
