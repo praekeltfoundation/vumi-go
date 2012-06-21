@@ -250,7 +250,7 @@ class OptOutMiddleware(BaseMiddleware):
         return word
 
     def handle_inbound(self, message, endpoint):
-        keyword = message['content'].strip()
+        keyword = (message['content'] or '').strip()
         helper_metadata = message['helper_metadata']
         optout_metadata = helper_metadata.setdefault('optout', {})
         if self.casing(keyword) in self.optout_keywords:
