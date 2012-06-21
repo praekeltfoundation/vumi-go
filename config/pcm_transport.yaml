@@ -1,0 +1,33 @@
+transport_name: pcm_transport
+web_path: /api/v1/pcm
+web_port: 8076
+
+reply_expected: True
+allowed_fields:
+  - "to_addr"
+  - "from_addr"
+field_defaults:
+  content: ""
+
+middleware:
+  - logging_mw: vumi.middleware.LoggingMiddleware
+  - storing_mw: vumi.middleware.StoringMiddleware
+  - cell_life_pcm_tagging_mw: vumi.middleware.TaggingMiddleware
+  - normalize_msisdns_mw: go.vumitools.middleware.NormalizeMsisdnMiddleware
+
+cell_life_pcm_tagging_mw:
+  incoming:
+    addr_pattern: '^(0711667783)$'
+    tagpool_template: 'cell_life_pcm'
+    tagname_template: '\1'
+  outgoing:
+    tagname_pattern: '.*'
+    msg_template: {}
+
+normalize_msisdns_mw:
+  country_code: '27'
+
+storing_mw:
+  riak:
+    bucket_prefix: vumigo.
+
