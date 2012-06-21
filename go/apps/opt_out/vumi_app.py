@@ -68,6 +68,12 @@ class OptOutApplication(ApplicationWorker):
         helper_metadata = message.get('helper_metadata', {})
         go_metadata = helper_metadata.get('go', {})
         account_key = go_metadata.get('user_account', None)
+
+        if account_key is None:
+            # We don't have an account to opt out of.
+            # Therefore, just throw the opt-out on the floor.
+            return
+
         opt_out_store = OptOutStore(self.manager, account_key)
         from_addr = message.get("from_addr")
         # Note: for now we are hardcoding addr_type as 'msisdn'

@@ -99,9 +99,12 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn):
         returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
-    def opt_out(self, from_addr, to_addr, content, transport_type=None):
+    def opt_out(self, from_addr, to_addr, content, transport_type=None,
+                helper_metadata=None):
         if transport_type:
             self.transport_type = transport_type
+        if helper_metadata is None:
+            helper_metadata = {"go": {"user_account": "testuser"}}
         msg = TransportUserMessage(
             to_addr=to_addr,
             from_addr=from_addr,
@@ -109,7 +112,7 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn):
             session_event=None,
             transport_name=self.transport_name,
             transport_type=self.transport_type,
-            helper_metadata={"go": {"user_account": "testuser"}},
+            helper_metadata=helper_metadata,
             )
         yield self.dispatch(msg)
 
@@ -133,12 +136,18 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn):
     def test_sms_opt_out(self):
         yield self.conversation.start()
         yield self.opt_out("12345", "666", "STOP")
-        [msg] = yield self.wait_for_dispatched_messages(1)
+        [msg] = self.get_dispatched_messages()
         self.assertEqual(msg.get('content'),
                 "You have opted out")
         opt_out_store = OptOutStore(self.manager, "testuser")
         opt_out = yield opt_out_store.get_opt_out("msisdn", "12345")
         self.assertNotEqual(opt_out, None)
+
+    @inlineCallbacks
+    def test_sms_opt_out_no_account(self):
+        yield self.conversation.start()
+        yield self.opt_out("12345", "666", "STOP", helper_metadata={})
+        self.assertEqual([], self.get_dispatched_messages())
 
     @inlineCallbacks
     def test_http_opt_out(self):
