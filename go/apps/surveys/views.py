@@ -27,6 +27,7 @@ def get_poll_config(poll_id):
         'worker_name': settings.VXPOLLS_WORKER_NAME,
     })
 
+    config.setdefault('repeatable', True)
     config.setdefault('survey_completed_response',
                         'Thanks for completing the survey')
     return pm, config

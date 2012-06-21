@@ -6,3 +6,9 @@ message_store:
   store_prefix: vumigo.
 riak_manager:
   bucket_prefix: vumigo.
+
+middleware:
+  - logging_middleware: vumi.middleware.LoggingMiddleware
+
+logging_middleware:
+  log_level: debug
