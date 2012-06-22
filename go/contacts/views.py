@@ -179,10 +179,9 @@ def _has_uncompleted_csv_import(request):
 
 
 def _import_csv_file(group, csv_path, field_names, has_header):
-    full_path = os.path.join(settings.MEDIA_ROOT, csv_path)
     # open in Universal mode to allow us to reed files with Windows,
     # MacOS9 & Unix line-endings
-    csv_file = open(full_path, 'rU')
+    csv_file = default_storage.open(csv_path, 'rU')
     data_dictionaries = _read_data_from_csv_file(csv_file,
                                 field_names)
 
