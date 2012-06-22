@@ -1,5 +1,5 @@
 from django.conf.urls.defaults import patterns, url
-from go.apps.opt_opt import views
+from go.apps.opt_out import views
 
 urlpatterns = patterns('',
     url(r'^new/$', views.new, name='new'),
