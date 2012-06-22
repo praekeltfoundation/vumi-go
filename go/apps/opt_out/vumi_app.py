@@ -68,6 +68,16 @@ class OptOutApplication(ApplicationWorker):
         helper_metadata = message.get('helper_metadata', {})
         go_metadata = helper_metadata.get('go', {})
         account_key = go_metadata.get('user_account', None)
+
+        if account_key is None:
+            # We don't have an account to opt out of.
+            # Since this can only happen for redirected messages, assume we
+            # aren't dealing with an API.
+            yield self.reply_to(
+                message, "Your opt-out was received but we failed to link it "
+                "to a specific service, please try again later.")
+            return
+
         opt_out_store = OptOutStore(self.manager, account_key)
         from_addr = message.get("from_addr")
         # Note: for now we are hardcoding addr_type as 'msisdn'
@@ -75,11 +85,10 @@ class OptOutApplication(ApplicationWorker):
         yield opt_out_store.new_opt_out("msisdn", from_addr, message)
 
         if message.get('transport_type') == 'http_api':
-            self.reply_to(message,
-                '{"msisdn":"%s",'
-                '"opted_in": false}' % (from_addr,))
+            yield self.reply_to(
+                message, '{"msisdn":"%s","opted_in": false}' % (from_addr,))
         else:
-            self.reply_to(message, "You have opted out")
+            yield self.reply_to(message, "You have opted out")
 
     def consume_control_command(self, command_message):
         """
