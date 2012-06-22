@@ -1,19 +1,19 @@
 <div class="control-group">
-    <label class="control-label" for="survey-name">Survey Name</label>
+    <label class="control-label" for="survey-name">Opt Out Name</label>
     <div class="controls">
         {{form.subject}}
         {{form.subject.errors}}
     </div>
 </div>
 <div class="control-group">
-    <label class="control-label" for="survey-summary">Survey Summary</label>
+    <label class="control-label" for="survey-summary">Opt Out Summary</label>
     <div class="controls">
         {{form.message}}
         {{form.message.errors}}
     </div>
 </div>
 <div class="control-group">
-    <label class="control-label" for="inlineCheckboxes">Survey Channels</label>
+    <label class="control-label" for="inlineCheckboxes">Opt Out Channels</label>
     <table class="table table-condensed" style="width: 90%">
     <tbody>
     {% for choice in form.delivery_class_widgets %}
@@ -25,7 +25,7 @@
     {% cycle '' '</tr>' %}
     {% endfor %}
     <tr>
-        <td colspan="3"><label for="channel" class="error" style="display: none">Please select at least one channel for your survey.</label></td>
+        <td colspan="3"><label for="channel" class="error" style="display: none">Please select at least one channel for your opt out.</label></td>
     </tr>
     </tbody>
     </table>
