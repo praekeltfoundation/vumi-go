@@ -9,7 +9,6 @@ transport_names:
   - safaricom_sna_smpp_transport
   - safaricom_sna_ussd_transport
   - afropinions_smpp_transport
-  - pcm_transport
 exposed_names:
   - vumigo_router
 router_class: vumi.dispatchers.base.SimpleDispatchRouter
@@ -25,6 +24,4 @@ route_mappings:
   safaricom_sna_ussd_transport:
     - vumigo_router
   afropinions_smpp_transport:
-    - vumigo_router
-  pcm_transport:
     - vumigo_router

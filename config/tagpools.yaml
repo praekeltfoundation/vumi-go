@@ -60,14 +60,3 @@ pools:
       transport_type: ussd
       client_intiated: true
       user_selects_tag: true
-  cell_life_pcm:
-    tags:
-      - '0711667783'
-    metadata:
-      display_name: "Cell Life PCM"
-      delivery_class: http_api
-      transport_type: http_api
-      client_initiated: true
-      user_selects_tag: true
-      msg_options:
-        transport_name: pcm_transport

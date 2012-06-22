@@ -19,7 +19,6 @@ conversation_mappings:
     survey: survey_transport
     multi_survey: multi_survey_transport
     bulk_message: bulk_message_transport
-    opt_out: opt_out_transport
 
 # NOTE: the order is important
 middleware:
