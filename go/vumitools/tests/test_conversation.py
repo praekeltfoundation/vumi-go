@@ -12,7 +12,6 @@ from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.contact import ContactStore
-from go.vumitools.api import VumiUserApi
 
 
 class TestConversationStore(TestCase):
@@ -76,6 +75,6 @@ class TestConversationStore(TestCase):
             'message_id': u'the-message-id'
         })
         all_addrs = yield conv.get_contacts_addresses()
-        self.assertEqual(all_addrs, ['+27760000000', '+27761234567'])
+        self.assertEqual(set(all_addrs), set(['+27760000000', '+27761234567']))
         optedin_addrs = yield conv.get_opted_in_addresses(self.account)
         self.assertEqual(optedin_addrs, ['+27760000000'])
