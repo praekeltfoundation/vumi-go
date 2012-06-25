@@ -1,35 +1,20 @@
-# -*- test-case-name: go.apps.multi_surveys.tests.test_vumi_app -*-
+# -*- test-case-name: go.apps.opt_out.tests.test_vumi_app -*-
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 from go.vumitools.api import VumiApiCommand, get_redis
 from go.vumitools.conversation import ConversationStore
-from vxpolls.multipoll_example import MultiPollApplication
-from vxpolls.manager import PollManager
+from go.vumitools.contact import ContactStore
+from go.vumitools.opt_out import OptOutStore
+from vumi.application import ApplicationWorker
 from vumi.persist.message_store import MessageStore
 from vumi.persist.txriak_manager import TxRiakManager
-from vumi.message import TransportUserMessage
 from vumi import log
 
 
-class MamaPollApplication(MultiPollApplication):
-    registration_partial_response = "Please dial back in to " \
-                                    "complete registration."
-    registration_completed_response = "Thank you!"
-    batch_completed_response = "Please dial in again to " \
-                                "complete the rest of this weeks questions."
-    survey_completed_response = "You've done this week's 2 quiz questions. " \
-                                "Please dial *120*646*4*6262# again next " \
-                                "week for new questions. Stay well! " \
-                                "Visit askmama.mobi"
-
-
-class MultiSurveyApplication(MamaPollApplication):
+class OptOutApplication(ApplicationWorker):
 
     def validate_config(self):
         self.worker_name = self.config['worker_name']
-        # vxpolls
-        vxp_config = self.config.get('vxpolls', {})
-        self.poll_prefix = vxp_config.get('prefix')
         # message store
         mdb_config = self.config.get('message_store', {})
         self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
@@ -41,7 +26,6 @@ class MultiSurveyApplication(MamaPollApplication):
     @inlineCallbacks
     def setup_application(self):
         r_server = get_redis(self.config)
-        self.pm = PollManager(r_server, self.poll_prefix)
         self.manager = TxRiakManager.from_config(
             self.config.get('riak_manager'))
         self.store = MessageStore(self.manager, r_server, self.mdb_prefix)
@@ -54,17 +38,57 @@ class MultiSurveyApplication(MamaPollApplication):
 
     @inlineCallbacks
     def teardown_application(self):
-        self.pm.stop()
         if self.control_consumer is not None:
             yield self.control_consumer.stop()
             self.control_consumer = None
 
+    @inlineCallbacks
+    def get_contact_for_message(self, message):
+        helper_metadata = message.get('helper_metadata', {})
+
+        go_metadata = helper_metadata.get('go', {})
+        account_key = go_metadata.get('user_account', None)
+
+        conversation_metadata = helper_metadata.get('conversations', {})
+        conversation_key = conversation_metadata.get('conversation_key', None)
+
+        if account_key and conversation_key:
+            conv_store = ConversationStore(self.manager, account_key)
+            conv = yield conv_store.get_conversation_by_key(conversation_key)
+
+            contact_store = ContactStore(self.manager, account_key)
+            contact = yield contact_store.contact_for_addr(conv.delivery_class,
+                message.user())
+
+            returnValue(contact)
+
+    @inlineCallbacks
     def consume_user_message(self, message):
-        helper_metadata = message['helper_metadata']
-        conv_info = helper_metadata.get('conversations')
-        helper_metadata['poll_id'] = 'poll-%s' % (
-            conv_info.get('conversation_key'),)
-        super(MultiSurveyApplication, self).consume_user_message(message)
+
+        helper_metadata = message.get('helper_metadata', {})
+        go_metadata = helper_metadata.get('go', {})
+        account_key = go_metadata.get('user_account', None)
+
+        if account_key is None:
+            # We don't have an account to opt out of.
+            # Since this can only happen for redirected messages, assume we
+            # aren't dealing with an API.
+            yield self.reply_to(
+                message, "Your opt-out was received but we failed to link it "
+                "to a specific service, please try again later.")
+            return
+
+        opt_out_store = OptOutStore(self.manager, account_key)
+        from_addr = message.get("from_addr")
+        # Note: for now we are hardcoding addr_type as 'msisdn'
+        # as only msisdn's are opting out currently
+        yield opt_out_store.new_opt_out("msisdn", from_addr, message)
+
+        if message.get('transport_type') == 'http_api':
+            yield self.reply_to(
+                message, '{"msisdn":"%s","opted_in": false}' % (from_addr,))
+        else:
+            yield self.reply_to(message, "You have opted out")
 
     def consume_control_command(self, command_message):
         """
@@ -87,22 +111,6 @@ class MultiSurveyApplication(MamaPollApplication):
         log.error("Unknown vumi API command: %s(%s, %s)" % (
             method_name, args, kwargs))
 
-    def start_survey(self, to_addr, conversation, **msg_options):
-        log.debug('Starting %r -> %s' % (conversation, to_addr))
-
-        helper_metadata = msg_options.setdefault('helper_metadata', {})
-        helper_metadata['conversations'] = {
-            'conversation_key': conversation.key,
-            'conversation_type': conversation.conversation_type,
-        }
-
-        # We reverse the to_addr & from_addr since we're faking input
-        # from the client to start the survey.
-        from_addr = msg_options.pop('from_addr')
-        msg = TransportUserMessage(from_addr=to_addr, to_addr=from_addr,
-                content='', **msg_options)
-        self.consume_user_message(msg)
-
     @inlineCallbacks
     def process_command_start(self, batch_id, conversation_type,
         conversation_key, msg_options, is_client_initiated, **extra_params):
@@ -123,8 +131,7 @@ class MultiSurveyApplication(MamaPollApplication):
             conv_store = ConversationStore(self.manager, account_key)
             conv = yield conv_store.get_conversation_by_key(conversation_key)
 
-            user_account = yield conv_store.get_user_account()
-            to_addresses = yield conv.get_opted_in_addresses(user_account)
+            to_addresses = yield conv.get_contacts_addresses()
             for to_addr in to_addresses:
                 yield self.start_survey(to_addr, conv, **msg_options)
         else:

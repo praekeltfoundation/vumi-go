@@ -1,0 +1,14 @@
+worker_name: opt_out_application
+transport_name: opt_out_transport
+batch_size: 5
+
+message_store:
+  store_prefix: vumigo.
+riak_manager:
+  bucket_prefix: vumigo.
+
+middleware:
+  - logging_middleware: vumi.middleware.LoggingMiddleware
+
+logging_middleware:
+  log_level: debug

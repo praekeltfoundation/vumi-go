@@ -124,6 +124,7 @@ TEMPLATE_DIRS = (
     abspath("apps", "surveys", "templates"),
     abspath("apps", "multi_surveys", "templates"),
     abspath("apps", "bulk_message", "templates"),
+    abspath("apps", "opt_out", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -236,6 +237,10 @@ VUMI_INSTALLED_APPS = {
     'go.apps.multi_surveys': {
         'namespace': 'multi_survey',
         'display_name': 'Multiple Dialogues',
+    },
+    'go.apps.opt_out': {
+        'namespace': 'opt_out',
+        'display_name': 'Opt Out Handler',
     },
     'go.apps.jsbox': {
         'namespace': 'jsbox',
