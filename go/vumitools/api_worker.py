@@ -142,6 +142,8 @@ class GoMessageMetadata(object):
     @inlineCallbacks
     def get_batch_key(self):
         if 'batch_key' not in self._go_metadata:
+            # We're calling _find_batch() for the side effect, which is to put
+            # the batch key in the metadata if there is one.
             yield self._find_batch()
         returnValue(self._go_metadata.get('batch_key'))
 
@@ -161,6 +163,8 @@ class GoMessageMetadata(object):
     @inlineCallbacks
     def get_account_key(self):
         if 'user_account' not in self._go_metadata:
+            # We're calling _find_account_key() for the side effect, which is
+            # to put the account key in the metadata if there is one.
             yield self._find_account_key()
         returnValue(self._go_metadata.get('user_account'))
 
