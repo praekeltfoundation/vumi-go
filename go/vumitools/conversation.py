@@ -85,15 +85,35 @@ class Conversation(Model):
     def get_contacts_addresses(self):
         """
         Get the contacts assigned to this group with an address attribute
-        that is appropriate for the given delivery_class
-
-        :rtype: str
-        :param rtype: the name of the delivery class to use, if None then
-                    it will default to `self.delivery_class`
+        that is appropriate for the conversation's delivery_class
         """
         people = yield self.people()
         addrs = [contact.addr_for(self.delivery_class) for contact in people]
-        returnValue([addr for addr in addrs if addr])
+        all_addrs = [addr for addr in addrs if addr]
+        returnValue(all_addrs)
+
+    @Manager.calls_manager
+    def get_opted_in_addresses(self, user_account):
+        """
+        Get the contacts assigned to this group with an address attribute
+        that is appropriate for the conversation's delivery_class and
+        that are opted in.
+
+        :param user_account:
+            The account to use to lookup the optouts in.
+
+        *NOTE*  This is a work around because it is currently not possible
+                to get back to the parents manager.
+        """
+        from go.vumitools.opt_out import OptOutStore
+        opt_out_store = OptOutStore.from_user_account(user_account)
+        optouts = yield opt_out_store.list_opt_outs()
+        optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
+                            if optout.key.startswith('msisdn:')]
+        all_addrs = yield self.get_contacts_addresses()
+        opted_in_addrs = [addr for addr in all_addrs
+                            if addr not in optout_addrs]
+        returnValue(opted_in_addrs)
 
 
 class ConversationStore(PerAccountStore):
@@ -110,6 +130,7 @@ class ConversationStore(PerAccountStore):
     def get_conversation_by_key(self, key):
         return self.conversations.load(key)
 
+    @Manager.calls_manager
     def new_conversation(self, conversation_type, subject, message,
         start_timestamp=None, **fields):
         conversation_id = uuid4().get_hex()
@@ -128,4 +149,5 @@ class ConversationStore(PerAccountStore):
         for group in groups:
             conversation.add_group(group)
 
-        return conversation.save()
+        conversation = yield conversation.save()
+        returnValue(conversation)
