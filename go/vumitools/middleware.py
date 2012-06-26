@@ -1,5 +1,6 @@
 # -*- test-case-name: go.vumitools.tests.test_middleware -*-
 import sys
+import base64
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -10,6 +11,7 @@ from vumi.utils import normalize_msisdn
 from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.message_store import MessageStore
 from vumi import log
+from vumi.utils import load_class_by_string, http_request_full
 
 from go.vumitools.credit import CreditManager
 from go.vumitools.account import AccountStore
@@ -337,3 +339,56 @@ class DebitAccountMiddleware(TransportMiddleware):
                                      " to debit %r." %
                                      (user_account_key, credits_per_message))
         return msg
+
+
+class PerAccountLogicMiddleware(BaseMiddleware):
+
+    def setup_middleware(self):
+        super(PerAccountLogicMiddleware, self).setup_middleware()
+        configured_accounts = self.config.get('accounts', {})
+        self.accounts = {}
+        for account_key, handlers in configured_accounts.items():
+            for handler in handlers:
+                [(name, handler_class_name)] = handler.items()
+                self.accounts.setdefault(account_key, [])
+                handler_config = self.config.get(name, {})
+                handler_class = load_class_by_string(handler_class_name)
+                handler = handler_class(**handler_config)
+                self.accounts[account_key].append(handler)
+
+    @inlineCallbacks
+    def handle_outbound(self, message, endpoint):
+        account_key = LookupAccountMiddleware.map_message_to_account_key(
+                                                                    message)
+        if account_key:
+            handlers = self.accounts.get(account_key, [])
+            for handler in handlers:
+                yield handler.handle_message(message)
+        returnValue(message)
+
+
+class YoPaymentHandler(object):
+
+    def __init__(self, username='', password='', url='', amount=0, reason=''):
+        self.username = username
+        self.password = password
+        self.url = url
+        self.amount = amount
+        self.reason = reason
+
+    def get_auth_headers(self, username, password):
+        credentials = base64.b64encode('%s:%s' % (username, password))
+        return {
+            'Authorization': 'Basic %s' % (credentials.strip(),)
+        }
+
+    @inlineCallbacks
+    def handle_message(self, message):
+        if not self.url:
+            log.error('No URL configured for YoPaymentHandler')
+        else:
+            yield http_request_full(self.url, data={
+                'msisdn': message['to_addr'],
+                'amount': self.amount,
+                'reason': self.reason,
+            }, headers=self.get_auth_headers(self.username, self.password))
