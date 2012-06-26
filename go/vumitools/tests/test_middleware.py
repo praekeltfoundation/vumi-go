@@ -1,5 +1,7 @@
 """Tests for go.vumitools.middleware"""
 
+import base64
+
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -242,6 +244,10 @@ class PerAccountLogicMiddlewareTestCase(MiddlewareTestCase):
                     {'yo': 'go.vumitools.middleware.YoPaymentHandler'},
                 ],
             },
+            'yo': {
+                'username': 'username',
+                'password': 'password',
+            }
         })
         self.mw = self.create_middleware(PerAccountLogicMiddleware,
             config=self.config)
@@ -258,3 +264,11 @@ class PerAccountLogicMiddlewareTestCase(MiddlewareTestCase):
             yield self.mw.handle_outbound(msg, 'dummy_endpoint')
             [error] = log.errors
             self.assertTrue('No URL configured' in error['message'][0])
+
+    def test_auth_headers(self):
+        handler = self.mw.accounts['account_key'][0]
+        auth = handler.get_auth_headers('username', 'password')
+        credentials = base64.b64encode('username:password')
+        self.assertEqual(auth, {
+            'Authorization': 'Basic %s' % (credentials.strip(),)
+            })
