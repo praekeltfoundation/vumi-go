@@ -6,14 +6,15 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.message_store import MessageStore
 from vumi.message import TransportUserMessage
-from vumi.tests.utils import FakeRedis
+from vumi.tests.utils import FakeRedis, LogCatcher
 from vumi.middleware import TaggingMiddleware
 
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.middleware import (NormalizeMsisdnMiddleware,
     LookupAccountMiddleware, LookupBatchMiddleware,
-    LookupConversationMiddleware, OptOutMiddleware)
+    LookupConversationMiddleware, OptOutMiddleware,
+    PerAccountLogicMiddleware)
 
 
 class MiddlewareTestCase(TestCase):
@@ -227,3 +228,33 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
                 'optout': False,
             }
         })
+
+
+class PerAccountLogicMiddlewareTestCase(MiddlewareTestCase):
+
+    @inlineCallbacks
+    def setUp(self):
+        yield super(PerAccountLogicMiddlewareTestCase, self).setUp()
+        self.config = self.default_config.copy()
+        self.config.update({
+            'accounts': {
+                'account_key': [
+                    {'yo': 'go.vumitools.middleware.YoPaymentHandler'},
+                ],
+            },
+        })
+        self.mw = self.create_middleware(PerAccountLogicMiddleware,
+            config=self.config)
+
+    @inlineCallbacks
+    def test_hitting_url(self):
+        msg = self.mk_msg('to@domain.org', 'from@domain.org')
+        msg['helper_metadata'] = {
+            'go': {
+                'user_account': 'account_key',
+            },
+        }
+        with LogCatcher() as log:
+            yield self.mw.handle_outbound(msg, 'dummy_endpoint')
+            [error] = log.errors
+            self.assertTrue('No URL configured' in error['message'][0])
