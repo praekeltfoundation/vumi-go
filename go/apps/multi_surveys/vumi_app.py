@@ -18,7 +18,7 @@ class MamaPollApplication(MultiPollApplication):
     batch_completed_response = "Please dial in again to " \
                                 "complete the rest of this weeks questions."
     survey_completed_response = "You've done this week's 2 quiz questions. " \
-                                "Please dial *120*646*4*6262# again next " \
+                                "Please dial *120*2112# again next " \
                                 "week for new questions. Stay well! " \
                                 "Visit askmama.mobi"
 
