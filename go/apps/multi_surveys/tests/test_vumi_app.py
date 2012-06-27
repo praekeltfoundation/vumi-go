@@ -47,7 +47,7 @@ class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
     end_of_survey_copy = {
         0: (u'Thank you!'),
         1: (u"You've done this week's 2 quiz questions. "
-            "Please dial *120*646*4*6262# again next week "
+            "Please dial *120*2112# again next week "
             "for new questions. Stay well! Visit askmama.mobi"),
         }
 
