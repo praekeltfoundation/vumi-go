@@ -14,7 +14,8 @@ from vumi import log
 class MamaPollApplication(MultiPollApplication):
     registration_partial_response = "Please dial back in to " \
                                     "complete registration."
-    registration_completed_response = "Thank you!"
+    registration_completed_response = "You have completed the " \
+                                        "registration questions."
     batch_completed_response = "Please dial in again to " \
                                 "complete the rest of this weeks questions."
     survey_completed_response = "You've done this week's 2 quiz questions. " \
