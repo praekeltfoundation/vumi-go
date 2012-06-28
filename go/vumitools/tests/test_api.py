@@ -7,7 +7,8 @@ from twisted.trial.unittest import TestCase
 from vumi.tests.utils import FakeRedis
 from vumi.application.tests.test_base import ApplicationTestCase
 
-from go.vumitools.api import VumiApi, MessageSender, VumiApiCommand
+from go.vumitools.api import (
+    VumiApi, MessageSender, VumiApiCommand, VumiApiEvent)
 from go.vumitools.tests.utils import CeleryTestMixIn
 
 
@@ -158,3 +159,18 @@ class TestVumiApiCommand(TestCase):
             },
             'to_addr': '+4567'
         })
+
+
+class TestVumiApiEvent(TestCase):
+    def test_default_routing_config(self):
+        cfg = VumiApiEvent.default_routing_config()
+        self.assertEqual(set(cfg.keys()),
+                         set(['exchange', 'exchange_type', 'routing_key']))
+
+    def test_event(self):
+        event = VumiApiEvent.event(
+            'my_app', 'my_conv', 'my_event', {"foo": "bar"})
+        self.assertEqual(event['conversation_type'], 'my_app')
+        self.assertEqual(event['conversation_key'], 'my_conv')
+        self.assertEqual(event['event_type'], 'my_event')
+        self.assertEqual(event['content'], {"foo": "bar"})
