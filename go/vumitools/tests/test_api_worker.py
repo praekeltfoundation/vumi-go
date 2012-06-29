@@ -12,8 +12,9 @@ from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.message_store import MessageStore
 from vumi.tests.utils import FakeRedis, LogCatcher
 
-from go.vumitools.api_worker import CommandDispatcher
-from go.vumitools.api import VumiApiCommand
+from go.vumitools.api_worker import (
+    CommandDispatcher, EventDispatcher, EventHandler)
+from go.vumitools.api import VumiApiCommand, VumiApiEvent
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.account import AccountStore
 
@@ -61,6 +62,72 @@ class CommandDispatcherTestCase(ApplicationTestCase):
             [error] = logs.errors
             self.assertTrue("No worker publisher available" in
                                 error['message'][0])
+
+
+class ToyHandler(EventHandler):
+    def setup_handler(self):
+        self.handled_events = []
+
+    def handle_event(self, event):
+        self.handled_events.append(event)
+
+
+class EventDispatcherTestCase(ApplicationTestCase):
+
+    application_class = EventDispatcher
+
+    @inlineCallbacks
+    def setUp(self):
+        super(EventDispatcherTestCase, self).setUp()
+        self._fake_redis = FakeRedis()
+        self.ed = yield self.get_application({
+            'redis_cls': lambda **kw: self._fake_redis,
+            'event_handlers': {
+                    'handler1': '%s.ToyHandler' % __name__,
+                    'handler2': '%s.ToyHandler' % __name__,
+                    },
+        })
+        self.handler1 = self.ed.handlers['handler1']
+        self.handler2 = self.ed.handlers['handler2']
+
+    def tearDown(self):
+        self._fake_redis.teardown()
+        return super(EventDispatcherTestCase, self).tearDown()
+
+    def publish_event(self, cmd):
+        return self.dispatch(cmd, rkey='vumi.event')
+
+    def mkevent(self, event_type, content, conv_key="conv_key",
+                conv_type="conv_type", account_key="acct"):
+        return VumiApiEvent.event(
+            account_key, conv_type, conv_key, event_type, content)
+
+    @inlineCallbacks
+    def test_handle_event(self):
+        self.ed.account_config['acct'] = {
+            ('conv_type', 'conv_key', 'my_event'): ['handler1']}
+        event = self.mkevent("my_event", {"foo": "bar"})
+        self.assertEqual([], self.handler1.handled_events)
+        yield self.publish_event(event)
+        self.assertEqual([event], self.handler1.handled_events)
+        self.assertEqual([], self.handler2.handled_events)
+
+    # @inlineCallbacks
+    # def test_unknown_worker_name(self):
+    #     with LogCatcher() as logs:
+    #         yield self.publish_command(
+    #             VumiApiCommand.command('no-worker', 'foo'))
+    #         [error] = logs.errors
+    #         self.assertTrue("No worker publisher available" in
+    #                             error['message'][0])
+
+    # @inlineCallbacks
+    # def test_badly_constructed_command(self):
+    #     with LogCatcher() as logs:
+    #         yield self.publish_command(VumiApiCommand())
+    #         [error] = logs.errors
+    #         self.assertTrue("No worker publisher available" in
+    #                             error['message'][0])
 
 
 class GoApplicationRouterTestCase(DispatcherTestCase):
