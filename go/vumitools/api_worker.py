@@ -3,21 +3,22 @@
 
 """Vumi application worker for the vumitools API."""
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application import ApplicationWorker
 from vumi.dispatchers.base import BaseDispatchRouter
+from vumi.utils import load_class_by_string
 from vumi import log
 
-from go.vumitools.api import VumiApiCommand
+from go.vumitools.api import VumiApiCommand, VumiApiEvent
 from go.vumitools.middleware import (LookupConversationMiddleware,
     OptOutMiddleware)
 
 
 class CommandDispatcher(ApplicationWorker):
     """
-    An application worker that forwards commands arriving on the Vumi Api
-    queue to the relevant applications. It does this by using the commands
+    An application worker that forwards commands arriving on the Vumi Api queue
+    to the relevant applications. It does this by using the command's
     worker_name parameter to construct the routing key.
 
     Configuration parameters:
@@ -67,6 +68,82 @@ class CommandDispatcher(ApplicationWorker):
             log.info('Sent %s to %s' % (cmd, worker_name))
         else:
             log.error('No worker publisher available for %s' % (cmd,))
+
+
+class EventHandler(object):
+    def __init__(self, config):
+        self.config = config
+
+    def setup_handler(self):
+        pass
+
+    def handle_event(self, event):
+        raise NotImplementedError()
+
+
+class EventDispatcher(ApplicationWorker):
+    """
+    An application worker that forwards event arriving on the Vumi Api Event
+    queue to the relevant handlers.
+
+    FIXME: The configuration is currently static.
+
+    Configuration parameters:
+
+    :type api_routing: dict
+    :param api_routing:
+        Dictionary describing where to consume API commands.
+    :type handler_names: list
+    :param event_handlers:
+        A mapping from handler name to fully-qualified class name.
+    """
+
+    def validate_config(self):
+        self.api_routing_config = VumiApiEvent.default_routing_config()
+        self.api_routing_config.update(self.config.get('api_routing', {}))
+        self.api_consumer = None
+        self.handler_config = self.config.get('event_handlers', {})
+
+    @inlineCallbacks
+    def setup_application(self):
+        self.handlers = {}
+        setup_deferreds = []
+        for name, handler_class in self.handler_config.items():
+            cls = load_class_by_string(handler_class)
+            self.handlers[name] = cls(self.config.get(name, {}))
+            yield setup_deferreds.append(self.handlers[name].setup_handler())
+
+        self.account_config = {}
+
+        self.api_event_consumer = yield self.consume(
+            self.api_routing_config['routing_key'],
+            self.consume_api_event,
+            exchange_name=self.api_routing_config['exchange'],
+            exchange_type=self.api_routing_config['exchange_type'],
+            message_class=VumiApiEvent)
+
+    @inlineCallbacks
+    def teardown_application(self):
+        if self.api_event_consumer:
+            yield self.api_event_consumer.stop()
+            self.api_event_consumer = None
+
+    @inlineCallbacks
+    def get_account_config(self, account_key):
+        if account_key not in self.account_config:
+            # TODO: Fetch this.
+            yield None
+            self.account_config[account_key] = {}
+        returnValue(self.account_config[account_key])
+
+    @inlineCallbacks
+    def consume_api_event(self, event):
+        log.msg("Handling event: %r" % (event,))
+        config = yield self.get_account_config(event['account_key'])
+        for handler in config.get((event['conversation_type'],
+                                   event['conversation_key'],
+                                   event['event_type']), []):
+            yield self.handlers[handler].handle_event(event)
 
 
 class GoApplicationRouter(BaseDispatchRouter):

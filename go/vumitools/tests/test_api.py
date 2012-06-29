@@ -169,7 +169,8 @@ class TestVumiApiEvent(TestCase):
 
     def test_event(self):
         event = VumiApiEvent.event(
-            'my_app', 'my_conv', 'my_event', {"foo": "bar"})
+            'me', 'my_app', 'my_conv', 'my_event', {"foo": "bar"})
+        self.assertEqual(event['account_key'], 'me')
         self.assertEqual(event['conversation_type'], 'my_app')
         self.assertEqual(event['conversation_key'], 'my_conv')
         self.assertEqual(event['event_type'], 'my_event')
