@@ -68,8 +68,8 @@ class ToyHandler(EventHandler):
     def setup_handler(self):
         self.handled_events = []
 
-    def handle_event(self, event):
-        self.handled_events.append(event)
+    def handle_event(self, event, handler_config):
+        self.handled_events.append((event, handler_config))
 
 
 class EventDispatcherTestCase(ApplicationTestCase):
@@ -105,36 +105,38 @@ class EventDispatcherTestCase(ApplicationTestCase):
     @inlineCallbacks
     def test_handle_event(self):
         self.ed.account_config['acct'] = {
-            ('conv_key', 'my_event'): ['handler1']}
+            ('conv_key', 'my_event'): [('handler1', {})]}
         event = self.mkevent("my_event", {"foo": "bar"})
         self.assertEqual([], self.handler1.handled_events)
         yield self.publish_event(event)
-        self.assertEqual([event], self.handler1.handled_events)
+        self.assertEqual([(event, {})], self.handler1.handled_events)
         self.assertEqual([], self.handler2.handled_events)
 
-    # @inlineCallbacks
-    # def test_unknown_worker_name(self):
-    #     with LogCatcher() as logs:
-    #         yield self.publish_command(
-    #             VumiApiCommand.command('no-worker', 'foo'))
-    #         [error] = logs.errors
-    #         self.assertTrue("No worker publisher available" in
-    #                             error['message'][0])
-
-    # @inlineCallbacks
-    # def test_badly_constructed_command(self):
-    #     with LogCatcher() as logs:
-    #         yield self.publish_command(VumiApiCommand())
-    #         [error] = logs.errors
-    #         self.assertTrue("No worker publisher available" in
-    #                             error['message'][0])
+    @inlineCallbacks
+    def test_handle_events(self):
+        self.ed.account_config['acct'] = {
+            ('conv_key', 'my_event'): [('handler1', {'animal': 'puppy'})],
+            ('conv_key', 'other_event'): [
+                ('handler1', {'animal': 'kitten'}),
+                ('handler2', {})
+                ],
+            }
+        event = self.mkevent("my_event", {"foo": "bar"})
+        event2 = self.mkevent("other_event", {"foo": "bar"})
+        self.assertEqual([], self.handler1.handled_events)
+        self.assertEqual([], self.handler2.handled_events)
+        yield self.publish_event(event)
+        yield self.publish_event(event2)
+        self.assertEqual(
+            [(event, {'animal': 'puppy'}), (event2, {'animal': 'kitten'})],
+            self.handler1.handled_events)
+        self.assertEqual([(event2, {})], self.handler2.handled_events)
 
 
 class GoApplicationRouterTestCase(DispatcherTestCase):
 
     dispatcher_class = BaseDispatchWorker
     transport_name = 'test_transport'
-    timeout = 1
 
     @inlineCallbacks
     def setUp(self):
