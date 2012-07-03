@@ -77,7 +77,7 @@ class EventHandler(object):
     def setup_handler(self):
         pass
 
-    def handle_event(self, event):
+    def handle_event(self, event, handler_config):
         raise NotImplementedError()
 
 
@@ -140,9 +140,9 @@ class EventDispatcher(ApplicationWorker):
     def consume_api_event(self, event):
         log.msg("Handling event: %r" % (event,))
         config = yield self.get_account_config(event['account_key'])
-        for handler in config.get((event['conversation_key'],
-                                   event['event_type']), []):
-            yield self.handlers[handler].handle_event(event)
+        for handler, handler_config in config.get(
+            (event['conversation_key'], event['event_type']), []):
+            yield self.handlers[handler].handle_event(event, handler_config)
 
 
 class GoApplicationRouter(BaseDispatchRouter):
