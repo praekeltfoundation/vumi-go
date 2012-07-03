@@ -134,3 +134,14 @@ class BulkMessageApplication(GoApplication):
                     conv.message, msg_options)
         else:
             log.error('Cannot find batch for batch_id %s' % (batch_id,))
+
+    @inlineCallbacks
+    def process_command_send_message(self, *args, **kwargs):
+        send_message = kwargs['send_message']
+        info = 'Processing send_message with: %s' % (send_message)
+        log.info(info)
+        #print info
+        yield self.send_to(
+                send_message['to_addr'],
+                send_message['content'],
+                **send_message['msg_options'])
