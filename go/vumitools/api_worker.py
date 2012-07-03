@@ -140,8 +140,7 @@ class EventDispatcher(ApplicationWorker):
     def consume_api_event(self, event):
         log.msg("Handling event: %r" % (event,))
         config = yield self.get_account_config(event['account_key'])
-        for handler in config.get((event['conversation_type'],
-                                   event['conversation_key'],
+        for handler in config.get((event['conversation_key'],
                                    event['event_type']), []):
             yield self.handlers[handler].handle_event(event)
 
