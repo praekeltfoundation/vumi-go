@@ -98,14 +98,14 @@ class EventDispatcherTestCase(ApplicationTestCase):
         return self.dispatch(cmd, rkey='vumi.event')
 
     def mkevent(self, event_type, content, conv_key="conv_key",
-                conv_type="conv_type", account_key="acct"):
+                account_key="acct"):
         return VumiApiEvent.event(
-            account_key, conv_type, conv_key, event_type, content)
+            account_key, conv_key, event_type, content)
 
     @inlineCallbacks
     def test_handle_event(self):
         self.ed.account_config['acct'] = {
-            ('conv_type', 'conv_key', 'my_event'): ['handler1']}
+            ('conv_key', 'my_event'): ['handler1']}
         event = self.mkevent("my_event", {"foo": "bar"})
         self.assertEqual([], self.handler1.handled_events)
         yield self.publish_event(event)

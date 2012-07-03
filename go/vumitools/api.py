@@ -688,10 +688,8 @@ class VumiApiEvent(Message):
         return cls._DEFAULT_ROUTING_CONFIG.copy()
 
     @classmethod
-    def event(cls, account_key, conversation_type, conversation_key,
-              event_type, content):
+    def event(cls, account_key, conversation_key, event_type, content):
         return cls(account_key=account_key,
-                   conversation_type=conversation_type,
                    conversation_key=conversation_key,
                    event_type=event_type,
                    content=content)
