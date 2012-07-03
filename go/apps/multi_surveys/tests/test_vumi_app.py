@@ -218,7 +218,6 @@ class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
                 'valid_responses': [u''],
                 'session_event': 'close',
                 })
-        #print questions
         for i, question in enumerate(questions):
             [msg] = yield self.wait_for_messages(1, i + start_at + 1)
             self.assertEqual(msg['content'], question['copy'])
@@ -237,7 +236,6 @@ class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
                 'valid_responses': [u''],
                 'session_event': 'close',
                 }]
-        #print questions
         for i, question in enumerate(questions):
             [msg] = yield self.wait_for_messages(1, i + start_at + 1)
             self.assertEqual(msg['content'], question['copy'])
