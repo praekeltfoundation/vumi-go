@@ -13,7 +13,7 @@ from vumi.persist.txriak_manager import TxRiakManager
 
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
 from go.vumitools.api_worker import CommandDispatcher
-from go.vumitools.api import VumiUserApi
+from go.vumitools.api import VumiUserApi, VumiApiCommand
 from go.vumitools.tests.utils import CeleryTestMixIn, DummyConsumerFactory
 from go.vumitools.account import AccountStore
 
@@ -171,3 +171,19 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
         yield self.dispatch(msg)
         dbmsg = yield self.app.store.get_inbound_message(msg['message_id'])
         self.assertEqual(dbmsg, msg)
+
+    @inlineCallbacks
+    def test_send_message_command(self):
+        sm_cmd = VumiApiCommand.command(self.app.worker_name,
+                "send_message",
+                send_message = {
+                    "to_addr": "123456",
+                    "content": "hello world",
+                    "msg_options": {}
+                })
+        yield self.dispatch(sm_cmd, rkey='%s.control' % self.app.worker_name)
+
+        [msg] = yield self.get_dispatched_messages()
+        self.assertEqual(msg.payload['to_addr'], "123456")
+        self.assertEqual(msg.payload['content'], "hello world")
+        #print msg.payload
