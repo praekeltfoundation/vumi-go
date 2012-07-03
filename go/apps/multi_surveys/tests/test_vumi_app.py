@@ -67,7 +67,8 @@ class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
             },
             'vxpolls': {
                 'prefix': 'test.',
-            }
+            },
+            'is_demo': False,
         }
 
         # Setup the SurveyApplication
@@ -217,7 +218,26 @@ class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
                 'valid_responses': [u''],
                 'session_event': 'close',
                 })
+        #print questions
+        for i, question in enumerate(questions):
+            [msg] = yield self.wait_for_messages(1, i + start_at + 1)
+            self.assertEqual(msg['content'], question['copy'])
+            self.assertEqual(msg['session_event'],
+                             question.get('session_event'))
+            if i != len(questions) - 1:
+                yield self.reply_to(msg, question['valid_responses'][0])
 
+        msgs = self.get_dispatched_messages()[-len(questions):]
+        returnValue(msgs)
+
+    @inlineCallbacks
+    def complete_empty_survey(self, polls, start_at=0):
+        questions = [{
+                'copy': self.end_of_survey_copy[1],
+                'valid_responses': [u''],
+                'session_event': 'close',
+                }]
+        #print questions
         for i, question in enumerate(questions):
             [msg] = yield self.wait_for_messages(1, i + start_at + 1)
             self.assertEqual(msg['content'], question['copy'])
@@ -239,6 +259,28 @@ class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
 
     @inlineCallbacks
     def test_surveys_in_succession(self):
+        yield self.create_contact(u'First', u'Contact',
+            msisdn=u'27831234567', groups=[self.group])
+        self.create_survey(self.conversation)
+        yield self.conversation.start()
+        start_at = 0
+        for i in range(1):
+            msgs = yield self.complete_survey(self.default_polls,
+                                              start_at=start_at)
+            start_at += len(msgs)
+            # any input will restart the survey
+            yield self.reply_to(msgs[-1], 'hi')
+
+        for i in range(2):
+            msgs = yield self.complete_empty_survey(self.default_polls,
+                                              start_at=start_at)
+            start_at += len(msgs)
+            # any input will restart the survey
+            yield self.reply_to(msgs[-1], 'hi')
+
+    @inlineCallbacks
+    def test_surveys_in_succession_demo_mode(self):
+        self.app.is_demo = True
         yield self.create_contact(u'First', u'Contact',
             msisdn=u'27831234567', groups=[self.group])
         self.create_survey(self.conversation)
