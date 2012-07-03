@@ -37,6 +37,7 @@ class MultiSurveyApplication(MamaPollApplication):
         # api worker
         self.api_routing_config = VumiApiCommand.default_routing_config()
         self.api_routing_config.update(self.config.get('api_routing', {}))
+        self.is_demo = self.config.get('is_demo', False)
         self.control_consumer = None
 
     @inlineCallbacks
