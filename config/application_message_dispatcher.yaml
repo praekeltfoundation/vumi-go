@@ -28,6 +28,7 @@ middleware:
   - optout_middleware: go.vumitools.middleware.OptOutMiddleware
   - storing_middleware: vumi.middleware.StoringMiddleware
   - logging_middleware: vumi.middleware.LoggingMiddleware
+  - per_account_middleware: go.vumitools.middleware.PerAccountLogicMiddleware
 
 tagging_middleware:
   message_store: *MESSAGE_STORE
@@ -54,3 +55,9 @@ optout_middleware:
     - stop
 logging_middleware:
   log_level: debug
+per_account_middleware:
+  message_store: *MESSAGE_STORE
+  riak: *RIAK
+  accounts:
+    account_key:
+      - yo: go.vumitools.middleware.YoPaymentHandler
