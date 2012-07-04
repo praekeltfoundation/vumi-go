@@ -140,8 +140,8 @@ class BulkMessageApplication(GoApplication):
         send_message = kwargs['send_message']
         info = 'Processing send_message with: %s' % (send_message)
         log.info(info)
-        #print info
-        yield self.send_to(
+        yield self.send_message(
+                send_message['batch_id'],
                 send_message['to_addr'],
                 send_message['content'],
-                **send_message['msg_options'])
+                send_message['msg_options'])

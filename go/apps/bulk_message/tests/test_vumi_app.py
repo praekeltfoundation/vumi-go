@@ -174,16 +174,28 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
 
     @inlineCallbacks
     def test_send_message_command(self):
-        sm_cmd = VumiApiCommand.command(self.app.worker_name,
+        user_account_key = "4f5gfdtrfe44rgffserf"
+        msg_options = {
+            "helper_metadata": {
+                "go": {
+                    "user_account": user_account_key
+                }
+            }
+        }
+        cmd_msg_options = msg_options
+        sm_cmd = VumiApiCommand.command(
+                self.app.worker_name,
                 "send_message",
                 send_message = {
+                    "batch_id": "345dt54fgtffdsft54ffg",
                     "to_addr": "123456",
                     "content": "hello world",
-                    "msg_options": {}
-                })
+                    "msg_options": cmd_msg_options
+                },
+                msg_options = msg_options,
+                )
         yield self.dispatch(sm_cmd, rkey='%s.control' % self.app.worker_name)
 
         [msg] = yield self.get_dispatched_messages()
         self.assertEqual(msg.payload['to_addr'], "123456")
         self.assertEqual(msg.payload['content'], "hello world")
-        #print msg.payload
