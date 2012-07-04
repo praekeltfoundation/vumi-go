@@ -30,6 +30,12 @@ def padded_queryset(queryset, size=6, padding=None):
     return results
 
 
+def make_read_only_formset(formset):
+    for form in formset:
+        make_read_only_form(form)
+    return formset
+
+
 def make_read_only_form(form):
     """turn all fields in a form readonly"""
     for field_name, field in form.fields.items():
