@@ -81,7 +81,9 @@ class SurveyApplication(PollApplication):
         contact = yield self.get_contact_for_message(message)
         if contact:
             participant = self.pm.get_participant(poll_id, message.user())
-            participant.labels.update(contact.extra)
+            for key, value in contact.extra.iteritems():
+                if key not in participant.labels:
+                    participant.set_label(key, value)
             self.pm.save_participant(poll_id, participant)
 
         super(SurveyApplication, self).consume_user_message(message)
@@ -128,14 +130,9 @@ class SurveyApplication(PollApplication):
         # At the end of a session we want to store the user's responses
         # as dynamic values on the contact's record in the contact database.
         # This does that.
-        helper_metadata = message.get('helper_metadata', {})
-        poll_id = helper_metadata.get('poll_id')
-
         contact = yield self.get_contact_for_message(message)
         if contact:
-            survey_results = poll.results_manager.get_user(poll_id,
-                                                        participant.user_id)
-            contact.extra.update(survey_results)
+            contact.extra.update(participant.labels)
             contact.save()
 
         super(SurveyApplication, self).end_session(participant, poll, message)
