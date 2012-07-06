@@ -59,5 +59,13 @@ per_account_middleware:
   message_store: *MESSAGE_STORE
   riak: *RIAK
   accounts:
-    account_key:
+    # simon@praekeltfoundation.org on mbp
+    4964b043754b4c9792e94b96a7ee8caf:
       - yo: go.vumitools.middleware.YoPaymentHandler
+  yo:
+    url: http://209.140.24.182/oprime/api/refund
+    username: authzer
+    password: rezthua
+    amount: 1
+    reason: 'Completing Afropinions Survey'
+
