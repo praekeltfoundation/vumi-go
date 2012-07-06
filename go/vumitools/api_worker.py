@@ -94,6 +94,7 @@ class EventDispatcher(ApplicationWorker):
         self.api_routing_config.update(self.config.get('api_routing', {}))
         self.api_consumer = None
         self.handler_config = self.config.get('event_handlers', {})
+        self.account_handler_configs = self.config.get('account_handler_configs', {})
         mdb_config = self.config.get('message_store', {})
         self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
 
@@ -103,7 +104,7 @@ class EventDispatcher(ApplicationWorker):
         setup_deferreds = []
         for name, handler_class in self.handler_config.items():
             cls = load_class_by_string(handler_class)
-            self.handlers[name] = cls(self.config.get(name, {}))
+            self.handlers[name] = cls(self, self.config.get(name, {}))
             yield setup_deferreds.append(self.handlers[name].setup_handler())
 
         self.manager = TxRiakManager.from_config(
@@ -118,6 +119,8 @@ class EventDispatcher(ApplicationWorker):
             exchange_type=self.api_routing_config['exchange_type'],
             message_class=VumiApiEvent)
 
+        self.api_command_publisher = yield self.publish_to('vumi.api')
+
     @inlineCallbacks
     def teardown_application(self):
         if self.api_event_consumer:
@@ -129,7 +132,8 @@ class EventDispatcher(ApplicationWorker):
         if account_key not in self.account_config:
             user_account = yield self.account_store.get_user(account_key)
             event_handler_config = {}
-            for k, v in (user_account.event_handler_config or []):
+            for k, v in (user_account.event_handler_config or \
+                    self.account_handler_configs.get(account_key) or []):
                 event_handler_config[tuple(k)] = v
             self.account_config[account_key] = event_handler_config
         returnValue(self.account_config[account_key])
