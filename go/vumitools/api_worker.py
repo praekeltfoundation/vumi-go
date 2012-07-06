@@ -129,7 +129,7 @@ class EventDispatcher(ApplicationWorker):
         if account_key not in self.account_config:
             user_account = yield self.account_store.get_user(account_key)
             event_handler_config = {}
-            for k, v in (user_account.event_handler_config or {}):
+            for k, v in (user_account.event_handler_config or []):
                 event_handler_config[tuple(k)] = v
             self.account_config[account_key] = event_handler_config
         returnValue(self.account_config[account_key])
