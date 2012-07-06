@@ -61,11 +61,14 @@ per_account_middleware:
   accounts:
     # simon@praekeltfoundation.org on mbp
     4964b043754b4c9792e94b96a7ee8caf:
-      - yo: go.vumitools.middleware.YoPaymentHandler
+      # - yo: go.vumitools.middleware.YoPaymentHandler
+      - sna: go.vumitools.middleware.SNAUSSDOptOutHandler
   yo:
     url: http://209.140.24.182/oprime/api/refund
     username: authzer
     password: rezthua
     amount: 1
     reason: 'Completing Afropinions Survey'
-
+  sna:
+    account_key: 4964b043754b4c9792e94b96a7ee8caf
+    riak: *RIAK
