@@ -72,17 +72,6 @@ class CommandDispatcher(ApplicationWorker):
             log.error('No worker publisher available for %s' % (cmd,))
 
 
-class EventHandler(object):
-    def __init__(self, config):
-        self.config = config
-
-    def setup_handler(self):
-        pass
-
-    def handle_event(self, event, handler_config):
-        raise NotImplementedError()
-
-
 class EventDispatcher(ApplicationWorker):
     """
     An application worker that forwards event arriving on the Vumi Api Event
