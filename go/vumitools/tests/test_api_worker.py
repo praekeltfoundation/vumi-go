@@ -13,7 +13,8 @@ from vumi.persist.message_store import MessageStore
 from vumi.tests.utils import FakeRedis, LogCatcher
 
 from go.vumitools.api_worker import (
-    CommandDispatcher, EventDispatcher, EventHandler)
+    CommandDispatcher, EventDispatcher)
+from go.vumitools.handler import EventHandler
 from go.vumitools.api import VumiApiCommand, VumiApiEvent
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.account import AccountStore
