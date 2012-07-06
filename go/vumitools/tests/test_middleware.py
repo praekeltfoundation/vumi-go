@@ -11,12 +11,15 @@ from vumi.message import TransportUserMessage
 from vumi.tests.utils import FakeRedis, LogCatcher
 from vumi.middleware import TaggingMiddleware
 
+from vxpolls.manager import PollManager
+
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
+from go.vumitools.opt_out import OptOutStore
 from go.vumitools.middleware import (NormalizeMsisdnMiddleware,
     LookupAccountMiddleware, LookupBatchMiddleware,
     LookupConversationMiddleware, OptOutMiddleware,
-    PerAccountLogicMiddleware)
+    PerAccountLogicMiddleware, SNAUSSDOptOutHandler)
 
 
 class MiddlewareTestCase(TestCase):
@@ -232,11 +235,11 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
         })
 
 
-class PerAccountLogicMiddlewareTestCase(MiddlewareTestCase):
+class YoPaymentHandlerTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        yield super(PerAccountLogicMiddlewareTestCase, self).setUp()
+        yield super(YoPaymentHandlerTestCase, self).setUp()
         self.config = self.default_config.copy()
         self.config.update({
             'accounts': {
@@ -247,7 +250,7 @@ class PerAccountLogicMiddlewareTestCase(MiddlewareTestCase):
             'yo': {
                 'username': 'username',
                 'password': 'password',
-                'url': 'http://localhost:8000',
+                'url': 'http://some-host/',
                 'amount': 1,
                 'reason': 'testing',
             }
@@ -282,3 +285,88 @@ class PerAccountLogicMiddlewareTestCase(MiddlewareTestCase):
         self.assertEqual(auth, {
             'Authorization': 'Basic %s' % (credentials.strip(),)
             })
+
+
+class SNAUSSDOptOutHandlerTestCase(MiddlewareTestCase):
+
+    @inlineCallbacks
+    def setUp(self):
+        yield super(SNAUSSDOptOutHandlerTestCase, self).setUp()
+        self.patch(SNAUSSDOptOutHandler, 'get_redis', lambda *a: self.r_server)
+        self.config = self.default_config.copy()
+        self.config.update({
+            'accounts': {
+                self.account.key: [
+                    {'sna': 'go.vumitools.middleware.SNAUSSDOptOutHandler'},
+                ],
+            },
+            'sna': {
+                'account_key': self.account.key,
+                'riak': {
+                    'bucket_prefix': self.mdb_prefix,
+                },
+                'message_store': {
+                    'store_prefix': self.mdb_prefix,
+                }
+            }
+        })
+        self.mw = self.create_middleware(PerAccountLogicMiddleware,
+            config=self.config)
+        self.oo_store = OptOutStore(self.manager, self.account.key)
+        self.pm = PollManager(self.r_server, 'vumigo.')
+
+    def tearDown(self):
+        self.mw.teardown_middleware()
+        self.pm.stop()
+
+    @inlineCallbacks
+    def test_opt_in(self):
+        msg = self.mk_msg('2345', '1234')
+        msg['helper_metadata'] = {
+            'go': {
+                'user_account': self.account.key,
+            },
+            'conversations': {
+                'conversation_key': '1',
+                'conversation_type': 'survey',
+            }
+        }
+
+        yield self.oo_store.new_opt_out('msisdn', '2345', {
+            'message_id': unicode(msg['message_id'])})
+
+        [opt_out] = yield self.oo_store.list_opt_outs()
+        self.assertTrue(opt_out)
+
+        yield self.mw.handle_outbound(msg, 'dummy_endpoint')
+
+        opt_outs = yield self.oo_store.list_opt_outs()
+        self.assertEqual(opt_outs, [])
+
+    @inlineCallbacks
+    def test_opt_out(self):
+        msg = self.mk_msg('2345', '1234')
+        msg['helper_metadata'] = {
+            'go': {
+                'user_account': self.account.key,
+            },
+            'conversations': {
+                'conversation_key': '1',
+                'conversation_type': 'survey',
+            }
+        }
+
+        participant = self.pm.get_participant('poll-1', '2345')
+        participant.labels['opted_out'] = 2
+        self.pm.save_participant('poll-1', participant)
+
+        opt_outs = yield self.oo_store.list_opt_outs()
+        self.assertEqual(opt_outs, [])
+
+        # It's not unicode because it hasn't been encoded & decoded
+        # through JSON
+        msg['message_id'] = unicode(msg['message_id'])
+        yield self.mw.handle_outbound(msg, 'dummy_endpoint')
+
+        [opt_out] = yield self.oo_store.list_opt_outs()
+        self.assertTrue(opt_out)
