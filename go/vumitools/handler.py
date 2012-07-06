@@ -33,8 +33,8 @@ class SendMessageCommandHandler(EventHandler):
                 "send_message",
                 send_message = event.payload['content'],
                 conversation_key=handler_config['conversation_key'],
+                account_key=event.payload['account_key']
                 )
-        #print sm_cmd
         self.dispatcher.api_command_publisher.publish_message(sm_cmd)
 
 
