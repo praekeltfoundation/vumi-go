@@ -1,6 +1,7 @@
 """Tests for go.vumitools.middleware"""
 
 import base64
+import time
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -16,6 +17,7 @@ from vxpolls.manager import PollManager
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.opt_out import OptOutStore
+from go.vumitools.contact import ContactStore
 from go.vumitools.middleware import (NormalizeMsisdnMiddleware,
     LookupAccountMiddleware, LookupBatchMiddleware,
     LookupConversationMiddleware, OptOutMiddleware,
@@ -43,6 +45,8 @@ class MiddlewareTestCase(TestCase):
         self.account = yield self.account_store.new_user(u'user')
         self.conversation_store = ConversationStore.from_user_account(
                                                                 self.account)
+        self.contact_store = ContactStore.from_user_account(self.account)
+        yield self.contact_store.contacts.enable_search()
         self.tag = ('xmpp', 'test1@xmpp.org')
 
     @inlineCallbacks
@@ -318,7 +322,8 @@ class SNAUSSDOptOutHandlerTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_opt_in(self):
-        msg = self.mk_msg('2345', '1234')
+        msisdn = u'+2345'
+        msg = self.mk_msg(msisdn, '1234')
         msg['helper_metadata'] = {
             'go': {
                 'user_account': self.account.key,
@@ -329,8 +334,12 @@ class SNAUSSDOptOutHandlerTestCase(MiddlewareTestCase):
             }
         }
 
-        yield self.oo_store.new_opt_out('msisdn', '2345', {
+        yield self.oo_store.new_opt_out('msisdn', msisdn, {
             'message_id': unicode(msg['message_id'])})
+
+        contact = yield self.contact_store.new_contact(msisdn=msisdn)
+        contact.extra['opted_out'] = u'1'
+        yield contact.save()
 
         [opt_out] = yield self.oo_store.list_opt_outs()
         self.assertTrue(opt_out)
@@ -342,7 +351,8 @@ class SNAUSSDOptOutHandlerTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_opt_out(self):
-        msg = self.mk_msg('2345', '1234')
+        msisdn = u'+2345'
+        msg = self.mk_msg(msisdn, '1234')
         msg['helper_metadata'] = {
             'go': {
                 'user_account': self.account.key,
@@ -353,9 +363,9 @@ class SNAUSSDOptOutHandlerTestCase(MiddlewareTestCase):
             }
         }
 
-        participant = self.pm.get_participant('poll-1', '2345')
-        participant.labels['opted_out'] = 2
-        self.pm.save_participant('poll-1', participant)
+        contact = yield self.contact_store.new_contact(msisdn=msisdn)
+        contact.extra['opted_out'] = u'2'
+        yield contact.save()
 
         opt_outs = yield self.oo_store.list_opt_outs()
         self.assertEqual(opt_outs, [])

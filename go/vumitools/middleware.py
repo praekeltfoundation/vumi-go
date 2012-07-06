@@ -19,6 +19,7 @@ from go.vumitools.credit import CreditManager
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.opt_out import OptOutStore
+from go.vumitools.contact import ContactStore
 
 from vxpolls.manager import PollManager
 
@@ -440,6 +441,7 @@ class SNAUSSDOptOutHandler(object):
         self.pm = PollManager(self.get_redis(redis), self.pm_prefix)
         self.manager = TxRiakManager.from_config(riak)
         self.oo_store = OptOutStore(self.manager, self.account_key)
+        self.contact_store = ContactStore(self.manager, self.account_key)
 
     def get_redis(self, config):
         return redis.Redis(**config)
@@ -449,15 +451,13 @@ class SNAUSSDOptOutHandler(object):
 
     @inlineCallbacks
     def handle_message(self, message):
-        helper = LookupConversationMiddleware.map_message_to_conversation_info
-        conv_info = helper(message)
-        conv_key, conv_type = conv_info
-
-        poll_id = 'poll-%s' % (conv_key,)
         addr = message['to_addr']
-        participant = self.pm.get_participant(poll_id, addr)
-        if int(participant.labels.get('opted_out', 0)) > 1:
-            yield self.oo_store.new_opt_out('msisdn', addr,
-                message)
-        else:
-            yield self.oo_store.delete_opt_out('msisdn', addr)
+        contact = yield self.contact_store.contact_for_addr('ussd', addr)
+        if contact:
+            opted_out = contact.extra['opted_out']
+            if opted_out is not None:
+                if int(opted_out) > 1:
+                    yield self.oo_store.new_opt_out('msisdn', addr,
+                        message)
+                else:
+                    yield self.oo_store.delete_opt_out('msisdn', addr)
