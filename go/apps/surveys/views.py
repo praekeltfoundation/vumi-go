@@ -7,7 +7,8 @@ from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
 
-from go.base.utils import make_read_only_form, conversation_or_404
+from go.base.utils import (make_read_only_form, make_read_only_formset,
+    conversation_or_404)
 from go.vumitools.api import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
 
@@ -79,22 +80,36 @@ def new(request):
     })
 
 
+def _clear_empties(cleaned_data):
+    """
+    FIXME:  this is a work around because for some reason Django is seeing
+            the new (empty) forms in the formsets as stuff that is to be
+            stored when it really should be discarded.
+    """
+    return [cd for cd in cleaned_data if cd.get('copy')]
+
+
 @login_required
 def contents(request, conversation_key):
     conversation = conversation_or_404(request.user_api, conversation_key)
-
     poll_id = 'poll-%s' % (conversation.key,)
-    pm, config = get_poll_config(poll_id)
+    pm, poll_data = get_poll_config(poll_id)
+    questions_data = poll_data.get('questions', [])
+
     if request.method == 'POST':
         post_data = request.POST.copy()
         post_data.update({
             'poll_id': poll_id,
-            'transport_name': settings.VXPOLLS_TRANSPORT_NAME,
-            'worker_name': settings.VXPOLLS_WORKER_NAME,
         })
-        form = forms.make_form(data=post_data, initial=config)
-        if form.is_valid():
-            pm.set(poll_id, form.export())
+
+        questions_formset = forms.make_form_set(data=post_data)
+        poll_form = forms.PollForm(data=post_data)
+        if questions_formset.is_valid() and poll_form.is_valid():
+            data = poll_form.cleaned_data.copy()
+            data.update({
+                'questions': _clear_empties(questions_formset.cleaned_data)
+                })
+            pm.set(poll_id, data)
             if request.POST.get('_save_contents'):
                 return redirect(reverse('survey:contents', kwargs={
                     'conversation_key': conversation.key,
@@ -104,15 +119,18 @@ def contents(request, conversation_key):
                     'conversation_key': conversation.key,
                 }))
     else:
-        form = forms.make_form(data=config, initial=config)
+        poll_form = forms.PollForm(initial=poll_data)
+        questions_formset = forms.make_form_set(initial=questions_data)
 
     survey_form = make_read_only_form(ConversationForm(request.user_api,
         instance=conversation, initial={
             'start_date': conversation.start_timestamp.date(),
             'start_time': conversation.start_timestamp.time(),
         }))
+
     return render(request, 'surveys/contents.html', {
-        'form': form,
+        'poll_form': poll_form,
+        'questions_formset': questions_formset,
         'survey_form': survey_form,
     })
 
@@ -123,7 +141,8 @@ def people(request, conversation_key):
     groups = request.user_api.list_groups()
 
     poll_id = "poll-%s" % (conversation.key,)
-    pm, config = get_poll_config(poll_id)
+    pm, poll_data = get_poll_config(poll_id)
+    questions_data = poll_data.get('questions', [])
 
     if request.method == 'POST':
         if conversation.is_client_initiated():
@@ -160,12 +179,14 @@ def people(request, conversation_key):
                                     'conversation_key': conversation.key}))
 
     survey_form = make_read_only_form(ConversationForm(request.user_api))
-    content_form = forms.make_form(data=config, initial=config, extra=0)
-    read_only_content_form = make_read_only_form(content_form)
+    poll_form = forms.PollForm(initial=poll_data)
+    questions_formset = forms.make_form_set(initial=questions_data, extra=0)
+    read_only_questions_formset = make_read_only_formset(questions_formset)
     return render(request, 'surveys/people.html', {
         'conversation': conversation,
         'survey_form': survey_form,
-        'content_form': read_only_content_form,
+        'poll_form': make_read_only_form(poll_form),
+        'questions_formset': read_only_questions_formset,
         'groups': groups,
     })
 
