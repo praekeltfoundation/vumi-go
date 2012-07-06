@@ -1,3 +1,4 @@
+# -*- test-case-name: go.apps.opt_out.tests.test_vumi_app -*-
 # -*- coding: utf-8 -*-
 
 """Utilities for go.vumitools tests."""
@@ -163,13 +164,7 @@ class CeleryTestMixIn(object):
 
 
 class RiakTestMixin(object):
-    USE_RIAK = True
-
-    def get_riak_manager(self, config=None):
-        if config is None:
-            config = {
-                'bucket_prefix': self.config['message_store']['store_prefix']}
-            config = self.config
+    def get_riak_manager(self, config):
         riak_manager = txriak_manager.TxRiakManager.from_config(config)
         self._riak_managers.append(riak_manager)
         return riak_manager

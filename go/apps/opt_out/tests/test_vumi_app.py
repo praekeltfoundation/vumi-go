@@ -33,7 +33,6 @@ class TestOptOutApplication(
 
     application_class = OptOutApplication
     transport_type = u'sms'
-    timeout = 2
 
     @inlineCallbacks
     def setUp(self):
@@ -132,7 +131,7 @@ class TestOptOutApplication(
     def tearDown(self):
         self.restore_celery()
         self._fake_redis.teardown()
-        yield self.app.manager.purge_all()
+        yield self.riak_teardown()
         yield super(TestOptOutApplication, self).tearDown()
 
     @inlineCallbacks
