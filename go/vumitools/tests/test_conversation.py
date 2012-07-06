@@ -5,24 +5,23 @@
 from twisted.internet.defer import inlineCallbacks
 from twisted.trial.unittest import TestCase
 
-from vumi.persist.txriak_manager import TxRiakManager
-
-from go.vumitools.tests.utils import model_eq
+from go.vumitools.tests.utils import model_eq, RiakTestMixin
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.contact import ContactStore
 
 
-class TestConversationStore(TestCase):
+class TestConversationStore(RiakTestMixin, TestCase):
 
     timeout = 10
 
     @inlineCallbacks
     def setUp(self):
         self.config = {'bucket_prefix': 'test.'}
-        self.manager = TxRiakManager.from_config(self.config)
-        yield self.manager.purge_all()
+        self.riak_setup()
+        self.manager = self.get_riak_manager(self.config)
+        yield self.riak_teardown()
         self.account_store = AccountStore(self.manager)
         self.account = yield self.account_store.new_user(u'user')
         self.optout_store = OptOutStore.from_user_account(self.account)
@@ -30,7 +29,7 @@ class TestConversationStore(TestCase):
         self.contact_store = ContactStore.from_user_account(self.account)
 
     def tearDown(self):
-        return self.manager.purge_all()
+        return self.riak_teardown()
 
     def assert_models_equal(self, m1, m2):
         self.assertTrue(model_eq(m1, m2),
