@@ -107,6 +107,7 @@ class EventDispatcher(ApplicationWorker):
             self.handlers[name] = cls(self, self.config.get(name, {}))
             yield setup_deferreds.append(self.handlers[name].setup_handler())
 
+        self.api_command_publisher = yield self.publish_to('vumi.api')
         self.manager = TxRiakManager.from_config(
             {'bucket_prefix': self.mdb_prefix})
         self.account_store = AccountStore(self.manager)
@@ -118,8 +119,6 @@ class EventDispatcher(ApplicationWorker):
             exchange_name=self.api_routing_config['exchange'],
             exchange_type=self.api_routing_config['exchange_type'],
             message_class=VumiApiEvent)
-
-        self.api_command_publisher = yield self.publish_to('vumi.api')
 
     @inlineCallbacks
     def teardown_application(self):
