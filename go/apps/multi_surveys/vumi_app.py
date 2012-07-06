@@ -14,11 +14,12 @@ from vumi import log
 class MamaPollApplication(MultiPollApplication):
     registration_partial_response = "Please dial back in to " \
                                     "complete registration."
-    registration_completed_response = "Thank you!"
+    registration_completed_response = "You have completed the " \
+                                        "registration questions."
     batch_completed_response = "Please dial in again to " \
                                 "complete the rest of this weeks questions."
     survey_completed_response = "You've done this week's 2 quiz questions. " \
-                                "Please dial *120*646*4*6262# again next " \
+                                "Please dial *120*2112# again next " \
                                 "week for new questions. Stay well! " \
                                 "Visit askmama.mobi"
 
@@ -36,6 +37,7 @@ class MultiSurveyApplication(MamaPollApplication):
         # api worker
         self.api_routing_config = VumiApiCommand.default_routing_config()
         self.api_routing_config.update(self.config.get('api_routing', {}))
+        self.is_demo = self.config.get('is_demo', False)
         self.control_consumer = None
 
     @inlineCallbacks
