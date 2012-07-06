@@ -434,7 +434,7 @@ class YoPaymentHandler(object):
 class SNAUSSDOptOutHandler(object):
 
     def __init__(self, account_key=None, redis={},
-                    poll_manager_prefix='vumigo.', riak={}, message_store={}):
+                    poll_manager_prefix='vumigo.', riak={}):
         self.account_key = account_key
         self.pm_prefix = poll_manager_prefix
         self.pm = PollManager(self.get_redis(redis), self.pm_prefix)

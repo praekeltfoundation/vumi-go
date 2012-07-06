@@ -305,9 +305,6 @@ class SNAUSSDOptOutHandlerTestCase(MiddlewareTestCase):
                 'riak': {
                     'bucket_prefix': self.mdb_prefix,
                 },
-                'message_store': {
-                    'store_prefix': self.mdb_prefix,
-                }
             }
         })
         self.mw = self.create_middleware(PerAccountLogicMiddleware,
