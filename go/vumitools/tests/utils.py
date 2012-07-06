@@ -5,13 +5,17 @@
 import os
 from contextlib import contextmanager
 
-from twisted.python. monkey import MonkeyPatcher
+from twisted.python.monkey import MonkeyPatcher
+from twisted.internet.defer import DeferredList, inlineCallbacks
 from celery.app import app_or_default
 
 from vumi.persist.fields import ForeignKeyProxy, ManyToManyProxy, DynamicProxy
 from vumi.message import TransportUserMessage
+from vumi.persist import txriak_manager
 
 from go.vumitools.api import VumiApiCommand
+from go.vumitools.account import UserAccount
+from go.vumitools.contact import Contact, ContactGroup
 
 
 def field_eq(f1, f2):
@@ -156,3 +160,54 @@ class CeleryTestMixIn(object):
             else:
                 break
         return [VumiApiCommand(**payload) for payload in msgs]
+
+
+class RiakTestMixin(object):
+    USE_RIAK = True
+
+    def get_riak_manager(self, config=None):
+        if config is None:
+            config = {
+                'bucket_prefix': self.config['message_store']['store_prefix']}
+            config = self.config
+        riak_manager = txriak_manager.TxRiakManager.from_config(config)
+        self._riak_managers.append(riak_manager)
+        return riak_manager
+
+    def riak_setup(self):
+        self._riak_managers = []
+
+    def _clear_bucket_properties(self, manager):
+        if not hasattr(txriak_manager, 'delete_bucket_properties'):
+            # This doesn't exist everywhere yet.
+            return
+
+        # If buckets are empty, they aren't listed. However, they may still
+        # have properties set.
+        client = manager.client
+
+        def delete_props(key):
+            sub_manager = manager.sub_manager(key)
+            return DeferredList([
+                    txriak_manager.delete_bucket_properties(
+                        client.bucket(sub_manager.bucket_name(Contact))),
+                    txriak_manager.delete_bucket_properties(
+                        client.bucket(sub_manager.bucket_name(ContactGroup))),
+                    ])
+
+        def clear_accounts(keys):
+            return DeferredList([delete_props(key) for key in keys])
+
+        d = client.bucket(manager.bucket_name(UserAccount)).list_keys()
+        d.addCallback(clear_accounts)
+        return d
+
+    @inlineCallbacks
+    def _purge_manager(self, manager):
+        yield self._clear_bucket_properties(manager)
+        yield manager.purge_all()
+
+    @inlineCallbacks
+    def riak_teardown(self):
+        for manager in self._riak_managers:
+            yield self._purge_manager(manager)
