@@ -10,12 +10,12 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.message import TransportUserMessage
 from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import FakeRedis
-from vumi.persist.txriak_manager import TxRiakManager
 
 from go.apps.opt_out.vumi_app import OptOutApplication
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
-from go.vumitools.tests.utils import CeleryTestMixIn, DummyConsumerFactory
+from go.vumitools.tests.utils import (
+    RiakTestMixin, CeleryTestMixIn, DummyConsumerFactory)
 from go.vumitools.account import AccountStore
 from go.vumitools.opt_out import OptOutStore
 
@@ -28,15 +28,16 @@ def dummy_consumer_factory_factory_factory(publish_func):
     return dummy_consumer_factory_factory
 
 
-class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn):
+class TestOptOutApplication(
+    ApplicationTestCase, CeleryTestMixIn, RiakTestMixin):
 
     application_class = OptOutApplication
     transport_type = u'sms'
-    timeout = 2
 
     @inlineCallbacks
     def setUp(self):
         super(TestOptOutApplication, self).setUp()
+        self.riak_setup()
 
         self._fake_redis = FakeRedis()
         self.config = {
@@ -61,6 +62,7 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn):
 
         # Setup Celery so that it uses FakeAMQP instead of the real one.
         self.manager = self.app.store.manager  # YOINK!
+        self._riak_managers.append(self.manager)
         self.account_store = AccountStore(self.manager)
         self.VUMI_COMMANDS_CONSUMER = dummy_consumer_factory_factory_factory(
             self.publish_command)
@@ -68,8 +70,8 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn):
 
         # Create a test user account
         self.user_account = yield self.account_store.new_user(u'testuser')
-        self.user_api = VumiUserApi(self.user_account.key, self.config,
-                                        TxRiakManager)
+        self.user_api = VumiUserApi(
+            self.user_account.key, self.config, type(self.manager))
 
         # Add tags
         self.user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
@@ -129,7 +131,7 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn):
     def tearDown(self):
         self.restore_celery()
         self._fake_redis.teardown()
-        yield self.app.manager.purge_all()
+        yield self.riak_teardown()
         yield super(TestOptOutApplication, self).tearDown()
 
     @inlineCallbacks
