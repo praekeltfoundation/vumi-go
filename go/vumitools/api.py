@@ -176,7 +176,7 @@ class ConversationWrapper(object):
         yield self.c.save()
 
     @Manager.calls_manager
-    def replies(self):
+    def replies(self, limit=100):
         """
         FIXME: this requires a contact to already exist in the database
                 before it can show up as a reply. Isn't going to work
@@ -189,7 +189,7 @@ class ConversationWrapper(object):
         for batch_id in batch_keys:
             # TODO: Not look up the batch by key again.
             replies.extend((yield self.mdb.batch_replies(batch_id)))
-        for reply in replies:
+        for reply in replies[:limit]:
             cache_key = '/'.join([self.delivery_class, reply['from_addr']])
             contact = cache.get(cache_key, None)
             if not contact:
@@ -208,14 +208,14 @@ class ConversationWrapper(object):
                            reverse=True))
 
     @Manager.calls_manager
-    def sent_messages(self):
+    def sent_messages(self, limit=100):
         batch_keys = self.get_batch_keys()
         outbound_statuses = []
         messages = []
         for batch_id in batch_keys:
             # TODO: Not look up the batch by key again.
             messages.extend((yield self.mdb.batch_messages(batch_id)))
-        for message in messages:
+        for message in messages[:limit]:
             contact = yield self.user_api.contact_store.contact_for_addr(
                     self.delivery_class, message['to_addr'])
             outbound_statuses.append({
