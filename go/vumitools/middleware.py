@@ -18,6 +18,7 @@ from vumi.utils import load_class_by_string, http_request_full
 from go.vumitools.credit import CreditManager
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
+from go.vumitools.opt_out import OptOutStore
 
 from vxpolls.manager import PollManager
 
@@ -389,7 +390,7 @@ class YoPaymentHandler(object):
         self.amount = amount
         self.reason = reason
         self.pm_prefix = poll_manager_prefix
-        self.pm = PollManager(self.get_redis(redis), 'vumigo.')
+        self.pm = PollManager(self.get_redis(redis), self.pm_prefix)
 
     def get_redis(self, config):
         return redis.Redis(**config)
@@ -424,11 +425,39 @@ class YoPaymentHandler(object):
             'amount': self.amount,
             'reason': self.reason,
         }
-        response = yield http_request_full(self.url,
+        yield http_request_full(self.url,
             data=urlencode(request_params),
             headers=self.get_auth_headers(self.username, self.password),
             method='GET')
 
-        print 'message', message
-        print ('request details: ', response.code, request_params,
-            response.delivered_body)
+
+class SNAUSSDOptOutHandler(object):
+
+    def __init__(self, account_key=None, redis={},
+                    poll_manager_prefix='vumigo.', riak={}, message_store={}):
+        self.account_key = account_key
+        self.pm_prefix = poll_manager_prefix
+        self.pm = PollManager(self.get_redis(redis), self.pm_prefix)
+        self.manager = TxRiakManager.from_config(riak)
+        self.oo_store = OptOutStore(self.manager, self.account_key)
+
+    def get_redis(self, config):
+        return redis.Redis(**config)
+
+    def teardown_handler(self):
+        self.pm.stop()
+
+    @inlineCallbacks
+    def handle_message(self, message):
+        helper = LookupConversationMiddleware.map_message_to_conversation_info
+        conv_info = helper(message)
+        conv_key, conv_type = conv_info
+
+        poll_id = 'poll-%s' % (conv_key,)
+        addr = message['to_addr']
+        participant = self.pm.get_participant(poll_id, addr)
+        if int(participant.labels.get('opted_out', 0)) > 1:
+            yield self.oo_store.new_opt_out('msisdn', addr,
+                message)
+        else:
+            yield self.oo_store.delete_opt_out('msisdn', addr)
