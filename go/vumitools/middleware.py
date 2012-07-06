@@ -1,6 +1,8 @@
 # -*- test-case-name: go.vumitools.tests.test_middleware -*-
 import sys
 import base64
+import redis
+from urllib import urlencode
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -16,6 +18,11 @@ from vumi.utils import load_class_by_string, http_request_full
 from go.vumitools.credit import CreditManager
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
+
+from vxpolls.manager import PollManager
+
+from twisted.internet.base import DelayedCall
+DelayedCall.debug = True
 
 
 class NormalizeMsisdnMiddleware(TransportMiddleware):
@@ -356,6 +363,11 @@ class PerAccountLogicMiddleware(BaseMiddleware):
                 handler = handler_class(**handler_config)
                 self.accounts[account_key].append(handler)
 
+    def teardown_middleware(self):
+        for key, handlers in self.accounts.items():
+            for handler in handlers:
+                handler.teardown_handler()
+
     @inlineCallbacks
     def handle_outbound(self, message, endpoint):
         account_key = LookupAccountMiddleware.map_message_to_account_key(
@@ -369,12 +381,21 @@ class PerAccountLogicMiddleware(BaseMiddleware):
 
 class YoPaymentHandler(object):
 
-    def __init__(self, username='', password='', url='', amount=0, reason=''):
+    def __init__(self, username='', password='', url='', amount=0, reason='',
+                    redis={}, poll_manager_prefix='vumigo.'):
         self.username = username
         self.password = password
         self.url = url
         self.amount = amount
         self.reason = reason
+        self.pm_prefix = poll_manager_prefix
+        self.pm = PollManager(self.get_redis(redis), 'vumigo.')
+
+    def get_redis(self, config):
+        return redis.Redis(**config)
+
+    def teardown_handler(self):
+        self.pm.stop()
 
     def get_auth_headers(self, username, password):
         credentials = base64.b64encode('%s:%s' % (username, password))
@@ -386,9 +407,28 @@ class YoPaymentHandler(object):
     def handle_message(self, message):
         if not self.url:
             log.error('No URL configured for YoPaymentHandler')
-        else:
-            yield http_request_full(self.url, data={
-                'msisdn': message['to_addr'],
-                'amount': self.amount,
-                'reason': self.reason,
-            }, headers=self.get_auth_headers(self.username, self.password))
+            return
+
+        helper = LookupConversationMiddleware.map_message_to_conversation_info
+        conv_info = helper(message)
+        conv_key, conv_type = conv_info
+
+        poll_id = 'poll-%s' % (conv_key,)
+        poll_config = self.pm.get_config(poll_id)
+        if message['content'] == poll_config['survey_completed_response']:
+            log.error("Survey hasn't been completed, continuing")
+            return
+
+        request_params = {
+            'msisdn': message['to_addr'],
+            'amount': self.amount,
+            'reason': self.reason,
+        }
+        response = yield http_request_full(self.url,
+            data=urlencode(request_params),
+            headers=self.get_auth_headers(self.username, self.password),
+            method='GET')
+
+        print 'message', message
+        print ('request details: ', response.code, request_params,
+            response.delivered_body)
