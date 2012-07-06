@@ -62,27 +62,32 @@ class VumiGoDjangoTestCase(TestCase):
     def tearDown(self):
         if self.USE_RIAK:
             for manager in self._riak_managers:
-                self._clear_bucket_properties(manager)
+                # If buckets are empty, they aren't listed. However, they may
+                # still have properties set. Therefore, we find all account
+                # keys and clear properties from their associated buckets.
+                accounts = self._list_accounts(manager)
                 manager.purge_all()
+                # This must happen after the objects are deleted, otherwise the
+                # indexes don't go away.
+                self._clear_bucket_properties(accounts, manager)
         for patch in reversed(self._settings_patches):
             patch.disable()
 
-    def _clear_bucket_properties(self, manager):
+    def _list_accounts(self, manager):
+        return manager.client.bucket(
+            manager.bucket_name(UserAccount)).get_keys()
+
+    def _clear_bucket_properties(self, accounts, manager):
         if not hasattr(riak_manager, 'delete_bucket_properties'):
             # This doesn't exist everywhere yet.
             return
 
-        # If buckets are empty, they aren't listed. However, they may still
-        # have properties set.
-        client = manager.client
-        accounts = client.bucket(manager.bucket_name(UserAccount)).get_keys()
-
         for account_key in accounts:
             sub_manager = manager.sub_manager(account_key)
             riak_manager.delete_bucket_properties(
-                client.bucket(sub_manager.bucket_name(Contact)))
+                manager.client.bucket(sub_manager.bucket_name(Contact)))
             riak_manager.delete_bucket_properties(
-                client.bucket(sub_manager.bucket_name(ContactGroup)))
+                manager.client.bucket(sub_manager.bucket_name(ContactGroup)))
 
     def patch_settings(self, **kwargs):
         patch = override_settings(**kwargs)
