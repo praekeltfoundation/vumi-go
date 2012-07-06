@@ -1,7 +1,9 @@
 
 
+from twisted.internet.defer import inlineCallbacks
 from vumi import log
 from go.vumitools.api import VumiApiCommand
+from go.vumitools.conversation import ConversationStore
 
 
 class EventHandler(object):
@@ -24,10 +26,19 @@ class LoggingHandler(EventHandler):
 
 class SendMessageCommandHandler(EventHandler):
 
+    @inlineCallbacks
     def handle_event(self, event, handler_config):
         log.info(
             "SendMessageCommandHandler handling event: %s with config: %s" % (
             event, handler_config))
+        conv_store = ConversationStore(self.dispatcher.manager,
+                                        event.payload['account_key'])
+        conv = yield conv_store.get_conversation_by_key(
+                                        event.payload['conversation_key'])
+        batch_id = conv.batches.keys()[0]
+        event.payload['content']['batch_id'] = batch_id
+        event.payload['content']['msg_options'] = {}
+
         sm_cmd = VumiApiCommand.command(
                 handler_config['worker_name'],
                 "send_message",
