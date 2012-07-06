@@ -32,7 +32,7 @@ class SendMessageCommandHandler(EventHandler):
                 handler_config['worker_name'],
                 "send_message",
                 send_message = event.payload['content'],
-                conversation_key=handler_config['conversation.key'],
+                conversation_key=handler_config['conversation_key'],
                 )
         #print sm_cmd
         self.dispatcher.api_command_publisher.publish_message(sm_cmd)
