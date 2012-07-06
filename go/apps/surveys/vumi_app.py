@@ -135,6 +135,7 @@ class SurveyApplication(PollApplication):
             contact.extra.update(participant.labels)
             contact.save()
 
+        self.pm.save_participant(poll.poll_id, participant)
         super(SurveyApplication, self).end_session(participant, poll, message)
 
     @inlineCallbacks
