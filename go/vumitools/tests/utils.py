@@ -1,4 +1,3 @@
-# -*- test-case-name: go.apps.opt_out.tests.test_vumi_app -*-
 # -*- coding: utf-8 -*-
 
 """Utilities for go.vumitools tests."""
@@ -172,35 +171,39 @@ class RiakTestMixin(object):
     def riak_setup(self):
         self._riak_managers = []
 
-    def _clear_bucket_properties(self, manager):
+    def _clear_bucket_properties(self, account_keys, manager):
         if not hasattr(txriak_manager, 'delete_bucket_properties'):
             # This doesn't exist everywhere yet.
             return
 
-        # If buckets are empty, they aren't listed. However, they may still
-        # have properties set.
         client = manager.client
+        deferreds = []
 
-        def delete_props(key):
-            sub_manager = manager.sub_manager(key)
-            return DeferredList([
+        for account_key in account_keys:
+            sub_manager = manager.sub_manager(account_key)
+            deferreds.extend([
                     txriak_manager.delete_bucket_properties(
                         client.bucket(sub_manager.bucket_name(Contact))),
                     txriak_manager.delete_bucket_properties(
                         client.bucket(sub_manager.bucket_name(ContactGroup))),
                     ])
 
-        def clear_accounts(keys):
-            return DeferredList([delete_props(key) for key in keys])
+        return DeferredList(deferreds)
 
-        d = client.bucket(manager.bucket_name(UserAccount)).list_keys()
-        d.addCallback(clear_accounts)
-        return d
+    def _list_accounts(self, manager):
+        return manager.client.bucket(
+            manager.bucket_name(UserAccount)).list_keys()
 
     @inlineCallbacks
     def _purge_manager(self, manager):
-        yield self._clear_bucket_properties(manager)
+        # If buckets are empty, they aren't listed. However, they may still
+        # have properties set. Therefore, we find all account keys and clear
+        # properties from their associated buckets.
+        accounts = yield self._list_accounts(manager)
         yield manager.purge_all()
+        # This must happen after the objects are deleted, otherwise the indexes
+        # don't go away.
+        yield self._clear_bucket_properties(accounts, manager)
 
     @inlineCallbacks
     def riak_teardown(self):
