@@ -9,7 +9,9 @@ from vumi.application import ApplicationWorker
 from vumi.dispatchers.base import BaseDispatchRouter
 from vumi.utils import load_class_by_string
 from vumi import log
+from vumi.persist.txriak_manager import TxRiakManager
 
+from go.vumitools.account import AccountStore
 from go.vumitools.api import VumiApiCommand, VumiApiEvent
 from go.vumitools.middleware import (LookupConversationMiddleware,
     OptOutMiddleware)
@@ -103,6 +105,8 @@ class EventDispatcher(ApplicationWorker):
         self.api_routing_config.update(self.config.get('api_routing', {}))
         self.api_consumer = None
         self.handler_config = self.config.get('event_handlers', {})
+        mdb_config = self.config.get('message_store', {})
+        self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
 
     @inlineCallbacks
     def setup_application(self):
@@ -113,6 +117,9 @@ class EventDispatcher(ApplicationWorker):
             self.handlers[name] = cls(self.config.get(name, {}))
             yield setup_deferreds.append(self.handlers[name].setup_handler())
 
+        self.manager = TxRiakManager.from_config(
+            {'bucket_prefix': self.mdb_prefix})
+        self.account_store = AccountStore(self.manager)
         self.account_config = {}
 
         self.api_event_consumer = yield self.consume(
@@ -131,9 +138,11 @@ class EventDispatcher(ApplicationWorker):
     @inlineCallbacks
     def get_account_config(self, account_key):
         if account_key not in self.account_config:
-            # TODO: Fetch this.
-            yield None
-            self.account_config[account_key] = {}
+            user_account = yield self.account_store.get_user(account_key)
+            event_handler_config = {}
+            for k, v in (user_account.event_handler_config or {}):
+                event_handler_config[tuple(k)] = v
+            self.account_config[account_key] = event_handler_config
         returnValue(self.account_config[account_key])
 
     @inlineCallbacks

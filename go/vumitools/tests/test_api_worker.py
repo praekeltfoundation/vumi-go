@@ -113,6 +113,20 @@ class EventDispatcherTestCase(ApplicationTestCase):
         self.assertEqual([], self.handler2.handled_events)
 
     @inlineCallbacks
+    def test_handle_event_uncached(self):
+        user_account = yield self.ed.account_store.new_user(u'dbacct')
+        user_account.event_handler_config = [
+            [['conv_key', 'my_event'], [('handler1', {})]]
+            ]
+        yield user_account.save()
+        event = self.mkevent(
+            "my_event", {"foo": "bar"}, account_key=user_account.key)
+        self.assertEqual([], self.handler1.handled_events)
+        yield self.publish_event(event)
+        self.assertEqual([(event, {})], self.handler1.handled_events)
+        self.assertEqual([], self.handler2.handled_events)
+
+    @inlineCallbacks
     def test_handle_events(self):
         self.ed.account_config['acct'] = {
             ('conv_key', 'my_event'): [('handler1', {'animal': 'puppy'})],
