@@ -23,9 +23,6 @@ from go.vumitools.contact import ContactStore
 
 from vxpolls.manager import PollManager
 
-from twisted.internet.base import DelayedCall
-DelayedCall.debug = True
-
 
 class NormalizeMsisdnMiddleware(TransportMiddleware):
 
@@ -411,6 +408,9 @@ class YoPaymentHandler(object):
             log.error('No URL configured for YoPaymentHandler')
             return
 
+        if not message.get('content'):
+            return
+
         helper = LookupConversationMiddleware.map_message_to_conversation_info
         conv_info = helper(message)
         conv_key, conv_type = conv_info
@@ -426,10 +426,11 @@ class YoPaymentHandler(object):
             'amount': self.amount,
             'reason': self.reason,
         }
-        yield http_request_full(self.url,
+        response = yield http_request_full(self.url,
             data=urlencode(request_params),
             headers=self.get_auth_headers(self.username, self.password),
             method='GET')
+        print response
 
 
 class SNAUSSDOptOutHandler(object):
