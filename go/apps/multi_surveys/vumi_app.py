@@ -3,6 +3,7 @@
 from twisted.internet.defer import inlineCallbacks
 from go.vumitools.api import VumiApiCommand, get_redis
 from go.vumitools.conversation import ConversationStore
+from go.vumitools.app_worker import GoApplicationMixin
 from vxpolls.multipoll_example import MultiPollApplication
 from vxpolls.manager import PollManager
 from vumi.persist.message_store import MessageStore
@@ -24,7 +25,9 @@ class MamaPollApplication(MultiPollApplication):
                                 "Visit askmama.mobi"
 
 
-class MultiSurveyApplication(MamaPollApplication):
+class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
+
+    SEND_TO_TAGS = frozenset(['default'])
 
     def validate_config(self):
         self.worker_name = self.config['worker_name']
@@ -53,6 +56,7 @@ class MultiSurveyApplication(MamaPollApplication):
             exchange_name=self.api_routing_config['exchange'],
             exchange_type=self.api_routing_config['exchange_type'],
             message_class=VumiApiCommand)
+        yield self._setup_go_event_publisher()
 
     @inlineCallbacks
     def teardown_application(self):
@@ -131,3 +135,12 @@ class MultiSurveyApplication(MamaPollApplication):
                 yield self.start_survey(to_addr, conv, **msg_options)
         else:
             log.error('No batch found for %s' % (batch_id,))
+
+    @inlineCallbacks
+    def process_command_send_message(self, *args, **kwargs):
+        log.info('Processing send_message: %s' % kwargs)
+        command_data = kwargs['command_data']
+        msg = yield self.send_to(command_data['to_addr'],
+                                 command_data['content'],
+                               **command_data['msg_options'])
+        log.info("Sent: %s" % msg)
