@@ -9,12 +9,12 @@ from twisted.internet.defer import inlineCallbacks
 from vumi.message import TransportEvent, TransportUserMessage
 from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import FakeRedis
-from vumi.persist.txriak_manager import TxRiakManager
 
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
-from go.vumitools.tests.utils import CeleryTestMixIn, DummyConsumerFactory
+from go.vumitools.tests.utils import (
+    RiakTestMixin, CeleryTestMixIn, DummyConsumerFactory)
 from go.vumitools.account import AccountStore
 
 
@@ -26,7 +26,8 @@ def dummy_consumer_factory_factory_factory(publish_func):
     return dummy_consumer_factory_factory
 
 
-class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
+class TestBulkMessageApplication(
+    ApplicationTestCase, CeleryTestMixIn, RiakTestMixin):
 
     application_class = BulkMessageApplication
     timeout = 2
@@ -34,6 +35,7 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
     @inlineCallbacks
     def setUp(self):
         super(TestBulkMessageApplication, self).setUp()
+        self.riak_setup()
         self._fake_redis = FakeRedis()
         self.app = yield self.get_application({
             'redis_cls': lambda **kw: self._fake_redis,
@@ -46,6 +48,7 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
             'worker_names': ['bulk_message_application'],
             }, cls=CommandDispatcher)
         self.manager = self.app.store.manager  # YOINK!
+        self._riak_managers.append(self.manager)
         self.account_store = AccountStore(self.manager)
         self.VUMI_COMMANDS_CONSUMER = dummy_consumer_factory_factory_factory(
             self.publish_command)
@@ -55,7 +58,7 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
     def tearDown(self):
         self.restore_celery()
         self._fake_redis.teardown()
-        yield self.app.manager.purge_all()
+        yield self.riak_teardown()
         yield super(TestBulkMessageApplication, self).tearDown()
 
     def publish_command(self, cmd_dict):
@@ -84,7 +87,7 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
         user_api = VumiUserApi(user_account.key, {
                 'redis_cls': lambda **kw: self._fake_redis,
                 'riak_manager': {'bucket_prefix': 'test.'},
-                }, TxRiakManager)
+                }, type(self.manager))
         user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
         user_api.api.set_pool_metadata("pool", {
             "transport_type": "sphex",
