@@ -7,17 +7,20 @@ NOTE: This uses the synchronous RiakManager, and is therefore unsuitable for
 use in Vumi workers.
 """
 
-import redis
 from datetime import datetime
 from collections import defaultdict
 
-from twisted.internet.defer import returnValue
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import Message
-from vumi.application import TagpoolManager
+from vumi.components import TagpoolManager
+from vumi.components import MessageStore
 from vumi.persist.model import Manager
 from vumi.persist.riak_manager import RiakManager
-from vumi.persist.message_store import MessageStore
+from vumi.persist.txriak_manager import TxRiakManager
+from vumi.persist.redis_manager import RedisManager
+from vumi.persist.txredis_manager import TxRedisManager
+
 from vumi.middleware import TaggingMiddleware
 
 from go.vumitools.account import AccountStore
@@ -27,12 +30,6 @@ from go.vumitools.middleware import DebitAccountMiddleware
 from go.vumitools.credit import CreditManager
 
 from django.conf import settings
-
-
-def get_redis(config):
-    """Get a possibly fake redis."""
-    redis_cls = config.get('redis_cls', redis.Redis)  # testing hook
-    return redis_cls(**config.get('redis', {}))
 
 
 class ConversationSendError(Exception):
@@ -399,38 +396,51 @@ class VumiUserApi(object):
 
 
 class VumiApi(object):
-    def __init__(self, config, manager_cls=None):
-        # TODO: Split the config up better.
-        config = config.copy()  # So we can modify it.
-        riak_config = config.pop('riak_manager')
-
-        r_server = get_redis(config)
-
-        if manager_cls is None:
-            manager_cls = RiakManager
-        self.manager = manager_cls.from_config(riak_config)
+    def __init__(self, manager, redis, sender=None):
+        self.manager = manager
+        self.redis = redis
 
         # tagpool manager
-        tpm_config = config.get('tagpool_manager', {})
-        tpm_prefix = tpm_config.get('tagpool_prefix', 'tagpool_store')
-        self.tpm = TagpoolManager(r_server, tpm_prefix)
+        self.tpm = TagpoolManager(self.redis.sub_manager('tagpool_store'))
 
         # credit manager
-        cm_config = config.get('credit_manager', {})
-        cm_prefix = cm_config.get('credit_prefix', 'credit_store')
-        self.cm = CreditManager(r_server, cm_prefix)
+        self.cm = CreditManager(self.redis.sub_manager('credit_store'))
 
         # message store
-        mdb_config = config.get('message_store', {})
-        mdb_prefix = mdb_config.get('store_prefix', 'message_store')
-        self.mdb = MessageStore(self.manager, r_server, mdb_prefix)
+        self.mdb = MessageStore(self.manager,
+                                self.redis.sub_manager('message_store'))
 
         # account store
         self.account_store = AccountStore(self.manager)
 
         # message sending API
-        mapi_config = config.get('message_sender', {})
-        self.mapi = MessageSender(mapi_config)
+        if sender is None:
+            sender = MessageSender({})
+        self.mapi = sender
+
+    @staticmethod
+    def _parse_config(config):
+        riak_config = config.get('riak_manager', {})
+        redis_config = config.get('redis', {})
+        sender_config = config.get('message_sender', {})
+        return riak_config, redis_config, sender_config
+
+    @classmethod
+    def from_config(cls, config):
+        riak_config, redis_config, sender_config = cls._parse_config(config)
+        manager = RiakManager.from_config(riak_config.copy())
+        redis = RedisManager.from_config(redis_config)
+        sender = MessageSender(sender_config)
+        return cls(manager, redis, sender)
+
+    @classmethod
+    @inlineCallbacks
+    def from_config_async(cls, config):
+        riak_config, redis_config, sender_config = cls._parse_config(config)
+        manager = TxRiakManager.from_config(riak_config.copy())
+        redis = yield TxRedisManager.from_config(redis_config)
+        sender = MessageSender(sender_config)
+        returnValue(cls(manager, redis, sender))
 
     def batch_start(self, tags):
         """Start a message batch.
@@ -542,6 +552,7 @@ class VumiApi(object):
         """
         return self.mdb.batch_replies(batch_id)
 
+    @Manager.calls_manager
     def batch_tags(self, batch_id):
         """Return a list of tags associated with a given batch.
 
@@ -551,7 +562,8 @@ class VumiApi(object):
         :rtype:
             list of tags
         """
-        return list(self.mdb.get_batch(batch_id).tags)
+        batch = yield self.mdb.get_batch(batch_id)
+        returnValue(list(batch.tags))
 
     def acquire_tag(self, pool):
         """Acquire a tag from a given tag pool.
