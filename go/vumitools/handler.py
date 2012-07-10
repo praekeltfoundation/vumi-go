@@ -34,7 +34,7 @@ class SendMessageCommandHandler(EventHandler):
                                         event.payload['account_key'])
         conv = yield conv_store.get_conversation_by_key(
                                         event.payload['conversation_key'])
-        uconf = {
+        api_conf = {
             'tagpool_manager': {
                 'tagpool_prefix': self.dispatcher.r_prefix,
             },
@@ -43,7 +43,7 @@ class SendMessageCommandHandler(EventHandler):
             },
         }
         user_api = VumiUserApi(event.payload['account_key'],
-                                    uconf)
+                                                    api_conf)
         conv = user_api.wrap_conversation(conv)
 
         batch_id = conv.batches.keys()[0]
@@ -56,7 +56,10 @@ class SendMessageCommandHandler(EventHandler):
                     'go': {'user_account': event.payload['account_key']},
                     'tag': {'tag': tag},
                     'transport_type': tag_info['transport_type'],
-                }
+                },
+                'transport_type': tag_info['transport_type'],
+                'transport_name': tag_info['msg_options']['transport_name'],
+                'from_addr': tag[1],
         }
 
         sm_cmd = VumiApiCommand.command(
