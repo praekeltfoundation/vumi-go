@@ -8,7 +8,6 @@ from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.dispatchers.tests.test_base import DispatcherTestCase
 from vumi.dispatchers.base import BaseDispatchWorker
 from vumi.middleware.tagger import TaggingMiddleware
-from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.message_store import MessageStore
 from vumi.tests.utils import FakeRedis, LogCatcher
 
@@ -16,6 +15,7 @@ from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.account import AccountStore
+from go.vumitools.tests.utils import RiakTestMixin
 
 
 class CommandDispatcherTestCase(ApplicationTestCase):
@@ -63,15 +63,15 @@ class CommandDispatcherTestCase(ApplicationTestCase):
                                 error['message'][0])
 
 
-class GoApplicationRouterTestCase(DispatcherTestCase):
+class GoApplicationRouterTestCase(RiakTestMixin, DispatcherTestCase):
 
     dispatcher_class = BaseDispatchWorker
     transport_name = 'test_transport'
-    timeout = 1
 
     @inlineCallbacks
     def setUp(self):
         yield super(GoApplicationRouterTestCase, self).setUp()
+        self.riak_setup()
         self.r_server = FakeRedis()
         self.mdb_prefix = 'test_message_store'
         self.message_store_config = {
@@ -115,7 +115,7 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
         })
 
         # get the router to test
-        self.manager = TxRiakManager.from_config({
+        self.manager = self.get_riak_manager({
                 'bucket_prefix': self.mdb_prefix})
         self.account_store = AccountStore(self.manager)
         self.message_store = MessageStore(self.manager, self.r_server,
@@ -129,7 +129,7 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
 
     @inlineCallbacks
     def tearDown(self):
-        yield self.manager.purge_all()
+        yield self.riak_teardown()
         yield super(GoApplicationRouterTestCase, self).tearDown()
 
     @inlineCallbacks
