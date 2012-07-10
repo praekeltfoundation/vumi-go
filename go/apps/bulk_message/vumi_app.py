@@ -137,11 +137,10 @@ class BulkMessageApplication(GoApplication):
 
     @inlineCallbacks
     def process_command_send_message(self, *args, **kwargs):
-        send_message = kwargs['send_message']
-        info = 'Processing send_message with: %s' % (send_message)
-        log.info(info)
+        command_data = kwargs['command_data']
+        log.info('Processing send_message: %s' % kwargs)
         yield self.send_message(
-                send_message['batch_id'],
-                send_message['to_addr'],
-                send_message['content'],
-                send_message['msg_options'])
+                command_data['batch_id'],
+                command_data['to_addr'],
+                command_data['content'],
+                command_data['msg_options'])
