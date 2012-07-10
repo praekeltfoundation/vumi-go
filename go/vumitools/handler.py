@@ -1,8 +1,7 @@
 
-
 from twisted.internet.defer import inlineCallbacks
 from vumi import log
-from go.vumitools.api import VumiApiCommand
+from go.vumitools.api import VumiApiCommand, VumiUserApi
 from go.vumitools.conversation import ConversationStore
 
 
@@ -35,9 +34,30 @@ class SendMessageCommandHandler(EventHandler):
                                         event.payload['account_key'])
         conv = yield conv_store.get_conversation_by_key(
                                         event.payload['conversation_key'])
+        uconf = {
+            'tagpool_manager': {
+                'tagpool_prefix': self.dispatcher.r_prefix,
+            },
+            'riak_manager': {
+                'bucket_prefix': self.dispatcher.mdb_prefix
+            },
+        }
+        user_api = VumiUserApi(event.payload['account_key'],
+                                    uconf)
+        conv = user_api.wrap_conversation(conv)
+
         batch_id = conv.batches.keys()[0]
+        batch_tags = user_api.api.batch_tags(batch_id)
+        tag = [batch_tags[0][0], batch_tags[0][1]]
+        tag_info = user_api.tagpools()._pools[tag[0]]
         event.payload['content']['batch_id'] = batch_id
-        event.payload['content']['msg_options'] = {}
+        event.payload['content']['msg_options'] = {
+                'helper_metadata': {
+                    'go': {'user_account': event.payload['account_key']},
+                    'tag': {'tag': tag},
+                    'transport_type': tag_info['transport_type'],
+                }
+        }
 
         sm_cmd = VumiApiCommand.command(
                 handler_config['worker_name'],
@@ -46,6 +66,7 @@ class SendMessageCommandHandler(EventHandler):
                 conversation_key=handler_config['conversation_key'],
                 account_key=event.payload['account_key']
                 )
+        log.info("Publishing command: %s" % sm_cmd)
         self.dispatcher.api_command_publisher.publish_message(sm_cmd)
 
 
