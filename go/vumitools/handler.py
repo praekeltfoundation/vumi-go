@@ -23,10 +23,17 @@ class LoggingHandler(EventHandler):
         log.info("LoggingHandler handling event: %s with config: %s" % (
             event, handler_config))
 
+
 class SendMessageCommandHandler(EventHandler):
 
     @inlineCallbacks
     def handle_event(self, event, handler_config):
+        """
+        From an account and conversation, this finds a batch and a tag.
+        While there could be multiple batches per conversation and
+        multiple tags per batch, this assumes lists of one, and takes
+        the first entry of each list
+        """
         log.info(
             "SendMessageCommandHandler handling event: %s with config: %s" % (
             event, handler_config))
@@ -46,12 +53,25 @@ class SendMessageCommandHandler(EventHandler):
                                                     api_conf)
         conv = user_api.wrap_conversation(conv)
 
-        batch_id = conv.batches.keys()[0]
+        batch_keys = conv.batches.keys()
+        if len(batch_keys) > 0:
+            batch_id = batch_keys[0]
+        else:
+            log.info("No batches found")
+            return
+
         batch_tags = user_api.api.batch_tags(batch_id)
-        tag = [batch_tags[0][0], batch_tags[0][1]]
+        if len(batch_tags) > 0:
+            tag = [batch_tags[0][0], batch_tags[0][1]]
+        else:
+            log.info("No batch tags found")
+            return
+
         tag_info = user_api.tagpools()._pools[tag[0]]
-        event.payload['content']['batch_id'] = batch_id
-        event.payload['content']['msg_options'] = {
+
+        command_data = event.payload['content']
+        command_data['batch_id'] = batch_id
+        command_data['msg_options'] = {
                 'helper_metadata': {
                     'go': {'user_account': event.payload['account_key']},
                     'tag': {'tag': tag},
@@ -65,11 +85,9 @@ class SendMessageCommandHandler(EventHandler):
         sm_cmd = VumiApiCommand.command(
                 handler_config['worker_name'],
                 "send_message",
-                send_message = event.payload['content'],
+                command_data=command_data,
                 conversation_key=handler_config['conversation_key'],
                 account_key=event.payload['account_key']
                 )
         log.info("Publishing command: %s" % sm_cmd)
         self.dispatcher.api_command_publisher.publish_message(sm_cmd)
-
-
