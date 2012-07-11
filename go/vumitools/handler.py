@@ -1,6 +1,12 @@
+# -*- test-case-name: go.vumitools.tests.test_api_worker -*-
+# -*- coding: utf-8 -*-
+
+"""Vumi event handlers for use with EventDispatcher in vumitools api_worker"""
 
 from twisted.internet.defer import inlineCallbacks
+
 from vumi import log
+
 from go.vumitools.api import VumiApiCommand, VumiUserApi
 from go.vumitools.conversation import ConversationStore
 
@@ -25,6 +31,9 @@ class LoggingHandler(EventHandler):
 
 
 class SendMessageCommandHandler(EventHandler):
+
+    def get_user_api(self, account_key, api_conf):
+        return VumiUserApi(account_key, api_conf)
 
     @inlineCallbacks
     def handle_event(self, event, handler_config):
@@ -68,8 +77,7 @@ class SendMessageCommandHandler(EventHandler):
                 'bucket_prefix': self.dispatcher.mdb_prefix
             },
         }
-        user_api = VumiUserApi(event.payload['account_key'],
-                                                    api_conf)
+        user_api = self.get_user_api(event.payload['account_key'], api_conf)
         conv = user_api.wrap_conversation(conv)
 
         batch_keys = conv.batches.keys()
