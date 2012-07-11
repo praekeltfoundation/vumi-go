@@ -22,6 +22,9 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.client = Client()
         self.client.login(username='username', password='password')
 
+        # FIXME: Update vxpolls to not use redis directly, then uncomment this.
+        # self.patch_settings(VXPOLLS_REDIS_CONFIG='FAKE_REDIS')
+
         self.setup_riak_fixtures()
 
     def setup_riak_fixtures(self):

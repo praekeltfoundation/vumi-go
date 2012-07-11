@@ -20,8 +20,7 @@ def hacky_hack_hack(config):
     from vumi.persist.fake_redis import FakeRedis
     if isinstance(config, FakeRedis):
         config = 'FAKE_REDIS'
-    manager = RedisManager.from_config(config)
-    return manager._client
+    return RedisManager.from_config(config)
 
 
 class SurveyApplication(PollApplication):
