@@ -1,14 +1,17 @@
 # -*- test-case-name: go.apps.opt_out.tests.test_vumi_app -*-
 
 from twisted.internet.defer import inlineCallbacks, returnValue
-from go.vumitools.api import VumiApiCommand, get_redis
+
+from vumi.application import ApplicationWorker
+from vumi.components.message_store import MessageStore
+from vumi.persist.txriak_manager import TxRiakManager
+from vumi.persist.txredis_manager import TxRedisManager
+from vumi import log
+
+from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.opt_out import OptOutStore
-from vumi.application import ApplicationWorker
-from vumi.persist.message_store import MessageStore
-from vumi.persist.txriak_manager import TxRiakManager
-from vumi import log
 
 
 class OptOutApplication(ApplicationWorker):
@@ -25,10 +28,11 @@ class OptOutApplication(ApplicationWorker):
 
     @inlineCallbacks
     def setup_application(self):
-        r_server = get_redis(self.config)
+        redis = yield TxRedisManager.from_config(
+            self.config.get('redis', {}), self.mdb_prefix)
         self.manager = TxRiakManager.from_config(
-            self.config.get('riak_manager'))
-        self.store = MessageStore(self.manager, r_server, self.mdb_prefix)
+            self.config.get('riak_manager', {}))
+        self.store = MessageStore(self.manager, redis)
         self.control_consumer = yield self.consume(
             '%s.control' % (self.worker_name,),
             self.consume_control_command,
@@ -113,7 +117,8 @@ class OptOutApplication(ApplicationWorker):
 
     @inlineCallbacks
     def process_command_start(self, batch_id, conversation_type,
-        conversation_key, msg_options, is_client_initiated, **extra_params):
+                              conversation_key, msg_options,
+                              is_client_initiated, **extra_params):
 
         if is_client_initiated:
             log.debug('Conversation %r is client initiated, no need to notify '

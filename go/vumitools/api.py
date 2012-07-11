@@ -50,12 +50,12 @@ class ConversationWrapper(object):
         self.base_manager = self.api.manager
         self._tagpool_metadata = None
 
-    @property
-    def tagpool_metadata(self):
+    @Manager.calls_manager
+    def get_tagpool_metadata(self, key, default=None):
         if self._tagpool_metadata is None:
-            self._tagpool_metadata = self.api.tpm.get_metadata(
-                    self.delivery_tag_pool)
-        return self._tagpool_metadata
+            self._tagpool_metadata = yield self.api.tpm.get_metadata(
+                self.delivery_tag_pool)
+        returnValue(self._tagpool_metadata.get(key, default))
 
     @Manager.calls_manager
     def end_conversation(self):
@@ -153,21 +153,24 @@ class ConversationWrapper(object):
 
         msg_options = {}
         # TODO: transport_type is probably irrelevant
-        msg_options['transport_type'] = self.tagpool_metadata['transport_type']
+        msg_options['transport_type'] = yield self.get_tagpool_metadata(
+            'transport_type')
         # TODO: not sure whether to declare that tag names must always be
         #       valid from_addr values or whether to put in a mapping somewhere
         msg_options['from_addr'] = tag[1]
-        msg_options.update(self.tagpool_metadata.get('msg_options', {}))
+        msg_options.update(
+            (yield self.get_tagpool_metadata('msg_options', {})))
         TaggingMiddleware.add_tag_to_payload(msg_options, tag)
         DebitAccountMiddleware.add_user_to_payload(msg_options,
                                                    self.c.user_account.key)
 
+        is_client_initiated = yield self.is_client_initiated()
         yield self.dispatch_command('start',
             batch_id=batch_id,
             conversation_type=self.c.conversation_type,
             conversation_key=self.c.key,
             msg_options=msg_options,
-            is_client_initiated=self.is_client_initiated(),
+            is_client_initiated=is_client_initiated,
             **extra_params)
         self.c.batches.add_key(batch_id)
         yield self.c.save()
@@ -258,7 +261,7 @@ class ConversationWrapper(object):
                The function itself is probably correct -- the
                name of the function is probably wrong.
         """
-        return self.tagpool_metadata.get('display_name',
+        return self.get_tagpool_metadata('display_name',
                                          self.delivery_tag_pool)
 
     def is_client_initiated(self):
@@ -267,7 +270,7 @@ class ConversationWrapper(object):
 
         :rtype: bool
         """
-        return self.tagpool_metadata.get('client_initiated', False)
+        return self.get_tagpool_metadata('client_initiated', False)
 
     def get_absolute_url(self):
         return u'/app/%s/%s/' % (self.conversation_type, self.key)
@@ -329,14 +332,23 @@ class VumiUserApi(object):
 
     conversation_wrapper = ConversationWrapper
 
-    def __init__(self, user_account_key, config, manager_cls=None):
-        self.api = VumiApi(config, manager_cls=manager_cls)
+    def __init__(self, api, user_account_key):
+        self.api = api
         self.manager = self.api.manager
         self.user_account_key = user_account_key
         self.conversation_store = ConversationStore(self.api.manager,
                                                     self.user_account_key)
         self.contact_store = ContactStore(self.api.manager,
                                           self.user_account_key)
+
+    @classmethod
+    def from_config(cls, user_account_key, config):
+        return cls(VumiApi.from_config(config), user_account_key)
+
+    @classmethod
+    def from_config_async(cls, user_account_key, config):
+        d = VumiApi.from_config_async(config)
+        return d.addCallback(cls, user_account_key)
 
     def wrap_conversation(self, conversation):
         """Wrap a conversation with a ConversationWrapper.
@@ -369,9 +381,9 @@ class VumiUserApi(object):
                           if (tp.max_keys is None
                               or tp.max_keys > tp_usage[tp.tagpool]))
 
-        available_set = self.api.tpm.list_pools()
+        available_set = yield self.api.tpm.list_pools()
         pool_names = list(allowed_set & available_set)
-        pool_data = dict((pool, self.api.tpm.get_metadata(pool))
+        pool_data = dict((pool, (yield self.api.tpm.get_metadata(pool)))
                          for pool in pool_names)
         returnValue(TagpoolSet(pool_data))
 

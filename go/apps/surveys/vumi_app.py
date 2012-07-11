@@ -1,15 +1,27 @@
 # -*- test-case-name: go.apps.surveys.tests.test_vumi_app -*-
 
 from twisted.internet.defer import inlineCallbacks, returnValue
-from go.vumitools.api import VumiApiCommand, get_redis
-from go.vumitools.conversation import ConversationStore
-from go.vumitools.contact import ContactStore
 from vxpolls.example import PollApplication
 from vxpolls.manager import PollManager
-from vumi.persist.message_store import MessageStore
+
+from vumi.components.message_store import MessageStore
 from vumi.persist.txriak_manager import TxRiakManager
+from vumi.persist.txredis_manager import TxRedisManager
 from vumi.message import TransportUserMessage
 from vumi import log
+
+from go.vumitools.api import VumiApiCommand
+from go.vumitools.conversation import ConversationStore
+from go.vumitools.contact import ContactStore
+
+
+def hacky_hack_hack(config):
+    from vumi.persist.redis_manager import RedisManager
+    from vumi.persist.fake_redis import FakeRedis
+    if isinstance(config, FakeRedis):
+        config = 'FAKE_REDIS'
+    manager = RedisManager.from_config(config)
+    return manager._client
 
 
 class SurveyApplication(PollApplication):
@@ -29,11 +41,13 @@ class SurveyApplication(PollApplication):
 
     @inlineCallbacks
     def setup_application(self):
-        r_server = get_redis(self.config)
+        r_server = hacky_hack_hack(self.config.get('redis'))
+        redis = yield TxRedisManager.from_config(self.config.get('redis'))
         self.pm = PollManager(r_server, self.poll_prefix)
         self.manager = TxRiakManager.from_config(
             self.config.get('riak_manager'))
-        self.store = MessageStore(self.manager, r_server, self.mdb_prefix)
+        self.store = MessageStore(
+            self.manager, redis.sub_manager(self.mdb_prefix))
         self.control_consumer = yield self.consume(
             '%s.control' % (self.worker_name,),
             self.consume_control_command,
@@ -141,7 +155,8 @@ class SurveyApplication(PollApplication):
 
     @inlineCallbacks
     def process_command_start(self, batch_id, conversation_type,
-        conversation_key, msg_options, is_client_initiated, **extra_params):
+                              conversation_key, msg_options,
+                              is_client_initiated, **extra_params):
 
         if is_client_initiated:
             log.debug('Conversation %r is client initiated, no need to notify '

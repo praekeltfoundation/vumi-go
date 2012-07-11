@@ -8,14 +8,13 @@ from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportEvent, TransportUserMessage
 from vumi.application.tests.test_base import ApplicationTestCase
-from vumi.tests.utils import FakeRedis
-from vumi.persist.txriak_manager import TxRiakManager
+from vumi.persist.txredis_manager import TxRedisManager
 
-from go.apps.bulk_message.vumi_app import BulkMessageApplication
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import CeleryTestMixIn, DummyConsumerFactory
 from go.vumitools.account import AccountStore
+from go.apps.bulk_message.vumi_app import BulkMessageApplication
 
 
 def dummy_consumer_factory_factory_factory(publish_func):
@@ -29,14 +28,13 @@ def dummy_consumer_factory_factory_factory(publish_func):
 class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
 
     application_class = BulkMessageApplication
-    timeout = 2
 
     @inlineCallbacks
     def setUp(self):
         super(TestBulkMessageApplication, self).setUp()
-        self._fake_redis = FakeRedis()
+        self.redis = yield TxRedisManager.from_config('FAKE_REDIS')
         self.app = yield self.get_application({
-            'redis_cls': lambda **kw: self._fake_redis,
+            'redis': self.redis._client,
             'riak': {
                 'bucket_prefix': 'test.',
                 },
@@ -54,7 +52,7 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
     @inlineCallbacks
     def tearDown(self):
         self.restore_celery()
-        self._fake_redis.teardown()
+        yield self.redis._close()
         yield self.app.manager.purge_all()
         yield super(TestBulkMessageApplication, self).tearDown()
 
@@ -81,12 +79,12 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
     @inlineCallbacks
     def test_start(self):
         user_account = yield self.account_store.new_user(u'testuser')
-        user_api = VumiUserApi(user_account.key, {
-                'redis_cls': lambda **kw: self._fake_redis,
+        user_api = yield VumiUserApi.from_config_async(user_account.key, {
+                'redis': self.redis._client,
                 'riak_manager': {'bucket_prefix': 'test.'},
-                }, TxRiakManager)
-        user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
-        user_api.api.set_pool_metadata("pool", {
+                })
+        yield user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
+        yield user_api.api.set_pool_metadata("pool", {
             "transport_type": "sphex",
             })
         group = yield user_api.contact_store.new_group(u'test group')
@@ -109,6 +107,7 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
         [batch_id] = conversation.batches.keys()
 
         # check commands made it through to the dispatcher and the vumi_app
+        # yield self._amqp.wait_messages('vumi', 'vumi.api', 1)
         [disp_cmd] = self.get_dispatcher_commands()
         self.assertEqual(disp_cmd['command'], 'start')
         [bulk_cmd] = self.get_bulk_message_commands()
@@ -132,7 +131,7 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
             self.assertEqual(tag, ["pool", "tag1"])
             self.assertEqual(user_account_key, user_account.key)
 
-        batch_status = self.app.store.batch_status(batch_id)
+        batch_status = yield self.app.store.batch_status(batch_id)
         self.assertEqual(batch_status['sent'], 2)
         dbmsgs = yield self.app.store.batch_messages(batch_id)
         dbmsgs.sort(key=lambda msg: msg['to_addr'])
