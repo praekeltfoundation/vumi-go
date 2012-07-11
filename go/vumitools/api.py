@@ -13,8 +13,8 @@ from collections import defaultdict
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import Message
-from vumi.components import TagpoolManager
-from vumi.components import MessageStore
+from vumi.components.tagpool import TagpoolManager
+from vumi.components.message_store import MessageStore
 from vumi.persist.model import Manager
 from vumi.persist.riak_manager import RiakManager
 from vumi.persist.txriak_manager import TxRiakManager
