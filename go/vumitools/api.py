@@ -26,7 +26,6 @@ from vumi.middleware import TaggingMiddleware
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
-from go.vumitools.middleware import DebitAccountMiddleware
 from go.vumitools.credit import CreditManager
 
 from django.conf import settings
@@ -148,6 +147,7 @@ class ConversationWrapper(object):
         """
         Send the start command to this conversations application worker.
         """
+        from go.vumitools.middleware import DebitAccountMiddleware
         tag = yield self.acquire_tag()
         batch_id = yield self.start_batch(tag)
 
@@ -453,6 +453,9 @@ class VumiApi(object):
         redis = yield TxRedisManager.from_config(redis_config)
         sender = MessageSender(sender_config)
         returnValue(cls(manager, redis, sender))
+
+    def conversation_store(self, account_key):
+        return ConversationStore(self.manager, account_key)
 
     def batch_start(self, tags):
         """Start a message batch.
