@@ -5,13 +5,17 @@
 import os
 from contextlib import contextmanager
 
-from twisted.python. monkey import MonkeyPatcher
+from twisted.python.monkey import MonkeyPatcher
+from twisted.internet.defer import DeferredList, inlineCallbacks
 from celery.app import app_or_default
 
 from vumi.persist.fields import ForeignKeyProxy, ManyToManyProxy, DynamicProxy
 from vumi.message import TransportUserMessage
+from vumi.persist import txriak_manager
 
 from go.vumitools.api import VumiApiCommand
+from go.vumitools.account import UserAccount
+from go.vumitools.contact import Contact, ContactGroup
 
 
 def field_eq(f1, f2):
@@ -156,3 +160,52 @@ class CeleryTestMixIn(object):
             else:
                 break
         return [VumiApiCommand(**payload) for payload in msgs]
+
+
+class RiakTestMixin(object):
+    def get_riak_manager(self, config):
+        riak_manager = txriak_manager.TxRiakManager.from_config(config)
+        self._riak_managers.append(riak_manager)
+        return riak_manager
+
+    def riak_setup(self):
+        self._riak_managers = []
+
+    def _clear_bucket_properties(self, account_keys, manager):
+        if not hasattr(txriak_manager, 'delete_bucket_properties'):
+            # This doesn't exist everywhere yet.
+            return
+
+        client = manager.client
+        deferreds = []
+
+        for account_key in account_keys:
+            sub_manager = manager.sub_manager(account_key)
+            deferreds.extend([
+                    txriak_manager.delete_bucket_properties(
+                        client.bucket(sub_manager.bucket_name(Contact))),
+                    txriak_manager.delete_bucket_properties(
+                        client.bucket(sub_manager.bucket_name(ContactGroup))),
+                    ])
+
+        return DeferredList(deferreds)
+
+    def _list_accounts(self, manager):
+        return manager.client.bucket(
+            manager.bucket_name(UserAccount)).list_keys()
+
+    @inlineCallbacks
+    def _purge_manager(self, manager):
+        # If buckets are empty, they aren't listed. However, they may still
+        # have properties set. Therefore, we find all account keys and clear
+        # properties from their associated buckets.
+        accounts = yield self._list_accounts(manager)
+        yield manager.purge_all()
+        # This must happen after the objects are deleted, otherwise the indexes
+        # don't go away.
+        yield self._clear_bucket_properties(accounts, manager)
+
+    @inlineCallbacks
+    def riak_teardown(self):
+        for manager in self._riak_managers:
+            yield self._purge_manager(manager)

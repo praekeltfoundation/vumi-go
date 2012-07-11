@@ -12,7 +12,8 @@ from vumi.persist.txredis_manager import TxRedisManager
 
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
-from go.vumitools.tests.utils import CeleryTestMixIn, DummyConsumerFactory
+from go.vumitools.tests.utils import (
+    RiakTestMixin, CeleryTestMixIn, DummyConsumerFactory)
 from go.vumitools.account import AccountStore
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
 
@@ -25,7 +26,8 @@ def dummy_consumer_factory_factory_factory(publish_func):
     return dummy_consumer_factory_factory
 
 
-class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
+class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn,
+                                 RiakTestMixin):
 
     application_class = BulkMessageApplication
 
@@ -33,6 +35,7 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
     def setUp(self):
         super(TestBulkMessageApplication, self).setUp()
         self.redis = yield TxRedisManager.from_config('FAKE_REDIS')
+        self.riak_setup()
         self.app = yield self.get_application({
             'redis': self.redis._client,
             'riak': {
@@ -44,6 +47,7 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
             'worker_names': ['bulk_message_application'],
             }, cls=CommandDispatcher)
         self.manager = self.app.store.manager  # YOINK!
+        self._riak_managers.append(self.manager)
         self.account_store = AccountStore(self.manager)
         self.VUMI_COMMANDS_CONSUMER = dummy_consumer_factory_factory_factory(
             self.publish_command)
@@ -53,7 +57,7 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
     def tearDown(self):
         self.restore_celery()
         yield self.redis._close()
-        yield self.app.manager.purge_all()
+        yield self.riak_teardown()
         yield super(TestBulkMessageApplication, self).tearDown()
 
     def publish_command(self, cmd_dict):
