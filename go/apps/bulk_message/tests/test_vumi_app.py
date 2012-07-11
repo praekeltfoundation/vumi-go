@@ -2,40 +2,24 @@
 
 """Tests for go.vumitools.bulk_send_application"""
 
-import json
-
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.message import TransportEvent, TransportUserMessage
-from vumi.application.tests.test_base import ApplicationTestCase
-from vumi.persist.txredis_manager import TxRedisManager
+from vumi.message import TransportUserMessage
 
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
-from go.vumitools.tests.utils import (
-    RiakTestMixin, CeleryTestMixIn, DummyConsumerFactory)
+from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.account import AccountStore
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
 
 
-def dummy_consumer_factory_factory_factory(publish_func):
-    def dummy_consumer_factory_factory():
-        dummy_consumer_factory = DummyConsumerFactory()
-        dummy_consumer_factory.publish = publish_func
-        return dummy_consumer_factory
-    return dummy_consumer_factory_factory
-
-
-class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn,
-                                 RiakTestMixin):
+class TestBulkMessageApplication(AppWorkerTestCase):
 
     application_class = BulkMessageApplication
 
     @inlineCallbacks
     def setUp(self):
         super(TestBulkMessageApplication, self).setUp()
-        self.redis = yield TxRedisManager.from_config('FAKE_REDIS')
-        self.riak_setup()
         self.app = yield self.get_application({
             'redis': self.redis._client,
             'riak': {
@@ -49,33 +33,6 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn,
         self.manager = self.app.store.manager  # YOINK!
         self._riak_managers.append(self.manager)
         self.account_store = AccountStore(self.manager)
-        self.VUMI_COMMANDS_CONSUMER = dummy_consumer_factory_factory_factory(
-            self.publish_command)
-        self.setup_celery_for_tests()
-
-    @inlineCallbacks
-    def tearDown(self):
-        self.restore_celery()
-        yield self.redis._close()
-        yield self.riak_teardown()
-        yield super(TestBulkMessageApplication, self).tearDown()
-
-    def publish_command(self, cmd_dict):
-        data = json.dumps(cmd_dict)
-        self._amqp.publish_raw('vumi', 'vumi.api', data)
-
-    def get_dispatcher_commands(self):
-        return self._amqp.get_messages('vumi', 'vumi.api')
-
-    def get_bulk_message_commands(self):
-        return self._amqp.get_messages('vumi',
-                                       "%s.control" % self.app.worker_name)
-
-    def publish_event(self, **kw):
-        event = TransportEvent(**kw)
-        d = self.dispatch(event, rkey=self.rkey('event'))
-        d.addCallback(lambda _result: event)
-        return d
 
     def store_outbound(self, **kw):
         return self.app.store.add_outbound_message(self.mkmsg_out(**kw))

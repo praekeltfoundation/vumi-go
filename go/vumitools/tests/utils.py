@@ -4,14 +4,17 @@
 
 import os
 from contextlib import contextmanager
+import json
 
 from twisted.python.monkey import MonkeyPatcher
 from twisted.internet.defer import DeferredList, inlineCallbacks
 from celery.app import app_or_default
 
 from vumi.persist.fields import ForeignKeyProxy, ManyToManyProxy, DynamicProxy
-from vumi.message import TransportUserMessage
+from vumi.message import TransportEvent, TransportUserMessage
 from vumi.persist import txriak_manager
+from vumi.application.tests.test_base import ApplicationTestCase
+from vumi.persist.txredis_manager import TxRedisManager
 
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.account import UserAccount
@@ -209,3 +212,47 @@ class RiakTestMixin(object):
     def riak_teardown(self):
         for manager in self._riak_managers:
             yield self._purge_manager(manager)
+
+
+def dummy_consumer_factory_factory_factory(publish_func):
+    def dummy_consumer_factory_factory():
+        dummy_consumer_factory = DummyConsumerFactory()
+        dummy_consumer_factory.publish = publish_func
+        return dummy_consumer_factory
+    return dummy_consumer_factory_factory
+
+
+class AppWorkerTestCase(ApplicationTestCase, CeleryTestMixIn, RiakTestMixin):
+
+    @inlineCallbacks
+    def setUp(self):
+        super(AppWorkerTestCase, self).setUp()
+        self.redis = yield TxRedisManager.from_config('FAKE_REDIS')
+        self.riak_setup()
+        self.VUMI_COMMANDS_CONSUMER = dummy_consumer_factory_factory_factory(
+            self.publish_command)
+        self.setup_celery_for_tests()
+
+    @inlineCallbacks
+    def tearDown(self):
+        self.restore_celery()
+        yield self.redis._close()
+        yield self.riak_teardown()
+        yield super(AppWorkerTestCase, self).tearDown()
+
+    def publish_command(self, cmd_dict):
+        data = json.dumps(cmd_dict)
+        self._amqp.publish_raw('vumi', 'vumi.api', data)
+
+    def get_dispatcher_commands(self):
+        return self._amqp.get_messages('vumi', 'vumi.api')
+
+    def get_bulk_message_commands(self):
+        return self._amqp.get_messages('vumi',
+                                       "%s.control" % self.app.worker_name)
+
+    def publish_event(self, **kw):
+        event = TransportEvent(**kw)
+        d = self.dispatch(event, rkey=self.rkey('event'))
+        d.addCallback(lambda _result: event)
+        return d

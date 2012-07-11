@@ -2,34 +2,21 @@
 
 """Tests for go.apps.opt_out application"""
 
-import json
 import uuid
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import TransportUserMessage
-from vumi.application.tests.test_base import ApplicationTestCase
-from vumi.persist.txredis_manager import TxRedisManager
 
 from go.apps.opt_out.vumi_app import OptOutApplication
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
-from go.vumitools.tests.utils import (
-    RiakTestMixin, CeleryTestMixIn, DummyConsumerFactory)
+from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.account import AccountStore
 from go.vumitools.opt_out import OptOutStore
 
 
-def dummy_consumer_factory_factory_factory(publish_func):
-    def dummy_consumer_factory_factory():
-        dummy_consumer_factory = DummyConsumerFactory()
-        dummy_consumer_factory.publish = publish_func
-        return dummy_consumer_factory
-    return dummy_consumer_factory_factory
-
-
-class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn,
-                            RiakTestMixin):
+class TestOptOutApplication(AppWorkerTestCase):
 
     application_class = OptOutApplication
     transport_type = u'sms'
@@ -37,9 +24,6 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn,
     @inlineCallbacks
     def setUp(self):
         super(TestOptOutApplication, self).setUp()
-        self.riak_setup()
-
-        self.redis = yield TxRedisManager.from_config('FAKE_REDIS')
         self.config = {
             'redis': self.redis._client,
             'worker_name': 'opt_out_application',
@@ -64,9 +48,6 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn,
         self.manager = self.app.store.manager  # YOINK!
         self._riak_managers.append(self.manager)
         self.account_store = AccountStore(self.manager)
-        self.VUMI_COMMANDS_CONSUMER = dummy_consumer_factory_factory_factory(
-            self.publish_command)
-        self.setup_celery_for_tests()
 
         # Create a test user account
         self.user_account = yield self.account_store.new_user(u'testuser')
@@ -117,21 +98,10 @@ class TestOptOutApplication(ApplicationTestCase, CeleryTestMixIn,
             )
         yield self.dispatch(msg)
 
-    def publish_command(self, cmd_dict):
-        data = json.dumps(cmd_dict)
-        self._amqp.publish_raw('vumi', 'vumi.api', data)
-
     @inlineCallbacks
     def wait_for_messages(self, nr_of_messages, total_length):
         msgs = yield self.wait_for_dispatched_messages(total_length)
         returnValue(msgs[-1 * nr_of_messages:])
-
-    @inlineCallbacks
-    def tearDown(self):
-        self.restore_celery()
-        yield self.redis._close()
-        yield self.riak_teardown()
-        yield super(TestOptOutApplication, self).tearDown()
 
     @inlineCallbacks
     def test_sms_opt_out(self):
