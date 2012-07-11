@@ -204,4 +204,3 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
         [msg] = yield self.get_dispatched_messages()
         self.assertEqual(msg.payload['to_addr'], "123456")
         self.assertEqual(msg.payload['content'], "hello world")
-        print msg.payload
