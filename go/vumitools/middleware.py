@@ -3,12 +3,18 @@ import sys
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.middleware import (TransportMiddleware, TaggingMiddleware,
-                             BaseMiddleware)
+from vumi.middleware import (
+    TransportMiddleware, TaggingMiddleware, BaseMiddleware)
 from vumi.utils import normalize_msisdn
+from vumi.persist.txriak_manager import TxRiakManager
+from vumi.persist.txredis_manager import TxRedisManager
+from vumi.components.tagpool import TagpoolManager
+from vumi.components import MessageStore
 from vumi import log
 
-from go.vumitools.api import VumiApi
+from go.vumitools.credit import CreditManager
+from go.vumitools.account import AccountStore
+from go.vumitools.conversation import ConversationStore
 
 
 class NormalizeMsisdnMiddleware(TransportMiddleware):
@@ -69,11 +75,15 @@ class GoApplicationRouterMiddleware(BaseMiddleware):
         to Redis with. Passed along as **kwargs to the Redis client.
 
     """
-    @inlineCallbacks
     def setup_middleware(self):
-        self.api = yield VumiApi.from_config_async(self.config)
-        self.account_store = self.api.account_store
-        self.message_store = self.api.mdb
+        mdb_config = self.config.get('message_store', {})
+        self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
+        redis_manager = TxRedisManager.from_config(
+            self.config.get('redis', {}), self.mdb_prefix)
+        self.manager = TxRiakManager.from_config({
+                'bucket_prefix': self.mdb_prefix})
+        self.account_store = AccountStore(self.manager)
+        self.message_store = MessageStore(self.manager, redis_manager)
 
     def add_metadata_to_message(self, message):
         """
@@ -187,7 +197,7 @@ class LookupConversationMiddleware(GoApplicationRouterMiddleware):
                                                                     message)
         batch_key = LookupBatchMiddleware.map_message_to_batch_key(message)
         if account_key and batch_key:
-            conversation_store = self.api.conversation_store(account_key)
+            conversation_store = ConversationStore(self.manager, account_key)
             account_submanager = conversation_store.manager
             batch = self.message_store.batches(batch_key)
             all_conversations = yield batch.backlinks.conversations(
@@ -255,11 +265,17 @@ class OptOutMiddleware(BaseMiddleware):
 
 class DebitAccountMiddleware(TransportMiddleware):
 
-    @inlineCallbacks
     def setup_middleware(self):
-        self.api = yield VumiApi.from_config_async(self.config)
-        self.tpm = self.api.tpm
-        self.cm = self.api.cm
+        # TODO: There really needs to be a helper function to
+        #       turn this config into managers.
+        from go.vumitools.api import get_redis
+        r_server = get_redis(self.config)
+        tpm_config = self.config.get('tagpool_manager', {})
+        tpm_prefix = tpm_config.get('tagpool_prefix', 'tagpool_store')
+        self.tpm = TagpoolManager(r_server, tpm_prefix)
+        cm_config = self.config.get('credit_manager', {})
+        cm_prefix = cm_config.get('credit_prefix', 'credit_store')
+        self.cm = CreditManager(r_server, cm_prefix)
 
     def _credits_per_message(self, pool):
         tagpool_metadata = self.tpm.get_metadata(pool)
