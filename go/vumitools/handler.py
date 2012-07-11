@@ -34,6 +34,25 @@ class SendMessageCommandHandler(EventHandler):
         multiple tags per batch, this assumes lists of one, and takes
         the first entry of each list
         """
+        """
+        An Example of a event_dispatcher.yaml config file, with mapped
+        conversations in the config:
+            transport_name: event_dispatcher
+            r_prefix: vumigo
+            message_store:
+                store_prefix: vumigo.
+            event_handlers:
+                sign_up_handler: go.vumitools.handler.SendMessageCommandHandler
+            account_handler_configs:
+                '73ad76ec8c2e40858dc9d6b934049d95':
+                - - ['a6a20571e77f4aa89a8b10a771b005bc', sign_up]
+                  - - [ sign_up_handler, {
+                      worker_name: 'multi_survey_application',
+                      conversation_key: 'a6a20571e77f4aa89a8b10a771b005bc'
+                      }
+                  ]
+        """
+
         log.info(
             "SendMessageCommandHandler handling event: %s with config: %s" % (
             event, handler_config))
