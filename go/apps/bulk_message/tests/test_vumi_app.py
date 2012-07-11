@@ -203,4 +203,12 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
 
         [msg] = yield self.get_dispatched_messages()
         self.assertEqual(msg.payload['to_addr'], "123456")
+        self.assertEqual(msg.payload['from_addr'], "666666")
         self.assertEqual(msg.payload['content'], "hello world")
+        self.assertEqual(msg.payload['transport_name'], "sphex_transport")
+        self.assertEqual(msg.payload['transport_type'], "sphex")
+        self.assertEqual(msg.payload['message_type'], "user_message")
+        self.assertEqual(msg.payload['helper_metadata']['go']['user_account'],
+                                                            user_account_key)
+        self.assertEqual(msg.payload['helper_metadata']['tag']['tag'],
+                                                            ['pool', 'tag1'])
