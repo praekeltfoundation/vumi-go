@@ -9,16 +9,14 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import TransportUserMessage
 from vumi.application.tests.test_base import ApplicationTestCase
-from vumi.tests.utils import FakeRedis, LogCatcher
-from vumi.persist.txriak_manager import TxRiakManager
+from vumi.persist.txredis_manager import TxRedisManager
+from vumi.tests.utils import LogCatcher
 
 from go.apps.surveys.vumi_app import SurveyApplication
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import CeleryTestMixIn, DummyConsumerFactory
 from go.vumitools.account import AccountStore
-
-from vxpolls.manager import PollManager
 
 
 def dummy_consumer_factory_factory_factory(publish_func):
@@ -33,7 +31,6 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
 
     application_class = SurveyApplication
     transport_type = u'sms'
-    timeout = 2
     default_questions = [{
         'copy': 'What is your favorite color? 1. Red 2. Yellow '
                 '3. Blue',
@@ -61,9 +58,9 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
     def setUp(self):
         super(TestSurveyApplication, self).setUp()
 
-        self._fake_redis = FakeRedis()
+        self.redis = yield TxRedisManager.from_config('FAKE_REDIS')
         self.config = {
-            'redis_cls': lambda **kw: self._fake_redis,
+            'redis': self.redis._client,
             'worker_name': 'survey_application',
             'message_store': {
                 'store_prefix': 'test.',
@@ -94,8 +91,8 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
 
         # Create a test user account
         self.user_account = yield self.account_store.new_user(u'testuser')
-        self.user_api = VumiUserApi(self.user_account.key, self.config,
-                                        TxRiakManager)
+        self.user_api = yield VumiUserApi.from_config_async(
+            self.user_account.key, self.config)
 
         # Add tags
         self.user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
@@ -107,8 +104,7 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         })
 
         # Setup the poll manager
-        self.pm = PollManager(self._fake_redis,
-                                self.config['vxpolls']['prefix'])
+        self.pm = self.app.pm
 
         # Give a user access to a tagpool
         self.user_api.api.account_store.tag_permissions(uuid.uuid4().hex,
@@ -131,22 +127,21 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         returnValue(group)
 
     @inlineCallbacks
-    def create_contact(self, name, surname, **kwargs):
+    def create_contact(self, name, surname, **kw):
         contact = yield self.user_api.contact_store.new_contact(name=name,
-            surname=surname, **kwargs)
+            surname=surname, **kw)
         yield contact.save()
         returnValue(contact)
 
     @inlineCallbacks
-    def create_conversation(self, conversation_type, subject, message,
-        **kwargs):
+    def create_conversation(self, conversation_type, subject, message, **kw):
         conversation = yield self.user_api.new_conversation(
-            conversation_type, subject, message, **kwargs)
+            conversation_type, subject, message, **kw)
         yield conversation.save()
         returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
-    def reply_to(self, msg, content, continue_session=True, **kwargs):
+    def reply_to(self, msg, content, continue_session=True, **kw):
         session_event = (None if continue_session
                             else TransportUserMessage.SESSION_CLOSE)
         reply = TransportUserMessage(
@@ -160,7 +155,7 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
             transport_type=msg['transport_type'],
             transport_metadata=msg['transport_metadata'],
             helper_metadata=msg['helper_metadata'],
-            **kwargs)
+            **kw)
         yield self.dispatch(reply)
 
     def create_survey(self, conversation, questions=None, end_response=None):
@@ -192,7 +187,7 @@ class TestSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
     @inlineCallbacks
     def tearDown(self):
         self.restore_celery()
-        self._fake_redis.teardown()
+        yield self.redis._close()
         self.pm.stop()
         yield self.app.manager.purge_all()
         yield super(TestSurveyApplication, self).tearDown()

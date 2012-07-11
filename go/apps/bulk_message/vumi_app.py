@@ -6,12 +6,13 @@
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.application import ApplicationWorker
-from vumi.persist.message_store import MessageStore
+from vumi.components.message_store import MessageStore
 from vumi.persist.txriak_manager import TxRiakManager
+from vumi.persist.txredis_manager import TxRedisManager
 from vumi.middleware import TaggingMiddleware
 from vumi import log
 
-from go.vumitools.api import VumiApiCommand, get_redis
+from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.middleware import DebitAccountMiddleware
 
@@ -42,9 +43,10 @@ class GoApplication(ApplicationWorker):
 
     @inlineCallbacks
     def setup_application(self):
-        r_server = get_redis(self.config)
+        redis = yield TxRedisManager.from_config(
+            self.config.get('redis', {}), self.mdb_prefix)
         self.manager = TxRiakManager.from_config(self.config.get('riak'))
-        self.store = MessageStore(self.manager, r_server, self.mdb_prefix)
+        self.store = MessageStore(self.manager, redis)
         self.control_consumer = yield self.consume(
             '%s.control' % (self.worker_name,),
             self.consume_control_command,
