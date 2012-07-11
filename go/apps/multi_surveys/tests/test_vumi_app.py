@@ -14,7 +14,8 @@ from vumi.tests.utils import LogCatcher
 
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
-from go.vumitools.tests.utils import CeleryTestMixIn, DummyConsumerFactory
+from go.vumitools.tests.utils import (
+    RiakTestMixin, CeleryTestMixIn, DummyConsumerFactory)
 from go.vumitools.account import AccountStore
 from go.apps.multi_surveys.vumi_app import MultiSurveyApplication
 
@@ -27,7 +28,8 @@ def dummy_consumer_factory_factory_factory(publish_func):
     return dummy_consumer_factory_factory
 
 
-class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
+class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn,
+                                 RiakTestMixin):
 
     application_class = MultiSurveyApplication
     transport_type = u'sms'
@@ -52,6 +54,7 @@ class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
     @inlineCallbacks
     def setUp(self):
         super(TestMultiSurveyApplication, self).setUp()
+        self.riak_setup()
 
         self.redis = yield TxRedisManager.from_config('FAKE_REDIS')
         self.config = {
@@ -80,6 +83,7 @@ class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
 
         # Setup Celery so that it uses FakeAMQP instead of the real one.
         self.manager = self.app.store.manager  # YOINK!
+        self._riak_managers.append(self.manager)
         self.account_store = AccountStore(self.manager)
         self.VUMI_COMMANDS_CONSUMER = dummy_consumer_factory_factory_factory(
             self.publish_command)
@@ -186,7 +190,7 @@ class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn):
         self.restore_celery()
         yield self.redis._close()
         self.pm.stop()
-        yield self.app.manager.purge_all()
+        yield self.riak_teardown()
         yield super(TestMultiSurveyApplication, self).tearDown()
 
     @inlineCallbacks

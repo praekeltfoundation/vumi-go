@@ -3,7 +3,10 @@ from django.utils.functional import wraps
 from django.test import TestCase
 
 from vumi.persist.redis_manager import RedisManager
-from vumi.persist.riak_manager import RiakManager
+from vumi.persist import riak_manager
+
+from go.vumitools.account import UserAccount
+from go.vumitools.contact import Contact, ContactGroup
 
 
 class override_settings(object):
@@ -46,12 +49,15 @@ class VumiGoDjangoTestCase(TestCase):
     def get_riak_manager(self, config=None):
         if config is None:
             config = settings.VUMI_API_CONFIG['riak_manager']
-        return RiakManager.from_config(config)
+        manager = riak_manager.RiakManager.from_config(config)
+        self._riak_managers.append(manager)
+        return manager
 
     def setUp(self):
         self._settings_patches = []
         self.set_up_redis()
         if self.USE_RIAK:
+            self._riak_managers = []
             self.riak_manager = self.get_riak_manager()
             # We don't purge here, because fixtures put stuff in riak.
 
@@ -64,9 +70,33 @@ class VumiGoDjangoTestCase(TestCase):
     def tearDown(self):
         self.redis._close()
         if self.USE_RIAK:
-            self.riak_manager.purge_all()
+            for manager in self._riak_managers:
+                # If buckets are empty, they aren't listed. However, they may
+                # still have properties set. Therefore, we find all account
+                # keys and clear properties from their associated buckets.
+                accounts = self._list_accounts(manager)
+                manager.purge_all()
+                # This must happen after the objects are deleted, otherwise the
+                # indexes don't go away.
+                self._clear_bucket_properties(accounts, manager)
         for patch in reversed(self._settings_patches):
             patch.disable()
+
+    def _list_accounts(self, manager):
+        return manager.client.bucket(
+            manager.bucket_name(UserAccount)).get_keys()
+
+    def _clear_bucket_properties(self, accounts, manager):
+        if not hasattr(riak_manager, 'delete_bucket_properties'):
+            # This doesn't exist everywhere yet.
+            return
+
+        for account_key in accounts:
+            sub_manager = manager.sub_manager(account_key)
+            riak_manager.delete_bucket_properties(
+                manager.client.bucket(sub_manager.bucket_name(Contact)))
+            riak_manager.delete_bucket_properties(
+                manager.client.bucket(sub_manager.bucket_name(ContactGroup)))
 
     def patch_settings(self, **kwargs):
         patch = override_settings(**kwargs)
