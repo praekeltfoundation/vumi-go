@@ -81,8 +81,10 @@ class SurveyApplication(PollApplication):
         contact = yield self.get_contact_for_message(message)
         if contact:
             participant = self.pm.get_participant(poll_id, message.user())
-            for key, value in contact.extra.iteritems():
-                if key not in participant.labels:
+            config = self.pm.get_config(poll_id)
+            for key in config.get('include_labels', []):
+                value = contact.extra[key]
+                if value and key not in participant.labels:
                     participant.set_label(key, value)
             self.pm.save_participant(poll_id, participant)
 
