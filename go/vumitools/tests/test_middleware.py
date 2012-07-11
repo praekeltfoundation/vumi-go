@@ -24,6 +24,9 @@ class MiddlewareTestCase(RiakTestMixin, TestCase):
         self.mdb_prefix = 'test_message_store'
         self.default_config = {
             'redis': self.redis._client,
+            'riak_manager': {
+                'bucket_prefix': 'test_middleware',
+            },
             'message_store': {
                 'store_prefix': self.mdb_prefix,
             }
