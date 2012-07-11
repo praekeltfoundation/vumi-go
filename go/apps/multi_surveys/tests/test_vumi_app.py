@@ -2,38 +2,25 @@
 
 """Tests for go.apps.multi_surveys.vumi_app"""
 
-import json
 import uuid
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import TransportUserMessage
-from vumi.application.tests.test_base import ApplicationTestCase
-from vumi.persist.txredis_manager import TxRedisManager
 from vumi.tests.utils import LogCatcher
 
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
-from go.vumitools.tests.utils import (
-    RiakTestMixin, CeleryTestMixIn, DummyConsumerFactory)
+from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.account import AccountStore
 from go.apps.multi_surveys.vumi_app import MultiSurveyApplication
 
 
-def dummy_consumer_factory_factory_factory(publish_func):
-    def dummy_consumer_factory_factory():
-        dummy_consumer_factory = DummyConsumerFactory()
-        dummy_consumer_factory.publish = publish_func
-        return dummy_consumer_factory
-    return dummy_consumer_factory_factory
-
-
-class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn,
-                                 RiakTestMixin):
+class TestMultiSurveyApplication(AppWorkerTestCase):
 
     application_class = MultiSurveyApplication
     transport_type = u'sms'
-    timeout = 2
+
     default_polls = {
         0: [{
             'copy': 'Color? 1. Red 2. Blue', 'label': 'color',
@@ -54,9 +41,6 @@ class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn,
     @inlineCallbacks
     def setUp(self):
         super(TestMultiSurveyApplication, self).setUp()
-        self.riak_setup()
-
-        self.redis = yield TxRedisManager.from_config('FAKE_REDIS')
         self.config = {
             'redis': self.redis._client,
             'worker_name': 'multi_survey_application',
@@ -85,9 +69,6 @@ class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn,
         self.manager = self.app.store.manager  # YOINK!
         self._riak_managers.append(self.manager)
         self.account_store = AccountStore(self.manager)
-        self.VUMI_COMMANDS_CONSUMER = dummy_consumer_factory_factory_factory(
-            self.publish_command)
-        self.setup_celery_for_tests()
 
         # Create a test user account
         self.user_account = yield self.account_store.new_user(u'testuser')
@@ -176,10 +157,6 @@ class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn,
                                'Thanks for completing the survey'))
             self.pm.set(poll_id, config)
 
-    def publish_command(self, cmd_dict):
-        data = json.dumps(cmd_dict)
-        self._amqp.publish_raw('vumi', 'vumi.api', data)
-
     @inlineCallbacks
     def wait_for_messages(self, nr_of_messages, total_length):
         msgs = yield self.wait_for_dispatched_messages(total_length)
@@ -187,10 +164,7 @@ class TestMultiSurveyApplication(ApplicationTestCase, CeleryTestMixIn,
 
     @inlineCallbacks
     def tearDown(self):
-        self.restore_celery()
-        yield self.redis._close()
         self.pm.stop()
-        yield self.riak_teardown()
         yield super(TestMultiSurveyApplication, self).tearDown()
 
     @inlineCallbacks
