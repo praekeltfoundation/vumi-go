@@ -2,6 +2,7 @@ from django.conf import settings, UserSettingsHolder
 from django.utils.functional import wraps
 from django.test import TestCase
 
+from vumi.persist.redis_manager import RedisManager
 from vumi.persist.riak_manager import RiakManager
 
 
@@ -49,11 +50,19 @@ class VumiGoDjangoTestCase(TestCase):
 
     def setUp(self):
         self._settings_patches = []
+        self.set_up_redis()
         if self.USE_RIAK:
             self.riak_manager = self.get_riak_manager()
             # We don't purge here, because fixtures put stuff in riak.
 
+    def set_up_redis(self):
+        self.redis = RedisManager.from_config('FAKE_REDIS')
+        vumi_config = settings.VUMI_API_CONFIG.copy()
+        vumi_config['redis'] = self.redis._client
+        self.patch_settings(VUMI_API_CONFIG=vumi_config)
+
     def tearDown(self):
+        self.redis._close()
         if self.USE_RIAK:
             self.riak_manager.purge_all()
         for patch in reversed(self._settings_patches):

@@ -6,8 +6,6 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.conf import settings
 
-from vumi.tests.utils import FakeRedis
-
 from go.vumitools.api import VumiApi
 from go.vumitools.tests.utils import CeleryTestMixIn
 from go.base.tests.utils import VumiGoDjangoTestCase, declare_longcode_tags
@@ -69,15 +67,11 @@ class ConversationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
 
     def tearDown(self):
         self.restore_celery()
-        self._fake_redis.teardown()
+        self.redis._close()
         super(ConversationTestCase, self).tearDown()
 
     def setup_api(self):
-        self._fake_redis = FakeRedis()
-        vumi_config = settings.VUMI_API_CONFIG.copy()
-        vumi_config['redis_cls'] = lambda **kws: self._fake_redis
-        self.patch_settings(VUMI_API_CONFIG=vumi_config)
-        self.api = VumiApi(settings.VUMI_API_CONFIG)
+        self.api = VumiApi.from_config(settings.VUMI_API_CONFIG)
 
     def declare_longcode_tags(self):
         declare_longcode_tags(self.api)
