@@ -4,15 +4,15 @@ from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.persist.txriak_manager import TxRiakManager
-from vumi.persist.message_store import MessageStore
+from vumi.persist.txredis_manager import TxRedisManager
+from vumi.components.message_store import MessageStore
 from vumi.message import TransportUserMessage
-from vumi.tests.utils import FakeRedis
 from vumi.middleware import TaggingMiddleware
 
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
-from go.vumitools.middleware import (NormalizeMsisdnMiddleware,
-    LookupAccountMiddleware, LookupBatchMiddleware,
+from go.vumitools.middleware import (
+    NormalizeMsisdnMiddleware, LookupAccountMiddleware, LookupBatchMiddleware,
     LookupConversationMiddleware, OptOutMiddleware)
 
 
@@ -20,34 +20,34 @@ class MiddlewareTestCase(TestCase):
 
     @inlineCallbacks
     def setUp(self):
+        self.redis = yield TxRedisManager.from_config('FAKE_REDIS')
         self.mdb_prefix = 'test_message_store'
         self.default_config = {
+            'redis': self.redis._client,
             'message_store': {
                 'store_prefix': self.mdb_prefix,
             }
         }
-        self.r_server = FakeRedis()
 
         self.manager = TxRiakManager.from_config({
                 'bucket_prefix': self.mdb_prefix})
         self.account_store = AccountStore(self.manager)
-        self.message_store = MessageStore(self.manager, self.r_server,
-                                            self.mdb_prefix)
+        self.message_store = MessageStore(self.manager, self.redis)
 
         self.account = yield self.account_store.new_user(u'user')
-        self.conversation_store = ConversationStore.from_user_account(
-                                                                self.account)
+        self.conv_store = ConversationStore.from_user_account(self.account)
         self.tag = ('xmpp', 'test1@xmpp.org')
 
     @inlineCallbacks
     def tearDown(self):
         yield self.manager.purge_all()
+        yield self.redis._close()
         yield super(MiddlewareTestCase, self).tearDown()
 
     @inlineCallbacks
     def create_conversation(self, conversation_type=u'bulk_message',
-        subject=u'subject', message=u'message'):
-        conversation = yield self.conversation_store.new_conversation(
+                            subject=u'subject', message=u'message'):
+        conversation = yield self.conv_store.new_conversation(
             conversation_type, subject, message)
         returnValue(conversation)
 

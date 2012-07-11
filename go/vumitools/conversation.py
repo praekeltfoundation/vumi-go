@@ -4,9 +4,9 @@ from uuid import uuid4
 from datetime import datetime
 
 from vumi.persist.model import Model, Manager
-from vumi.persist.message_store import Batch
-from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
-                                Json)
+from vumi.persist.fields import (
+    Unicode, ManyToMany, ForeignKey, Timestamp, Json)
+from vumi.components.message_store import Batch
 
 from twisted.internet.defer import returnValue
 

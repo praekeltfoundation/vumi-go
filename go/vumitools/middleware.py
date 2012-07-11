@@ -3,12 +3,13 @@ import sys
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.middleware import (TransportMiddleware, TaggingMiddleware,
-                                BaseMiddleware)
-from vumi.application import TagpoolManager
+from vumi.middleware import (
+    TransportMiddleware, TaggingMiddleware, BaseMiddleware)
 from vumi.utils import normalize_msisdn
 from vumi.persist.txriak_manager import TxRiakManager
-from vumi.persist.message_store import MessageStore
+from vumi.persist.txredis_manager import TxRedisManager
+from vumi.components.tagpool import TagpoolManager
+from vumi.components import MessageStore
 from vumi import log
 
 from go.vumitools.credit import CreditManager
@@ -75,17 +76,14 @@ class GoApplicationRouterMiddleware(BaseMiddleware):
 
     """
     def setup_middleware(self):
-        from go.vumitools.api import get_redis
-        r_server = get_redis(self.config)
-
         mdb_config = self.config.get('message_store', {})
         self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
-        r_server = get_redis(self.config)
+        redis_manager = TxRedisManager.from_config(
+            self.config.get('redis', {}), self.mdb_prefix)
         self.manager = TxRiakManager.from_config({
                 'bucket_prefix': self.mdb_prefix})
         self.account_store = AccountStore(self.manager)
-        self.message_store = MessageStore(self.manager, r_server,
-                                            self.mdb_prefix)
+        self.message_store = MessageStore(self.manager, redis_manager)
 
     def add_metadata_to_message(self, message):
         """
