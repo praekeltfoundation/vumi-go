@@ -9,8 +9,9 @@ from vumi.dispatchers.tests.test_base import DispatcherTestCase
 from vumi.dispatchers.base import BaseDispatchWorker
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.persist.txriak_manager import TxRiakManager
-from vumi.persist.message_store import MessageStore
-from vumi.tests.utils import FakeRedis, LogCatcher
+from vumi.persist.txredis_manager import TxRedisManager
+from vumi.components.message_store import MessageStore
+from vumi.tests.utils import LogCatcher
 
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiApiCommand
@@ -25,15 +26,16 @@ class CommandDispatcherTestCase(ApplicationTestCase):
     @inlineCallbacks
     def setUp(self):
         super(CommandDispatcherTestCase, self).setUp()
-        self._fake_redis = FakeRedis()
+        self.redis = yield TxRedisManager.from_config('FAKE_REDIS')
         self.api = yield self.get_application({
-            'redis_cls': lambda **kw: self._fake_redis,
+            'redis': self.redis._client,
             'worker_names': ['worker_1', 'worker_2'],
         })
 
+    @inlineCallbacks
     def tearDown(self):
-        self._fake_redis.teardown()
-        return super(CommandDispatcherTestCase, self).tearDown()
+        yield self.redis._close()
+        yield super(CommandDispatcherTestCase, self).tearDown()
 
     def publish_command(self, cmd):
         return self.dispatch(cmd, rkey='vumi.api')
@@ -72,16 +74,17 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(GoApplicationRouterTestCase, self).setUp()
-        self.r_server = FakeRedis()
+        self.redis = yield TxRedisManager.from_config('FAKE_REDIS')
         self.mdb_prefix = 'test_message_store'
         self.message_store_config = {
+            'redis': self.redis._client,
             'message_store': {
                 'store_prefix': self.mdb_prefix,
             }
         }
         self.dispatcher = yield self.get_dispatcher({
             'router_class': 'go.vumitools.api_worker.GoApplicationRouter',
-            'redis_clr': lambda: self.r_server,
+            'redis': self.redis._client,
             'transport_names': [
                 self.transport_name,
             ],
@@ -118,8 +121,7 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
         self.manager = TxRiakManager.from_config({
                 'bucket_prefix': self.mdb_prefix})
         self.account_store = AccountStore(self.manager)
-        self.message_store = MessageStore(self.manager, self.r_server,
-                                            self.mdb_prefix)
+        self.message_store = MessageStore(self.manager, self.redis)
 
         self.account = yield self.account_store.new_user(u'user')
         self.conversation_store = ConversationStore.from_user_account(
@@ -130,6 +132,7 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
     @inlineCallbacks
     def tearDown(self):
         yield self.manager.purge_all()
+        yield self.redis._close()
         yield super(GoApplicationRouterTestCase, self).tearDown()
 
     @inlineCallbacks
