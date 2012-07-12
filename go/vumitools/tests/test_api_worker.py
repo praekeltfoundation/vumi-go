@@ -9,7 +9,6 @@ from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.dispatchers.tests.test_base import DispatcherTestCase
 from vumi.dispatchers.base import BaseDispatchWorker
 from vumi.middleware.tagger import TaggingMiddleware
-from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.message_store import MessageStore
 from vumi.tests.utils import FakeRedis, LogCatcher
 from vumi.message import TransportUserMessage
@@ -18,6 +17,7 @@ from go.vumitools.api_worker import CommandDispatcher, GoMessageMetadata
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.account import AccountStore
+from go.vumitools.tests.utils import RiakTestMixin
 
 
 class CommandDispatcherTestCase(ApplicationTestCase):
@@ -65,10 +65,11 @@ class CommandDispatcherTestCase(ApplicationTestCase):
                                 error['message'][0])
 
 
-class GoMessageMetadataTestCase(TestCase):
+class GoMessageMetadataTestCase(RiakTestMixin, TestCase):
 
     @inlineCallbacks
     def setUp(self):
+        self.riak_setup()
         self.mdb_prefix = 'test_message_store'
         self.default_config = {
             'message_store': {
@@ -77,7 +78,7 @@ class GoMessageMetadataTestCase(TestCase):
         }
         self.r_server = FakeRedis()
 
-        self.manager = TxRiakManager.from_config({
+        self.manager = self.get_riak_manager({
                 'bucket_prefix': self.mdb_prefix})
         self.account_store = AccountStore(self.manager)
         self.message_store = MessageStore(self.manager, self.r_server,
@@ -88,13 +89,12 @@ class GoMessageMetadataTestCase(TestCase):
                                                                 self.account)
         self.tag = ('xmpp', 'test1@xmpp.org')
 
-    @inlineCallbacks
     def tearDown(self):
-        yield self.manager.purge_all()
+        return self.riak_teardown()
 
     @inlineCallbacks
     def create_conversation(self, conversation_type=u'bulk_message',
-        subject=u'subject', message=u'message'):
+                            subject=u'subject', message=u'message'):
         conversation = yield self.conversation_store.new_conversation(
             conversation_type, subject, message)
         returnValue(conversation)
@@ -214,15 +214,15 @@ class GoMessageMetadataTestCase(TestCase):
         self.assertEqual(md._go_metadata, other_md._go_metadata)
 
 
-class GoApplicationRouterTestCase(DispatcherTestCase):
+class GoApplicationRouterTestCase(RiakTestMixin, DispatcherTestCase):
 
     dispatcher_class = BaseDispatchWorker
     transport_name = 'test_transport'
-    timeout = 1
 
     @inlineCallbacks
     def setUp(self):
         yield super(GoApplicationRouterTestCase, self).setUp()
+        self.riak_setup()
         self.r_server = FakeRedis()
         self.mdb_prefix = 'test_message_store'
         self.dispatcher = yield self.get_dispatcher({
@@ -255,7 +255,7 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
         })
 
         # get the router to test
-        self.manager = TxRiakManager.from_config({
+        self.manager = self.get_riak_manager({
                 'bucket_prefix': self.mdb_prefix})
         self.account_store = AccountStore(self.manager)
         self.message_store = MessageStore(self.manager, self.r_server,
@@ -269,7 +269,7 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
 
     @inlineCallbacks
     def tearDown(self):
-        yield self.manager.purge_all()
+        yield self.riak_teardown()
         yield super(GoApplicationRouterTestCase, self).tearDown()
 
     @inlineCallbacks
