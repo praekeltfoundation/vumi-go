@@ -6,14 +6,12 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.persist.message_store import MessageStore
 from vumi.message import TransportUserMessage
 from vumi.tests.utils import FakeRedis
-from vumi.middleware import TaggingMiddleware
 
 from go.vumitools.tests.utils import RiakTestMixin
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
-from go.vumitools.middleware import (NormalizeMsisdnMiddleware,
-    LookupAccountMiddleware, LookupBatchMiddleware,
-    LookupConversationMiddleware, OptOutMiddleware)
+from go.vumitools.middleware import (
+    NormalizeMsisdnMiddleware, OptOutMiddleware)
 
 
 class MiddlewareTestCase(RiakTestMixin, TestCase):
@@ -87,87 +85,6 @@ class NormalizeMisdnMiddlewareTestCase(MiddlewareTestCase):
         msg = self.mk_msg(to_addr='8007', from_addr='256123456789')
         msg = self.mw.handle_inbound(msg, 'dummy_endpoint')
         self.assertEqual(msg['from_addr'], '+256123456789')
-
-
-class LookupAccountMiddlewareTestCase(MiddlewareTestCase):
-
-    @inlineCallbacks
-    def setUp(self):
-        yield super(LookupAccountMiddlewareTestCase, self).setUp()
-        conversation = yield self.create_conversation()
-        yield self.tag_conversation(conversation, self.tag)
-        self.mw = self.create_middleware(LookupAccountMiddleware)
-
-    @inlineCallbacks
-    def test_account_lookup(self):
-        msg = self.mk_msg('to@domain.org', 'from@domain.org')
-        TaggingMiddleware.add_tag_to_msg(msg, self.tag)
-        yield self.mw.handle_inbound(msg, 'dummy_endpoint')
-        self.assertEqual(msg['helper_metadata'], {
-            'tag': {
-                'tag': list(self.tag),
-            },
-            'go': {
-                'user_account': self.account.key,
-            }
-        })
-
-
-class LookupBatchMiddlewareTestCase(MiddlewareTestCase):
-
-    @inlineCallbacks
-    def setUp(self):
-        yield super(LookupBatchMiddlewareTestCase, self).setUp()
-        self.mw = self.create_middleware(LookupBatchMiddleware)
-
-    @inlineCallbacks
-    def test_batch_lookup(self):
-        conversation = yield self.create_conversation()
-        batch_id = yield self.tag_conversation(conversation, self.tag)
-        msg = self.mk_msg('to@domain.org', 'from@domain.org')
-        TaggingMiddleware.add_tag_to_msg(msg, self.tag)
-        yield self.mw.handle_inbound(msg, 'dummy_endpoint')
-        self.assertEqual(msg['helper_metadata'], {
-            'go': {
-                'batch_key': batch_id,
-            },
-            'tag': {
-                'tag': list(self.tag),
-            }
-        })
-
-
-class LookupConversationMiddlewareTestCase(MiddlewareTestCase):
-
-    @inlineCallbacks
-    def setUp(self):
-        yield super(LookupConversationMiddlewareTestCase, self).setUp()
-        self.account_mw = self.create_middleware(LookupAccountMiddleware)
-        self.batch_mw = self.create_middleware(LookupBatchMiddleware)
-        self.conv_mw = self.create_middleware(LookupConversationMiddleware)
-
-    @inlineCallbacks
-    def test_conversation_lookup(self):
-        conversation = yield self.create_conversation()
-        batch_id = yield self.tag_conversation(conversation, self.tag)
-        msg = self.mk_msg('to@domain.org', 'from@domain.org')
-        TaggingMiddleware.add_tag_to_msg(msg, self.tag)
-        yield self.account_mw.handle_inbound(msg, 'dummy_endpoint')
-        yield self.batch_mw.handle_inbound(msg, 'dummy_endpoint')
-        yield self.conv_mw.handle_inbound(msg, 'dummy_endpoint')
-        self.assertEqual(msg['helper_metadata'], {
-            'go': {
-                'batch_key': batch_id,
-                'user_account': self.account.key,
-            },
-            'tag': {
-                'tag': list(self.tag),
-            },
-            'conversations': {
-                'conversation_key': conversation.key,
-                'conversation_type': conversation.conversation_type,
-            }
-        })
 
 
 class OptOutMiddlewareTestCase(MiddlewareTestCase):

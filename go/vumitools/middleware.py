@@ -9,11 +9,9 @@ from vumi.application import TagpoolManager
 from vumi.utils import normalize_msisdn
 from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.message_store import MessageStore
-from vumi import log
 
 from go.vumitools.credit import CreditManager
 from go.vumitools.account import AccountStore
-from go.vumitools.conversation import ConversationStore
 
 
 class NormalizeMsisdnMiddleware(TransportMiddleware):
@@ -111,128 +109,6 @@ class GoApplicationRouterMiddleware(BaseMiddleware):
     def handle_outbound(self, message, endpoint):
         yield self.add_metadata_to_message(message)
         returnValue(message)
-
-
-class LookupAccountMiddleware(GoApplicationRouterMiddleware):
-    """
-    Look up the account_key for a given message by retrieving
-    this from the message tag's info.
-
-    *NOTE*  This requires the `TaggingMiddleware` to be configured and placed
-            before this middleware for this to work as it expects certain
-            values to be set in the `helper_metadata`
-    """
-
-    @inlineCallbacks
-    def find_account_key_for_message(self, message):
-        # NOTE: there is probably a better way of doing this when given a
-        #       batch key but I'm not seeing it right now.
-        tag = TaggingMiddleware.map_msg_to_tag(message)
-        if tag:
-            current_tag = yield self.message_store.get_tag_info(tag)
-            if current_tag:
-                batch = yield current_tag.current_batch.get()
-                if batch:
-                    returnValue(batch.metadata['user_account'])
-
-    @inlineCallbacks
-    def add_metadata_to_message(self, message):
-        account_key = yield self.find_account_key_for_message(message)
-        if account_key:
-            helper_metadata = message.get('helper_metadata', {})
-            go_metadata = helper_metadata.setdefault('go', {})
-            go_metadata['user_account'] = account_key
-
-    @staticmethod
-    def map_message_to_account_key(message):
-        go_metadata = message.get('helper_metadata', {}).setdefault('go', {})
-        return go_metadata.get('user_account')
-
-
-class LookupBatchMiddleware(GoApplicationRouterMiddleware):
-    """
-    Look up a `batch_key` by inspecting the tag for a given message.
-
-    *NOTE*  This requires the `TaggingMiddleware` to be configured and placed
-            before this middleware to ensure that the appropriate tagging
-            values are set in the `helper_metadata`
-    """
-
-    @inlineCallbacks
-    def find_batch_for_message(self, message):
-        tag = TaggingMiddleware.map_msg_to_tag(message)
-        if tag:
-            current_tag = yield self.message_store.get_tag_info(tag)
-            if current_tag:
-                batch = yield current_tag.current_batch.get()
-                returnValue(batch)
-
-    @inlineCallbacks
-    def add_metadata_to_message(self, message):
-        batch = yield self.find_batch_for_message(message)
-        if batch:
-            helper_metadata = message.get('helper_metadata', {})
-            go_metadata = helper_metadata.setdefault('go', {})
-            go_metadata['batch_key'] = batch.key
-
-    @staticmethod
-    def map_message_to_batch_key(message):
-        go_metadata = message.get('helper_metadata', {}).get('go', {})
-        return go_metadata.get('batch_key')
-
-
-class LookupConversationMiddleware(GoApplicationRouterMiddleware):
-    """
-    Look up a conversation based on the `account_key` and `batch_key` that
-    have been stored in the `helper_metadata` by the `LookupAccountMiddleware`
-    and the `LookupBatchMiddleware` middlewares.
-
-    *NOTE*  This middleware depends on the `LookupAccountMiddleware`,
-            `LookupBatchMiddleware` and the `TaggingMiddleware` being
-            configured and placed before this middleware to ensure that the
-            appropriate variables are set in the `helper_metadata`
-    """
-
-    @inlineCallbacks
-    def find_conversation_for_message(self, message):
-        account_key = LookupAccountMiddleware.map_message_to_account_key(
-                                                                    message)
-        batch_key = LookupBatchMiddleware.map_message_to_batch_key(message)
-        if account_key and batch_key:
-            conversation_store = ConversationStore(self.manager, account_key)
-            account_submanager = conversation_store.manager
-            batch = self.message_store.batches(batch_key)
-            all_conversations = yield batch.backlinks.conversations(
-                                                            account_submanager)
-            conversations = [c for c in all_conversations if not
-                                c.ended()]
-            if conversations:
-                if len(conversations) > 1:
-                    conv_keys = [c.key for c in conversations]
-                    log.warning('Multiple conversations found '
-                        'going with most recent: %r' % (conv_keys,))
-                conversation = sorted(conversations, reverse=True,
-                    key=lambda c: c.start_timestamp)[0]
-                returnValue(conversation)
-
-    @inlineCallbacks
-    def add_metadata_to_message(self, message):
-        conversation = yield self.find_conversation_for_message(message)
-        if conversation:
-            helper_metadata = message.get('helper_metadata', {})
-            conv_metadata = helper_metadata.setdefault('conversations', {})
-            conv_metadata['conversation_key'] = conversation.key
-            conv_metadata['conversation_type'] = conversation.conversation_type
-
-    @staticmethod
-    def map_message_to_conversation_info(message):
-        helper_metadata = message.get('helper_metadata', {})
-        conv_metadata = helper_metadata.get('conversations', {})
-        if conv_metadata:
-            return (
-                conv_metadata['conversation_key'],
-                conv_metadata['conversation_type']
-            )
 
 
 class OptOutMiddleware(BaseMiddleware):

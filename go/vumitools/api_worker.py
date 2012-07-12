@@ -3,14 +3,18 @@
 
 """Vumi application worker for the vumitools API."""
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application import ApplicationWorker
 from vumi.dispatchers.base import BaseDispatchRouter
 from vumi import log
+from vumi.middleware import TaggingMiddleware
+from vumi.persist.txriak_manager import TxRiakManager
+from vumi.persist.message_store import MessageStore
 
 from go.vumitools.api import VumiApiCommand
-from go.vumitools.middleware import (LookupConversationMiddleware,
+from go.vumitools.conversation import ConversationStore
+from go.vumitools.middleware import (
     OptOutMiddleware)
 
 
@@ -69,6 +73,167 @@ class CommandDispatcher(ApplicationWorker):
             log.error('No worker publisher available for %s' % (cmd,))
 
 
+class GoMessageMetadata(object):
+    """Look up various bits of metadata for a Vumi Go message.
+
+    We store metadata in two places:
+
+    1. Keys into the various stores go into the message helper_metadata.
+       This is helpful for preventing unnecessary duplicate lookups between
+       workers.
+
+    2. Objects retreived from those stores get stashed on the message object.
+       This is helpful for preventing duplicate lookups within a worker.
+       (Between different middlewares, for example.)
+    """
+
+    def __init__(self, message_store, message):
+        self.message_store = message_store
+        self.message = message
+
+        # Easier access to metadata.
+        message_metadata = message.get('helper_metadata', {})
+        self._go_metadata = message_metadata.setdefault('go', {})
+
+        # A place to store objects we don't want serialised.
+        if not hasattr(message, '_store_objects'):
+            message._store_objects = {}
+        self._store_objects = message._store_objects
+
+        # If we don't have a tag, we want to blow up early in some places.
+        self.tag = TaggingMiddleware.map_msg_to_tag(message)
+
+    @inlineCallbacks
+    def _get_tag_info(self):
+        if not self.tag:
+            # Without a tag, there's no point in bothering.
+            return
+
+        if 'tag_info' in self._store_objects:
+            # We already have this, no need to look it up.
+            returnValue(self._store_objects['tag_info'])
+
+        # Get it from the message store.
+        tag_info = yield self.message_store.get_tag_info(self.tag)
+        self._store_objects['tag_info'] = tag_info
+        returnValue(tag_info)
+
+    @inlineCallbacks
+    def _find_batch(self):
+        if 'batch' in self._store_objects:
+            # We already have this, no need to look it up.
+            returnValue(self._store_objects['batch'])
+
+        if 'batch_key' in self._go_metadata:
+            # We know what it is, we just need to get it.
+            batch = yield self.message_store.get_batch(
+                self._go_metadata['batch_key'])
+            self._store_objects['batch'] = batch
+            returnValue(batch)
+
+        # Look it up from the tag, assuming we have one.
+        tag_info = yield self._get_tag_info()
+        if tag_info:
+            batch = yield tag_info.current_batch.get()
+            self._store_objects['batch'] = batch
+            self._go_metadata['batch_key'] = batch.key
+            returnValue(batch)
+
+    @inlineCallbacks
+    def get_batch_key(self):
+        if 'batch_key' not in self._go_metadata:
+            # We're calling _find_batch() for the side effect, which is to put
+            # the batch key in the metadata if there is one.
+            yield self._find_batch()
+        returnValue(self._go_metadata.get('batch_key'))
+
+    @inlineCallbacks
+    def _find_account_key(self):
+        if 'user_account' in self._go_metadata:
+            # We already have this, no need to look it up.
+            returnValue(self._go_metadata['user_account'])
+
+        # Look it up from the batch, assuming we can get one.
+        batch = yield self._find_batch()
+        if batch:
+            user_account_key = batch.metadata['user_account']
+            self._go_metadata['user_account'] = user_account_key
+            returnValue(user_account_key)
+
+    @inlineCallbacks
+    def get_account_key(self):
+        if 'user_account' not in self._go_metadata:
+            # We're calling _find_account_key() for the side effect, which is
+            # to put the account key in the metadata if there is one.
+            yield self._find_account_key()
+        returnValue(self._go_metadata.get('user_account'))
+
+    @inlineCallbacks
+    def _get_conversation_store(self):
+        if 'conv_store' in self._store_objects:
+            returnValue(self._store_objects['conv_store'])
+
+        # We need an account key to get at a conversation.
+        account_key = yield self.get_account_key()
+        if not account_key:
+            return
+
+        conv_store = ConversationStore(self.message_store.manager, account_key)
+        self._store_objects['conv_store'] = conv_store
+        returnValue(conv_store)
+
+    @inlineCallbacks
+    def _find_conversation(self):
+        if 'conversation' in self._store_objects:
+            # We already have this, no need to look it up.
+            returnValue(self._store_objects['conversation'])
+
+        # We need a conversation store.
+        conv_store = yield self._get_conversation_store()
+        if not conv_store:
+            return
+
+        if 'conversation_key' in self._go_metadata:
+            # We know what it is, we just need to get it.
+            conversation = yield conv_store.get_conversation_by_key(
+                self._go_metadata['conversation_key'])
+            returnValue(conversation)
+
+        batch = yield self._find_batch()
+        if not batch:
+            # Without a batch, we can't get a conversation.
+            return
+
+        all_conversations = yield batch.backlinks.conversations(
+            conv_store.manager)
+        conversations = [c for c in all_conversations if not c.ended()]
+        if not conversations:
+            # No open conversations for this batch.
+            return
+
+        # We may have more than one conversation here.
+        if len(conversations) > 1:
+            conv_keys = [c.key for c in conversations]
+            log.warning('Multiple conversations found '
+                        'going with most recent: %r' % (conv_keys,))
+        conversation = sorted(conversations, reverse=True,
+                              key=lambda c: c.start_timestamp)[0]
+
+        self._go_metadata['conversation_key'] = conversation.key
+        self._go_metadata['conversation_type'] = conversation.conversation_type
+        returnValue(conversation)
+
+    @inlineCallbacks
+    def get_conversation_info(self):
+        if 'conversation_key' not in self._go_metadata:
+            conv = yield self._find_conversation()
+            if conv is None:
+                # We couldn't find a conversation.
+                return
+        returnValue((self._go_metadata['conversation_key'],
+                     self._go_metadata['conversation_type']))
+
+
 class GoApplicationRouter(BaseDispatchRouter):
     """
     Router for a dispatcher that routes messages
@@ -81,17 +246,28 @@ class GoApplicationRouter(BaseDispatchRouter):
         self.upstream_transport = self.config['upstream_transport']
         self.optout_transport = self.config['optout_transport']
 
+        from go.vumitools.api import get_redis
+        r_server = get_redis(self.config)
+
+        mdb_config = self.config.get('message_store', {})
+        self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
+        r_server = get_redis(self.config)
+        self.manager = TxRiakManager.from_config({
+                'bucket_prefix': self.mdb_prefix})
+        self.message_store = MessageStore(self.manager, r_server,
+                                            self.mdb_prefix)
+
+    @inlineCallbacks
     def find_application_for_msg(self, msg):
-        # Sometimes I don't like pep8
-        helper = LookupConversationMiddleware.map_message_to_conversation_info
-        conversation_info = helper(msg)
+        md = GoMessageMetadata(self.message_store, msg)
+        conversation_info = yield md.get_conversation_info()
         if conversation_info:
             conversation_key, conversation_type = conversation_info
-            return self.conversation_mappings[conversation_type]
+            returnValue(self.conversation_mappings[conversation_type])
 
     @inlineCallbacks
     def dispatch_inbound_message(self, msg):
-        application = self.find_application_for_msg(msg)
+        application = yield self.find_application_for_msg(msg)
         if OptOutMiddleware.is_optout_message(msg):
             publisher = self.dispatcher.exposed_publisher[
                 self.optout_transport]
@@ -106,7 +282,7 @@ class GoApplicationRouter(BaseDispatchRouter):
 
     @inlineCallbacks
     def dispatch_inbound_event(self, msg):
-        application = self.find_application_for_msg(msg)
+        application = yield self.find_application_for_msg(msg)
         if application:
             publisher = self.dispatcher.exposed_event_publisher[application]
             yield publisher.publish_message(msg)
