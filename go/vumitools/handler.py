@@ -77,7 +77,6 @@ class SendMessageCommandHandler(EventHandler):
                 'bucket_prefix': self.dispatcher.mdb_prefix
             },
         }
-        print api_conf
         user_api = self.get_user_api(event.payload['account_key'], api_conf)
         conv = user_api.wrap_conversation(conv)
 
