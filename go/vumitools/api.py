@@ -542,6 +542,7 @@ class VumiApi(object):
         """
         return self.mdb.batch_replies(batch_id)
 
+    @Manager.calls_manager
     def batch_tags(self, batch_id):
         """Return a list of tags associated with a given batch.
 
@@ -551,7 +552,8 @@ class VumiApi(object):
         :rtype:
             list of tags
         """
-        return list(self.mdb.get_batch(batch_id).tags)
+        batch = yield self.mdb.get_batch(batch_id)
+        returnValue(list(batch.tags))
 
     def acquire_tag(self, pool):
         """Acquire a tag from a given tag pool.
