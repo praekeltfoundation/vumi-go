@@ -12,7 +12,7 @@ from vumi.tests.utils import FakeRedis
 
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
 from go.vumitools.api_worker import CommandDispatcher
-from go.vumitools.api import VumiUserApi
+from go.vumitools.api import VumiUserApi, VumiApiCommand
 from go.vumitools.tests.utils import (
     RiakTestMixin, CeleryTestMixIn, DummyConsumerFactory)
 from go.vumitools.account import AccountStore
@@ -174,3 +174,44 @@ class TestBulkMessageApplication(
         yield self.dispatch(msg)
         dbmsg = yield self.app.store.get_inbound_message(msg['message_id'])
         self.assertEqual(dbmsg, msg)
+
+    @inlineCallbacks
+    def test_send_message_command(self):
+        user_account_key = "4f5gfdtrfe44rgffserf"
+        msg_options = {
+            'transport_name': 'sphex_transport',
+            'from_addr': '666666',
+            'transport_type': 'sphex',
+            "helper_metadata": {
+                "go": {
+                    "user_account": user_account_key
+                },
+                'tag': {
+                    'tag': ['pool', 'tag1']
+                },
+                'transport_type': 'sphex'
+            }
+        }
+        sm_cmd = VumiApiCommand.command(
+                self.app.worker_name,
+                "send_message",
+                command_data = {
+                    "batch_id": "345dt54fgtffdsft54ffg",
+                    "to_addr": "123456",
+                    "content": "hello world",
+                    "msg_options": msg_options
+                },
+                )
+        yield self.dispatch(sm_cmd, rkey='%s.control' % self.app.worker_name)
+
+        [msg] = yield self.get_dispatched_messages()
+        self.assertEqual(msg.payload['to_addr'], "123456")
+        self.assertEqual(msg.payload['from_addr'], "666666")
+        self.assertEqual(msg.payload['content'], "hello world")
+        self.assertEqual(msg.payload['transport_name'], "sphex_transport")
+        self.assertEqual(msg.payload['transport_type'], "sphex")
+        self.assertEqual(msg.payload['message_type'], "user_message")
+        self.assertEqual(msg.payload['helper_metadata']['go']['user_account'],
+                                                            user_account_key)
+        self.assertEqual(msg.payload['helper_metadata']['tag']['tag'],
+                                                            ['pool', 'tag1'])
