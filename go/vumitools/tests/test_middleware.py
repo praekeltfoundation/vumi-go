@@ -3,18 +3,18 @@
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.message_store import MessageStore
 from vumi.message import TransportUserMessage
 from vumi.tests.utils import FakeRedis
 
+from go.vumitools.tests.utils import RiakTestMixin
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.middleware import (
     NormalizeMsisdnMiddleware, OptOutMiddleware)
 
 
-class MiddlewareTestCase(TestCase):
+class MiddlewareTestCase(RiakTestMixin, TestCase):
 
     @inlineCallbacks
     def setUp(self):
@@ -26,8 +26,9 @@ class MiddlewareTestCase(TestCase):
         }
         self.r_server = FakeRedis()
 
-        self.manager = TxRiakManager.from_config({
-                'bucket_prefix': self.mdb_prefix})
+        self.riak_setup()
+        self.manager = self.get_riak_manager(
+            {'bucket_prefix': self.mdb_prefix})
         self.account_store = AccountStore(self.manager)
         self.message_store = MessageStore(self.manager, self.r_server,
                                             self.mdb_prefix)
@@ -39,7 +40,7 @@ class MiddlewareTestCase(TestCase):
 
     @inlineCallbacks
     def tearDown(self):
-        yield self.manager.purge_all()
+        yield self.riak_teardown()
         yield super(MiddlewareTestCase, self).tearDown()
 
     @inlineCallbacks
