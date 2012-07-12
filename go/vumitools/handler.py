@@ -77,6 +77,7 @@ class SendMessageCommandHandler(EventHandler):
                 'bucket_prefix': self.dispatcher.mdb_prefix
             },
         }
+        print api_conf
         user_api = self.get_user_api(event.payload['account_key'], api_conf)
         conv = user_api.wrap_conversation(conv)
 
@@ -87,14 +88,15 @@ class SendMessageCommandHandler(EventHandler):
             log.info("No batches found")
             return
 
-        batch_tags = user_api.api.batch_tags(batch_id)
+        batch_tags = yield user_api.api.batch_tags(batch_id)
         if len(batch_tags) > 0:
             tag = [batch_tags[0][0], batch_tags[0][1]]
         else:
             log.info("No batch tags found")
             return
 
-        tag_info = user_api.tagpools()._pools[tag[0]]
+        tag_pools = yield user_api.tagpools()
+        tag_info = tag_pools._pools[tag[0]]
 
         command_data = event.payload['content']
         command_data['batch_id'] = batch_id
