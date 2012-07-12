@@ -14,8 +14,8 @@ from vumi.tests.utils import FakeRedis, LogCatcher
 
 from go.vumitools.api_worker import (
     CommandDispatcher, EventDispatcher)
-from go.vumitools.handler import EventHandler
-from go.vumitools.api import VumiApiCommand, VumiApiEvent
+from go.vumitools.handler import EventHandler, SendMessageCommandHandler
+from go.vumitools.api import VumiApiCommand, VumiApiEvent, VumiUserApi
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.account import AccountStore
 
@@ -146,6 +146,82 @@ class EventDispatcherTestCase(ApplicationTestCase):
             [(event, {'animal': 'puppy'}), (event2, {'animal': 'kitten'})],
             self.handler1.handled_events)
         self.assertEqual([(event2, {})], self.handler2.handled_events)
+
+
+class MySendMessageCommandHandler(SendMessageCommandHandler):
+
+    def get_user_api(self, account_key, api_conf):
+        return VumiUserApi(account_key, {
+            'redis_cls': lambda **kw: self.dispatcher._fake_redis,
+            'riak_manager': {'bucket_prefix': 'test.'},
+            }, TxRiakManager)
+
+
+class SendingEventDispatcherTestCase(ApplicationTestCase):
+
+    application_class = EventDispatcher
+
+    @inlineCallbacks
+    def setUp(self):
+        super(SendingEventDispatcherTestCase, self).setUp()
+        self._fake_redis = FakeRedis()
+        self.ed = yield self.get_application({
+            'redis_cls': lambda **kw: self._fake_redis,
+            'event_handlers': {
+                'handler1': '%s.MySendMessageCommandHandler' % __name__,
+            },
+        })
+        self.handler1 = self.ed.handlers['handler1']
+        self.handler1._fake_redis = self._fake_redis
+        self.ed._fake_redis = self._fake_redis
+
+    def tearDown(self):
+        self._fake_redis.teardown()
+        return super(SendingEventDispatcherTestCase, self).tearDown()
+
+    def publish_event(self, cmd):
+        return self.dispatch(cmd, rkey='vumi.event')
+
+    def mkevent(self, event_type, content, conv_key="conv_key",
+                account_key="acct"):
+        return VumiApiEvent.event(
+            account_key, conv_key, event_type, content)
+
+    @inlineCallbacks
+    def test_handle_events(self):
+        user_account = yield self.ed.account_store.new_user(u'dbacct')
+        yield user_account.save()
+        user_api = VumiUserApi(user_account.key, {
+            'redis_cls': lambda **kw: self._fake_redis,
+            'riak_manager': {'bucket_prefix': 'test.'},
+            }, TxRiakManager)
+        user_api.api.declare_tags([("pool", "tag1")])
+        user_api.api.set_pool_metadata("pool", {
+            "transport_type": "other",
+            })
+        self.conversation_store = ConversationStore.from_user_account(
+                                                                user_account)
+        conversation = yield self.conversation_store.new_conversation(
+                                    u'bulk_message', u'subject', u'message',
+                                    delivery_tag_pool=u'pool',
+                                    delivery_class=u'sms')
+
+        conversation = user_api.wrap_conversation(conversation)
+        yield conversation.start()
+
+        user_account.event_handler_config = [
+            [[conversation.key, 'my_event'], [('handler1', {
+                'worker_name': 'other_worker',
+                'conversation_key': 'other_conv',
+                })]]
+            ]
+        yield user_account.save()
+
+        event = self.mkevent("my_event",
+                {"to_addr": "12345", "content": "hello"},
+                account_key=user_account.key,
+                conv_key=conversation.key)
+        yield self.publish_event(event)
 
 
 class GoApplicationRouterTestCase(DispatcherTestCase):
