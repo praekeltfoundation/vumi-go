@@ -30,6 +30,7 @@ class CommandDispatcherTestCase(ApplicationTestCase):
         self._fake_redis = FakeRedis()
         self.api = yield self.get_application({
             'redis_cls': lambda **kw: self._fake_redis,
+            'riak_manager': {'bucket_prefix': 'test.'},
             'worker_names': ['worker_1', 'worker_2'],
         })
 
@@ -83,6 +84,7 @@ class EventDispatcherTestCase(ApplicationTestCase):
         self._fake_redis = FakeRedis()
         self.ed = yield self.get_application({
             'redis_cls': lambda **kw: self._fake_redis,
+            'riak_manager': {'bucket_prefix': 'test.'},
             'event_handlers': {
                     'handler1': '%s.ToyHandler' % __name__,
                     'handler2': '%s.ToyHandler' % __name__,
@@ -148,32 +150,28 @@ class EventDispatcherTestCase(ApplicationTestCase):
         self.assertEqual([(event2, {})], self.handler2.handled_events)
 
 
-class MySendMessageCommandHandler(SendMessageCommandHandler):
-
-    def get_user_api(self, account_key, api_conf):
-        return VumiUserApi(account_key, {
-            'redis_cls': lambda **kw: self.dispatcher._fake_redis,
-            'riak_manager': {'bucket_prefix': 'test.'},
-            }, TxRiakManager)
-
-
 class SendingEventDispatcherTestCase(ApplicationTestCase):
-
+    timeout = 2
     application_class = EventDispatcher
 
     @inlineCallbacks
     def setUp(self):
         super(SendingEventDispatcherTestCase, self).setUp()
         self._fake_redis = FakeRedis()
-        self.ed = yield self.get_application({
+        self.base_config = {
             'redis_cls': lambda **kw: self._fake_redis,
-            'event_handlers': {
-                'handler1': '%s.MySendMessageCommandHandler' % __name__,
-            },
-        })
+            'riak_manager': {'bucket_prefix': 'test.'},
+            }
+        ed_config = self.base_config.copy()
+        ed_config.update({
+                'event_handlers': {
+                    'handler1': "%s.%s" % (
+                        SendMessageCommandHandler.__module__,
+                        SendMessageCommandHandler.__name__)
+                    },
+                })
+        self.ed = yield self.get_application(ed_config)
         self.handler1 = self.ed.handlers['handler1']
-        self.handler1._fake_redis = self._fake_redis
-        self.ed._fake_redis = self._fake_redis
 
     def tearDown(self):
         self._fake_redis.teardown()
@@ -191,17 +189,16 @@ class SendingEventDispatcherTestCase(ApplicationTestCase):
     def test_handle_events(self):
         user_account = yield self.ed.account_store.new_user(u'dbacct')
         yield user_account.save()
-        user_api = VumiUserApi(user_account.key, {
-            'redis_cls': lambda **kw: self._fake_redis,
-            'riak_manager': {'bucket_prefix': 'test.'},
-            }, TxRiakManager)
+
+        user_api = VumiUserApi(
+            user_account.key, self.base_config.copy(), TxRiakManager)
         user_api.api.declare_tags([("pool", "tag1")])
         user_api.api.set_pool_metadata("pool", {
             "transport_type": "other",
+            "msg_options": {"transport_name": "other_transport"},
             })
-        self.conversation_store = ConversationStore.from_user_account(
-                                                                user_account)
-        conversation = yield self.conversation_store.new_conversation(
+
+        conversation = yield user_api.new_conversation(
                                     u'bulk_message', u'subject', u'message',
                                     delivery_tag_pool=u'pool',
                                     delivery_class=u'sms')
@@ -222,6 +219,23 @@ class SendingEventDispatcherTestCase(ApplicationTestCase):
                 account_key=user_account.key,
                 conv_key=conversation.key)
         yield self.publish_event(event)
+
+        [api_command] = self._amqp.get_messages('vumi', 'vumi.api')
+        self.assertEqual(api_command['worker_name'], 'other_worker')
+        self.assertEqual(api_command['kwargs']['command_data'], {
+                'content': 'hello',
+                'batch_id': conversation.batches.keys()[0],
+                'to_addr': '12345',
+                'msg_options': {
+                    'transport_name': 'other_transport',
+                    'helper_metadata': {
+                        'go': {'user_account': user_account.key},
+                        'tag': {'tag': ['pool', 'tag1']},
+                        'transport_type': u'other'
+                        },
+                    'transport_type': 'other',
+                    'from_addr': 'tag1',
+                    }})
 
 
 class GoApplicationRouterTestCase(DispatcherTestCase):

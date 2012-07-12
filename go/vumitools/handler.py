@@ -8,7 +8,6 @@ from twisted.internet.defer import inlineCallbacks
 from vumi import log
 
 from go.vumitools.api import VumiApiCommand, VumiUserApi
-from go.vumitools.conversation import ConversationStore
 
 
 class EventHandler(object):
@@ -32,8 +31,9 @@ class LoggingHandler(EventHandler):
 
 class SendMessageCommandHandler(EventHandler):
 
-    def get_user_api(self, account_key, api_conf):
-        return VumiUserApi(account_key, api_conf)
+    def get_user_api(self, account_key):
+        return VumiUserApi(
+            account_key, self.dispatcher.config, type(self.dispatcher.manager))
 
     @inlineCallbacks
     def handle_event(self, event, handler_config):
@@ -65,19 +65,10 @@ class SendMessageCommandHandler(EventHandler):
         log.info(
             "SendMessageCommandHandler handling event: %s with config: %s" % (
             event, handler_config))
-        conv_store = ConversationStore(self.dispatcher.manager,
-                                        event.payload['account_key'])
-        conv = yield conv_store.get_conversation_by_key(
-                                        event.payload['conversation_key'])
-        api_conf = {
-            'tagpool_manager': {
-                'tagpool_prefix': self.dispatcher.r_prefix,
-            },
-            'riak_manager': {
-                'bucket_prefix': self.dispatcher.mdb_prefix
-            },
-        }
-        user_api = self.get_user_api(event.payload['account_key'], api_conf)
+
+        user_api = self.get_user_api(event.payload['account_key'])
+        conv = yield user_api.conversation_store.get_conversation_by_key(
+            event.payload['conversation_key'])
         conv = user_api.wrap_conversation(conv)
 
         batch_keys = conv.batches.keys()
@@ -87,14 +78,14 @@ class SendMessageCommandHandler(EventHandler):
             log.info("No batches found")
             return
 
-        batch_tags = user_api.api.batch_tags(batch_id)
+        batch_tags = yield user_api.api.batch_tags(batch_id)
         if len(batch_tags) > 0:
             tag = [batch_tags[0][0], batch_tags[0][1]]
         else:
             log.info("No batch tags found")
             return
 
-        tag_info = user_api.tagpools()._pools[tag[0]]
+        tag_info = user_api.api.tpm.get_metadata(tag[0])
 
         command_data = event.payload['content']
         command_data['batch_id'] = batch_id

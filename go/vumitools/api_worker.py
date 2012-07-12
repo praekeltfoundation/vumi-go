@@ -94,9 +94,11 @@ class EventDispatcher(ApplicationWorker):
         self.api_routing_config.update(self.config.get('api_routing', {}))
         self.api_consumer = None
         self.handler_config = self.config.get('event_handlers', {})
-        self.account_handler_configs = self.config.get('account_handler_configs', {})
+        self.account_handler_configs = self.config.get(
+            'account_handler_configs', {})
         mdb_config = self.config.get('message_store', {})
         self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
+        self.riak_config = self.config.get('riak_manager', {})
         self.r_prefix = self.config.get('r_prefix')
 
     @inlineCallbacks
@@ -109,8 +111,7 @@ class EventDispatcher(ApplicationWorker):
             yield setup_deferreds.append(self.handlers[name].setup_handler())
 
         self.api_command_publisher = yield self.publish_to('vumi.api')
-        self.manager = TxRiakManager.from_config(
-            {'bucket_prefix': self.mdb_prefix})
+        self.manager = TxRiakManager.from_config(self.riak_config.copy())
         self.account_store = AccountStore(self.manager)
         self.account_config = {}
 
