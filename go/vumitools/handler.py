@@ -48,6 +48,10 @@ class SendMessageCommandHandler(EventHandler):
         conversations in the config:
             transport_name: event_dispatcher
             r_prefix: vumigo
+            riak_manager:
+                bucket_prefix: vumigo.
+            tagpool_manager:
+                tagpool_prefix: vumigo
             message_store:
                 store_prefix: vumigo.
             event_handlers:
