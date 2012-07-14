@@ -417,7 +417,13 @@ class YoPaymentHandler(object):
 
         poll_id = 'poll-%s' % (conv_key,)
         poll_config = self.pm.get_config(poll_id)
-        if message['content'] == poll_config['survey_completed_response']:
+
+        content = message.get('content')
+        if not content:
+            log.error('No content, skipping')
+            return
+
+        if content != poll_config.get('survey_completed_response'):
             log.error("Survey hasn't been completed, continuing")
             return
 
