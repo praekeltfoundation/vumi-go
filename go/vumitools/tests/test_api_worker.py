@@ -27,11 +27,6 @@ class CommandDispatcherTestCase(AppWorkerTestCase):
         self.api = yield self.get_application(self.make_config({
                     'worker_names': ['worker_1', 'worker_2']}))
 
-    @inlineCallbacks
-    def tearDown(self):
-        yield self.redis._close()
-        yield super(CommandDispatcherTestCase, self).tearDown()
-
     def publish_command(self, cmd):
         return self.dispatch(cmd, rkey='vumi.api')
 
