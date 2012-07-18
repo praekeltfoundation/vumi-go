@@ -5,25 +5,21 @@
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.tests.test_base import ApplicationTestCase
-
-
 from go.vumitools.api import VumiApi, MessageSender, VumiApiCommand
-from go.vumitools.tests.utils import CeleryTestMixIn
+from go.vumitools.tests.utils import AppWorkerTestCase, CeleryTestMixIn
 
 
-class TestTxVumiApi(ApplicationTestCase, CeleryTestMixIn):
-    # inherits from ApplicationTestCase for .mkmsg_in and .mkmsg_out
-
-    from_config = VumiApi.from_config_async
+class TestTxVumiApi(AppWorkerTestCase):
+    override_dummy_consumer = False
 
     @inlineCallbacks
     def setUp(self):
-        self.setup_celery_for_tests()
-        self.api = yield self.from_config({
-            'redis': 'FAKE_REDIS',
-            'riak_manager': {'bucket_prefix': 'test.'},
-            })
+        yield super(TestTxVumiApi, self).setUp()
+        self.config = self.make_config({})
+        if self.sync_persistence:
+            self.api = VumiApi.from_config(self.config)
+        else:
+            self.api = yield VumiApi.from_config_async(self.config)
 
     @inlineCallbacks
     def tearDown(self):
@@ -131,8 +127,7 @@ class TestTxVumiApi(ApplicationTestCase, CeleryTestMixIn):
 
 
 class TestVumiApi(TestTxVumiApi):
-
-    from_config = VumiApi.from_config
+    sync_persistence = True
 
 
 class TestMessageSender(TestCase, CeleryTestMixIn):

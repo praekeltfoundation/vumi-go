@@ -4,11 +4,9 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.dispatchers.tests.test_base import DispatcherTestCase
 from vumi.dispatchers.base import BaseDispatchWorker
 from vumi.middleware.tagger import TaggingMiddleware
-from vumi.persist.txredis_manager import TxRedisManager
 from vumi.components.message_store import MessageStore
 from vumi.tests.utils import LogCatcher
 
@@ -16,21 +14,18 @@ from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.account import AccountStore
-from go.vumitools.tests.utils import RiakTestMixin
+from go.vumitools.tests.utils import AppWorkerTestCase, GoPersistenceMixin
 
 
-class CommandDispatcherTestCase(ApplicationTestCase):
+class CommandDispatcherTestCase(AppWorkerTestCase):
 
     application_class = CommandDispatcher
 
     @inlineCallbacks
     def setUp(self):
         super(CommandDispatcherTestCase, self).setUp()
-        self.redis = yield TxRedisManager.from_config('FAKE_REDIS')
-        self.api = yield self.get_application({
-            'redis': self.redis._client,
-            'worker_names': ['worker_1', 'worker_2'],
-        })
+        self.api = yield self.get_application(self.make_config({
+                    'worker_names': ['worker_1', 'worker_2']}))
 
     @inlineCallbacks
     def tearDown(self):
@@ -65,26 +60,28 @@ class CommandDispatcherTestCase(ApplicationTestCase):
                                 error['message'][0])
 
 
-class GoApplicationRouterTestCase(RiakTestMixin, DispatcherTestCase):
+class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
 
     dispatcher_class = BaseDispatchWorker
     transport_name = 'test_transport'
 
+    def make_config(self, config):
+        return dict(self.base_config, **config)
+
     @inlineCallbacks
     def setUp(self):
         yield super(GoApplicationRouterTestCase, self).setUp()
-        self.redis = yield TxRedisManager.from_config('FAKE_REDIS')
-        self.riak_setup()
-        self.mdb_prefix = 'test_message_store'
-        self.message_store_config = {
+        self._persist_setUp()
+        self.redis = yield self.get_redis_manager()
+        self.base_config = {
+            'riak_manager': {'bucket_prefix': type(self).__module__},
             'redis': self.redis._client,
-            'message_store': {
-                'store_prefix': self.mdb_prefix,
             }
-        }
-        self.dispatcher = yield self.get_dispatcher({
+        self.message_store_config = self.make_config({
+                'r_prefix': 'test.'})
+        self.dispatcher = yield self.get_dispatcher(self.make_config({
             'router_class': 'go.vumitools.api_worker.GoApplicationRouter',
-            'redis': self.redis._client,
+            'r_prefix': 'test.',
             'transport_names': [
                 self.transport_name,
             ],
@@ -115,11 +112,10 @@ class GoApplicationRouterTestCase(RiakTestMixin, DispatcherTestCase):
             'optout_mw': {
                 'optout_keywords': ['stop']
             }
-        })
+        }))
 
         # get the router to test
-        self.manager = self.get_riak_manager({
-                'bucket_prefix': self.mdb_prefix})
+        self.manager = self.get_riak_manager()
         self.account_store = AccountStore(self.manager)
         self.message_store = MessageStore(self.manager, self.redis)
 
@@ -131,8 +127,7 @@ class GoApplicationRouterTestCase(RiakTestMixin, DispatcherTestCase):
 
     @inlineCallbacks
     def tearDown(self):
-        yield self.redis._close()
-        yield self.riak_teardown()
+        yield self._persist_tearDown()
         yield super(GoApplicationRouterTestCase, self).tearDown()
 
     @inlineCallbacks

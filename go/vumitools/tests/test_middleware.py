@@ -1,14 +1,12 @@
 """Tests for go.vumitools.middleware"""
 
-from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.persist.txredis_manager import TxRedisManager
 from vumi.components.message_store import MessageStore
 from vumi.message import TransportUserMessage
 from vumi.middleware import TaggingMiddleware
 
-from go.vumitools.tests.utils import RiakTestMixin
+from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.middleware import (
@@ -16,34 +14,20 @@ from go.vumitools.middleware import (
     LookupConversationMiddleware, OptOutMiddleware)
 
 
-class MiddlewareTestCase(RiakTestMixin, TestCase):
+class MiddlewareTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.redis = yield TxRedisManager.from_config('FAKE_REDIS')
-        self.mdb_prefix = 'test_message_store'
-        self.default_config = {
-            'redis': self.redis._client,
-            'message_store': {
-                'store_prefix': self.mdb_prefix,
-            }
-        }
+        yield super(MiddlewareTestCase, self).setUp()
 
-        self.riak_setup()
-        self.manager = self.get_riak_manager(
-            {'bucket_prefix': self.mdb_prefix})
+        self.default_config = self.make_config({})
+        self.manager = self.get_riak_manager()
         self.account_store = AccountStore(self.manager)
         self.message_store = MessageStore(self.manager, self.redis)
 
         self.account = yield self.account_store.new_user(u'user')
         self.conv_store = ConversationStore.from_user_account(self.account)
         self.tag = ('xmpp', 'test1@xmpp.org')
-
-    @inlineCallbacks
-    def tearDown(self):
-        yield self.redis._close()
-        yield self.riak_teardown()
-        yield super(MiddlewareTestCase, self).tearDown()
 
     @inlineCallbacks
     def create_conversation(self, conversation_type=u'bulk_message',

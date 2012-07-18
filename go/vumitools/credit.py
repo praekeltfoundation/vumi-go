@@ -9,8 +9,8 @@ from vumi.persist.redis_base import Manager
 
 class CreditManager(object):
     def __init__(self, redis):
-        self.redis = redis
-        self.manager = redis  # TODO: hack to make calls_manager work
+        self.redis = redis.sub_manager('credit_store')
+        self.manager = self.redis  # TODO: hack to make calls_manager work
 
     @Manager.calls_manager
     def get_credit(self, user_account_key):

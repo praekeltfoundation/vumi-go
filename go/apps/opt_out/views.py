@@ -1,15 +1,13 @@
-import redis
 from datetime import datetime
 
-from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
 
-from go.base.utils import make_read_only_form, conversation_or_404
+from go.base.utils import conversation_or_404
 from go.vumitools.api import ConversationSendError
-from go.conversation.forms import ConversationForm, ConversationGroupForm
+from go.conversation.forms import ConversationForm
 
 
 @login_required

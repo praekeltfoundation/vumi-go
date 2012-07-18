@@ -20,18 +20,14 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         super(TestBulkMessageApplication, self).setUp()
-        self.app = yield self.get_application({
-            'redis': self.redis._client,
-            'riak': {
-                'bucket_prefix': 'test.',
-                },
-            })
+        self.config = self.make_config({})
+        self.app = yield self.get_application(self.config)
         self.cmd_dispatcher = yield self.get_application({
             'transport_name': 'cmd_dispatcher',
             'worker_names': ['bulk_message_application'],
             }, cls=CommandDispatcher)
         self.manager = self.app.store.manager  # YOINK!
-        self._riak_managers.append(self.manager)
+        self._persist_riak_managers.append(self.manager)
         self.account_store = AccountStore(self.manager)
 
     def store_outbound(self, **kw):
@@ -40,10 +36,8 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     @inlineCallbacks
     def test_start(self):
         user_account = yield self.account_store.new_user(u'testuser')
-        user_api = yield VumiUserApi.from_config_async(user_account.key, {
-                'redis': self.redis._client,
-                'riak_manager': {'bucket_prefix': 'test.'},
-                })
+        user_api = yield VumiUserApi.from_config_async(
+            user_account.key, self.config)
         yield user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
         yield user_api.api.set_pool_metadata("pool", {
             "transport_type": "sphex",

@@ -75,10 +75,9 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(conversation.delivery_class, 'sms')
         self.assertEqual(conversation.delivery_tag_pool, pool)
         self.assertEqual(conversation.delivery_tag, tag)
-        self.assertRedirects(response, reverse('multi_survey:surveys',
-                                               kwargs={
-            'conversation_key': conversation.key,
-        }))
+        self.assertRedirects(response, reverse('multi_survey:surveys', kwargs={
+                    'conversation_key': conversation.key,
+                    }))
 
     def test_new_conversation(self):
         """test the creation of a new conversation"""
@@ -137,9 +136,8 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         conversation = self.get_wrapped_conv()
         self.assertFalse(conversation.is_client_initiated())
         response = self.client.post(reverse('multi_survey:people',
-            kwargs={'conversation_key': conversation.key}), {
-            'groups': [grp.key for grp in self.contact_store.list_groups()],
-        })
+            kwargs={'conversation_key': conversation.key}), {'groups': [
+                    grp.key for grp in self.contact_store.list_groups()]})
         self.assertRedirects(response, reverse('multi_survey:start', kwargs={
             'conversation_key': conversation.key}))
 
