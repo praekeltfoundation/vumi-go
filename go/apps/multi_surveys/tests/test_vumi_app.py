@@ -41,20 +41,11 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         super(TestMultiSurveyApplication, self).setUp()
-        self.config = {
-            'redis': self.redis._client,
-            'worker_name': 'multi_survey_application',
-            'message_store': {
-                'store_prefix': 'test.',
-            },
-            'riak_manager': {
-                'bucket_prefix': 'test.',
-            },
-            'vxpolls': {
-                'prefix': 'test.',
-            },
-            'is_demo': False,
-        }
+        self.config = self.make_config({
+                'worker_name': 'multi_survey_application',
+                'vxpolls': {'prefix': 'test.'},
+                'is_demo': False,
+                })
 
         # Setup the SurveyApplication
         self.app = yield self.get_application(self.config)
@@ -65,12 +56,12 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             'worker_names': ['multi_survey_application'],
             }, cls=CommandDispatcher)
 
-        # Setup Celery so that it uses FakeAMQP instead of the real one.
+        # Steal app's riak manager
         self.manager = self.app.store.manager  # YOINK!
-        self._riak_managers.append(self.manager)
-        self.account_store = AccountStore(self.manager)
+        self._persist_riak_managers.append(self.manager)
 
         # Create a test user account
+        self.account_store = AccountStore(self.manager)
         self.user_account = yield self.account_store.new_user(u'testuser')
         self.user_api = yield VumiUserApi.from_config_async(
             self.user_account.key, self.config)

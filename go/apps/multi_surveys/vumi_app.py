@@ -44,9 +44,6 @@ class MultiSurveyApplication(MamaPollApplication):
         # vxpolls
         vxp_config = self.config.get('vxpolls', {})
         self.poll_prefix = vxp_config.get('prefix')
-        # message store
-        mdb_config = self.config.get('message_store', {})
-        self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
         # api worker
         self.api_routing_config = VumiApiCommand.default_routing_config()
         self.api_routing_config.update(self.config.get('api_routing', {}))
@@ -60,8 +57,7 @@ class MultiSurveyApplication(MamaPollApplication):
         self.pm = PollManager(r_server, self.poll_prefix)
         self.manager = TxRiakManager.from_config(
             self.config.get('riak_manager'))
-        self.store = MessageStore(
-            self.manager, redis.sub_manager(self.mdb_prefix))
+        self.store = MessageStore(self.manager, redis)
         self.control_consumer = yield self.consume(
             '%s.control' % (self.worker_name,),
             self.consume_control_command,

@@ -18,9 +18,6 @@ class OptOutApplication(ApplicationWorker):
 
     def validate_config(self):
         self.worker_name = self.config['worker_name']
-        # message store
-        mdb_config = self.config.get('message_store', {})
-        self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
         # api worker
         self.api_routing_config = VumiApiCommand.default_routing_config()
         self.api_routing_config.update(self.config.get('api_routing', {}))
@@ -28,10 +25,9 @@ class OptOutApplication(ApplicationWorker):
 
     @inlineCallbacks
     def setup_application(self):
-        redis = yield TxRedisManager.from_config(
-            self.config.get('redis', {}), self.mdb_prefix)
+        redis = yield TxRedisManager.from_config(self.config.get('redis'))
         self.manager = TxRiakManager.from_config(
-            self.config.get('riak_manager', {}))
+            self.config.get('riak_manager'))
         self.store = MessageStore(self.manager, redis)
         self.control_consumer = yield self.consume(
             '%s.control' % (self.worker_name,),

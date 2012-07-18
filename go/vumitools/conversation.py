@@ -132,7 +132,7 @@ class ConversationStore(PerAccountStore):
 
     @Manager.calls_manager
     def new_conversation(self, conversation_type, subject, message,
-        start_timestamp=None, **fields):
+                         start_timestamp=None, **fields):
         conversation_id = uuid4().get_hex()
         start_timestamp = start_timestamp or datetime.utcnow()
 

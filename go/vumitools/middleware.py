@@ -75,13 +75,12 @@ class GoApplicationRouterMiddleware(BaseMiddleware):
         to Redis with. Passed along as **kwargs to the Redis client.
 
     """
+    @inlineCallbacks
     def setup_middleware(self):
-        mdb_config = self.config.get('message_store', {})
-        self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
-        redis_manager = TxRedisManager.from_config(
-            self.config.get('redis', {}), self.mdb_prefix)
-        self.manager = TxRiakManager.from_config({
-                'bucket_prefix': self.mdb_prefix})
+        redis_manager = yield TxRedisManager.from_config(
+            self.config.get('redis', {}))
+        self.manager = TxRiakManager.from_config(
+            self.config.get('riak_manager', {}))
         self.account_store = AccountStore(self.manager)
         self.message_store = MessageStore(self.manager, redis_manager)
 

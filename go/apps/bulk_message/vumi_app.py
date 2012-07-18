@@ -33,9 +33,6 @@ class GoApplication(ApplicationWorker):
 
     def validate_config(self):
         self.worker_name = self.config.get('worker_name', self.worker_name)
-        # message store
-        mdb_config = self.config.get('message_store', {})
-        self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
         # api worker
         self.api_routing_config = VumiApiCommand.default_routing_config()
         self.api_routing_config.update(self.config.get('api_routing', {}))
@@ -43,9 +40,9 @@ class GoApplication(ApplicationWorker):
 
     @inlineCallbacks
     def setup_application(self):
-        redis = yield TxRedisManager.from_config(
-            self.config.get('redis', {}), self.mdb_prefix)
-        self.manager = TxRiakManager.from_config(self.config.get('riak'))
+        redis = yield TxRedisManager.from_config(self.config.get('redis', {}))
+        self.manager = TxRiakManager.from_config(
+            self.config.get('riak_manager'))
         self.store = MessageStore(self.manager, redis)
         self.control_consumer = yield self.consume(
             '%s.control' % (self.worker_name,),
@@ -111,7 +108,8 @@ class BulkMessageApplication(GoApplication):
 
     @inlineCallbacks
     def process_command_start(self, batch_id, conversation_type,
-        conversation_key, msg_options, is_client_initiated, **extra_params):
+                              conversation_key, msg_options,
+                              is_client_initiated, **extra_params):
 
         if is_client_initiated:
             log.warning('Trying to start a client initiated conversation '
