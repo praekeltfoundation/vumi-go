@@ -3,8 +3,6 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi import log
 from vumi.application import ApplicationWorker
-# from vumi.persist.txriak_manager import TxRiakManager
-# from vumi.persist.txredis_manager import TxRedisManager
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiUserApi
 
@@ -13,17 +11,12 @@ class GoApplicationMixin(object):
 
     def _go_validate_config(self):
         self.worker_name = self.config.get('worker_name', self.worker_name)
-        # self.r_prefix = self.config.get('r_prefix')
         self.api_routing_config = VumiApiCommand.default_routing_config()
         self.api_routing_config.update(self.config.get('api_routing', {}))
         self.control_consumer = None
 
     @inlineCallbacks
     def _go_setup_application(self):
-        # self.redis = yield TxRedisManager.from_config(
-        #     self.config.get('redis', {}), self.r_prefix)
-        # self.manager = TxRiakManager.from_config(
-        #     self.config.get('riak_manager'))
         self.vumi_api = yield VumiApi.from_config_async(self.config)
 
         # In case we need these.
