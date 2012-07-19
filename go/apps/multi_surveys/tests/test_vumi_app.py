@@ -40,14 +40,13 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         super(TestMultiSurveyApplication, self).setUp()
-        self.config = self.make_config({
+
+        # Setup the SurveyApplication
+        self.app = yield self.get_application({
                 'worker_name': 'multi_survey_application',
                 'vxpolls': {'prefix': 'test.'},
                 'is_demo': False,
                 })
-
-        # Setup the SurveyApplication
-        self.app = yield self.get_application(self.config)
 
         # Setup the command dispatcher so we cand send it commands
         self.cmd_dispatcher = yield self.get_application({

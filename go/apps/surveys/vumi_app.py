@@ -12,12 +12,7 @@ from go.vumitools.app_worker import GoApplicationMixin
 
 def hacky_hack_hack(config):
     from vumi.persist.redis_manager import RedisManager
-    from vumi.persist.fake_redis import FakeRedis
-    if isinstance(config, FakeRedis):
-        config = 'FAKE_REDIS'
-    manager = RedisManager.from_config(config)
-    manager._key_separator = ':'
-    return manager
+    return RedisManager.from_config(dict(config, key_separator=':'))
 
 
 class SurveyApplication(PollApplication, GoApplicationMixin):
@@ -32,7 +27,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
 
     @inlineCallbacks
     def setup_application(self):
-        r_server = hacky_hack_hack(self.config.get('redis'))
+        r_server = hacky_hack_hack(self.config.get('redis_manager'))
         self.pm = PollManager(r_server, self.poll_prefix)
         yield self._go_setup_application()
 

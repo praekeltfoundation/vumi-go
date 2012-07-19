@@ -17,11 +17,10 @@ class TestTxVumiApi(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(TestTxVumiApi, self).setUp()
-        self.config = self.make_config({})
         if self.sync_persistence:
-            self.api = VumiApi.from_config(self.config)
+            self.api = VumiApi.from_config(self._persist_config)
         else:
-            self.api = yield VumiApi.from_config_async(self.config)
+            self.api = yield VumiApi.from_config_async(self._persist_config)
 
     @inlineCallbacks
     def tearDown(self):
@@ -138,11 +137,10 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(TestTxVumiUserApi, self).setUp()
-        self.config = self.make_config({})
         if self.sync_persistence:
-            self.api = VumiApi.from_config(self.config)
+            self.api = VumiApi.from_config(self._persist_config)
         else:
-            self.api = yield VumiApi.from_config_async(self.config)
+            self.api = yield VumiApi.from_config_async(self._persist_config)
         self.user_account = yield self.api.account_store.new_user(u'Buster')
         self.user_api = VumiUserApi(self.api, self.user_account.key)
 

@@ -213,11 +213,6 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
     @inlineCallbacks
     def setUp(self):
         yield super(AppWorkerTestCase, self).setUp()
-        self.redis = yield self.get_redis_manager()
-        self.base_config = {
-            'riak_manager': {'bucket_prefix': type(self).__module__},
-            'redis': self.redis._client,
-            }
         if self.override_dummy_consumer:
             self.VUMI_COMMANDS_CONSUMER = (
                 dummy_consumer_factory_factory_factory(self.publish_command))
@@ -227,9 +222,6 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
     def _aw_tearDown(self):
         self.restore_celery()
         yield super(AppWorkerTestCase, self).tearDown()
-
-    def make_config(self, config):
-        return dict(self.base_config, **config)
 
     def publish_command(self, cmd_dict):
         data = json.dumps(cmd_dict)

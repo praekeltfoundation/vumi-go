@@ -5,18 +5,21 @@ import uuid
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.persist.txredis_manager import TxRedisManager
-
 from go.vumitools.credit import CreditManager
+from go.vumitools.tests.utils import GoPersistenceMixin
 
 
-class TestCreditManager(TestCase):
+class TestCreditManager(TestCase, GoPersistenceMixin):
 
     @inlineCallbacks
     def setUp(self):
-        redis = yield TxRedisManager.from_config('FAKE_REDIS', 'teststore')
+        self._persist_setUp()
+        redis = yield self.get_redis_manager()
         self.cm = CreditManager(redis)
         self.user_id = uuid.uuid4().hex
+
+    def tearDown(self):
+        return self._persist_tearDown()
 
     @inlineCallbacks
     def test_get_credit(self):

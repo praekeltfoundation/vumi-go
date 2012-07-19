@@ -23,10 +23,10 @@ class TestOptOutApplication(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         super(TestOptOutApplication, self).setUp()
-        self.config = self.make_config({'worker_name': 'opt_out_application'})
 
         # Setup the OptOutApplication
-        self.app = yield self.get_application(self.config)
+        self.app = yield self.get_application(
+                {'worker_name': 'opt_out_application'})
 
         # Setup the command dispatcher so we cand send it commands
         self.cmd_dispatcher = yield self.get_application({

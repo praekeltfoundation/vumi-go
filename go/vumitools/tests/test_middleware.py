@@ -13,7 +13,7 @@ class MiddlewareTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(MiddlewareTestCase, self).setUp()
-        self.default_config = self.make_config({})
+        self.default_config = self.mk_config({})
 
     def create_middleware(self, middleware_class, name='dummy_middleware',
                             config=None):

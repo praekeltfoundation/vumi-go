@@ -213,6 +213,7 @@ SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
 #       duplicated
 VUMI_API_CONFIG = {
     'message_sender': {},
+    'redis_manager': {'key_prefix': 'vumigo'},
     'riak_manager': {'bucket_prefix': 'vumigo.'},
     }
 

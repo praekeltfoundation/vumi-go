@@ -19,7 +19,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         super(TestBulkMessageApplication, self).setUp()
-        self.config = self.make_config({})
+        self.config = self.mk_config({})
         self.app = yield self.get_application(self.config)
         self.cmd_dispatcher = yield self.get_application({
             'transport_name': 'cmd_dispatcher',
