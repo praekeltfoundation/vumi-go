@@ -5,7 +5,9 @@
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from go.vumitools.api import VumiApi, MessageSender, VumiApiCommand
+from go.vumitools.opt_out import OptOutStore
+from go.vumitools.api import (
+    VumiApi, VumiUserApi, MessageSender, VumiApiCommand)
 from go.vumitools.tests.utils import AppWorkerTestCase, CeleryTestMixIn
 
 
@@ -127,6 +129,56 @@ class TestTxVumiApi(AppWorkerTestCase):
 
 
 class TestVumiApi(TestTxVumiApi):
+    sync_persistence = True
+
+
+class TestTxVumiUserApi(AppWorkerTestCase):
+    override_dummy_consumer = False
+
+    @inlineCallbacks
+    def setUp(self):
+        yield super(TestTxVumiUserApi, self).setUp()
+        self.config = self.make_config({})
+        if self.sync_persistence:
+            self.api = VumiApi.from_config(self.config)
+        else:
+            self.api = yield VumiApi.from_config_async(self.config)
+        self.user_account = yield self.api.account_store.new_user(u'Buster')
+        self.user_api = VumiUserApi(self.api, self.user_account.key)
+
+    @inlineCallbacks
+    def tearDown(self):
+        self.restore_celery()
+        yield self.api.manager.purge_all()
+
+    @inlineCallbacks
+    def test_optout_filtering(self):
+        group = yield self.user_api.contact_store.new_group(u'test-group')
+        optout_store = OptOutStore.from_user_account(self.user_account)
+
+        # Create two random contacts
+        yield self.user_api.contact_store.new_contact(
+            msisdn=u'+27761234567', groups=[group.key])
+        yield self.user_api.contact_store.new_contact(
+            msisdn=u'+27760000000', groups=[group.key])
+
+        conv = yield self.user_api.new_conversation(
+            u'bulk_message', u'subject', u'message', delivery_class=u'sms')
+        conv = self.user_api.wrap_conversation(conv)
+        conv.add_group(group)
+        yield conv.save()
+
+        # Opt out the first contact
+        yield optout_store.new_opt_out(u'msisdn', u'+27761234567', {
+            'message_id': u'the-message-id'
+        })
+        all_addrs = yield conv.get_contacts_addresses()
+        self.assertEqual(set(all_addrs), set(['+27760000000', '+27761234567']))
+        optedin_addrs = yield conv.get_opted_in_addresses()
+        self.assertEqual(optedin_addrs, ['+27760000000'])
+
+
+class TestVumiUserApi(TestTxVumiUserApi):
     sync_persistence = True
 
 
