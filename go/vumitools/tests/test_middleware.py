@@ -1,15 +1,11 @@
 """Tests for go.vumitools.middleware"""
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
-from vumi.components.message_store import MessageStore
 from vumi.message import TransportUserMessage
 
 from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.account import AccountStore
-from go.vumitools.conversation import ConversationStore
-from go.vumitools.middleware import (
-    NormalizeMsisdnMiddleware, OptOutMiddleware)
+from go.vumitools.middleware import NormalizeMsisdnMiddleware, OptOutMiddleware
 
 
 class MiddlewareTestCase(AppWorkerTestCase):
@@ -17,30 +13,7 @@ class MiddlewareTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(MiddlewareTestCase, self).setUp()
-
         self.default_config = self.make_config({})
-        self.manager = self.get_riak_manager()
-        self.account_store = AccountStore(self.manager)
-        self.message_store = MessageStore(self.manager, self.redis)
-
-        self.account = yield self.account_store.new_user(u'user')
-        self.conv_store = ConversationStore.from_user_account(self.account)
-        self.tag = ('xmpp', 'test1@xmpp.org')
-
-    @inlineCallbacks
-    def create_conversation(self, conversation_type=u'bulk_message',
-                            subject=u'subject', message=u'message'):
-        conversation = yield self.conv_store.new_conversation(
-            conversation_type, subject, message)
-        returnValue(conversation)
-
-    @inlineCallbacks
-    def tag_conversation(self, conversation, tag):
-        batch_id = yield self.message_store.batch_start([tag],
-                            user_account=unicode(self.account.key))
-        conversation.batches.add_key(batch_id)
-        conversation.save()
-        returnValue(batch_id)
 
     def create_middleware(self, middleware_class, name='dummy_middleware',
                             config=None):

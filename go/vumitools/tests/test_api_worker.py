@@ -210,8 +210,6 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
             'riak_manager': {'bucket_prefix': type(self).__module__},
             'redis': self.redis._client,
             }
-        self.message_store_config = self.make_config({
-                'r_prefix': 'test.'})
         self.dispatcher = yield self.get_dispatcher(self.make_config({
             'router_class': 'go.vumitools.api_worker.GoApplicationRouter',
             'r_prefix': 'test.',
