@@ -451,14 +451,14 @@ class VumiApi(object):
     @staticmethod
     def _parse_config(config):
         riak_config = config.get('riak_manager', {})
-        redis_config = config.get('redis', {})
+        redis_config = config.get('redis_manager', {})
         sender_config = config.get('message_sender', {})
         return riak_config, redis_config, sender_config
 
     @classmethod
     def from_config(cls, config):
         riak_config, redis_config, sender_config = cls._parse_config(config)
-        manager = RiakManager.from_config(riak_config.copy())
+        manager = RiakManager.from_config(riak_config)
         redis = RedisManager.from_config(redis_config)
         sender = MessageSender(sender_config)
         return cls(manager, redis, sender)
@@ -467,7 +467,7 @@ class VumiApi(object):
     @inlineCallbacks
     def from_config_async(cls, config):
         riak_config, redis_config, sender_config = cls._parse_config(config)
-        manager = TxRiakManager.from_config(riak_config.copy())
+        manager = TxRiakManager.from_config(riak_config)
         redis = yield TxRedisManager.from_config(redis_config)
         sender = MessageSender(sender_config)
         returnValue(cls(manager, redis, sender))

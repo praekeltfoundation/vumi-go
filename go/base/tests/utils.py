@@ -45,12 +45,13 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
     def setUp(self):
         self._persist_setUp()
         self._settings_patches = []
-        self.set_up_redis()
 
-    def set_up_redis(self):
-        self.redis = self.get_redis_manager()
+        # Need some hackery to make things fit together here.
         vumi_config = settings.VUMI_API_CONFIG.copy()
-        vumi_config['redis'] = self.redis._client
+        self._persist_config['riak_manager'] = vumi_config['riak_manager']
+        self._persist_config['redis_manager']['FAKE_REDIS'] = (
+            self.get_redis_manager())
+        vumi_config.update(self._persist_config)
         self.patch_settings(VUMI_API_CONFIG=vumi_config)
 
     def tearDown(self):

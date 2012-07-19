@@ -23,8 +23,8 @@ class CommandDispatcherTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         super(CommandDispatcherTestCase, self).setUp()
-        self.api = yield self.get_application(self.make_config({
-                    'worker_names': ['worker_1', 'worker_2']}))
+        self.api = yield self.get_application({
+                'worker_names': ['worker_1', 'worker_2']})
 
     def publish_command(self, cmd):
         return self.dispatch(cmd, rkey='vumi.api')
@@ -59,13 +59,8 @@ class GoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
     @inlineCallbacks
     def setUp(self):
         self._persist_setUp()
-        self.redis = yield self.get_redis_manager()
-        self.base_config = {
-            'riak_manager': {'bucket_prefix': type(self).__module__},
-            'redis': self.redis._client,
-            }
 
-        self.vumi_api = VumiApi(self.get_riak_manager(), self.redis)
+        self.vumi_api = yield VumiApi.from_config_async(self._persist_config)
         self.account = yield self.vumi_api.account_store.new_user(u'user')
         self.user_api = VumiUserApi(self.vumi_api, self.account.key)
         self.tag = ('xmpp', 'test1@xmpp.org')
@@ -193,26 +188,16 @@ class GoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
         self.assertEqual(md._go_metadata, other_md._go_metadata)
 
 
-class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
+class GoApplicationRouterTestCase(DispatcherTestCase):
 
     dispatcher_class = BaseDispatchWorker
     transport_name = 'test_transport'
 
-    def make_config(self, config):
-        return dict(self.base_config, **config)
-
     @inlineCallbacks
     def setUp(self):
         yield super(GoApplicationRouterTestCase, self).setUp()
-        self._persist_setUp()
-        self.redis = yield self.get_redis_manager()
-        self.base_config = {
-            'riak_manager': {'bucket_prefix': type(self).__module__},
-            'redis': self.redis._client,
-            }
-        self.dispatcher = yield self.get_dispatcher(self.make_config({
+        self.dispatcher = yield self.get_dispatcher({
             'router_class': 'go.vumitools.api_worker.GoApplicationRouter',
-            'r_prefix': 'test.',
             'transport_names': [
                 self.transport_name,
             ],
@@ -234,10 +219,10 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
             'optout_mw': {
                 'optout_keywords': ['stop']
             }
-        }))
+            })
 
         # get the router to test
-        self.vumi_api = VumiApi(self.get_riak_manager(), self.redis)
+        self.vumi_api = yield VumiApi.from_config_async(self._persist_config)
 
         self.account = yield self.vumi_api.account_store.new_user(u'user')
         self.user_api = VumiUserApi(self.vumi_api, self.account.key)
