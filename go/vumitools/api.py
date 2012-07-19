@@ -28,6 +28,7 @@ from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.middleware import DebitAccountMiddleware
 from go.vumitools.credit import CreditManager
+from go.vumitools.opt_out import OptOutStore
 
 from django.conf import settings
 
@@ -275,6 +276,24 @@ class ConversationWrapper(object):
     def get_absolute_url(self):
         return u'/app/%s/%s/' % (self.conversation_type, self.key)
 
+    @Manager.calls_manager
+    def get_opted_in_addresses(self):
+        """
+        Get the contacts assigned to this group with an address attribute
+        that is appropriate for the conversation's delivery_class and
+        that are opted in.
+        """
+        # TODO: Unhacky this.
+        opt_out_store = OptOutStore(
+            self.api.manager, self.user_api.user_account_key)
+        optouts = yield opt_out_store.list_opt_outs()
+        optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
+                            if optout.key.startswith('msisdn:')]
+        all_addrs = yield self.get_contacts_addresses()
+        opted_in_addrs = [addr for addr in all_addrs
+                            if addr not in optout_addrs]
+        returnValue(opted_in_addrs)
+
 
 class TagpoolSet(object):
     """Holder for helper methods for retrieving tag pool information.
@@ -361,6 +380,12 @@ class VumiUserApi(object):
             ConversationWrapper.
         """
         return self.conversation_wrapper(conversation, self)
+
+    @Manager.calls_manager
+    def get_wrapped_conversation(self, conversation_key):
+        conversation = yield self.conversation_store.get_conversation_by_key(
+            conversation_key)
+        returnValue(self.wrap_conversation(conversation))
 
     def active_conversations(self):
         conversations = self.conversation_store.conversations
