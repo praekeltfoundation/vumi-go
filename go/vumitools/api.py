@@ -412,9 +412,10 @@ class VumiApi(object):
         self.manager = manager
         self.redis = redis
 
-        self.tpm = TagpoolManager(self.redis)
+        self.tpm = TagpoolManager(self.redis.sub_manager('tagpool_store'))
         self.cm = CreditManager(self.redis.sub_manager('credit_store'))
-        self.mdb = MessageStore(self.manager, self.redis)
+        self.mdb = MessageStore(self.manager,
+                                self.redis.sub_manager('message_store'))
         self.account_store = AccountStore(self.manager)
 
         # message sending API
