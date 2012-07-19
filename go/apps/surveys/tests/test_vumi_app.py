@@ -13,7 +13,6 @@ from go.apps.surveys.vumi_app import SurveyApplication
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.account import AccountStore
 
 
 class TestSurveyApplication(AppWorkerTestCase):
@@ -60,15 +59,14 @@ class TestSurveyApplication(AppWorkerTestCase):
             'worker_names': ['survey_application'],
             }, cls=CommandDispatcher)
 
-        # Steal app's riak manager
-        self.manager = self.app.store.manager  # YOINK!
-        self._persist_riak_managers.append(self.manager)
+        # Steal app's vumi_api
+        self.vumi_api = self.app.vumi_api  # YOINK!
+        self._persist_riak_managers.append(self.vumi_api.manager)
 
         # Create a test user account
-        self.account_store = AccountStore(self.manager)
-        self.user_account = yield self.account_store.new_user(u'testuser')
-        self.user_api = yield VumiUserApi.from_config_async(
-            self.user_account.key, self.config)
+        self.user_account = yield self.vumi_api.account_store.new_user(
+            u'testuser')
+        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
         # Add tags
         self.user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])

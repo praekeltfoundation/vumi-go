@@ -12,7 +12,6 @@ from go.apps.opt_out.vumi_app import OptOutApplication
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.account import AccountStore
 from go.vumitools.opt_out import OptOutStore
 
 
@@ -35,15 +34,14 @@ class TestOptOutApplication(AppWorkerTestCase):
             'worker_names': ['opt_out_application'],
             }, cls=CommandDispatcher)
 
-        # Steal app's riak manager
-        self.manager = self.app.store.manager  # YOINK!
-        self._persist_riak_managers.append(self.manager)
+        # Steal app's vumi_api
+        self.vumi_api = self.app.vumi_api  # YOINK!
+        self._persist_riak_managers.append(self.vumi_api.manager)
 
         # Create a test user account
-        self.account_store = AccountStore(self.manager)
-        self.user_account = yield self.account_store.new_user(u'testuser')
-        self.user_api = yield VumiUserApi.from_config_async(
-            self.user_account.key, self.config)
+        self.user_account = yield self.vumi_api.account_store.new_user(
+            u'testuser')
+        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
         # Add tags
         self.user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
@@ -100,7 +98,7 @@ class TestOptOutApplication(AppWorkerTestCase):
         yield self.opt_out("12345", "666", "STOP")
         [msg] = self.get_dispatched_messages()
         self.assertEqual(msg.get('content'), "You have opted out")
-        opt_out_store = OptOutStore(self.manager, "testuser")
+        opt_out_store = OptOutStore(self.vumi_api.manager, "testuser")
         opt_out = yield opt_out_store.get_opt_out("msisdn", "12345")
         self.assertNotEqual(opt_out, None)
 
@@ -120,6 +118,6 @@ class TestOptOutApplication(AppWorkerTestCase):
         [msg] = yield self.wait_for_dispatched_messages(1)
         self.assertEqual(msg.get('content'),
                 '{"msisdn":"12345","opted_in": false}')
-        opt_out_store = OptOutStore(self.manager, "testuser")
+        opt_out_store = OptOutStore(self.vumi_api.manager, "testuser")
         opt_out = yield opt_out_store.get_opt_out("msisdn", "12345")
         self.assertNotEqual(opt_out, None)
