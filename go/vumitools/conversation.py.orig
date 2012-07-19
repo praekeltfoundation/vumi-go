@@ -1,0 +1,158 @@
+# -*- test-case-name: go.vumitools.tests.test_conversation -*-
+
+from uuid import uuid4
+from datetime import datetime
+
+from vumi.persist.model import Model, Manager
+from vumi.persist.message_store import Batch
+from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
+                                Json)
+
+from twisted.internet.defer import returnValue
+
+from go.vumitools.account import UserAccount, PerAccountStore
+from go.vumitools.contact import ContactGroup
+
+
+CONVERSATION_TYPES = [
+    ('bulk_message', 'Send Bulk SMS and track replies'),
+    ('survey', 'Interactive Survey'),
+    ('multi_survey', 'Multi-stage Interactive Survey'),
+]
+
+CONVERSATION_DRAFT = 'draft'
+CONVERSATION_RUNNING = 'running'
+CONVERSATION_FINISHED = 'finished'
+
+
+class Conversation(Model):
+    """A conversation with an audience"""
+    user_account = ForeignKey(UserAccount)
+    subject = Unicode(max_length=255)
+    message = Unicode()
+    start_timestamp = Timestamp()
+    end_timestamp = Timestamp(null=True, index=True)
+    created_at = Timestamp(default=datetime.utcnow)
+
+    groups = ManyToMany(ContactGroup)
+    conversation_type = Unicode()
+    delivery_class = Unicode(null=True)
+    delivery_tag_pool = Unicode(null=True)
+    delivery_tag = Unicode(null=True)
+
+    batches = ManyToMany(Batch)
+    metadata = Json(null=True)
+
+    def ended(self):
+        return self.end_timestamp is not None
+
+    def get_status(self):
+        """
+        Get the status of this conversation
+
+        :rtype: str, (CONVERSATION_FINISHED, CONVERSATION_RUNNING, or
+            CONVERSATION_DRAFT)
+
+        """
+        if self.ended():
+            return CONVERSATION_FINISHED
+        elif self.batches.keys():
+            return CONVERSATION_RUNNING
+        else:
+            return CONVERSATION_DRAFT
+
+    def add_group(self, group):
+        if isinstance(group, ContactGroup):
+            self.groups.add(group)
+        else:
+            self.groups.add_key(group)
+
+    def __unicode__(self):
+        return self.subject
+
+    @Manager.calls_manager
+    def people(self):
+        people = []
+        groups = yield self.groups.get_all()
+        for group in groups:
+            if group is None:
+                # TODO: Something sane here.
+                continue
+            people.extend((yield group.backlinks.contacts()))
+        returnValue(people)
+
+    @Manager.calls_manager
+    def get_contacts_addresses(self):
+        """
+        Get the contacts assigned to this group with an address attribute
+        that is appropriate for the conversation's delivery_class
+        """
+        people = yield self.people()
+        addrs = [contact.addr_for(self.delivery_class) for contact in people]
+        all_addrs = [addr for addr in addrs if addr]
+        returnValue(all_addrs)
+
+    @Manager.calls_manager
+    def get_opted_in_addresses(self, user_account):
+        """
+        Get the contacts assigned to this group with an address attribute
+        that is appropriate for the conversation's delivery_class and
+        that are opted in.
+
+        :param user_account:
+            The account to use to lookup the optouts in.
+
+        *NOTE*  This is a work around because it is currently not possible
+                to get back to the parents manager.
+        """
+<<<<<<< HEAD
+        # FIXME:    Need to import this to make sure the backlinks are created
+        #           even though it isn't used directly.
+=======
+>>>>>>> feature/VUMIGO-111-opt-out-tech-debt-payment-plan
+        from go.vumitools.opt_out import OptOutStore
+        opt_out_store = OptOutStore.from_user_account(user_account)
+        optouts = yield opt_out_store.list_opt_outs()
+        optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
+                            if optout.key.startswith('msisdn:')]
+        all_addrs = yield self.get_contacts_addresses()
+        opted_in_addrs = [addr for addr in all_addrs
+                            if addr not in optout_addrs]
+        returnValue(opted_in_addrs)
+
+
+class ConversationStore(PerAccountStore):
+    def setup_proxies(self):
+        self.conversations = self.manager.proxy(Conversation)
+
+    @Manager.calls_manager
+    def list_conversations(self):
+        # Not stale, because we're using backlinks.
+        account = yield self.get_user_account()
+        conversations = yield account.backlinks.conversations(self.manager)
+        returnValue(conversations)
+
+    def get_conversation_by_key(self, key):
+        return self.conversations.load(key)
+
+    @Manager.calls_manager
+    def new_conversation(self, conversation_type, subject, message,
+        start_timestamp=None, **fields):
+        conversation_id = uuid4().get_hex()
+        start_timestamp = start_timestamp or datetime.utcnow()
+
+        # These are foreign keys.
+        groups = fields.pop('groups', [])
+
+        conversation = self.conversations(
+            conversation_id, user_account=self.user_account_key,
+            conversation_type=conversation_type,
+            subject=subject, message=message,
+            start_timestamp=start_timestamp,
+            **fields)
+
+        for group in groups:
+            conversation.add_group(group)
+
+        conversation = yield conversation.save()
+        returnValue(conversation)

@@ -386,7 +386,7 @@ class YoPaymentHandler(object):
         self.username = username
         self.password = password
         self.url = url
-        self.method = method,
+        self.method = method
         self.amount = amount
         self.reason = reason
         self.pm_prefix = poll_manager_prefix
@@ -443,7 +443,7 @@ class YoPaymentHandler(object):
         response = yield http_request_full(self.url,
             data=urlencode(request_params),
             headers=self.get_auth_headers(self.username, self.password),
-            method='GET')
+            method=self.method)
         log.info('Received response: %s / %s' % (response.code,
             response.delivered_body,))
 
