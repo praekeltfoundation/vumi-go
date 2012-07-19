@@ -10,19 +10,6 @@ from vumi import log
 
 from go.vumitools.app_worker import GoApplicationWorker
 
-# from twisted.internet.defer import inlineCallbacks
-
-# from vumi.application import ApplicationWorker
-# from vumi.components.message_store import MessageStore
-# from vumi.persist.txriak_manager import TxRiakManager
-# from vumi.persist.txredis_manager import TxRedisManager
-# from vumi.middleware import TaggingMiddleware
-# from vumi import log
-
-# from go.vumitools.api import VumiApiCommand
-# from go.vumitools.conversation import ConversationStore
-# from go.vumitools.middleware import DebitAccountMiddleware
-
 
 class BulkMessageApplication(GoApplicationWorker):
     """

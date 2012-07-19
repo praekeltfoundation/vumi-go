@@ -12,7 +12,6 @@ from vumi.tests.utils import LogCatcher
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.account import AccountStore
 from go.apps.multi_surveys.vumi_app import MultiSurveyApplication
 
 
