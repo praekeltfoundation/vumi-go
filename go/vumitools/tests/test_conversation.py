@@ -51,27 +51,3 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
 
         dbconv = yield self.conv_store.get_conversation_by_key(conv.key)
         self.assert_models_equal(conv, dbconv)
-
-    # @inlineCallbacks
-    # def test_optout_filtering(self):
-    #     group = yield self.contact_store.new_group(u'test-group')
-
-    #     # Create two random contacts
-    #     yield self.contact_store.new_contact(msisdn=u'+27761234567', groups=[
-    #         group.key])
-    #     yield self.contact_store.new_contact(msisdn=u'+27760000000', groups=[
-    #         group.key])
-
-    #     conv = yield self.conv_store.new_conversation(
-    #         u'bulk_message', u'subject', u'message', delivery_class=u'sms')
-    #     conv.add_group(group)
-    #     yield conv.save()
-
-    #     # Opt out the first contact
-    #     yield self.optout_store.new_opt_out(u'msisdn', u'+27761234567', {
-    #         'message_id': u'the-message-id'
-    #     })
-    #     all_addrs = yield conv.get_contacts_addresses()
-    #     self.assertEqual(set(all_addrs), set(['+27760000000', '+27761234567']))
-    #     optedin_addrs = yield conv.get_opted_in_addresses(self.account)
-    #     self.assertEqual(optedin_addrs, ['+27760000000'])
