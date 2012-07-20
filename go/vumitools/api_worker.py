@@ -256,10 +256,6 @@ class EventDispatcher(ApplicationWorker):
         self.handler_config = self.config.get('event_handlers', {})
         self.account_handler_configs = self.config.get(
             'account_handler_configs', {})
-        mdb_config = self.config.get('message_store', {})
-        self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
-        self.riak_config = self.config.get('riak_manager', {})
-        self.r_prefix = self.config.get('r_prefix')
 
     @inlineCallbacks
     def setup_application(self):
