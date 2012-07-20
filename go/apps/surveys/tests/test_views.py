@@ -22,6 +22,9 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.client = Client()
         self.client.login(username='username', password='password')
 
+        # FIXME: Update vxpolls to not use redis directly, then uncomment this.
+        # self.patch_settings(VXPOLLS_REDIS_CONFIG='FAKE_REDIS')
+
         self.setup_riak_fixtures()
 
     def setup_riak_fixtures(self):
@@ -133,9 +136,8 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         conversation = self.get_wrapped_conv()
         self.assertFalse(conversation.is_client_initiated())
         response = self.client.post(reverse('survey:people',
-            kwargs={'conversation_key': conversation.key}), {
-            'groups': [grp.key for grp in self.contact_store.list_groups()],
-        })
+            kwargs={'conversation_key': conversation.key}), {'groups': [
+                    grp.key for grp in self.contact_store.list_groups()]})
         self.assertRedirects(response, reverse('survey:start', kwargs={
             'conversation_key': conversation.key}))
 

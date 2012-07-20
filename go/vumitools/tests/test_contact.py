@@ -5,20 +5,19 @@
 from twisted.internet.defer import inlineCallbacks
 from twisted.trial.unittest import TestCase
 
-from vumi.persist.txriak_manager import TxRiakManager
-
-from go.vumitools.tests.utils import model_eq
+from go.vumitools.tests.utils import model_eq, GoPersistenceMixin
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.opt_out import OptOutStore
 
 
-class TestContactStore(TestCase):
+class TestContactStore(GoPersistenceMixin, TestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self.manager = TxRiakManager.from_config({'bucket_prefix': 'test.'})
-        yield self.manager.purge_all()
+        self._persist_setUp()
+        self.manager = self.get_riak_manager()
+        # yield self.manager.purge_all()
         self.account_store = AccountStore(self.manager)
         self.account = yield self.account_store.new_user(u'user')
         self.account_alt = yield self.account_store.new_user(u'other_user')
@@ -26,7 +25,7 @@ class TestContactStore(TestCase):
         self.store_alt = ContactStore.from_user_account(self.account_alt)
 
     def tearDown(self):
-        return self.manager.purge_all()
+        return self._persist_tearDown()
 
     def assert_models_equal(self, m1, m2):
         self.assertTrue(model_eq(m1, m2),

@@ -7,17 +7,20 @@ NOTE: This uses the synchronous RiakManager, and is therefore unsuitable for
 use in Vumi workers.
 """
 
-import redis
 from datetime import datetime
 from collections import defaultdict
 
-from twisted.internet.defer import returnValue
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import Message
-from vumi.application import TagpoolManager
+from vumi.components.tagpool import TagpoolManager
+from vumi.components.message_store import MessageStore
 from vumi.persist.model import Manager
 from vumi.persist.riak_manager import RiakManager
-from vumi.persist.message_store import MessageStore
+from vumi.persist.txriak_manager import TxRiakManager
+from vumi.persist.redis_manager import RedisManager
+from vumi.persist.txredis_manager import TxRedisManager
+
 from vumi.middleware import TaggingMiddleware
 
 from go.vumitools.account import AccountStore
@@ -25,14 +28,9 @@ from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.middleware import DebitAccountMiddleware
 from go.vumitools.credit import CreditManager
+from go.vumitools.opt_out import OptOutStore
 
 from django.conf import settings
-
-
-def get_redis(config):
-    """Get a possibly fake redis."""
-    redis_cls = config.get('redis_cls', redis.Redis)  # testing hook
-    return redis_cls(**config.get('redis', {}))
 
 
 class ConversationSendError(Exception):
@@ -53,12 +51,12 @@ class ConversationWrapper(object):
         self.base_manager = self.api.manager
         self._tagpool_metadata = None
 
-    @property
-    def tagpool_metadata(self):
+    @Manager.calls_manager
+    def get_tagpool_metadata(self, key, default=None):
         if self._tagpool_metadata is None:
-            self._tagpool_metadata = self.api.tpm.get_metadata(
-                    self.delivery_tag_pool)
-        return self._tagpool_metadata
+            self._tagpool_metadata = yield self.api.tpm.get_metadata(
+                self.delivery_tag_pool)
+        returnValue(self._tagpool_metadata.get(key, default))
 
     @Manager.calls_manager
     def end_conversation(self):
@@ -156,27 +154,30 @@ class ConversationWrapper(object):
 
         msg_options = {}
         # TODO: transport_type is probably irrelevant
-        msg_options['transport_type'] = self.tagpool_metadata['transport_type']
+        msg_options['transport_type'] = yield self.get_tagpool_metadata(
+            'transport_type')
         # TODO: not sure whether to declare that tag names must always be
         #       valid from_addr values or whether to put in a mapping somewhere
         msg_options['from_addr'] = tag[1]
-        msg_options.update(self.tagpool_metadata.get('msg_options', {}))
+        msg_options.update(
+            (yield self.get_tagpool_metadata('msg_options', {})))
         TaggingMiddleware.add_tag_to_payload(msg_options, tag)
         DebitAccountMiddleware.add_user_to_payload(msg_options,
                                                    self.c.user_account.key)
 
+        is_client_initiated = yield self.is_client_initiated()
         yield self.dispatch_command('start',
             batch_id=batch_id,
             conversation_type=self.c.conversation_type,
             conversation_key=self.c.key,
             msg_options=msg_options,
-            is_client_initiated=self.is_client_initiated(),
+            is_client_initiated=is_client_initiated,
             **extra_params)
         self.c.batches.add_key(batch_id)
         yield self.c.save()
 
     @Manager.calls_manager
-    def replies(self):
+    def replies(self, limit=100):
         """
         FIXME: this requires a contact to already exist in the database
                 before it can show up as a reply. Isn't going to work
@@ -189,7 +190,7 @@ class ConversationWrapper(object):
         for batch_id in batch_keys:
             # TODO: Not look up the batch by key again.
             replies.extend((yield self.mdb.batch_replies(batch_id)))
-        for reply in replies:
+        for reply in replies[:limit]:
             cache_key = '/'.join([self.delivery_class, reply['from_addr']])
             contact = cache.get(cache_key, None)
             if not contact:
@@ -208,14 +209,14 @@ class ConversationWrapper(object):
                            reverse=True))
 
     @Manager.calls_manager
-    def sent_messages(self):
+    def sent_messages(self, limit=100):
         batch_keys = self.get_batch_keys()
         outbound_statuses = []
         messages = []
         for batch_id in batch_keys:
             # TODO: Not look up the batch by key again.
             messages.extend((yield self.mdb.batch_messages(batch_id)))
-        for message in messages:
+        for message in messages[:limit]:
             contact = yield self.user_api.contact_store.contact_for_addr(
                     self.delivery_class, message['to_addr'])
             outbound_statuses.append({
@@ -261,7 +262,7 @@ class ConversationWrapper(object):
                The function itself is probably correct -- the
                name of the function is probably wrong.
         """
-        return self.tagpool_metadata.get('display_name',
+        return self.get_tagpool_metadata('display_name',
                                          self.delivery_tag_pool)
 
     def is_client_initiated(self):
@@ -270,10 +271,28 @@ class ConversationWrapper(object):
 
         :rtype: bool
         """
-        return self.tagpool_metadata.get('client_initiated', False)
+        return self.get_tagpool_metadata('client_initiated', False)
 
     def get_absolute_url(self):
         return u'/app/%s/%s/' % (self.conversation_type, self.key)
+
+    @Manager.calls_manager
+    def get_opted_in_addresses(self):
+        """
+        Get the contacts assigned to this group with an address attribute
+        that is appropriate for the conversation's delivery_class and
+        that are opted in.
+        """
+        # TODO: Unhacky this.
+        opt_out_store = OptOutStore(
+            self.api.manager, self.user_api.user_account_key)
+        optouts = yield opt_out_store.list_opt_outs()
+        optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
+                            if optout.key.startswith('msisdn:')]
+        all_addrs = yield self.get_contacts_addresses()
+        opted_in_addrs = [addr for addr in all_addrs
+                            if addr not in optout_addrs]
+        returnValue(opted_in_addrs)
 
 
 class TagpoolSet(object):
@@ -332,14 +351,23 @@ class VumiUserApi(object):
 
     conversation_wrapper = ConversationWrapper
 
-    def __init__(self, user_account_key, config, manager_cls=None):
-        self.api = VumiApi(config, manager_cls=manager_cls)
+    def __init__(self, api, user_account_key):
+        self.api = api
         self.manager = self.api.manager
         self.user_account_key = user_account_key
         self.conversation_store = ConversationStore(self.api.manager,
                                                     self.user_account_key)
         self.contact_store = ContactStore(self.api.manager,
                                           self.user_account_key)
+
+    @classmethod
+    def from_config(cls, user_account_key, config):
+        return cls(VumiApi.from_config(config), user_account_key)
+
+    @classmethod
+    def from_config_async(cls, user_account_key, config):
+        d = VumiApi.from_config_async(config)
+        return d.addCallback(cls, user_account_key)
 
     def wrap_conversation(self, conversation):
         """Wrap a conversation with a ConversationWrapper.
@@ -352,6 +380,12 @@ class VumiUserApi(object):
             ConversationWrapper.
         """
         return self.conversation_wrapper(conversation, self)
+
+    @Manager.calls_manager
+    def get_wrapped_conversation(self, conversation_key):
+        conversation = yield self.conversation_store.get_conversation_by_key(
+            conversation_key)
+        returnValue(self.wrap_conversation(conversation))
 
     def active_conversations(self):
         conversations = self.conversation_store.conversations
@@ -372,9 +406,9 @@ class VumiUserApi(object):
                           if (tp.max_keys is None
                               or tp.max_keys > tp_usage[tp.tagpool]))
 
-        available_set = self.api.tpm.list_pools()
+        available_set = yield self.api.tpm.list_pools()
         pool_names = list(allowed_set & available_set)
-        pool_data = dict((pool, self.api.tpm.get_metadata(pool))
+        pool_data = dict((pool, (yield self.api.tpm.get_metadata(pool)))
                          for pool in pool_names)
         returnValue(TagpoolSet(pool_data))
 
@@ -399,38 +433,44 @@ class VumiUserApi(object):
 
 
 class VumiApi(object):
-    def __init__(self, config, manager_cls=None):
-        # TODO: Split the config up better.
-        config = config.copy()  # So we can modify it.
-        riak_config = config.pop('riak_manager')
+    def __init__(self, manager, redis, sender=None):
+        self.manager = manager
+        self.redis = redis
 
-        r_server = get_redis(config)
-
-        if manager_cls is None:
-            manager_cls = RiakManager
-        self.manager = manager_cls.from_config(riak_config)
-
-        # tagpool manager
-        tpm_config = config.get('tagpool_manager', {})
-        tpm_prefix = tpm_config.get('tagpool_prefix', 'tagpool_store')
-        self.tpm = TagpoolManager(r_server, tpm_prefix)
-
-        # credit manager
-        cm_config = config.get('credit_manager', {})
-        cm_prefix = cm_config.get('credit_prefix', 'credit_store')
-        self.cm = CreditManager(r_server, cm_prefix)
-
-        # message store
-        mdb_config = config.get('message_store', {})
-        mdb_prefix = mdb_config.get('store_prefix', 'message_store')
-        self.mdb = MessageStore(self.manager, r_server, mdb_prefix)
-
-        # account store
+        self.tpm = TagpoolManager(self.redis.sub_manager('tagpool_store'))
+        self.cm = CreditManager(self.redis.sub_manager('credit_store'))
+        self.mdb = MessageStore(self.manager,
+                                self.redis.sub_manager('message_store'))
         self.account_store = AccountStore(self.manager)
 
         # message sending API
-        mapi_config = config.get('message_sender', {})
-        self.mapi = MessageSender(mapi_config)
+        if sender is None:
+            sender = MessageSender({})
+        self.mapi = sender
+
+    @staticmethod
+    def _parse_config(config):
+        riak_config = config.get('riak_manager', {})
+        redis_config = config.get('redis_manager', {})
+        sender_config = config.get('message_sender', {})
+        return riak_config, redis_config, sender_config
+
+    @classmethod
+    def from_config(cls, config):
+        riak_config, redis_config, sender_config = cls._parse_config(config)
+        manager = RiakManager.from_config(riak_config)
+        redis = RedisManager.from_config(redis_config)
+        sender = MessageSender(sender_config)
+        return cls(manager, redis, sender)
+
+    @classmethod
+    @inlineCallbacks
+    def from_config_async(cls, config):
+        riak_config, redis_config, sender_config = cls._parse_config(config)
+        manager = TxRiakManager.from_config(riak_config)
+        redis = yield TxRedisManager.from_config(redis_config)
+        sender = MessageSender(sender_config)
+        returnValue(cls(manager, redis, sender))
 
     def batch_start(self, tags):
         """Start a message batch.
@@ -542,6 +582,7 @@ class VumiApi(object):
         """
         return self.mdb.batch_replies(batch_id)
 
+    @Manager.calls_manager
     def batch_tags(self, batch_id):
         """Return a list of tags associated with a given batch.
 
@@ -551,7 +592,8 @@ class VumiApi(object):
         :rtype:
             list of tags
         """
-        return list(self.mdb.get_batch(batch_id).tags)
+        batch = yield self.mdb.get_batch(batch_id)
+        returnValue(list(batch.tags))
 
     def acquire_tag(self, pool):
         """Acquire a tag from a given tag pool.

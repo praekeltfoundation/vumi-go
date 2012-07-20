@@ -2,91 +2,48 @@
 
 """Tests for go.vumitools.bulk_send_application"""
 
-import json
-
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.message import TransportEvent, TransportUserMessage
-from vumi.application.tests.test_base import ApplicationTestCase
-from vumi.tests.utils import FakeRedis
-from vumi.persist.txriak_manager import TxRiakManager
+from vumi.message import TransportUserMessage
 
-from go.apps.bulk_message.vumi_app import BulkMessageApplication
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
-from go.vumitools.tests.utils import CeleryTestMixIn, DummyConsumerFactory
-from go.vumitools.account import AccountStore
+from go.vumitools.tests.utils import AppWorkerTestCase
+from go.apps.bulk_message.vumi_app import BulkMessageApplication
 
 
-def dummy_consumer_factory_factory_factory(publish_func):
-    def dummy_consumer_factory_factory():
-        dummy_consumer_factory = DummyConsumerFactory()
-        dummy_consumer_factory.publish = publish_func
-        return dummy_consumer_factory
-    return dummy_consumer_factory_factory
-
-
-class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
+class TestBulkMessageApplication(AppWorkerTestCase):
 
     application_class = BulkMessageApplication
-    timeout = 2
 
     @inlineCallbacks
     def setUp(self):
         super(TestBulkMessageApplication, self).setUp()
-        self._fake_redis = FakeRedis()
-        self.app = yield self.get_application({
-            'redis_cls': lambda **kw: self._fake_redis,
-            'riak': {
-                'bucket_prefix': 'test.',
-                },
-            })
+        self.config = self.mk_config({})
+        self.app = yield self.get_application(self.config)
         self.cmd_dispatcher = yield self.get_application({
             'transport_name': 'cmd_dispatcher',
             'worker_names': ['bulk_message_application'],
             }, cls=CommandDispatcher)
-        self.manager = self.app.store.manager  # YOINK!
-        self.account_store = AccountStore(self.manager)
-        self.VUMI_COMMANDS_CONSUMER = dummy_consumer_factory_factory_factory(
-            self.publish_command)
-        self.setup_celery_for_tests()
 
-    @inlineCallbacks
-    def tearDown(self):
-        self.restore_celery()
-        self._fake_redis.teardown()
-        yield self.app.manager.purge_all()
-        yield super(TestBulkMessageApplication, self).tearDown()
+        # Steal app's vumi_api
+        self.vumi_api = self.app.vumi_api  # YOINK!
+        self._persist_riak_managers.append(self.vumi_api.manager)
 
-    def publish_command(self, cmd_dict):
-        data = json.dumps(cmd_dict)
-        self._amqp.publish_raw('vumi', 'vumi.api', data)
-
-    def get_dispatcher_commands(self):
-        return self._amqp.get_messages('vumi', 'vumi.api')
-
-    def get_bulk_message_commands(self):
-        return self._amqp.get_messages('vumi',
-                                       "%s.control" % self.app.worker_name)
-
-    def publish_event(self, **kw):
-        event = TransportEvent(**kw)
-        d = self.dispatch(event, rkey=self.rkey('event'))
-        d.addCallback(lambda _result: event)
-        return d
+        # Create a test user account
+        self.user_account = yield self.vumi_api.account_store.new_user(
+            u'testuser')
+        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
     def store_outbound(self, **kw):
-        return self.app.store.add_outbound_message(self.mkmsg_out(**kw))
+        return self.vumi_api.mdb.add_outbound_message(self.mkmsg_out(**kw))
 
     @inlineCallbacks
     def test_start(self):
-        user_account = yield self.account_store.new_user(u'testuser')
-        user_api = VumiUserApi(user_account.key, {
-                'redis_cls': lambda **kw: self._fake_redis,
-                'riak_manager': {'bucket_prefix': 'test.'},
-                }, TxRiakManager)
-        user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
-        user_api.api.set_pool_metadata("pool", {
+        user_api = yield VumiUserApi.from_config_async(
+            self.user_account.key, self.config)
+        yield user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
+        yield user_api.api.set_pool_metadata("pool", {
             "transport_type": "sphex",
             })
         group = yield user_api.contact_store.new_group(u'test group')
@@ -109,6 +66,7 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
         [batch_id] = conversation.batches.keys()
 
         # check commands made it through to the dispatcher and the vumi_app
+        # yield self._amqp.wait_messages('vumi', 'vumi.api', 1)
         [disp_cmd] = self.get_dispatcher_commands()
         self.assertEqual(disp_cmd['command'], 'start')
         [bulk_cmd] = self.get_bulk_message_commands()
@@ -130,11 +88,11 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
             tag = msg['helper_metadata']['tag']['tag']
             user_account_key = msg['helper_metadata']['go']['user_account']
             self.assertEqual(tag, ["pool", "tag1"])
-            self.assertEqual(user_account_key, user_account.key)
+            self.assertEqual(user_account_key, self.user_account.key)
 
-        batch_status = self.app.store.batch_status(batch_id)
+        batch_status = yield self.vumi_api.mdb.batch_status(batch_id)
         self.assertEqual(batch_status['sent'], 2)
-        dbmsgs = yield self.app.store.batch_messages(batch_id)
+        dbmsgs = yield self.vumi_api.mdb.batch_messages(batch_id)
         dbmsgs.sort(key=lambda msg: msg['to_addr'])
         [dbmsg1, dbmsg2] = dbmsgs
         self.assertEqual(dbmsg1, msg1)
@@ -146,7 +104,7 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
         ack_event = yield self.publish_event(user_message_id='123',
                                              event_type='ack',
                                              sent_message_id='xyz')
-        [event] = yield self.app.store.message_events('123')
+        [event] = yield self.vumi_api.mdb.message_events('123')
         self.assertEqual(event, ack_event)
 
     @inlineCallbacks
@@ -155,19 +113,19 @@ class TestBulkMessageApplication(ApplicationTestCase, CeleryTestMixIn):
         dr_event = yield self.publish_event(user_message_id='123',
                                             event_type='delivery_report',
                                             delivery_status='delivered')
-        [event] = yield self.app.store.message_events('123')
+        [event] = yield self.vumi_api.mdb.message_events('123')
         self.assertEqual(event, dr_event)
 
     @inlineCallbacks
     def test_consume_user_message(self):
         msg = self.mkmsg_in()
         yield self.dispatch(msg)
-        dbmsg = yield self.app.store.get_inbound_message(msg['message_id'])
+        dbmsg = yield self.vumi_api.mdb.get_inbound_message(msg['message_id'])
         self.assertEqual(dbmsg, msg)
 
     @inlineCallbacks
     def test_close_session(self):
         msg = self.mkmsg_in(session_event=TransportUserMessage.SESSION_CLOSE)
         yield self.dispatch(msg)
-        dbmsg = yield self.app.store.get_inbound_message(msg['message_id'])
+        dbmsg = yield self.vumi_api.mdb.get_inbound_message(msg['message_id'])
         self.assertEqual(dbmsg, msg)

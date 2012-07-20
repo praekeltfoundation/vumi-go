@@ -1,15 +1,25 @@
-{% for field in form.visible_fields %}
-<div class="control-group">
-    {% with field.name|slice:":11" as group_name %}
-        <label class="control-label">
-            {% ifchanged group_name %}<strong>{% endifchanged %}
-            {{field.label}}
-            {% ifchanged group_name %}</strong>{% endifchanged %}
-        </label>
+{% for form in questions_formset %}
+    <strong>Question {{forloop.counter}}:</strong>
+    <hr>
+    {% for field in form.visible_fields %}
+    <div class="control-group">
+        <label class="control-label">{{field.label}}</label>
         <div class="controls">
             {{field}}
             {{field.errors}}
         </div>
-    {% endwith %}
+    </div>
+    {% endfor %}
+{% endfor %}
+
+{% for field in poll_form.visible_fields %}
+<div class="control-group">
+    <label class="control-label">{{field.label}}</label>
+    <div class="controls">
+        {{field}}
+        {{field.errors}}
+    </div>
 </div>
 {% endfor %}
+
+{{ questions_formset.management_form }}

@@ -213,15 +213,9 @@ SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
 #       configuration file so that configuration values aren't
 #       duplicated
 VUMI_API_CONFIG = {
-    'message_store': {},
-    'tagpool_manager': {
-        'tagpool_prefix': 'vumigo',
-    },
-    'credit_manager': {
-        'credit_prefix': 'vumigo',
-    },
     'message_sender': {},
-    'riak_manager': {'bucket_prefix': 'vumigo.'}
+    'redis_manager': {'key_prefix': 'vumigo'},
+    'riak_manager': {'bucket_prefix': 'vumigo.'},
     }
 
 VUMI_COUNTRY_CODE = '27'

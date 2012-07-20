@@ -2,7 +2,7 @@ from django.conf import settings, UserSettingsHolder
 from django.utils.functional import wraps
 from django.test import TestCase
 
-from vumi.persist.riak_manager import RiakManager
+from go.vumitools.tests.utils import GoPersistenceMixin
 
 
 class override_settings(object):
@@ -39,23 +39,23 @@ class override_settings(object):
         settings._wrapped = self.wrapped
 
 
-class VumiGoDjangoTestCase(TestCase):
-    USE_RIAK = True
-
-    def get_riak_manager(self, config=None):
-        if config is None:
-            config = settings.VUMI_API_CONFIG['riak_manager']
-        return RiakManager.from_config(config)
+class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
+    sync_persistence = True
 
     def setUp(self):
+        self._persist_setUp()
         self._settings_patches = []
-        if self.USE_RIAK:
-            self.riak_manager = self.get_riak_manager()
-            # We don't purge here, because fixtures put stuff in riak.
+
+        # Need some hackery to make things fit together here.
+        vumi_config = settings.VUMI_API_CONFIG.copy()
+        self._persist_config['riak_manager'] = vumi_config['riak_manager']
+        self._persist_config['redis_manager']['FAKE_REDIS'] = (
+            self.get_redis_manager())
+        vumi_config.update(self._persist_config)
+        self.patch_settings(VUMI_API_CONFIG=vumi_config)
 
     def tearDown(self):
-        if self.USE_RIAK:
-            self.riak_manager.purge_all()
+        self._persist_tearDown()
         for patch in reversed(self._settings_patches):
             patch.disable()
 
