@@ -6,12 +6,11 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.conf import settings
 
-from vumi.tests.utils import FakeRedis
-
 from go.vumitools.api import VumiApi
 from go.vumitools.tests.utils import CeleryTestMixIn
 from go.base.tests.utils import VumiGoDjangoTestCase, declare_longcode_tags
 from go.base.utils import vumi_api_for_user
+from vumi.message import TransportUserMessage
 
 
 TEST_GROUP_NAME = u"Test Group"
@@ -44,6 +43,7 @@ class ConversationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
     def setup_riak_fixtures(self):
         self.user = User.objects.get(username='username')
         self.user_api = vumi_api_for_user(self.user)
+        self._persist_riak_managers.append(self.user_api.api.manager)
         self.contact_store = self.user_api.contact_store
         self.contact_store.contacts.enable_search()
         self.conv_store = self.user_api.conversation_store
@@ -69,15 +69,17 @@ class ConversationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
 
     def tearDown(self):
         self.restore_celery()
-        self._fake_redis.teardown()
         super(ConversationTestCase, self).tearDown()
 
+    def mkmsg_in(self, content, **kw):
+        kw.setdefault('to_addr', '+123')
+        kw.setdefault('from_addr', '+456')
+        kw.setdefault('transport_name', 'dummy_transport')
+        kw.setdefault('transport_type', 'sms')
+        return TransportUserMessage(content=content, **kw)
+
     def setup_api(self):
-        self._fake_redis = FakeRedis()
-        vumi_config = settings.VUMI_API_CONFIG.copy()
-        vumi_config['redis_cls'] = lambda **kws: self._fake_redis
-        self.patch_settings(VUMI_API_CONFIG=vumi_config)
-        self.api = VumiApi(settings.VUMI_API_CONFIG)
+        self.api = VumiApi.from_config(settings.VUMI_API_CONFIG)
 
     def declare_longcode_tags(self):
         declare_longcode_tags(self.api)

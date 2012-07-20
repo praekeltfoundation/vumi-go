@@ -106,9 +106,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """Select an existing group and use that as the group for the
         conversation"""
         response = self.client.post(reverse('bulk_message:people',
-            kwargs={'conversation_key': self.conv_key}), {
-            'groups': [grp.key for grp in self.contact_store.list_groups()],
-        })
+            kwargs={'conversation_key': self.conv_key}), {'groups': [
+                    grp.key for grp in self.contact_store.list_groups()]})
         self.assertRedirects(response, reverse('bulk_message:send', kwargs={
             'conversation_key': self.conv_key}))
 

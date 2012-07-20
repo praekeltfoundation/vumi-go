@@ -15,8 +15,8 @@ def conversation_or_404(user_api, key):
 
 def vumi_api_for_user(user):
     """Return a Vumi API instance for the given user."""
-    return VumiUserApi(user.get_profile().user_account,
-                       settings.VUMI_API_CONFIG)
+    return VumiUserApi.from_config(user.get_profile().user_account,
+                                   settings.VUMI_API_CONFIG)
 
 
 def padded_queryset(queryset, size=6, padding=None):
@@ -28,6 +28,12 @@ def padded_queryset(queryset, size=6, padding=None):
     results = list(queryset)
     results.extend(filler)
     return results
+
+
+def make_read_only_formset(formset):
+    for form in formset:
+        make_read_only_form(form)
+    return formset
 
 
 def make_read_only_form(form):
