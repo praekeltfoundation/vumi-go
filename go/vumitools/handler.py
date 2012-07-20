@@ -44,14 +44,8 @@ class SendMessageCommandHandler(EventHandler):
 
         An Example of a event_dispatcher.yaml config file, with mapped
         conversations in the config:
+
             transport_name: event_dispatcher
-            r_prefix: vumigo
-            riak_manager:
-                bucket_prefix: vumigo.
-            tagpool_manager:
-                tagpool_prefix: vumigo
-            message_store:
-                store_prefix: vumigo.
             event_handlers:
                 sign_up_handler: go.vumitools.handler.SendMessageCommandHandler
             account_handler_configs:
