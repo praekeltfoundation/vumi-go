@@ -219,7 +219,7 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
         self.setup_celery_for_tests()
 
     @inlineCallbacks
-    def _aw_tearDown(self):
+    def tearDown(self):
         self.restore_celery()
         yield super(AppWorkerTestCase, self).tearDown()
 
