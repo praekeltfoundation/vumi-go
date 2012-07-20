@@ -41,8 +41,7 @@ class SendMessageCommandHandler(EventHandler):
         While there could be multiple batches per conversation and
         multiple tags per batch, this assumes lists of one, and takes
         the first entry of each list
-        """
-        """
+
         An Example of a event_dispatcher.yaml config file, with mapped
         conversations in the config:
             transport_name: event_dispatcher
