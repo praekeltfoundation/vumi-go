@@ -7,17 +7,18 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application import ApplicationWorker
 from vumi.dispatchers.base import BaseDispatchRouter
+from vumi.utils import load_class_by_string
 from vumi import log
 from vumi.middleware import TaggingMiddleware
 
-from go.vumitools.api import VumiApi, VumiUserApi, VumiApiCommand
+from go.vumitools.api import VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent
 from go.vumitools.middleware import OptOutMiddleware
 
 
 class CommandDispatcher(ApplicationWorker):
     """
-    An application worker that forwards commands arriving on the Vumi Api
-    queue to the relevant applications. It does this by using the commands
+    An application worker that forwards commands arriving on the Vumi Api queue
+    to the relevant applications. It does this by using the command's
     worker_name parameter to construct the routing key.
 
     Configuration parameters:
@@ -229,6 +230,82 @@ class GoMessageMetadata(object):
                 return
         returnValue((self._go_metadata['conversation_key'],
                      self._go_metadata['conversation_type']))
+
+
+class EventDispatcher(ApplicationWorker):
+    """
+    An application worker that forwards event arriving on the Vumi Api Event
+    queue to the relevant handlers.
+
+    FIXME: The configuration is currently static.
+
+    Configuration parameters:
+
+    :type api_routing: dict
+    :param api_routing:
+        Dictionary describing where to consume API commands.
+    :type handler_names: list
+    :param event_handlers:
+        A mapping from handler name to fully-qualified class name.
+    """
+
+    def validate_config(self):
+        self.api_routing_config = VumiApiEvent.default_routing_config()
+        self.api_routing_config.update(self.config.get('api_routing', {}))
+        self.api_consumer = None
+        self.handler_config = self.config.get('event_handlers', {})
+        self.account_handler_configs = self.config.get(
+            'account_handler_configs', {})
+        mdb_config = self.config.get('message_store', {})
+        self.mdb_prefix = mdb_config.get('store_prefix', 'message_store')
+        self.riak_config = self.config.get('riak_manager', {})
+        self.r_prefix = self.config.get('r_prefix')
+
+    @inlineCallbacks
+    def setup_application(self):
+        self.handlers = {}
+        setup_deferreds = []
+        for name, handler_class in self.handler_config.items():
+            cls = load_class_by_string(handler_class)
+            self.handlers[name] = cls(self, self.config.get(name, {}))
+            yield setup_deferreds.append(self.handlers[name].setup_handler())
+
+        self.api_command_publisher = yield self.publish_to('vumi.api')
+        self.vumi_api = yield VumiApi.from_config_async(self.config)
+        self.account_config = {}
+
+        self.api_event_consumer = yield self.consume(
+            self.api_routing_config['routing_key'],
+            self.consume_api_event,
+            exchange_name=self.api_routing_config['exchange'],
+            exchange_type=self.api_routing_config['exchange_type'],
+            message_class=VumiApiEvent)
+
+    @inlineCallbacks
+    def teardown_application(self):
+        if self.api_event_consumer:
+            yield self.api_event_consumer.stop()
+            self.api_event_consumer = None
+
+    @inlineCallbacks
+    def get_account_config(self, account_key):
+        if account_key not in self.account_config:
+            user_account = yield self.vumi_api.account_store.get_user(
+                account_key)
+            event_handler_config = {}
+            for k, v in (user_account.event_handler_config or
+                         self.account_handler_configs.get(account_key) or []):
+                event_handler_config[tuple(k)] = v
+            self.account_config[account_key] = event_handler_config
+        returnValue(self.account_config[account_key])
+
+    @inlineCallbacks
+    def consume_api_event(self, event):
+        log.msg("Handling event: %r" % (event,))
+        config = yield self.get_account_config(event['account_key'])
+        for handler, handler_config in config.get(
+                (event['conversation_key'], event['event_type']), []):
+            yield self.handlers[handler].handle_event(event, handler_config)
 
 
 class GoApplicationRouter(BaseDispatchRouter):

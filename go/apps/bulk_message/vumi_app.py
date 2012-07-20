@@ -54,3 +54,13 @@ class BulkMessageApplication(GoApplicationWorker):
     def close_session(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
         return self.vumi_api.mdb.add_inbound_message(msg, tag=tag)
+
+    @inlineCallbacks
+    def process_command_send_message(self, *args, **kwargs):
+        command_data = kwargs['command_data']
+        log.info('Processing send_message: %s' % kwargs)
+        yield self.send_message(
+                command_data['batch_id'],
+                command_data['to_addr'],
+                command_data['content'],
+                command_data['msg_options'])
