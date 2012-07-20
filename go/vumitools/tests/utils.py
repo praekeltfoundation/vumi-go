@@ -4,14 +4,16 @@
 
 import os
 from contextlib import contextmanager
+import json
 
 from twisted.python.monkey import MonkeyPatcher
 from twisted.internet.defer import DeferredList, inlineCallbacks
 from celery.app import app_or_default
 
 from vumi.persist.fields import ForeignKeyProxy, ManyToManyProxy, DynamicProxy
-from vumi.message import TransportUserMessage
-from vumi.persist import txriak_manager
+from vumi.message import TransportEvent
+from vumi.application.tests.test_base import ApplicationTestCase
+from vumi.tests.utils import PersistenceMixin
 
 from go.vumitools.api import VumiApiCommand
 from go.vumitools.account import UserAccount
@@ -129,13 +131,6 @@ class CeleryTestMixIn(object):
             os.environ["CELERY_CONFIG_MODULE"] = celery_config
         self._app.conf.CELERY_ALWAYS_EAGER = always_eager
 
-    def mkmsg_in(self, content, **kw):
-        kw.setdefault('to_addr', '+123')
-        kw.setdefault('from_addr', '+456')
-        kw.setdefault('transport_name', 'dummy_transport')
-        kw.setdefault('transport_type', 'sms')
-        return TransportUserMessage(content=content, **kw)
-
     def get_consumer(self, **options):
         """Create a command message consumer.
 
@@ -162,16 +157,10 @@ class CeleryTestMixIn(object):
         return [VumiApiCommand(**payload) for payload in msgs]
 
 
-class RiakTestMixin(object):
-    def get_riak_manager(self, config):
-        riak_manager = txriak_manager.TxRiakManager.from_config(config)
-        self._riak_managers.append(riak_manager)
-        return riak_manager
-
-    def riak_setup(self):
-        self._riak_managers = []
+class GoPersistenceMixin(PersistenceMixin):
 
     def _clear_bucket_properties(self, account_keys, manager):
+        from vumi.persist import txriak_manager
         if not hasattr(txriak_manager, 'delete_bucket_properties'):
             # This doesn't exist everywhere yet.
             return
@@ -191,11 +180,14 @@ class RiakTestMixin(object):
         return DeferredList(deferreds)
 
     def _list_accounts(self, manager):
-        return manager.client.bucket(
-            manager.bucket_name(UserAccount)).list_keys()
+        bucket = manager.client.bucket(
+            manager.bucket_name(UserAccount))
+        if self.sync_persistence:
+            return bucket.get_keys()
+        return bucket.list_keys()
 
-    @inlineCallbacks
-    def _purge_manager(self, manager):
+    @PersistenceMixin.sync_or_async
+    def _persist_purge_riak(self, manager):
         # If buckets are empty, they aren't listed. However, they may still
         # have properties set. Therefore, we find all account keys and clear
         # properties from their associated buckets.
@@ -205,7 +197,45 @@ class RiakTestMixin(object):
         # don't go away.
         yield self._clear_bucket_properties(accounts, manager)
 
+
+def dummy_consumer_factory_factory_factory(publish_func):
+    def dummy_consumer_factory_factory():
+        dummy_consumer_factory = DummyConsumerFactory()
+        dummy_consumer_factory.publish = publish_func
+        return dummy_consumer_factory
+    return dummy_consumer_factory_factory
+
+
+class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
+                        ApplicationTestCase):
+    override_dummy_consumer = True
+
     @inlineCallbacks
-    def riak_teardown(self):
-        for manager in self._riak_managers:
-            yield self._purge_manager(manager)
+    def setUp(self):
+        yield super(AppWorkerTestCase, self).setUp()
+        if self.override_dummy_consumer:
+            self.VUMI_COMMANDS_CONSUMER = (
+                dummy_consumer_factory_factory_factory(self.publish_command))
+        self.setup_celery_for_tests()
+
+    @inlineCallbacks
+    def _aw_tearDown(self):
+        self.restore_celery()
+        yield super(AppWorkerTestCase, self).tearDown()
+
+    def publish_command(self, cmd_dict):
+        data = json.dumps(cmd_dict)
+        self._amqp.publish_raw('vumi', 'vumi.api', data)
+
+    def get_dispatcher_commands(self):
+        return self._amqp.get_messages('vumi', 'vumi.api')
+
+    def get_bulk_message_commands(self):
+        return self._amqp.get_messages('vumi',
+                                       "%s.control" % self.app.worker_name)
+
+    def publish_event(self, **kw):
+        event = TransportEvent(**kw)
+        d = self.dispatch(event, rkey=self.rkey('event'))
+        d.addCallback(lambda _result: event)
+        return d

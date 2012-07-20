@@ -394,4 +394,3 @@ class ContactsTestCase(VumiGoDjangoTestCase):
             'q': 'name:%s' % (self.contact.name,)
         })
         print response.content
-
