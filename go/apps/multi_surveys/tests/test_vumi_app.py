@@ -2,39 +2,24 @@
 
 """Tests for go.apps.multi_surveys.vumi_app"""
 
-import json
 import uuid
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import TransportUserMessage
-from vumi.application.tests.test_base import ApplicationTestCase
-from vumi.tests.utils import FakeRedis, LogCatcher
+from vumi.tests.utils import LogCatcher
 
-from go.apps.multi_surveys.vumi_app import MultiSurveyApplication
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
-from go.vumitools.tests.utils import (
-    RiakTestMixin, CeleryTestMixIn, DummyConsumerFactory)
-from go.vumitools.account import AccountStore
-
-from vxpolls.manager import PollManager
+from go.vumitools.tests.utils import AppWorkerTestCase
+from go.apps.multi_surveys.vumi_app import MultiSurveyApplication
 
 
-def dummy_consumer_factory_factory_factory(publish_func):
-    def dummy_consumer_factory_factory():
-        dummy_consumer_factory = DummyConsumerFactory()
-        dummy_consumer_factory.publish = publish_func
-        return dummy_consumer_factory
-    return dummy_consumer_factory_factory
-
-
-class TestMultiSurveyApplication(
-    ApplicationTestCase, CeleryTestMixIn, RiakTestMixin):
+class TestMultiSurveyApplication(AppWorkerTestCase):
 
     application_class = MultiSurveyApplication
     transport_type = u'sms'
-    timeout = 2
+
     default_polls = {
         0: [{
             'copy': 'Color? 1. Red 2. Blue', 'label': 'color',
@@ -55,26 +40,13 @@ class TestMultiSurveyApplication(
     @inlineCallbacks
     def setUp(self):
         super(TestMultiSurveyApplication, self).setUp()
-        self.riak_setup()
-
-        self._fake_redis = FakeRedis()
-        self.config = {
-            'redis_cls': lambda **kw: self._fake_redis,
-            'worker_name': 'multi_survey_application',
-            'message_store': {
-                'store_prefix': 'test.',
-            },
-            'riak_manager': {
-                'bucket_prefix': 'test.',
-            },
-            'vxpolls': {
-                'prefix': 'test.',
-            },
-            'is_demo': False,
-        }
 
         # Setup the SurveyApplication
-        self.app = yield self.get_application(self.config)
+        self.app = yield self.get_application({
+                'worker_name': 'multi_survey_application',
+                'vxpolls': {'prefix': 'test.'},
+                'is_demo': False,
+                })
 
         # Setup the command dispatcher so we cand send it commands
         self.cmd_dispatcher = yield self.get_application({
@@ -82,18 +54,14 @@ class TestMultiSurveyApplication(
             'worker_names': ['multi_survey_application'],
             }, cls=CommandDispatcher)
 
-        # Setup Celery so that it uses FakeAMQP instead of the real one.
-        self.manager = self.app.store.manager  # YOINK!
-        self._riak_managers.append(self.manager)
-        self.account_store = AccountStore(self.manager)
-        self.VUMI_COMMANDS_CONSUMER = dummy_consumer_factory_factory_factory(
-            self.publish_command)
-        self.setup_celery_for_tests()
+        # Steal app's vumi_api
+        self.vumi_api = self.app.vumi_api  # YOINK!
+        self._persist_riak_managers.append(self.vumi_api.manager)
 
         # Create a test user account
-        self.user_account = yield self.account_store.new_user(u'testuser')
-        self.user_api = VumiUserApi(
-            self.user_account.key, self.config, type(self.manager))
+        self.user_account = yield self.vumi_api.account_store.new_user(
+            u'testuser')
+        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
         # Add tags
         self.user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
@@ -105,8 +73,7 @@ class TestMultiSurveyApplication(
         })
 
         # Setup the poll manager
-        self.pm = PollManager(self._fake_redis,
-                                self.config['vxpolls']['prefix'])
+        self.pm = self.app.pm
 
         # Give a user access to a tagpool
         self.user_api.api.account_store.tag_permissions(uuid.uuid4().hex,
@@ -129,22 +96,21 @@ class TestMultiSurveyApplication(
         returnValue(group)
 
     @inlineCallbacks
-    def create_contact(self, name, surname, **kwargs):
+    def create_contact(self, name, surname, **kw):
         contact = yield self.user_api.contact_store.new_contact(name=name,
-            surname=surname, **kwargs)
+            surname=surname, **kw)
         yield contact.save()
         returnValue(contact)
 
     @inlineCallbacks
-    def create_conversation(self, conversation_type, subject, message,
-        **kwargs):
+    def create_conversation(self, conversation_type, subject, message, **kw):
         conversation = yield self.user_api.new_conversation(
-            conversation_type, subject, message, **kwargs)
+            conversation_type, subject, message, **kw)
         yield conversation.save()
         returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
-    def reply_to(self, msg, content, continue_session=True, **kwargs):
+    def reply_to(self, msg, content, continue_session=True, **kw):
         session_event = (None if continue_session
                             else TransportUserMessage.SESSION_CLOSE)
         reply = TransportUserMessage(
@@ -158,7 +124,7 @@ class TestMultiSurveyApplication(
             transport_type=msg['transport_type'],
             transport_metadata=msg['transport_metadata'],
             helper_metadata=msg['helper_metadata'],
-            **kwargs)
+            **kw)
         yield self.dispatch(reply)
 
     def create_survey(self, conversation, polls=None, end_response=None):
@@ -179,10 +145,6 @@ class TestMultiSurveyApplication(
                                'Thanks for completing the survey'))
             self.pm.set(poll_id, config)
 
-    def publish_command(self, cmd_dict):
-        data = json.dumps(cmd_dict)
-        self._amqp.publish_raw('vumi', 'vumi.api', data)
-
     @inlineCallbacks
     def wait_for_messages(self, nr_of_messages, total_length):
         msgs = yield self.wait_for_dispatched_messages(total_length)
@@ -190,10 +152,7 @@ class TestMultiSurveyApplication(
 
     @inlineCallbacks
     def tearDown(self):
-        self.restore_celery()
-        self._fake_redis.teardown()
         self.pm.stop()
-        yield self.riak_teardown()
         yield super(TestMultiSurveyApplication, self).tearDown()
 
     @inlineCallbacks
