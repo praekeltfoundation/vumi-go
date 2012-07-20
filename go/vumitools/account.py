@@ -6,7 +6,7 @@ from datetime import datetime
 from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager
-from vumi.persist.fields import Integer, Unicode, Timestamp, ManyToMany
+from vumi.persist.fields import Integer, Unicode, Timestamp, ManyToMany, Json
 
 
 class UserTagPermission(Model):
@@ -30,6 +30,7 @@ class UserAccount(Model):
     tagpools = ManyToMany(UserTagPermission)
     applications = ManyToMany(UserAppPermission)
     created_at = Timestamp(default=datetime.utcnow)
+    event_handler_config = Json(null=True)
 
 
 class AccountStore(object):

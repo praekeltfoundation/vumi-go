@@ -7,7 +7,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.api import (
-    VumiApi, VumiUserApi, MessageSender, VumiApiCommand)
+    VumiApi, VumiUserApi, MessageSender, VumiApiCommand, VumiApiEvent)
 from go.vumitools.tests.utils import AppWorkerTestCase, CeleryTestMixIn
 
 
@@ -226,3 +226,18 @@ class TestVumiApiCommand(TestCase):
             },
             'to_addr': '+4567'
         })
+
+
+class TestVumiApiEvent(TestCase):
+    def test_default_routing_config(self):
+        cfg = VumiApiEvent.default_routing_config()
+        self.assertEqual(set(cfg.keys()),
+                         set(['exchange', 'exchange_type', 'routing_key']))
+
+    def test_event(self):
+        event = VumiApiEvent.event(
+            'me', 'my_conv', 'my_event', {"foo": "bar"})
+        self.assertEqual(event['account_key'], 'me')
+        self.assertEqual(event['conversation_key'], 'my_conv')
+        self.assertEqual(event['event_type'], 'my_event')
+        self.assertEqual(event['content'], {"foo": "bar"})

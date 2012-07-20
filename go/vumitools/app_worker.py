@@ -1,4 +1,3 @@
-
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi import log

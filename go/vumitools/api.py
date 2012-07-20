@@ -715,3 +715,23 @@ class VumiApiCommand(Message):
         worker_name = options.pop('worker_name')
         return cls.command(worker_name, 'send', batch_id=batch_id,
             content=msg, to_addr=address, msg_options=options)
+
+
+class VumiApiEvent(Message):
+
+    _DEFAULT_ROUTING_CONFIG = {
+        'exchange': 'vumi',
+        'exchange_type': 'direct',
+        'routing_key': 'vumi.event',
+        }
+
+    @classmethod
+    def default_routing_config(cls):
+        return cls._DEFAULT_ROUTING_CONFIG.copy()
+
+    @classmethod
+    def event(cls, account_key, conversation_key, event_type, content):
+        return cls(account_key=account_key,
+                   conversation_key=conversation_key,
+                   event_type=event_type,
+                   content=content)
