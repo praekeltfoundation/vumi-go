@@ -296,8 +296,7 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
         user_account = yield self.ed.vumi_api.account_store.new_user(u'dbacct')
         yield user_account.save()
 
-        user_api = yield VumiUserApi.from_config_async(
-            user_account.key, self._persist_config)
+        user_api = VumiUserApi(self.ed.vumi_api, user_account.key)
         yield user_api.api.declare_tags([("pool", "tag1")])
         yield user_api.api.set_pool_metadata("pool", {
             "transport_type": "other",
@@ -326,7 +325,9 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
                 conv_key=conversation.key)
         yield self.publish_event(event)
 
-        [api_command] = self._amqp.get_messages('vumi', 'vumi.api')
+        [start_command, api_command] = self._amqp.get_messages('vumi',
+                                                               'vumi.api')
+        self.assertEqual(start_command['command'], 'start')
         self.assertEqual(api_command['worker_name'], 'other_worker')
         self.assertEqual(api_command['kwargs']['command_data'], {
                 'content': 'hello',
