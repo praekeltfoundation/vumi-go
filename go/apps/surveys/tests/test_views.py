@@ -22,7 +22,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.client = Client()
         self.client.login(username='username', password='password')
 
-        # self.patch_settings(VXPOLLS_REDIS_CONFIG={'FAKE_REDIS': 'sure'})
+        self.patch_settings(VXPOLLS_REDIS_CONFIG={'FAKE_REDIS': 'sure'})
 
         self.setup_riak_fixtures()
 
