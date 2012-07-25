@@ -42,6 +42,8 @@ class SendMessageCommandHandler(EventHandler):
         multiple tags per batch, this assumes lists of one, and takes
         the first entry of each list
 
+        TODO: Turn this into a generic API Command Sender?
+
         An Example of a event_dispatcher.yaml config file, with mapped
         conversations in the config:
 
