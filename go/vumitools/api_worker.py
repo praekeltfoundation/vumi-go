@@ -288,6 +288,33 @@ class EventDispatcher(ApplicationWorker):
 
     @inlineCallbacks
     def get_account_config(self, account_key):
+        """Find the appropriate account config.
+
+        TODO: Clean this up a bit.
+
+        The account config we want is structured as follows:
+            {
+                (conversation_key, event_type): [
+                        [handler, handler_config],
+                        ...
+                    ],
+                ...
+            }
+
+        Unfortunately, this structure can't be stored directly in JSON.
+        Therefore, what we get from Riak (or the static config, etc.) needs to
+        be translated from this:
+            [
+                [[conversation_key, event_type], [
+                        [handler, handler_config],
+                        ...
+                    ],
+                ...
+                ]
+            ]
+
+        Hence the juggling of eggs below.
+        """
         if account_key not in self.account_config:
             user_account = yield self.vumi_api.account_store.get_user(
                 account_key)
