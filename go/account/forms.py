@@ -1,4 +1,5 @@
 from django import forms
+from registration.forms import RegistrationFormUniqueEmail
 
 
 class AccountForm(forms.Form):
@@ -14,6 +15,16 @@ class AccountForm(forms.Form):
         }),
         required=False)
 
+
+class RegistrationForm(RegistrationFormUniqueEmail):
+    def __init__(self, *args, **kwargs):
+        super(RegistrationForm, self).__init__(*args, **kwargs)
+        del self.fields['username']
+
+    def clean(self):
+        if not self.errors:
+            self.cleaned_data['username'] = self.cleaned_data['email']
+        return self.cleaned_data
 
 class EmailForm(forms.Form):
     subject = forms.CharField()
