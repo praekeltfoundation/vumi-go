@@ -149,6 +149,7 @@ INSTALLED_APPS = (
     'go.contacts',
     'go.account',
     'vxpolls.djdashboard',
+    'registration',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -250,3 +251,6 @@ try:
     from production_settings import *
 except ImportError:
     pass
+
+# django-registration tokens expire after a week
+ACCOUNT_ACTIVATION_DAYS = 7
