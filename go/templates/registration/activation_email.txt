@@ -1,0 +1,3 @@
+Welcome to Vumi Go!
+
+Go to http://{{ site.domain }}{% url registration_activate activation_key=activation_key %}
