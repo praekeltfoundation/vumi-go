@@ -76,7 +76,7 @@ class OptOutMiddleware(BaseMiddleware):
 
     @staticmethod
     def is_optout_message(message):
-        return message['helper_metadata'].get('optout')
+        return message['helper_metadata'].get('optout', {}).get('optout')
 
 
 class DebitAccountMiddleware(TransportMiddleware):
