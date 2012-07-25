@@ -31,7 +31,6 @@ class MamaPollApplication(MultiPollApplication):
 class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
 
     worker_name = None
-    SEND_TO_TAGS = frozenset(['default'])
 
     def validate_config(self):
         self._go_validate_config()

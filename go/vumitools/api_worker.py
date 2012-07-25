@@ -238,6 +238,10 @@ class EventDispatcher(ApplicationWorker):
     queue to the relevant handlers.
 
     FIXME: The configuration is currently static.
+    TODO: We need a "flush cache" command for when the per-account config
+          updates.
+    TODO: We should wrap the command publisher and such to make event handlers
+          saner. Or something.
 
     Configuration parameters:
 
@@ -260,11 +264,10 @@ class EventDispatcher(ApplicationWorker):
     @inlineCallbacks
     def setup_application(self):
         self.handlers = {}
-        setup_deferreds = []
         for name, handler_class in self.handler_config.items():
             cls = load_class_by_string(handler_class)
             self.handlers[name] = cls(self, self.config.get(name, {}))
-            yield setup_deferreds.append(self.handlers[name].setup_handler())
+            yield self.handlers[name].setup_handler()
 
         self.api_command_publisher = yield self.publish_to('vumi.api')
         self.vumi_api = yield VumiApi.from_config_async(self.config)
