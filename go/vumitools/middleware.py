@@ -468,6 +468,10 @@ class SNAUSSDOptOutHandler(object):
     @inlineCallbacks
     def handle_message(self, message):
         addr = message['to_addr']
+        if message.get('transport_type') != 'ussd':
+            log.info("SNAUSSDOptOutHandler skipping non-ussd"
+                     " message for %r" % (addr,))
+            return
         contact = yield self.contact_store.contact_for_addr('ussd', addr)
         if contact:
             opted_out = contact.extra['opted_out']
