@@ -12,7 +12,10 @@ from go.vumitools.app_worker import GoApplicationMixin
 
 def hacky_hack_hack(config):
     from vumi.persist.redis_manager import RedisManager
-    return RedisManager.from_config(dict(config, key_separator=':'))
+    hacked_config = config.copy()
+    hacked_config['key_prefix'] = ""
+    hacked_config['key_separator'] = ""
+    return RedisManager.from_config(dict(hacked_config))
 
 
 class MamaPollApplication(MultiPollApplication):
@@ -51,9 +54,9 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
 
     def consume_user_message(self, message):
         helper_metadata = message['helper_metadata']
-        conv_info = helper_metadata.get('conversations')
+        go = helper_metadata.get('go')
         helper_metadata['poll_id'] = 'poll-%s' % (
-            conv_info.get('conversation_key'),)
+            go.get('conversation_key'),)
         super(MultiSurveyApplication, self).consume_user_message(message)
 
     def start_survey(self, to_addr, conversation, **msg_options):
