@@ -5,7 +5,7 @@
 	    <div class="span12">
 	        <div id="login">
 	            <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go">
-	            <form id="signin-form" name="signin-form" action="/accounts/login/" method="post" class="form-horizontal">
+	            <form id="signin-form" name="signin-form" action="{% url auth_login %}" method="post" class="form-horizontal">
 	               {% csrf_token %}
 	               <input type="hidden" name="next" value="{{next}}">
 	               <fieldset>
