@@ -272,6 +272,6 @@ if DEBUG:
 DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 
 # Redirect to this URL after a successful login.
-from django.core.urlresolvers import reverse_lazy
+from django.core.urlresolvers import reverse
 
-LOGIN_REDIRECT_URL = reverse_lazy('home')
+LOGIN_REDIRECT_URL = reverse('home')
