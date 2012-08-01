@@ -7,7 +7,7 @@
 	            <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go">
 	            <form id="signin-form" name="signin-form" action="{% url auth_login %}" method="post" class="form-horizontal">
 	               {% csrf_token %}
-	               <input type="hidden" name="next" value="{{next}}">
+	               <input type="hidden" name="next" value="{{next|default:"/"}}">
 	               <fieldset>
 		               <div class="control-group"><input type="text" class="input-large email required" id="signin-input-email" name="username" placeholder="Email Address"></div>
 		               <div class="control-group"><input type="password" class="input-large required" id="signin-input-password" name="password" placeholder="Password"></div>
@@ -16,7 +16,7 @@
 		                   <div class="remember">
 		                       <label class="checkbox"><input type="checkbox"> Keep me signed in</label>
 		                   </div>
-		                   <p><a href="{% url todo %}forgot-password.html">Forgot your password?</a></p>
+		                   <p><a href="{% url auth_password_reset %}">Forgot your password?</a></p>
 		               </div>
 	               </fieldset>
 	               <p>&copy; 2012 <a href="http://praekelt.com">Praekelt Group</a>. <a href="mailto:hello@vumi.org">Contact</a>. <a href="https://github.com/praekelt/vumi">Github</a></p>
