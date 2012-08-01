@@ -270,3 +270,8 @@ if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Password resets are sent from this address
 DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
+
+# Redirect to this URL after a successful login.
+from django.core.urlresolvers import reverse_lazy
+
+LOGIN_REDIRECT_URL = reverse_lazy('home')
