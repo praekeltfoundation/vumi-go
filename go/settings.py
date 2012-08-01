@@ -265,3 +265,13 @@ ACCOUNT_ACTIVATION_DAYS = 7
 COMPRESS_PRECOMPILERS = (
     ('text/less', 'lessc {infile} {outfile}'),
 )
+
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Password resets are sent from this address
+DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
+
+# Redirect to this URL after a successful login.
+from django.core.urlresolvers import reverse
+
+LOGIN_REDIRECT_URL = reverse('home')
