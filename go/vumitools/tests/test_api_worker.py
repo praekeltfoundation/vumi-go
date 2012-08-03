@@ -338,7 +338,6 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
                     'helper_metadata': {
                         'go': {'user_account': user_account.key},
                         'tag': {'tag': ['pool', 'tag1']},
-                        'transport_type': u'other'
                         },
                     'transport_type': 'other',
                     'from_addr': 'tag1',

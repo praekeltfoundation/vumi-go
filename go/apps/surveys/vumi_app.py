@@ -39,8 +39,8 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
     @inlineCallbacks
     def consume_user_message(self, message):
         helper_metadata = message['helper_metadata']
-        conv_info = helper_metadata.get('conversations', {})
-        poll_id = 'poll-%s' % (conv_info.get('conversation_key'),)
+        go = helper_metadata.get('go')
+        poll_id = 'poll-%s' % (go.get('conversation_key'),)
         helper_metadata['poll_id'] = poll_id
 
         # If we've found a contact, grab it's dynamic-extra values
@@ -61,17 +61,15 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
     def start_survey(self, to_addr, conversation, **msg_options):
         log.debug('Starting %r -> %s' % (conversation, to_addr))
 
-        helper_metadata = msg_options.setdefault('helper_metadata', {})
-        helper_metadata['conversations'] = {
-            'conversation_key': conversation.key,
-            'conversation_type': conversation.conversation_type,
-        }
-
         # We reverse the to_addr & from_addr since we're faking input
         # from the client to start the survey.
         from_addr = msg_options.pop('from_addr')
         msg = TransportUserMessage(from_addr=to_addr, to_addr=from_addr,
                 content='', **msg_options)
+
+        gmt = self.get_go_metadata(msg)
+        gmt.set_conversation_info(conversation)
+
         self.consume_user_message(msg)
 
     @inlineCallbacks

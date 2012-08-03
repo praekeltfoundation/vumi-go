@@ -5,7 +5,7 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.middleware import TaggingMiddleware
+from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationWorker

@@ -9,7 +9,7 @@ from vumi.application import ApplicationWorker
 from vumi.dispatchers.base import BaseDispatchRouter
 from vumi.utils import load_class_by_string
 from vumi import log
-from vumi.middleware import TaggingMiddleware
+from vumi.middleware.tagger import TaggingMiddleware
 
 from go.vumitools.api import VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent
 from go.vumitools.middleware import OptOutMiddleware
@@ -230,6 +230,10 @@ class GoMessageMetadata(object):
                 return
         returnValue((self._go_metadata['conversation_key'],
                      self._go_metadata['conversation_type']))
+
+    def set_conversation_info(self, conversation):
+        self._go_metadata['conversation_key'] = conversation.key
+        self._go_metadata['conversation_type'] = conversation.conversation_type
 
 
 class EventDispatcher(ApplicationWorker):

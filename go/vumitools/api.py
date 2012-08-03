@@ -21,7 +21,7 @@ from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.txredis_manager import TxRedisManager
 
-from vumi.middleware import TaggingMiddleware
+from vumi.middleware.tagger import TaggingMiddleware
 
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
