@@ -91,7 +91,6 @@ class SendMessageCommandHandler(EventHandler):
                 'helper_metadata': {
                     'go': {'user_account': event.payload['account_key']},
                     'tag': {'tag': tag},
-                    'transport_type': tag_info['transport_type'],
                 },
                 'transport_type': tag_info['transport_type'],
                 'transport_name': tag_info['msg_options']['transport_name'],
