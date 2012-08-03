@@ -4,6 +4,7 @@ from vumi import log
 from vumi.application import ApplicationWorker
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiUserApi
+from go.vumitools.api_worker import GoMessageMetadata
 
 
 class GoApplicationMixin(object):
@@ -93,6 +94,9 @@ class GoApplicationMixin(object):
         user_api = self.get_user_api(user_account_key)
         conv = yield user_api.get_wrapped_conversation(conversation_key)
         returnValue(conv)
+
+    def get_go_metadata(self, msg):
+        return GoMessageMetadata(self.vumi_api, msg)
 
 
 class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):
