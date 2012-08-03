@@ -144,7 +144,6 @@ class TestBulkMessageApplication(AppWorkerTestCase):
                 'tag': {
                     'tag': ['pool', 'tag1']
                 },
-                'transport_type': 'sphex'
             }
         }
         sm_cmd = VumiApiCommand.command(
