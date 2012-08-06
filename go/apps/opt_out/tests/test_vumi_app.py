@@ -44,17 +44,14 @@ class TestOptOutApplication(AppWorkerTestCase):
         self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
         # Add tags
-        self.user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
-        self.user_api.api.set_pool_metadata("pool", {
+        yield self.user_api.api.declare_tags([("pool", "tag1"),
+                                              ("pool", "tag2")])
+        yield self.user_api.api.set_pool_metadata("pool", {
             "transport_type": self.transport_type,
             "msg_options": {
                 "transport_name": self.transport_name,
             },
         })
-
-        # Give a user access to a tagpool
-        self.user_api.api.account_store.tag_permissions(uuid.uuid4().hex,
-            tagpool=u"pool", max_keys=None)
 
         self.conversation = yield self.create_conversation(u'opt_out',
             u'Subject', u'Message',
