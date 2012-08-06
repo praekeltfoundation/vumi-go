@@ -28,7 +28,7 @@ class AuthenticationTestCase(VumiGoDjangoTestCase):
         """test the authentication mechanism"""
         response = self.client.get(reverse('conversations:index'))
         self.assertRedirects(response, '%s?next=%s' % (
-            reverse('login'), reverse('conversations:index')))
+            reverse('auth_login'), reverse('conversations:index')))
 
     def test_login(self):
         """test correct login"""
@@ -40,10 +40,10 @@ class AuthenticationTestCase(VumiGoDjangoTestCase):
     def test_logged_out(self):
         """test logout & redirect after logout"""
         self.client.login(username=self.user.username, password='password')
-        response = self.client.get(reverse('logout'))
+        response = self.client.get(reverse('auth_logout'))
         response = self.client.get(reverse('conversations:index'))
         self.assertRedirects(response, '%s?next=%s' % (
-            reverse('login'), reverse('conversations:index')))
+            reverse('auth_login'), reverse('conversations:index')))
 
 
 class FakeTemplateToken(object):
