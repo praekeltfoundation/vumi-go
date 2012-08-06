@@ -261,9 +261,9 @@ except ImportError:
 # django-registration tokens expire after a week
 ACCOUNT_ACTIVATION_DAYS = 7
 
-# Compress Less with `lessc`, install with `npm install --global less`
+# Compress Less with `lesscpy`
 COMPRESS_PRECOMPILERS = (
-    ('text/less', 'lessc {infile} {outfile}'),
+    ('text/less', 'lesscpy {infile} > {outfile}'),
 )
 
 if DEBUG:
