@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="row">
+        <div class="span12">
+            <div id="login">
+                <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go">
+                <strong>You've been logged out.</strong>
+                <p>You will need to <a href="{% url home %}">log in again</a> if you want to access your account.</p>
+                <p>&copy; 2012 <a href="http://praekelt.com">Praekelt Group</a>. <a href="mailto:hello@vumi.org">Contact</a>. <a href="https://github.com/praekelt/vumi">Github</a></p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        $(document).ready(function(){
+            $("#signin-form").validate();
+        });
+    </script>
+{% endblock %}

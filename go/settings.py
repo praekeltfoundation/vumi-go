@@ -36,6 +36,10 @@ DATABASES = {
     }
 }
 
+INTERNAL_IPS = (
+    '127.0.0.1',
+    )
+
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
@@ -91,6 +95,7 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 #    'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    'compressor.finders.CompressorFinder',
 )
 
 # Make this unique, and don't share it with anybody.
@@ -149,6 +154,8 @@ INSTALLED_APPS = (
     'go.contacts',
     'go.account',
     'vxpolls.djdashboard',
+    'registration',
+    'compressor',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -250,3 +257,21 @@ try:
     from production_settings import *
 except ImportError:
     pass
+
+# django-registration tokens expire after a week
+ACCOUNT_ACTIVATION_DAYS = 7
+
+# Compress Less with `lessc`, install with `npm install --global less`
+COMPRESS_PRECOMPILERS = (
+    ('text/less', 'lessc {infile} {outfile}'),
+)
+
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Password resets are sent from this address
+DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
+
+# Redirect to this URL after a successful login.
+from django.core.urlresolvers import reverse
+
+LOGIN_REDIRECT_URL = reverse('home')
