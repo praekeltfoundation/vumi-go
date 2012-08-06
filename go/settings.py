@@ -144,6 +144,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     'django.contrib.admindocs',
+    'compressor',
     'south',
     'gunicorn',
     'django_nose',
@@ -155,7 +156,6 @@ INSTALLED_APPS = (
     'go.account',
     'vxpolls.djdashboard',
     'registration',
-    'compressor',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -271,7 +271,7 @@ if DEBUG:
 # Password resets are sent from this address
 DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 
-# Redirect to this URL after a successful login.
-from django.core.urlresolvers import reverse
+# # Redirect to this URL after a successful login.
+# from django.core.urlresolvers import reverse
 
-LOGIN_REDIRECT_URL = reverse('home')
+# LOGIN_REDIRECT_URL = reverse('home')
