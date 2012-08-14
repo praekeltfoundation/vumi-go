@@ -1,5 +1,6 @@
 # -*- test-case-name: go.vumitools.tests.test_middleware -*-
 import sys
+from twisted.internet.defer import inlineCallbacks
 
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.middleware.base import TransportMiddleware, BaseMiddleware
