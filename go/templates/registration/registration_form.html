@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="row">
+        <div class="span12">
+            <div id="login">
+                <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go">
+                <form id="registration-form" name="registration-form" action="{% url registration_register %}" method="post" class="form-horizontal">
+                    {% csrf_token %}
+                    <fieldset>
+                        {{ form.as_p }}
+                    </fieldset>
+                    <fieldset>
+                        <div class="control-group">
+                            <input type="submit" class="btn" name="submit" value="Register">
+                        </div>
+                    </fieldset>
+                    <p>&copy; 2012 <a href="http://praekelt.com">Praekelt Group</a>. <a href="mailto:hello@vumi.org">Contact</a>. <a href="https://github.com/praekelt/vumi">Github</a></p>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        $(document).ready(function(){
+            $("#registration-form").validate();
+        });
+    </script>
+{% endblock %}

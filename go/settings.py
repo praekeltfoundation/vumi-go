@@ -36,6 +36,10 @@ DATABASES = {
     }
 }
 
+INTERNAL_IPS = (
+    '127.0.0.1',
+    )
+
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
@@ -91,6 +95,7 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 #    'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    'compressor.finders.CompressorFinder',
 )
 
 # Make this unique, and don't share it with anybody.
@@ -139,6 +144,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     'django.contrib.admindocs',
+    'compressor',
     'south',
     'gunicorn',
     'django_nose',
@@ -149,6 +155,7 @@ INSTALLED_APPS = (
     'go.contacts',
     'go.account',
     'vxpolls.djdashboard',
+    'registration',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -212,15 +219,9 @@ SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
 #       configuration file so that configuration values aren't
 #       duplicated
 VUMI_API_CONFIG = {
-    'message_store': {},
-    'tagpool_manager': {
-        'tagpool_prefix': 'vumigo',
-    },
-    'credit_manager': {
-        'credit_prefix': 'vumigo',
-    },
     'message_sender': {},
-    'riak_manager': {'bucket_prefix': 'vumigo.'}
+    'redis_manager': {'key_prefix': 'vumigo'},
+    'riak_manager': {'bucket_prefix': 'vumigo.'},
     }
 
 VUMI_COUNTRY_CODE = '27'
@@ -256,3 +257,21 @@ try:
     from production_settings import *
 except ImportError:
     pass
+
+# django-registration tokens expire after a week
+ACCOUNT_ACTIVATION_DAYS = 7
+
+# Compress Less with `lesscpy`
+COMPRESS_PRECOMPILERS = (
+    ('text/less', 'lesscpy {infile} > {outfile}'),
+)
+
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Password resets are sent from this address
+DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
+
+# # Redirect to this URL after a successful login.
+# from django.core.urlresolvers import reverse
+
+# LOGIN_REDIRECT_URL = reverse('home')

@@ -4,9 +4,9 @@ from uuid import uuid4
 from datetime import datetime
 
 from vumi.persist.model import Model, Manager
-from vumi.persist.message_store import Batch
-from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
-                                Json)
+from vumi.persist.fields import (
+    Unicode, ManyToMany, ForeignKey, Timestamp, Json)
+from vumi.components.message_store import Batch
 
 from twisted.internet.defer import returnValue
 
@@ -92,29 +92,6 @@ class Conversation(Model):
         all_addrs = [addr for addr in addrs if addr]
         returnValue(all_addrs)
 
-    @Manager.calls_manager
-    def get_opted_in_addresses(self, user_account):
-        """
-        Get the contacts assigned to this group with an address attribute
-        that is appropriate for the conversation's delivery_class and
-        that are opted in.
-
-        :param user_account:
-            The account to use to lookup the optouts in.
-
-        *NOTE*  This is a work around because it is currently not possible
-                to get back to the parents manager.
-        """
-        from go.vumitools.opt_out import OptOutStore
-        opt_out_store = OptOutStore.from_user_account(user_account)
-        optouts = yield opt_out_store.list_opt_outs()
-        optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
-                            if optout.key.startswith('msisdn:')]
-        all_addrs = yield self.get_contacts_addresses()
-        opted_in_addrs = [addr for addr in all_addrs
-                            if addr not in optout_addrs]
-        returnValue(opted_in_addrs)
-
 
 class ConversationStore(PerAccountStore):
     def setup_proxies(self):
@@ -132,7 +109,7 @@ class ConversationStore(PerAccountStore):
 
     @Manager.calls_manager
     def new_conversation(self, conversation_type, subject, message,
-        start_timestamp=None, **fields):
+                         start_timestamp=None, **fields):
         conversation_id = uuid4().get_hex()
         start_timestamp = start_timestamp or datetime.utcnow()
 
