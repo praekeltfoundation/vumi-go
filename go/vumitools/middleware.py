@@ -1,27 +1,12 @@
 # -*- test-case-name: go.vumitools.tests.test_middleware -*-
 import sys
-import base64
-import redis
-from urllib import urlencode
 
-from twisted.internet.defer import inlineCallbacks, returnValue
-
-from vumi.middleware import (TransportMiddleware, TaggingMiddleware,
-                                BaseMiddleware)
-from vumi.application import TagpoolManager
+from vumi.middleware.tagger import TaggingMiddleware
+from vumi.middleware.base import TransportMiddleware, BaseMiddleware
 from vumi.utils import normalize_msisdn
-from vumi.persist.txriak_manager import TxRiakManager
-from vumi.persist.message_store import MessageStore
-from vumi import log
-from vumi.utils import load_class_by_string, http_request_full
+from vumi.components.tagpool import TagpoolManager
 
 from go.vumitools.credit import CreditManager
-from go.vumitools.account import AccountStore
-from go.vumitools.conversation import ConversationStore
-from go.vumitools.opt_out import OptOutStore
-from go.vumitools.contact import ContactStore
-
-from vxpolls.manager import PollManager
 
 
 class NormalizeMsisdnMiddleware(TransportMiddleware):
@@ -270,7 +255,7 @@ class OptOutMiddleware(BaseMiddleware):
 
     @staticmethod
     def is_optout_message(message):
-        return message['helper_metadata'].setdefault('optout').get('optout')
+        return message['helper_metadata'].get('optout', {}).get('optout')
 
 
 class DebitAccountMiddleware(TransportMiddleware):

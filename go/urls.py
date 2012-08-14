@@ -3,6 +3,9 @@ from django.contrib import admin
 from django.http import HttpResponse
 from django.views.generic import RedirectView
 
+from registration.views import register
+from go.account.forms import RegistrationForm
+
 admin.autodiscover()
 
 
@@ -14,11 +17,13 @@ urlpatterns = patterns('',
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
     url(r'^admin/', include(admin.site.urls)),
 
-    # django default auth
-    url(r'^accounts/login/$', 'django.contrib.auth.views.login',
-        name='login'),
-    url(r'^accounts/logout/$', 'django.contrib.auth.views.logout',
-        name='logout'),
+    # django-regisration auth, override some views so we can specify
+    # our own custom forms to use.
+    url(r'^accounts/register/$', register, {
+        'backend': 'registration.backends.default.DefaultBackend',
+        'form_class': RegistrationForm,
+        }, name='registration_register'),
+    url(r'^accounts/', include('registration.backends.default.urls')),
 
     # simple todo view for stuff that's not completed yet
     url(r'^todo/.*$', 'go.base.views.todo', name='todo'),
