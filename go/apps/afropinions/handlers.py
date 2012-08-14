@@ -1,3 +1,4 @@
+# -*- test-case-name: go.apps.afropinions.test_handlers -*-
 import base64
 from urllib import urlencode
 
@@ -8,9 +9,6 @@ from vumi import log
 
 from go.vumitools.handler import EventHandler
 from go.vumitools.api import VumiUserApi
-from go.vumitools.api_worker import GoMessageMetadata
-
-from vxpolls.manager import PollManager
 
 
 class YoPaymentHandler(EventHandler):
