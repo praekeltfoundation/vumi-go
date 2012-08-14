@@ -260,7 +260,7 @@ class EventDispatcher(ApplicationWorker):
     def validate_config(self):
         self.api_routing_config = VumiApiEvent.default_routing_config()
         self.api_routing_config.update(self.config.get('api_routing', {}))
-        self.api_consumer = None
+        self.api_event_consumer = None
         self.handler_config = self.config.get('event_handlers', {})
         self.account_handler_configs = self.config.get(
             'account_handler_configs', {})
