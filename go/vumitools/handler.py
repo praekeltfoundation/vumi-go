@@ -18,6 +18,9 @@ class EventHandler(object):
     def setup_handler(self):
         pass
 
+    def teardown_handler(self):
+        pass
+
     def handle_event(self, event, handler_config):
         raise NotImplementedError()
 
