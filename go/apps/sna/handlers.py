@@ -1,3 +1,4 @@
+# -*- test-case-name: go.apps.sna.test_handlers -*-
 from twisted.internet.defer import inlineCallbacks
 
 from go.vumitools.opt_out import OptOutStore
@@ -61,4 +62,4 @@ class USSDOptOutHandler(EventHandler):
                         'message_id': message_id,
                     })
                 else:
-                    yield self.oo_store.delete_opt_out('msisdn', from_addr)
+                    yield oo_store.delete_opt_out('msisdn', from_addr)

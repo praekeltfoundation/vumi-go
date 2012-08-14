@@ -291,6 +291,9 @@ class EventDispatcher(ApplicationWorker):
             yield self.api_event_consumer.stop()
             self.api_event_consumer = None
 
+        for name, handler in self.handlers.items():
+            yield handler.teardown_handler()
+
     @inlineCallbacks
     def get_account_config(self, account_key):
         """Find the appropriate account config.
