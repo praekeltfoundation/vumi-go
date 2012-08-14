@@ -268,14 +268,15 @@ class EventDispatcher(ApplicationWorker):
     @inlineCallbacks
     def setup_application(self):
         self.handlers = {}
-        for name, handler_class in self.handler_config.items():
-            cls = load_class_by_string(handler_class)
-            self.handlers[name] = cls(self, self.config.get(name, {}))
-            yield self.handlers[name].setup_handler()
 
         self.api_command_publisher = yield self.publish_to('vumi.api')
         self.vumi_api = yield VumiApi.from_config_async(self.config)
         self.account_config = {}
+
+        for name, handler_class in self.handler_config.items():
+            cls = load_class_by_string(handler_class)
+            self.handlers[name] = cls(self, self.config.get(name, {}))
+            yield self.handlers[name].setup_handler()
 
         self.api_event_consumer = yield self.consume(
             self.api_routing_config['routing_key'],
