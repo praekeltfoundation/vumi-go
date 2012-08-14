@@ -1,19 +1,33 @@
-class YoPaymentHandler(object):
+import base64
+from urllib import urlencode
 
-    def __init__(self, username='', password='', url='', method='POST',
-                    amount=0, reason='', redis={},
-                    poll_manager_prefix='vumigo.'):
-        self.username = username
-        self.password = password
-        self.url = url
-        self.method = method
-        self.amount = amount
-        self.reason = reason
-        self.pm_prefix = poll_manager_prefix
-        self.pm = PollManager(self.get_redis(redis), self.pm_prefix)
+from twisted.internet.defer import inlineCallbacks
 
-    def get_redis(self, config):
-        return redis.Redis(**config)
+from vumi.utils import http_request_full
+from vumi import log
+
+from go.vumitools.handler import EventHandler
+from go.vumitools.api import VumiUserApi
+from go.vumitools.api_worker import GoMessageMetadata
+
+from vxpolls.manager import PollManager
+
+
+class YoPaymentHandler(EventHandler):
+
+    def get_user_api(self, account_key):
+        return VumiUserApi(self.dispatcher.vumi_api, account_key)
+
+    def setup_handler(self):
+        self.username = self.config['username']
+        self.password = self.config['password']
+        self.url = self.config['url']
+        self.method = self.config['method']
+        self.amount = self.config['amount']
+        self.reason = self.config['reason']
+        self.pm_prefix = self.config['poll_manager_prefix']
+
+        self.pm = PollManager(self.dispatcher.vumi_api.redis, self.pm_prefix)
 
     def teardown_handler(self):
         self.pm.stop()
@@ -33,12 +47,11 @@ class YoPaymentHandler(object):
         if not message.get('content'):
             return
 
-        helper = LookupConversationMiddleware.map_message_to_conversation_info
-        conv_info = helper(message)
-        conv_key, conv_type = conv_info
+        gmt = GoMessageMetadata(self.dispatcher.vumi_api, message)
+        conv_key, conv_type = yield gmt.get_conversation_info()
 
         poll_id = 'poll-%s' % (conv_key,)
-        poll_config = self.pm.get_config(poll_id)
+        poll_config = yield self.pm.get_config(poll_id)
 
         content = message.get('content')
         if not content:
