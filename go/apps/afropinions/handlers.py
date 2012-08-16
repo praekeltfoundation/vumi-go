@@ -16,7 +16,7 @@ class YoPaymentHandler(EventHandler):
         self.username = self.config['username']
         self.password = self.config['password']
         self.url = self.config['url']
-        self.method = self.config['method']
+        self.method = self.config.get('method', 'POST')
         self.amount = self.config['amount']
         self.reason = self.config['reason']
 
@@ -39,9 +39,6 @@ class YoPaymentHandler(EventHandler):
             should be topped up with airtime.
 
         """
-        if not self.url:
-            log.error('No URL configured for YoPaymentHandler')
-            return
 
         request_params = {
             'msisdn': event.content['from_addr'],
