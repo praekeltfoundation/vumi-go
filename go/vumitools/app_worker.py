@@ -3,7 +3,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi import log
 from vumi.application import ApplicationWorker
 
-from go.vumitools.api import VumiApiCommand, VumiApi, VumiUserApi
+from go.vumitools.api import VumiApiCommand, VumiApi, VumiUserApi, VumiApiEvent
 from go.vumitools.api_worker import GoMessageMetadata
 
 
@@ -13,6 +13,9 @@ class GoApplicationMixin(object):
         self.worker_name = self.config.get('worker_name', self.worker_name)
         self.api_routing_config = VumiApiCommand.default_routing_config()
         self.api_routing_config.update(self.config.get('api_routing', {}))
+        self.app_event_routing_config = VumiApiEvent.default_routing_config()
+        self.app_event_routing_config.update(
+            self.config.get('app_event_routing', {}))
         self.control_consumer = None
 
     @inlineCallbacks
@@ -22,6 +25,9 @@ class GoApplicationMixin(object):
         # In case we need these.
         self.redis = self.vumi_api.redis
         self.manager = self.vumi_api.manager
+
+        self.app_event_publisher = yield self.publish_to(
+            self.app_event_routing_config['routing_key'])
 
         self.control_consumer = yield self.consume(
             '%s.control' % (self.worker_name,),
@@ -97,6 +103,23 @@ class GoApplicationMixin(object):
 
     def get_go_metadata(self, msg):
         return GoMessageMetadata(self.vumi_api, msg)
+
+    @inlineCallbacks
+    def event_for_message(self, message, event_type, content):
+        gmt = self.get_go_metadata(message)
+        account_key = yield gmt.get_account_key()
+        conversation_key, conversation_type = yield gmt.get_conversation_info()
+        event = VumiApiEvent.event(account_key, conversation_key,
+                                    event_type, content)
+        returnValue(event)
+
+    @inlineCallbacks
+    def trigger_event(self, message, event_type, content):
+        event = yield self.event_for_message(message, event_type, content)
+        yield self.publish_app_event(event)
+
+    def publish_app_event(self, event):
+        self.app_event_publisher.publish_message(event)
 
 
 class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):
