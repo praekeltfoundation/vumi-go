@@ -8,6 +8,7 @@ from vumi.message import TransportUserMessage
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationMixin
+from go.vumitools.api import VumiApiEvent
 
 
 def hacky_hack_hack(config):
@@ -83,6 +84,11 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             contact.save()
 
         self.pm.save_participant(poll.poll_id, participant)
+        yield self.trigger_event(message, 'survey_completed', {
+            'from_addr': message['from_addr'],
+            'message_id': message['message_id'],
+            'transport_type': message['transport_type'],
+        })
         super(SurveyApplication, self).end_session(participant, poll, message)
 
     @inlineCallbacks

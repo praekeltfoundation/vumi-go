@@ -41,7 +41,7 @@ class YoPaymentHandler(EventHandler):
         """
 
         request_params = {
-            'msisdn': event.content['from_addr'],
+            'msisdn': event['content']['from_addr'],
             'amount': self.amount,
             'reason': self.reason,
         }
