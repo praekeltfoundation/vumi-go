@@ -100,19 +100,15 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_start_with_deduplication(self):
-        user_account = yield self.account_store.new_user(u'testuser')
-        user_api = VumiUserApi(user_account.key, {
-                'redis_cls': lambda **kw: self._fake_redis,
-                'riak_manager': {'bucket_prefix': 'test.'},
-                }, TxRiakManager)
-        user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
-        user_api.api.set_pool_metadata("pool", {
+        user_api = yield VumiUserApi.from_config_async(
+            self.user_account.key, self.config)
+        yield user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
+        yield user_api.api.set_pool_metadata("pool", {
             "transport_type": "sphex",
             })
         group = yield user_api.contact_store.new_group(u'test group')
 
-        # Create two contacts with the same to_addr, they should be deduped
-
+        # These contacts have the same to_addr and will be deduped
         contact1 = yield user_api.contact_store.new_contact(
             name=u'First', surname=u'Contact', msisdn=u'27831234567',
             groups=[group])
@@ -130,13 +126,9 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         yield conversation.start(dedupe=True)
         yield self._amqp.kick_delivery()
 
-        # assert that we've sent the message to the two contacts
-        msgs = yield self.get_dispatched_messages()
-        msgs.sort(key=lambda msg: msg['to_addr'])
-
         # Make sure only 1 message is sent, the rest were duplicates to the
         # same to_addr and were filtered out as a result.
-        [msg] = msgs
+        [msg] = yield self.get_dispatched_messages()
 
         # check that the right to_addr & from_addr are set and that the content
         # of the message equals conversation.message
