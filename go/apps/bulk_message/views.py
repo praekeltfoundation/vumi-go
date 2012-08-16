@@ -92,7 +92,7 @@ def send(request, conversation_key):
 
     if request.method == 'POST':
         try:
-            conversation.start()
+            conversation.start(dedupe=(request.POST.get('dedupe') == '1'))
         except ConversationSendError as error:
             messages.add_message(request, messages.ERROR, str(error))
             return redirect(reverse('bulk_message:send', kwargs={

@@ -70,8 +70,16 @@
                     </tbody>
                 </table>
                 <div class="btn-toolbar">
-                    <div class="btn-group"><input type="submit" class="btn btn-success btn-large" value="Send Message &rarr;"></div>
+                    <div class="btn-group">
+                        <input type="submit" class="btn btn-success btn-large" value="Send Message &rarr;">
+                    </div>
                     <div class="btn-group"><input type="reset" class="btn" onClick="javascript:history.go(-1)" value="Go Back"></div>
+                    <div class="btn-group">
+                        <label class="checkbox">
+                            <input type="checkbox" value="1" name="dedupe" />
+                            Filter out duplicates from groups
+                        </label>
+                    </div>
                     <!--
                     <div class="btn-group"><input type="reset" class="btn" value="Cancel"></div>
                     -->
