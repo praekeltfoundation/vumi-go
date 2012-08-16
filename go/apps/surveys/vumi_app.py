@@ -8,7 +8,6 @@ from vumi.message import TransportUserMessage
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationMixin
-from go.vumitools.api import VumiApiEvent
 
 
 def hacky_hack_hack(config):
