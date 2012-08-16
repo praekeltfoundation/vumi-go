@@ -8,13 +8,9 @@ from vumi.utils import http_request_full
 from vumi import log
 
 from go.vumitools.handler import EventHandler
-from go.vumitools.api import VumiUserApi
 
 
 class YoPaymentHandler(EventHandler):
-
-    def get_user_api(self, account_key):
-        return VumiUserApi(self.dispatcher.vumi_api, account_key)
 
     def setup_handler(self):
         self.username = self.config['username']
