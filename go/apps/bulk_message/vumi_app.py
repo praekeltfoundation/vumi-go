@@ -37,6 +37,8 @@ class BulkMessageApplication(GoApplicationWorker):
         conv = yield self.get_conversation(batch_id, conversation_key)
 
         to_addresses = yield conv.get_opted_in_addresses()
+        if extra_params.get('dedupe') == True:
+            to_addresses = set(to_addresses)
         for to_addr in to_addresses:
             yield self.send_message(batch_id, to_addr,
                                     conv.message, msg_options)
