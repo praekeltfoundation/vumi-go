@@ -129,6 +129,8 @@ class BulkMessageApplication(GoApplication):
 
             user_account = yield conv_store.get_user_account()
             to_addresses = yield conv.get_opted_in_addresses(user_account)
+            if extra_params.get('dedupe') == True:
+                to_addresses = set(to_addresses)
             for to_addr in to_addresses:
                 yield self.send_message(batch_id, to_addr,
                     conv.message, msg_options)
