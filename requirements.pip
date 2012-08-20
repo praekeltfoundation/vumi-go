@@ -19,4 +19,4 @@ django-registration==0.8
 # django_compressor==1.1.2 on Pypi has a bug, install from GitHub
 # until a new version has been published to pypi
 -e git+git://github.com/jezdez/django_compressor@236e0d711#egg=compressor
-lesscpy==0.9g
+lesscpy==0.9h
