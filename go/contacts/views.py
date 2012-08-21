@@ -187,10 +187,10 @@ def _has_uncompleted_csv_import(request):
 
 def _import_csv_file(group, csv_path, field_names, has_header):
     full_path = os.path.join(settings.MEDIA_ROOT, csv_path)
-    # open in Universal mode to allow us to reed files with Windows,
+    # open in Universal mode to allow us to read files with Windows,
     # MacOS9 & Unix line-endings
-    csv_file = open(full_path, 'rU')
-    data_dictionaries = _read_data_from_csv_file(csv_file,
+    with open(full_path, 'rU') as csv_file:
+        data_dictionaries = _read_data_from_csv_file(csv_file,
                                 field_names)
 
     # We need to know what we cannot set to avoid a

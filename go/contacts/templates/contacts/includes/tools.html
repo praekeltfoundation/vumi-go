@@ -83,7 +83,7 @@
             <fieldset>
               <table class="table table-bordered table-striped">
                 <tbody>
-                    {% for value, column in csv_data_row.items %}
+                    {% for column, value in csv_data_row.items %}
                       <tr>
                         <td>
                             <select name="column-{{ forloop.counter0 }}">
