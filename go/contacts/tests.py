@@ -255,6 +255,30 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         group = self.contact_store.get_group(self.group_key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
 
+    def test_uploading_windows_linebreaks_in_csv(self):
+        self.clear_groups()
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+            'fixtures', 'sample-windows-linebreaks-contacts.csv'))
+
+        response = self.client.post(reverse('contacts:people'), {
+            'contact_group': self.group_key,
+            'file': csv_file,
+        })
+        self.assertRedirects(response, group_url(self.group_key))
+
+        self.specify_columns(columns={
+            'column-0': 'msisdn',
+            'column-1': 'area',
+            'column-2': 'nairobi_1',
+            'column-3': 'baba dogo',
+            'column-4': 'age',
+            'column-5': 'gender',
+            'column-6': 'language',
+            'column-7': 'occupation',
+            })
+        group = self.contact_store.get_group(self.group_key)
+        self.assertEqual(len(group.backlinks.contacts()), 2)
+
     def test_uploading_unicode_chars_in_csv_into_new_group(self):
         self.clear_groups()
         new_group_name = u'Testing a ünicode grøüp'
