@@ -156,7 +156,7 @@ def _get_file_hints(content_file):
     content_file.seek(0)
     first_two_lines = '\n'.join([
         content_file.readline().strip() for i in range(2)])
-
+    print repr(first_two_lines)
     return temp_file_path, first_two_lines
 
 
@@ -293,8 +293,11 @@ def group(request, group_key):
                                                         request.FILES)
             if upload_contacts_form.is_valid():
                 file_object = upload_contacts_form.cleaned_data['file']
-                _store_file_hints_in_session(request,
-                    *_get_file_hints(file_object))
+                # re-open the file in Universal mode to prevent files
+                # with windows line endings spewing errors
+                with open(file_object.temporary_file_path(), 'rU') as fp:
+                    _store_file_hints_in_session(request,
+                        *_get_file_hints(fp))
                 return redirect(_group_url(group.key))
 
     context = {
