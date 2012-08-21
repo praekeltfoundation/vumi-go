@@ -242,9 +242,6 @@ def _import_csv_file(group, csv_path, field_names, has_header):
 
 @login_required
 def group(request, group_key):
-    # Force all CSV uploads to be streamed to disk so we can inspect
-    # the file contents for things like windows style \r\n line endings
-    request.upload_handlers = [TemporaryFileUploadHandler()]
     contact_store = request.user_api.contact_store
     group = contact_store.get_group(group_key)
     if group is None:
@@ -337,9 +334,6 @@ def group(request, group_key):
 
 @login_required
 def people(request):
-    # Force all CSV uploads to be streamed to disk so we can inspect
-    # the file contents for things like windows style \r\n line endings
-    request.upload_handlers = [TemporaryFileUploadHandler()]
     contact_store = request.user_api.contact_store
     if request.method == 'POST':
         # first parse the CSV file and create Contact instances
