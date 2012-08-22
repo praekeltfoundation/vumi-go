@@ -156,7 +156,7 @@ def _get_file_hints(content_file):
     content_file.seek(0)
     first_two_lines = '\n'.join([
         content_file.readline().strip() for i in range(2)])
-    print repr(first_two_lines)
+    
     return temp_file_path, first_two_lines
 
 
