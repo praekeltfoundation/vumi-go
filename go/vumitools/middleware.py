@@ -442,7 +442,7 @@ class YoPaymentHandler(object):
             ))
 
         headers = {
-            'Content-Type': 'application/x-www-form-urlencode',
+            'Content-Type': 'application/x-www-form-urlencoded',
         }
         headers.update(self.get_auth_headers(self.username, self.password))
         response = yield http_request_full(self.url,
