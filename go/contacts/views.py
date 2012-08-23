@@ -11,8 +11,11 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
+from django.core.files.uploadhandler import TemporaryFileUploadHandler
+from django.core.files.base import File
 from django.conf import settings
 from django.utils.datastructures import SortedDict
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 from vumi.utils import normalize_msisdn
 
@@ -73,7 +76,6 @@ def index(request):
     return redirect(reverse('contacts:groups'))
 
 
-@login_required
 def groups(request):
     contact_store = request.user_api.contact_store
     if request.POST:
@@ -114,7 +116,11 @@ def _is_header_row(columns):
 
 
 def _guess_headers_and_row(csv_data):
-    [first_row, second_row] = csv.reader(StringIO(csv_data))
+    sio = StringIO(csv_data)
+    dialect = csv.Sniffer().sniff(sio.read(1024))
+    sio.seek(0)
+
+    [first_row, second_row] = csv.reader(sio, dialect=dialect)
     default_headers = {
         'name': 'Name',
         'surname': 'Surname',
@@ -128,7 +134,7 @@ def _guess_headers_and_row(csv_data):
     }
 
     if _is_header_row(first_row):
-        sample_row = SortedDict(zip(second_row, first_row))
+        sample_row = SortedDict(zip(first_row, second_row))
         for column in first_row:
             default_headers.setdefault(column, column)
         return True, default_headers, sample_row
@@ -140,9 +146,10 @@ def _get_file_hints(content_file):
     # Save the file object temporarily so we can present
     # some UI to help the user figure out which columns are
     # what of what type.
-    temp_file_name = uuid.uuid4().hex
-    temp_file_path = default_storage.save(os.path.join('tmp',
-        '%s.csv' % (temp_file_name,)), content_file)
+    temp_file_name = '%s.csv' % (uuid.uuid4().hex,)
+    django_content_file = File(file=content_file, name=temp_file_name)
+    temp_file_path = default_storage.save(os.path.join('tmp', temp_file_name),
+        django_content_file)
     # Store the first two lines in the session, we'll present these
     # in the UI on the following page to help the user determine
     # which column represents what.
@@ -178,12 +185,9 @@ def _has_uncompleted_csv_import(request):
         and ('uploaded_csv_path' in request.session))
 
 
-def _import_csv_file(group, csv_path, field_names, has_header):
-    # open in Universal mode to allow us to reed files with Windows,
-    # MacOS9 & Unix line-endings
-    csv_file = default_storage.open(csv_path, 'rU')
+def _import_csv_file(group, csv_file, field_names, has_header):
     data_dictionaries = _read_data_from_csv_file(csv_file,
-                                field_names)
+                            field_names)
 
     # We need to know what we cannot set to avoid a
     # CSV import overwriting things like account details.
@@ -232,8 +236,17 @@ def _import_csv_file(group, csv_path, field_names, has_header):
         yield (counter if has_header else counter + 1, contact_dictionary)
 
 
-@login_required
+@csrf_exempt
 def group(request, group_key):
+    # the upload handlers can only be set before touching request.POST or
+    # request.FILES. The CsrfViewMiddleware touches request.POST, avoid
+    # this by doing the CSRF manually with a separate view
+    request.upload_handlers = [TemporaryFileUploadHandler()]
+    return _group(request, group_key)
+
+@login_required
+@csrf_protect
+def _group(request, group_key):
     contact_store = request.user_api.contact_store
     group = contact_store.get_group(group_key)
     if group is None:
@@ -263,10 +276,14 @@ def group(request, group_key):
                 field_names = [request.POST.get('column-%s' % i) for i in
                                 range(len(sample_row))]
 
-                for csv_data in _import_csv_file(group, csv_path, field_names,
-                                                    has_header):
-                    [count, contact_dictionary] = csv_data
-                    contact_store.new_contact(**contact_dictionary)
+                # open in Universal mode to allow us to read files with Windows,
+                # MacOS9 & Unix line-endings
+                full_path = os.path.join(settings.MEDIA_ROOT, csv_path)
+                with open(full_path, 'rU') as csv_file:
+                    for csv_data in _import_csv_file(group, csv_file, field_names,
+                                                        has_header):
+                        [count, contact_dictionary] = csv_data
+                        contact_store.new_contact(**contact_dictionary)
 
                 messages.info(request,
                     'Success! %s contacts imported.' % (
@@ -283,8 +300,11 @@ def group(request, group_key):
                                                         request.FILES)
             if upload_contacts_form.is_valid():
                 file_object = upload_contacts_form.cleaned_data['file']
-                _store_file_hints_in_session(request,
-                    *_get_file_hints(file_object))
+                # re-open the file in Universal mode to prevent files
+                # with windows line endings spewing errors
+                with open(file_object.temporary_file_path(), 'rU') as fp:
+                    _store_file_hints_in_session(request,
+                        *_get_file_hints(fp))
                 return redirect(_group_url(group.key))
 
     context = {
@@ -321,8 +341,17 @@ def group(request, group_key):
     return render(request, 'contacts/group.html', context)
 
 
-@login_required
+@csrf_exempt
 def people(request):
+    # the upload handlers can only be set before touching request.POST or
+    # request.FILES. The CsrfViewMiddleware touches request.POST, avoid
+    # this by doing the CSRF manually with a separate view
+    request.upload_handlers = [TemporaryFileUploadHandler()]
+    return _people(request)
+
+@login_required
+@csrf_protect
+def _people(request):
     contact_store = request.user_api.contact_store
     if request.method == 'POST':
         # first parse the CSV file and create Contact instances
@@ -349,8 +378,11 @@ def people(request):
                     'a new group name.')
             else:
                 file_object = upload_contacts_form.cleaned_data['file']
-                _store_file_hints_in_session(request,
-                    *_get_file_hints(file_object))
+                # re-open the file in Universal mode to prevent files
+                # with windows line endings spewing errors
+                with open(file_object.temporary_file_path(), 'rU') as fp:
+                    _store_file_hints_in_session(request,
+                        *_get_file_hints(fp))
                 return redirect(_group_url(group.key))
         else:
             messages.error(request, 'Something went wrong with the upload.')
