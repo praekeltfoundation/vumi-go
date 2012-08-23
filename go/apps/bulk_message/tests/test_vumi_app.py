@@ -5,6 +5,7 @@
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportUserMessage
+from vumi.persist.txriak_manager import TxRiakManager
 
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi, VumiApiCommand
@@ -100,11 +101,9 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_start_with_deduplication(self):
-        user_account = yield self.account_store.new_user(u'testuser')
-        user_api = VumiUserApi(user_account.key, {
-                'redis_cls': lambda **kw: self._fake_redis,
-                'riak_manager': {'bucket_prefix': 'test.'},
-                }, TxRiakManager)
+        user_account = yield self.vumi_api.account_store.new_user(u'testuser')
+        user_api = yield VumiUserApi.from_config_async(
+            self.user_account.key, self.config)
         user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
         user_api.api.set_pool_metadata("pool", {
             "transport_type": "sphex",

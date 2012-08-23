@@ -76,7 +76,7 @@ def index(request):
     return redirect(reverse('contacts:groups'))
 
 
-def group(request):
+def groups(request):
     contact_store = request.user_api.contact_store
     if request.POST:
         new_contact_group_form = NewContactGroupForm(request.POST)
@@ -241,7 +241,7 @@ def _import_csv_file(group, csv_path, field_names, has_header):
 
 
 @csrf_exempt
-def group(request):
+def group(request, group_key):
     # the upload handlers can only be set before touching request.POST or
     # request.FILES. The CsrfViewMiddleware touches request.POST, avoid
     # this by doing the CSRF manually with a separate view
