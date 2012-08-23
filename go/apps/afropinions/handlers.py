@@ -46,6 +46,11 @@ class YoPaymentHandler(EventHandler):
             'reason': self.reason,
         }
 
+        headers = self.get_auth_headers(self.username, self.password)
+        headers.update({
+            'Content-Type': 'application/x-www-form-urlencoded',
+            })
+
         log.info('Sending %s to %s via HTTP %s' % (
             request_params,
             self.url,
@@ -53,7 +58,7 @@ class YoPaymentHandler(EventHandler):
             ))
         response = yield http_request_full(self.url,
             data=urlencode(request_params),
-            headers=self.get_auth_headers(self.username, self.password),
+            headers=headers,
             method=self.method)
         log.info('Received response: %s / %s' % (response.code,
             response.delivered_body,))
