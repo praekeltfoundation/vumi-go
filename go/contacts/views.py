@@ -185,13 +185,9 @@ def _has_uncompleted_csv_import(request):
         and ('uploaded_csv_path' in request.session))
 
 
-def _import_csv_file(group, csv_path, field_names, has_header):
-    full_path = os.path.join(settings.MEDIA_ROOT, csv_path)
-    # open in Universal mode to allow us to read files with Windows,
-    # MacOS9 & Unix line-endings
-    with open(full_path, 'rU') as csv_file:
-        data_dictionaries = _read_data_from_csv_file(csv_file,
-                                field_names)
+def _import_csv_file(group, csv_file, field_names, has_header):
+    data_dictionaries = _read_data_from_csv_file(csv_file,
+                            field_names)
 
     # We need to know what we cannot set to avoid a
     # CSV import overwriting things like account details.
@@ -246,7 +242,7 @@ def group(request, group_key):
     # request.FILES. The CsrfViewMiddleware touches request.POST, avoid
     # this by doing the CSRF manually with a separate view
     request.upload_handlers = [TemporaryFileUploadHandler()]
-    return _group(request)
+    return _group(request, group_key)
 
 @login_required
 @csrf_protect
@@ -280,10 +276,14 @@ def _group(request, group_key):
                 field_names = [request.POST.get('column-%s' % i) for i in
                                 range(len(sample_row))]
 
-                for csv_data in _import_csv_file(group, csv_path, field_names,
-                                                    has_header):
-                    [count, contact_dictionary] = csv_data
-                    contact_store.new_contact(**contact_dictionary)
+                # open in Universal mode to allow us to read files with Windows,
+                # MacOS9 & Unix line-endings
+                full_path = os.path.join(settings.MEDIA_ROOT, csv_path)
+                with open(full_path, 'rU') as csv_file:
+                    for csv_data in _import_csv_file(group, csv_file, field_names,
+                                                        has_header):
+                        [count, contact_dictionary] = csv_data
+                        contact_store.new_contact(**contact_dictionary)
 
                 messages.info(request,
                     'Success! %s contacts imported.' % (
