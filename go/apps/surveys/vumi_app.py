@@ -82,6 +82,12 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             contact.extra.update(participant.labels)
             contact.save()
 
+        self.pm.save_participant(poll.poll_id, participant)
+        yield self.trigger_event(message, 'survey_completed', {
+            'from_addr': message['from_addr'],
+            'message_id': message['message_id'],
+            'transport_type': message['transport_type'],
+        })
         super(SurveyApplication, self).end_session(participant, poll, message)
 
     @inlineCallbacks

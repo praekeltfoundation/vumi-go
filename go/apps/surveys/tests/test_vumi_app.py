@@ -130,6 +130,7 @@ class TestSurveyApplication(AppWorkerTestCase):
             helper_metadata=msg['helper_metadata'],
             **kw)
         yield self.dispatch(reply)
+        returnValue(reply)
 
     def create_survey(self, conversation, questions=None, end_response=None):
         # Create a sample survey
@@ -179,7 +180,7 @@ class TestSurveyApplication(AppWorkerTestCase):
             [msg] = yield self.wait_for_messages(1, i + start_at + 1)
             self.assertEqual(msg['content'], questions[i]['copy'])
             response = str(questions[i]['valid_responses'][0])
-            yield self.reply_to(msg, response)
+            last_sent_msg = yield self.reply_to(msg, response)
 
         nr_of_messages = 1 + len(questions) + start_at
         all_messages = yield self.wait_for_dispatched_messages(nr_of_messages)
@@ -188,7 +189,16 @@ class TestSurveyApplication(AppWorkerTestCase):
             'Thanks for completing the survey')
         self.assertEqual(last_msg['session_event'],
             TransportUserMessage.SESSION_CLOSE)
+        [app_event] = self.get_dispatched_app_events()
+        self.assertEqual(app_event['account_key'], self.user_account.key)
+        self.assertEqual(app_event['conversation_key'], self.conversation.key)
+        self.assertEqual(app_event['content'], {
+            'from_addr': last_sent_msg['from_addr'],
+            'transport_type': last_sent_msg['transport_type'],
+            'message_id': last_sent_msg['message_id'],
+        })
         returnValue(last_msg)
+
 
     @inlineCallbacks
     def test_survey_completion(self):

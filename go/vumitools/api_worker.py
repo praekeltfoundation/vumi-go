@@ -260,7 +260,7 @@ class EventDispatcher(ApplicationWorker):
     def validate_config(self):
         self.api_routing_config = VumiApiEvent.default_routing_config()
         self.api_routing_config.update(self.config.get('api_routing', {}))
-        self.api_consumer = None
+        self.api_event_consumer = None
         self.handler_config = self.config.get('event_handlers', {})
         self.account_handler_configs = self.config.get(
             'account_handler_configs', {})
@@ -268,14 +268,15 @@ class EventDispatcher(ApplicationWorker):
     @inlineCallbacks
     def setup_application(self):
         self.handlers = {}
-        for name, handler_class in self.handler_config.items():
-            cls = load_class_by_string(handler_class)
-            self.handlers[name] = cls(self, self.config.get(name, {}))
-            yield self.handlers[name].setup_handler()
 
         self.api_command_publisher = yield self.publish_to('vumi.api')
         self.vumi_api = yield VumiApi.from_config_async(self.config)
         self.account_config = {}
+
+        for name, handler_class in self.handler_config.items():
+            cls = load_class_by_string(handler_class)
+            self.handlers[name] = cls(self, self.config.get(name, {}))
+            yield self.handlers[name].setup_handler()
 
         self.api_event_consumer = yield self.consume(
             self.api_routing_config['routing_key'],
@@ -289,6 +290,9 @@ class EventDispatcher(ApplicationWorker):
         if self.api_event_consumer:
             yield self.api_event_consumer.stop()
             self.api_event_consumer = None
+
+        for name, handler in self.handlers.items():
+            yield handler.teardown_handler()
 
     @inlineCallbacks
     def get_account_config(self, account_key):
