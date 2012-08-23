@@ -99,6 +99,43 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         self.assertEqual(dbmsg2, msg2)
 
     @inlineCallbacks
+    def test_start_with_deduplication(self):
+        user_api = yield VumiUserApi.from_config_async(
+            self.user_account.key, self.config)
+        yield user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
+        yield user_api.api.set_pool_metadata("pool", {
+            "transport_type": "sphex",
+            })
+        group = yield user_api.contact_store.new_group(u'test group')
+
+        # These contacts have the same to_addr and will be deduped
+        contact1 = yield user_api.contact_store.new_contact(
+            name=u'First', surname=u'Contact', msisdn=u'27831234567',
+            groups=[group])
+        contact2 = yield user_api.contact_store.new_contact(
+            name=u'Second', surname=u'Contact', msisdn=u'27831234567',
+            groups=[group])
+        conversation = yield user_api.new_conversation(
+            u'bulk_message', u'Subject', u'Message', delivery_tag_pool=u"pool",
+            delivery_class=u'sms')
+        conversation.add_group(group)
+        yield conversation.save()
+        conversation = user_api.wrap_conversation(conversation)
+
+        # Provide the dedupe option to the conversation
+        yield conversation.start(dedupe=True)
+        yield self._amqp.kick_delivery()
+
+        # Make sure only 1 message is sent, the rest were duplicates to the
+        # same to_addr and were filtered out as a result.
+        [msg] = yield self.get_dispatched_messages()
+
+        # check that the right to_addr & from_addr are set and that the content
+        # of the message equals conversation.message
+        self.assertEqual(msg['to_addr'], contact1.msisdn)
+        self.assertEqual(msg['to_addr'], contact2.msisdn)
+
+    @inlineCallbacks
     def test_consume_ack(self):
         yield self.store_outbound(message_id='123')
         ack_event = yield self.publish_event(user_message_id='123',
