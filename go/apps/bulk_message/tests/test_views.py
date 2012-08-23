@@ -139,6 +139,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         expected_cmd = VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,), 'start',
             batch_id=batch.key,
+            dedupe=False,
             msg_options=msg_options,
             conversation_type=conversation.conversation_type,
             conversation_key=conversation.key,
