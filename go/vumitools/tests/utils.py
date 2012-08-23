@@ -234,6 +234,9 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
         return self._amqp.get_messages('vumi',
                                        "%s.control" % self.app.worker_name)
 
+    def get_dispatched_app_events(self):
+        return self._amqp.get_messages('vumi', 'vumi.event')
+
     def publish_event(self, **kw):
         event = TransportEvent(**kw)
         d = self.dispatch(event, rkey=self.rkey('event'))
