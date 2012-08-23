@@ -253,11 +253,6 @@ VXPOLLS_POLL_ID = VXPOLLS_CONFIG.get('poll_id')
 VXPOLLS_TRANSPORT_NAME = 'vxpolls_transport'
 VXPOLLS_WORKER_NAME = 'vxpolls_worker'
 
-FILE_UPLOAD_HANDLERS = (
-    # "django.core.files.uploadhandler.MemoryFileUploadHandler",
-    "django.core.files.uploadhandler.TemporaryFileUploadHandler",
-)
-
 try:
     from production_settings import *
 except ImportError:

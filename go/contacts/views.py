@@ -15,6 +15,7 @@ from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from django.core.files.base import File
 from django.conf import settings
 from django.utils.datastructures import SortedDict
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 from vumi.utils import normalize_msisdn
 
@@ -75,8 +76,7 @@ def index(request):
     return redirect(reverse('contacts:groups'))
 
 
-@login_required
-def groups(request):
+def group(request):
     contact_store = request.user_api.contact_store
     if request.POST:
         new_contact_group_form = NewContactGroupForm(request.POST)
@@ -156,7 +156,7 @@ def _get_file_hints(content_file):
     content_file.seek(0)
     first_two_lines = '\n'.join([
         content_file.readline().strip() for i in range(2)])
-    
+
     return temp_file_path, first_two_lines
 
 
@@ -240,8 +240,17 @@ def _import_csv_file(group, csv_path, field_names, has_header):
         yield (counter if has_header else counter + 1, contact_dictionary)
 
 
+@csrf_exempt
+def group(request):
+    # the upload handlers can only be set before touching request.POST or
+    # request.FILES. The CsrfViewMiddleware touches request.POST, avoid
+    # this by doing the CSRF manually with a separate view
+    request.upload_handlers = [TemporaryFileUploadHandler()]
+    return _group(request)
+
 @login_required
-def group(request, group_key):
+@csrf_protect
+def _group(request, group_key):
     contact_store = request.user_api.contact_store
     group = contact_store.get_group(group_key)
     if group is None:
@@ -332,8 +341,17 @@ def group(request, group_key):
     return render(request, 'contacts/group.html', context)
 
 
-@login_required
+@csrf_exempt
 def people(request):
+    # the upload handlers can only be set before touching request.POST or
+    # request.FILES. The CsrfViewMiddleware touches request.POST, avoid
+    # this by doing the CSRF manually with a separate view
+    request.upload_handlers = [TemporaryFileUploadHandler()]
+    return _people(request)
+
+@login_required
+@csrf_protect
+def _people(request):
     contact_store = request.user_api.contact_store
     if request.method == 'POST':
         # first parse the CSV file and create Contact instances
