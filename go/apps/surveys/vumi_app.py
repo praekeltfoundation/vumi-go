@@ -54,7 +54,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
                 value = contact.extra[key]
                 if value and key not in participant.labels:
                     participant.set_label(key, value)
-            self.pm.save_participant(poll_id, participant)
+            yield self.pm.save_participant(poll_id, participant)
 
         super(SurveyApplication, self).consume_user_message(message)
 
@@ -82,7 +82,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             contact.extra.update(participant.labels)
             contact.save()
 
-        self.pm.save_participant(poll.poll_id, participant)
+        yield self.pm.save_participant(poll.poll_id, participant)
         yield self.trigger_event(message, 'survey_completed', {
             'from_addr': message['from_addr'],
             'message_id': message['message_id'],

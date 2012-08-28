@@ -60,9 +60,9 @@ def make_mapping_form_class(known_fields):
                 ('facebook_id', 'Facebook ID'),
                 ('bbm_pin', 'BBM Pin'),
                 ('gtalk_id', 'Google Talk / Jabber ID'),
-            ], widget=forms.Select(attrs={'class': 'span2'}))
+            ])
         fields['%s_other' % (field,)] = forms.CharField(required=False,
-            label='Other: ', widget=forms.TextInput(attrs={'class': 'span1',
+            label='Other: ', widget=forms.TextInput(attrs={'class': 'span2',
                 'placeholder': 'Other ...'}))
 
     form_class = type('DynamicSurveyForm', (
@@ -73,6 +73,9 @@ def make_mapping_form_class(known_fields):
     return form_class
 
 def make_mapping_form_class_for_formset(questions_formset):
-    known_fields = [form['label'].value() for form in questions_formset.forms
-                        if form['label'].value()]
+    # Make it a sorted dict so we get a list of unique keys while
+    # still maintaining their original order. Just calling set() on the
+    # list makes it unique but jumbles the order
+    known_fields = SortedDict([(form['label'].value(), 1) for form in
+                            questions_formset.forms if form['label'].value()])
     return make_mapping_form_class(known_fields)

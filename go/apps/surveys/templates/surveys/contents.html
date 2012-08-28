@@ -60,9 +60,9 @@
                     {% for mapping in mapping_form.mapping_sets %}
                     <tr>
                         <td>{{mapping.field}}</td>
-                        <td>{{mapping.select}}</td>
-                        <td>or</td>
-                        <td>{{mapping.other}}</td>
+                        <td>{{mapping.select}}
+                            <div>or {{mapping.other}}</div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </table>

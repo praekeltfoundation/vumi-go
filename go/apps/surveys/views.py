@@ -141,7 +141,6 @@ def people(request, conversation_key):
 
     poll_id = "poll-%s" % (conversation.key,)
     pm, poll_data = get_poll_config(poll_id)
-    questions_data = poll_data.get('questions', [])
 
     if request.method == 'POST':
         if conversation.is_client_initiated():
@@ -179,7 +178,7 @@ def people(request, conversation_key):
 
     conversation_form = make_read_only_form(ConversationForm(request.user_api))
     survey_form = SurveyForm(initial=poll_data)
-    questions_formset = SurveyQuestionFormSet(initial=questions_data)
+    questions_formset = SurveyQuestionFormSet(initial=poll_data['questions'])
     read_only_questions_formset = make_read_only_formset(questions_formset)
     return render(request, 'surveys/people.html', {
         'conversation': conversation,
