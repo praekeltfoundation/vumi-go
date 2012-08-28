@@ -408,8 +408,8 @@ class VumiUserApi(object):
 
         available_set = yield self.api.tpm.list_pools()
         pool_names = list(allowed_set & available_set)
-        pool_data = dict((pool, (yield self.api.tpm.get_metadata(pool)))
-                         for pool in pool_names)
+        pool_data = dict([(pool, (yield self.api.tpm.get_metadata(pool)))
+                         for pool in pool_names])
         returnValue(TagpoolSet(pool_data))
 
     @Manager.calls_manager
