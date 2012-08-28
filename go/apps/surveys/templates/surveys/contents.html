@@ -32,7 +32,7 @@
                 <h3>1. Survey Details</h3>
                 <br>
                 <fieldset>
-                    {% include "surveys/includes/new.html" with form=survey_form %}
+                    {% include "surveys/includes/new.html" with form=conversation_form %}
                 </fieldset>
             </div>
         </div>
@@ -41,12 +41,35 @@
                 <h3>2. Survey Questions</h3>
                 <br>
                 <fieldset>
-                    {% include "surveys/includes/contents.html" with questions_formset=questions_formset poll_form=poll_form %}
-                    <div class="btn-toolbar">
-                        <input type="submit" name="_save_contents" value="Save and add another question" class="btn btn-primary" />
-                        <input type="submit" value="Continue &rarr;" class="btn" />
-                    </div>
+                    {% include "surveys/includes/contents.html" with questions_formset=questions_formset poll_form=survey_form %}
                 </fieldset>
+                <h4>Mapping</h4>
+                <p>
+                    Please specify below how the answers from the survey above
+                    are to be saved on a contact. You can either choose to
+                    save answers under known fields of the contact (such as Name,
+                    Surname or Date of Birth) or specify a new field to add to
+                    the contact by specifying it in the field marked
+                    <em>"Other ..."</em>
+                </p>
+                <table class="table table-striped">
+                    <tr>
+                        <th>Label</th>
+                        <th colspan="3">Contact Field</th>
+                    </tr>
+                    {% for mapping in mapping_form.mapping_sets %}
+                    <tr>
+                        <td>{{mapping.field}}</td>
+                        <td>{{mapping.select}}</td>
+                        <td>or</td>
+                        <td>{{mapping.other}}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                <div class="btn-toolbar">
+                    <input type="submit" name="_save_contents" value="Save and add another question" class="btn btn-primary" />
+                    <input type="submit" value="Continue &rarr;" class="btn" />
+                </div>
             </div>
         </div>
         <div class="span4">

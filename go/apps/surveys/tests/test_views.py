@@ -6,6 +6,8 @@ from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.utils import vumi_api_for_user
 
+from go.apps.surveys.utils import get_poll_config
+
 
 TEST_GROUP_NAME = u"Test Group"
 TEST_CONTACT_NAME = u"Name"
@@ -52,8 +54,9 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             delivery_tag_pool=u"longcode", groups=[self.group_key])
         self.conv_key = conversation.key
 
-    def get_wrapped_conv(self):
-        conv = self.conv_store.get_conversation_by_key(self.conv_key)
+    def get_wrapped_conv(self, conv_key=None):
+        conv = self.conv_store.get_conversation_by_key(
+            conv_key or self.conv_key)
         return self.user_api.wrap_conversation(conv)
 
     def run_new_conversation(self, selected_option, pool, tag):
@@ -173,6 +176,104 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             batch_id=batch.key,
             msg_options=msg_options
             ))
+
+    def post_survey_contents(self, conversation, post_data={}):
+        defaults = {
+            # Survey form entries
+            'poll_id': 'poll-%s' % (conversation.key,),
+            'repeatable': '1',
+            'case_sensitive': '1',
+            'include_labels': 'first, second',
+            'survey_completed_response': 'All done!',
+            # Questions
+            'form-TOTAL_FORMS': 2,
+            'form-INITIAL_FORMS': 0,
+            'form-0-copy': 'first question',
+            'form-0-label': 'first',
+            'form-1-copy': 'second question',
+            'form-1-label': 'second',
+        }
+        defaults.update(post_data)
+        return self.client.post(reverse('survey:contents', kwargs={
+            'conversation_key': conversation.key,
+            }), defaults)
+
+    def test_contents(self):
+        conversation = self.get_wrapped_conv()
+        poll_id = 'poll-%s' % (conversation.key,)
+        response = self.post_survey_contents(conversation)
+        self.assertRedirects(response, reverse('survey:people', kwargs={
+            'conversation_key': conversation.key,
+        }))
+
+        pm, poll_data = get_poll_config(poll_id)
+        self.assertEqual(poll_data, {
+            u'poll_id': poll_id,
+            u'case_sensitive': True,
+            u'repeatable': True,
+            u'survey_completed_response': u'All done!',
+            u'include_labels': [u'first', u'second'],
+            u'questions': [{
+                    u'valid_responses': [],
+                    u'copy': u'first question',
+                    u'checks': [
+                        [u'', u'', u''],
+                        [u'', u'', u''],
+                        [u'', u'', u'']],
+                    u'label': u'first'
+                }, {
+                    u'valid_responses': [],
+                    u'copy': u'second question',
+                    u'checks': [
+                        [u'', u'', u''],
+                        [u'', u'', u''],
+                        [u'', u'', u'']],
+                    u'label': u'second'
+                }]
+        })
+
+        # check mappings metadata written to the conversation
+        conversation = self.get_wrapped_conv(conversation.key)
+        self.assertEqual(conversation.get_metadata(), {
+            'surveys': {
+                'mappings': {},
+                'raw_mappings': {
+                    'first_map': '',
+                    'first_other': '',
+                    'second_map': '',
+                    'second_other': '',
+                },
+            },
+        })
+
+    def test_mappings(self):
+        conversation = self.get_wrapped_conv()
+        response = self.post_survey_contents(conversation, {
+            'first_map': 'name',
+            'second_other': 'second',
+            })
+
+        self.assertRedirects(response, reverse('survey:people', kwargs={
+            'conversation_key': conversation.key,
+        }))
+
+        # check mappings metadata written to the conversation
+        conversation = self.get_wrapped_conv(conversation.key)
+        self.assertEqual(conversation.get_metadata(), {
+            'surveys': {
+                'mappings': {
+                    'first': 'name',
+                    'second': 'second',
+                },
+                'raw_mappings': {
+                    'first_map': 'name',
+                    'first_other': '',
+                    'second_map': '',
+                    'second_other': 'second',
+                },
+            },
+        })
+
 
     def test_send_fails(self):
         """

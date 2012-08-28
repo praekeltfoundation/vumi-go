@@ -1,38 +1,18 @@
 from datetime import datetime
 
-from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
-
-from vumi.persist.redis_manager import RedisManager
 
 from go.base.utils import (make_read_only_form, make_read_only_formset,
     conversation_or_404)
 from go.vumitools.api import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
 
-from vxpolls.content import forms
-from vxpolls.manager import PollManager
-
-
-redis = RedisManager.from_config(settings.VXPOLLS_REDIS_CONFIG)
-
-
-def get_poll_config(poll_id):
-    pm = PollManager(redis, settings.VXPOLLS_PREFIX)
-    config = pm.get_config(poll_id)
-    config.update({
-        'poll_id': poll_id,
-        'transport_name': settings.VXPOLLS_TRANSPORT_NAME,
-        'worker_name': settings.VXPOLLS_WORKER_NAME,
-    })
-
-    config.setdefault('repeatable', True)
-    config.setdefault('survey_completed_response',
-                        'Thanks for completing the survey')
-    return pm, config
+from go.apps.surveys.forms import (SurveyForm,
+    make_mapping_form_class_for_formset, SurveyQuestionFormSet)
+from go.apps.surveys.utils import get_poll_config
 
 
 @login_required
@@ -92,25 +72,36 @@ def _clear_empties(cleaned_data):
 
 @login_required
 def contents(request, conversation_key):
-    conversation = conversation_or_404(request.user_api, conversation_key)
-    poll_id = 'poll-%s' % (conversation.key,)
+    poll_id = 'poll-%s' % (conversation_key,)
     pm, poll_data = get_poll_config(poll_id)
-    questions_data = poll_data.get('questions', [])
+
+    conversation = conversation_or_404(request.user_api, conversation_key)
+    conversation_metadata = conversation.get_metadata({})
+    survey_metadata = conversation_metadata.setdefault('surveys', {})
 
     if request.method == 'POST':
-        post_data = request.POST.copy()
-        post_data.update({
-            'poll_id': poll_id,
-        })
+        questions_formset = SurveyQuestionFormSet(request.POST)
+        survey_form = SurveyForm(request.POST)
+        MappingFormClass = make_mapping_form_class_for_formset(questions_formset)
+        mapping_form = MappingFormClass(request.POST)
+        if (questions_formset.is_valid() and survey_form.is_valid()
+                and mapping_form.is_valid()):
 
-        questions_formset = forms.make_form_set(data=post_data)
-        poll_form = forms.PollForm(data=post_data)
-        if questions_formset.is_valid() and poll_form.is_valid():
-            data = poll_form.cleaned_data.copy()
+            data = survey_form.cleaned_data.copy()
             data.update({
-                'questions': _clear_empties(questions_formset.cleaned_data)
+                'questions': _clear_empties(questions_formset.cleaned_data),
                 })
             pm.set(poll_id, data)
+
+            # Store the mapping on the conversation as metadata
+            survey_metadata.update({
+                'mappings': mapping_form.get_mappings(),
+                'raw_mappings': mapping_form.cleaned_data.copy(),
+                })
+
+            conversation.set_metadata(conversation_metadata)
+            conversation.save()
+
             if request.POST.get('_save_contents'):
                 return redirect(reverse('survey:contents', kwargs={
                     'conversation_key': conversation.key,
@@ -119,20 +110,27 @@ def contents(request, conversation_key):
                 return redirect(reverse('survey:people', kwargs={
                     'conversation_key': conversation.key,
                 }))
-    else:
-        poll_form = forms.PollForm(initial=poll_data)
-        questions_formset = forms.make_form_set(initial=questions_data)
 
-    survey_form = make_read_only_form(ConversationForm(request.user_api,
+    else:
+        survey_form = SurveyForm(initial=poll_data)
+        questions_formset = SurveyQuestionFormSet(
+            initial=poll_data['questions'])
+
+    conversation_form = make_read_only_form(ConversationForm(request.user_api,
         instance=conversation, initial={
             'start_date': conversation.start_timestamp.date(),
             'start_time': conversation.start_timestamp.time(),
         }))
 
+    MappingFormClass = make_mapping_form_class_for_formset(questions_formset)
+    mapping_form = MappingFormClass(
+        initial=survey_metadata.get('raw_mappings', {}))
+
     return render(request, 'surveys/contents.html', {
-        'poll_form': poll_form,
-        'questions_formset': questions_formset,
+        'conversation_form': conversation_form,
         'survey_form': survey_form,
+        'questions_formset': questions_formset,
+        'mapping_form': mapping_form,
     })
 
 
@@ -179,14 +177,14 @@ def people(request, conversation_key):
                 return redirect(reverse('survey:start', kwargs={
                                     'conversation_key': conversation.key}))
 
-    survey_form = make_read_only_form(ConversationForm(request.user_api))
-    poll_form = forms.PollForm(initial=poll_data)
-    questions_formset = forms.make_form_set(initial=questions_data, extra=0)
+    conversation_form = make_read_only_form(ConversationForm(request.user_api))
+    survey_form = SurveyForm(initial=poll_data)
+    questions_formset = SurveyQuestionFormSet(initial=questions_data)
     read_only_questions_formset = make_read_only_formset(questions_formset)
     return render(request, 'surveys/people.html', {
         'conversation': conversation,
-        'survey_form': survey_form,
-        'poll_form': make_read_only_form(poll_form),
+        'conversation_form': conversation_form,
+        'survey_form': make_read_only_form(survey_form),
         'questions_formset': read_only_questions_formset,
         'groups': groups,
     })

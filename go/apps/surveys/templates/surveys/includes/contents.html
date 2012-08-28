@@ -22,4 +22,9 @@
 </div>
 {% endfor %}
 
+{% for field in poll_form.hidden_fields %}
+    {{field}}
+{% endfor %}
+
+
 {{ questions_formset.management_form }}
