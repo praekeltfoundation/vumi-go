@@ -16,14 +16,8 @@
     <link rel="shortcut icon" href="{{ STATIC_URL }}img/favicon.ico" />
     <link rel="icon" type="image/x-icon" href="{{ STATIC_URL }}img/favicon.ico" />
     <meta name="viewport" content="width=device-width">
-    {% if debug %}
     <link rel="stylesheet/less" href="{{ STATIC_URL }}less/style.less">
     <script src="{{ STATIC_URL }}js/libs/less-1.2.1.min.js"></script>
-    {% else %}
-    {% compress css %}
-    <link rel="stylesheet" type="text/less" href="{{ STATIC_URL }}less/style.less">
-    {% endcompress %}
-    {% endif %}
     <script src="{{ STATIC_URL }}js/libs/modernizr-2.5.2-respond-1.1.0.min.js"></script>
     {% block extra_header %}{% endblock %}
 </head>
