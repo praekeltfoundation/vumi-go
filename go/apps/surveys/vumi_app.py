@@ -5,14 +5,10 @@ from vxpolls.example import PollApplication
 from vxpolls.manager import PollManager
 
 from vumi.message import TransportUserMessage
+from vumi.persist.txredis_manager import TxRedisManager
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationMixin
-
-
-def hacky_hack_hack(config):
-    from vumi.persist.redis_manager import RedisManager
-    return RedisManager.from_config(dict(config, key_separator=':'))
 
 
 class SurveyApplication(PollApplication, GoApplicationMixin):
@@ -24,17 +20,28 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         # vxpolls
         vxp_config = self.config.get('vxpolls', {})
         self.poll_prefix = vxp_config.get('prefix')
+        self.r_config = self.config.get('redis_manager', {})
 
     @inlineCallbacks
     def setup_application(self):
-        r_server = hacky_hack_hack(self.config.get('redis_manager'))
-        self.pm = PollManager(r_server, self.poll_prefix)
+        self.r_server = yield TxRedisManager.from_config(self.r_config)
+        self.pm = PollManager(self.r_server, self.poll_prefix)
         yield self._go_setup_application()
 
     @inlineCallbacks
     def teardown_application(self):
         yield self._go_teardown_application()
         self.pm.stop()
+
+    def can_set_contact_key(self, key):
+        return key not in ['user_account', 'created_at', 'groups', 'extra']
+
+    def get_value_from_contact(self, contact, key):
+        value = getattr(contact, key, None)
+        if (value and isinstance(value, basestring)
+            and self.can_set_contact_key(key)):
+            return value
+        return contact.extra.get(key, None)
 
     @inlineCallbacks
     def consume_user_message(self, message):
@@ -48,10 +55,10 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         # to the PollApplication
         contact = yield self.get_contact_for_message(message)
         if contact:
-            participant = self.pm.get_participant(poll_id, message.user())
-            config = self.pm.get_config(poll_id)
+            participant = yield self.pm.get_participant(poll_id, message.user())
+            config = yield self.pm.get_config(poll_id)
             for key in config.get('include_labels', []):
-                value = contact.extra[key]
+                value = self.get_value_from_contact(contact, key)
                 if value and key not in participant.labels:
                     participant.set_label(key, value)
             yield self.pm.save_participant(poll_id, participant)
@@ -79,8 +86,27 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         # This does that.
         contact = yield self.get_contact_for_message(message)
         if contact:
-            contact.extra.update(participant.labels)
-            contact.save()
+            gmt = self.get_go_metadata(message)
+            batch_key = yield gmt.get_batch_key()
+            conv_key, conv_type = yield gmt.get_conversation_info()
+            conversation = yield self.get_conversation(batch_key, conv_key)
+            if conversation:
+                conv_metadata = conversation.get_metadata({})
+                survey_metadata = conv_metadata.get('surveys', {})
+                mappings = survey_metadata.get('mappings', {})
+
+                for key, value in mappings.items():
+                    contact_value = getattr(contact, key, None)
+                    if (contact_value and isinstance(contact_value, basestring)
+                        and self.can_set_contact_key(key)):
+                        new_value = participant.labels.get(value)
+                        if new_value:
+                            setattr(contact, key, new_value)
+                    else:
+                        new_value = participant.labels.get(value)
+                        if new_value:
+                            contact.extra[key] = new_value
+                yield contact.save()
 
         yield self.pm.save_participant(poll.poll_id, participant)
         yield self.trigger_event(message, 'survey_completed', {
