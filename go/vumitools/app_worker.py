@@ -73,9 +73,7 @@ class GoApplicationMixin(object):
 
         go_metadata = helper_metadata.get('go', {})
         account_key = go_metadata.get('user_account', None)
-
-        conversation_metadata = helper_metadata.get('conversations', {})
-        conversation_key = conversation_metadata.get('conversation_key', None)
+        conversation_key = go_metadata.get('conversation_key', None)
 
         if account_key and conversation_key:
             user_api = self.get_user_api(account_key)
