@@ -47,6 +47,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         # and update the participant with those before sending it
         # to the PollApplication
         contact = yield self.get_contact_for_message(message)
+        print 'contact', contact
         if contact:
             participant = yield self.pm.get_participant(poll_id, message.user())
             print participant
