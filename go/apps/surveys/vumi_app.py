@@ -54,6 +54,26 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
                 value = contact.extra[key]
                 if value and key not in participant.labels:
                     participant.set_label(key, value)
+
+            # NOTE:
+            #
+            # This is here because our SMS opt-out and our USSD opt-out's
+            # are not linked properly. Some bits and pieces are missing.
+            # The USSD opt-out happens through variables set in the
+            # contacts.extras[] dict, but the SMS is set in the contact_store.
+            # The USSD opt-out is fed back to the SMS/contact_store via
+            # the event handlers (specifically sna/handlers.py) and this
+            # hack links it the other way around again. We need the SMS
+            # contact_store opt-out status back to the participant's variables
+            # that vxpolls knows about.
+            account_key = go.get('account_key')
+            if account_key:
+                user_api = self.get_user_api(account_key)
+                contact_store = user_api.contact_store
+                is_opted_out = yield contact_store.contact_has_opted_out(contact)
+                if is_opted_out:
+                    participant.set_label('opted_out', '2')
+
             yield self.pm.save_participant(poll_id, participant)
 
         super(SurveyApplication, self).consume_user_message(message)
