@@ -123,14 +123,17 @@ class ConversationWrapper(object):
             *delivery_report_pending* The number of delivery reports
                     indicating ongoing attempts to deliver the message.
         """
-        statuses = defaultdict(int)
+        statuses = dict((k, 0) for k in
+                        ('sent', 'ack', 'delivery_report',
+                         'delivery_report_delivered', 'delivery_report_failed',
+                         'delivery_report_pending'))
 
         for batch_id in self.get_batch_keys():
             for k, v in self.mdb.batch_status(batch_id).items():
                 k = k.replace('.', '_')
                 statuses[k] += v
 
-        return dict(statuses)  # convert back from defaultdict
+        return statuses
 
     def get_progress_percentage(self):
         """
@@ -408,8 +411,8 @@ class VumiUserApi(object):
 
         available_set = yield self.api.tpm.list_pools()
         pool_names = list(allowed_set & available_set)
-        pool_data = dict((pool, (yield self.api.tpm.get_metadata(pool)))
-                         for pool in pool_names)
+        pool_data = dict([(pool, (yield self.api.tpm.get_metadata(pool)))
+                         for pool in pool_names])
         returnValue(TagpoolSet(pool_data))
 
     @Manager.calls_manager
