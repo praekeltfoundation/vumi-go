@@ -56,6 +56,8 @@ class USSDOptOutHandler(EventHandler):
             return
         contact = yield contact_store.contact_for_addr('ussd', from_addr)
         if contact:
+            print contact
+            print dict(contact.extra)
             opted_out = contact.extra['opted_out']
             if opted_out is not None:
                 if int(opted_out) > 1:
