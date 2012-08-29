@@ -356,11 +356,13 @@ class GoApplicationRouter(BaseDispatchRouter):
 
         # TODO: Fix this madness.
         self.vumi_api_d = VumiApi.from_config_async(self.config)
+        self.vumi_api = None
 
     @inlineCallbacks
     def find_application_for_msg(self, msg):
-        vumi_api = yield self.vumi_api_d
-        md = GoMessageMetadata(vumi_api, msg)
+        if self.vumi_api is None:
+            self.vumi_api = yield self.vumi_api_d
+        md = GoMessageMetadata(self.vumi_api, msg)
         conversation_info = yield md.get_conversation_info()
         if conversation_info:
             conversation_key, conversation_type = conversation_info
