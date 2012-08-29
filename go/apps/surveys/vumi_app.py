@@ -54,7 +54,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             print participant.labels
             config = yield self.pm.get_config(poll_id)
             for key in config.get('include_labels', []):
-                value = self.get_value_from_contact(contact, key)
+                value = contact.extra[key]
                 if value and key not in participant.labels:
                     participant.set_label(key, value)
             print 'saving participant', participant.dump()
