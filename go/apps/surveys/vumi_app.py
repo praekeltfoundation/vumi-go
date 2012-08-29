@@ -47,17 +47,13 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         # and update the participant with those before sending it
         # to the PollApplication
         contact = yield self.get_contact_for_message(message)
-        print 'contact', contact
         if contact:
             participant = yield self.pm.get_participant(poll_id, message.user())
-            print participant
-            print participant.labels
             config = yield self.pm.get_config(poll_id)
             for key in config.get('include_labels', []):
                 value = contact.extra[key]
                 if value and key not in participant.labels:
                     participant.set_label(key, value)
-            print 'saving participant', participant.dump()
             yield self.pm.save_participant(poll_id, participant)
 
         super(SurveyApplication, self).consume_user_message(message)
@@ -83,10 +79,17 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         # This does that.
         contact = yield self.get_contact_for_message(message)
         if contact:
-            contact.extra.update(participant.labels)
-            contact.save()
+            # Clear previous answers from this poll
+            possible_labels = [q.label for q in poll.questions]
+            for label in possible_labels:
+                if label in contact.extra:
+                    print 'clearing', label
+                    contact.extra[label]
 
-        self.pm.save_participant(poll.poll_id, participant)
+            contact.extra.update(participant.labels)
+            yield contact.save()
+
+        yield self.pm.save_participant(poll.poll_id, participant)
         yield self.trigger_event(message, 'survey_completed', {
             'from_addr': message['from_addr'],
             'message_id': message['message_id'],
