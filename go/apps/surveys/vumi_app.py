@@ -48,13 +48,16 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         # to the PollApplication
         contact = yield self.get_contact_for_message(message)
         if contact:
-            participant = self.pm.get_participant(poll_id, message.user())
-            config = self.pm.get_config(poll_id)
+            participant = yield self.pm.get_participant(poll_id, message.user())
+            print participant
+            print participant.labels
+            config = yield self.pm.get_config(poll_id)
             for key in config.get('include_labels', []):
-                value = contact.extra[key]
+                value = self.get_value_from_contact(contact, key)
                 if value and key not in participant.labels:
                     participant.set_label(key, value)
-            self.pm.save_participant(poll_id, participant)
+            print 'saving participant', participant.dump()
+            yield self.pm.save_participant(poll_id, participant)
 
         super(SurveyApplication, self).consume_user_message(message)
 
