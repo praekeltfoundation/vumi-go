@@ -66,7 +66,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             # hack links it the other way around again. We need the SMS
             # contact_store opt-out status back to the participant's variables
             # that vxpolls knows about.
-            account_key = go.get('account_key')
+            account_key = go.get('user_account')
             print 'account_key', account_key
             if account_key:
                 user_api = self.get_user_api(account_key)
