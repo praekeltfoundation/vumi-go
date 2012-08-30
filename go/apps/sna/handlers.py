@@ -39,7 +39,6 @@ class USSDOptOutHandler(EventHandler):
             the transport_type that the message was received on.
 
         """
-        print 'handling event', event, handler_config
         account_key = event.payload['account_key']
         oo_store = OptOutStore(self.vumi_api.manager, account_key)
         contact_store = ContactStore(self.vumi_api.manager, account_key)
@@ -56,8 +55,6 @@ class USSDOptOutHandler(EventHandler):
             return
         contact = yield contact_store.contact_for_addr('ussd', from_addr)
         if contact:
-            print contact
-            print dict(contact.extra)
             opted_out = contact.extra['opted_out']
             if opted_out is not None:
                 if int(opted_out) > 1:
