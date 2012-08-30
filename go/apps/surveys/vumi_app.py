@@ -4,15 +4,11 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vxpolls.example import PollApplication
 from vxpolls.manager import PollManager
 
+from vumi.persist.txredis_manager import TxRedisManager
 from vumi.message import TransportUserMessage
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationMixin
-
-
-def hacky_hack_hack(config):
-    from vumi.persist.redis_manager import RedisManager
-    return RedisManager.from_config(dict(config, key_separator=':'))
 
 
 class SurveyApplication(PollApplication, GoApplicationMixin):
@@ -21,13 +17,14 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
 
     def validate_config(self):
         self._go_validate_config()
+        self.r_config = self.config.get('redis_manager', {})
         # vxpolls
         vxp_config = self.config.get('vxpolls', {})
         self.poll_prefix = vxp_config.get('prefix')
 
     @inlineCallbacks
     def setup_application(self):
-        r_server = hacky_hack_hack(self.config.get('redis_manager'))
+        r_server = yield TxRedisManager.from_config(self.r_config)
         self.pm = PollManager(r_server, self.poll_prefix)
         yield self._go_setup_application()
 
@@ -110,7 +107,6 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             possible_labels = [q.get('label') for q in poll.questions]
             for label in possible_labels:
                 if (label is not None) and (label in contact.extra):
-                    print 'clearing', label
                     contact.extra[label]
 
             contact.extra.update(participant.labels)

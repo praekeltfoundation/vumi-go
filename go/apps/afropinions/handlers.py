@@ -56,6 +56,7 @@ class YoPaymentHandler(EventHandler):
             self.url,
             self.method,
             ))
+
         response = yield http_request_full(self.url,
             data=urlencode(request_params),
             headers=headers,
