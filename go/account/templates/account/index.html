@@ -9,6 +9,16 @@
     {% endfor %}
 {% endblock %}
 
+{% block extra_js %}
+<script type="text/javascript">
+    $(function() {
+        if(window.location.hash != "") {
+            $('#.nav a[href="'+window.location.hash+'"]').tab('show');
+        }
+    });
+</script>
+{% endblock %}
+
 {% block main %}
 
 <h2>Manage Profile</h2><br>
@@ -79,7 +89,7 @@
 
             <h4>Add your Facebook profile</h4>
             <p>This will allow you to post messages to your wall.</p>
-            <p> 
+            <p>
                 <i>
                     This is still being developed and will become available here
                     immediately when released.
@@ -101,7 +111,7 @@
             <h4>Add your Twitter profile</h4>
 
             <p>This will allow you to tweet on your twitter timeline.</p>
-            <p> 
+            <p>
                 <i>
                     This is still being developed and will become available here
                     immediately when released.
