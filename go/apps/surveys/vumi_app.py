@@ -66,20 +66,20 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             # hack links it the other way around again. We need the SMS
             # contact_store opt-out status back to the participant's variables
             # that vxpolls knows about.
-            account_key = go.get('user_account')
-            print 'account_key', account_key
-            if account_key:
-                user_api = self.get_user_api(account_key)
-                contact_store = user_api.contact_store
-                is_opted_out = yield contact_store.contact_has_opted_out(contact)
-                print 'participant', participant
-                if is_opted_out:
-                    print '--- is opted out'
-                    participant.set_label('opted_out', '2')
-                    print 'opt-out set'
-                    print participant.dump()
-                else:
-                    print '--- is NOT opted out'
+            # account_key = go.get('user_account')
+            # print 'account_key', account_key
+            # if account_key:
+            #     user_api = self.get_user_api(account_key)
+            #     contact_store = user_api.contact_store
+            #     is_opted_out = yield contact_store.contact_has_opted_out(contact)
+            #     print 'participant', participant
+            #     if is_opted_out:
+            #         print '--- is opted out'
+            #         participant.set_label('opted_out', '2')
+            #         print 'opt-out set'
+            #         print participant.dump()
+            #     else:
+            #         print '--- is NOT opted out'
 
             yield self.pm.save_participant(poll_id, participant)
 
