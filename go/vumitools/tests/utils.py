@@ -159,25 +159,21 @@ class CeleryTestMixIn(object):
 
 class GoPersistenceMixin(PersistenceMixin):
 
+    @PersistenceMixin.sync_or_async
     def _clear_bucket_properties(self, account_keys, manager):
-        from vumi.persist import txriak_manager
-        if not hasattr(txriak_manager, 'delete_bucket_properties'):
+        # TODO: Fix this hackery when we can.
+        import sys
+        manager_module = sys.modules[manager.__module__]
+        del_bp = getattr(manager_module, 'delete_bucket_properties', None)
+        if del_bp is None:
             # This doesn't exist everywhere yet.
             return
 
         client = manager.client
-        deferreds = []
-
         for account_key in account_keys:
             sub_manager = manager.sub_manager(account_key)
-            deferreds.extend([
-                    txriak_manager.delete_bucket_properties(
-                        client.bucket(sub_manager.bucket_name(Contact))),
-                    txriak_manager.delete_bucket_properties(
-                        client.bucket(sub_manager.bucket_name(ContactGroup))),
-                    ])
-
-        return DeferredList(deferreds)
+            yield del_bp(client.bucket(sub_manager.bucket_name(Contact)))
+            yield del_bp(client.bucket(sub_manager.bucket_name(ContactGroup)))
 
     def _list_accounts(self, manager):
         bucket = manager.client.bucket(
