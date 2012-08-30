@@ -4,6 +4,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vxpolls.example import PollApplication
 from vxpolls.manager import PollManager
 
+from vumi.persist.txredis_manager import TxRedisManager
 from vumi.message import TransportUserMessage
 from vumi import log
 
@@ -21,13 +22,14 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
 
     def validate_config(self):
         self._go_validate_config()
+        self.redis_config = self.config.get('redis_manager')
         # vxpolls
         vxp_config = self.config.get('vxpolls', {})
         self.poll_prefix = vxp_config.get('prefix')
 
     @inlineCallbacks
     def setup_application(self):
-        r_server = hacky_hack_hack(self.config.get('redis_manager'))
+        r_server = yield TxRedisManager.from_config(self.redis_config)
         self.pm = PollManager(r_server, self.poll_prefix)
         yield self._go_setup_application()
 
@@ -107,9 +109,9 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         contact = yield self.get_contact_for_message(message)
         if contact:
             # Clear previous answers from this poll
-            possible_labels = [q['label'] for q in poll.questions]
+            possible_labels = [q.get('label') for q in poll.questions]
             for label in possible_labels:
-                if label in contact.extra:
+                if (label is not None) and (label in contact.extra):
                     print 'clearing', label
                     contact.extra[label]
 
