@@ -13,8 +13,6 @@ from go.vumitools.app_worker import GoApplicationMixin
 def hacky_hack_hack(config):
     from vumi.persist.redis_manager import RedisManager
     hacked_config = config.copy()
-    hacked_config['key_prefix'] = ""
-    hacked_config['key_separator'] = ""
     return RedisManager.from_config(dict(hacked_config))
 
 
