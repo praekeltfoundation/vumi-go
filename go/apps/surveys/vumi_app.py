@@ -107,9 +107,9 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         contact = yield self.get_contact_for_message(message)
         if contact:
             # Clear previous answers from this poll
-            possible_labels = [q['label'] for q in poll.questions]
+            possible_labels = [q.get('label') for q in poll.questions]
             for label in possible_labels:
-                if label in contact.extra:
+                if (label is not None) and (label in contact.extra):
                     print 'clearing', label
                     contact.extra[label]
 
