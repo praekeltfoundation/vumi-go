@@ -147,7 +147,7 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         config.setdefault('survey_completed_response',
             (end_response or 'Thanks for completing the survey'))
-        self.pm.set(poll_id, config)
+        yield self.pm.set(poll_id, config)
         poll = yield self.pm.get(poll_id)
         returnValue(poll)
 

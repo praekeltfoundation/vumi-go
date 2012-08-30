@@ -11,25 +11,20 @@ from vumi import log
 from go.vumitools.app_worker import GoApplicationMixin
 
 
-def hacky_hack_hack(config):
-    from vumi.persist.redis_manager import RedisManager
-    return RedisManager.from_config(dict(config, key_separator=':'))
-
-
 class SurveyApplication(PollApplication, GoApplicationMixin):
 
     worker_name = None
 
     def validate_config(self):
         self._go_validate_config()
-        self.redis_config = self.config.get('redis_manager')
+        self.r_config = self.config.get('redis_manager', {})
         # vxpolls
         vxp_config = self.config.get('vxpolls', {})
         self.poll_prefix = vxp_config.get('prefix')
 
     @inlineCallbacks
     def setup_application(self):
-        r_server = yield TxRedisManager.from_config(self.redis_config)
+        r_server = yield TxRedisManager.from_config(self.r_config)
         self.pm = PollManager(r_server, self.poll_prefix)
         yield self._go_setup_application()
 
@@ -112,7 +107,6 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             possible_labels = [q.get('label') for q in poll.questions]
             for label in possible_labels:
                 if (label is not None) and (label in contact.extra):
-                    print 'clearing', label
                     contact.extra[label]
 
             contact.extra.update(participant.labels)

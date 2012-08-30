@@ -2,7 +2,7 @@ import base64
 
 from go.vumitools.tests.test_handler import EventHandlerTestCase
 
-from vumi.tests.utils import LogCatcher
+from vumi.tests.utils import LogCatcher, MockHttpServer
 
 from twisted.internet.defer import inlineCallbacks
 
@@ -15,7 +15,7 @@ class YoPaymentHandlerTestCase(EventHandlerTestCase):
             'username': 'username',
             'password': 'password',
             'url': None,
-            'method': 'post',
+            'method': 'POST',
             'amount': 1000,
             'reason': 'foo',
             })
@@ -37,10 +37,25 @@ class YoPaymentHandlerTestCase(EventHandlerTestCase):
             'transport_type': 'ussd',
             }, conv_key=self.conversation.key, account_key=self.account.key)
 
-        with LogCatcher() as log:
-            yield self.publish_event(event)
-            [error] = log.errors
-            self.assertTrue('No URL configured' in error['message'][0])
+
+        self.mock_server = MockHttpServer()
+        yield self.mock_server.start()
+
+        handler = self.event_dispatcher.handlers['afropinions']
+        handler.url = self.mock_server.url
+
+        yield self.publish_event(event)
+        received_request = yield self.mock_server.queue.get()
+        self.assertEqual(received_request.args['msisdn'][0], msisdn)
+        self.assertEqual(received_request.args['amount'][0], '1000')
+        self.assertEqual(received_request.args['reason'][0], 'foo')
+
+        headers = received_request.requestHeaders
+        self.assertEqual(headers.getRawHeaders('Content-Type'),
+            ['application/x-www-form-urlencoded'])
+        self.assertEqual(headers.getRawHeaders('Authorization'),
+            ['Basic %s' % (base64.b64encode('username:password'),)])
+        yield self.mock_server.stop()
 
     def test_auth_headers(self):
         handler = self.event_dispatcher.handlers['afropinions']
