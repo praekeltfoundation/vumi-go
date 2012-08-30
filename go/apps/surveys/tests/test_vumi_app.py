@@ -132,11 +132,12 @@ class TestSurveyApplication(AppWorkerTestCase):
         yield self.dispatch(reply)
         returnValue(reply)
 
+    @inlineCallbacks
     def create_survey(self, conversation, questions=None, end_response=None):
         # Create a sample survey
         questions = questions or self.default_questions
         poll_id = 'poll-%s' % (conversation.key,)
-        config = self.pm.get_config(poll_id)
+        config = yield self.pm.get_config(poll_id)
         config.update({
             'poll_id': poll_id,
             'transport_name': self.transport_name,
@@ -146,8 +147,9 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         config.setdefault('survey_completed_response',
             (end_response or 'Thanks for completing the survey'))
-        self.pm.set(poll_id, config)
-        return self.pm.get(poll_id)
+        yield self.pm.set(poll_id, config)
+        poll = yield self.pm.get(poll_id)
+        returnValue(poll)
 
     @inlineCallbacks
     def wait_for_messages(self, nr_of_messages, total_length):
