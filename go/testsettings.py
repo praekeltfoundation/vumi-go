@@ -18,4 +18,4 @@ if os.environ.get('VUMIGO_FAST_TESTS'):
         }
     }
 
-NOSE_ARGS = ['-evumitools', '-evumi_app', '-m^test']
+NOSE_ARGS = ['-evumitools', '-evumi_app', '-ehandlers', '-m^test']
