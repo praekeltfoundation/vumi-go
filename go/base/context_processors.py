@@ -28,6 +28,6 @@ def credit(request):
         profile = request.user.get_profile()
         api = request.user_api.api
         return {
-            'account_credits': api.cm.get_credit(profile.user_account),
+            'account_credits': api.cm.get_credit(profile.user_account) or 0,
         }
     return {}
