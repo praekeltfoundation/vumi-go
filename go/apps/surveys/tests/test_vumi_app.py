@@ -3,6 +3,7 @@
 """Tests for go.vumitools.bulk_send_application"""
 
 import uuid
+import json
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -176,6 +177,13 @@ class TestSurveyApplication(AppWorkerTestCase):
         self.assertEqual(msg1['content'], self.default_questions[0]['copy'])
         self.assertEqual(msg2['content'], self.default_questions[0]['copy'])
 
+    def _reformat_participant_for_comparison(self, participant):
+        clone = participant.copy()
+        clone['labels'] = json.loads(participant['labels'])
+        clone['polls'] = json.loads(participant['polls'])
+        clone['updated_at'] = int(participant['updated_at'])
+        return clone
+
     @inlineCallbacks
     def complete_survey(self, questions, start_at=0):
         for i in range(len(questions)):
@@ -203,18 +211,21 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         self.assertEqual(app_event['account_key'], self.user_account.key)
         self.assertEqual(app_event['conversation_key'], self.conversation.key)
-        self.assertEqual(app_event['content']['from_addr'],
-            last_sent_msg['from_addr'])
-        self.assertEqual(app_event['content']['transport_type'],
-            last_sent_msg['transport_type'])
-        self.assertEqual(app_event['content']['message_id'],
-            last_sent_msg['message_id'])
 
-        event_participant = app_event['content']['participant']
-        self.assertEqual(event_participant['interactions'],
-            participant.interactions)
-        self.assertEqual(event_participant['interactions'],
-            4)
+        # make sure we have a participant, pop it out and
+        # compare with expected result further down.
+        event_participant = app_event['content'].pop('participant')
+        self.assertTrue(event_participant)
+
+        self.assertEqual(app_event['content'], {
+            'from_addr': last_sent_msg['from_addr'],
+            'transport_type': last_sent_msg['transport_type'],
+            'message_id': last_sent_msg['message_id'],
+        })
+
+        self.assertEqual(
+            self._reformat_participant_for_comparison(event_participant),
+            self._reformat_participant_for_comparison(participant.dump()))
 
         returnValue(last_msg)
 
