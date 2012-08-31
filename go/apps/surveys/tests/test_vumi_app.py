@@ -191,14 +191,31 @@ class TestSurveyApplication(AppWorkerTestCase):
             'Thanks for completing the survey')
         self.assertEqual(last_msg['session_event'],
             TransportUserMessage.SESSION_CLOSE)
+
+        poll_id = 'poll-%s' % (self.conversation.key,)
+
         [app_event] = self.get_dispatched_app_events()
+
+        # The poll has been completed and so the results have been
+        # archived, get the participant from the archive
+        [participant] = (yield self.pm.get_archive(poll_id,
+            last_sent_msg['from_addr']))
+
         self.assertEqual(app_event['account_key'], self.user_account.key)
         self.assertEqual(app_event['conversation_key'], self.conversation.key)
-        self.assertEqual(app_event['content'], {
-            'from_addr': last_sent_msg['from_addr'],
-            'transport_type': last_sent_msg['transport_type'],
-            'message_id': last_sent_msg['message_id'],
-        })
+        self.assertEqual(app_event['content']['from_addr'],
+            last_sent_msg['from_addr'])
+        self.assertEqual(app_event['content']['transport_type'],
+            last_sent_msg['transport_type'])
+        self.assertEqual(app_event['content']['message_id'],
+            last_sent_msg['message_id'])
+
+        event_participant = app_event['content']['participant']
+        self.assertEqual(event_participant['interactions'],
+            participant.interactions)
+        self.assertEqual(event_participant['interactions'],
+            4)
+
         returnValue(last_msg)
 
 
