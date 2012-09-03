@@ -233,7 +233,7 @@ class ConversationWrapper(object):
             The name of the command to call
         """
         worker_name = '%s_application' % (self.conversation_type,)
-        return self.api.send_new_command(worker_name, command, *args, **kwargs)
+        return self.api.send_command(worker_name, command, *args, **kwargs)
 
     def delivery_class_description(self):
         """
