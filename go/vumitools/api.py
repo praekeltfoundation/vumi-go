@@ -235,7 +235,7 @@ class VumiApi(object):
         """
         return self.mdb.batch_done(batch_id)
 
-    def send_new_command(self, worker_name, command, *args, **kwargs):
+    def send_command(self, worker_name, command, *args, **kwargs):
         """Create a VumiApiCommand and send it.
 
         :param str worker_name: Name of worker to send command to.
@@ -245,17 +245,6 @@ class VumiApi(object):
         """
         self.mapi.send_command(
             VumiApiCommand.command(worker_name, command, *args, **kwargs))
-
-    def send_command(self, command):
-        """Send a command to the GoApplication via the control channel.
-
-        :type command: VumiApiCommand
-        :param command:
-            The command to send
-        :rtype:
-            None.
-        """
-        self.mapi.send_command(command)
 
     def batch_send(self, batch_id, msg, msg_options, addresses):
         """Send a batch of text message to a list of addresses.
@@ -283,7 +272,7 @@ class VumiApi(object):
         """
         for address in addresses:
             command = VumiApiCommand.send(batch_id, msg, msg_options, address)
-            self.send_command(command)
+            self.mapi.send_command(command)
 
     def batch_status(self, batch_id):
         """Check the status of a batch of messages.
