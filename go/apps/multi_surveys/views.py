@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from vumi.persist.redis_manager import RedisManager
 
 from go.base.utils import make_read_only_form, conversation_or_404
-from go.vumitools.api import ConversationSendError
+from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
 
 from vxpolls.content import forms
