@@ -3,6 +3,7 @@
 """Tests for go.vumitools.bulk_send_application"""
 
 import uuid
+import json
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -176,6 +177,13 @@ class TestSurveyApplication(AppWorkerTestCase):
         self.assertEqual(msg1['content'], self.default_questions[0]['copy'])
         self.assertEqual(msg2['content'], self.default_questions[0]['copy'])
 
+    def _reformat_participant_for_comparison(self, participant):
+        clone = participant.copy()
+        clone['labels'] = json.loads(participant['labels'])
+        clone['polls'] = json.loads(participant['polls'])
+        clone['updated_at'] = int(participant['updated_at'])
+        return clone
+
     @inlineCallbacks
     def complete_survey(self, questions, start_at=0):
         for i in range(len(questions)):
@@ -191,14 +199,34 @@ class TestSurveyApplication(AppWorkerTestCase):
             'Thanks for completing the survey')
         self.assertEqual(last_msg['session_event'],
             TransportUserMessage.SESSION_CLOSE)
+
+        poll_id = 'poll-%s' % (self.conversation.key,)
+
         [app_event] = self.get_dispatched_app_events()
+
+        # The poll has been completed and so the results have been
+        # archived, get the participant from the archive
+        [participant] = (yield self.pm.get_archive(poll_id,
+            last_sent_msg['from_addr']))
+
         self.assertEqual(app_event['account_key'], self.user_account.key)
         self.assertEqual(app_event['conversation_key'], self.conversation.key)
+
+        # make sure we have a participant, pop it out and
+        # compare with expected result further down.
+        event_participant = app_event['content'].pop('participant')
+        self.assertTrue(event_participant)
+
         self.assertEqual(app_event['content'], {
             'from_addr': last_sent_msg['from_addr'],
             'transport_type': last_sent_msg['transport_type'],
             'message_id': last_sent_msg['message_id'],
         })
+
+        self.assertEqual(
+            self._reformat_participant_for_comparison(event_participant),
+            self._reformat_participant_for_comparison(participant.dump()))
+
         returnValue(last_msg)
 
 

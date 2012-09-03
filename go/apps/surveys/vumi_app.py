@@ -117,6 +117,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             'from_addr': message['from_addr'],
             'message_id': message['message_id'],
             'transport_type': message['transport_type'],
+            'participant': participant.dump(),
         })
         super(SurveyApplication, self).end_session(participant, poll, message)
 
