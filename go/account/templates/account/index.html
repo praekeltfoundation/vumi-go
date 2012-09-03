@@ -9,6 +9,16 @@
     {% endfor %}
 {% endblock %}
 
+{% block extra_js %}
+<script type="text/javascript">
+    $(function() {
+        if(window.location.hash != "") {
+            $('#.nav a[href="'+window.location.hash+'"]').tab('show');
+        }
+    });
+</script>
+{% endblock %}
+
 {% block main %}
 
 <h2>Manage Profile</h2><br>
@@ -21,15 +31,15 @@
 
 <div class="tabbable">
   <ul class="nav nav-tabs">
-    <li class="active"><a href="#1" data-toggle="tab">Info</a></li>
-    <li><a href="#2" data-toggle="tab">Social</a></li>
-    <li><a href="#3" data-toggle="tab">IM</a></li>
-    <!-- <li><a href="#4" data-toggle="tab">Email</a></li> -->
-    <li><a href="#5" data-toggle="tab">Team</a></li>
-    <li><a href="#6" data-toggle="tab">Contact Us</a></li>
+    <li class="active"><a href="#info" data-toggle="tab">Info</a></li>
+    <li><a href="#social" data-toggle="tab">Social</a></li>
+    <li><a href="#im" data-toggle="tab">IM</a></li>
+    <!-- <li><a href="#email" data-toggle="tab">Email</a></li> -->
+    <li><a href="#team" data-toggle="tab">Team</a></li>
+    <li><a href="#contact" data-toggle="tab">Contact Us</a></li>
   </ul>
    <div class="tab-content">
-    <div class="tab-pane active" id="1">
+    <div class="tab-pane active" id="info">
         <h3>Account Information</h3><br>
         <form class="form-horizontal" action="" method="post" id="accountinfo">
           <fieldset>
@@ -69,7 +79,7 @@
         </form>
     </div>
 
-    <div class="tab-pane" id="2">
+    <div class="tab-pane" id="social">
 
         <h3>Social Networks</h3>
         <p>Adding social networks will let you message your followers and fans from Vumi</p>
@@ -79,7 +89,7 @@
 
             <h4>Add your Facebook profile</h4>
             <p>This will allow you to post messages to your wall.</p>
-            <p> 
+            <p>
                 <i>
                     This is still being developed and will become available here
                     immediately when released.
@@ -101,7 +111,7 @@
             <h4>Add your Twitter profile</h4>
 
             <p>This will allow you to tweet on your twitter timeline.</p>
-            <p> 
+            <p>
                 <i>
                     This is still being developed and will become available here
                     immediately when released.
@@ -114,7 +124,7 @@
 
     </div>
 
-    <div class="tab-pane" id="3">
+    <div class="tab-pane" id="im">
         <h3>Instant Messaging</h3>
         <p>Adding instant messaging services will let you send instant chat messages to friends and contacts.</p>
         <br>
@@ -137,7 +147,7 @@
 
     </div>
 
-    <div class="tab-pane" id="4">
+    <div class="tab-pane" id="email">
 
         <h3>Email Messaging</h3>
         <p>Adding email messaging services will let you send simple messages to your email contacts</p>
@@ -175,7 +185,7 @@
 
     </div>
 
-    <div class="tab-pane" id="5">
+    <div class="tab-pane" id="team">
 
         <h3>Account Owner</h3>
 
@@ -209,7 +219,7 @@
 
     </div>
 
-    <div class="tab-pane" id="6">
+    <div class="tab-pane" id="contact">
 
         <div class="span6">
             <form method="post" action="">
