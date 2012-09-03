@@ -35,7 +35,9 @@ class YoPaymentHandlerTestCase(EventHandlerTestCase):
             'from_addr': msisdn,
             'message_id': message_id,
             'transport_type': 'ussd',
-            }, conv_key=self.conversation.key, account_key=self.account.key)
+            'participant': {
+                'interactions': 2,
+            }}, conv_key=self.conversation.key, account_key=self.account.key)
 
 
         self.mock_server = MockHttpServer()
@@ -47,7 +49,7 @@ class YoPaymentHandlerTestCase(EventHandlerTestCase):
         yield self.publish_event(event)
         received_request = yield self.mock_server.queue.get()
         self.assertEqual(received_request.args['msisdn'][0], msisdn)
-        self.assertEqual(received_request.args['amount'][0], '1000')
+        self.assertEqual(received_request.args['amount'][0], '2000')
         self.assertEqual(received_request.args['reason'][0], 'foo')
 
         headers = received_request.requestHeaders

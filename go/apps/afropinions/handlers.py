@@ -40,9 +40,12 @@ class YoPaymentHandler(EventHandler):
 
         """
 
+        participant = event['content']['participant']
+        interactions = int(participant['interactions'])
+        amount = interactions * int(self.amount)
         request_params = {
             'msisdn': event['content']['from_addr'],
-            'amount': self.amount,
+            'amount': amount,
             'reason': self.reason,
         }
 
