@@ -1,9 +1,0 @@
-worker_name: bulk_message_application
-transport_name: bulk_message_transport
-message_store:
-    store_prefix: vumigo.
-riak:
-    bucket_prefix: vumigo.
-send_to:
-  default:
-    transport_name: "invalid broken transport"
