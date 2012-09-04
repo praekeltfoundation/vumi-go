@@ -15,6 +15,9 @@ class EventHandler(object):
         self.dispatcher = dispatcher
         self.config = config
 
+    def get_user_api(self, account_key):
+        return VumiUserApi(self.dispatcher.vumi_api, account_key)
+
     def setup_handler(self):
         pass
 
@@ -33,9 +36,6 @@ class LoggingHandler(EventHandler):
 
 
 class SendMessageCommandHandler(EventHandler):
-
-    def get_user_api(self, account_key):
-        return VumiUserApi(self.dispatcher.vumi_api, account_key)
 
     @inlineCallbacks
     def handle_event(self, event, handler_config):

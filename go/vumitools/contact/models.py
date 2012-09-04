@@ -46,6 +46,7 @@ class Contact(Model):
     created_at = Timestamp(default=datetime.utcnow)
     groups = ManyToMany(ContactGroup)
     extra = Dynamic(prefix='extras-')
+    optin = Dynamic(prefix='optin-')
 
     def add_to_group(self, group):
         if isinstance(group, ContactGroup):
