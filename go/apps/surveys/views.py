@@ -25,8 +25,6 @@ def get_poll_config(poll_id):
     config = pm.get_config(poll_id)
     config.update({
         'poll_id': poll_id,
-        'transport_name': settings.VXPOLLS_TRANSPORT_NAME,
-        'worker_name': settings.VXPOLLS_WORKER_NAME,
     })
 
     config.setdefault('repeatable', True)
