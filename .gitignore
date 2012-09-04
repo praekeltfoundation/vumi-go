@@ -16,6 +16,4 @@ requirements.pip.md5
 .pydevproject
 distribute-0.6.10.tar.gz
 .DS_Store
-/go/media/
-/go/static/
 *.db
