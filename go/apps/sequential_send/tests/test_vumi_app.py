@@ -57,16 +57,6 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         self.user_api.api.account_store.tag_permissions(uuid.uuid4().hex,
             tagpool=u"pool", max_keys=None)
 
-        # Create a group and a conversation
-        self.group = yield self.create_group(u'test group')
-
-        self.conversation = yield self.create_conversation(u'multi_survey',
-            u'Subject', u'Message',
-            delivery_tag_pool=u'pool',
-            delivery_class=self.transport_type)
-        self.conversation.add_group(self.group)
-        yield self.conversation.save()
-
     @inlineCallbacks
     def create_group(self, name):
         group = yield self.user_api.contact_store.new_group(name)
@@ -81,9 +71,11 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         returnValue(contact)
 
     @inlineCallbacks
-    def create_conversation(self, conversation_type, subject, message, **kw):
+    def create_conversation(self, **kw):
         conversation = yield self.user_api.new_conversation(
-            conversation_type, subject, message, **kw)
+            u'sequential_send', u'Subject', u'Message',
+            delivery_tag_pool=u'pool', delivery_class=self.transport_type,
+            **kw)
         yield conversation.save()
         returnValue(self.user_api.wrap_conversation(conversation))
 
@@ -111,18 +103,135 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         returnValue(msgs[-1 * nr_of_messages:])
 
     @inlineCallbacks
-    def test_start(self):
-        self.contact1 = yield self.create_contact(name=u'First',
-            surname=u'Contact', msisdn=u'27831234567', groups=[self.group])
-        self.contact2 = yield self.create_contact(name=u'Second',
-            surname=u'Contact', msisdn=u'27831234568', groups=[self.group])
+    def test_schedule_conv(self):
+        """Test conversation scheduling.
 
-        yield self.conversation.start()
-        self.clock.advance(70)
-        self.clock.advance(70)
-        self.clock.advance(70)
-        self.clock.advance(70)
+        NOTE: Riak stuff takes a while and messes up fake clock timing, so we
+        stub it out. It gets tested in other test methods.
+        """
 
-        # [msg1, msg2] = (yield self.wait_for_dispatched_messages(2))
-        # self.assertEqual(msg1['content'], self.default_polls[0][0]['copy'])
-        # self.assertEqual(msg2['content'], self.default_polls[0][0]['copy'])
+        conv = yield self.create_conversation(metadata={
+                'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
+        yield conv.start()
+        batch_id = conv.get_batch_keys()[0]
+
+        # Avoid hitting Riak for the conversation.
+        def get_conversations(conv_pointers):
+            self.assertEqual(conv_pointers, [[batch_id, conv.key]])
+            return [conv]
+        self.app.get_conversations = get_conversations
+
+        message_convs = []
+
+        # Fake the message send by adding the convs to a list.
+        def send_scheduled_messages(conv):
+            message_convs.append(conv)
+        self.app.send_scheduled_messages = send_scheduled_messages
+
+        self.assertEqual(message_convs, [])
+        yield self.clock.advance(70)
+        self.assertEqual(message_convs, [])
+        yield self.clock.advance(70)
+        self.assertEqual(message_convs, [conv])
+        yield self.clock.advance(70)
+        self.assertEqual(message_convs, [conv])
+        yield self.clock.advance(3600 * 24 - 140)
+        self.assertEqual(message_convs, [conv])
+        yield self.clock.advance(70)
+        self.assertEqual(message_convs, [conv, conv])
+        yield self.clock.advance(70)
+        self.assertEqual(message_convs, [conv, conv])
+
+    @inlineCallbacks
+    def test_schedule_convs(self):
+        """Test multiple conversation scheduling.
+
+        NOTE: Riak stuff takes a while and messes up fake clock timing, so we
+        stub it out. It gets tested in other test methods.
+        """
+
+        conv1 = yield self.create_conversation(metadata={
+                'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
+        yield conv1.start()
+        batch_id1 = conv1.get_batch_keys()[0]
+
+        conv2 = yield self.create_conversation(metadata={
+                'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
+        yield conv2.start()
+        batch_id2 = conv2.get_batch_keys()[0]
+
+        # Avoid hitting Riak for the conversation.
+        def get_conversations(conv_pointers):
+            self.assertEqual(sorted(conv_pointers), sorted(
+                    [[batch_id1, conv1.key], [batch_id2, conv2.key]]))
+            return [conv1, conv2]
+        self.app.get_conversations = get_conversations
+
+        message_convs = []
+
+        # Fake the message send by adding the convs to a list.
+        def send_scheduled_messages(conv):
+            message_convs.append(conv)
+        self.app.send_scheduled_messages = send_scheduled_messages
+
+        self.assertEqual(message_convs, [])
+        yield self.clock.advance(70)
+        self.assertEqual(message_convs, [])
+        yield self.clock.advance(70)
+        self.assertEqual(message_convs, [conv1])
+        yield self.clock.advance(70)
+        self.assertEqual(message_convs, [conv1, conv2])
+        yield self.clock.advance(3600 * 24 - 140)
+        self.assertEqual(message_convs, [conv1, conv2])
+        yield self.clock.advance(70)
+        self.assertEqual(message_convs, [conv1, conv2, conv1])
+        yield self.clock.advance(70)
+        self.assertEqual(message_convs, [conv1, conv2, conv1, conv2])
+
+    @inlineCallbacks
+    def test_get_conversations(self):
+        """Test get_conversation, because we stub it out elsewhere.
+        """
+        conv1 = yield self.create_conversation(metadata={
+                'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
+        yield conv1.start()
+        batch_id1 = conv1.get_batch_keys()[0]
+
+        conv2 = yield self.create_conversation(metadata={
+                'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
+        yield conv2.start()
+        batch_id2 = conv2.get_batch_keys()[0]
+
+        yield self.create_conversation(metadata={
+                'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
+
+        [c1, c2] = yield self.app.get_conversations(
+            [[batch_id1, conv1.key], [batch_id2, conv2.key]])
+
+        self.assertEqual(sorted([c1.key, c2.key]),
+                         sorted([conv1.key, conv2.key]))
+
+    @inlineCallbacks
+    def test_sends(self):
+        """Test send_scheduled_messages, because we stub it out elsewhere.
+        """
+
+        group = yield self.create_group(u'group')
+        contact1 = yield self.create_contact(name=u'First',
+            surname=u'Contact', msisdn=u'27831234567', groups=[group])
+        contact2 = yield self.create_contact(name=u'Second',
+            surname=u'Contact', msisdn=u'27831234568', groups=[group])
+
+        conv = yield self.create_conversation(metadata={
+                'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
+        conv.add_group(group)
+        yield conv.start()
+
+        yield self.app.send_scheduled_messages(conv)
+
+        [msg1, msg2] = sorted(self.get_dispatched_messages(),
+                              key=lambda m: m['to_addr'])
+        self.assertEqual(msg1['content'], 'foo')
+        self.assertEqual(msg1['to_addr'], contact1.msisdn)
+        self.assertEqual(msg2['content'], 'foo')
+        self.assertEqual(msg2['to_addr'], contact2.msisdn)
