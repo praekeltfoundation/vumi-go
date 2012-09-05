@@ -10,6 +10,7 @@ from vumi import log
 from vumi.persist.txredis_manager import TxRedisManager
 
 from go.vumitools.app_worker import GoApplicationWorker
+from go.vumitools.opt_out import OptOutStore
 
 
 class ScheduleManager(object):
@@ -114,17 +115,50 @@ class SequentialSendApplication(GoApplicationWorker):
 
     @inlineCallbacks
     def process_conversation_schedule(self, then, now, conv):
-        schedule = conv.metadata['schedule']
+        schedule = conv.get_metadata()['schedule']
         if ScheduleManager(schedule).is_scheduled(then, now):
             yield self.send_scheduled_messages(conv)
 
     @inlineCallbacks
     def send_scheduled_messages(self, conv):
+        messages = conv.get_metadata()['messages']
         batch_id = conv.get_batch_keys()[0]
-        to_addresses = yield conv.get_opted_in_addresses()
-        to_addresses = set(to_addresses)
-        for to_addr in to_addresses:
-            yield self.send_message(batch_id, to_addr, 'foo', {})
+        contacts = yield self.get_contacts_with_addresses(conv)
+
+        for contact, to_addr in contacts:
+            index_key = 'scheduled_message_index_%s' % (conv.key,)
+            message_index = int(contact.extra[index_key] or '0')
+            if message_index >= len(messages):
+                # We have nothing more to send to this person.
+                continue
+
+            yield self.send_message(
+                batch_id, to_addr, messages[message_index], {})
+
+            contact.extra[index_key] = u'%s' % (message_index + 1)
+            yield contact.save()
+
+    @inlineCallbacks
+    def get_contacts_with_addresses(self, conv):
+        """Get opted-in contacts with their addresses.
+
+        Since the account-level opt-out is per-address, we need to look up the
+        addresses in here. Once we have them, we may as well return them.
+        """
+        # FIXME: We need a more generic way to do this.
+        opt_out_store = OptOutStore(
+            conv.api.manager, conv.user_api.user_account_key)
+        optouts = yield opt_out_store.list_opt_outs()
+        optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
+                        if optout.key.startswith('msisdn:')]
+
+        contacts = yield conv.people()
+        result = []
+        for contact in contacts:
+            addr = contact.addr_for(conv.delivery_class)
+            if addr not in optout_addrs:
+                result.append((contact, addr))
+        returnValue(result)
 
     @inlineCallbacks
     def send_message(self, batch_id, to_addr, content, msg_options):
@@ -139,7 +173,7 @@ class SequentialSendApplication(GoApplicationWorker):
 
         if is_client_initiated:
             log.warning('Trying to start a client initiated conversation '
-                        'on a bulk sequential send.')
+                        'on a sequential send.')
             return
 
         yield self.redis.sadd('scheduled_conversations', json.dumps(

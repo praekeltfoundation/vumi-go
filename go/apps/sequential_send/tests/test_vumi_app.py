@@ -223,10 +223,13 @@ class TestSequentialSendApplication(AppWorkerTestCase):
             surname=u'Contact', msisdn=u'27831234568', groups=[group])
 
         conv = yield self.create_conversation(metadata={
-                'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
+                'schedule': {'recurring': 'daily', 'time': '00:01:40'},
+                'messages': ['foo', 'bar'],
+                })
         conv.add_group(group)
         yield conv.start()
 
+        # Send to two contacts.
         yield self.app.send_scheduled_messages(conv)
 
         [msg1, msg2] = sorted(self.get_dispatched_messages(),
@@ -235,3 +238,25 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         self.assertEqual(msg1['to_addr'], contact1.msisdn)
         self.assertEqual(msg2['content'], 'foo')
         self.assertEqual(msg2['to_addr'], contact2.msisdn)
+
+        # Send to previous two contacts and a new third contact.
+        contact3 = yield self.create_contact(name=u'Third',
+            surname=u'Contact', msisdn=u'27831234569', groups=[group])
+        yield self.app.send_scheduled_messages(conv)
+
+        [msg1, msg2, msg3] = sorted(self.get_dispatched_messages()[2:],
+                                    key=lambda m: m['to_addr'])
+        self.assertEqual(msg1['content'], 'bar')
+        self.assertEqual(msg1['to_addr'], contact1.msisdn)
+        self.assertEqual(msg2['content'], 'bar')
+        self.assertEqual(msg2['to_addr'], contact2.msisdn)
+        self.assertEqual(msg3['content'], 'foo')
+        self.assertEqual(msg3['to_addr'], contact3.msisdn)
+
+        # Previous two contacts are done, so we should only send to the third.
+        yield self.app.send_scheduled_messages(conv)
+
+        [msg] = sorted(self.get_dispatched_messages()[5:],
+                       key=lambda m: m['to_addr'])
+        self.assertEqual(msg['content'], 'bar')
+        self.assertEqual(msg['to_addr'], contact3.msisdn)
