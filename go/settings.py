@@ -245,13 +245,7 @@ VUMI_INSTALLED_APPS = {
 }
 
 VXPOLLS_REDIS_CONFIG = {}
-VXPOLLS_PREFIX = 'vumigo.'
-VXPOLLS_CONFIG_PATH = join(PROJECT_ROOT, '..', 'config', 'poll.yaml')
-VXPOLLS_CONFIG = yaml.load(open(VXPOLLS_CONFIG_PATH, 'r'))
-VXPOLLS_QUESTIONS = VXPOLLS_CONFIG.get('questions', [])
-VXPOLLS_POLL_ID = VXPOLLS_CONFIG.get('poll_id')
-VXPOLLS_TRANSPORT_NAME = 'vxpolls_transport'
-VXPOLLS_WORKER_NAME = 'vxpolls_worker'
+VXPOLLS_PREFIX = 'vumigo'
 
 try:
     from production_settings import *
