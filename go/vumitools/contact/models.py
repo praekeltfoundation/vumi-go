@@ -17,6 +17,7 @@ class ContactGroup(Model):
     """A group of contacts"""
     # key is UUID
     name = Unicode()
+    query = Unicode(null=True)
     user_account = ForeignKey(UserAccount)
     created_at = Timestamp(default=datetime.utcnow)
 
@@ -110,6 +111,14 @@ class ContactStore(PerAccountStore):
 
         group = self.groups(
             group_id, name=name, user_account=self.user_account_key)
+        yield group.save()
+        returnValue(group)
+
+    @Manager.calls_manager
+    def new_smart_group(self, name, query):
+        group_id = uuid4().get_hex()
+        group = self.groups(group_id, name=name,
+            user_account=self.user_account_key, query=query)
         yield group.save()
         returnValue(group)
 

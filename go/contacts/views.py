@@ -21,7 +21,7 @@ from vumi.utils import normalize_msisdn
 
 from go.vumitools.contact import Contact
 from go.contacts.forms import (
-    ContactForm, NewContactGroupForm, UploadContactsForm,
+    ContactForm, ContactGroupForm, UploadContactsForm, SmartGroupForm,
     SelectContactGroupForm)
 from go.contacts import tasks
 
@@ -79,14 +79,23 @@ def index(request):
 def groups(request):
     contact_store = request.user_api.contact_store
     if request.POST:
-        new_contact_group_form = NewContactGroupForm(request.POST)
-        if new_contact_group_form.is_valid():
-            group = contact_store.new_group(
-                new_contact_group_form.cleaned_data['name'])
-            messages.add_message(request, messages.INFO, 'New group created')
-            return redirect(_group_url(group.key))
+        if 'new_group' in request.POST:
+            new_contact_group_form = ContactGroupForm(request.POST)
+            if new_contact_group_form.is_valid():
+                group = contact_store.new_group(
+                    new_contact_group_form.cleaned_data['name'])
+                messages.add_message(request, messages.INFO, 'New group created')
+                return redirect(_group_url(group.key))
+        elif 'new_smart_group' in request.POST:
+            new_smart_group_form = SmartGroupForm(request.POST)
+            if new_smart_group_form.is_valid():
+                name = new_smart_group_form.cleaned_data['name']
+                query = new_smart_group_form.cleaned_data['query']
+                smart_group = contact_store.new_smart_group(
+                    name, query)
+                return redirect(_group_url(smart_group.key))
     else:
-        new_contact_group_form = NewContactGroupForm()
+        new_contact_group_form = ContactGroupForm()
 
     query = request.GET.get('q', None)
     if query:
@@ -254,7 +263,7 @@ def _group(request, group_key):
 
     if request.method == 'POST':
         if '_save_group' in request.POST:
-            group_form = NewContactGroupForm(request.POST)
+            group_form = ContactGroupForm(request.POST)
             if group_form.is_valid():
                 group.name = group_form.cleaned_data['name']
                 group.save()
@@ -353,6 +362,8 @@ def people(request):
 @csrf_protect
 def _people(request):
     contact_store = request.user_api.contact_store
+    group = None
+
     if request.method == 'POST':
         # first parse the CSV file and create Contact instances
         # from them for attaching to a group later
@@ -360,7 +371,7 @@ def _people(request):
         if upload_contacts_form.is_valid():
             # We could be creating a new contact group.
             if request.POST.get('name'):
-                new_group_form = NewContactGroupForm(request.POST)
+                new_group_form = ContactGroupForm(request.POST)
                 if new_group_form.is_valid():
                     group = contact_store.new_group(
                         new_group_form.cleaned_data['name'])
@@ -401,11 +412,10 @@ def _people(request):
 
     if ':' in request.GET.get('q', ''):
         query = request.GET['q']
-        query_kwargs = _query_to_kwargs(query)
         context.update({
             'query': query,
             'selected_contacts': [contact for contact in
-                            contact_store.contacts.search(**query_kwargs)],
+                            contact_store.contacts.riak_search(query)],
         })
     else:
         context.update(_filter_contacts(contacts, request.GET))

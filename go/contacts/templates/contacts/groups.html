@@ -22,7 +22,7 @@
       			    <li class="active"><a href="{% url contacts:groups %}">Groups</a></li>
       			</ul>
       			<form id="search-filter" name="search-filter" action="" method="get" class="well form-search">
-                <input type="text" id="search-filter-input" name="q" value="{{query|default_if_none:"Search..."}}" class="input-large search-query">
+                <input type="text" id="search-filter-input" name="q" value="{{query|default:""}}" placeholder="Search..." class="input-large search-query">
                 <button type="submit" id="search-filter-btn" class="btn">Search</button>
             </form>
             <table class="table table-bordered table-striped">
