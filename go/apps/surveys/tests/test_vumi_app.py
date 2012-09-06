@@ -168,7 +168,7 @@ class TestSurveyApplication(AppWorkerTestCase):
             surname=u'Contact', msisdn=u'27831234567', groups=[self.group])
         self.contact2 = yield self.create_contact(name=u'Second',
             surname=u'Contact', msisdn=u'27831234568', groups=[self.group])
-        self.create_survey(self.conversation)
+        yield self.create_survey(self.conversation)
         with LogCatcher() as log:
             yield self.conversation.start()
             self.assertEqual(log.errors, [])
@@ -229,11 +229,10 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         returnValue(last_msg)
 
-
     @inlineCallbacks
     def test_survey_completion(self):
         yield self.create_contact(u'First', u'Contact',
             msisdn=u'27831234567', groups=[self.group])
-        self.create_survey(self.conversation)
+        yield self.create_survey(self.conversation)
         yield self.conversation.start()
         yield self.complete_survey(self.default_questions)

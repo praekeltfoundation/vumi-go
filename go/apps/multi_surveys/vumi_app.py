@@ -4,16 +4,11 @@ from twisted.internet.defer import inlineCallbacks
 from vxpolls.multipoll_example import MultiPollApplication
 from vxpolls.manager import PollManager
 
+from vumi.persist.txredis_manager import TxRedisManager
 from vumi.message import TransportUserMessage
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationMixin
-
-
-def hacky_hack_hack(config):
-    from vumi.persist.redis_manager import RedisManager
-    hacked_config = config.copy()
-    return RedisManager.from_config(dict(hacked_config))
 
 
 class MamaPollApplication(MultiPollApplication):
@@ -35,13 +30,14 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
 
     def validate_config(self):
         self._go_validate_config()
+        self.redis_config = self.config.get('redis_manager')
         # vxpolls
         vxp_config = self.config.get('vxpolls', {})
         self.poll_prefix = vxp_config.get('prefix')
 
     @inlineCallbacks
     def setup_application(self):
-        r_server = hacky_hack_hack(self.config.get('redis_manager'))
+        r_server = yield TxRedisManager.from_config(self.redis_config)
         self.pm = PollManager(r_server, self.poll_prefix)
         yield self._go_setup_application()
 
