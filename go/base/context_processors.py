@@ -16,7 +16,7 @@ def standard_forms(request):
         return {}
     else:
         upload_contacts_form = forms.UploadContactsForm()
-        new_contact_group_form = forms.NewContactGroupForm()
+        new_contact_group_form = forms.ContactGroupForm()
         return {
             'upload_contacts_form': upload_contacts_form,
             'new_contact_group_form': new_contact_group_form,

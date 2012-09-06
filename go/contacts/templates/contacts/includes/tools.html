@@ -126,7 +126,7 @@
 	    </fieldset>
     </div>
     <div class="modal-footer">
-        <button type="submit" class="btn btn-primary" data-loading-text="uploading..." >Add New Group</button>
+        <button type="submit" name="new_group" class="btn btn-primary" data-loading-text="uploading..." >Add New Group</button>
     </div>
     </form>
 </div><!--/newGroup-->
@@ -192,3 +192,30 @@
     </div>
     </form>
 </div><!--/emptyGroup-->
+
+<div class="modal hide fade" id="createSmartGroup">
+  <div class="modal-header">
+    <a class="close" data-dismiss="modal">×</a>
+    <h3>Smart Group</h3>
+    <p>
+      This smart group automatically selects contacts using the following search criteria:
+    <p>
+    <p>
+      <pre>{{query}}</pre>
+    </p>
+  </div>
+  <form class="form-horizontal" method="POST" action="{% url contacts:groups %}">
+    <div class="modal-body">
+        <div class="control-group">
+          <label class="control-label" for="smart-group-name">Smart Group name:</label>
+          <div class="controls">
+            <input type="text" class="input-xlarge" id="smart-group-name" name="name" value="{{group.name}}" placeholder="...">
+          </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+    <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+    <button type="submit" class="btn btn-primary" data-loading-text="saving..."  data-dismiss="modal" data-toggle="modal" >Create Smart Group</button>
+    </div>
+  </form>
+</div>
