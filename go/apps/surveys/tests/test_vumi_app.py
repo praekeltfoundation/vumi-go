@@ -26,9 +26,9 @@ class TestSurveyApplication(AppWorkerTestCase):
         'label': 'favorite color',
         'valid_responses': [u'1', u'2', u'3'],
     }, {
-        'checks': {
-            'equal': {'favorite color': u'1'}
-        },
+        'checks': [
+            ['equal', 'favorite color', u'1'],
+        ],
         'copy': 'What shade of red? 1. Dark or 2. Light',
         'label': 'what shade',
         'valid_responses': [u'1', u'2'],
@@ -199,7 +199,17 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         self.create_survey(self.conversation)
         yield self.conversation.start()
-        yield self.complete_survey(self.default_questions)
+        yield self.submit_answers(self.default_questions,
+            answers=[
+                '2',  # Yellow, skips the second question because of the check
+                '2',  # Oranges
+                '1',  # Vim
+            ])
+
+        # The 4th message should be the closing one
+        [closing_message] = yield self.wait_for_messages(1, 4)
+        self.assertEqual(closing_message['content'],
+            'Thanks for completing the survey')
 
         contact = yield self.get_contact(contact.key)
         self.assertEqual(contact.extra['litmus'], u'test')
@@ -213,7 +223,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         return clone
 
     @inlineCallbacks
-    def complete_survey(self, questions, start_at=0,):
+    def complete_survey(self, questions, start_at=0):
         for i in range(len(questions)):
             [msg] = yield self.wait_for_messages(1, i + start_at + 1)
             self.assertEqual(msg['content'], questions[i]['copy'])
@@ -257,6 +267,12 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         returnValue(last_msg)
 
+
+    @inlineCallbacks
+    def submit_answers(self, questions, answers, start_at=0):
+        for i in range(len(answers)):
+            [msg] = yield self.wait_for_messages(1, i + start_at + 1)
+            yield self.reply_to(msg, answers.pop(0))
 
     @inlineCallbacks
     def test_survey_completion(self):
