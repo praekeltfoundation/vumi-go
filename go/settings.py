@@ -1,9 +1,6 @@
 # Django settings for go project.
 import os
 import djcelery
-import yaml
-
-from os.path import join
 
 
 djcelery.setup_loader()
@@ -129,6 +126,7 @@ TEMPLATE_DIRS = (
     abspath("apps", "multi_surveys", "templates"),
     abspath("apps", "bulk_message", "templates"),
     abspath("apps", "opt_out", "templates"),
+    abspath("apps", "sequential_send", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -241,7 +239,11 @@ VUMI_INSTALLED_APPS = {
     'go.apps.opt_out': {
         'namespace': 'opt_out',
         'display_name': 'Opt Out Handler',
-    }
+    },
+    'go.apps.sequential_send': {
+        'namespace': 'sequential_send',
+        'display_name': 'Sequential Send',
+    },
 }
 
 VXPOLLS_REDIS_CONFIG = {}
