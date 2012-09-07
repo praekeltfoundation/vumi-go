@@ -107,7 +107,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             possible_labels = [q.get('label') for q in poll.questions]
             for label in possible_labels:
                 if (label is not None) and (label in contact.extra):
-                    contact.extra[label]
+                    del contact.extra[label]
 
             contact.extra.update(participant.labels)
             yield contact.save()
