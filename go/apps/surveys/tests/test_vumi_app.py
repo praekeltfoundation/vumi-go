@@ -26,9 +26,9 @@ class TestSurveyApplication(AppWorkerTestCase):
         'label': 'favorite color',
         'valid_responses': [u'1', u'2', u'3'],
     }, {
-        'checks': {
-            'equal': {'favorite color': u'1'}
-        },
+        'checks': [
+            ['equal', 'favorite color', u'1'],
+        ],
         'copy': 'What shade of red? 1. Dark or 2. Light',
         'label': 'what shade',
         'valid_responses': [u'1', u'2'],
@@ -40,6 +40,7 @@ class TestSurveyApplication(AppWorkerTestCase):
     }, {
         'copy': 'What is your favorite editor? 1. Vim 2. Emacs '
                 '3. Other',
+        'label': 'editor',
         'valid_responses': [u'1', u'2', u'3']
     }]
 
@@ -87,6 +88,9 @@ class TestSurveyApplication(AppWorkerTestCase):
         # Create a group and a conversation
         self.group = yield self.create_group(u'test group')
 
+        # Make the contact store searchable
+        yield self.user_api.contact_store.contacts.enable_search()
+
         self.conversation = yield self.create_conversation(u'survey',
             u'Subject', u'Message',
             delivery_tag_pool=u'pool',
@@ -106,6 +110,9 @@ class TestSurveyApplication(AppWorkerTestCase):
             surname=surname, **kw)
         yield contact.save()
         returnValue(contact)
+
+    def get_contact(self, contact_key):
+        return self.user_api.contact_store.get_contact_by_key(contact_key)
 
     @inlineCallbacks
     def create_conversation(self, conversation_type, subject, message, **kw):
@@ -165,9 +172,9 @@ class TestSurveyApplication(AppWorkerTestCase):
     @inlineCallbacks
     def test_start(self):
         self.contact1 = yield self.create_contact(name=u'First',
-            surname=u'Contact', msisdn=u'27831234567', groups=[self.group])
+            surname=u'Contact', msisdn=u'+27831234567', groups=[self.group])
         self.contact2 = yield self.create_contact(name=u'Second',
-            surname=u'Contact', msisdn=u'27831234568', groups=[self.group])
+            surname=u'Contact', msisdn=u'+27831234568', groups=[self.group])
         self.create_survey(self.conversation)
         with LogCatcher() as log:
             yield self.conversation.start()
@@ -176,6 +183,37 @@ class TestSurveyApplication(AppWorkerTestCase):
         [msg1, msg2] = (yield self.wait_for_dispatched_messages(2))
         self.assertEqual(msg1['content'], self.default_questions[0]['copy'])
         self.assertEqual(msg2['content'], self.default_questions[0]['copy'])
+
+    @inlineCallbacks
+    def test_clearing_old_survey_data(self):
+        contact = yield self.create_contact(u'First', u'Contact',
+            msisdn=u'+27831234567', groups=[self.group])
+        # Populate all the known labels with 'to-be-cleared', these should
+        # be overwritten with new values later
+        for question in self.default_questions:
+            contact.extra[question['label']] = u'to-be-cleared'
+        # Also fill in junk data for an unknown field which should be left
+        # alone.
+        contact.extra['litmus'] = u'test'
+        yield contact.save()
+
+        self.create_survey(self.conversation)
+        yield self.conversation.start()
+        yield self.submit_answers(self.default_questions,
+            answers=[
+                '2',  # Yellow, skips the second question because of the check
+                '2',  # Oranges
+                '1',  # Vim
+            ])
+
+        # The 4th message should be the closing one
+        [closing_message] = yield self.wait_for_messages(1, 4)
+        self.assertEqual(closing_message['content'],
+            'Thanks for completing the survey')
+
+        contact = yield self.get_contact(contact.key)
+        self.assertEqual(contact.extra['litmus'], u'test')
+        self.assertTrue('to-be-cleared' not in contact.extra.values())
 
     def _reformat_participant_for_comparison(self, participant):
         clone = participant.copy()
@@ -231,9 +269,15 @@ class TestSurveyApplication(AppWorkerTestCase):
 
 
     @inlineCallbacks
+    def submit_answers(self, questions, answers, start_at=0):
+        for i in range(len(answers)):
+            [msg] = yield self.wait_for_messages(1, i + start_at + 1)
+            yield self.reply_to(msg, answers.pop(0))
+
+    @inlineCallbacks
     def test_survey_completion(self):
         yield self.create_contact(u'First', u'Contact',
-            msisdn=u'27831234567', groups=[self.group])
+            msisdn=u'+27831234567', groups=[self.group])
         self.create_survey(self.conversation)
         yield self.conversation.start()
         yield self.complete_survey(self.default_questions)
