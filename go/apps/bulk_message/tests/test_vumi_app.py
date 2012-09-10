@@ -29,7 +29,6 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
-        self._persist_riak_managers.append(self.vumi_api.manager)
 
         # Create a test user account
         self.user_account = yield self.vumi_api.account_store.new_user(
@@ -41,8 +40,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_start(self):
-        user_api = yield VumiUserApi.from_config_async(
-            self.user_account.key, self.config)
+        user_api = self.user_api
         yield user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
         yield user_api.api.set_pool_metadata("pool", {
             "transport_type": "sphex",
@@ -99,15 +97,10 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         self.assertEqual(dbmsg1, msg1)
         self.assertEqual(dbmsg2, msg2)
 
-        yield user_api.api.redis._purge_all()
-        yield user_api.api.redis.close_manager()
-        yield user_api.api.manager.purge_all()
-
     @inlineCallbacks
     def test_start_with_deduplication(self):
         yield self.vumi_api.account_store.new_user(u'testuser')
-        user_api = yield VumiUserApi.from_config_async(
-            self.user_account.key, self.config)
+        user_api = self.user_api
         user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
         user_api.api.set_pool_metadata("pool", {
             "transport_type": "sphex",
@@ -145,12 +138,6 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         # of the message equals conversation.message
         self.assertEqual(msg['to_addr'], contact1.msisdn)
         self.assertEqual(msg['to_addr'], contact2.msisdn)
-
-        # Purge & shutdown Redis connection
-        yield user_api.api.redis._purge_all()
-        yield user_api.api.redis.close_manager()
-        # Purge Riak
-        yield user_api.api.manager.purge_all()
 
     @inlineCallbacks
     def test_consume_ack(self):
