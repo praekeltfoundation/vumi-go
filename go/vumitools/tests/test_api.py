@@ -25,6 +25,8 @@ class TestTxVumiApi(AppWorkerTestCase):
     @inlineCallbacks
     def tearDown(self):
         self.restore_celery()
+        yield self.api.redis._purge_all()
+        yield self.api.redis.close_manager()
         yield self.api.manager.purge_all()
 
     @inlineCallbacks
@@ -89,13 +91,13 @@ class TestTxVumiApi(AppWorkerTestCase):
     @inlineCallbacks
     def test_declare_acquire_and_release_tags(self):
         tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
-        self.api.declare_tags([tag1, tag2])
+        yield self.api.declare_tags([tag1, tag2])
         self.assertEqual((yield self.api.acquire_tag("poolA")), tag1)
         self.assertEqual((yield self.api.acquire_tag("poolA")), tag2)
         self.assertEqual((yield self.api.acquire_tag("poolA")), None)
         self.assertEqual((yield self.api.acquire_tag("poolB")), None)
 
-        self.api.release_tag(tag2)
+        yield self.api.release_tag(tag2)
         self.assertEqual((yield self.api.acquire_tag("poolA")), tag2)
         self.assertEqual((yield self.api.acquire_tag("poolA")), None)
 
@@ -148,6 +150,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     def tearDown(self):
         self.restore_celery()
         yield self.api.manager.purge_all()
+        yield self.api.redis._purge_all()
+        yield self.api.redis.close_manager()
 
     @inlineCallbacks
     def test_optout_filtering(self):
