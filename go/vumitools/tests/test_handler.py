@@ -13,10 +13,10 @@ class EventHandlerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(EventHandlerTestCase, self).setUp()
-
-        app_config = {
+        yield self._persist_setUp()
+        app_config = self.mk_config({
             'event_handlers': {},
-        }
+        })
         for name, handler_class, config in self.handlers:
             app_config['event_handlers'][name] = handler_class
             app_config[name] = config
@@ -33,7 +33,8 @@ class EventHandlerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def tearDown(self):
         yield super(EventHandlerTestCase, self).tearDown()
-        yield self.event_dispatcher.teardown_application()
+        yield self._persist_tearDown()
+        yield self.vumi_api.redis.close_manager()
 
     def publish_event(self, event):
         return self.dispatch(event, rkey='vumi.event')

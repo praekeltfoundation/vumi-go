@@ -4,7 +4,6 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vxpolls.example import PollApplication
 from vxpolls.manager import PollManager
 
-from vumi.persist.txredis_manager import TxRedisManager
 from vumi.message import TransportUserMessage
 from vumi import log
 
@@ -17,21 +16,19 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
 
     def validate_config(self):
         self._go_validate_config()
-        self.r_config = self.config.get('redis_manager', {})
         # vxpolls
         vxp_config = self.config.get('vxpolls', {})
         self.poll_prefix = vxp_config.get('prefix')
 
     @inlineCallbacks
     def setup_application(self):
-        r_server = yield TxRedisManager.from_config(self.r_config)
-        self.pm = PollManager(r_server, self.poll_prefix)
         yield self._go_setup_application()
+        self.pm = PollManager(self.redis, self.poll_prefix)
 
     @inlineCallbacks
     def teardown_application(self):
-        yield self._go_teardown_application()
         self.pm.stop()
+        yield self._go_teardown_application()
 
     @inlineCallbacks
     def consume_user_message(self, message):
