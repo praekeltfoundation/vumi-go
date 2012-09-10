@@ -67,8 +67,10 @@ class GoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
         self.user_api = VumiUserApi(self.vumi_api, self.account.key)
         self.tag = ('xmpp', 'test1@xmpp.org')
 
+    @inlineCallbacks
     def tearDown(self):
-        return self._persist_tearDown()
+        yield self._persist_tearDown()
+        yield self.vumi_api.redis.close_manager()
 
     def create_conversation(self, conversation_type=u'bulk_message',
                             subject=u'subject', message=u'message'):
@@ -205,14 +207,20 @@ class EventDispatcherTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         super(EventDispatcherTestCase, self).setUp()
-        self.ed = yield self.get_application({
+        yield self._persist_setUp()
+        self.ed = yield self.get_application(self.mk_config({
             'event_handlers': {
                     'handler1': '%s.ToyHandler' % __name__,
                     'handler2': '%s.ToyHandler' % __name__,
                     },
-        })
+        }))
         self.handler1 = self.ed.handlers['handler1']
         self.handler2 = self.ed.handlers['handler2']
+
+    @inlineCallbacks
+    def tearDown(self):
+        yield self._persist_tearDown()
+        yield self.ed.vumi_api.redis.close_manager()
 
     def publish_event(self, cmd):
         return self.dispatch(cmd, rkey='vumi.event')
@@ -273,6 +281,7 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         super(SendingEventDispatcherTestCase, self).setUp()
+        yield self._persist_setUp()
         ed_config = self.mk_config({
                 'event_handlers': {
                     'handler1': "%s.%s" % (
@@ -282,6 +291,11 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
                 })
         self.ed = yield self.get_application(ed_config)
         self.handler1 = self.ed.handlers['handler1']
+
+    @inlineCallbacks
+    def tearDown(self):
+        yield self._persist_tearDown()
+        yield self.ed.vumi_api.redis.close_manager()
 
     def publish_event(self, cmd):
         return self.dispatch(cmd, rkey='vumi.event')
@@ -344,7 +358,7 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
                     }})
 
 
-class GoApplicationRouterTestCase(DispatcherTestCase):
+class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
 
     dispatcher_class = BaseDispatchWorker
     transport_name = 'test_transport'
@@ -352,7 +366,8 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(GoApplicationRouterTestCase, self).setUp()
-        self.dispatcher = yield self.get_dispatcher({
+        yield self._persist_setUp()
+        self.dispatcher = yield self.get_dispatcher(self.mk_config({
             'router_class': 'go.vumitools.api_worker.GoApplicationRouter',
             'transport_names': [
                 self.transport_name,
@@ -375,7 +390,7 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
             'optout_mw': {
                 'optout_keywords': ['stop']
             }
-            })
+            }))
 
         # get the router to test
         self.vumi_api = yield VumiApi.from_config_async(self._persist_config)
@@ -388,8 +403,12 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
 
     @inlineCallbacks
     def tearDown(self):
-        yield self._persist_tearDown()
         yield super(GoApplicationRouterTestCase, self).tearDown()
+        yield self._persist_tearDown()
+        yield self.vumi_api.redis.close_manager()
+        yield self.dispatcher._router.vumi_api.redis._purge_all()
+        yield self.dispatcher._router.vumi_api.redis.close_manager()
+
 
     @inlineCallbacks
     def test_tag_retrieval_and_dispatching(self):
