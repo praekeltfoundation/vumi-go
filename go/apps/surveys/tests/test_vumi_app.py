@@ -281,3 +281,15 @@ class TestSurveyApplication(AppWorkerTestCase):
         self.create_survey(self.conversation)
         yield self.conversation.start()
         yield self.complete_survey(self.default_questions)
+
+    @inlineCallbacks
+    def test_ensure_participant_cleared_after_archiving(self):
+        contact = yield self.create_contact(u'First', u'Contact',
+            msisdn=u'+27831234567', groups=[self.group])
+        self.create_survey(self.conversation)
+        yield self.conversation.start()
+        yield self.complete_survey(self.default_questions)
+        # This participant should be empty
+        poll_id = 'poll-%s' % (self.conversation.key,)
+        participant = yield self.pm.get_participant(poll_id, contact.msisdn)
+        self.assertEqual(participant.labels, {})
