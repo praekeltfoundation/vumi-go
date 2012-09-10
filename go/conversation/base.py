@@ -16,6 +16,7 @@ from go.base.utils import make_read_only_form, conversation_or_404
 
 class ConversationView(TemplateView):
     template_name = None
+    template_base = 'generic'
 
     # These are overridden on construction.
     conversation_form = None
@@ -37,7 +38,7 @@ class ConversationView(TemplateView):
         return super(ConversationView, self).dispatch(request, *args, **kwargs)
 
     def get_template_names(self):
-        return ['%s/%s.html' % (self.conversation_type, self.template_name)]
+        return ['%s/%s.html' % (self.template_base, self.template_name)]
 
     def redirect_to(self, name, **kwargs):
         return redirect(
@@ -61,7 +62,7 @@ class NewConversationView(ConversationView):
     def post(self, request):
         form = self.conversation_form(request.user_api, request.POST)
         if not form.is_valid():
-            return render(request, self.template_for('new'), {'form': form})
+            return self.render_to_response({'form': form})
 
         copy_keys = [
             'subject',
