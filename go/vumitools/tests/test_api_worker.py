@@ -354,7 +354,6 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(GoApplicationRouterTestCase, self).setUp()
-        yield self._persist_setUp()
         self.dispatcher = yield self.get_dispatcher(self.mk_config({
             'router_class': 'go.vumitools.api_worker.GoApplicationRouter',
             'transport_names': [
@@ -382,6 +381,8 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
 
         # get the router to test
         self.vumi_api = yield VumiApi.from_config_async(self._persist_config)
+        self._persist_riak_managers.append(self.vumi_api.manager)
+        self._persist_redis_managers.append(self.vumi_api.redis)
 
         self.account = yield self.vumi_api.account_store.new_user(u'user')
         self.user_api = VumiUserApi(self.vumi_api, self.account.key)
@@ -398,7 +399,6 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         self._persist_redis_managers.append(
             self.dispatcher._router.vumi_api.redis)
         yield super(GoApplicationRouterTestCase, self).tearDown()
-        yield self._persist_tearDown()
 
     @inlineCallbacks
     def test_tag_retrieval_and_dispatching(self):
