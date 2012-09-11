@@ -53,8 +53,7 @@ def import_csv_file(account_key, group_key, csv_path, field_names, has_header):
                 [count, contact_dictionary] = csv_data
 
                 # Make sure we set this group they're being uploaded in to
-                groups = contact_dictionary.setdefault('groups', [])
-                groups.append(group.key)
+                contact_dictionary['groups'] = [group.key]
 
                 contact = contact_store.new_contact(**contact_dictionary)
                 written_contacts.append(contact)
