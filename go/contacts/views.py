@@ -7,7 +7,6 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
-from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 from go.contacts.forms import (
@@ -231,24 +230,20 @@ def _people(request):
 
     select_contact_group_form = SelectContactGroupForm(
         groups=contact_store.list_groups())
-    contacts = contact_store.list_contacts()
-    context = {
-        'upload_contacts_form': upload_contacts_form,
-        'contacts': contacts,
-        'select_contact_group_form': select_contact_group_form,
-        }
-
+    selected_letter = request.GET.get('l', 'a')
     if ':' in request.GET.get('q', ''):
-        query = request.GET['q']
-        query_kwargs = _query_to_kwargs(query)
-        context.update({
-            'query': query,
-            'selected_contacts': [contact for contact in
-                            contact_store.contacts.search(**query_kwargs)],
-        })
+        query_kwargs = _query_to_kwargs(request.GET.get('q'))
+        selected_contacts = contact_store.contacts.search(**query_kwargs)
     else:
-        context.update(_filter_contacts(contacts, request.GET))
-    return render(request, 'contacts/people.html', context)
+        selected_contacts = contact_store.filter_contacts_on_surname(
+            selected_letter)
+    return render(request, 'contacts/people.html', {
+        'query': request.GET.get('q'),
+        'selected_letter': selected_letter,
+        'selected_contacts': selected_contacts,
+        'upload_contacts_form': upload_contacts_form,
+        'select_contact_group_form': select_contact_group_form,
+        })
 
 
 @login_required

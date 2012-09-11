@@ -124,6 +124,24 @@ class ContactStore(PerAccountStore):
                                           return_keys=return_keys, **kw)
 
     @Manager.calls_manager
+    def filter_contacts_on_surname(self, letter):
+        mr = self.manager.riak_map_reduce()
+        mr.add_bucket(self.manager.bucket_name(Contact))
+        js_function = """function(value, keyData, arg){
+            var data = Riak.mapValuesJson(value)[0];
+            var surname = data.surname;
+            if(surname && surname.charAt(0) == arg){
+                return [[value.key, value[0]]];
+            } else {
+                return [];
+            }
+        }"""
+        mr.map(js_function, {'arg': letter})
+        contacts = yield self.manager.run_map_reduce(mr,
+            lambda manager, result: Contact.load(manager, result[0], result[1]))
+        returnValue(contacts)
+
+    @Manager.calls_manager
     def list_contacts(self):
         # Not stale, because we're using backlinks.
         user_account = yield self.get_user_account()
