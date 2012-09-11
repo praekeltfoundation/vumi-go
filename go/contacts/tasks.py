@@ -3,8 +3,13 @@ import os.path
 from celery.task import task
 
 from django.conf import settings
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+
+from vumi.persist.fields import ValidationError
 
 from go.vumitools.api import VumiUserApi
+from go.base.models import UserProfile
 from go.contacts.utils import parse_contacts_csv_file
 
 
@@ -26,7 +31,6 @@ def delete_group(account_key, group_key):
 
 @task(ignore_result=True)
 def import_csv_file(account_key, group_key, csv_path, field_names, has_header):
-    print 'importing csv file'
     api = VumiUserApi.from_config(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
@@ -35,14 +39,47 @@ def import_csv_file(account_key, group_key, csv_path, field_names, has_header):
     # MacOS9 & Unix line-endings
     full_path = os.path.join(settings.MEDIA_ROOT, csv_path)
 
-    with open(full_path, 'rU') as csv_file:
-        for csv_data in parse_contacts_csv_file(csv_file, field_names,
-                                            has_header):
-            [count, contact_dictionary] = csv_data
+    # Get the profile for this user so we can email them when the import
+    # has been completed.
+    user_profile = UserProfile.objects.get(user_account=account_key)
 
-            # Make sure we set this group they're being uploaded in to
-            groups = contact_dictionary.setdefault('groups', [])
-            groups.append(group.key)
+    count = 0
+    written_contacts = []
 
-            contact_store.new_contact(**contact_dictionary)
-    print 'done'
+    try:
+        with open(full_path, 'rU') as csv_file:
+            for csv_data in parse_contacts_csv_file(csv_file, field_names,
+                                                has_header):
+                [count, contact_dictionary] = csv_data
+
+                # Make sure we set this group they're being uploaded in to
+                groups = contact_dictionary.setdefault('groups', [])
+                groups.append(group.key)
+
+                contact = contact_store.new_contact(**contact_dictionary)
+                written_contacts.append(contact)
+
+        send_mail('Contact import completed successfully.',
+            render_to_string('contacts/import_completed_mail.txt', {
+                'count': count,
+                'group': group,
+                'user': user_profile.user,
+            }), settings.DEFAULT_FROM_EMAIL, [user_profile.user.email],
+            fail_silently=False)
+
+    except (ValueError, ValidationError):
+        # Clean up if something went wrong, either everything is written
+        # or nothing is written
+        for contact in written_contacts:
+            contact.delete()
+
+        send_mail('Something went wrong while importing the contacts.',
+            render_to_string('contacts/import_failed_mail.txt', {
+                'user': user_profile.user,
+                'group_key': group_key,
+                'account_key': account_key,
+                'csv_path': csv_path,
+                'field_names': field_names,
+                'has_header': has_header,
+            }), settings.DEFAULT_FROM_EMAIL, [user_profile.user.email],
+            fail_silently=False)

@@ -224,7 +224,6 @@ VUMI_API_CONFIG = {
     'riak_manager': {'bucket_prefix': 'vumigo.'},
     }
 
-VUMI_COUNTRY_CODE = '27'
 VUMI_INSTALLED_APPS = {
     'go.apps.bulk_message': {
         'namespace': 'bulk_message',
