@@ -1,9 +1,6 @@
 # Django settings for go project.
 import os
 import djcelery
-import yaml
-
-from os.path import join
 
 
 djcelery.setup_loader()
