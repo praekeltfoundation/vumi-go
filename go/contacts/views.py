@@ -82,7 +82,6 @@ def groups(request):
         'page': page,
         'query': query,
         'new_contact_group_form': new_contact_group_form,
-        'country_code': settings.VUMI_COUNTRY_CODE,
     })
 
 @csrf_exempt
@@ -151,7 +150,6 @@ def _group(request, group_key):
 
     context = {
         'group': group,
-        'country_code': settings.VUMI_COUNTRY_CODE,
     }
 
     if 'clear-upload' in request.GET:
@@ -237,7 +235,6 @@ def _people(request):
     context = {
         'upload_contacts_form': upload_contacts_form,
         'contacts': contacts,
-        'country_code': settings.VUMI_COUNTRY_CODE,
         'select_contact_group_form': select_contact_group_form,
         }
 
@@ -303,7 +300,6 @@ def person(request, person_key):
         'contact': contact,
         'contact_extra_items': contact.extra.items(),
         'form': form,
-        'country_code': settings.VUMI_COUNTRY_CODE,
     })
 
 
@@ -325,5 +321,4 @@ def new_person(request):
         form = ContactForm(groups=groups)
     return render(request, 'contacts/new_person.html', {
         'form': form,
-        'country_code': settings.VUMI_COUNTRY_CODE,
     })
