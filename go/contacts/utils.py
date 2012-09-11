@@ -139,9 +139,9 @@ def parse_contacts_csv_file(csv_file, field_names, has_header,
     """
     data_dictionaries = read_data_from_csv_file(csv_file, field_names)
 
-    known_attributes = [attribute
+    known_attributes = set([attribute
         for attribute in Contact.field_descriptors.keys()
-        if attribute not in excluded_attributes]
+        if attribute not in excluded_attributes])
 
     # It's a generator so loop over it and save as contacts
     # in the contact_store, normalizing anything we need to
