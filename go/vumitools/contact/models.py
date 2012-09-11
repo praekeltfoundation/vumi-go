@@ -124,19 +124,22 @@ class ContactStore(PerAccountStore):
                                           return_keys=return_keys, **kw)
 
     @Manager.calls_manager
-    def filter_contacts_on_surname(self, letter):
+    def filter_contacts_on_surname(self, letter, group=None):
         mr = self.manager.riak_map_reduce()
-        mr.add_bucket(self.manager.bucket_name(Contact))
+        bucket = self.manager.bucket_name(Contact)
+        mr.add_bucket(bucket)
+        if group is not None:
+            mr.index(bucket, 'groups_bin', group.key)
         js_function = """function(value, keyData, arg){
             var data = Riak.mapValuesJson(value)[0];
-            var surname = data.surname;
+            var surname = data.surname.toLowerCase();
             if(surname && surname.charAt(0) == arg){
                 return [[value.key, value[0]]];
             } else {
                 return [];
             }
         }"""
-        mr.map(js_function, {'arg': letter})
+        mr.map(js_function, {'arg': letter.lower()})
         contacts = yield self.manager.run_map_reduce(mr,
             lambda manager, result: Contact.load(manager, result[0], result[1]))
         returnValue(contacts)
