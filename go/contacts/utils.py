@@ -127,7 +127,7 @@ def has_uncompleted_csv_import(request):
 
 
 def parse_contacts_csv_file(csv_file, field_names, has_header,
-    excluded_attributes=['user_account', 'created_at', 'extra']):
+    excluded_attributes=['user_account', 'created_at', 'extra', 'groups']):
     """
     Parses the CSV data and returns dictionaries ready to be fed
     the ContactStore.new_contact method.
