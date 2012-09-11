@@ -21,13 +21,8 @@ class TestTxVumiApi(AppWorkerTestCase):
             self.api = VumiApi.from_config(self._persist_config)
         else:
             self.api = yield VumiApi.from_config_async(self._persist_config)
-
-    @inlineCallbacks
-    def tearDown(self):
-        self.restore_celery()
-        yield self.api.redis._purge_all()
-        yield self.api.redis.close_manager()
-        yield self.api.manager.purge_all()
+        self._persist_riak_managers.append(self.api.manager)
+        self._persist_redis_managers.append(self.api.redis)
 
     @inlineCallbacks
     def test_batch_start(self):

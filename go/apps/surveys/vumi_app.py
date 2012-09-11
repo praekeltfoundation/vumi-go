@@ -27,7 +27,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
 
     @inlineCallbacks
     def teardown_application(self):
-        self.pm.stop()
+        yield self.pm.stop()
         yield self._go_teardown_application()
 
     @inlineCallbacks
@@ -91,7 +91,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         gmt = self.get_go_metadata(msg)
         gmt.set_conversation_info(conversation)
 
-        self.consume_user_message(msg)
+        return self.consume_user_message(msg)
 
     @inlineCallbacks
     def end_session(self, participant, poll, message):

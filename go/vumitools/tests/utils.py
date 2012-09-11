@@ -243,8 +243,7 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
     def get_application(self, *args, **kw):
         worker = yield super(AppWorkerTestCase, self).get_application(
             *args, **kw)
-        if hasattr(worker, 'manager'):
-            self._persist_riak_managers.append(worker.manager)
-        if hasattr(worker, 'redis'):
-            self._persist_redis_managers.append(worker.redis)
+        if hasattr(worker, 'vumi_api'):
+            self._persist_riak_managers.append(worker.vumi_api.manager)
+            self._persist_redis_managers.append(worker.vumi_api.redis)
         returnValue(worker)
