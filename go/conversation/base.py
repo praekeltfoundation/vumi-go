@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 from django.core.urlresolvers import reverse
 from django.contrib import messages
-from django.conf.urls.defaults import url
+from django.conf.urls.defaults import url, patterns
 
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
@@ -230,7 +230,7 @@ class ConversationViews(object):
             regex = r'^(?P<conversation_key>\w+)/%s/' % (name,)
         return url(regex, self.mkview(name), name=name)
 
-    def urls(self):
+    def get_urlpatterns(self):
         urls = [
             self.mkurl('new', r'^new/'),
             self.mkurl('start'),
@@ -239,7 +239,7 @@ class ConversationViews(object):
             ] + self.extra_urls()
         if self.conversation_initiator != 'client':
             urls.append(self.mkurl('people'))
-        return urls
+        return patterns('', *urls)
 
     def extra_urls(self):
         return []
