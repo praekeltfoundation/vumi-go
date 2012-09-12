@@ -108,7 +108,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         response = self.client.post(reverse('bulk_message:people',
             kwargs={'conversation_key': self.conv_key}), {'groups': [
                     grp.key for grp in self.contact_store.list_groups()]})
-        self.assertRedirects(response, reverse('bulk_message:send', kwargs={
+        self.assertRedirects(response, reverse('bulk_message:start', kwargs={
             'conversation_key': self.conv_key}))
 
     def test_start(self):
@@ -117,7 +117,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """
         conversation = self.get_wrapped_conv()
 
-        response = self.client.post(reverse('bulk_message:send', kwargs={
+        response = self.client.post(reverse('bulk_message:start', kwargs={
             'conversation_key': conversation.key}))
         self.assertRedirects(response, reverse('bulk_message:show', kwargs={
             'conversation_key': conversation.key}))
@@ -149,7 +149,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
     def test_start_with_deduplication(self):
         conversation = self.get_wrapped_conv()
-        self.client.post(reverse('bulk_message:send', kwargs={
+        self.client.post(reverse('bulk_message:start', kwargs={
             'conversation_key': conversation.key}), {
             'dedupe': '1'
         })
@@ -158,7 +158,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
     def test_start_without_deduplication(self):
         conversation = self.get_wrapped_conv()
-        self.client.post(reverse('bulk_message:send', kwargs={
+        self.client.post(reverse('bulk_message:start', kwargs={
             'conversation_key': conversation.key}), {
         })
         [cmd] = self.get_api_commands_sent()
@@ -171,9 +171,9 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         conversation = self.get_wrapped_conv()
         self.acquire_all_longcode_tags()
         consumer = self.get_cmd_consumer()
-        response = self.client.post(reverse('bulk_message:send', kwargs={
+        response = self.client.post(reverse('bulk_message:start', kwargs={
             'conversation_key': conversation.key}), follow=True)
-        self.assertRedirects(response, reverse('bulk_message:send', kwargs={
+        self.assertRedirects(response, reverse('bulk_message:start', kwargs={
             'conversation_key': conversation.key}))
         [] = self.fetch_cmds(consumer)
         [msg] = response.context['messages']
