@@ -91,12 +91,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         })
         self.assertContains(response, person_url(self.contact_key))
 
-        # test match surname
-        response = self.client.get(group_url(self.group_key), {
-            'q': TEST_CONTACT_SURNAME,
-        })
-        self.assertContains(response, person_url(self.contact_key))
-
     def test_group_contact_filter_by_letter(self):
         first_letter = TEST_CONTACT_SURNAME[0]
 

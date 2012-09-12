@@ -7,7 +7,6 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
-from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 from go.contacts.forms import (
@@ -20,28 +19,6 @@ def _query_to_kwargs(query):
     pattern = r'(?P<key>[^ :]+):[ ]*(?P<value>[^:]*[^ :])(?:(?=( [^:]+:)|$))'
     tuples = re.findall(pattern, query)
     return dict([(t[0], t[1]) for t in tuples])
-
-
-def _filter_contacts(contacts, request_params):
-    contacts = [c for c in contacts if (c.name or c.surname)]
-    query = request_params.get('q', None)
-    selected_letter = None
-
-    if query:
-        ql = query.lower()
-        contacts = [c for c in contacts
-                    if (ql in c.name.lower()) or (ql in c.surname.lower())]
-    else:
-        selected_letter = request_params.get('l', 'a').lower()
-        contacts = [c for c in contacts
-                    if c.surname.lower().startswith(selected_letter)]
-
-    return {
-        'query': query,
-        'selected_letter': selected_letter,
-        'selected_contacts': sorted(contacts,
-                                    key=lambda c: c.name.lower()[0]),
-        }
 
 
 def _group_url(group_key):
@@ -167,17 +144,24 @@ def _group(request, group_key):
         except ValueError:
             messages.error(request, 'Something is wrong with the file')
 
-    if ':' in request.GET.get('q', ''):
-        query = request.GET['q']
-        query_kwargs = _query_to_kwargs(query)
-        context.update({
-            'query': query,
-            'selected_contacts': [contact for contact in
-                            contact_store.contacts.search(**query_kwargs)],
-        })
+    selected_letter = request.GET.get('l', 'a')
+    query = request.GET.get('q', '')
+    if query:
+        if ':' in query:
+            query_kwargs = _query_to_kwargs(request.GET.get('q'))
+        else:
+            query_kwargs = _query_to_kwargs('name:%s' % query)
+        selected_contacts = contact_store.contacts.search(**query_kwargs)
     else:
-        context.update(_filter_contacts(group.backlinks.contacts(),
-                                            request.GET))
+        selected_contacts = contact_store.filter_contacts_on_surname(
+            selected_letter, group=group)
+
+    context.update({
+        'query': request.GET.get('q'),
+        'selected_letter': selected_letter,
+        'selected_contacts': selected_contacts,
+        })
+
     return render(request, 'contacts/group.html', context)
 
 
@@ -231,24 +215,29 @@ def _people(request):
 
     select_contact_group_form = SelectContactGroupForm(
         groups=contact_store.list_groups())
-    contacts = contact_store.list_contacts()
-    context = {
-        'upload_contacts_form': upload_contacts_form,
-        'contacts': contacts,
-        'select_contact_group_form': select_contact_group_form,
-        }
 
-    if ':' in request.GET.get('q', ''):
-        query = request.GET['q']
-        query_kwargs = _query_to_kwargs(query)
-        context.update({
-            'query': query,
-            'selected_contacts': [contact for contact in
-                            contact_store.contacts.search(**query_kwargs)],
-        })
+    # TODO: A lot of this stuff is duplicated from the similar group search
+    #       in the groups() view. We need a function that does that to avoid
+    #       the duplication.
+    selected_letter = request.GET.get('l', 'a')
+    query = request.GET.get('q', '')
+    if query:
+        if ':' in query:
+            query_kwargs = _query_to_kwargs(query)
+        else:
+            query_kwargs = _query_to_kwargs('name:%s' % query)
+        selected_contacts = contact_store.contacts.search(**query_kwargs)
     else:
-        context.update(_filter_contacts(contacts, request.GET))
-    return render(request, 'contacts/people.html', context)
+        selected_contacts = contact_store.filter_contacts_on_surname(
+            selected_letter)
+
+    return render(request, 'contacts/people.html', {
+        'query': request.GET.get('q'),
+        'selected_letter': selected_letter,
+        'selected_contacts': selected_contacts,
+        'upload_contacts_form': upload_contacts_form,
+        'select_contact_group_form': select_contact_group_form,
+        })
 
 
 @login_required
