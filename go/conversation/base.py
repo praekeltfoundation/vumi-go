@@ -18,7 +18,7 @@ class ConversationView(TemplateView):
     template_name = None
     template_base = 'generic'
 
-    # These are overridden on construction.
+    # These are set in the constructor, but the attributes must exist already.
     conversation_form = None
     conversation_group_form = None
     conversation_type = None
@@ -195,18 +195,59 @@ def tf_client_initiated(pool, metadata):
 
 
 class ConversationViews(object):
+    """Generic conversation view machinery.
+
+    NOTE: This is an early iteration. Please set expectations accordingly.
+
+    Subclass this for your shiny new conversation and setting the appropriate
+    attributes and/or add special magic code.
+
+    Individual view classes may be overridden for conversations that are unique
+    and special snowflakes by setting the `*_conversation_view` attributes. If
+    you need new views, add the appropriate conversation_view attributes and
+    implement `.extra_urls()` to build the right URLs.
+
+    The following more general attributes are passed through to each view:
+
+    :param conversation_type:
+        The name of this application. Currently needs to be the app submodule
+        name. (Mandatory)
+
+    :param conversation_form:
+        The conversation form to use. Defaults to `ConversationForm`.
+
+    :param conversation_group_form:
+        The conversation group form to use. Defaults to
+        `ConversationGroupForm`.
+
+    :param tagpool_filter:
+        Filter function for tagpools. It gets set appropriately based on
+        `conversation_initiator` if it hasn't been overridden.
+
+    :param conversation_initiator:
+        Should be `'server'` for server-initiated-only conversations,
+        `'client'` for client-initiated-only conversations or `None` for
+        conversations that can be either client-initiated or server-initiated.
+        Among other things, this determines the applicable tagpool filter and
+        conversation setup flow.
+
+    :param conversation_display_name:
+        Used in various places in the UI for messaging. Defaults to
+        `'Conversation'`.
+    """
+
     new_conversation_view = NewConversationView
     people_conversation_view = PeopleConversationView
     start_conversation_view = StartConversationView
     show_conversation_view = ShowConversationView
     end_conversation_view = EndConversationView
 
+    # These attributes get passed through to the individual view objects.
+    conversation_type = None
     conversation_form = ConversationForm
     conversation_group_form = ConversationGroupForm
-    conversation_type = None
     tagpool_filter = None
-    # This can be "client", "server" or None.
-    conversation_initiator = None
+    conversation_initiator = None  # This can be "client", "server" or None.
     conversation_display_name = 'Conversation'
 
     def mkview(self, name):
@@ -218,9 +259,9 @@ class ConversationViews(object):
                 None: None,
                 }[self.conversation_initiator]
         return cls.as_view(
+            conversation_type=self.conversation_type,
             conversation_form=self.conversation_form,
             conversation_group_form=self.conversation_group_form,
-            conversation_type=self.conversation_type,
             tagpool_filter=self.tagpool_filter,
             conversation_initiator=self.conversation_initiator,
             conversation_display_name=self.conversation_display_name)
