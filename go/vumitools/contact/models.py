@@ -138,7 +138,7 @@ class ContactStore(PerAccountStore):
             var data = Riak.mapValuesJson(value)[0];
             if(data.surname) {
                 var surname = data.surname.toLowerCase();
-                if(surname && surname[0] === arg){
+                if(surname[0] === arg){
                     return [[value.key, value[0]]];
                 }
             }
