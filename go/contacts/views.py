@@ -215,6 +215,10 @@ def _people(request):
 
     select_contact_group_form = SelectContactGroupForm(
         groups=contact_store.list_groups())
+
+    # TODO: A lot of this stuff is duplicated from the similar group search
+    #       in the groups() view. We need a function that does that to avoid
+    #       the duplication.
     selected_letter = request.GET.get('l', 'a')
     query = request.GET.get('q', '')
     if query:

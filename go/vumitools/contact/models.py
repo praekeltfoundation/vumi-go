@@ -125,6 +125,10 @@ class ContactStore(PerAccountStore):
 
     @Manager.calls_manager
     def filter_contacts_on_surname(self, letter, group=None):
+        # TODO: vumi.persist needs to have better ways of supporting
+        #       generic map reduce functions. There's a bunch of boilerplate
+        #       around getting bucket names and indexes that I'm doing
+        #       manually that could be automated.
         mr = self.manager.riak_map_reduce()
         bucket = self.manager.bucket_name(Contact)
         mr.add_bucket(bucket)
