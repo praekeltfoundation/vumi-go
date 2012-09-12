@@ -4,7 +4,6 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vxpolls.example import PollApplication
 from vxpolls.manager import PollManager
 
-from vumi.persist.txredis_manager import TxRedisManager
 from vumi.message import TransportUserMessage
 from vumi import log
 
@@ -17,21 +16,19 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
 
     def validate_config(self):
         self._go_validate_config()
-        self.r_config = self.config.get('redis_manager', {})
         # vxpolls
         vxp_config = self.config.get('vxpolls', {})
         self.poll_prefix = vxp_config.get('prefix')
 
     @inlineCallbacks
     def setup_application(self):
-        r_server = yield TxRedisManager.from_config(self.r_config)
-        self.pm = PollManager(r_server, self.poll_prefix)
         yield self._go_setup_application()
+        self.pm = PollManager(self.redis, self.poll_prefix)
 
     @inlineCallbacks
     def teardown_application(self):
+        yield self.pm.stop()
         yield self._go_teardown_application()
-        self.pm.stop()
 
     @inlineCallbacks
     def consume_user_message(self, message):
@@ -80,7 +77,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
 
             yield self.pm.save_participant(poll_id, participant)
 
-        super(SurveyApplication, self).consume_user_message(message)
+        yield super(SurveyApplication, self).consume_user_message(message)
 
     def start_survey(self, to_addr, conversation, **msg_options):
         log.debug('Starting %r -> %s' % (conversation, to_addr))
@@ -94,7 +91,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         gmt = self.get_go_metadata(msg)
         gmt.set_conversation_info(conversation)
 
-        self.consume_user_message(msg)
+        return self.consume_user_message(msg)
 
     @inlineCallbacks
     def end_session(self, participant, poll, message):
@@ -119,7 +116,8 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             'transport_type': message['transport_type'],
             'participant': participant.dump(),
         })
-        super(SurveyApplication, self).end_session(participant, poll, message)
+        yield super(SurveyApplication, self).end_session(participant, poll,
+            message)
 
     @inlineCallbacks
     def get_conversation(self, batch_id, conversation_key):

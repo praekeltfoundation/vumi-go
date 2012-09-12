@@ -9,7 +9,7 @@ from django.core.urlresolvers import reverse
 from go.base.models import User
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.vumitools.contact import ContactStore
-
+from django.core import mail
 
 TEST_GROUP_NAME = u"Test Group"
 TEST_CONTACT_NAME = u"Name"
@@ -41,6 +41,8 @@ class ContactsTestCase(VumiGoDjangoTestCase):
     def setup_riak_fixtures(self):
         self.user = User.objects.get(username='username')
         self.contact_store = ContactStore.from_django_user(self.user)
+        self.contact_store.contacts.enable_search()
+        self.contact_store.groups.enable_search()
 
         # We need a group
         self.group = self.contact_store.new_group(TEST_GROUP_NAME)
@@ -254,6 +256,8 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.specify_columns()
         group = self.contact_store.get_group(self.group_key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertTrue('successfully' in mail.outbox[0].subject)
 
     def test_uploading_windows_linebreaks_in_csv(self):
         self.clear_groups()
@@ -278,6 +282,8 @@ class ContactsTestCase(VumiGoDjangoTestCase):
             })
         group = self.contact_store.get_group(self.group_key)
         self.assertEqual(len(group.backlinks.contacts()), 2)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertTrue('successfully' in mail.outbox[0].subject)
 
     def test_uploading_unicode_chars_in_csv_into_new_group(self):
         self.clear_groups()
@@ -295,6 +301,8 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertRedirects(response, group_url(group.key))
         self.specify_columns(group_key=group.key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertTrue('successfully' in mail.outbox[0].subject)
 
     def test_contact_upload_from_group_page(self):
 
@@ -339,6 +347,8 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertRedirects(response, group_url)
         # 3 records should have been written to the db.
         self.assertEqual(len(list(self.group.backlinks.contacts())), 3)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertTrue('successfully' in mail.outbox[0].subject)
 
     def test_graceful_error_handling_on_upload_failure(self):
         group_url = reverse('contacts:group', kwargs={
@@ -366,19 +376,23 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         })
         self.assertContains(response, 'Something went wrong with the upload')
         self.assertEqual(len(self.contact_store.list_groups()), 1)
+        self.assertEqual(len(mail.outbox), 0)
 
-    def test_contact_phone_number_normalization(self):
-        settings.VUMI_COUNTRY_CODE = '27'
+    def test_contact_parsing_failure(self):
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
-            'fixtures', 'sample-denormalized-contacts.csv'))
+            'fixtures', 'sample-broken-contacts.csv'))
         response = self.client.post(reverse('contacts:people'), {
-            'name': 'normalization group',
+            'name': 'broken contacts group',
             'file': csv_file,
         })
         group = newest(self.contact_store.list_groups())
         self.assertRedirects(response, group_url(group.key))
-        self.assertTrue(all([c.msisdn.startswith('+27') for c
-                             in group.backlinks.contacts()]))
+        response = self.specify_columns(group_key=group.key)
+        group = newest(self.contact_store.list_groups())
+        contacts = group.backlinks.contacts()
+        self.assertEqual(len(contacts), 0)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertTrue('went wrong' in mail.outbox[0].subject)
 
     def test_contact_letter_filter(self):
         people_url = reverse('contacts:people')
@@ -414,7 +428,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
 
     def test_contact_key_value_query(self):
         people_url = reverse('contacts:people')
-        response = self.client.get(people_url, {
+        self.client.get(people_url, {
             'q': 'name:%s' % (self.contact.name,)
         })
-        print response.content
