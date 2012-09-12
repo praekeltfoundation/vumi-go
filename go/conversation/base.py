@@ -4,7 +4,7 @@ from django.views.generic import TemplateView
 
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
+from django.shortcuts import redirect
 from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.conf.urls.defaults import url
@@ -22,6 +22,9 @@ class ConversationView(TemplateView):
     conversation_form = None
     conversation_group_form = None
     conversation_type = None
+    conversation_initiator = None
+    conversation_display_name = None
+    tagpool_filter = None
 
     def request_setup(self, request, conversation_key):
         """Perform common request setup.
@@ -44,6 +47,10 @@ class ConversationView(TemplateView):
         return redirect(
             reverse('%s:%s' % (self.conversation_type, name), kwargs=kwargs))
 
+    def make_conversation_form(self, *args, **kw):
+        kw.setdefault('tagpool_filter', self.tagpool_filter)
+        return self.conversation_form(*args, **kw)
+
 
 class NewConversationView(ConversationView):
     template_name = 'new'
@@ -52,15 +59,13 @@ class NewConversationView(ConversationView):
         return (), {}
 
     def get(self, request):
-        now = datetime.utcnow()
-        form = self.conversation_form(request.user_api, initial={
-                'start_date': now.date(),
-                'start_time': now.time().replace(second=0, microsecond=0),
-                })
+        # We used to put the time in the form, but that's a silly thing to do.
+        # Especially since we now ignore it anyway.
+        form = self.make_conversation_form(request.user_api, initial={})
         return self.render_to_response({'form': form})
 
     def post(self, request):
-        form = self.conversation_form(request.user_api, request.POST)
+        form = self.make_conversation_form(request.user_api, request.POST)
         if not form.is_valid():
             return self.render_to_response({'form': form})
 
@@ -83,7 +88,10 @@ class NewConversationView(ConversationView):
         conversation = request.user_api.new_conversation(
             self.conversation_type, **conversation_data)
         messages.add_message(request, messages.INFO,
-                             'Conversation Created')
+                             '%s Created' % (self.conversation_display_name,))
+
+        if self.conversation_initiator == 'client':
+            return self.redirect_to('start', conversation_key=conversation.key)
         return self.redirect_to('people', conversation_key=conversation.key)
 
 
@@ -96,7 +104,7 @@ class PeopleConversationView(ConversationView):
         return (conversation, groups), {}
 
     def get(self, request, conversation, groups):
-        conversation_form = make_read_only_form(self.conversation_form(
+        conversation_form = make_read_only_form(self.make_conversation_form(
                 request.user_api, instance=conversation, initial={
                     'start_date': conversation.start_timestamp.date(),
                     'start_time': conversation.start_timestamp.time(),
@@ -117,23 +125,27 @@ class PeopleConversationView(ConversationView):
         conversation.save()
         messages.add_message(request, messages.INFO,
             'The selected groups have been added to the conversation')
-        return self.redirect_to('send', conversation_key=conversation.key)
+        return self.redirect_to('start', conversation_key=conversation.key)
 
 
-class SendConversationView(ConversationView):
-    template_name = 'send'
+class StartConversationView(ConversationView):
+    template_name = 'start'
 
     def get(self, request, conversation):
-        conversation_form = make_read_only_form(self.conversation_form(
-                request.user_api, instance=conversation, initial={
-                    'start_date': conversation.start_timestamp.date(),
-                    'start_time': conversation.start_timestamp.time(),
-                    }))
+        conversation_form = make_read_only_form(self.make_conversation_form(
+                request.user_api, instance=conversation, initial={}))
         groups = request.user_api.list_groups()
         group_form = make_read_only_form(
             self.conversation_group_form(groups=groups))
 
+        if self.conversation_initiator == 'client':
+            return self.render_to_response({
+                    'send_messages': False,
+                    'conversation': conversation,
+                    })
+
         return self.render_to_response({
+                'send_messages': True,
                 'conversation': conversation,
                 'conversation_form': conversation_form,
                 'group_form': group_form,
@@ -142,12 +154,16 @@ class SendConversationView(ConversationView):
                 })
 
     def post(self, request, conversation):
+        params = {}
+        if self.conversation_initiator != 'client':
+            params['dedupe'] = request.POST.get('dedupe') == '1'
         try:
-            conversation.start(dedupe=(request.POST.get('dedupe') == '1'))
+            conversation.start(**params)
         except ConversationSendError as error:
             messages.add_message(request, messages.ERROR, str(error))
-            return self.redirect_to('send', conversation_key=conversation.key)
-        messages.add_message(request, messages.INFO, 'Conversation started')
+            return self.redirect_to('start', conversation_key=conversation.key)
+        messages.add_message(request, messages.INFO,
+                             '%s started' % (self.conversation_display_name,))
         return self.redirect_to('show', conversation_key=conversation.key)
 
 
@@ -164,27 +180,50 @@ class EndConversationView(ConversationView):
     def post(self, request, conversation):
         if request.method == 'POST':
             conversation.end_conversation()
-            messages.add_message(request, messages.INFO, 'Conversation ended')
+            messages.add_message(
+                request, messages.INFO,
+                '%s ended' % (self.conversation_display_name,))
         return self.redirect_to('show', conversation_key=conversation.key)
+
+
+def tf_server_initiated(pool, metadata):
+    return metadata.get('server_initiated', False)
+
+
+def tf_client_initiated(pool, metadata):
+    return metadata.get('client_initiated', False)
 
 
 class ConversationViews(object):
     new_conversation_view = NewConversationView
     people_conversation_view = PeopleConversationView
-    send_conversation_view = SendConversationView
+    start_conversation_view = StartConversationView
     show_conversation_view = ShowConversationView
     end_conversation_view = EndConversationView
 
     conversation_form = ConversationForm
     conversation_group_form = ConversationGroupForm
     conversation_type = None
+    tagpool_filter = None
+    # This can be "client", "server" or None.
+    conversation_initiator = None
+    conversation_display_name = 'Conversation'
 
     def mkview(self, name):
         cls = getattr(self, '%s_conversation_view' % (name,))
+        if self.tagpool_filter is None:
+            self.tagpool_filter = {
+                'server': tf_server_initiated,
+                'client': tf_client_initiated,
+                None: None,
+                }[self.conversation_initiator]
         return cls.as_view(
             conversation_form=self.conversation_form,
             conversation_group_form=self.conversation_group_form,
-            conversation_type=self.conversation_type)
+            conversation_type=self.conversation_type,
+            tagpool_filter=self.tagpool_filter,
+            conversation_initiator=self.conversation_initiator,
+            conversation_display_name=self.conversation_display_name)
 
     def mkurl(self, name, regex=None):
         if regex is None:
@@ -192,13 +231,15 @@ class ConversationViews(object):
         return url(regex, self.mkview(name), name=name)
 
     def urls(self):
-        return [
+        urls = [
             self.mkurl('new', r'^new/'),
-            self.mkurl('people'),
-            self.mkurl('send'),
+            self.mkurl('start'),
             self.mkurl('end'),
-            self.mkurl('show', r'^(?P<conversation_key>\w+)/'),
+            self.mkurl('show', r'^(?P<conversation_key>\w+)/$'),
             ] + self.extra_urls()
+        if self.conversation_initiator != 'client':
+            urls.append(self.mkurl('people'))
+        return urls
 
     def extra_urls(self):
         return []
