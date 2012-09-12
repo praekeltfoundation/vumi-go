@@ -124,7 +124,7 @@ def _group(request, group_key):
                 field_names = [request.POST.get('column-%s' % i) for i in
                                 range(len(sample_row))]
 
-                tasks.import_csv_file(request.user_api.user_account_key,
+                tasks.import_csv_file.delay(request.user_api.user_account_key,
                     group.key, csv_path, field_names, has_header)
                 messages.info(request, 'The contacts are being imported. '
                     'We will notify you via email when the import has '
