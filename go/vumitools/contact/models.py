@@ -136,12 +136,13 @@ class ContactStore(PerAccountStore):
             mr.index(bucket, 'groups_bin', group.key)
         js_function = """function(value, keyData, arg){
             var data = Riak.mapValuesJson(value)[0];
-            var surname = data.surname.toLowerCase();
-            if(surname && surname[0] === arg){
-                return [[value.key, value[0]]];
-            } else {
-                return [];
+            if(data.surname) {
+                var surname = data.surname.toLowerCase();
+                if(surname && surname[0] === arg){
+                    return [[value.key, value[0]]];
+                }
             }
+            return [];
         }"""
         mr.map(js_function, {'arg': letter.lower()})
         contacts = yield self.manager.run_map_reduce(mr,
