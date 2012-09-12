@@ -133,7 +133,7 @@ class ContactStore(PerAccountStore):
         js_function = """function(value, keyData, arg){
             var data = Riak.mapValuesJson(value)[0];
             var surname = data.surname.toLowerCase();
-            if(surname && surname.charAt(0) == arg){
+            if(surname && surname[0] === arg){
                 return [[value.key, value[0]]];
             } else {
                 return [];
