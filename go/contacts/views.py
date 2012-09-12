@@ -1,8 +1,4 @@
-import csv
 import re
-import uuid
-import os.path
-from StringIO import StringIO
 
 from django.http import Http404
 from django.shortcuts import render, redirect
@@ -10,20 +6,14 @@ from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.files.storage import default_storage
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
-from django.core.files.base import File
 from django.conf import settings
-from django.utils.datastructures import SortedDict
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
-from vumi.utils import normalize_msisdn
-
-from go.vumitools.contact import Contact
 from go.contacts.forms import (
     ContactForm, NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
-from go.contacts import tasks
+from go.contacts import tasks, utils
 
 
 def _query_to_kwargs(query):
@@ -52,19 +42,6 @@ def _filter_contacts(contacts, request_params):
         'selected_contacts': sorted(contacts,
                                     key=lambda c: c.name.lower()[0]),
         }
-
-
-def _read_data_from_csv_file(csvfile, field_names):
-    dialect = csv.Sniffer().sniff(csvfile.read(1024))
-    csvfile.seek(0)
-    reader = csv.DictReader(csvfile, field_names, dialect=dialect)
-    for row in reader:
-        # Only process rows that actually have data
-        if any([column for column in row]):
-            # Our Riak client requires unicode for all keys & values stored.
-            unicoded_row = dict([(key, unicode(value, 'utf-8'))
-                                    for key, value in row.items()])
-            yield unicoded_row
 
 
 def _group_url(group_key):
@@ -105,136 +82,7 @@ def groups(request):
         'page': page,
         'query': query,
         'new_contact_group_form': new_contact_group_form,
-        'country_code': settings.VUMI_COUNTRY_CODE,
     })
-
-
-def _is_header_row(columns):
-    column_set = set([column.lower() for column in columns])
-    hint_set = set(['phone', 'contact', 'msisdn', 'number'])
-    return hint_set.intersection(column_set)
-
-
-def _guess_headers_and_row(csv_data):
-    sio = StringIO(csv_data)
-    dialect = csv.Sniffer().sniff(sio.read(1024))
-    sio.seek(0)
-
-    [first_row, second_row] = csv.reader(sio, dialect=dialect)
-    default_headers = {
-        'name': 'Name',
-        'surname': 'Surname',
-        'bbm_pin': 'BBM Pin',
-        'msisdn': 'Contact Number',
-        'gtalk_id': 'GTalk (or XMPP) address',
-        'dob': 'Date of Birth',
-        'facebook_id': 'Facebook ID',
-        'twitter_handle': 'Twitter handle',
-        'email_address': 'Email address',
-    }
-
-    if _is_header_row(first_row):
-        sample_row = SortedDict(zip(first_row, second_row))
-        for column in first_row:
-            default_headers.setdefault(column, column)
-        return True, default_headers, sample_row
-    return (False, default_headers,
-        SortedDict([(column, None) for column in first_row]))
-
-
-def _get_file_hints(content_file):
-    # Save the file object temporarily so we can present
-    # some UI to help the user figure out which columns are
-    # what of what type.
-    temp_file_name = '%s.csv' % (uuid.uuid4().hex,)
-    django_content_file = File(file=content_file, name=temp_file_name)
-    temp_file_path = default_storage.save(os.path.join('tmp', temp_file_name),
-        django_content_file)
-    # Store the first two lines in the session, we'll present these
-    # in the UI on the following page to help the user determine
-    # which column represents what.
-    content_file.seek(0)
-    first_two_lines = '\n'.join([
-        content_file.readline().strip() for i in range(2)])
-
-    return temp_file_path, first_two_lines
-
-
-def _store_file_hints_in_session(request, path, data):
-    # Not too happy with this method but I don't want to
-    # be writing the same session keys everywhere.
-    request.session['uploaded_csv_path'] = path
-    request.session['uploaded_csv_data'] = data
-    return request
-
-
-def _get_file_hints_from_session(request):
-    return [
-        request.session['uploaded_csv_path'],
-        request.session['uploaded_csv_data'],
-    ]
-
-
-def _clear_file_hints_from_session(request):
-    del request.session['uploaded_csv_data']
-    del request.session['uploaded_csv_path']
-
-
-def _has_uncompleted_csv_import(request):
-    return (('uploaded_csv_data' in request.session)
-        and ('uploaded_csv_path' in request.session))
-
-
-def _import_csv_file(group, csv_file, field_names, has_header):
-    data_dictionaries = _read_data_from_csv_file(csv_file,
-                            field_names)
-
-    # We need to know what we cannot set to avoid a
-    # CSV import overwriting things like account details.
-    excluded_attributes = ['user_account',
-                            'created_at',
-                            'extra']
-
-    known_attributes = [attribute
-        for attribute in Contact.field_descriptors.keys()
-        if attribute not in excluded_attributes]
-
-    # It's a generator so loop over it and save as contacts
-    # in the contact_store, normalizing anything we need to
-    for counter, data_dictionary in enumerate(data_dictionaries):
-
-        # If we've determined that the first line of the file is
-        # a header then skip it.
-        if has_header and counter == 0:
-            continue
-
-        # Make sure we set this group they're being uploaded in to
-        groups = data_dictionary.setdefault('groups', [])
-        groups.append(group.key)
-
-        # Make sure we normalize the msisdn before saving in the db
-        if 'msisdn' in data_dictionary:
-            msisdn = data_dictionary['msisdn']
-            # TODO: fix normalization, Vumi Go won't be bound to a single
-            #       country code which can be used for normalization.
-            normalized_msisdn = normalize_msisdn(msisdn,
-                country_code=settings.VUMI_COUNTRY_CODE)
-            data_dictionary.update({
-                'msisdn': unicode(normalized_msisdn, 'utf-8')
-            })
-
-        # Populate this with whatever we'll be sending to the
-        # contact to be saved
-        contact_dictionary = {}
-        for key, value in data_dictionary.items():
-            if key in known_attributes:
-                contact_dictionary[key] = value
-            else:
-                extra = contact_dictionary.setdefault('extra', {})
-                extra[key] = value
-
-        yield (counter if has_header else counter + 1, contact_dictionary)
-
 
 @csrf_exempt
 def group(request, group_key):
@@ -267,8 +115,8 @@ def _group(request, group_key):
             return redirect(reverse('contacts:index'))
         elif '_complete_csv_upload' in request.POST:
             try:
-                csv_path, csv_data = _get_file_hints_from_session(request)
-                has_header, _, sample_row = _guess_headers_and_row(csv_data)
+                csv_path, csv_data = utils.get_file_hints_from_session(request)
+                has_header, _, sample_row = utils.guess_headers_and_row(csv_data)
 
                 # Grab the selected field names from the submitted form
                 # by looping over the expect n number of `column-n` keys being
@@ -276,20 +124,13 @@ def _group(request, group_key):
                 field_names = [request.POST.get('column-%s' % i) for i in
                                 range(len(sample_row))]
 
-                # open in Universal mode to allow us to read files with Windows,
-                # MacOS9 & Unix line-endings
-                full_path = os.path.join(settings.MEDIA_ROOT, csv_path)
-                with open(full_path, 'rU') as csv_file:
-                    for csv_data in _import_csv_file(group, csv_file, field_names,
-                                                        has_header):
-                        [count, contact_dictionary] = csv_data
-                        contact_store.new_contact(**contact_dictionary)
+                tasks.import_csv_file.delay(request.user_api.user_account_key,
+                    group.key, csv_path, field_names, has_header)
+                messages.info(request, 'The contacts are being imported. '
+                    'We will notify you via email when the import has '
+                    'been completed')
 
-                messages.info(request,
-                    'Success! %s contacts imported.' % (
-                        count,))
-
-                _clear_file_hints_from_session(request)
+                utils.clear_file_hints_from_session(request)
                 return redirect(_group_url(group.key))
 
             except ValueError:
@@ -303,23 +144,22 @@ def _group(request, group_key):
                 # re-open the file in Universal mode to prevent files
                 # with windows line endings spewing errors
                 with open(file_object.temporary_file_path(), 'rU') as fp:
-                    _store_file_hints_in_session(request,
-                        *_get_file_hints(fp))
+                    utils.store_file_hints_in_session(request,
+                        *utils.get_file_hints(fp))
                 return redirect(_group_url(group.key))
 
     context = {
         'group': group,
-        'country_code': settings.VUMI_COUNTRY_CODE,
     }
 
     if 'clear-upload' in request.GET:
         # FIXME this is a debug statement
         del request.session['uploaded_csv_data']
 
-    if _has_uncompleted_csv_import(request):
+    if utils.has_uncompleted_csv_import(request):
         try:
-            csv_path, csv_data = _get_file_hints_from_session(request)
-            has_header, headers, row = _guess_headers_and_row(csv_data)
+            csv_path, csv_data = utils.get_file_hints_from_session(request)
+            has_header, headers, row = utils.guess_headers_and_row(csv_data)
             context.update({
                 'csv_data_headers': headers,
                 'csv_data_row': row,
@@ -381,8 +221,8 @@ def _people(request):
                 # re-open the file in Universal mode to prevent files
                 # with windows line endings spewing errors
                 with open(file_object.temporary_file_path(), 'rU') as fp:
-                    _store_file_hints_in_session(request,
-                        *_get_file_hints(fp))
+                    utils.store_file_hints_in_session(request,
+                        *utils.get_file_hints(fp))
                 return redirect(_group_url(group.key))
         else:
             messages.error(request, 'Something went wrong with the upload.')
@@ -395,7 +235,6 @@ def _people(request):
     context = {
         'upload_contacts_form': upload_contacts_form,
         'contacts': contacts,
-        'country_code': settings.VUMI_COUNTRY_CODE,
         'select_contact_group_form': select_contact_group_form,
         }
 
@@ -461,7 +300,6 @@ def person(request, person_key):
         'contact': contact,
         'contact_extra_items': contact.extra.items(),
         'form': form,
-        'country_code': settings.VUMI_COUNTRY_CODE,
     })
 
 
@@ -483,5 +321,4 @@ def new_person(request):
         form = ContactForm(groups=groups)
     return render(request, 'contacts/new_person.html', {
         'form': form,
-        'country_code': settings.VUMI_COUNTRY_CODE,
     })

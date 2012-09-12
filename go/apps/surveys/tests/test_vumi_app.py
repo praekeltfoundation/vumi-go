@@ -5,7 +5,7 @@
 import uuid
 import json
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks, returnValue, Deferred
 
 from vumi.message import TransportUserMessage
 from vumi.tests.utils import LogCatcher
@@ -62,7 +62,6 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
-        self._persist_riak_managers.append(self.vumi_api.manager)
 
         # Create a test user account
         self.user_account = yield self.vumi_api.account_store.new_user(
@@ -70,8 +69,8 @@ class TestSurveyApplication(AppWorkerTestCase):
         self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
         # Add tags
-        self.user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
-        self.user_api.api.set_pool_metadata("pool", {
+        self.vumi_api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
+        self.vumi_api.set_pool_metadata("pool", {
             "transport_type": self.transport_type,
             "msg_options": {
                 "transport_name": self.transport_name,
@@ -165,22 +164,26 @@ class TestSurveyApplication(AppWorkerTestCase):
         returnValue(msgs[-1 * nr_of_messages:])
 
     @inlineCallbacks
-    def tearDown(self):
-        self.pm.stop()
-        yield super(TestSurveyApplication, self).tearDown()
-
-    @inlineCallbacks
     def test_start(self):
+        # We need to wait for process_command_start() to finish completely.
+        # Since it runs in response to an async command, we need to wrap it in
+        # something that fires a deferred at the appropriate time.
+        pcs_d = Deferred()
+        pcs = self.app.process_command_start
+        pcs_wrapper = lambda *args, **kw: pcs(*args, **kw).chainDeferred(pcs_d)
+        self.app.process_command_start = pcs_wrapper
+
         self.contact1 = yield self.create_contact(name=u'First',
             surname=u'Contact', msisdn=u'+27831234567', groups=[self.group])
         self.contact2 = yield self.create_contact(name=u'Second',
             surname=u'Contact', msisdn=u'+27831234568', groups=[self.group])
-        self.create_survey(self.conversation)
+        yield self.create_survey(self.conversation)
         with LogCatcher() as log:
             yield self.conversation.start()
             self.assertEqual(log.errors, [])
 
-        [msg1, msg2] = (yield self.wait_for_dispatched_messages(2))
+        yield pcs_d
+        [msg1, msg2] = self.get_dispatched_messages()
         self.assertEqual(msg1['content'], self.default_questions[0]['copy'])
         self.assertEqual(msg2['content'], self.default_questions[0]['copy'])
 
@@ -267,7 +270,6 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         returnValue(last_msg)
 
-
     @inlineCallbacks
     def submit_answers(self, questions, answers, start_at=0):
         for i in range(len(answers)):
@@ -281,3 +283,15 @@ class TestSurveyApplication(AppWorkerTestCase):
         self.create_survey(self.conversation)
         yield self.conversation.start()
         yield self.complete_survey(self.default_questions)
+
+    @inlineCallbacks
+    def test_ensure_participant_cleared_after_archiving(self):
+        contact = yield self.create_contact(u'First', u'Contact',
+            msisdn=u'+27831234567', groups=[self.group])
+        self.create_survey(self.conversation)
+        yield self.conversation.start()
+        yield self.complete_survey(self.default_questions)
+        # This participant should be empty
+        poll_id = 'poll-%s' % (self.conversation.key,)
+        participant = yield self.pm.get_participant(poll_id, contact.msisdn)
+        self.assertEqual(participant.labels, {})
