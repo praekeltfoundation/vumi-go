@@ -2,8 +2,7 @@ from go.vumitools.opt_out import OptOutStore
 from go.vumitools.tests.test_handler import EventHandlerTestCase
 
 from twisted.internet.defer import inlineCallbacks
-# from twisted.internet.base import DelayedCall
-# DelayedCall.debug = True
+
 from vxpolls.manager import PollManager
 
 
