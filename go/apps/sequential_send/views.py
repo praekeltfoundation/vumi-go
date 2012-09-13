@@ -18,7 +18,6 @@ MessageFormSet = formsets.formset_factory(
 class EditSequentialSendConversationView(EditConversationView):
     def make_form(self, conversation):
         metadata = conversation.get_metadata()
-        print metadata
         if metadata is None:
             metadata = {'messages': []}
         messages = [{'message': message} for message in metadata['messages']]
