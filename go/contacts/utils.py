@@ -12,6 +12,8 @@ def get_parser(file_name):
 
     parser = {
         'csv': 'go.contacts.parsers.csv_parser',
+        'xls': 'go.contacts.parser.xls_parser',
+        'xlsx': 'go.contacts.parser.xls_parser',
     }.get(extension)
 
     if parser:
