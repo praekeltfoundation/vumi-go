@@ -75,7 +75,7 @@ class ContactFileParser(object):
         """
         raise NotImplementedError('Subclasses should implement this.')
 
-    def parse_file(self, file_pointer, field_names, has_header,
+    def parse_file(self, file_path, field_names, has_header,
         excluded_attributes=None):
         """
         Parses the file and returns dictionaries ready to be fed
@@ -93,7 +93,7 @@ class ContactFileParser(object):
 
         # We're expecting a generator so loop over it and save as contacts
         # in the contact_store, normalizing anything we need to
-        data_dictionaries = self.read_data_from_file(file_pointer, field_names)
+        data_dictionaries = self.read_data_from_file(file_path, field_names)
         for counter, data_dictionary in enumerate(data_dictionaries):
 
             # If we've determined that the first line of the file is

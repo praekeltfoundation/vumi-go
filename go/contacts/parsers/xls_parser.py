@@ -9,20 +9,22 @@ from go.contacts.parsers.base import ContactFileParser, ContactParserException
 
 class XLSFileParser(ContactFileParser):
 
-    def read_data_from_file(self, xls_file, field_names):
-        book = xlrd.open_workbook(xls_file)
+    def default_storage_path(self, file_path):
+        return os.path.join(settings.MEDIA_ROOT, file_path)
+
+    def read_data_from_file(self, file_path, field_names):
+        book = xlrd.open_workbook(self.default_storage_path(file_path))
         sheet = book.sheet_by_index(0)
         for row_number in range(sheet.nrows):
             row = sheet.row_values(row_number)
             # Only process rows that actually have data
             if any([column for column in row]):
                 # Our Riak client requires unicode for all keys & values stored.
-                unicoded_row = dict([(key, unicode(value, 'utf-8'))
-                                        for key, value in row.items()])
-                yield unicoded_row
+                yield dict(zip(field_names,
+                        sheet.row_values(row_number)[:len(field_names)]))
 
     def guess_headers_and_row(self, file_path):
-        book = xlrd.open_workbook(os.path.join(settings.MEDIA_ROOT, file_path))
+        book = xlrd.open_workbook(self.default_storage_path(file_path))
         sheet = book.sheet_by_index(0)
         if sheet.nrows == 0:
             raise ContactParserException('Worksheet is empty.')

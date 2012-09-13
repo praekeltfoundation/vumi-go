@@ -8,8 +8,9 @@ from django.core.files.storage import default_storage
 
 class CSVFileParser(ContactFileParser):
 
-    def read_data_from_file(self, csvfile, field_names):
+    def read_data_from_file(self, file_path, field_names):
         try:
+            csvfile = default_storage.open(file_path, 'rU')
             dialect = csv.Sniffer().sniff(csvfile.read(1024))
             csvfile.seek(0)
             reader = csv.DictReader(csvfile, field_names, dialect=dialect)
