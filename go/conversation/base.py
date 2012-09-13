@@ -41,7 +41,10 @@ class ConversationView(TemplateView):
         return super(ConversationView, self).dispatch(request, *args, **kwargs)
 
     def get_template_names(self):
-        return ['%s/%s.html' % (self.template_base, self.template_name)]
+        return [self.get_template_name(self.template_name)]
+
+    def get_template_name(self, name):
+        return '%s/%s.html' % (self.template_base, name)
 
     def redirect_to(self, name, **kwargs):
         return redirect(
@@ -171,7 +174,11 @@ class ShowConversationView(ConversationView):
     template_name = 'show'
 
     def get(self, request, conversation):
+        button_template = self.get_template_name('includes/end-button')
+        if conversation.ended():
+            button_template = self.get_template_name('includes/ended-button')
         return self.render_to_response({
+                'button_template': button_template,
                 'conversation': conversation,
                 })
 
