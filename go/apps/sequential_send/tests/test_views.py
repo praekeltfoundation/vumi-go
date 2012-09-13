@@ -117,7 +117,7 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
             kwargs={'conversation_key': conversation.key}), {'groups': [
                     grp.key for grp in self.contact_store.list_groups()]})
         self.assertRedirects(
-            response, reverse('sequential_send:show', kwargs={
+            response, reverse('sequential_send:start', kwargs={
                     'conversation_key': conversation.key}))
 
     def test_start(self):
@@ -151,7 +151,8 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
             conversation_key=conversation.key,
             is_client_initiated=conversation.is_client_initiated(),
             batch_id=batch.key,
-            msg_options=msg_options
+            msg_options=msg_options,
+            dedupe=False,
             ))
 
     def test_send_fails(self):
