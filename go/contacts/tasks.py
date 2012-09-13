@@ -1,4 +1,5 @@
 import os.path
+import logging
 
 from celery.task import task
 
@@ -10,7 +11,7 @@ from vumi.persist.fields import ValidationError
 
 from go.vumitools.api import VumiUserApi
 from go.base.models import UserProfile
-from go.contacts.utils import parse_contacts_csv_file
+from go.contacts import parsers
 
 
 @task(ignore_result=True)
@@ -29,15 +30,17 @@ def delete_group(account_key, group_key):
         contact.save()
     group.delete()
 
+
 @task(ignore_result=True)
-def import_csv_file(account_key, group_key, csv_path, field_names, has_header):
+def import_contacts_file(account_key, group_key, file_type, file_path,
+                            field_names, has_header):
     api = VumiUserApi.from_config(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
 
     # open in Universal mode to allow us to read files with Windows,
     # MacOS9 & Unix line-endings
-    full_path = os.path.join(settings.MEDIA_ROOT, csv_path)
+    full_path = os.path.join(settings.MEDIA_ROOT, file_path)
 
     # Get the profile for this user so we can email them when the import
     # has been completed.
@@ -46,11 +49,20 @@ def import_csv_file(account_key, group_key, csv_path, field_names, has_header):
     count = 0
     written_contacts = []
 
+    parser = {
+        'csv': parsers.csv_parser,
+    }.get(file_type)
+
+    if parser is None:
+        logging.warn('No file parser available for: %s. Stopping' % (
+            file_type,))
+        return
+
     try:
-        with open(full_path, 'rU') as csv_file:
-            for csv_data in parse_contacts_csv_file(csv_file, field_names,
+        with open(full_path, 'rU') as file_object:
+            for data in parser.parse_contacts_file(file_object, field_names,
                                                 has_header):
-                [count, contact_dictionary] = csv_data
+                [count, contact_dictionary] = data
 
                 # Make sure we set this group they're being uploaded in to
                 contact_dictionary['groups'] = [group.key]
@@ -77,7 +89,8 @@ def import_csv_file(account_key, group_key, csv_path, field_names, has_header):
                 'user': user_profile.user,
                 'group_key': group_key,
                 'account_key': account_key,
-                'csv_path': csv_path,
+                'file_type': file_type,
+                'file_path': file_path,
                 'field_names': field_names,
                 'has_header': has_header,
             }), settings.DEFAULT_FROM_EMAIL, [user_profile.user.email],

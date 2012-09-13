@@ -194,7 +194,7 @@ class ContactsTestCase(VumiGoDjangoTestCase):
             'column-0': 'name',
             'column-1': 'surname',
             'column-2': 'msisdn',
-            '_complete_csv_upload': '1',
+            '_complete_contact_upload': '1',
         }
         if columns:
             defaults.update(columns)
@@ -321,14 +321,14 @@ class ContactsTestCase(VumiGoDjangoTestCase):
             'Please match the sample to the fields provided')
 
         # The path of the uploaded file should have been set
-        self.assertTrue('uploaded_csv_path' in self.client.session)
+        self.assertTrue('uploaded_contacts_path' in self.client.session)
 
         # And it should store the first two lines as sample data
         # in the session in order to do the CSV column matching.
         csv_file.seek(0)
         expected_two_lines = '\n'.join([csv_file.readline().strip()
                                             for i in range(2)])
-        first_two_lines = self.client.session['uploaded_csv_data']
+        first_two_lines = self.client.session['uploaded_contacts_data']
         self.assertEqual(first_two_lines, expected_two_lines)
 
         # Nothing should have been written to the db by now.

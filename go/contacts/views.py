@@ -90,10 +90,12 @@ def _group(request, group_key):
                 group.key)
             messages.info(request, 'The group will be deleted shortly.')
             return redirect(reverse('contacts:index'))
-        elif '_complete_csv_upload' in request.POST:
+        elif '_complete_contact_upload' in request.POST:
             try:
-                csv_path, csv_data = utils.get_file_hints_from_session(request)
-                has_header, _, sample_row = utils.guess_headers_and_row(csv_data)
+                file_path, file_data = utils.get_file_hints_from_session(request)
+                file_type, parser = utils.get_parser(file_path)
+                has_header, _, sample_row = parser.guess_headers_and_row(
+                    file_data)
 
                 # Grab the selected field names from the submitted form
                 # by looping over the expect n number of `column-n` keys being
@@ -101,8 +103,9 @@ def _group(request, group_key):
                 field_names = [request.POST.get('column-%s' % i) for i in
                                 range(len(sample_row))]
 
-                tasks.import_csv_file.delay(request.user_api.user_account_key,
-                    group.key, csv_path, field_names, has_header)
+                tasks.import_contacts_file.delay(
+                    request.user_api.user_account_key, group.key, file_type,
+                    file_path, field_names, has_header)
                 messages.info(request, 'The contacts are being imported. '
                     'We will notify you via email when the import has '
                     'been completed')
@@ -120,9 +123,11 @@ def _group(request, group_key):
                 file_object = upload_contacts_form.cleaned_data['file']
                 # re-open the file in Universal mode to prevent files
                 # with windows line endings spewing errors
-                with open(file_object.temporary_file_path(), 'rU') as fp:
+                file_path = file_object.temporary_file_path()
+                file_type, parser = utils.get_parser(file_object.name)
+                with open(file_path, 'rU') as fp:
                     utils.store_file_hints_in_session(request,
-                        *utils.get_file_hints(fp))
+                        *parser.get_file_hints(fp))
                 return redirect(_group_url(group.key))
 
     context = {
@@ -131,15 +136,16 @@ def _group(request, group_key):
 
     if 'clear-upload' in request.GET:
         # FIXME this is a debug statement
-        del request.session['uploaded_csv_data']
+        utils.clear_file_hints_from_session(request)
 
-    if utils.has_uncompleted_csv_import(request):
+    if utils.has_uncompleted_contact_import(request):
         try:
-            csv_path, csv_data = utils.get_file_hints_from_session(request)
-            has_header, headers, row = utils.guess_headers_and_row(csv_data)
+            file_path, file_data = utils.get_file_hints_from_session(request)
+            file_type, parser = utils.get_parser(file_path)
+            has_header, headers, row = parser.guess_headers_and_row(file_data)
             context.update({
-                'csv_data_headers': headers,
-                'csv_data_row': row,
+                'contact_data_headers': headers,
+                'contact_data_row': row,
             })
         except ValueError:
             messages.error(request, 'Something is wrong with the file')
@@ -204,9 +210,11 @@ def _people(request):
                 file_object = upload_contacts_form.cleaned_data['file']
                 # re-open the file in Universal mode to prevent files
                 # with windows line endings spewing errors
-                with open(file_object.temporary_file_path(), 'rU') as fp:
+                file_path = file_object.temporary_file_path()
+                file_type, parser = utils.get_parser(file_object.name)
+                with open(file_path, 'rU') as fp:
                     utils.store_file_hints_in_session(request,
-                        *utils.get_file_hints(fp))
+                        *parser.get_file_hints(fp))
                 return redirect(_group_url(group.key))
         else:
             messages.error(request, 'Something went wrong with the upload.')
