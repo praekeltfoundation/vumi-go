@@ -13,6 +13,7 @@ from go.contacts.forms import (
     ContactForm, NewContactGroupForm, UploadContactsForm,
     SelectContactGroupForm)
 from go.contacts import tasks, utils
+from go.contacts.parsers import ContactFileParser, ContactParserException
 
 
 def _query_to_kwargs(query):
@@ -92,10 +93,11 @@ def _group(request, group_key):
             return redirect(reverse('contacts:index'))
         elif '_complete_contact_upload' in request.POST:
             try:
-                file_path, file_data = utils.get_file_hints_from_session(request)
-                file_type, parser = utils.get_parser(file_path)
+                file_name, file_path = utils.get_file_hints_from_session(
+                    request)
+                file_type, parser = ContactFileParser.get_parser(file_name)
                 has_header, _, sample_row = parser.guess_headers_and_row(
-                    file_data)
+                    file_path)
 
                 # Grab the selected field names from the submitted form
                 # by looping over the expect n number of `column-n` keys being
@@ -104,8 +106,9 @@ def _group(request, group_key):
                                 range(len(sample_row))]
 
                 tasks.import_contacts_file.delay(
-                    request.user_api.user_account_key, group.key, file_type,
+                    request.user_api.user_account_key, group.key, file_name,
                     file_path, field_names, has_header)
+
                 messages.info(request, 'The contacts are being imported. '
                     'We will notify you via email when the import has '
                     'been completed')
@@ -113,7 +116,7 @@ def _group(request, group_key):
                 utils.clear_file_hints_from_session(request)
                 return redirect(_group_url(group.key))
 
-            except ValueError:
+            except (ContactParserException,):
                 messages.error(request, 'Something is wrong with the file')
 
         else:
@@ -121,13 +124,8 @@ def _group(request, group_key):
                                                         request.FILES)
             if upload_contacts_form.is_valid():
                 file_object = upload_contacts_form.cleaned_data['file']
-                # re-open the file in Universal mode to prevent files
-                # with windows line endings spewing errors
-                file_path = file_object.temporary_file_path()
-                file_type, parser = utils.get_parser(file_object.name)
-                with open(file_path, 'rU') as fp:
-                    utils.store_file_hints_in_session(request,
-                        *parser.get_file_hints(fp))
+                file_name, file_path = utils.store_temporarily(file_object)
+                utils.store_file_hints_in_session(request, file_name, file_path)
                 return redirect(_group_url(group.key))
 
     context = {
@@ -140,15 +138,16 @@ def _group(request, group_key):
 
     if utils.has_uncompleted_contact_import(request):
         try:
-            file_path, file_data = utils.get_file_hints_from_session(request)
-            file_type, parser = utils.get_parser(file_path)
-            has_header, headers, row = parser.guess_headers_and_row(file_data)
+            file_name, file_path = utils.get_file_hints_from_session(request)
+            file_type, parser = ContactFileParser.get_parser(file_name)
+            has_header, headers, row = parser.guess_headers_and_row(file_path)
             context.update({
                 'contact_data_headers': headers,
                 'contact_data_row': row,
             })
-        except ValueError:
+        except (ValueError, ContactParserException):
             messages.error(request, 'Something is wrong with the file')
+            utils.clear_file_hints_from_session(request)
 
     selected_letter = request.GET.get('l', 'a')
     query = request.GET.get('q', '')
@@ -208,13 +207,8 @@ def _people(request):
                     'a new group name.')
             else:
                 file_object = upload_contacts_form.cleaned_data['file']
-                # re-open the file in Universal mode to prevent files
-                # with windows line endings spewing errors
-                file_path = file_object.temporary_file_path()
-                file_type, parser = utils.get_parser(file_object.name)
-                with open(file_path, 'rU') as fp:
-                    utils.store_file_hints_in_session(request,
-                        *parser.get_file_hints(fp))
+                file_name, file_path = utils.store_temporarily(file_object)
+                utils.store_file_hints_in_session(request, file_name, file_path)
                 return redirect(_group_url(group.key))
         else:
             messages.error(request, 'Something went wrong with the upload.')
