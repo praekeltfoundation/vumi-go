@@ -24,6 +24,15 @@ class ContactFileParser(object):
 
     EXCLUDED_ATTRIBUTES = ['user_account', 'created_at', 'extra', 'groups']
 
+    def is_header_row(self, columns):
+        """
+        Determines whether the given columns have something that might hint
+        at the row being a row with column headers and not column values.
+        """
+        column_set = set([column.lower() for column in columns])
+        hint_set = set(['phone', 'contact', 'msisdn', 'number'])
+        return hint_set.intersection(column_set)
+
     @classmethod
     def get_file_extension(cls, file_name):
         name, extension = os.path.splitext(file_name)
