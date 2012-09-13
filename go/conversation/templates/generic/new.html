@@ -10,14 +10,16 @@
     {% csrf_token %}
     <div class="row">
         <div class="span12">
+            <!--
             <div class="pull-right padtop">
-                <a class="btn btn-success" data-toggle="modal" href="#previewConv">Send Preview</a>
-            </div>
-            <div class="pull-right padtop" style="margin-right: 10px">
-                <a class="btn" href="#">Save Draft</a>
-            </div>
+		        <a class="btn btn-success" data-toggle="modal" href="#previewConv">Send Preview</a>
+		    </div>
+		    <div class="pull-right padtop" style="margin-right: 10px">
+		        <a class="btn" href="#">Save Draft</a>
+		    </div>
+            -->
             <div id="welcome">
-                <h1>New Opt Out channel</h1>
+                <h1>New Conversation</h1>
             </div>
         </div>
     </div>
@@ -28,11 +30,11 @@
     </div>
     <div class="row">
         <div class="span4">
-            <div class="box shadow survey-box">
-                <h3>1. Opt Out Details</h3>
+            <div class="box shadow">
+                <h3>1. Message Details</h3>
                 <br>
                 <fieldset>
-                    {% include "opt_out/includes/new.html" %}
+                    {% include "generic/includes/new.html" %}
                     <div class="btn-toolbar">
                         <div class="btn-group"><input type="submit" class="btn btn-primary" value="Next &rarr;"></div>
                         <div class="btn-group"><input type="reset" class="btn" value="Cancel"></div>
@@ -40,8 +42,17 @@
                 </fieldset>
             </div>
         </div>
+        <div class="span4">
+            <div class="box shadow conv-disabled">
+                <h3>2. Message Recipients</h3>
+            </div>
+        </div>
+        <div class="span4">
+            <div class="box shadow conv-disabled">
+                <h3>3. Send Message</h3>
+            </div>
+        </div>
     </div>
-
 </form>
 {% endblock %}
 
@@ -51,4 +62,8 @@
         $("#conversation").validate();
     });
 </script>
+{% endblock %}
+
+{% block modals %}
+    {% include "conversation/includes/tools.html" %}
 {% endblock %}

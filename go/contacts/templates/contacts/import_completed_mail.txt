@@ -1,0 +1,10 @@
+Hi {{user.get_full_name}}!
+
+We've successfully imported {{count}} of your contact(s).
+They're all stored in the group {{group.name}}
+
+They can be found at http://go.vumi.org{% url contacts:group group_key=group.key %}.
+
+thanks!
+
+Vumi Go.
