@@ -2,31 +2,38 @@ from os import path
 
 from django.test import TestCase
 from django.conf import settings
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
-from go.contacts.parsers import csv_parser, xls_parser
+from go.contacts.parsers.csv_parser import CSVFileParser
 
 
 class ParserTestCase(TestCase):
 
     def fixture(self, fixture_name):
-        return path.join(settings.PROJECT_ROOT, 'base', 'fixtures',
+        fixture_path = path.join(settings.PROJECT_ROOT, 'base', 'fixtures',
             fixture_name)
+        content_file = ContentFile(open(fixture_path, 'r').read())
+        return default_storage.save('tmp/%s' % (fixture_name,), content_file)
 
 class CSVParserTestCase(ParserTestCase):
 
+    def setUp(self):
+        self.parser = CSVFileParser()
+
     def test_guess_headers_and_row_without_headers(self):
         csv_file = self.fixture('sample-contacts.csv')
-        data = csv_parser.guess_headers_and_row(csv_file)
+        data = self.parser.guess_headers_and_row(csv_file)
         has_headers, known_headers, sample_row = data
         self.assertFalse(has_headers)
-        self.assertEqual(known_headers, csv_parser.DEFAULT_HEADERS)
+        self.assertEqual(known_headers, self.parser.DEFAULT_HEADERS)
 
     def test_guess_headers_and_row_with_headers(self):
         csv_file = self.fixture('sample-contacts-with-headers.csv')
-        data = csv_parser.guess_headers_and_row(csv_file)
+        data = self.parser.guess_headers_and_row(csv_file)
         has_headers, known_headers, sample_row = data
         self.assertTrue(has_headers)
-        self.assertEqual(known_headers, csv_parser.DEFAULT_HEADERS)
+        self.assertEqual(known_headers, self.parser.DEFAULT_HEADERS)
         self.assertEqual(sample_row, {
             'name': 'Name 1',
             'surname': 'Surname 1',
@@ -35,8 +42,9 @@ class CSVParserTestCase(ParserTestCase):
 
     def test_contacts_parsing(self):
         csv_file = self.fixture('sample-contacts-with-headers.csv')
-        contacts = list(csv_parser.parse_contacts_file(open(csv_file, 'rU'),
-                        ['name', 'surname', 'msisdn'], has_header=True))
+        fp = default_storage.open(csv_file, 'rU')
+        contacts = list(self.parser.parse_file(fp,
+            ['name', 'surname', 'msisdn'], has_header=True))
         self.assertEqual(contacts, [
             (1, {
                 'msisdn': '+27761234561',
