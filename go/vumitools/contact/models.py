@@ -133,6 +133,32 @@ class ContactStore(PerAccountStore):
                                           return_keys=return_keys, **kw)
 
     @Manager.calls_manager
+    def filter_contacts_on_surname(self, letter, group=None):
+        # TODO: vumi.persist needs to have better ways of supporting
+        #       generic map reduce functions. There's a bunch of boilerplate
+        #       around getting bucket names and indexes that I'm doing
+        #       manually that could be automated.
+        mr = self.manager.riak_map_reduce()
+        bucket = self.manager.bucket_name(Contact)
+        mr.add_bucket(bucket)
+        if group is not None:
+            mr.index(bucket, 'groups_bin', group.key)
+        js_function = """function(value, keyData, arg){
+            var data = Riak.mapValuesJson(value)[0];
+            if(data.surname) {
+                var surname = data.surname.toLowerCase();
+                if(surname[0] === arg){
+                    return [[value.key, value[0]]];
+                }
+            }
+            return [];
+        }"""
+        mr.map(js_function, {'arg': letter.lower()})
+        contacts = yield self.manager.run_map_reduce(mr,
+            lambda manager, result: Contact.load(manager, result[0], result[1]))
+        returnValue(contacts)
+
+    @Manager.calls_manager
     def list_contacts(self):
         # Not stale, because we're using backlinks.
         user_account = yield self.get_user_account()

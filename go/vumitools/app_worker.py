@@ -38,7 +38,9 @@ class GoApplicationMixin(object):
 
     @inlineCallbacks
     def _go_teardown_application(self):
-        yield self.redis.close_manager()
+        # Sometimes something else closes our Redis connection.
+        if self.redis is not None:
+            yield self.redis.close_manager()
         if self.control_consumer is not None:
             yield self.control_consumer.stop()
             self.control_consumer = None
