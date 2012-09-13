@@ -9,6 +9,8 @@ from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.conf.urls.defaults import url, patterns
 
+from go.vumitools.conversation.models import (
+    CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
 from go.base.utils import make_read_only_form, conversation_or_404
@@ -47,12 +49,21 @@ class ConversationView(TemplateView):
         return '%s/%s.html' % (self.template_base, name)
 
     def redirect_to(self, name, **kwargs):
-        return redirect(
-            reverse('%s:%s' % (self.conversation_type, name), kwargs=kwargs))
+        return redirect(self.get_view_url(name, **kwargs))
+
+    def get_view_url(self, name, **kwargs):
+        return reverse('%s:%s' % (self.conversation_type, name), kwargs=kwargs)
 
     def make_conversation_form(self, *args, **kw):
         kw.setdefault('tagpool_filter', self.tagpool_filter)
         return self.conversation_form(*args, **kw)
+
+    def get_next_view(self, conversation):
+        if conversation.get_status() != CONVERSATION_DRAFT:
+            return 'show'
+        if self.conversation_initiator == 'client':
+            return 'start'
+        return 'people'
 
 
 class NewConversationView(ConversationView):
@@ -93,9 +104,8 @@ class NewConversationView(ConversationView):
         messages.add_message(request, messages.INFO,
                              '%s Created' % (self.conversation_display_name,))
 
-        if self.conversation_initiator == 'client':
-            return self.redirect_to('start', conversation_key=conversation.key)
-        return self.redirect_to('people', conversation_key=conversation.key)
+        return self.redirect_to(self.get_next_view(conversation),
+                                conversation_key=conversation.key)
 
 
 class PeopleConversationView(ConversationView):
@@ -174,13 +184,21 @@ class ShowConversationView(ConversationView):
     template_name = 'show'
 
     def get(self, request, conversation):
-        button_template = self.get_template_name('includes/end-button')
-        if conversation.ended():
-            button_template = self.get_template_name('includes/ended-button')
-        return self.render_to_response({
-                'button_template': button_template,
-                'conversation': conversation,
-                })
+        params = {'conversation': conversation}
+        status = conversation.get_status()
+        templ = lambda name: self.get_template_name('includes/%s' % (name,))
+
+        if status == CONVERSATION_FINISHED:
+            params['button_template'] = templ('ended-button')
+        elif status == CONVERSATION_RUNNING:
+            params['button_template'] = templ('end-button')
+        elif status == CONVERSATION_DRAFT:
+            params['button_template'] = templ('next-button')
+            params['next_url'] = self.get_view_url(
+                self.get_next_view(conversation),
+                conversation_key=conversation.key)
+
+        return self.render_to_response(params)
 
 
 class EndConversationView(ConversationView):
