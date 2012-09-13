@@ -14,6 +14,18 @@ except ImportError:
     from StringIO import StringIO
 
 
+DEFAULT_HEADERS = {
+    'name': 'Name',
+    'surname': 'Surname',
+    'bbm_pin': 'BBM Pin',
+    'msisdn': 'Contact Number',
+    'gtalk_id': 'GTalk (or XMPP) address',
+    'dob': 'Date of Birth',
+    'facebook_id': 'Facebook ID',
+    'twitter_handle': 'Twitter handle',
+    'email_address': 'Email address',
+}
+
 def read_data_from_csv_file(csvfile, field_names):
     dialect = csv.Sniffer().sniff(csvfile.read(1024))
     csvfile.seek(0)
@@ -41,17 +53,8 @@ def guess_headers_and_row(csv_data):
     sio.seek(0)
 
     [first_row, second_row] = csv.reader(sio, dialect=dialect)
-    default_headers = {
-        'name': 'Name',
-        'surname': 'Surname',
-        'bbm_pin': 'BBM Pin',
-        'msisdn': 'Contact Number',
-        'gtalk_id': 'GTalk (or XMPP) address',
-        'dob': 'Date of Birth',
-        'facebook_id': 'Facebook ID',
-        'twitter_handle': 'Twitter handle',
-        'email_address': 'Email address',
-    }
+
+    default_headers = DEFAULT_HEADERS.copy()
 
     # Importing here to prevent circular import errors
     from go.contacts.utils import is_header_row
