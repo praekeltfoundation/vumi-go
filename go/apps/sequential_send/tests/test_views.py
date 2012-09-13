@@ -78,7 +78,7 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(conversation.delivery_tag_pool, pool)
         self.assertEqual(conversation.delivery_tag, tag)
         self.assertRedirects(
-            response, reverse('sequential_send:people', kwargs={
+            response, reverse('sequential_send:edit', kwargs={
                     'conversation_key': conversation.key,
                     }))
 
