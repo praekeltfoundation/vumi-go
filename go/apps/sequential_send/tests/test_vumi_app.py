@@ -103,24 +103,35 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         returnValue(msgs[-1 * nr_of_messages:])
 
     @inlineCallbacks
+    def _stub_out_async(self, *convs):
+        # Avoid hitting Riak for the conversation and Redis for poll times.
+        expected = [[conv.get_batch_keys()[0], conv.key] for conv in convs]
+        poll_times = [(yield self.app._get_last_poll_time())]
+        scheduled_conversations = yield self.app._get_scheduled_conversations()
+
+        def get_conversations(conv_pointers):
+            self.assertEqual(sorted(conv_pointers), sorted(expected))
+            return list(convs)
+        self.app.get_conversations = get_conversations
+
+        self.app._get_last_poll_time = lambda: poll_times[-1]
+        self.app._set_last_poll_time = lambda t: poll_times.append(str(t))
+        self.app._get_scheduled_conversations = lambda: scheduled_conversations
+
+    @inlineCallbacks
     def test_schedule_conv(self):
         """Test conversation scheduling.
 
         NOTE: Riak stuff takes a while and messes up fake clock timing, so we
-        stub it out. It gets tested in other test methods.
+        stub it out. It gets tested in other test methods. Also, we replace the
+        redis manager for the same reason.
         """
 
         conv = yield self.create_conversation(metadata={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
         yield conv.start()
-        batch_id = conv.get_batch_keys()[0]
 
-        # Avoid hitting Riak for the conversation.
-        def get_conversations(conv_pointers):
-            self.assertEqual(conv_pointers, [[batch_id, conv.key]])
-            return [conv]
-        self.app.get_conversations = get_conversations
-
+        yield self._stub_out_async(conv)
         message_convs = []
 
         # Fake the message send by adding the convs to a list.
@@ -153,20 +164,12 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         conv1 = yield self.create_conversation(metadata={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
         yield conv1.start()
-        batch_id1 = conv1.get_batch_keys()[0]
 
         conv2 = yield self.create_conversation(metadata={
                 'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
         yield conv2.start()
-        batch_id2 = conv2.get_batch_keys()[0]
 
-        # Avoid hitting Riak for the conversation.
-        def get_conversations(conv_pointers):
-            self.assertEqual(sorted(conv_pointers), sorted(
-                    [[batch_id1, conv1.key], [batch_id2, conv2.key]]))
-            return [conv1, conv2]
-        self.app.get_conversations = get_conversations
-
+        yield self._stub_out_async(conv1, conv2)
         message_convs = []
 
         # Fake the message send by adding the convs to a list.

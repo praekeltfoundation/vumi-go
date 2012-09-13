@@ -7,7 +7,6 @@ from twisted.internet.defer import inlineCallbacks, returnValue, gatherResults
 from twisted.internet.task import LoopingCall
 
 from vumi import log
-from vumi.persist.txredis_manager import TxRedisManager
 
 from go.vumitools.app_worker import GoApplicationWorker
 from go.vumitools.opt_out import OptOutStore
@@ -56,7 +55,6 @@ class SequentialSendApplication(GoApplicationWorker):
 
     def validate_config(self):
         super(SequentialSendApplication, self).validate_config()
-        self.r_config = self.config.get('redis_manager', {})
         self.poll_interval = self.config.get('poll_interval', 60)
 
     def _setup_poller(self):
@@ -68,18 +66,16 @@ class SequentialSendApplication(GoApplicationWorker):
 
     @inlineCallbacks
     def setup_application(self):
-        redis = yield TxRedisManager.from_config(self.r_config)
-        self.redis = redis.sub_manager(self.worker_name)
         yield self._go_setup_application()
+        self.redis = self.redis.sub_manager(self.worker_name)
         self._setup_poller()
         # Store the current time so we don't process stale events.
         yield self.get_interval()
 
     @inlineCallbacks
     def teardown_application(self):
-        yield self._go_teardown_application()
         yield self.poller.stop()
-        yield self.redis._close()
+        yield self._go_teardown_application()
 
     def consume_user_message(self, message):
         # This should not receive inbound messages.
@@ -91,23 +87,32 @@ class SequentialSendApplication(GoApplicationWorker):
     def consume_delivery_report(self, event):
         return self.vumi_api.mdb.add_event(event)
 
+    def _get_last_poll_time(self):
+        return self.redis.get('last_poll_time')
+
+    def _set_last_poll_time(self, now):
+        return self.redis.set('last_poll_time', now)
+
     @inlineCallbacks
     def get_interval(self):
         now = self.poller.clock.seconds()
-        then = yield self.redis.get('last_poll_time')
+        then = yield self._get_last_poll_time()
         if then is not None:
             then = float(then)
-        yield self.redis.set('last_poll_time', now)
+        yield self._set_last_poll_time(now)
         returnValue((then, now))
 
     def get_conversations(self, conv_pointers):
         return gatherResults([self.get_conversation(batch_id, conv_key)
                               for batch_id, conv_key in conv_pointers])
 
+    def _get_scheduled_conversations(self):
+        return self.redis.smembers('scheduled_conversations')
+
     @inlineCallbacks
     def poll_conversations(self):
         then, now = yield self.get_interval()
-        conv_jsons = yield self.redis.smembers('scheduled_conversations')
+        conv_jsons = yield self._get_scheduled_conversations()
         conversations = yield self.get_conversations(
             [json.loads(c) for c in conv_jsons])
         for conv in conversations:
