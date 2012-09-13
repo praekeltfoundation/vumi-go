@@ -1,0 +1,55 @@
+<div class="row">
+    <div class="span12">
+        <div class="pull-right">
+           {% if conversation.ended %}
+                <h4 class="btn btn-info"><i class="icon-ok icon-white"></i> Conversation ended on {{conversation.end_date|date:"d F Y"}}</h4>
+            {% else %}
+                <form id="conversation-end" name="conversation-end" method="post" action="{{ conversation.get_absolute_url }}end/">
+                    {% csrf_token %}
+                    <a href="javascript: document.getElementById('conversation-end').submit();" class="btn btn-danger"><i class="icon-remove-sign icon-white"></i> End Conversation</a>
+                </form>
+            {% endif %}
+        </div>
+        <span class="label label-info">{{conversation.start_timestamp|date:"d F Y"}}</span> 
+        <span class="label">{{conversation.delivery_class_description}}</span> 
+
+        {% for group in conversation.groups.get_all %}
+        <span class="label label-inverse">{{group.name}}</span>
+        {% endfor %}
+         <h3>{{conversation.subject}}</h3>
+         <p>{{conversation.message}}</p>
+    </div>
+    <div class="span12">
+        <table class="table table-bordered table-striped">
+            <tr>
+                <th>Channel</th>
+                <th>Recipients</th>
+                <th>Cost</th>
+                <th>Status</th>
+            </tr>
+            {% with conversation.people|length as people_count %}
+            {% for batch in conversation.get_batches %}
+            {% for tagpool, tag_account in batch.tags %}
+            <tr>
+                <td><i class="icon-comment"></i> {{tag_account}}</td>
+                <td>{{people_count}}</td>
+                <td>{{people_count}}</td>
+                <td>
+                   <div class="progress progress-striped active">
+                        <strong>In progress:</strong> {{conversation.get_progress_status.ack}} / {{conversation.get_progress_status.sent}}
+                        <div class="bar" style="width: {{conversation.get_progress_percentage}}%;"></div>
+                    </div>
+                </td>
+            <tr>
+                <td><strong>Totals</strong></td>
+                <td><strong>{{people_count}} People</strong></td>
+                <td colspan="3"><strong>{{people_count}} Vumi Credits</strong></td>
+            </tr>
+            {% endfor %}
+            {% endfor %}
+            {% endwith %}
+        </table>
+    </div>
+</div>
+
+<hr>
