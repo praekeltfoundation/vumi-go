@@ -36,10 +36,6 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
 
-    # open in Universal mode to allow us to read files with Windows,
-    # MacOS9 & Unix line-endings
-    full_path = os.path.join(settings.MEDIA_ROOT, file_path)
-
     # Get the profile for this user so we can email them when the import
     # has been completed.
     user_profile = UserProfile.objects.get(user_account=account_key)
@@ -55,16 +51,15 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
         return
 
     try:
-        with open(full_path, 'rU') as file_object:
-            for data in parser.parse_file(file_object, field_names,
-                                                has_header):
-                [count, contact_dictionary] = data
+        for data in parser.parse_file(file_path, field_names,
+                                            has_header):
+            [count, contact_dictionary] = data
 
-                # Make sure we set this group they're being uploaded in to
-                contact_dictionary['groups'] = [group.key]
+            # Make sure we set this group they're being uploaded in to
+            contact_dictionary['groups'] = [group.key]
 
-                contact = contact_store.new_contact(**contact_dictionary)
-                written_contacts.append(contact)
+            contact = contact_store.new_contact(**contact_dictionary)
+            written_contacts.append(contact)
 
         send_mail('Contact import completed successfully.',
             render_to_string('contacts/import_completed_mail.txt', {

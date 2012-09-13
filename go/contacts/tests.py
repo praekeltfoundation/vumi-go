@@ -232,7 +232,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertRedirects(response, group_url(self.group_key))
         group = self.contact_store.get_group(self.group_key)
         self.assertEqual(len(group.backlinks.contacts()), 0)
-
         self.specify_columns()
         self.assertEqual(len(group.backlinks.contacts()), 3)
 
