@@ -72,7 +72,7 @@
     </form>
 </div><!--/uplContactFrm-->
 
-{% if csv_data_headers and csv_data_row %}
+{% if contact_data_headers and contact_data_row %}
 <div class="modal hide fade" id="recMatchFrm" style="display: block; ">
     <div class="modal-header">
         <a class="close" data-dismiss="modal">×</a>
@@ -83,12 +83,12 @@
             <fieldset>
               <table class="table table-bordered table-striped">
                 <tbody>
-                    {% for column, value in csv_data_row.items %}
+                    {% for column, value in contact_data_row.items %}
                       <tr>
                         <td>
                             <select name="column-{{ forloop.counter0 }}">
                                 <option value="">Please Select:</option>
-                                {% for header, label in csv_data_headers.items %}
+                                {% for header, label in contact_data_headers.items %}
                                 <option {% if header == column %}selected="true"{% endif %}value="{{ header }}">{{ label }}</option>
                                 {% endfor %}
                             </select>
@@ -101,7 +101,7 @@
             </fieldset>
         </div>
         <div class="modal-footer">
-            <button type="submit" class="btn btn-primary" name="_complete_csv_upload" data-loading-text="saving...">Finish</button>
+            <button type="submit" class="btn btn-primary" name="_complete_contact_upload" data-loading-text="saving...">Finish</button>
         </div>
         {% csrf_token %}
     </form>
