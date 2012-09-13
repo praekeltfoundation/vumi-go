@@ -27,6 +27,7 @@ class ConversationView(TemplateView):
     conversation_initiator = None
     conversation_display_name = None
     tagpool_filter = None
+    edit_conversation_form = None
 
     def request_setup(self, request, conversation_key):
         """Perform common request setup.
@@ -104,8 +105,10 @@ class NewConversationView(ConversationView):
         messages.add_message(request, messages.INFO,
                              '%s Created' % (self.conversation_display_name,))
 
-        return self.redirect_to(self.get_next_view(conversation),
-                                conversation_key=conversation.key)
+        next_view = self.get_next_view(conversation)
+        if self.edit_conversation_form is not None:
+            next_view = 'edit'
+        return self.redirect_to(next_view, conversation_key=conversation.key)
 
 
 class PeopleConversationView(ConversationView):
@@ -118,10 +121,7 @@ class PeopleConversationView(ConversationView):
 
     def get(self, request, conversation, groups):
         conversation_form = make_read_only_form(self.make_conversation_form(
-                request.user_api, instance=conversation, initial={
-                    'start_date': conversation.start_timestamp.date(),
-                    'start_time': conversation.start_timestamp.time(),
-                    }))
+                request.user_api, instance=conversation, initial={}))
         return self.render_to_response({
                 'conversation': conversation,
                 'conversation_form': conversation_form,
@@ -201,13 +201,39 @@ class ShowConversationView(ConversationView):
         return self.render_to_response(params)
 
 
+class EditConversationView(ConversationView):
+    template_name = 'edit'
+
+    def get(self, request, conversation):
+        return self.render_to_response({
+                'conversation': conversation,
+                'edit_form': self.make_form(conversation),
+                })
+
+    def post(self, request, conversation):
+        edit_form = self.edit_conversation_form(request.POST)
+        if not edit_form.is_valid():
+            return self.get(request, conversation)
+
+        self.process_form(conversation, edit_form)
+
+        return self.redirect_to(self.get_next_view(conversation),
+                                conversation_key=conversation.key)
+
+    def make_form(self, conversation):
+        return self.edit_conversation_form(initial=conversation.metadata)
+
+    def process_form(self, conversation, form):
+        conversation.set_metadata(form.cleaned_data)
+        conversation.save()
+
+
 class EndConversationView(ConversationView):
     def post(self, request, conversation):
-        if request.method == 'POST':
-            conversation.end_conversation()
-            messages.add_message(
-                request, messages.INFO,
-                '%s ended' % (self.conversation_display_name,))
+        conversation.end_conversation()
+        messages.add_message(
+            request, messages.INFO,
+            '%s ended' % (self.conversation_display_name,))
         return self.redirect_to('show', conversation_key=conversation.key)
 
 
@@ -259,12 +285,17 @@ class ConversationViews(object):
     :param conversation_display_name:
         Used in various places in the UI for messaging. Defaults to
         `'Conversation'`.
+
+    :param edit_conversation_form:
+        If set, the conversation will be editable and form data will be stashed
+        in the conversation metadata field.
     """
 
     new_conversation_view = NewConversationView
     people_conversation_view = PeopleConversationView
     start_conversation_view = StartConversationView
     show_conversation_view = ShowConversationView
+    edit_conversation_view = EditConversationView
     end_conversation_view = EndConversationView
 
     # These attributes get passed through to the individual view objects.
@@ -274,6 +305,7 @@ class ConversationViews(object):
     tagpool_filter = None
     conversation_initiator = None  # This can be "client", "server" or None.
     conversation_display_name = 'Conversation'
+    edit_conversation_form = None
 
     def mkview(self, name):
         cls = getattr(self, '%s_conversation_view' % (name,))
@@ -289,7 +321,8 @@ class ConversationViews(object):
             conversation_group_form=self.conversation_group_form,
             tagpool_filter=self.tagpool_filter,
             conversation_initiator=self.conversation_initiator,
-            conversation_display_name=self.conversation_display_name)
+            conversation_display_name=self.conversation_display_name,
+            edit_conversation_form=self.edit_conversation_form)
 
     def mkurl(self, name, regex=None):
         if regex is None:
@@ -305,6 +338,8 @@ class ConversationViews(object):
             ] + self.extra_urls()
         if self.conversation_initiator != 'client':
             urls.append(self.mkurl('people'))
+        if self.edit_conversation_form is not None:
+            urls.append(self.mkurl('edit'))
         return patterns('', *urls)
 
     def extra_urls(self):
