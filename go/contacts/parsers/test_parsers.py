@@ -6,6 +6,7 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
 from go.contacts.parsers.csv_parser import CSVFileParser
+from go.contacts.parsers.xls_parser import XLSFileParser
 
 
 class ParserTestCase(TestCase):
@@ -63,30 +64,30 @@ class CSVParserTestCase(ParserTestCase):
 
 class XLSParserTestCase(ParserTestCase):
 
+    def setUp(self):
+        self.parser = XLSFileParser()
+
     def test_guess_headers_and_row_without_headers(self):
         xls_file = self.fixture('sample-contacts.xls')
-        file_path, first_two_lines = xls_parser.get_file_hints(xls_file)
-        data = xls_parser.guess_headers_and_row(first_two_lines)
+        data = self.parser.guess_headers_and_row(xls_file)
         has_headers, known_headers, sample_row = data
         self.assertFalse(has_headers)
-        self.assertEqual(known_headers, xls_parser.DEFAULT_HEADERS)
+        self.assertEqual(known_headers, self.parser.DEFAULT_HEADERS)
 
     def test_guess_headers_and_row_with_headers(self):
         xls_file = self.fixture('sample-contacts-with-headers.xlsx')
-        file_path, first_two_lines = xls_parser.get_file_hints(xls_file)
-        data = xls_parser.guess_headers_and_row(first_two_lines)
+        data = self.parser.guess_headers_and_row(xls_file)
         has_headers, known_headers, sample_row = data
         self.assertTrue(has_headers)
-        self.assertEqual(known_headers, xls_parser.DEFAULT_HEADERS)
-        self.assertEqual(sample_row, {
-            'name': 'Name 1',
-            'surname': 'Surname 1',
-            'msisdn': '+27761234561',
-            })
+        self.assertTrue('mathare-kiamaiko' in known_headers)
+        self.assertTrue('baba dogo' in known_headers)
+        self.assertTrue('mathare-kiamaiko' in sample_row)
+        self.assertTrue('baba dogo' in sample_row)
 
     def test_contacts_parsing(self):
         xls_file = self.fixture('sample-contacts-with-headers.xlsx')
-        contacts = list(xls_parser.parse_contacts_file(xls_file,
+        fp = default_storage.open(xls_file)
+        contacts = list(self.parser.parse_file(fp,
                         ['name', 'surname', 'msisdn'], has_header=True))
         self.assertEqual(contacts, [
             (1, {

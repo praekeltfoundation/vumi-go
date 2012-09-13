@@ -53,9 +53,7 @@ class CSVFileParser(ContactFileParser):
 
         default_headers = self.DEFAULT_HEADERS.copy()
 
-        # Importing here to prevent circular import errors
-        from go.contacts.utils import is_header_row
-        if is_header_row(first_row) and second_row is not None:
+        if self.is_header_row(first_row) and second_row is not None:
             sample_row = SortedDict(zip(first_row, second_row))
             for column in first_row:
                 default_headers.setdefault(column, column)

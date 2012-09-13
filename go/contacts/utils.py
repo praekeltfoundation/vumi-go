@@ -6,15 +6,6 @@ from django.core.files.base import File
 from django.core.files.storage import default_storage
 
 
-def is_header_row(columns):
-    """
-    Determines whether the given columns have something that might hint
-    at the row being a row with column headers and not column values.
-    """
-    column_set = set([column.lower() for column in columns])
-    hint_set = set(['phone', 'contact', 'msisdn', 'number'])
-    return hint_set.intersection(column_set)
-
 def store_temporarily(django_file_object):
     django_content_file = File(file=django_file_object,
         name=django_file_object.name)
