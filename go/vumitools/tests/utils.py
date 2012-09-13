@@ -7,7 +7,7 @@ from contextlib import contextmanager
 import json
 
 from twisted.python.monkey import MonkeyPatcher
-from twisted.internet.defer import DeferredList, inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 from celery.app import app_or_default
 
 from vumi.persist.fields import ForeignKeyProxy, ManyToManyProxy, DynamicProxy
@@ -238,3 +238,12 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
         d = self.dispatch(event, rkey=self.rkey('event'))
         d.addCallback(lambda _result: event)
         return d
+
+    @inlineCallbacks
+    def get_application(self, *args, **kw):
+        worker = yield super(AppWorkerTestCase, self).get_application(
+            *args, **kw)
+        if hasattr(worker, 'vumi_api'):
+            self._persist_riak_managers.append(worker.vumi_api.manager)
+            self._persist_redis_managers.append(worker.vumi_api.redis)
+        returnValue(worker)

@@ -23,11 +23,9 @@ class CommandDispatcher(ApplicationWorker):
 
     Configuration parameters:
 
-    :type api_routing: dict
-    :param api_routing:
+    :param dict api_routing:
         Dictionary describing where to consume API commands.
-    :type worker_names: list
-    :param worker_names:
+    :param list worker_names:
         A list of known worker names that we can forward
         VumiApiCommands to.
     """
@@ -249,11 +247,9 @@ class EventDispatcher(ApplicationWorker):
 
     Configuration parameters:
 
-    :type api_routing: dict
-    :param api_routing:
+    :param dict api_routing:
         Dictionary describing where to consume API commands.
-    :type handler_names: list
-    :param event_handlers:
+    :param dict event_handlers:
         A mapping from handler name to fully-qualified class name.
     """
 
