@@ -201,7 +201,7 @@ BROKER_HOST = "localhost"
 BROKER_PORT = 5672
 BROKER_USER = "vumi"
 BROKER_PASSWORD = "vumi"
-BROKER_VHOST = "/go"
+BROKER_VHOST = "/develop"
 
 # If we're running in DEBUG mode then skip RabbitMQ and execute tasks
 # immediate instead of deferring them to the queue / workers.
