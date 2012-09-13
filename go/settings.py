@@ -202,7 +202,7 @@ BROKER_HOST = "localhost"
 BROKER_PORT = 5672
 BROKER_USER = "vumi"
 BROKER_PASSWORD = "vumi"
-BROKER_VHOST = "/go"
+BROKER_VHOST = "/develop"
 
 # If we're running in DEBUG mode then skip RabbitMQ and execute tasks
 # immediate instead of deferring them to the queue / workers.
@@ -222,7 +222,6 @@ VUMI_API_CONFIG = {
     'riak_manager': {'bucket_prefix': 'vumigo.'},
     }
 
-VUMI_COUNTRY_CODE = '27'
 VUMI_INSTALLED_APPS = {
     'go.apps.bulk_message': {
         'namespace': 'bulk_message',

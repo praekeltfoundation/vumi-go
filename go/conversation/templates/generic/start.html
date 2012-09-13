@@ -1,0 +1,46 @@
+{% extends "app.html" %}
+
+{% block main %}
+    <form action="" method="post" accept-charset="utf-8">
+    <div class="row">
+        <div class="span12">
+            <!--
+            <div class="pull-right padtop">
+                <a class="btn btn-success" data-toggle="modal" href="#previewConv">Send Preview</a>
+            </div>
+            <div class="pull-right padtop" style="margin-right: 10px">
+                <input type="button" class="btn" value="Back" onclick="javascript:history.go(-1)">
+            </div>
+            -->
+            <div id="welcome">
+                <h1>New Conversation</h1>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="span4">
+            <div class="box shadow conv-disabled">
+                <h3>1. Message Details</h3>
+                <br>
+                {% include "generic/includes/new.html" with form=conversation_form %}
+            </div>
+        </div>
+        {% if send_messages %}
+            {% include "generic/includes/send.html" %}
+        {% else %}
+            {% include "generic/includes/nosend.html" %}
+        {% endif %}
+        {% csrf_token %}
+    </div>
+    </form>
+{% endblock %}
+
+
+{% block modals %}
+    {% include "conversation/includes/tools.html" %}
+{% endblock %}
