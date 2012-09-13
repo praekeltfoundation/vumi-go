@@ -70,7 +70,6 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
             fail_silently=False)
 
     except (Exception,), e:
-        print e
         # Clean up if something went wrong, either everything is written
         # or nothing is written
         for contact in written_contacts:

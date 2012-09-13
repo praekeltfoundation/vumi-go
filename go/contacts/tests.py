@@ -382,7 +382,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
             'column-1': 'surname',
             'column-2': 'msisdn',
             })
-        print response
         group = newest(self.contact_store.list_groups())
         contacts = group.backlinks.contacts()
         self.assertEqual(len(contacts), 0)
