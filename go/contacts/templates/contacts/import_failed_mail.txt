@@ -16,3 +16,4 @@ File Type: {{file_type}}
 File Path: {{file_path}}
 Field Names: {{field_names}}
 Has Header: {{has_header}}
+Exception: {{exception}}

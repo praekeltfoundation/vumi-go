@@ -1,0 +1,106 @@
+import os.path
+
+from go.vumitools.contact import Contact
+
+from vumi.utils import load_class
+
+
+class ContactParserException(Exception):
+    pass
+
+class ContactFileParser(object):
+
+    DEFAULT_HEADERS = {
+        'name': 'Name',
+        'surname': 'Surname',
+        'bbm_pin': 'BBM Pin',
+        'msisdn': 'Contact Number',
+        'gtalk_id': 'GTalk (or XMPP) address',
+        'dob': 'Date of Birth',
+        'facebook_id': 'Facebook ID',
+        'twitter_handle': 'Twitter handle',
+        'email_address': 'Email address',
+    }
+
+    EXCLUDED_ATTRIBUTES = ['user_account', 'created_at', 'extra', 'groups']
+
+    @classmethod
+    def get_file_extension(cls, file_name):
+        name, extension = os.path.splitext(file_name)
+        separator, suffix = extension.rsplit('.', 1)
+        return suffix
+
+    @classmethod
+    def get_parser(cls, file_name):
+        extension = cls.get_file_extension(file_name)
+
+        parser = {
+            'csv': 'go.contacts.parsers.csv_parser.CSVFileParser',
+            'xls': 'go.contacts.parser.xls_parser.XLSFileParser',
+            'xlsx': 'go.contacts.parser.xls_parser.XLSFileParser',
+        }.get(extension)
+
+        if parser:
+            parser_class = load_class(*parser.rsplit('.', 1))
+            return (extension, parser_class())
+        else:
+            raise ContactParserException('No parser available for type %s' % (
+                extension,))
+
+    def guess_headers_and_row(self, file_path):
+        """
+        Take a sample from the file path and determine if it has a header
+        and provide a sample of the header if found along with existing
+        values matched against the known headers.
+
+        returns a Tuple:
+
+            (header_found, known_headers, sample_data_row)
+        """
+        raise NotImplementedError('Subclasses should implement this.')
+
+    def read_data_from_file(self, file_path, field_names):
+        """
+        Read the data from the file returning dictionaries of `field_names`
+        versus the values found.
+        """
+        raise NotImplementedError('Subclasses should implement this.')
+
+    def parse_file(self, file_pointer, field_names, has_header,
+        excluded_attributes=None):
+        """
+        Parses the file and returns dictionaries ready to be fed
+        the ContactStore.new_contact method.
+
+        We need to know what we cannot set to avoid a file import overwriting
+        things like account details. Excluded attributes is a list of contact
+        attributes that are to be ignored. Defaults to EXCLUDED_ATTRIBUTES
+        """
+        excluded_attributes = excluded_attributes or self.EXCLUDED_ATTRIBUTES
+
+        known_attributes = set([attribute
+            for attribute in Contact.field_descriptors.keys()
+            if attribute not in excluded_attributes])
+
+        # We're expecting a generator so loop over it and save as contacts
+        # in the contact_store, normalizing anything we need to
+        data_dictionaries = self.read_data_from_file(file_pointer, field_names)
+        for counter, data_dictionary in enumerate(data_dictionaries):
+
+            # If we've determined that the first line of the file is
+            # a header then skip it.
+            if has_header and counter == 0:
+                continue
+
+            # Populate this with whatever we'll be sending to the
+            # contact to be saved
+            contact_dictionary = {}
+            for key, value in data_dictionary.items():
+                if key in known_attributes:
+                    contact_dictionary[key] = value
+                else:
+                    extra = contact_dictionary.setdefault('extra', {})
+                    extra[key] = value
+
+            yield (counter if has_header else counter + 1, contact_dictionary)
+

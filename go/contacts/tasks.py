@@ -7,11 +7,9 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
-from vumi.persist.fields import ValidationError
-
 from go.vumitools.api import VumiUserApi
 from go.base.models import UserProfile
-from go.contacts import parsers
+from go.contacts.parsers import ContactFileParser
 
 
 @task(ignore_result=True)
@@ -32,7 +30,7 @@ def delete_group(account_key, group_key):
 
 
 @task(ignore_result=True)
-def import_contacts_file(account_key, group_key, file_type, file_path,
+def import_contacts_file(account_key, group_key, file_name, file_path,
                             field_names, has_header):
     api = VumiUserApi.from_config(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
@@ -49,18 +47,16 @@ def import_contacts_file(account_key, group_key, file_type, file_path,
     count = 0
     written_contacts = []
 
-    parser = {
-        'csv': parsers.csv_parser,
-    }.get(file_type)
+    extension, parser = ContactFileParser.get_parser(file_name)
 
     if parser is None:
         logging.warn('No file parser available for: %s. Stopping' % (
-            file_type,))
+            extension,))
         return
 
     try:
         with open(full_path, 'rU') as file_object:
-            for data in parser.parse_contacts_file(file_object, field_names,
+            for data in parser.parse_file(file_object, field_names,
                                                 has_header):
                 [count, contact_dictionary] = data
 
@@ -78,7 +74,8 @@ def import_contacts_file(account_key, group_key, file_type, file_path,
             }), settings.DEFAULT_FROM_EMAIL, [user_profile.user.email],
             fail_silently=False)
 
-    except (ValueError, ValidationError):
+    except (Exception,), e:
+        print e
         # Clean up if something went wrong, either everything is written
         # or nothing is written
         for contact in written_contacts:
@@ -89,9 +86,10 @@ def import_contacts_file(account_key, group_key, file_type, file_path,
                 'user': user_profile.user,
                 'group_key': group_key,
                 'account_key': account_key,
-                'file_type': file_type,
+                'file_name': file_name,
                 'file_path': file_path,
                 'field_names': field_names,
                 'has_header': has_header,
+                'exception': e,
             }), settings.DEFAULT_FROM_EMAIL, [user_profile.user.email],
             fail_silently=False)
