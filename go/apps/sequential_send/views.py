@@ -25,10 +25,10 @@ class EditSequentialSendConversationView(EditConversationView):
         return self.edit_conversation_form(initial=messages)
 
     def process_form(self, conversation, form):
-        metadata = {'messages': [f.cleaned_data['message'] for f in form]}
+        metadata = {'messages': [f.cleaned_data['message']
+                                 for f in form if f.cleaned_data]}
         conversation.set_metadata(metadata)
         conversation.save()
-        return metadata
 
 
 class SequentialSendConversationViews(ConversationViews):

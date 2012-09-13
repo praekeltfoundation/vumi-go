@@ -2,6 +2,12 @@
     <div class="span12">
         <div class="pull-right">
             {% include button_template %}
+            {% if is_editable %}
+                <form id="conversation-edit" name="conversation-edit" method="get" action="{{ conversation.get_absolute_url }}edit/">
+                {% csrf_token %}
+                    <div class="btn-group"><input type="submit" class="btn btn-primary" value="Edit"></div>
+                </form>
+            {% endif %}
         </div>
         <span class="label label-info">{{conversation.start_timestamp|date:"d F Y"}}</span>
         <span class="label">{{conversation.delivery_class_description}}</span>

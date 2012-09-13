@@ -184,7 +184,10 @@ class ShowConversationView(ConversationView):
     template_name = 'show'
 
     def get(self, request, conversation):
-        params = {'conversation': conversation}
+        params = {
+            'conversation': conversation,
+            'is_editable': (self.edit_conversation_form is not None),
+            }
         status = conversation.get_status()
         templ = lambda name: self.get_template_name('includes/%s' % (name,))
 
