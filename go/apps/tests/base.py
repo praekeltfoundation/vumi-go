@@ -32,20 +32,35 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         self.group_key = self.group.key
 
         # Also a contact
-        contact = self.contact_store.new_contact(
+        self.contact = self.contact_store.new_contact(
             name=self.TEST_CONTACT_NAME, surname=self.TEST_CONTACT_SURNAME,
             msisdn=u"+27761234567")
-        contact.add_to_group(self.group)
-        contact.save()
-        self.contact_key = contact.key
+        self.contact.add_to_group(self.group)
+        self.contact.save()
+        self.contact_key = self.contact.key
 
         # And a conversation
-        conversation = self.conv_store.new_conversation(
+        self.conversation = self.conv_store.new_conversation(
             conversation_type=u'bulk_message', subject=self.TEST_SUBJECT,
             message=u"Test message", delivery_class=u"sms",
             delivery_tag_pool=u"longcode", groups=[self.group_key])
-        self.conv_key = conversation.key
+        self.conv_key = self.conversation.key
 
+    def mkconversation(self, **kwargs):
+        defaults = {
+            'conversation_type': u'bulk_message',
+            'subject': u'subject',
+            'message': u'hello world'
+        }
+        defaults.update(kwargs)
+        return self.conv_store.new_conversation(**defaults)
+
+    def mkcontact(self, name=None, surname=None, msisdn=u'+1234567890',
+        **kwargs):
+        return self.contact_store.new_contact(
+            name=unicode(name or self.TEST_CONTACT_NAME),
+            surname=unicode(surname or self.TEST_CONTACT_SURNAME),
+            msisdn=unicode(msisdn), **kwargs)
 
     def setup_user_api(self, django_user):
         self.user_api = vumi_api_for_user(django_user)
