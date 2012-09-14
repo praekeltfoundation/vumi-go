@@ -462,8 +462,8 @@ class SmartGroupsTestCase(VumiGoDjangoTestCase):
 
     def mkcontact(self, name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
         msisdn=u'+27761234567', **kwargs):
-        return self.contact_store.new_contact(name=name, surname=surname,
-            msisdn=msisdn, **kwargs)
+        return self.contact_store.new_contact(name=unicode(name),
+            surname=unicode(surname), msisdn=unicode(msisdn), **kwargs)
 
     def add_to_group(self, contact, group):
         contact.add_to_group(self.group)
@@ -503,8 +503,8 @@ class SmartGroupsTestCase(VumiGoDjangoTestCase):
 
     def assertEqualContacts(self, contacts1, contacts2):
         self.assertEqual(
-            [contact.key for contact in contacts1],
-            [contact.key for contact in contacts2])
+            set([contact.key for contact in contacts1]),
+            set([contact.key for contact in contacts2]))
 
     def test_smart_groups_with_matches_results(self):
         response = self.client.post(reverse('contacts:groups'), {
@@ -530,3 +530,43 @@ class SmartGroupsTestCase(VumiGoDjangoTestCase):
         self.assertEqualContacts(
             self.contact_store.get_contacts_for_conversation(conversation),
             [contact])
+
+    def test_smart_groups_with_matches_AND_query_results(self):
+        response = self.client.post(reverse('contacts:groups'), {
+            'name': 'a smart group',
+            'query': 'name:foo AND surname:bar',
+            '_new_smart_group': '1',
+            })
+
+        contact1 = self.mkcontact(surname='bar')
+        contact2 = self.mkcontact(name='foo')
+        contact3 = self.mkcontact(name='foo', surname='bar')
+
+        group = newest(self.contact_store.list_groups())
+        conversation = self.mkconversation()
+        conversation.groups.add(group)
+        conversation.save()
+
+        contacts = self.contact_store.get_contacts_for_conversation(
+            conversation)
+        self.assertEqualContacts(contacts, [contact3])
+
+    def test_smart_groups_with_matches_OR_query_results(self):
+        response = self.client.post(reverse('contacts:groups'), {
+            'name': 'a smart group',
+            'query': 'name:foo OR surname:bar',
+            '_new_smart_group': '1',
+            })
+
+        contact1 = self.mkcontact(surname='bar')
+        contact2 = self.mkcontact(name='foo')
+        contact3 = self.mkcontact(name='foo', surname='bar')
+
+        group = newest(self.contact_store.list_groups())
+        conversation = self.mkconversation()
+        conversation.groups.add(group)
+        conversation.save()
+
+        contacts = self.contact_store.get_contacts_for_conversation(
+            conversation)
+        self.assertEqualContacts(contacts, [contact1, contact2, contact3])
