@@ -34,37 +34,20 @@
     <form id="frm-upload-contacts" name="frm-upload-contacts" enctype="multipart/form-data" method="post" action="" class="form-horizontal">
         {% csrf_token %}
         <div class="modal-body">
-            <fieldset>
-            <div class="control-group {% if upload_contacts_form.errors %}error{% endif %}">
-                <label class="control-label" for="input01">Upload your data file:<br />Use this <a href="{{ STATIC_URL }}contacts-upload-template.csv">Template</a></label>
-                {% if upload_contacts_form.file.errors %}
-                  <span class="help-inline">
-                    {% for error in upload_contacts_form.file.errors %}
-                      {{ error }}
-                    {% endfor %}
-                  </span>
-                {% endif %}
-                <div class="controls">{{upload_contacts_form.file}}</div>
+            {{ upload_contacts_form }}
+            <div class="controls">
+              <p><span class="help-block">
+                The first row of the CSV or XLS document will be treated as a
+                row containing column headers if any following values are found:
+                <em>phone</em>, <em>contact</em>, <em>msisdn</em>, <em>number</em>.
+              </span><br/></p>
             </div>
             {% if show_groups %}
-            <div class="control-group">
-                <label class="control-label" for="input02">Choose which group you want to add new contacts to:</label>
-                <div class="controls">
-	               {{select_contact_group_form.errors}}
-	               {{select_contact_group_form.contact_group}}
-                </div>
-            </div>
+                {{ select_contact_group_form }}
             {% endif %}
-            {{new_contact_group_form.errors}}
             {% if save_group %}
-                <div class="control-group">
-                    <label class="control-label">
-                        Save as group
-                    </label>
-                    <div class="controls">{{new_contact_group_form.name}}</div>
-                </div>
+                {{ new_contact_group_form }}
             {% endif %}
-            </fieldset>
         </div>
         <div class="modal-footer">
             <button type="submit" class="btn btn-primary" data-loading-text="uploading...">Upload contacts</button>
@@ -72,7 +55,7 @@
     </form>
 </div><!--/uplContactFrm-->
 
-{% if csv_data_headers and csv_data_row %}
+{% if contact_data_headers and contact_data_row %}
 <div class="modal hide fade" id="recMatchFrm" style="display: block; ">
     <div class="modal-header">
         <a class="close" data-dismiss="modal">×</a>
@@ -83,12 +66,12 @@
             <fieldset>
               <table class="table table-bordered table-striped">
                 <tbody>
-                    {% for column, value in csv_data_row.items %}
+                    {% for column, value in contact_data_row.items %}
                       <tr>
                         <td>
                             <select name="column-{{ forloop.counter0 }}">
                                 <option value="">Please Select:</option>
-                                {% for header, label in csv_data_headers.items %}
+                                {% for header, label in contact_data_headers.items %}
                                 <option {% if header == column %}selected="true"{% endif %}value="{{ header }}">{{ label }}</option>
                                 {% endfor %}
                             </select>
@@ -101,7 +84,7 @@
             </fieldset>
         </div>
         <div class="modal-footer">
-            <button type="submit" class="btn btn-primary" name="_complete_csv_upload" data-loading-text="saving...">Finish</button>
+            <button type="submit" class="btn btn-primary" name="_complete_contact_upload" data-loading-text="saving...">Finish</button>
         </div>
         {% csrf_token %}
     </form>
