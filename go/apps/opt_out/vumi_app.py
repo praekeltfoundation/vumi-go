@@ -12,9 +12,8 @@ class OptOutApplication(GoApplicationWorker):
     @inlineCallbacks
     def consume_user_message(self, message):
 
-        helper_metadata = message.get('helper_metadata', {})
-        go_metadata = helper_metadata.get('go', {})
-        account_key = go_metadata.get('user_account', None)
+        gmt = self.get_go_metadata(message)
+        account_key = yield gmt.get_account_key()
 
         if account_key is None:
             # We don't have an account to opt out of.
@@ -37,20 +36,7 @@ class OptOutApplication(GoApplicationWorker):
         else:
             yield self.reply_to(message, "You have opted out")
 
-    @inlineCallbacks
     def process_command_start(self, batch_id, conversation_type,
                               conversation_key, msg_options,
                               is_client_initiated, **extra_params):
-
-        if is_client_initiated:
-            log.debug('Conversation %r is client initiated, no need to notify '
-                'the application worker' % (conversation_key,))
-            return
-
-        conv = yield self.get_conversation(batch_id, conversation_key)
-
-        to_addresses = yield conv.get_contacts_addresses()
-        for to_addr in to_addresses:
-            # XXX: !?!?
-            # I guess this never gets run.
-            yield self.start_survey(to_addr, conv, **msg_options)
+        log.debug('OptOutApplication started: %s' % (conversation_key,))

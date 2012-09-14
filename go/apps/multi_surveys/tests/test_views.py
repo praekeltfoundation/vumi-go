@@ -1,16 +1,8 @@
 from django.test.client import Client
 from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.base.utils import vumi_api_for_user
-
-
-TEST_GROUP_NAME = u"Test Group"
-TEST_CONTACT_NAME = u"Name"
-TEST_CONTACT_SURNAME = u"Surname"
-TEST_SUBJECT = u"Test Conversation"
 
 
 class MultiSurveyTestCase(DjangoGoApplicationTestCase):
@@ -25,32 +17,6 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         self.patch_settings(VXPOLLS_REDIS_CONFIG={'FAKE_REDIS': 'sure'})
 
         self.setup_riak_fixtures()
-
-    def setup_riak_fixtures(self):
-        self.user = User.objects.get(username='username')
-        self.user_api = vumi_api_for_user(self.user)
-        self.contact_store = self.user_api.contact_store
-        self.contact_store.contacts.enable_search()
-        self.conv_store = self.user_api.conversation_store
-
-        # We need a group
-        group = self.contact_store.new_group(TEST_GROUP_NAME)
-        self.group_key = group.key
-
-        # Also a contact
-        contact = self.contact_store.new_contact(
-            name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
-            msisdn=u"+27761234567")
-        contact.add_to_group(group)
-        contact.save()
-        self.contact_key = contact.key
-
-        # And a conversation
-        conversation = self.conv_store.new_conversation(
-            conversation_type=u'multi_survey', subject=TEST_SUBJECT,
-            message=u"Test message", delivery_class=u"sms",
-            delivery_tag_pool=u"longcode", groups=[self.group_key])
-        self.conv_key = conversation.key
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
@@ -155,7 +121,7 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         [cmd] = self.fetch_cmds(consumer)
         [batch] = conversation.get_batches()
         [tag] = list(batch.tags)
-        [contact] = conversation.people()
+        [contact] = self.get_contacts_for_conversation(conversation)
         msg_options = {
             "transport_type": "sms",
             "from_addr": "default10001",
