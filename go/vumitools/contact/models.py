@@ -145,12 +145,14 @@ class ContactStore(PerAccountStore):
         dynamic_groups = [group for group in all_groups if group.query]
 
         # Grab all contacts we can find
-        contacts = []
+        contacts = set([])
         for group in static_groups:
-            contacts.extend((yield self.get_static_contacts_for_group(group)))
+            static_contacts = yield self.get_static_contacts_for_group(group)
+            contacts.update(static_contacts)
 
         for group in dynamic_groups:
-            contacts.extend((yield self.get_dynamic_contacts_for_group(group)))
+            dynamic_contacts = yield self.get_dynamic_contacts_for_group(group)
+            contacts.update(dynamic_contacts)
 
         returnValue(contacts)
 
