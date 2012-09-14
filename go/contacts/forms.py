@@ -23,14 +23,16 @@ class ContactForm(BootstrapForm):
 
 
 class ContactGroupForm(BootstrapForm):
-    name = forms.CharField()
+    name = forms.CharField(label="Create a Group")
 
 class SmartGroupForm(BootstrapForm):
     name = forms.CharField()
     query = forms.CharField()
 
 class UploadContactsForm(BootstrapForm):
-    file = forms.FileField()
+    file = forms.FileField(label="File with Contact data",
+        help_text="This can either be a double-quoted UTF-8 encoded CSV file "
+                    "or an Excel spreadsheet")
 
 
 class SelectContactGroupForm(BootstrapForm):
@@ -40,4 +42,6 @@ class SelectContactGroupForm(BootstrapForm):
         groups = kw.pop('groups')
         super(SelectContactGroupForm, self).__init__(*args, **kw)
         self.fields['contact_group'] = forms.ChoiceField(
+            label="Select group to store contacts in.",
+            help_text="Or provide a name for a new group below.",
             choices=[(g.key, g.name) for g in groups])
