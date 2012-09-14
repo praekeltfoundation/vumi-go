@@ -351,6 +351,19 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(u'a new group', group.name)
         self.assertRedirects(response, group_url(group.key))
 
+    def test_group_updating(self):
+        new_group_name = 'a new group name'
+        self.assertNotEqual(self.group.name, new_group_name)
+        response = self.client.post(reverse('contacts:group', kwargs={
+            'group_key': self.group.key,
+            }), {
+            'name': new_group_name,
+            '_save_group': '1',
+        })
+        updated_group = self.contact_store.get_group(self.group.key)
+        self.assertEqual(new_group_name, updated_group.name)
+        self.assertRedirects(response, group_url(self.group.key))
+
     def test_groups_creation_with_funny_chars(self):
         response = self.client.post(reverse('contacts:groups'), {
             'name': "a new group! with cüte chars's",
@@ -420,6 +433,32 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         reloaded_contact = max(reloaded_contacts, key=lambda c: c.created_at)
         self.assertEqual(reloaded_contact.key, contact.key)
         self.assertEqual(reloaded_contact.groups.get_all(), [])
+
+    def test_group_clearing(self):
+        # Create a contact in the group
+        response = self.client.post(reverse('contacts:new_person'), {
+            'name': 'New',
+            'surname': 'Person',
+            'msisdn': '27761234567',
+            'groups': [self.group_key],
+            })
+
+        contacts = self.contact_store.list_contacts()
+        contact = max(contacts, key=lambda c: c.created_at)
+        self.assertRedirects(response, person_url(contact.key))
+
+        # Clear the group
+        group_url = reverse('contacts:group', kwargs={
+            'group_key': self.group.key,
+        })
+        response = self.client.post(group_url, {
+                '_delete_group_contacts': True,
+            })
+        self.assertRedirects(response, group_url)
+
+        self.assertEqual(self.contact_store.get_contacts_for_group(self.group),
+            set([]))
+        self.assertFalse(contact in self.contact_store.list_contacts())
 
 
 class SmartGroupsTestCase(DjangoGoApplicationTestCase):
