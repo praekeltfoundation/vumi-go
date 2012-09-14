@@ -136,6 +136,14 @@ class ContactStore(PerAccountStore):
                                           return_keys=return_keys, **kw)
 
     @Manager.calls_manager
+    def get_contacts_for_group(self, group):
+        contacts = set([])
+        contacts.update((yield self.get_static_contacts_for_group(group)))
+        if group.is_smart_group():
+            contacts.update((yield self.get_dynamic_contacts_for_group(group)))
+        returnValue(contacts)
+
+    @Manager.calls_manager
     def get_contacts_for_conversation(self, conversation):
         """
         Collect all contacts relating to a conversation from static &
@@ -144,18 +152,12 @@ class ContactStore(PerAccountStore):
         known_groups = yield conversation.groups.get_all()
         # Making sure to skip Nones, possibly not necessary
         all_groups = [group for group in known_groups if group]
-        static_groups = [group for group in all_groups if group.query is None]
-        dynamic_groups = [group for group in all_groups if group.query]
 
         # Grab all contacts we can find
         contacts = set([])
-        for group in static_groups:
-            static_contacts = yield self.get_static_contacts_for_group(group)
-            contacts.update(static_contacts)
-
-        for group in dynamic_groups:
-            dynamic_contacts = yield self.get_dynamic_contacts_for_group(group)
-            contacts.update(dynamic_contacts)
+        for group in all_groups:
+            group_contacts = yield self.get_contacts_for_group(group)
+            contacts.update(group_contacts)
 
         returnValue(contacts)
 

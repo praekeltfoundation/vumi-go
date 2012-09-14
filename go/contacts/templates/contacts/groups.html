@@ -18,8 +18,8 @@
     <div class="row">
         <div class="span12">
       			<ul class="nav nav-tabs">
-      			    <li><a href="{% url contacts:people %}"><strong>People</strong></a></li>
-      			    <li class="active"><a href="{% url contacts:groups %}">Groups</a></li>
+      			    <li><a href="{% url contacts:people %}">People</a></li>
+      			    <li class="active"><a href="{% url contacts:groups %}"><strong>Groups</strong></a></li>
       			</ul>
       			<form id="search-filter" name="search-filter" action="" method="get" class="well form-search">
                 <input type="text" id="search-filter-input" name="q" value="{{query|default:''}}" placeholder="Find Groups..." class="input-large search-query">
