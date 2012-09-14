@@ -70,17 +70,6 @@ class Conversation(Model):
     def __unicode__(self):
         return self.subject
 
-    # @Manager.calls_manager
-    # def people(self):
-    #     people = []
-    #     groups = yield self.groups.get_all()
-    #     for group in groups:
-    #         if group is None:
-    #             # TODO: Something sane here.
-    #             continue
-    #         people.extend((yield group.backlinks.contacts()))
-    #     returnValue(people)
-
     def get_contacts_addresses(self, contacts):
         """
         Get the contacts assigned to this group with an address attribute
