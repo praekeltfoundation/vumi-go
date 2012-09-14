@@ -39,7 +39,6 @@ class YoPaymentHandlerTestCase(EventHandlerTestCase):
                 'interactions': 2,
             }}, conv_key=self.conversation.key, account_key=self.account.key)
 
-
         self.mock_server = MockHttpServer()
         yield self.mock_server.start()
 
