@@ -9,6 +9,7 @@ from django.core.urlresolvers import reverse
 from go.base.models import User
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.vumitools.contact import ContactStore
+from go.vumitools.conversation import ConversationStore
 from django.core import mail
 
 TEST_GROUP_NAME = u"Test Group"
@@ -69,17 +70,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertNotEqual(group, None)
         self.assertEqual(u'a new group', group.name)
         self.assertRedirects(response, group_url(group.key))
-
-    def test_smart_groups_creation(self):
-        response = self.client.post(reverse('contacts:groups'), {
-            'name': 'a smart group',
-            'query': 'msisdn:\+27*',
-            '_new_smart_group': '1',
-            })
-        group = newest(self.contact_store.list_groups())
-        self.assertRedirects(response, group_url(group.key))
-        self.assertEqual(u'a smart group', group.name)
-        self.assertEqual(u'msisdn:\+27*', group.query)
 
     def test_groups_creation_with_funny_chars(self):
         response = self.client.post(reverse('contacts:groups'), {
@@ -438,3 +428,105 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.client.get(people_url, {
             'q': 'name:%s' % (self.contact.name,)
         })
+
+class SmartGroupsTestCase(VumiGoDjangoTestCase):
+
+    fixtures = ['test_user']
+
+    def setUp(self):
+        super(SmartGroupsTestCase, self).setUp()
+        self.setup_riak_fixtures()
+        self.client = Client()
+        self.client.login(username='username', password='password')
+
+    def setup_riak_fixtures(self):
+        self.user = User.objects.get(username='username')
+        self.contact_store = ContactStore.from_django_user(self.user)
+        self.contact_store.contacts.enable_search()
+        self.contact_store.groups.enable_search()
+
+        self.conversation_store = ConversationStore.from_django_user(self.user)
+
+        # We need a group
+        self.group = self.contact_store.new_group(TEST_GROUP_NAME)
+        self.group_key = self.group.key
+
+    def mkconversation(self, **kwargs):
+        defaults = {
+            'conversation_type': u'bulk_message',
+            'subject': u'subject',
+            'message': u'hello world'
+        }
+        defaults.update(kwargs)
+        return self.conversation_store.new_conversation(**defaults)
+
+    def mkcontact(self, name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
+        msisdn=u'+27761234567', **kwargs):
+        return self.contact_store.new_contact(name=name, surname=surname,
+            msisdn=msisdn, **kwargs)
+
+    def add_to_group(self, contact, group):
+        contact.add_to_group(self.group)
+        contact.save()
+        return contact
+
+    def test_smart_groups_creation(self):
+        response = self.client.post(reverse('contacts:groups'), {
+            'name': 'a smart group',
+            'query': 'msisdn:\+27*',
+            '_new_smart_group': '1',
+            })
+        group = newest(self.contact_store.list_groups())
+        self.assertRedirects(response, group_url(group.key))
+        self.assertEqual(u'a smart group', group.name)
+        self.assertEqual(u'msisdn:\+27*', group.query)
+
+    def test_smart_groups_no_matches_results(self):
+        response = self.client.post(reverse('contacts:groups'), {
+            'name': 'a smart group',
+            'query': 'msisdn:\+27*',
+            '_new_smart_group': '1',
+            })
+        group = newest(self.contact_store.list_groups())
+        conversation = self.mkconversation()
+        conversation.groups.add(group)
+        conversation.save()
+
+        self.assertRedirects(response, group_url(group.key))
+        self.assertEqual(u'a smart group', group.name)
+        self.assertEqual(u'msisdn:\+27*', group.query)
+        self.assertEqual(
+            self.contact_store.get_contacts_for_conversation(conversation), [])
+
+    def assertEqualContact(self, contact1, contact2):
+        self.assertSameContacts([contact1], [contact2])
+
+    def assertEqualContacts(self, contacts1, contacts2):
+        self.assertEqual(
+            [contact.key for contact in contacts1],
+            [contact.key for contact in contacts2])
+
+    def test_smart_groups_with_matches_results(self):
+        response = self.client.post(reverse('contacts:groups'), {
+            'name': 'a smart group',
+            'query': 'msisdn:\+27*',
+            '_new_smart_group': '1',
+            })
+
+        contact = self.mkcontact()
+        group = newest(self.contact_store.list_groups())
+        conversation = self.mkconversation()
+        conversation.groups.add(group)
+        conversation.save()
+
+        self.assertRedirects(response, group_url(group.key))
+        self.assertEqual(u'a smart group', group.name)
+        self.assertEqual(u'msisdn:\+27*', group.query)
+        self.assertEqual(
+            self.contact_store.get_static_contacts_for_group(group), [])
+        self.assertEqualContacts(
+            self.contact_store.get_dynamic_contacts_for_group(group),
+            [contact])
+        self.assertEqualContacts(
+            self.contact_store.get_contacts_for_conversation(conversation),
+            [contact])

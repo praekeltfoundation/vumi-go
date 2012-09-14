@@ -133,6 +133,44 @@ class ContactStore(PerAccountStore):
                                           return_keys=return_keys, **kw)
 
     @Manager.calls_manager
+    def get_contacts_for_conversation(self, conversation):
+        """
+        Collect all contacts relating to a conversation from static &
+        dynamic groups.
+        """
+        known_groups = yield conversation.groups.get_all()
+        # Making sure to skip Nones, possibly not necessary
+        all_groups = [group for group in known_groups if group]
+        static_groups = [group for group in all_groups if group.query is None]
+        dynamic_groups = [group for group in all_groups if group.query]
+
+        # Grab all contacts we can find
+        contacts = []
+        for group in static_groups:
+            contacts.extend((yield self.get_static_contacts_for_group(group)))
+
+        for group in dynamic_groups:
+            contacts.extend((yield self.get_dynamic_contacts_for_group(group)))
+
+        returnValue(contacts)
+
+    @Manager.calls_manager
+    def get_static_contacts_for_group(self, group):
+        """
+        Look up contacts through Riak 2i
+        """
+        contacts = yield group.backlinks.contacts()
+        returnValue(contacts)
+
+    @Manager.calls_manager
+    def get_dynamic_contacts_for_group(self, group):
+        """
+        Use Riak search to find matching contacts.
+        """
+        contacts = yield self.contacts.riak_search(group.query)
+        returnValue(contacts)
+
+    @Manager.calls_manager
     def filter_contacts_on_surname(self, letter, group=None):
         # TODO: vumi.persist needs to have better ways of supporting
         #       generic map reduce functions. There's a bunch of boilerplate
