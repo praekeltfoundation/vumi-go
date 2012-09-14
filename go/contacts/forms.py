@@ -23,7 +23,7 @@ class ContactForm(BootstrapForm):
 
     def clean(self):
         """
-        None of the fields in this form are valid but we don't want to save
+        None of the fields in this form are required but we don't want to save
         the contact if none of the fields contain any values.
         """
         cleaned_data = super(ContactForm, self).clean()
