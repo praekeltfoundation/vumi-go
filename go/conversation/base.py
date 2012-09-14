@@ -147,6 +147,8 @@ class StartConversationView(ConversationView):
     def get(self, request, conversation):
         conversation_form = make_read_only_form(self.make_conversation_form(
                 request.user_api, instance=conversation, initial={}))
+        contact_store = request.user_api.contact_store
+        people = contact_store.get_contacts_for_conversation(conversation)
         groups = request.user_api.list_groups()
         group_form = make_read_only_form(
             self.conversation_group_form(groups=groups))
@@ -163,7 +165,7 @@ class StartConversationView(ConversationView):
                 'conversation_form': conversation_form,
                 'group_form': group_form,
                 'groups': conversation.groups.get_all(),
-                'people': conversation.people(),
+                'people': people,
                 })
 
     def post(self, request, conversation):
