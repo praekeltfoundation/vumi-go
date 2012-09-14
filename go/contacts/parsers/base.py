@@ -36,8 +36,7 @@ class ContactFileParser(object):
     @classmethod
     def get_file_extension(cls, file_name):
         name, extension = os.path.splitext(file_name)
-        separator, suffix = extension.rsplit('.', 1)
-        return suffix
+        return extension[1:]
 
     @classmethod
     def get_parser(cls, file_name):
