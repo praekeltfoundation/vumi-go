@@ -50,18 +50,12 @@ class SequentialSendApplication(GoApplicationWorker):
     SEND_TO_TAGS = frozenset(['default'])
     worker_name = 'sequential_send_app'
 
-    # For test purposes.
-    _clock = None
-
     def validate_config(self):
         super(SequentialSendApplication, self).validate_config()
         self.poll_interval = self.config.get('poll_interval', 60)
 
     def _setup_poller(self):
         self.poller = LoopingCall(self.poll_conversations)
-        if self._clock is not None:
-            # So we can stub in a fake clock.
-            self.poller.clock = self._clock
         self.poller.start(self.poll_interval, now=False)
 
     @inlineCallbacks
