@@ -12,6 +12,12 @@ Vumi Go.
 
 Account Key: {{account_key}}
 Group Key: {{group_key}}
-CSV Path: {{csv_path}}
+File Type: {{file_type}}
+File Path: {{file_path}}
 Field Names: {{field_names}}
 Has Header: {{has_header}}
+Exception Type: {{exception_type}}
+Exception Value: {{exception_value}}
+Exception Traceback:
+
+{{exception_traceback|join:""|safe}}

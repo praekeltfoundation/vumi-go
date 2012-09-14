@@ -153,6 +153,7 @@ INSTALLED_APPS = (
     'go.account',
     'vxpolls.djdashboard',
     'registration',
+    'bootstrap',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
