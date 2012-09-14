@@ -34,23 +34,25 @@ def index(request):
 def groups(request):
     contact_store = request.user_api.contact_store
     if request.POST:
-        if 'new_group' in request.POST:
-            new_contact_group_form = ContactGroupForm(request.POST)
-            if new_contact_group_form.is_valid():
+        contact_group_form = ContactGroupForm(request.POST)
+        smart_group_form = SmartGroupForm(request.POST)
+
+        if '_new_group' in request.POST:
+            if contact_group_form.is_valid():
                 group = contact_store.new_group(
-                    new_contact_group_form.cleaned_data['name'])
+                    contact_group_form.cleaned_data['name'])
                 messages.add_message(request, messages.INFO, 'New group created')
                 return redirect(_group_url(group.key))
-        elif 'new_smart_group' in request.POST:
-            new_smart_group_form = SmartGroupForm(request.POST)
-            if new_smart_group_form.is_valid():
-                name = new_smart_group_form.cleaned_data['name']
-                query = new_smart_group_form.cleaned_data['query']
+        elif '_new_smart_group' in request.POST:
+            if smart_group_form.is_valid():
+                name = smart_group_form.cleaned_data['name']
+                query = smart_group_form.cleaned_data['query']
                 smart_group = contact_store.new_smart_group(
                     name, query)
                 return redirect(_group_url(smart_group.key))
     else:
-        new_contact_group_form = ContactGroupForm()
+        contact_group_form = ContactGroupForm()
+        smart_group_form = SmartGroupForm()
 
     query = request.GET.get('q', None)
     if query:
@@ -68,7 +70,7 @@ def groups(request):
         'paginator': paginator,
         'page': page,
         'query': query,
-        'new_contact_group_form': new_contact_group_form,
+        'contact_group_form': contact_group_form,
     })
 
 @csrf_exempt

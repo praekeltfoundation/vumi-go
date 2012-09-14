@@ -63,15 +63,28 @@ class ContactsTestCase(VumiGoDjangoTestCase):
     def test_groups_creation(self):
         response = self.client.post(reverse('contacts:groups'), {
             'name': 'a new group',
+            '_new_group': '1',
         })
         group = newest(self.contact_store.list_groups())
         self.assertNotEqual(group, None)
         self.assertEqual(u'a new group', group.name)
         self.assertRedirects(response, group_url(group.key))
 
+    def test_smart_groups_creation(self):
+        response = self.client.post(reverse('contacts:groups'), {
+            'name': 'a smart group',
+            'query': 'msisdn:\+27*',
+            '_new_smart_group': '1',
+            })
+        group = newest(self.contact_store.list_groups())
+        self.assertRedirects(response, group_url(group.key))
+        self.assertEqual(u'a smart group', group.name)
+        self.assertEqual(u'msisdn:\+27*', group.query)
+
     def test_groups_creation_with_funny_chars(self):
         response = self.client.post(reverse('contacts:groups'), {
             'name': "a new group! with cüte chars's",
+            '_new_group': '1',
         })
         group = newest(self.contact_store.list_groups())
         self.assertNotEqual(group, None)
