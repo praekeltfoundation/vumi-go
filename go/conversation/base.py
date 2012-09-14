@@ -239,7 +239,7 @@ class EditConversationView(ConversationView):
         return form(prefix=key, initial=data)
 
     def make_forms(self, conversation):
-        metadata = conversation.get_metadata()
+        metadata = conversation.get_metadata() or {}
         return [self.make_form(key, edit_form, metadata)
                 for key, edit_form in self.edit_conversation_forms]
 
