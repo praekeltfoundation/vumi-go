@@ -5,7 +5,6 @@
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportUserMessage
-from vumi.persist.txriak_manager import TxRiakManager
 
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi, VumiApiCommand

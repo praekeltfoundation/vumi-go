@@ -73,6 +73,7 @@ def groups(request):
         'contact_group_form': contact_group_form,
     })
 
+
 @csrf_exempt
 def group(request, group_key):
     # the upload handlers can only be set before touching request.POST or
@@ -80,6 +81,7 @@ def group(request, group_key):
     # this by doing the CSRF manually with a separate view
     request.upload_handlers = [TemporaryFileUploadHandler()]
     return _group(request, group_key)
+
 
 @login_required
 @csrf_protect
@@ -136,7 +138,8 @@ def _group(request, group_key):
             if upload_contacts_form.is_valid():
                 file_object = upload_contacts_form.cleaned_data['file']
                 file_name, file_path = utils.store_temporarily(file_object)
-                utils.store_file_hints_in_session(request, file_name, file_path)
+                utils.store_file_hints_in_session(
+                    request, file_name, file_path)
                 return redirect(_group_url(group.key))
 
     context = {
@@ -189,6 +192,7 @@ def people(request):
     request.upload_handlers = [TemporaryFileUploadHandler()]
     return _people(request)
 
+
 @login_required
 @csrf_protect
 def _people(request):
@@ -221,7 +225,8 @@ def _people(request):
             else:
                 file_object = upload_contacts_form.cleaned_data['file']
                 file_name, file_path = utils.store_temporarily(file_object)
-                utils.store_file_hints_in_session(request, file_name, file_path)
+                utils.store_file_hints_in_session(
+                    request, file_name, file_path)
                 return redirect(_group_url(group.key))
         else:
             messages.error(request, 'Something went wrong with the upload.')

@@ -15,6 +15,7 @@ def store_temporarily(django_file_object):
         django_content_file)
     return django_file_object.name, temp_file_path
 
+
 def store_file_hints_in_session(request, name, path):
     # Not too happy with this method but I don't want to
     # be writing the same session keys everywhere.
@@ -35,4 +36,3 @@ def clear_file_hints_from_session(request):
 
 def has_uncompleted_contact_import(request):
     return 'uploaded_contacts_file_path' in request.session
-

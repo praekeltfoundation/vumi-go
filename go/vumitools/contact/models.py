@@ -193,7 +193,8 @@ class ContactStore(PerAccountStore):
         }"""
         mr.map(js_function, {'arg': letter.lower()})
         contacts = yield self.manager.run_map_reduce(mr,
-            lambda manager, result: Contact.load(manager, result[0], result[1]))
+            lambda manager, result: Contact.load(
+                manager, result[0], result[1]))
         returnValue(contacts)
 
     @Manager.calls_manager

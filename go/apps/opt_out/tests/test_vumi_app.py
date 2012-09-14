@@ -2,8 +2,6 @@
 
 """Tests for go.apps.opt_out application"""
 
-import uuid
-
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import TransportUserMessage

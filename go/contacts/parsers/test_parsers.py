@@ -17,6 +17,7 @@ class ParserTestCase(TestCase):
         content_file = ContentFile(open(fixture_path, 'r').read())
         return default_storage.save('tmp/%s' % (fixture_name,), content_file)
 
+
 class CSVParserTestCase(ParserTestCase):
 
     def setUp(self):
