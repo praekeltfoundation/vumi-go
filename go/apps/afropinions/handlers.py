@@ -65,4 +65,3 @@ class YoPaymentHandler(EventHandler):
             method=self.method)
         log.info('Received response: %s / %s' % (response.code,
             response.delivered_body,))
-

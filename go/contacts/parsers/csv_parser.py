@@ -19,13 +19,13 @@ class CSVFileParser(ContactFileParser):
             for row in reader:
                 # Only process rows that actually have data
                 if any([column for column in row]):
-                    # Our Riak client requires unicode for all keys & values stored.
+                    # Our Riak client requires unicode for all keys & values
+                    # stored.
                     unicoded_row = dict([(key, unicode(value, 'utf-8'))
                                             for key, value in row.items()])
                     yield unicoded_row
         except (csv.Error,), e:
             raise ContactParserException(e)
-
 
     def guess_headers_and_row(self, file_path):
         """
@@ -63,4 +63,3 @@ class CSVFileParser(ContactFileParser):
             return True, default_headers, sample_row
         return (False, default_headers,
             SortedDict([(column, None) for column in first_row]))
-
