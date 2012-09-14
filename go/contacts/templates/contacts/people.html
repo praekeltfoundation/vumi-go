@@ -54,11 +54,10 @@
             {% empty %}
                 <tr>
 					<td colspan="3">
-					{% if selected_letter %}
+                    {% if query %}
+                        No contact match <strong>{{query}}</strong>
+                    {% else %}
 					    No contact surnames start with the letter <strong>{{selected_letter|upper}}</strong>
-					{% endif %}
-					{% if query %}
-					    No contact match <strong>{{query}}</strong>
 					{% endif %}
 					</td>
                 </tr>

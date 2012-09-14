@@ -17,3 +17,4 @@ requirements.pip.md5
 distribute-0.6.10.tar.gz
 .DS_Store
 *.db
+/go/production_settings.py

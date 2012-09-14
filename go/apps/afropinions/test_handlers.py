@@ -2,7 +2,7 @@ import base64
 
 from go.vumitools.tests.test_handler import EventHandlerTestCase
 
-from vumi.tests.utils import LogCatcher, MockHttpServer
+from vumi.tests.utils import MockHttpServer
 
 from twisted.internet.defer import inlineCallbacks
 

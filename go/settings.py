@@ -1,9 +1,6 @@
 # Django settings for go project.
 import os
 import djcelery
-import yaml
-
-from os.path import join
 
 
 djcelery.setup_loader()
@@ -129,6 +126,7 @@ TEMPLATE_DIRS = (
     abspath("apps", "multi_surveys", "templates"),
     abspath("apps", "bulk_message", "templates"),
     abspath("apps", "opt_out", "templates"),
+    abspath("apps", "sequential_send", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -156,6 +154,7 @@ INSTALLED_APPS = (
     'go.account',
     'vxpolls.djdashboard',
     'registration',
+    'bootstrap',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -204,7 +203,7 @@ BROKER_HOST = "localhost"
 BROKER_PORT = 5672
 BROKER_USER = "vumi"
 BROKER_PASSWORD = "vumi"
-BROKER_VHOST = "/go"
+BROKER_VHOST = "/develop"
 
 # If we're running in DEBUG mode then skip RabbitMQ and execute tasks
 # immediate instead of deferring them to the queue / workers.
@@ -224,7 +223,6 @@ VUMI_API_CONFIG = {
     'riak_manager': {'bucket_prefix': 'vumigo.'},
     }
 
-VUMI_COUNTRY_CODE = '27'
 VUMI_INSTALLED_APPS = {
     'go.apps.bulk_message': {
         'namespace': 'bulk_message',
@@ -241,7 +239,11 @@ VUMI_INSTALLED_APPS = {
     'go.apps.opt_out': {
         'namespace': 'opt_out',
         'display_name': 'Opt Out Handler',
-    }
+    },
+    'go.apps.sequential_send': {
+        'namespace': 'sequential_send',
+        'display_name': 'Sequential Send',
+    },
 }
 
 VXPOLLS_REDIS_CONFIG = {}
