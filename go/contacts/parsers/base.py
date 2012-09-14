@@ -22,7 +22,7 @@ class ContactFileParser(object):
         'email_address': 'Email address',
     }
 
-    EXCLUDED_ATTRIBUTES = ['user_account', 'created_at', 'extra', 'groups']
+    SETTABLE_ATTRIBUTES = set(DEFAULT_HEADERS.keys())
 
     def is_header_row(self, columns):
         """
@@ -74,21 +74,15 @@ class ContactFileParser(object):
         """
         raise NotImplementedError('Subclasses should implement this.')
 
-    def parse_file(self, file_path, field_names, has_header,
-        excluded_attributes=None):
+    def parse_file(self, file_path, field_names, has_header):
         """
         Parses the file and returns dictionaries ready to be fed
         the ContactStore.new_contact method.
 
         We need to know what we cannot set to avoid a file import overwriting
-        things like account details. Excluded attributes is a list of contact
-        attributes that are to be ignored. Defaults to EXCLUDED_ATTRIBUTES
+        things like account details. Attributes that can be set are in the
+        SETTABLE_ATTRIBUTES list, which defaults to the DEFAULT_HEADERS keys.
         """
-        excluded_attributes = excluded_attributes or self.EXCLUDED_ATTRIBUTES
-
-        known_attributes = set([attribute
-            for attribute in Contact.field_descriptors.keys()
-            if attribute not in excluded_attributes])
 
         # We're expecting a generator so loop over it and save as contacts
         # in the contact_store, normalizing anything we need to
@@ -100,7 +94,7 @@ class ContactFileParser(object):
             # contact to be saved
             contact_dictionary = {}
             for key, value in data_dictionary.items():
-                if key in known_attributes:
+                if key in self.SETTABLE_ATTRIBUTES:
                     contact_dictionary[key] = value
                 else:
                     extra = contact_dictionary.setdefault('extra', {})
