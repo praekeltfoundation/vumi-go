@@ -12,10 +12,11 @@ class XLSFileParser(ContactFileParser):
     def default_storage_path(self, file_path):
         return os.path.join(settings.MEDIA_ROOT, file_path)
 
-    def read_data_from_file(self, file_path, field_names):
+    def read_data_from_file(self, file_path, field_names, has_header):
         book = xlrd.open_workbook(self.default_storage_path(file_path))
         sheet = book.sheet_by_index(0)
-        for row_number in range(sheet.nrows):
+        start_at = 1 if has_header else 0
+        for row_number in range(start_at, sheet.nrows):
             row = sheet.row_values(row_number)
             # Only process rows that actually have data
             if any([column for column in row]):
