@@ -33,8 +33,8 @@ class NewContactGroupForm(BootstrapForm):
 
 class UploadContactsForm(BootstrapForm):
     file = forms.FileField(label="File with Contact data",
-        help_text="This can either be a double-quoted CSV file or an "
-                    "Excel spreadsheet")
+        help_text="This can either be a double-quoted UTF-8 encoded CSV file "
+                    "or an Excel spreadsheet")
 
 
 class SelectContactGroupForm(BootstrapForm):
