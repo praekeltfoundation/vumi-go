@@ -16,4 +16,8 @@ File Type: {{file_type}}
 File Path: {{file_path}}
 Field Names: {{field_names}}
 Has Header: {{has_header}}
-Exception: {{exception}}
+Exception Type: {{exception_type}}
+Exception Value: {{exception_value}}
+Exception Traceback:
+
+{{exception_traceback|join:""|safe}}
