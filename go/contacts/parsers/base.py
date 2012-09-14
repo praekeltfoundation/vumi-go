@@ -44,8 +44,8 @@ class ContactFileParser(object):
 
         parser = {
             'csv': 'go.contacts.parsers.csv_parser.CSVFileParser',
-            'xls': 'go.contacts.parser.xls_parser.XLSFileParser',
-            'xlsx': 'go.contacts.parser.xls_parser.XLSFileParser',
+            'xls': 'go.contacts.parsers.xls_parser.XLSFileParser',
+            'xlsx': 'go.contacts.parsers.xls_parser.XLSFileParser',
         }.get(extension)
 
         if parser:
