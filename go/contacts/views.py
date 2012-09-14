@@ -100,8 +100,8 @@ def _static_group(request, contact_store, group):
         raise Http404
 
     if request.method == 'POST':
+        group_form = ContactGroupForm(request.POST)
         if '_save_group' in request.POST:
-            group_form = ContactGroupForm(request.POST)
             if group_form.is_valid():
                 group.name = group_form.cleaned_data['name']
                 group.save()
