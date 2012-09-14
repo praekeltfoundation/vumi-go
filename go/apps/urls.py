@@ -9,4 +9,6 @@ urlpatterns = patterns('',
         include('go.apps.bulk_message.urls', namespace='bulk_message')),
     url(r'^opt_out/',
         include('go.apps.opt_out.urls', namespace='opt_out')),
+    url(r'^sequential_send/',
+        include('go.apps.sequential_send.urls', namespace='sequential_send')),
 )

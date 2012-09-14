@@ -13,14 +13,19 @@ TEST_CONTACT_SURNAME = u"Surname"
 TEST_SUBJECT = u"Test Conversation"
 
 
-class BulkMessageTestCase(DjangoGoApplicationTestCase):
+# FIXME: These tests are probably broken.
+
+
+class SequentialSendTestCase(DjangoGoApplicationTestCase):
 
     fixtures = ['test_user']
 
     def setUp(self):
-        super(BulkMessageTestCase, self).setUp()
+        super(SequentialSendTestCase, self).setUp()
         self.client = Client()
         self.client.login(username='username', password='password')
+
+        self.patch_settings(VXPOLLS_REDIS_CONFIG={'FAKE_REDIS': 'sure'})
 
         self.setup_riak_fixtures()
 
@@ -32,20 +37,20 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.conv_store = self.user_api.conversation_store
 
         # We need a group
-        self.group = self.contact_store.new_group(TEST_GROUP_NAME)
-        self.group_key = self.group.key
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        self.group_key = group.key
 
         # Also a contact
         contact = self.contact_store.new_contact(
             name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
             msisdn=u"+27761234567")
-        contact.add_to_group(self.group)
+        contact.add_to_group(group)
         contact.save()
         self.contact_key = contact.key
 
         # And a conversation
         conversation = self.conv_store.new_conversation(
-            conversation_type=u'bulk_message', subject=TEST_SUBJECT,
+            conversation_type=u'sequential_send', subject=TEST_SUBJECT,
             message=u"Test message", delivery_class=u"sms",
             delivery_tag_pool=u"longcode", groups=[self.group_key])
         self.conv_key = conversation.key
@@ -57,10 +62,10 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
     def run_new_conversation(self, selected_option, pool, tag):
         # render the form
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        response = self.client.get(reverse('bulk_message:new'))
+        response = self.client.get(reverse('sequential_send:new'))
         self.assertEqual(response.status_code, 200)
         # post the form
-        response = self.client.post(reverse('bulk_message:new'), {
+        response = self.client.post(reverse('sequential_send:new'), {
             'subject': 'the subject',
             'message': 'the message',
             'delivery_class': 'sms',
@@ -72,9 +77,10 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(conversation.delivery_class, 'sms')
         self.assertEqual(conversation.delivery_tag_pool, pool)
         self.assertEqual(conversation.delivery_tag, tag)
-        self.assertRedirects(response, reverse('bulk_message:people', kwargs={
-            'conversation_key': conversation.key,
-        }))
+        self.assertRedirects(
+            response, reverse('sequential_send:edit', kwargs={
+                    'conversation_key': conversation.key,
+                    }))
 
     def test_new_conversation(self):
         """test the creation of a new conversation"""
@@ -93,36 +99,40 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """
         conversation = self.get_wrapped_conv()
         self.assertFalse(conversation.ended())
-        response = self.client.post(reverse('bulk_message:end', kwargs={
+        response = self.client.post(reverse('sequential_send:end', kwargs={
             'conversation_key': conversation.key}), follow=True)
-        self.assertRedirects(response, reverse('bulk_message:show', kwargs={
+        self.assertRedirects(response, reverse('sequential_send:show', kwargs={
             'conversation_key': conversation.key}))
         [msg] = response.context['messages']
-        self.assertEqual(str(msg), "Conversation ended")
+        self.assertEqual(str(msg), "Sequential Send ended")
         conversation = self.get_wrapped_conv()
         self.assertTrue(conversation.ended())
 
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
         conversation"""
-        response = self.client.post(reverse('bulk_message:people',
-            kwargs={'conversation_key': self.conv_key}), {'groups': [
+        conversation = self.get_wrapped_conv()
+        self.assertFalse(conversation.is_client_initiated())
+        response = self.client.post(reverse('sequential_send:people',
+            kwargs={'conversation_key': conversation.key}), {'groups': [
                     grp.key for grp in self.contact_store.list_groups()]})
-        self.assertRedirects(response, reverse('bulk_message:start', kwargs={
-            'conversation_key': self.conv_key}))
+        self.assertRedirects(
+            response, reverse('sequential_send:start', kwargs={
+                    'conversation_key': conversation.key}))
 
     def test_start(self):
         """
         Test the start conversation view
         """
-        conversation = self.get_wrapped_conv()
+        consumer = self.get_cmd_consumer()
 
-        response = self.client.post(reverse('bulk_message:start', kwargs={
-            'conversation_key': conversation.key}))
-        self.assertRedirects(response, reverse('bulk_message:show', kwargs={
-            'conversation_key': conversation.key}))
+        response = self.client.post(reverse('sequential_send:start', kwargs={
+            'conversation_key': self.conv_key}))
+        self.assertRedirects(response, reverse('sequential_send:show', kwargs={
+            'conversation_key': self.conv_key}))
 
         conversation = self.get_wrapped_conv()
+        [cmd] = self.fetch_cmds(consumer)
         [batch] = conversation.get_batches()
         [tag] = list(batch.tags)
         [contact] = conversation.people()
@@ -135,46 +145,27 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
                 },
             }
 
-        [cmd] = self.get_api_commands_sent()
-        expected_cmd = VumiApiCommand.command(
+        self.assertEqual(cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,), 'start',
-            batch_id=batch.key,
-            dedupe=False,
-            msg_options=msg_options,
             conversation_type=conversation.conversation_type,
             conversation_key=conversation.key,
             is_client_initiated=conversation.is_client_initiated(),
-            )
-        self.assertEqual(cmd, expected_cmd)
-
-    def test_start_with_deduplication(self):
-        conversation = self.get_wrapped_conv()
-        self.client.post(
-            reverse('bulk_message:start', kwargs={
-                    'conversation_key': conversation.key}),
-            {'dedupe': '1'})
-        [cmd] = self.get_api_commands_sent()
-        self.assertEqual(cmd.payload['kwargs']['dedupe'], True)
-
-    def test_start_without_deduplication(self):
-        conversation = self.get_wrapped_conv()
-        self.client.post(reverse('bulk_message:start', kwargs={
-            'conversation_key': conversation.key}), {
-        })
-        [cmd] = self.get_api_commands_sent()
-        self.assertEqual(cmd.payload['kwargs']['dedupe'], False)
+            batch_id=batch.key,
+            msg_options=msg_options,
+            dedupe=False,
+            ))
 
     def test_send_fails(self):
         """
         Test failure to send messages
         """
-        conversation = self.get_wrapped_conv()
         self.acquire_all_longcode_tags()
         consumer = self.get_cmd_consumer()
-        response = self.client.post(reverse('bulk_message:start', kwargs={
-            'conversation_key': conversation.key}), follow=True)
-        self.assertRedirects(response, reverse('bulk_message:start', kwargs={
-            'conversation_key': conversation.key}))
+        response = self.client.post(reverse('sequential_send:start', kwargs={
+            'conversation_key': self.conv_key}), follow=True)
+        self.assertRedirects(
+            response, reverse('sequential_send:start', kwargs={
+                    'conversation_key': self.conv_key}))
         [] = self.fetch_cmds(consumer)
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "No spare messaging tags.")
@@ -183,7 +174,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """
         Test showing the conversation
         """
-        response = self.client.get(reverse('bulk_message:show', kwargs={
+        response = self.client.get(reverse('sequential_send:show', kwargs={
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.subject, TEST_SUBJECT)
+        self.assertEqual(conversation.subject, 'Test Conversation')
