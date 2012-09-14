@@ -239,7 +239,7 @@ class EditConversationView(ConversationView):
         return form(prefix=key, initial=data)
 
     def make_forms(self, conversation):
-        metadata = conversation.get_metadata() or {}
+        metadata = conversation.get_metadata(default={})
         return [self.make_form(key, edit_form, metadata)
                 for key, edit_form in self.edit_conversation_forms]
 
@@ -249,7 +249,7 @@ class EditConversationView(ConversationView):
         return form.cleaned_data
 
     def process_forms(self, request, conversation):
-        metadata = conversation.get_metadata()
+        metadata = conversation.get_metadata(default={})
         for key, edit_form in self.edit_conversation_forms:
             form = edit_form(request.POST, prefix=key)
             # Is this a good idea?
