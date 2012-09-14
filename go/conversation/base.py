@@ -27,7 +27,7 @@ class ConversationView(TemplateView):
     conversation_initiator = None
     conversation_display_name = None
     tagpool_filter = None
-    edit_conversation_form = None
+    edit_conversation_forms = None
 
     def request_setup(self, request, conversation_key):
         """Perform common request setup.
@@ -106,7 +106,7 @@ class NewConversationView(ConversationView):
                              '%s Created' % (self.conversation_display_name,))
 
         next_view = self.get_next_view(conversation)
-        if self.edit_conversation_form is not None:
+        if self.edit_conversation_forms is not None:
             next_view = 'edit'
         return self.redirect_to(next_view, conversation_key=conversation.key)
 
@@ -186,7 +186,7 @@ class ShowConversationView(ConversationView):
     def get(self, request, conversation):
         params = {
             'conversation': conversation,
-            'is_editable': (self.edit_conversation_form is not None),
+            'is_editable': (self.edit_conversation_forms is not None),
             }
         status = conversation.get_status()
         templ = lambda name: self.get_template_name('includes/%s' % (name,))
@@ -205,29 +205,58 @@ class ShowConversationView(ConversationView):
 
 
 class EditConversationView(ConversationView):
+    """View for editing conversation data.
+
+    Subclass this and set :attr:`edit_conversation_forms` to a list of tuples
+    of the form `('key', FormClass)`.
+
+    The `key` should be a key into the conversation's metadata field. If `key`
+    is `None`, the whole of the metadata field will be used.
+
+    If the default behaviour is insufficient or problematic, implement
+    :meth:`make_forms` and :meth:`process_forms`. These are the only two
+    methods that look at :attr:`edit_conversation_forms`.
+    """
     template_name = 'edit'
+    edit_conversation_forms = ()
 
     def get(self, request, conversation):
         return self.render_to_response({
                 'conversation': conversation,
-                'edit_form': self.make_form(conversation),
+                'edit_forms': self.make_forms(conversation),
                 })
 
     def post(self, request, conversation):
-        edit_form = self.edit_conversation_form(request.POST)
-        if not edit_form.is_valid():
-            return self.get(request, conversation)
-
-        self.process_form(conversation, edit_form)
+        self.process_forms(request, conversation)
 
         return self.redirect_to(self.get_next_view(conversation),
                                 conversation_key=conversation.key)
 
-    def make_form(self, conversation):
-        return self.edit_conversation_form(initial=conversation.metadata)
+    def make_form(self, key, form, metadata):
+        data = metadata.get(key, {})
+        if hasattr(form, 'initial_from_metadata'):
+            data = form.initial_from_metadata(data)
+        return form(prefix=key, initial=data)
 
-    def process_form(self, conversation, form):
-        conversation.set_metadata(form.cleaned_data)
+    def make_forms(self, conversation):
+        metadata = conversation.get_metadata()
+        return [self.make_form(key, edit_form, metadata)
+                for key, edit_form in self.edit_conversation_forms]
+
+    def process_form(self, form):
+        if hasattr(form, 'to_metadata'):
+            return form.to_metadata()
+        return form.cleaned_data
+
+    def process_forms(self, request, conversation):
+        metadata = conversation.get_metadata()
+        for key, edit_form in self.edit_conversation_forms:
+            form = edit_form(request.POST, prefix=key)
+            # Is this a good idea?
+            if not form.is_valid():
+                return self.get(request, conversation)
+            metadata[key] = self.process_form(form)
+        conversation.set_metadata(metadata)
         conversation.save()
 
 
@@ -289,9 +318,10 @@ class ConversationViews(object):
         Used in various places in the UI for messaging. Defaults to
         `'Conversation'`.
 
-    :param edit_conversation_form:
+    :param edit_conversation_forms:
         If set, the conversation will be editable and form data will be stashed
-        in the conversation metadata field.
+        in the conversation metadata field. See :class:`EditConversationView`
+        for details.
     """
 
     new_conversation_view = NewConversationView
@@ -308,7 +338,7 @@ class ConversationViews(object):
     tagpool_filter = None
     conversation_initiator = None  # This can be "client", "server" or None.
     conversation_display_name = 'Conversation'
-    edit_conversation_form = None
+    edit_conversation_forms = None
 
     def mkview(self, name):
         cls = getattr(self, '%s_conversation_view' % (name,))
@@ -325,7 +355,7 @@ class ConversationViews(object):
             tagpool_filter=self.tagpool_filter,
             conversation_initiator=self.conversation_initiator,
             conversation_display_name=self.conversation_display_name,
-            edit_conversation_form=self.edit_conversation_form)
+            edit_conversation_forms=self.edit_conversation_forms)
 
     def mkurl(self, name, regex=None):
         if regex is None:
@@ -341,7 +371,7 @@ class ConversationViews(object):
             ] + self.extra_urls()
         if self.conversation_initiator != 'client':
             urls.append(self.mkurl('people'))
-        if self.edit_conversation_form is not None:
+        if self.edit_conversation_forms is not None:
             urls.append(self.mkurl('edit'))
         return patterns('', *urls)
 
