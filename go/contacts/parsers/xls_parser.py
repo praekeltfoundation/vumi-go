@@ -20,7 +20,6 @@ class XLSFileParser(ContactFileParser):
             row = sheet.row_values(row_number)
             # Only process rows that actually have data
             if any([column for column in row]):
-                # Our Riak client requires unicode for all keys & values stored.
                 yield dict(zip(field_names,
                         sheet.row_values(row_number)[:len(field_names)]))
 
@@ -39,7 +38,6 @@ class XLSFileParser(ContactFileParser):
 
         default_headers = self.DEFAULT_HEADERS.copy()
 
-        # Importing here to prevent circular import errors
         if self.is_header_row(first_row):
             sample_row = SortedDict(zip(first_row, second_row))
             for column in first_row:
