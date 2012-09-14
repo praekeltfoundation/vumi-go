@@ -465,21 +465,67 @@ class SmartGroupsTestCase(VumiGoDjangoTestCase):
         return self.contact_store.new_contact(name=unicode(name),
             surname=unicode(surname), msisdn=unicode(msisdn), **kwargs)
 
+    def mksmart_group(self, query, name='a smart group'):
+        response = self.client.post(reverse('contacts:groups'), {
+            'name': name,
+            'query': query,
+            '_new_smart_group': '1',
+            })
+        group = newest(self.contact_store.list_groups())
+        self.assertRedirects(response, group_url(group.key))
+        return group
+
     def add_to_group(self, contact, group):
         contact.add_to_group(self.group)
         contact.save()
         return contact
 
     def test_smart_groups_creation(self):
-        response = self.client.post(reverse('contacts:groups'), {
-            'name': 'a smart group',
-            'query': 'msisdn:\+27*',
-            '_new_smart_group': '1',
-            })
-        group = newest(self.contact_store.list_groups())
-        self.assertRedirects(response, group_url(group.key))
+        group = self.mksmart_group('msisdn:\+27*')
         self.assertEqual(u'a smart group', group.name)
         self.assertEqual(u'msisdn:\+27*', group.query)
+
+    def test_smart_group_deletion(self):
+        group = self.mksmart_group('msisdn:\+27*')
+        response = self.client.post(reverse('contacts:group', kwargs={
+            'group_key': group.key,
+            }), {
+            '_delete_group': 1,
+        })
+        self.assertRedirects(response, reverse('contacts:index'),
+            target_status_code=302)
+        self.assertTrue(group not in self.contact_store.list_groups())
+
+    def test_smart_group_clearing(self):
+        contact = self.mkcontact()
+        group = self.mksmart_group('msisdn:\+27*')
+        self.assertEqualContacts(set([contact]),
+            self.contact_store.get_contacts_for_group(group))
+        response = self.client.post(reverse('contacts:group', kwargs={
+            'group_key': group.key,
+            }), {
+            '_delete_group_contacts': 1,
+        })
+        self.assertRedirects(response, reverse('contacts:group', kwargs={
+            'group_key': group.key}))
+        self.assertEqualContacts(set([]),
+            self.contact_store.get_contacts_for_group(group))
+
+    def test_smart_group_updating(self):
+        group = self.mksmart_group('msisdn:\+27*')
+        response = self.client.post(reverse('contacts:group', kwargs={
+            'group_key': group.key,
+            }), {
+            'name': 'foo',
+            'query': 'name:bar',
+            '_save_group': 1,
+        })
+        self.assertRedirects(response, reverse('contacts:group', kwargs={
+            'group_key': group.key}))
+        saved_group = self.contact_store.get_group(group.key)
+        self.assertEqual(saved_group.name, 'foo')
+        self.assertEqual(saved_group.query, 'name:bar')
+
 
     def test_smart_groups_no_matches_results(self):
         response = self.client.post(reverse('contacts:groups'), {
@@ -496,7 +542,8 @@ class SmartGroupsTestCase(VumiGoDjangoTestCase):
         self.assertEqual(u'a smart group', group.name)
         self.assertEqual(u'msisdn:\+27*', group.query)
         self.assertEqual(
-            self.contact_store.get_contacts_for_conversation(conversation), [])
+            self.contact_store.get_contacts_for_conversation(conversation),
+            set([]))
 
     def assertEqualContact(self, contact1, contact2):
         self.assertSameContacts([contact1], [contact2])
@@ -532,15 +579,15 @@ class SmartGroupsTestCase(VumiGoDjangoTestCase):
             [contact])
 
     def test_smart_groups_with_matches_AND_query_results(self):
-        response = self.client.post(reverse('contacts:groups'), {
+        self.client.post(reverse('contacts:groups'), {
             'name': 'a smart group',
             'query': 'name:foo AND surname:bar',
             '_new_smart_group': '1',
             })
 
-        contact1 = self.mkcontact(surname='bar')
-        contact2 = self.mkcontact(name='foo')
-        contact3 = self.mkcontact(name='foo', surname='bar')
+        self.mkcontact(surname='bar'),
+        self.mkcontact(name='foo'),
+        match = self.mkcontact(name='foo', surname='bar')
 
         group = newest(self.contact_store.list_groups())
         conversation = self.mkconversation()
@@ -549,10 +596,10 @@ class SmartGroupsTestCase(VumiGoDjangoTestCase):
 
         contacts = self.contact_store.get_contacts_for_conversation(
             conversation)
-        self.assertEqualContacts(contacts, [contact3])
+        self.assertEqualContacts(contacts, [match])
 
     def test_smart_groups_with_matches_OR_query_results(self):
-        response = self.client.post(reverse('contacts:groups'), {
+        self.client.post(reverse('contacts:groups'), {
             'name': 'a smart group',
             'query': 'name:foo OR surname:bar',
             '_new_smart_group': '1',
@@ -569,4 +616,4 @@ class SmartGroupsTestCase(VumiGoDjangoTestCase):
 
         contacts = self.contact_store.get_contacts_for_conversation(
             conversation)
-        self.assertEqualContacts(contacts, [contact1, contact2, contact3])
+        self.assertEqualContacts(contacts, set([contact1, contact2, contact3]))
