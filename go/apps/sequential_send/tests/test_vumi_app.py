@@ -3,7 +3,7 @@
 import uuid
 
 from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.internet.task import Clock
+from twisted.internet.task import Clock, LoopingCall
 
 from vumi.message import TransportUserMessage
 
@@ -11,6 +11,7 @@ from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.sequential_send.vumi_app import SequentialSendApplication
+from go.apps.sequential_send import vumi_app as sequential_send_module
 
 
 class TestSequentialSendApplication(AppWorkerTestCase):
@@ -23,10 +24,12 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         super(TestSequentialSendApplication, self).setUp()
 
         # Setup the SurveyApplication
+        self.clock = Clock()
+        self.patch(sequential_send_module, 'LoopingCall',
+                   self.looping_call)
         self.app = yield self.get_application({
                 'worker_name': 'sequential_send_application',
                 }, start=False)
-        self.clock = self.app._clock = Clock()
         yield self.app.startWorker()
 
         # Setup the command dispatcher so we cand send it commands
@@ -56,6 +59,11 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         # Give a user access to a tagpool
         self.user_api.api.account_store.tag_permissions(uuid.uuid4().hex,
             tagpool=u"pool", max_keys=None)
+
+    def looping_call(self, *args, **kwargs):
+        looping_call = LoopingCall(*args, **kwargs)
+        looping_call.clock = self.clock
+        return looping_call
 
     @inlineCallbacks
     def create_group(self, name):
