@@ -120,20 +120,15 @@
       <h3>Edit Group</h3>
   </div>
   <form class="form-horizontal" action="" method="post">
-  <div class="modal-body">
-        <fieldset>
-          <div class="control-group">
-            <label class="control-label" for="input01">Group name:</label>
-            <div class="controls">
-              <input type="text" class="input-xlarge" id="input01" name="name" value="{{group.name}}">
-            </div>
-          </div>
-        </fieldset>
-  </div>
-  <div class="modal-footer">
-  <a href="#" class="btn" data-dismiss="modal">Cancel</a>
-  <input type="submit" class="btn btn-primary" name="_save_group" data-loading-text="saving..." value="Save Details" data-dismiss="modal" data-toggle="modal" >
-  </div>
+    <input type="hidden" name="_update_group" value="1">
+    <div class="modal-body">
+      {% csrf_token %}
+      {{group_form}}
+    </div>
+    <div class="modal-footer">
+      <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+      <input type="submit" class="btn btn-primary" name="_save_group" data-loading-text="saving..." value="Save Details">
+    </div>
   </form>
 </div><!--/editGroup-->
 
@@ -184,21 +179,15 @@
       This smart group automatically selects contacts using the following search criteria:
     <p>
     <p>
-      <pre>{{query}}</pre>
+      <pre>{{smart_group_form.query.value}}</pre>
     </p>
   </div>
   <form class="form-horizontal" method="POST" action="{% url contacts:groups %}">
-    <div class="modal-body">
-        <div class="control-group">
-          <label class="control-label" for="smart-group-name">Smart Group name:</label>
-          <div class="controls">
-            <input type="text" class="input-xlarge" id="smart-group-name" name="name" value="{{group.name}}" placeholder="...">
-          </div>
-        </div>
-    </div>
+    {% csrf_token %}
+    {{smart_group_form}}
     <div class="modal-footer">
-    <a href="#" class="btn" data-dismiss="modal">Cancel</a>
-    <button type="submit" class="btn btn-primary" name="_new_smart_group" data-loading-text="saving..."  data-dismiss="modal" data-toggle="modal" >Create Smart Group</button>
+      <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+      <button type="submit" class="btn btn-primary" name="_new_smart_group" data-loading-text="saving...">Create Smart Group</button>
     </div>
   </form>
 </div>
