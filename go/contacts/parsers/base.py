@@ -1,12 +1,11 @@
 import os.path
 
-from go.vumitools.contact import Contact
-
 from vumi.utils import load_class
 
 
 class ContactParserException(Exception):
     pass
+
 
 class ContactFileParser(object):
 
@@ -101,4 +100,3 @@ class ContactFileParser(object):
                     extra[key] = value
 
             yield contact_dictionary
-

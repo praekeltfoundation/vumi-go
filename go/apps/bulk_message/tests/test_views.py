@@ -149,10 +149,10 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
     def test_start_with_deduplication(self):
         conversation = self.get_wrapped_conv()
-        self.client.post(reverse('bulk_message:start', kwargs={
-            'conversation_key': conversation.key}), {
-            'dedupe': '1'
-        })
+        self.client.post(
+            reverse('bulk_message:start', kwargs={
+                    'conversation_key': conversation.key}),
+            {'dedupe': '1'})
         [cmd] = self.get_api_commands_sent()
         self.assertEqual(cmd.payload['kwargs']['dedupe'], True)
 
