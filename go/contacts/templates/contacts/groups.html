@@ -35,8 +35,8 @@
             {% for group in page.object_list %}
                <tr>
                      <td>
-                         <a href="{% url contacts:group group_key=group.key %}">{{group.name}}</a>
-                    <span class="label label-info pull-right">{{group.backlinks.contacts|length}}</span>
+                        <a href="{% url contacts:group group_key=group.key %}">{{group.name}}</a>
+                        {# <span class="label label-info pull-right">{{group.backlinks.contacts|length}}</span> #}
                      </td>
                </tr>
             {% empty %}

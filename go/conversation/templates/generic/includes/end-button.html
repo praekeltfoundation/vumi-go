@@ -1,0 +1,4 @@
+<form id="conversation-end" name="conversation-end" method="post" action="{{ conversation.get_absolute_url }}end/">
+    {% csrf_token %}
+    <a href="javascript: document.getElementById('conversation-end').submit();" class="btn btn-danger"><i class="icon-remove-sign icon-white"></i> End Conversation</a>
+</form>

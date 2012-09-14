@@ -1,0 +1,4 @@
+<form id="conversation-next" name="conversation-next" method="post" action="{{ next_url }}">
+    {% csrf_token %}
+    <div class="btn-group"><input type="submit" class="btn btn-primary" value="Next &rarr;"></div>
+</form>
