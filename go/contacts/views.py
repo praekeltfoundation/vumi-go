@@ -50,8 +50,6 @@ def groups(request):
                 smart_group = contact_store.new_smart_group(
                     name, query)
                 return redirect(_group_url(smart_group.key))
-            else:
-                print smart_group_form.errors
     else:
         contact_group_form = ContactGroupForm()
         smart_group_form = SmartGroupForm()
@@ -109,11 +107,12 @@ def _static_group(request, contact_store, group):
                 group.save()
             messages.info(request, 'The group name has been updated')
             return redirect(_group_url(group.key))
-        elif '_update_group' in request.POST:
-            group_form = ContactGroupForm(request.POST)
-            if group_form.is_valid():
-                group.name = group_form.cleaned_data['name']
-                group.save()
+        elif '_delete_group_contacts' in request.POST:
+            tasks.delete_group_contacts.delay(
+                request.user_api.user_account_key, group.key)
+            messages.info(request,
+                "The group's contacts will be deleted shortly.")
+            return redirect(_group_url(group.key))
         elif '_delete_group' in request.POST:
             tasks.delete_group.delay(request.user_api.user_account_key,
                 group.key)
@@ -207,16 +206,21 @@ def _static_group(request, contact_store, group):
 @csrf_protect
 @login_required
 def _smart_group(request, contact_store, group):
-    if '_update_group' in request.POST:
+    if '_save_group' in request.POST:
         smart_group_form = SmartGroupForm(request.POST)
         if smart_group_form.is_valid():
             group.name = smart_group_form.cleaned_data['name']
             group.query = smart_group_form.cleaned_data['query']
             group.save()
             return redirect(_group_url(group.key))
+    elif '_delete_group_contacts' in request.POST:
+        tasks.delete_group_contacts.delay(request.user_api.user_account_key,
+            group.key)
+        messages.info(request, "The group's contacts will be deleted shortly.")
+        return redirect(_group_url(group.key))
     elif '_delete_group' in request.POST:
         tasks.delete_group.delay(request.user_api.user_account_key,
-                group.key)
+            group.key)
         messages.info(request, 'The group will be deleted shortly.')
         return redirect(reverse('contacts:index'))
     else:
