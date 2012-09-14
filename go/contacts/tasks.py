@@ -1,5 +1,5 @@
-import os.path
-import logging
+import sys
+import traceback
 
 from celery.task import task
 
@@ -43,14 +43,9 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
     count = 0
     written_contacts = []
 
-    extension, parser = ContactFileParser.get_parser(file_name)
-
-    if parser is None:
-        logging.warn('No file parser available for: %s. Stopping' % (
-            extension,))
-        return
-
     try:
+        extension, parser = ContactFileParser.get_parser(file_name)
+
         for data in parser.parse_file(file_path, field_names,
                                             has_header):
             [count, contact_dictionary] = data
@@ -69,11 +64,13 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
             }), settings.DEFAULT_FROM_EMAIL, [user_profile.user.email],
             fail_silently=False)
 
-    except (Exception,), e:
+    except:
         # Clean up if something went wrong, either everything is written
         # or nothing is written
         for contact in written_contacts:
             contact.delete()
+
+        exc_type, exc_value, exc_traceback = sys.exc_info()
 
         send_mail('Something went wrong while importing the contacts.',
             render_to_string('contacts/import_failed_mail.txt', {
@@ -84,6 +81,10 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
                 'file_path': file_path,
                 'field_names': field_names,
                 'has_header': has_header,
-                'exception': e,
-            }), settings.DEFAULT_FROM_EMAIL, [user_profile.user.email],
-            fail_silently=False)
+                'exception_type': exc_type,
+                'exception_value': exc_value,
+                'exception_traceback': traceback.format_tb(exc_traceback),
+            }), settings.DEFAULT_FROM_EMAIL, [
+                user_profile.user.email,
+                'support+contact-import@vumi.org',
+            ], fail_silently=False)
