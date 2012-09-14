@@ -1,4 +1,5 @@
 from django import forms
+from bootstrap.forms import BootstrapForm
 
 
 widebox = forms.TextInput(attrs={'class': 'txtbox widebox'})
@@ -26,21 +27,23 @@ class ContactForm(forms.Form):
             widget=wideselect, choices=[(g.key, g.name) for g in groups])
 
 
-class NewContactGroupForm(forms.Form):
-    name = forms.CharField(widget=forms.TextInput(attrs={'class': 'txtbox'}))
+class NewContactGroupForm(BootstrapForm):
+    name = forms.CharField(label="Create a new Group")
 
 
-class UploadContactsForm(forms.Form):
-    file = forms.FileField(widget=forms.FileInput(attrs={
-        'class': 'txtbox'
-    }))
+class UploadContactsForm(BootstrapForm):
+    file = forms.FileField(label="File with Contact data",
+        help_text="This can either be a double-quoted CSV file or an "
+                    "Excel spreadsheet")
 
 
-class SelectContactGroupForm(forms.Form):
+class SelectContactGroupForm(BootstrapForm):
     # contact_group is a special magic field that we add in __init__
 
     def __init__(self, *args, **kw):
         groups = kw.pop('groups')
         super(SelectContactGroupForm, self).__init__(*args, **kw)
         self.fields['contact_group'] = forms.ChoiceField(
+            label="Select group to store contacts in.",
+            help_text="Or provide a name for a new group below.",
             choices=[(g.key, g.name) for g in groups])
