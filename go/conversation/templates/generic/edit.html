@@ -31,9 +31,11 @@
             <div class="box shadow survey-box survey-questions">
                 <h3>Edit</h3>
                 <br>
-                <table>
-                    {{ edit_form }}
-                </table>
+                {% for edit_form in edit_forms %}
+                    <fieldset>
+                        {{ edit_form }}
+                    </fieldset>
+                {% endfor %}
             </div>
         </div>
     </div>
