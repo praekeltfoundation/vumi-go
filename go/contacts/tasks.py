@@ -40,15 +40,14 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
     # has been completed.
     user_profile = UserProfile.objects.get(user_account=account_key)
 
-    count = 0
     written_contacts = []
 
     try:
         extension, parser = ContactFileParser.get_parser(file_name)
 
-        for data in parser.parse_file(file_path, field_names,
-                                            has_header):
-            [count, contact_dictionary] = data
+        contact_dictionaries = parser.parse_file(file_path, field_names,
+            has_header)
+        for counter, contact_dictionary in enumerate(contact_dictionaries):
 
             # Make sure we set this group they're being uploaded in to
             contact_dictionary['groups'] = [group.key]
@@ -58,7 +57,7 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
 
         send_mail('Contact import completed successfully.',
             render_to_string('contacts/import_completed_mail.txt', {
-                'count': count,
+                'count': counter,
                 'group': group,
                 'user': user_profile.user,
             }), settings.DEFAULT_FROM_EMAIL, [user_profile.user.email],
