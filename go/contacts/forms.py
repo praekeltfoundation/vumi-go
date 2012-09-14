@@ -3,8 +3,8 @@ from django import forms
 
 
 class ContactForm(BootstrapForm):
-    name = forms.CharField()
-    surname = forms.CharField()
+    name = forms.CharField(required=False)
+    surname = forms.CharField(required=False)
 
     email_address = forms.CharField(required=False)
     msisdn = forms.CharField(label='Contact number', required=False)
@@ -18,8 +18,18 @@ class ContactForm(BootstrapForm):
     def __init__(self, *args, **kw):
         groups = kw.pop('groups')
         super(ContactForm, self).__init__(*args, **kw)
-        self.fields['groups'] = forms.MultipleChoiceField(
+        self.fields['groups'] = forms.MultipleChoiceField(required=False,
             choices=[(g.key, g.name) for g in groups])
+
+    def clean(self):
+        """
+        None of the fields in this form are valid but we don't want to save
+        the contact if none of the fields contain any values.
+        """
+        cleaned_data = super(ContactForm, self).clean()
+        if not any(cleaned_data.values()):
+            raise forms.ValidationError("Nothing to save.")
+        return cleaned_data
 
 
 class ContactGroupForm(BootstrapForm):

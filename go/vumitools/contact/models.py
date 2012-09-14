@@ -27,6 +27,9 @@ class ContactGroup(Model):
             contact.groups.add(self)
             yield contact.save()
 
+    def is_smart_group(self):
+        return self.query is not None
+
     def __unicode__(self):
         return self.name
 

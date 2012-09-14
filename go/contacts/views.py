@@ -50,6 +50,8 @@ def groups(request):
                 smart_group = contact_store.new_smart_group(
                     name, query)
                 return redirect(_group_url(smart_group.key))
+            else:
+                print smart_group_form.errors
     else:
         contact_group_form = ContactGroupForm()
         smart_group_form = SmartGroupForm()
@@ -88,6 +90,14 @@ def group(request, group_key):
 def _group(request, group_key):
     contact_store = request.user_api.contact_store
     group = contact_store.get_group(group_key)
+    if group.is_smart_group():
+        return _smart_group(request, contact_store, group)
+    else:
+        return _static_group(request, contact_store, group)
+
+@login_required
+@csrf_protect
+def _static_group(request, contact_store, group):
     if group is None:
         raise Http404
 
@@ -99,8 +109,13 @@ def _group(request, group_key):
                 group.save()
             messages.info(request, 'The group name has been updated')
             return redirect(_group_url(group.key))
+        elif '_update_group' in request.POST:
+            group_form = ContactGroupForm(request.POST)
+            if group_form.is_valid():
+                group.name = group_form.cleaned_data['name']
+                group.save()
         elif '_delete_group' in request.POST:
-            tasks.delete_group(request.user_api.user_account_key,
+            tasks.delete_group.delay(request.user_api.user_account_key,
                 group.key)
             messages.info(request, 'The group will be deleted shortly.')
             return redirect(reverse('contacts:index'))
@@ -141,9 +156,15 @@ def _group(request, group_key):
                 utils.store_file_hints_in_session(
                     request, file_name, file_path)
                 return redirect(_group_url(group.key))
+    else:
+        group_form = ContactGroupForm({
+            'name': group.name,
+        })
+
 
     context = {
         'group': group,
+        'group_form': group_form,
     }
 
     if 'clear-upload' in request.GET:
@@ -183,6 +204,33 @@ def _group(request, group_key):
 
     return render(request, 'contacts/group.html', context)
 
+@csrf_protect
+@login_required
+def _smart_group(request, contact_store, group):
+    if '_update_group' in request.POST:
+        smart_group_form = SmartGroupForm(request.POST)
+        if smart_group_form.is_valid():
+            group.name = smart_group_form.cleaned_data['name']
+            group.query = smart_group_form.cleaned_data['query']
+            group.save()
+            return redirect(_group_url(group.key))
+    elif '_delete_group' in request.POST:
+        tasks.delete_group.delay(request.user_api.user_account_key,
+                group.key)
+        messages.info(request, 'The group will be deleted shortly.')
+        return redirect(reverse('contacts:index'))
+    else:
+        smart_group_form = SmartGroupForm({
+            'name': group.name,
+            'query': group.query,
+            })
+
+    selected_contacts = contact_store.contacts.riak_search(group.query)[:100]
+    return render(request, 'contacts/smart_group.html', {
+        'group': group,
+        'selected_contacts': selected_contacts,
+        'group_form': smart_group_form,
+    })
 
 @csrf_exempt
 def people(request):
@@ -243,18 +291,20 @@ def _people(request):
     query = request.GET.get('q', '')
     if query:
         if not ':' in query:
-			query = 'name:%s' % query
+            query = 'name:%s' % (query,)
         selected_contacts = contact_store.contacts.riak_search(query)
     else:
         selected_contacts = contact_store.filter_contacts_on_surname(
             selected_letter)
 
+    smart_group_form = SmartGroupForm(initial={'query': query})
     return render(request, 'contacts/people.html', {
         'query': request.GET.get('q'),
         'selected_letter': selected_letter,
         'selected_contacts': selected_contacts,
         'upload_contacts_form': upload_contacts_form,
         'select_contact_group_form': select_contact_group_form,
+        'smart_group_form': smart_group_form,
         })
 
 
