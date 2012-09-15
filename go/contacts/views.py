@@ -56,11 +56,9 @@ def groups(request):
 
     query = request.GET.get('q', None)
     if query:
-        query_kwargs = _query_to_kwargs(query)
-        if query_kwargs:
-            groups = contact_store.groups.search(**query_kwargs)
-        else:
-            groups = []
+        if ':' not in query:
+            query = 'name:%s' % (query,)
+        groups = contact_store.groups.riak_search(query)
     else:
         groups = contact_store.list_groups()
 
