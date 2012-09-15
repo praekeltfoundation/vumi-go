@@ -138,9 +138,11 @@ class ContactStore(PerAccountStore):
     @Manager.calls_manager
     def get_contacts_for_group(self, group):
         contacts = set([])
-        contacts.update((yield self.get_static_contacts_for_group(group)))
+        static_contacts = yield self.get_static_contacts_for_group(group)
+        contacts.update(static_contacts)
         if group.is_smart_group():
-            contacts.update((yield self.get_dynamic_contacts_for_group(group)))
+            dynamic_contacts = yield self.get_dynamic_contacts_for_group(group)
+            contacts.update(dynamic_contacts)
         returnValue(contacts)
 
     @Manager.calls_manager
