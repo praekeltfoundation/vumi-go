@@ -70,27 +70,13 @@ class Conversation(Model):
     def __unicode__(self):
         return self.subject
 
-    @Manager.calls_manager
-    def people(self):
-        people = []
-        groups = yield self.groups.get_all()
-        for group in groups:
-            if group is None:
-                # TODO: Something sane here.
-                continue
-            people.extend((yield group.backlinks.contacts()))
-        returnValue(people)
-
-    @Manager.calls_manager
-    def get_contacts_addresses(self):
+    def get_contacts_addresses(self, contacts):
         """
         Get the contacts assigned to this group with an address attribute
-        that is appropriate for the conversation's delivery_class
+        that is appropriate for this conversation's delivery_class
         """
-        people = yield self.people()
-        addrs = [contact.addr_for(self.delivery_class) for contact in people]
-        all_addrs = [addr for addr in addrs if addr]
-        returnValue(all_addrs)
+        addrs = [contact.addr_for(self.delivery_class) for contact in contacts]
+        return [addr for addr in addrs if addr]
 
 
 class ConversationStore(PerAccountStore):

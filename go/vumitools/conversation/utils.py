@@ -256,6 +256,15 @@ class ConversationWrapper(object):
         return u'/app/%s/%s/' % (self.conversation_type, self.key)
 
     @Manager.calls_manager
+    def get_opted_in_contacts(self):
+        """
+        Get all the contacts that are both assigned to this group and opted in.
+        """
+        contact_store = self.user_api.contact_store
+        contacts = yield contact_store.get_contacts_for_conversation(self.c)
+        returnValue(contacts)
+
+    @Manager.calls_manager
     def get_opted_in_addresses(self):
         """
         Get the contacts assigned to this group with an address attribute
@@ -268,7 +277,8 @@ class ConversationWrapper(object):
         optouts = yield opt_out_store.list_opt_outs()
         optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
                             if optout.key.startswith('msisdn:')]
-        all_addrs = yield self.get_contacts_addresses()
+        contacts = yield self.get_opted_in_contacts()
+        all_addrs = yield self.get_contacts_addresses(contacts)
         opted_in_addrs = [addr for addr in all_addrs
                             if addr not in optout_addrs]
         returnValue(opted_in_addrs)

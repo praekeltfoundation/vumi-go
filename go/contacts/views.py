@@ -10,7 +10,7 @@ from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 from go.contacts.forms import (
-    ContactForm, NewContactGroupForm, UploadContactsForm,
+    ContactForm, ContactGroupForm, UploadContactsForm, SmartGroupForm,
     SelectContactGroupForm)
 from go.contacts import tasks, utils
 from go.contacts.parsers import ContactFileParser, ContactParserException
@@ -34,22 +34,31 @@ def index(request):
 def groups(request):
     contact_store = request.user_api.contact_store
     if request.POST:
-        new_contact_group_form = NewContactGroupForm(request.POST)
-        if new_contact_group_form.is_valid():
-            group = contact_store.new_group(
-                new_contact_group_form.cleaned_data['name'])
-            messages.add_message(request, messages.INFO, 'New group created')
-            return redirect(_group_url(group.key))
+        contact_group_form = ContactGroupForm(request.POST)
+        smart_group_form = SmartGroupForm(request.POST)
+
+        if '_new_group' in request.POST:
+            if contact_group_form.is_valid():
+                group = contact_store.new_group(
+                    contact_group_form.cleaned_data['name'])
+                messages.add_message(request, messages.INFO, 'New group created')
+                return redirect(_group_url(group.key))
+        elif '_new_smart_group' in request.POST:
+            if smart_group_form.is_valid():
+                name = smart_group_form.cleaned_data['name']
+                query = smart_group_form.cleaned_data['query']
+                smart_group = contact_store.new_smart_group(
+                    name, query)
+                return redirect(_group_url(smart_group.key))
     else:
-        new_contact_group_form = NewContactGroupForm()
+        contact_group_form = ContactGroupForm()
+        smart_group_form = SmartGroupForm()
 
     query = request.GET.get('q', None)
     if query:
-        query_kwargs = _query_to_kwargs(query)
-        if query_kwargs:
-            groups = contact_store.groups.search(**query_kwargs)
-        else:
-            groups = []
+        if ':' not in query:
+            query = 'name:%s' % (query,)
+        groups = contact_store.groups.riak_search(query)
     else:
         groups = contact_store.list_groups()
 
@@ -59,7 +68,7 @@ def groups(request):
         'paginator': paginator,
         'page': page,
         'query': query,
-        'new_contact_group_form': new_contact_group_form,
+        'contact_group_form': contact_group_form,
     })
 
 
@@ -77,19 +86,33 @@ def group(request, group_key):
 def _group(request, group_key):
     contact_store = request.user_api.contact_store
     group = contact_store.get_group(group_key)
+    if group.is_smart_group():
+        return _smart_group(request, contact_store, group)
+    else:
+        return _static_group(request, contact_store, group)
+
+@login_required
+@csrf_protect
+def _static_group(request, contact_store, group):
     if group is None:
         raise Http404
 
     if request.method == 'POST':
+        group_form = ContactGroupForm(request.POST)
         if '_save_group' in request.POST:
-            group_form = NewContactGroupForm(request.POST)
             if group_form.is_valid():
                 group.name = group_form.cleaned_data['name']
                 group.save()
             messages.info(request, 'The group name has been updated')
             return redirect(_group_url(group.key))
+        elif '_delete_group_contacts' in request.POST:
+            tasks.delete_group_contacts.delay(
+                request.user_api.user_account_key, group.key)
+            messages.info(request,
+                "The group's contacts will be deleted shortly.")
+            return redirect(_group_url(group.key))
         elif '_delete_group' in request.POST:
-            tasks.delete_group(request.user_api.user_account_key,
+            tasks.delete_group.delay(request.user_api.user_account_key,
                 group.key)
             messages.info(request, 'The group will be deleted shortly.')
             return redirect(reverse('contacts:index'))
@@ -130,9 +153,15 @@ def _group(request, group_key):
                 utils.store_file_hints_in_session(
                     request, file_name, file_path)
                 return redirect(_group_url(group.key))
+    else:
+        group_form = ContactGroupForm({
+            'name': group.name,
+        })
+
 
     context = {
         'group': group,
+        'group_form': group_form,
     }
 
     if 'clear-upload' in request.GET:
@@ -172,6 +201,38 @@ def _group(request, group_key):
 
     return render(request, 'contacts/group.html', context)
 
+@csrf_protect
+@login_required
+def _smart_group(request, contact_store, group):
+    if '_save_group' in request.POST:
+        smart_group_form = SmartGroupForm(request.POST)
+        if smart_group_form.is_valid():
+            group.name = smart_group_form.cleaned_data['name']
+            group.query = smart_group_form.cleaned_data['query']
+            group.save()
+            return redirect(_group_url(group.key))
+    elif '_delete_group_contacts' in request.POST:
+        tasks.delete_group_contacts.delay(request.user_api.user_account_key,
+            group.key)
+        messages.info(request, "The group's contacts will be deleted shortly.")
+        return redirect(_group_url(group.key))
+    elif '_delete_group' in request.POST:
+        tasks.delete_group.delay(request.user_api.user_account_key,
+            group.key)
+        messages.info(request, 'The group will be deleted shortly.')
+        return redirect(reverse('contacts:index'))
+    else:
+        smart_group_form = SmartGroupForm({
+            'name': group.name,
+            'query': group.query,
+            })
+
+    selected_contacts = contact_store.contacts.riak_search(group.query)[:100]
+    return render(request, 'contacts/smart_group.html', {
+        'group': group,
+        'selected_contacts': selected_contacts,
+        'group_form': smart_group_form,
+    })
 
 @csrf_exempt
 def people(request):
@@ -186,6 +247,8 @@ def people(request):
 @csrf_protect
 def _people(request):
     contact_store = request.user_api.contact_store
+    group = None
+
     if request.method == 'POST':
         # first parse the CSV file and create Contact instances
         # from them for attaching to a group later
@@ -193,7 +256,7 @@ def _people(request):
         if upload_contacts_form.is_valid():
             # We could be creating a new contact group.
             if request.POST.get('name'):
-                new_group_form = NewContactGroupForm(request.POST)
+                new_group_form = ContactGroupForm(request.POST)
                 if new_group_form.is_valid():
                     group = contact_store.new_group(
                         new_group_form.cleaned_data['name'])
@@ -229,21 +292,21 @@ def _people(request):
     selected_letter = request.GET.get('l', 'a')
     query = request.GET.get('q', '')
     if query:
-        if ':' in query:
-            query_kwargs = _query_to_kwargs(query)
-        else:
-            query_kwargs = _query_to_kwargs('name:%s' % query)
-        selected_contacts = contact_store.contacts.search(**query_kwargs)
+        if not ':' in query:
+            query = 'name:%s' % (query,)
+        selected_contacts = contact_store.contacts.riak_search(query)
     else:
         selected_contacts = contact_store.filter_contacts_on_surname(
             selected_letter)
 
+    smart_group_form = SmartGroupForm(initial={'query': query})
     return render(request, 'contacts/people.html', {
         'query': request.GET.get('q'),
         'selected_letter': selected_letter,
         'selected_contacts': selected_contacts,
         'upload_contacts_form': upload_contacts_form,
         'select_contact_group_form': select_contact_group_form,
+        'smart_group_form': smart_group_form,
         })
 
 

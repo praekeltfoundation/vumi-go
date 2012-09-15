@@ -42,24 +42,14 @@
 	               <a data-toggle="modal" href="#newConv">Message this group</a>
 	            </div>
 	        </div>
- -->            <h3>{{group.name}} <span class="label label-info">{{group.contact_set.count}} Members</span></h3><br />
+ -->            <h3>{{group.name}} <span class="label label-info">Smart Group</span></h3><br />
         </div>
     </div>
     <div class="row">
         <div class="span12">
-            <div class="btn-group">
-                {% load_alphabet as alphabet %}
-                {% for letter in alphabet %}
-                    <a class="btn {% spaceless %}
-                    {% if forloop.first %}first{% endif %}
-                    {% if letter == selected_letter %}active{% endif %}
-                    {% if forloop.last %}last{% endif %}
-                    {% endspaceless %}" href="?l={{letter}}">
-                        {{letter|upper}}
-                    </a>
-                {% endfor %}
-            </div>
-            <br />
+            {% if selected_contacts %}
+            <p>Contacts listed below are sample of the contacts matching <strong>{{group.query}}</strong>, it is not the complete set.</p>
+            {% endif %}
             <table class="table table-bordered table-striped">
             <thead>
             <tr>
@@ -76,12 +66,7 @@
             {% empty %}
                 <tr>
                     <td colspan="3">
-                    {% if selected_letter %}
-                        No contact surnames start with the letter <strong>{{selected_letter|upper}}</strong>
-                    {% endif %}
-                    {% if query %}
-                        No contact match <strong>{{query}}</strong>
-                    {% endif %}
+                        No contacts match <strong>{{group.query}}</strong>
                     </td>
                 </tr>
             {% endfor %}
@@ -89,7 +74,6 @@
             </table>
         </div>
     </div>
-    {% include "base/includes/pagination.html" %}
 
 {% endblock %}
 

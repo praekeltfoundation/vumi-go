@@ -18,10 +18,6 @@ $('#surveyUSSD').click(function() {
 	if($('#surveyUSSD').attr('checked')) { $('#surveyUSSDNum').show(); } else { $('#surveyUSSDNum').hide(); }
 });
 
-$('#search-filter-input').focus(function() {
-	$('input#search-filter-input').val('');
-});
-
 $('#convtype').change(function() {
 	var newAction = $('#convtype').val();
 	$('#newConversationType').attr('action', newAction);
