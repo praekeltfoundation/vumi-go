@@ -62,6 +62,7 @@ def groups(request):
     else:
         groups = contact_store.list_groups()
 
+    groups = sorted(groups, key=lambda group: group.created_at, reverse=True)
     paginator = Paginator(groups, 5)
     page = paginator.page(request.GET.get('p', 1))
     return render(request, 'contacts/groups.html', {
