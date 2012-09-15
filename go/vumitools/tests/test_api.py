@@ -6,6 +6,7 @@ from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from go.vumitools.opt_out import OptOutStore
+from go.vumitools.contact import ContactStore
 from go.vumitools.api import (
     VumiApi, VumiUserApi, MessageSender, VumiApiCommand, VumiApiEvent)
 from go.vumitools.tests.utils import AppWorkerTestCase, CeleryTestMixIn
@@ -152,6 +153,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     def test_optout_filtering(self):
         group = yield self.user_api.contact_store.new_group(u'test-group')
         optout_store = OptOutStore.from_user_account(self.user_account)
+        contact_store = ContactStore.from_user_account(self.user_account)
 
         # Create two random contacts
         yield self.user_api.contact_store.new_contact(
@@ -169,7 +171,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         yield optout_store.new_opt_out(u'msisdn', u'+27761234567', {
             'message_id': u'the-message-id'
         })
-        all_addrs = yield conv.get_contacts_addresses()
+        contacts = yield contact_store.get_contacts_for_conversation(conv)
+        all_addrs = yield conv.get_contacts_addresses(contacts)
         self.assertEqual(set(all_addrs), set(['+27760000000', '+27761234567']))
         optedin_addrs = yield conv.get_opted_in_addresses()
         self.assertEqual(optedin_addrs, ['+27760000000'])
