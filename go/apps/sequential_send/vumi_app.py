@@ -10,6 +10,7 @@ from vumi import log
 
 from go.vumitools.app_worker import GoApplicationWorker
 from go.vumitools.opt_out import OptOutStore
+from go.vumitools.contact import ContactStore
 
 
 class ScheduleManager(object):
@@ -151,7 +152,9 @@ class SequentialSendApplication(GoApplicationWorker):
         optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
                         if optout.key.startswith('msisdn:')]
 
-        contacts = yield conv.people()
+        contact_store = ContactStore(
+            conv.api.manager, conv.user_api.user_account_key)
+        contacts = yield contact_store.get_contacts_for_conversation(conv)
         result = []
         for contact in contacts:
             addr = contact.addr_for(conv.delivery_class)

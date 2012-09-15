@@ -7,8 +7,9 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 
 from go.base.models import User
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.vumitools.contact import ContactStore
+from go.vumitools.conversation import ConversationStore
 from django.core import mail
 
 TEST_GROUP_NAME = u"Test Group"
@@ -28,7 +29,7 @@ def group_url(group_key):
     return reverse('contacts:group', kwargs={'group_key': group_key})
 
 
-class ContactsTestCase(VumiGoDjangoTestCase):
+class ContactsTestCase(DjangoGoApplicationTestCase):
 
     fixtures = ['test_user']
 
@@ -38,76 +39,15 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.client = Client()
         self.client.login(username='username', password='password')
 
-    def setup_riak_fixtures(self):
-        self.user = User.objects.get(username='username')
-        self.contact_store = ContactStore.from_django_user(self.user)
-        self.contact_store.contacts.enable_search()
-        self.contact_store.groups.enable_search()
-
-        # We need a group
-        self.group = self.contact_store.new_group(TEST_GROUP_NAME)
-        self.group_key = self.group.key
-
-        # Also a contact
-        self.contact = self.contact_store.new_contact(
-            name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
-            msisdn=u"+27761234567")
-        self.contact.add_to_group(self.group)
-        self.contact.save()
-        self.contact_key = self.contact.key
-
     def test_redirect_index(self):
         response = self.client.get(reverse('contacts:index'))
         self.assertRedirects(response, reverse('contacts:groups'))
 
-    def test_groups_creation(self):
-        response = self.client.post(reverse('contacts:groups'), {
-            'name': 'a new group',
-        })
-        group = newest(self.contact_store.list_groups())
-        self.assertNotEqual(group, None)
-        self.assertEqual(u'a new group', group.name)
-        self.assertRedirects(response, group_url(group.key))
-
-    def test_groups_creation_with_funny_chars(self):
-        response = self.client.post(reverse('contacts:groups'), {
-            'name': "a new group! with cüte chars's",
-        })
-        group = newest(self.contact_store.list_groups())
-        self.assertNotEqual(group, None)
-        self.assertEqual(u"a new group! with cüte chars's", group.name)
-        self.assertRedirects(response, group_url(group.key))
-
-    def test_group_contact_querying(self):
-        # test no-match
-        response = self.client.get(group_url(self.group_key), {
-            'q': 'this should not match',
-        })
-        self.assertContains(response, 'No contact match')
-
-        # test match name
-        response = self.client.get(group_url(self.group_key), {
-            'q': TEST_CONTACT_NAME,
-        })
-        self.assertContains(response, person_url(self.contact_key))
-
-    def test_group_contact_filter_by_letter(self):
-        first_letter = TEST_CONTACT_SURNAME[0]
-
-        # Assert that our name doesn't start with our "fail" case.
-        self.assertNotEqual(first_letter.lower(), 'z')
-
-        response = self.client.get(group_url(self.group_key), {'l': 'z'})
-        self.assertContains(response, 'No contact surnames start with '
-                                        'the letter')
-
-        response = self.client.get(group_url(self.group_key),
-                                   {'l': first_letter.upper()})
-        self.assertContains(response, person_url(self.contact_key))
-
-        response = self.client.get(group_url(self.group_key),
-                                   {'l': first_letter.lower()})
-        self.assertContains(response, person_url(self.contact_key))
+    def clear_groups(self, contact_key=None):
+        contact = self.contact_store.get_contact_by_key(
+            contact_key or self.contact_key)
+        contact.groups.clear()
+        contact.save()
 
     def test_contact_creation(self):
         response = self.client.post(reverse('contacts:new_person'), {
@@ -150,41 +90,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertEqual(contact.msisdn, '112')
         self.assertEqual(set([g.key for g in contact.groups.get_all()]),
                     set([g.key for g in self.contact_store.list_groups()]))
-
-    def test_group_deletion(self):
-        # Create a contact in the group
-        response = self.client.post(reverse('contacts:new_person'), {
-            'name': 'New',
-            'surname': 'Person',
-            'msisdn': '27761234567',
-            'groups': [self.group_key],
-            })
-
-        contacts = self.contact_store.list_contacts()
-        contact = max(contacts, key=lambda c: c.created_at)
-        self.assertRedirects(response, person_url(contact.key))
-
-        # Delete the group
-        group_url = reverse('contacts:group', kwargs={
-            'group_key': self.group.key,
-        })
-        response = self.client.post(group_url, {
-                '_delete_group': True,
-            })
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response['Location'].endswith(
-            reverse('contacts:index')))
-
-        reloaded_contacts = self.contact_store.list_contacts()
-        reloaded_contact = max(reloaded_contacts, key=lambda c: c.created_at)
-        self.assertEqual(reloaded_contact.key, contact.key)
-        self.assertEqual(reloaded_contact.groups.get_all(), [])
-
-    def clear_groups(self, contact_key=None):
-        contact = self.contact_store.get_contact_by_key(
-            contact_key or self.contact_key)
-        contact.groups.clear()
-        contact.save()
 
     def specify_columns(self, group_key=None, columns=None):
         group_url = reverse('contacts:group', kwargs={
@@ -425,3 +330,296 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.client.get(people_url, {
             'q': 'name:%s' % (self.contact.name,)
         })
+
+class GroupsTestCase(DjangoGoApplicationTestCase):
+
+    fixtures = ['test_user']
+
+    def setUp(self):
+        super(GroupsTestCase, self).setUp()
+        self.setup_riak_fixtures()
+        self.client = Client()
+        self.client.login(username='username', password='password')
+
+    def test_groups_creation(self):
+        response = self.client.post(reverse('contacts:groups'), {
+            'name': 'a new group',
+            '_new_group': '1',
+        })
+        group = newest(self.contact_store.list_groups())
+        self.assertNotEqual(group, None)
+        self.assertEqual(u'a new group', group.name)
+        self.assertRedirects(response, group_url(group.key))
+
+    def test_group_updating(self):
+        new_group_name = 'a new group name'
+        self.assertNotEqual(self.group.name, new_group_name)
+        response = self.client.post(reverse('contacts:group', kwargs={
+            'group_key': self.group.key,
+            }), {
+            'name': new_group_name,
+            '_save_group': '1',
+        })
+        updated_group = self.contact_store.get_group(self.group.key)
+        self.assertEqual(new_group_name, updated_group.name)
+        self.assertRedirects(response, group_url(self.group.key))
+
+    def test_groups_creation_with_funny_chars(self):
+        response = self.client.post(reverse('contacts:groups'), {
+            'name': "a new group! with cüte chars's",
+            '_new_group': '1',
+        })
+        group = newest(self.contact_store.list_groups())
+        self.assertNotEqual(group, None)
+        self.assertEqual(u"a new group! with cüte chars's", group.name)
+        self.assertRedirects(response, group_url(group.key))
+
+    def test_group_contact_querying(self):
+        # test no-match
+        response = self.client.get(group_url(self.group_key), {
+            'q': 'this should not match',
+        })
+        self.assertContains(response, 'No contact match')
+
+        # test match name
+        response = self.client.get(group_url(self.group_key), {
+            'q': TEST_CONTACT_NAME,
+        })
+        self.assertContains(response, person_url(self.contact_key))
+
+    def test_group_contact_filter_by_letter(self):
+        first_letter = TEST_CONTACT_SURNAME[0]
+
+        # Assert that our name doesn't start with our "fail" case.
+        self.assertNotEqual(first_letter.lower(), 'z')
+
+        response = self.client.get(group_url(self.group_key), {'l': 'z'})
+        self.assertContains(response, 'No contact surnames start with '
+                                        'the letter')
+
+        response = self.client.get(group_url(self.group_key),
+                                   {'l': first_letter.upper()})
+        self.assertContains(response, person_url(self.contact_key))
+
+        response = self.client.get(group_url(self.group_key),
+                                   {'l': first_letter.lower()})
+        self.assertContains(response, person_url(self.contact_key))
+
+    def test_group_deletion(self):
+        # Create a contact in the group
+        response = self.client.post(reverse('contacts:new_person'), {
+            'name': 'New',
+            'surname': 'Person',
+            'msisdn': '27761234567',
+            'groups': [self.group_key],
+            })
+
+        contacts = self.contact_store.list_contacts()
+        contact = max(contacts, key=lambda c: c.created_at)
+        self.assertRedirects(response, person_url(contact.key))
+
+        # Delete the group
+        group_url = reverse('contacts:group', kwargs={
+            'group_key': self.group.key,
+        })
+        response = self.client.post(group_url, {
+                '_delete_group': True,
+            })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response['Location'].endswith(
+            reverse('contacts:index')))
+
+        reloaded_contacts = self.contact_store.list_contacts()
+        reloaded_contact = max(reloaded_contacts, key=lambda c: c.created_at)
+        self.assertEqual(reloaded_contact.key, contact.key)
+        self.assertEqual(reloaded_contact.groups.get_all(), [])
+
+    def test_group_clearing(self):
+        # Create a contact in the group
+        response = self.client.post(reverse('contacts:new_person'), {
+            'name': 'New',
+            'surname': 'Person',
+            'msisdn': '27761234567',
+            'groups': [self.group_key],
+            })
+
+        contacts = self.contact_store.list_contacts()
+        contact = max(contacts, key=lambda c: c.created_at)
+        self.assertRedirects(response, person_url(contact.key))
+
+        # Clear the group
+        group_url = reverse('contacts:group', kwargs={
+            'group_key': self.group.key,
+        })
+        response = self.client.post(group_url, {
+                '_delete_group_contacts': True,
+            })
+        self.assertRedirects(response, group_url)
+
+        self.assertEqual(self.contact_store.get_contacts_for_group(self.group),
+            set([]))
+        self.assertFalse(contact in self.contact_store.list_contacts())
+
+
+class SmartGroupsTestCase(DjangoGoApplicationTestCase):
+
+    fixtures = ['test_user']
+
+    def setUp(self):
+        super(SmartGroupsTestCase, self).setUp()
+        self.setup_riak_fixtures()
+        self.client = Client()
+        self.client.login(username='username', password='password')
+
+    def mksmart_group(self, query, name='a smart group'):
+        response = self.client.post(reverse('contacts:groups'), {
+            'name': name,
+            'query': query,
+            '_new_smart_group': '1',
+            })
+        group = newest(self.contact_store.list_groups())
+        self.assertRedirects(response, group_url(group.key))
+        return group
+
+    def add_to_group(self, contact, group):
+        contact.add_to_group(self.group)
+        contact.save()
+        return contact
+
+    def test_smart_groups_creation(self):
+        group = self.mksmart_group('msisdn:\+12*')
+        self.assertEqual(u'a smart group', group.name)
+        self.assertEqual(u'msisdn:\+12*', group.query)
+
+    def test_smart_group_deletion(self):
+        group = self.mksmart_group('msisdn:\+12*')
+        response = self.client.post(reverse('contacts:group', kwargs={
+            'group_key': group.key,
+            }), {
+            '_delete_group': 1,
+        })
+        self.assertRedirects(response, reverse('contacts:index'),
+            target_status_code=302)
+        self.assertTrue(group not in self.contact_store.list_groups())
+
+    def test_smart_group_clearing(self):
+        contact = self.mkcontact()
+        group = self.mksmart_group('msisdn:\+12*')
+        self.assertEqualContacts(set([contact]),
+            self.contact_store.get_contacts_for_group(group))
+        response = self.client.post(reverse('contacts:group', kwargs={
+            'group_key': group.key,
+            }), {
+            '_delete_group_contacts': 1,
+        })
+        self.assertRedirects(response, reverse('contacts:group', kwargs={
+            'group_key': group.key}))
+        self.assertEqualContacts(set([]),
+            self.contact_store.get_contacts_for_group(group))
+
+    def test_smart_group_updating(self):
+        group = self.mksmart_group('msisdn:\+12*')
+        response = self.client.post(reverse('contacts:group', kwargs={
+            'group_key': group.key,
+            }), {
+            'name': 'foo',
+            'query': 'name:bar',
+            '_save_group': 1,
+        })
+        self.assertRedirects(response, reverse('contacts:group', kwargs={
+            'group_key': group.key}))
+        saved_group = self.contact_store.get_group(group.key)
+        self.assertEqual(saved_group.name, 'foo')
+        self.assertEqual(saved_group.query, 'name:bar')
+
+
+    def test_smart_groups_no_matches_results(self):
+        response = self.client.post(reverse('contacts:groups'), {
+            'name': 'a smart group',
+            'query': 'msisdn:\+12*',
+            '_new_smart_group': '1',
+            })
+        group = newest(self.contact_store.list_groups())
+        conversation = self.mkconversation()
+        conversation.groups.add(group)
+        conversation.save()
+
+        self.assertRedirects(response, group_url(group.key))
+        self.assertEqual(u'a smart group', group.name)
+        self.assertEqual(u'msisdn:\+12*', group.query)
+        self.assertEqual(
+            self.contact_store.get_contacts_for_conversation(conversation),
+            set([]))
+
+    def assertEqualContact(self, contact1, contact2):
+        self.assertSameContacts([contact1], [contact2])
+
+    def assertEqualContacts(self, contacts1, contacts2):
+        self.assertEqual(
+            set([contact.key for contact in contacts1]),
+            set([contact.key for contact in contacts2]))
+
+    def test_smart_groups_with_matches_results(self):
+        response = self.client.post(reverse('contacts:groups'), {
+            'name': 'a smart group',
+            'query': 'msisdn:\+12*',
+            '_new_smart_group': '1',
+            })
+
+        contact = self.mkcontact()
+        group = newest(self.contact_store.list_groups())
+        conversation = self.mkconversation()
+        conversation.groups.add(group)
+        conversation.save()
+
+        self.assertRedirects(response, group_url(group.key))
+        self.assertEqual(u'a smart group', group.name)
+        self.assertEqual(u'msisdn:\+12*', group.query)
+        self.assertEqual(
+            self.contact_store.get_static_contacts_for_group(group), [])
+        self.assertEqualContacts(
+            self.contact_store.get_dynamic_contacts_for_group(group),
+            [contact])
+        self.assertEqualContacts(
+            self.contact_store.get_contacts_for_conversation(conversation),
+            [contact])
+
+    def test_smart_groups_with_matches_AND_query_results(self):
+        self.client.post(reverse('contacts:groups'), {
+            'name': 'a smart group',
+            'query': 'name:foo AND surname:bar',
+            '_new_smart_group': '1',
+            })
+
+        self.mkcontact(surname='bar'),
+        self.mkcontact(name='foo'),
+        match = self.mkcontact(name='foo', surname='bar')
+
+        group = newest(self.contact_store.list_groups())
+        conversation = self.mkconversation()
+        conversation.groups.add(group)
+        conversation.save()
+
+        contacts = self.contact_store.get_contacts_for_conversation(
+            conversation)
+        self.assertEqualContacts(contacts, [match])
+
+    def test_smart_groups_with_matches_OR_query_results(self):
+        self.client.post(reverse('contacts:groups'), {
+            'name': 'a smart group',
+            'query': 'name:foo OR surname:bar',
+            '_new_smart_group': '1',
+            })
+
+        contact1 = self.mkcontact(surname='bar')
+        contact2 = self.mkcontact(name='foo')
+        contact3 = self.mkcontact(name='foo', surname='bar')
+
+        group = newest(self.contact_store.list_groups())
+        conversation = self.mkconversation()
+        conversation.groups.add(group)
+        conversation.save()
+
+        contacts = self.contact_store.get_contacts_for_conversation(
+            conversation)
+        self.assertEqualContacts(contacts, set([contact1, contact2, contact3]))

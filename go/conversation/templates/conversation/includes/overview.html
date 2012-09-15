@@ -23,31 +23,32 @@
         <table class="table table-bordered table-striped">
             <tr>
                 <th>Channel</th>
-                <th>Recipients</th>
-                <th>Cost</th>
-                <th>Status</th>
+                <th colspan="2">Progress</th>
             </tr>
-            {% with conversation.people|length as people_count %}
             {% for batch in conversation.get_batches %}
             {% for tagpool, tag_account in batch.tags %}
             <tr>
-                <td><i class="icon-comment"></i> {{tag_account}}</td>
-                <td>{{people_count}}</td>
-                <td>{{people_count}}</td>
                 <td>
-                   <div class="progress progress-striped active">
-                        <strong>In progress:</strong> {{conversation.get_progress_status.ack}} / {{conversation.get_progress_status.sent}}
-                        <div class="bar" style="width: {{conversation.get_progress_percentage}}%;"></div>
-                    </div>
+                    <i class="icon-comment">&nbsp;</i>
+                    {{tag_account}}
                 </td>
-            <tr>
-                <td><strong>Totals</strong></td>
-                <td><strong>{{people_count}} People</strong></td>
-                <td colspan="3"><strong>{{people_count}} Vumi Credits</strong></td>
+                <td width="50%">
+                    {% if not conversation.get_progress_percentage %}
+                        <div class="progress progress-striped active">
+                            <div class="bar" style="width: 100%;"/>
+                        </div>
+                    {% else %}
+                        <div class="progress progress-striped">
+                            <div class="bar" style="width: {{conversation.get_progress_percentage}}%"/>
+                        </div>
+                    {% endif %}
+                </td>
+                <td>
+                    {{conversation.get_progress_status.sent}} sent
+                </td
             </tr>
             {% endfor %}
             {% endfor %}
-            {% endwith %}
         </table>
     </div>
 </div>

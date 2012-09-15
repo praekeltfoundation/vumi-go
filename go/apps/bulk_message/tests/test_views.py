@@ -21,34 +21,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         super(BulkMessageTestCase, self).setUp()
         self.client = Client()
         self.client.login(username='username', password='password')
-
         self.setup_riak_fixtures()
-
-    def setup_riak_fixtures(self):
-        self.user = User.objects.get(username='username')
-        self.user_api = vumi_api_for_user(self.user)
-        self.contact_store = self.user_api.contact_store
-        self.contact_store.contacts.enable_search()
-        self.conv_store = self.user_api.conversation_store
-
-        # We need a group
-        self.group = self.contact_store.new_group(TEST_GROUP_NAME)
-        self.group_key = self.group.key
-
-        # Also a contact
-        contact = self.contact_store.new_contact(
-            name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
-            msisdn=u"+27761234567")
-        contact.add_to_group(self.group)
-        contact.save()
-        self.contact_key = contact.key
-
-        # And a conversation
-        conversation = self.conv_store.new_conversation(
-            conversation_type=u'bulk_message', subject=TEST_SUBJECT,
-            message=u"Test message", delivery_class=u"sms",
-            delivery_tag_pool=u"longcode", groups=[self.group_key])
-        self.conv_key = conversation.key
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
@@ -125,7 +98,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         conversation = self.get_wrapped_conv()
         [batch] = conversation.get_batches()
         [tag] = list(batch.tags)
-        [contact] = conversation.people()
+        [contact] = self.get_contacts_for_conversation(conversation)
         msg_options = {
             "transport_type": "sms",
             "from_addr": "default10001",
