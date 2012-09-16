@@ -17,6 +17,7 @@ class ContactGroup(Model):
     """A group of contacts"""
     # key is UUID
     name = Unicode()
+    query = Unicode(null=True)
     user_account = ForeignKey(UserAccount)
     created_at = Timestamp(default=datetime.utcnow)
 
@@ -25,6 +26,9 @@ class ContactGroup(Model):
         for contact in contacts:
             contact.groups.add(self)
             yield contact.save()
+
+    def is_smart_group(self):
+        return self.query is not None
 
     def __unicode__(self):
         return self.name
@@ -114,6 +118,14 @@ class ContactStore(PerAccountStore):
         yield group.save()
         returnValue(group)
 
+    @Manager.calls_manager
+    def new_smart_group(self, name, query):
+        group_id = uuid4().get_hex()
+        group = self.groups(group_id, name=name,
+            user_account=self.user_account_key, query=query)
+        yield group.save()
+        returnValue(group)
+
     def get_contact_by_key(self, key):
         return self.contacts.load(key)
 
@@ -123,6 +135,50 @@ class ContactStore(PerAccountStore):
     def search_group(self, group, return_keys=False, **kw):
         return self.contacts.search_group(self.manager, group,
                                           return_keys=return_keys, **kw)
+
+    @Manager.calls_manager
+    def get_contacts_for_group(self, group):
+        contacts = set([])
+        static_contacts = yield self.get_static_contacts_for_group(group)
+        contacts.update(static_contacts)
+        if group.is_smart_group():
+            dynamic_contacts = yield self.get_dynamic_contacts_for_group(group)
+            contacts.update(dynamic_contacts)
+        returnValue(contacts)
+
+    @Manager.calls_manager
+    def get_contacts_for_conversation(self, conversation):
+        """
+        Collect all contacts relating to a conversation from static &
+        dynamic groups.
+        """
+        known_groups = yield conversation.groups.get_all()
+        # Making sure to skip Nones, possibly not necessary
+        all_groups = [group for group in known_groups if group]
+
+        # Grab all contacts we can find
+        contacts = set([])
+        for group in all_groups:
+            group_contacts = yield self.get_contacts_for_group(group)
+            contacts.update(group_contacts)
+
+        returnValue(contacts)
+
+    @Manager.calls_manager
+    def get_static_contacts_for_group(self, group):
+        """
+        Look up contacts through Riak 2i
+        """
+        contacts = yield group.backlinks.contacts()
+        returnValue(contacts)
+
+    @Manager.calls_manager
+    def get_dynamic_contacts_for_group(self, group):
+        """
+        Use Riak search to find matching contacts.
+        """
+        contacts = yield self.contacts.riak_search(group.query)
+        returnValue(contacts)
 
     @Manager.calls_manager
     def filter_contacts_on_surname(self, letter, group=None):
@@ -147,7 +203,8 @@ class ContactStore(PerAccountStore):
         }"""
         mr.map(js_function, {'arg': letter.lower()})
         contacts = yield self.manager.run_map_reduce(mr,
-            lambda manager, result: Contact.load(manager, result[0], result[1]))
+            lambda manager, result: Contact.load(
+                manager, result[0], result[1]))
         returnValue(contacts)
 
     @Manager.calls_manager

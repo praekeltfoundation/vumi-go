@@ -39,7 +39,7 @@ export COVERAGE_COMMAND="coverage run --branch --append --include='go/*'"
 coverage xml --include="go/*"
 coverage html --include="go/*"
 
-(find ./go -name '*.py' | xargs pep8 --repeat --exclude='0*' > pep8.log || true) && \
+(find ./go -name '*.py' | xargs pep8 --repeat --exclude='0*' --ignore=E121,E123,E126,E127,E128 > pep8.log || true) && \
 cat pep8.log
 
 deactivate

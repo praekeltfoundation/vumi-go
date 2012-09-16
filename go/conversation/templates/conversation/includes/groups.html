@@ -8,7 +8,9 @@
             <label class="checkbox inline">
                 <input type="checkbox" name="groups" value="{{group.key}}" class="group-check"> {{group.name}}
             </label>
-            <span class="label label-info pull-right">{{group.backlinks.contacts|length}}</span>
+            {% if group.is_smart_group %}
+                <span class="label label-info pull-right">smart group</span>
+            {% endif %}
         </td>
         </tr>
     {% empty %}
