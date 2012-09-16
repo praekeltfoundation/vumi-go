@@ -4,11 +4,10 @@
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.message import TransportUserMessage
 from vumi.middleware.tagger import TaggingMiddleware
 
 from go.vumitools.api_worker import CommandDispatcher
-from go.vumitools.api import VumiUserApi, VumiApiCommand
+from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.subscription.vumi_app import SubscriptionApplication
 
