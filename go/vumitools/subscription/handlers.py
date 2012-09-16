@@ -19,7 +19,7 @@ class SubscriptionHandler(EventHandler):
 
          * ``operation``: Must be ``subscribe`` or ``unsubscribe``.
 
-         * ``contact_id``: Contact id to operate on. (optional)
+         * ``contact_id``: Contact id to operate on.
 
         An Example of a event_dispatcher.yaml config file, with mapped
         conversations in the config:
