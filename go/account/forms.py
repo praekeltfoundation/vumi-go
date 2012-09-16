@@ -26,6 +26,7 @@ class RegistrationForm(RegistrationFormUniqueEmail):
             self.cleaned_data['username'] = self.cleaned_data['email']
         return self.cleaned_data
 
+
 class EmailForm(forms.Form):
     subject = forms.CharField()
     message = forms.CharField(widget=forms.Textarea)

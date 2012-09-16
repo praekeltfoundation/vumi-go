@@ -109,7 +109,7 @@
 	    </fieldset>
     </div>
     <div class="modal-footer">
-        <button type="submit" class="btn btn-primary" data-loading-text="uploading..." >Add New Group</button>
+        <button type="submit" name="_new_group" class="btn btn-primary" data-loading-text="uploading..." >Add New Group</button>
     </div>
     </form>
 </div><!--/newGroup-->
@@ -120,20 +120,14 @@
       <h3>Edit Group</h3>
   </div>
   <form class="form-horizontal" action="" method="post">
-  <div class="modal-body">
-        <fieldset>
-          <div class="control-group">
-            <label class="control-label" for="input01">Group name:</label>
-            <div class="controls">
-              <input type="text" class="input-xlarge" id="input01" name="name" value="{{group.name}}">
-            </div>
-          </div>
-        </fieldset>
-  </div>
-  <div class="modal-footer">
-  <a href="#" class="btn" data-dismiss="modal">Cancel</a>
-  <input type="submit" class="btn btn-primary" name="_save_group" data-loading-text="saving..." value="Save Details" data-dismiss="modal" data-toggle="modal" >
-  </div>
+    <div class="modal-body">
+      {% csrf_token %}
+      {{group_form}}
+    </div>
+    <div class="modal-footer">
+      <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+      <input type="submit" class="btn btn-primary" name="_save_group" data-loading-text="saving..." value="Save Details">
+    </div>
   </form>
 </div><!--/editGroup-->
 
@@ -146,32 +140,61 @@
 	<form class="form-horizontal" method="POST" action="{% url contacts:group group_key=group.key %}">
 	<div class="modal-body">
 	      <fieldset>
-	        <p><strong>Are you sure you want to remove this group?</strong><br>The group members will not be deleted.</p>
+	        <p><strong>Are you sure you want to remove this group?</strong>
+            <br>The group members will not be deleted.</p>
 	      </fieldset>
 	</div>
 	<div class="modal-footer">
 	<a href="#" class="btn" data-dismiss="modal">Cancel</a>
-	<button type="submit" name='_delete_group' class="btn btn-primary" data-loading-text="saving...">Remove Group</button>
+	<button type="submit" name='_delete_group' class="btn btn-danger" data-loading-text="saving...">Remove Group</button>
 	</div>
   {% csrf_token %}
 	</form>
 </div><!--/delGroup-->
-{% endif %}
 
 <div class="modal hide fade" id="emptyGroup">
 	<div class="modal-header">
 	  <a class="close" data-dismiss="modal">×</a>
-	  <h3>Empty Group</h3>
+	  <h3>Delete Group's Contacts</h3>
 	</div>
-    <form class="form-horizontal">
+    <form class="form-horizontal" method="POST" action="{% url contacts:group group_key=group.key %}">
+      {% csrf_token %}
     <div class="modal-body">
-          <fieldset>
-            <p><strong>Are you sure you want to remove all members from this group?</strong><br>The group members being removed will not be deleted.</p>
-          </fieldset>
+        <div class="alert alert-error">
+          <strong>Warning!</strong> Removed contacts can never be recovered.
+        </div>
+        <p>
+          Are you sure you want to <strong>remove all contacts</strong> found in this group?
+        </p>
     </div>
     <div class="modal-footer">
     <a href="#" class="btn" data-dismiss="modal">Cancel</a>
-    <button type="submit" class="btn btn-primary" data-loading-text="saving..."  data-dismiss="modal" data-toggle="modal" >Empty Group</button>
+    <input type="hidden" name="_delete_group_contacts" value="1"/>
+    <button type="submit" class="btn btn-danger" data-loading-text="saving..." >Delete Group's Contacts</button>
     </div>
     </form>
 </div><!--/emptyGroup-->
+{% endif %}
+
+{% if smart_group_form %}
+<div class="modal hide fade" id="createSmartGroup">
+  <div class="modal-header">
+    <a class="close" data-dismiss="modal">×</a>
+    <h3>Smart Group</h3>
+    <p>
+      This smart group automatically selects contacts using the following search criteria:
+    <p>
+    <p>
+      <pre>{{smart_group_form.query.value}}</pre>
+    </p>
+  </div>
+  <form class="form-horizontal" method="POST" action="{% url contacts:groups %}">
+    {% csrf_token %}
+    {{smart_group_form}}
+    <div class="modal-footer">
+      <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+      <button type="submit" class="btn btn-primary" name="_new_smart_group" data-loading-text="saving...">Create Smart Group</button>
+    </div>
+  </form>
+</div>
+{% endif %}
