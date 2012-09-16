@@ -11,4 +11,6 @@ urlpatterns = patterns('',
         include('go.apps.opt_out.urls', namespace='opt_out')),
     url(r'^sequential_send/',
         include('go.apps.sequential_send.urls', namespace='sequential_send')),
+    url(r'^subscription/',
+        include('go.apps.subscription.urls', namespace='subscription')),
 )
