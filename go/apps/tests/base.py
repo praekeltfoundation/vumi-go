@@ -13,6 +13,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
     TEST_CONTACT_NAME = u"Name"
     TEST_CONTACT_SURNAME = u"Surname"
     TEST_SUBJECT = u"Test Conversation"
+    TEST_CONVERSATION_TYPE = u'bulk_message'
 
     def setUp(self):
         super(DjangoGoApplicationTestCase, self).setUp()
@@ -41,7 +42,8 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
 
         # And a conversation
         self.conversation = self.conv_store.new_conversation(
-            conversation_type=u'bulk_message', subject=self.TEST_SUBJECT,
+            conversation_type=self.TEST_CONVERSATION_TYPE,
+            subject=self.TEST_SUBJECT,
             message=u"Test message", delivery_class=u"sms",
             delivery_tag_pool=u"longcode", groups=[self.group_key])
         self.conv_key = self.conversation.key

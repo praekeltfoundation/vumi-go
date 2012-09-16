@@ -16,6 +16,7 @@ TEST_SUBJECT = u"Test Conversation"
 class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
     fixtures = ['test_user']
+    TEST_CONVERSATION_TYPE = u'bulk_message'
 
     def setUp(self):
         super(BulkMessageTestCase, self).setUp()
