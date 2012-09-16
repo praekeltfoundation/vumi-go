@@ -1,16 +1,8 @@
 from django.test.client import Client
 from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.base.utils import vumi_api_for_user
-
-
-TEST_GROUP_NAME = u"Test Group"
-TEST_CONTACT_NAME = u"Name"
-TEST_CONTACT_SURNAME = u"Surname"
-TEST_SUBJECT = u"Test Conversation"
 
 
 class SubscriptionTestCase(DjangoGoApplicationTestCase):
@@ -133,4 +125,4 @@ class SubscriptionTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(reverse('subscription:show', kwargs={
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.subject, TEST_SUBJECT)
+        self.assertEqual(conversation.subject, self.TEST_SUBJECT)
