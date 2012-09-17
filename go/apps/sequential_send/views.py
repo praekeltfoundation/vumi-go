@@ -34,3 +34,4 @@ class SequentialSendConversationViews(ConversationViews):
         ('schedule', ScheduleForm),
         ('messages', MessageFormSet),
         )
+    conversation_start_params = {'no_batch_tag': True}

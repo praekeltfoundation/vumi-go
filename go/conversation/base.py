@@ -28,6 +28,7 @@ class ConversationView(TemplateView):
     conversation_display_name = None
     tagpool_filter = None
     edit_conversation_forms = None
+    conversation_start_params = None
 
     def request_setup(self, request, conversation_key):
         """Perform common request setup.
@@ -167,6 +168,7 @@ class StartConversationView(ConversationView):
 
     def post(self, request, conversation):
         params = {}
+        params.update(self.conversation_start_params or {})
         if self.conversation_initiator != 'client':
             params['dedupe'] = request.POST.get('dedupe') == '1'
         try:
@@ -321,6 +323,10 @@ class ConversationViews(object):
         If set, the conversation will be editable and form data will be stashed
         in the conversation metadata field. See :class:`EditConversationView`
         for details.
+
+    :param conversation_display_name:
+        A dict containing default parameters to send with the conversation
+        start command.
     """
 
     new_conversation_view = NewConversationView
@@ -338,6 +344,7 @@ class ConversationViews(object):
     conversation_initiator = None  # This can be "client", "server" or None.
     conversation_display_name = 'Conversation'
     edit_conversation_forms = None
+    conversation_start_params = None
 
     def mkview(self, name):
         cls = getattr(self, '%s_conversation_view' % (name,))
