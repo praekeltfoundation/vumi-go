@@ -18,7 +18,7 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self._persist_setUp()
+        yield self._persist_setUp()
         self.manager = self.get_riak_manager()
         self.account_store = AccountStore(self.manager)
         self.account = yield self.account_store.new_user(u'user')
@@ -51,3 +51,7 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
 
         dbconv = yield self.conv_store.get_conversation_by_key(conv.key)
         self.assert_models_equal(conv, dbconv)
+
+
+class TestConversationStoreSync(TestConversationStore):
+    sync_persistence = True
