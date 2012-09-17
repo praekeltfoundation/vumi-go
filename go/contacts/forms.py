@@ -35,9 +35,11 @@ class ContactForm(BootstrapForm):
 class ContactGroupForm(BootstrapForm):
     name = forms.CharField(label="Create a Group")
 
+
 class SmartGroupForm(BootstrapForm):
     name = forms.CharField()
     query = forms.CharField()
+
 
 class UploadContactsForm(BootstrapForm):
     file = forms.FileField(label="File with Contact data",

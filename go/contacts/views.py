@@ -41,7 +41,8 @@ def groups(request):
             if contact_group_form.is_valid():
                 group = contact_store.new_group(
                     contact_group_form.cleaned_data['name'])
-                messages.add_message(request, messages.INFO, 'New group created')
+                messages.add_message(
+                    request, messages.INFO, 'New group created')
                 return redirect(_group_url(group.key))
         elif '_new_smart_group' in request.POST:
             if smart_group_form.is_valid():
@@ -91,6 +92,7 @@ def _group(request, group_key):
         return _smart_group(request, contact_store, group)
     else:
         return _static_group(request, contact_store, group)
+
 
 @login_required
 @csrf_protect
@@ -159,7 +161,6 @@ def _static_group(request, contact_store, group):
             'name': group.name,
         })
 
-
     context = {
         'group': group,
         'group_form': group_form,
@@ -202,6 +203,7 @@ def _static_group(request, contact_store, group):
 
     return render(request, 'contacts/group.html', context)
 
+
 @csrf_protect
 @login_required
 def _smart_group(request, contact_store, group):
@@ -234,6 +236,7 @@ def _smart_group(request, contact_store, group):
         'selected_contacts': selected_contacts,
         'group_form': smart_group_form,
     })
+
 
 @csrf_exempt
 def people(request):

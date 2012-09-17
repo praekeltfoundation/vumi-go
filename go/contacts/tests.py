@@ -6,10 +6,7 @@ from django.conf import settings
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 
-from go.base.models import User
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.vumitools.contact import ContactStore
-from go.vumitools.conversation import ConversationStore
 from django.core import mail
 
 TEST_GROUP_NAME = u"Test Group"
@@ -331,6 +328,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
             'q': 'name:%s' % (self.contact.name,)
         })
 
+
 class GroupsTestCase(DjangoGoApplicationTestCase):
 
     fixtures = ['test_user']
@@ -354,12 +352,9 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
     def test_group_updating(self):
         new_group_name = 'a new group name'
         self.assertNotEqual(self.group.name, new_group_name)
-        response = self.client.post(reverse('contacts:group', kwargs={
-            'group_key': self.group.key,
-            }), {
-            'name': new_group_name,
-            '_save_group': '1',
-        })
+        response = self.client.post(
+            reverse('contacts:group', kwargs={'group_key': self.group.key}),
+            {'name': new_group_name, '_save_group': '1'})
         updated_group = self.contact_store.get_group(self.group.key)
         self.assertEqual(new_group_name, updated_group.name)
         self.assertRedirects(response, group_url(self.group.key))
@@ -493,11 +488,9 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
 
     def test_smart_group_deletion(self):
         group = self.mksmart_group('msisdn:\+12*')
-        response = self.client.post(reverse('contacts:group', kwargs={
-            'group_key': group.key,
-            }), {
-            '_delete_group': 1,
-        })
+        response = self.client.post(
+            reverse('contacts:group', kwargs={'group_key': group.key}),
+            {'_delete_group': 1})
         self.assertRedirects(response, reverse('contacts:index'),
             target_status_code=302)
         self.assertTrue(group not in self.contact_store.list_groups())
@@ -507,11 +500,9 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
         group = self.mksmart_group('msisdn:\+12*')
         self.assertEqualContacts(set([contact]),
             self.contact_store.get_contacts_for_group(group))
-        response = self.client.post(reverse('contacts:group', kwargs={
-            'group_key': group.key,
-            }), {
-            '_delete_group_contacts': 1,
-        })
+        response = self.client.post(
+            reverse('contacts:group', kwargs={'group_key': group.key}),
+            {'_delete_group_contacts': 1})
         self.assertRedirects(response, reverse('contacts:group', kwargs={
             'group_key': group.key}))
         self.assertEqualContacts(set([]),
@@ -519,19 +510,14 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
 
     def test_smart_group_updating(self):
         group = self.mksmart_group('msisdn:\+12*')
-        response = self.client.post(reverse('contacts:group', kwargs={
-            'group_key': group.key,
-            }), {
-            'name': 'foo',
-            'query': 'name:bar',
-            '_save_group': 1,
-        })
+        response = self.client.post(
+            reverse('contacts:group', kwargs={'group_key': group.key}),
+            {'name': 'foo', 'query': 'name:bar', '_save_group': 1})
         self.assertRedirects(response, reverse('contacts:group', kwargs={
             'group_key': group.key}))
         saved_group = self.contact_store.get_group(group.key)
         self.assertEqual(saved_group.name, 'foo')
         self.assertEqual(saved_group.query, 'name:bar')
-
 
     def test_smart_groups_no_matches_results(self):
         response = self.client.post(reverse('contacts:groups'), {
