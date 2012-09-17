@@ -1,10 +1,8 @@
 from django.test.client import Client
 from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.base.utils import vumi_api_for_user
 
 
 TEST_GROUP_NAME = u"Test Group"

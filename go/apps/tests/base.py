@@ -58,7 +58,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         return self.conv_store.new_conversation(**defaults)
 
     def mkcontact(self, name=None, surname=None, msisdn=u'+1234567890',
-        **kwargs):
+                  **kwargs):
         return self.contact_store.new_contact(
             name=unicode(name or self.TEST_CONTACT_NAME),
             surname=unicode(surname or self.TEST_CONTACT_SURNAME),

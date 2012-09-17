@@ -28,6 +28,7 @@ def delete_group(account_key, group_key):
         contact.save()
     group.delete()
 
+
 @task(ignore_result=True)
 def delete_group_contacts(account_key, group_key):
     api = VumiUserApi.from_config(account_key, settings.VUMI_API_CONFIG)
@@ -36,6 +37,7 @@ def delete_group_contacts(account_key, group_key):
     contacts = contact_store.get_contacts_for_group(group)
     for contact in contacts:
         contact.delete()
+
 
 @task(ignore_result=True)
 def import_contacts_file(account_key, group_key, file_name, file_path,
