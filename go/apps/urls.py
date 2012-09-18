@@ -14,7 +14,7 @@ urlpatterns = patterns('',
     url(r'^subscription/',
         include('go.apps.subscription.urls', namespace='subscription')),
     url(r'^wikipedia/ussd/',
-        include('go.apps.wikipedia.ussd.ussd', namespace='wikipedia_ussd')),
+        include('go.apps.wikipedia.ussd.urls', namespace='wikipedia_ussd')),
     url(r'^wikipedia/sms/',
         include('go.apps.wikipedia.sms.urls', namespace='wikipedia_sms')),
 )
