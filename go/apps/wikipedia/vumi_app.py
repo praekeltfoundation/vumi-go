@@ -45,7 +45,6 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
         if self._tagpool_metadata is None:
             self._tagpool_metadata = yield self.vumi_api.tpm.get_metadata(
                 tagpool)
-        print '._tagpool_metadata', self._tagpool_metadata
         returnValue(self._tagpool_metadata.get(key, default))
 
     @inlineCallbacks
@@ -79,11 +78,12 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
         bmsg = message.reply(sms_content)
         bmsg['from_addr'] = from_addr
         bmsg['transport_type'] = 'sms'
+        if self.override_sms_address:
+            bmsg['to_addr'] = self.override_sms_address
+
         tagpool_metadata = yield self.get_tagpool_metadata(from_tagpool,
             'msg_options')
-        print 'tagpool_metadata', tagpool_metadata, from_tagpool
         bmsg.payload.update(tagpool_metadata)
-        print 'bmsg', bmsg
 
         self.transport_publisher.publish_message(
             bmsg, routing_key='%s.outbound' % (self.sms_transport,))
