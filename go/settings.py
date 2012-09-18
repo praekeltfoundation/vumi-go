@@ -244,6 +244,10 @@ VUMI_INSTALLED_APPS = {
         'namespace': 'sequential_send',
         'display_name': 'Sequential Send',
     },
+    'go.apps.subscription': {
+        'namespace': 'subscription',
+        'display_name': 'Subscription Manager',
+    },
 }
 
 VXPOLLS_REDIS_CONFIG = {}
