@@ -1,9 +1,11 @@
 from django import forms
 
+from bootstrap.forms import BootstrapForm
+
 from go.conversation.base import ConversationViews
 
 
-class SubscriptionForm(forms.Form):
+class SubscriptionForm(BootstrapForm):
     keyword = forms.CharField()
     operation = forms.ChoiceField(choices=(
             ('subscribe', 'subscribe'),
