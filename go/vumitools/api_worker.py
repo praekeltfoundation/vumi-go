@@ -179,7 +179,7 @@ class GoMessageMetadata(object):
         returnValue(conv_store)
 
     @inlineCallbacks
-    def _find_conversation(self):
+    def get_conversation(self):
         if 'conversation' in self._store_objects:
             # We already have this, no need to look it up.
             returnValue(self._store_objects['conversation'])
@@ -222,7 +222,7 @@ class GoMessageMetadata(object):
     @inlineCallbacks
     def get_conversation_info(self):
         if 'conversation_key' not in self._go_metadata:
-            conv = yield self._find_conversation()
+            conv = yield self.get_conversation()
             if conv is None:
                 # We couldn't find a conversation.
                 return
