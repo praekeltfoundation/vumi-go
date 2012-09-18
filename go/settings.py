@@ -127,6 +127,7 @@ TEMPLATE_DIRS = (
     abspath("apps", "bulk_message", "templates"),
     abspath("apps", "opt_out", "templates"),
     abspath("apps", "sequential_send", "templates"),
+    abspath("apps", "wikipedia", "ussd", "templates"),
 )
 
 INSTALLED_APPS = (
