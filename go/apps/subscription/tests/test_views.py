@@ -5,19 +5,13 @@ from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
 
 
-TEST_GROUP_NAME = u"Test Group"
-TEST_CONTACT_NAME = u"Name"
-TEST_CONTACT_SURNAME = u"Surname"
-TEST_SUBJECT = u"Test Conversation"
-
-
-class BulkMessageTestCase(DjangoGoApplicationTestCase):
+class SubscriptionTestCase(DjangoGoApplicationTestCase):
 
     fixtures = ['test_user']
-    TEST_CONVERSATION_TYPE = u'bulk_message'
+    TEST_CONVERSATION_TYPE = u'subscription'
 
     def setUp(self):
-        super(BulkMessageTestCase, self).setUp()
+        super(SubscriptionTestCase, self).setUp()
         self.client = Client()
         self.client.login(username='username', password='password')
         self.setup_riak_fixtures()
@@ -29,10 +23,10 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
     def run_new_conversation(self, selected_option, pool, tag):
         # render the form
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        response = self.client.get(reverse('bulk_message:new'))
+        response = self.client.get(reverse('subscription:new'))
         self.assertEqual(response.status_code, 200)
         # post the form
-        response = self.client.post(reverse('bulk_message:new'), {
+        response = self.client.post(reverse('subscription:new'), {
             'subject': 'the subject',
             'message': 'the message',
             'delivery_class': 'sms',
@@ -44,7 +38,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(conversation.delivery_class, 'sms')
         self.assertEqual(conversation.delivery_tag_pool, pool)
         self.assertEqual(conversation.delivery_tag, tag)
-        self.assertRedirects(response, reverse('bulk_message:people', kwargs={
+        self.assertRedirects(response, reverse('subscription:edit', kwargs={
             'conversation_key': conversation.key,
         }))
 
@@ -65,23 +59,14 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """
         conversation = self.get_wrapped_conv()
         self.assertFalse(conversation.ended())
-        response = self.client.post(reverse('bulk_message:end', kwargs={
+        response = self.client.post(reverse('subscription:end', kwargs={
             'conversation_key': conversation.key}), follow=True)
-        self.assertRedirects(response, reverse('bulk_message:show', kwargs={
+        self.assertRedirects(response, reverse('subscription:show', kwargs={
             'conversation_key': conversation.key}))
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "Conversation ended")
         conversation = self.get_wrapped_conv()
         self.assertTrue(conversation.ended())
-
-    def test_group_selection(self):
-        """Select an existing group and use that as the group for the
-        conversation"""
-        response = self.client.post(reverse('bulk_message:people',
-            kwargs={'conversation_key': self.conv_key}), {'groups': [
-                    grp.key for grp in self.contact_store.list_groups()]})
-        self.assertRedirects(response, reverse('bulk_message:start', kwargs={
-            'conversation_key': self.conv_key}))
 
     def test_start(self):
         """
@@ -89,9 +74,9 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """
         conversation = self.get_wrapped_conv()
 
-        response = self.client.post(reverse('bulk_message:start', kwargs={
+        response = self.client.post(reverse('subscription:start', kwargs={
             'conversation_key': conversation.key}))
-        self.assertRedirects(response, reverse('bulk_message:show', kwargs={
+        self.assertRedirects(response, reverse('subscription:show', kwargs={
             'conversation_key': conversation.key}))
 
         conversation = self.get_wrapped_conv()
@@ -111,30 +96,12 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         expected_cmd = VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,), 'start',
             batch_id=batch.key,
-            dedupe=False,
             msg_options=msg_options,
             conversation_type=conversation.conversation_type,
             conversation_key=conversation.key,
             is_client_initiated=conversation.is_client_initiated(),
             )
         self.assertEqual(cmd, expected_cmd)
-
-    def test_start_with_deduplication(self):
-        conversation = self.get_wrapped_conv()
-        self.client.post(
-            reverse('bulk_message:start', kwargs={
-                    'conversation_key': conversation.key}),
-            {'dedupe': '1'})
-        [cmd] = self.get_api_commands_sent()
-        self.assertEqual(cmd.payload['kwargs']['dedupe'], True)
-
-    def test_start_without_deduplication(self):
-        conversation = self.get_wrapped_conv()
-        self.client.post(reverse('bulk_message:start', kwargs={
-            'conversation_key': conversation.key}), {
-        })
-        [cmd] = self.get_api_commands_sent()
-        self.assertEqual(cmd.payload['kwargs']['dedupe'], False)
 
     def test_send_fails(self):
         """
@@ -143,9 +110,9 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         conversation = self.get_wrapped_conv()
         self.acquire_all_longcode_tags()
         consumer = self.get_cmd_consumer()
-        response = self.client.post(reverse('bulk_message:start', kwargs={
+        response = self.client.post(reverse('subscription:start', kwargs={
             'conversation_key': conversation.key}), follow=True)
-        self.assertRedirects(response, reverse('bulk_message:start', kwargs={
+        self.assertRedirects(response, reverse('subscription:start', kwargs={
             'conversation_key': conversation.key}))
         [] = self.fetch_cmds(consumer)
         [msg] = response.context['messages']
@@ -155,7 +122,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """
         Test showing the conversation
         """
-        response = self.client.get(reverse('bulk_message:show', kwargs={
+        response = self.client.get(reverse('subscription:show', kwargs={
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.subject, TEST_SUBJECT)
+        self.assertEqual(conversation.subject, self.TEST_SUBJECT)
