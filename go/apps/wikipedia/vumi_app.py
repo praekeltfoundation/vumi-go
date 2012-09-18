@@ -2,12 +2,12 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi_wikipedia.wikipedia import WikipediaWorker
+from vumi import log
 
-from go.vumitools.api_worker import GoMessageMetadata
-from go.vumitools.api import VumiApi
+from go.vumitools.app_worker import GoApplicationMixin
 
 
-class WikipediaApplication(WikipediaWorker):
+class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
     """
     The primary reason for subclassing WikipediaWorker is that we need
     to do some trickery to get the SMS tag assigned to this conversation.
@@ -17,15 +17,36 @@ class WikipediaApplication(WikipediaWorker):
     with an SMS tag and steal it by storing it in its metadata.
 
     """
+    worker_name = 'wikipedia_ussd_application'
 
     def validate_config(self):
-        self.vumi_api = VumiApi.from_config(self.config)
+        super(WikipediaApplication, self).validate_config()
+        self._go_validate_config()
+        self._tagpool_metadata = None
+
+    @inlineCallbacks
+    def setup_application(self):
+        yield super(WikipediaApplication, self).setup_application()
+        yield self._go_setup_application()
+
+    @inlineCallbacks
+    def teardown_application(self):
+        yield super(WikipediaApplication, self).teardown_application()
+        yield self._go_teardown_application()
 
     @inlineCallbacks
     def get_conversation_metadata(self, message):
-        gm = GoMessageMetadata(self.vumi_api, message)
+        gm = self.get_go_metadata(message)
         conversation = yield gm.get_conversation()
-        returnValue(conversation.get_metadata(default={}))
+        returnValue(conversation.metadata or {})
+
+    @inlineCallbacks
+    def get_tagpool_metadata(self, tagpool, key, default=None):
+        if self._tagpool_metadata is None:
+            self._tagpool_metadata = yield self.vumi_api.tpm.get_metadata(
+                tagpool)
+        print '._tagpool_metadata', self._tagpool_metadata
+        returnValue(self._tagpool_metadata.get(key, default))
 
     @inlineCallbacks
     def send_sms_content(self, message, session):
@@ -49,13 +70,27 @@ class WikipediaApplication(WikipediaWorker):
         if session['sms_offset'] >= len(session['sms_content']):
             session['state'] = None
 
-        conv_metadata = yield self.get_metadata(message)
+        log.debug('sending: %s' % (sms_content,))
+
+        conv_metadata = yield self.get_conversation_metadata(message)
+        from_tagpool = conv_metadata['send_from_tagpool']
+        from_addr = conv_metadata['send_from_tag']
 
         bmsg = message.reply(sms_content)
-        bmsg['from_addr'] = conv_metadata['from_addr']
-        bmsg['transport_name'] = conv_metadata['transport_name']
+        bmsg['from_addr'] = from_addr
         bmsg['transport_type'] = 'sms'
-        if self.override_sms_address:
-            bmsg['to_addr'] = self.override_sms_address
+        tagpool_metadata = yield self.get_tagpool_metadata(from_tagpool,
+            'msg_options')
+        print 'tagpool_metadata', tagpool_metadata, from_tagpool
+        bmsg.payload.update(tagpool_metadata)
+        print 'bmsg', bmsg
+
         self.transport_publisher.publish_message(
             bmsg, routing_key='%s.outbound' % (self.sms_transport,))
+        returnValue(session)
+
+    def process_command_start(self, batch_id, conversation_type,
+                              conversation_key, msg_options,
+                              is_client_initiated, **extra_params):
+        log.debug('Conversation %r has been started, no need to '
+                    'do anything.' % (conversation_key,))

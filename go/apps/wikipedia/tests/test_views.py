@@ -44,5 +44,3 @@ class WikipediaTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, reverse('wikipedia_ussd:people', kwargs={
             'conversation_key': conversation.key,
         }))
-
-

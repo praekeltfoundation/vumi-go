@@ -29,7 +29,7 @@ class NewWikipediaConversationView(NewConversationView):
         conversation_data = dict((k, form.cleaned_data[k]) for k in copy_keys)
         conversation_data['metadata'] = {
             'send_from_tagpool': form.cleaned_data['send_from_tagpool'],
-            'send_from_tag': form.cleaned_data['send_from_tag'],
+            'send_from_tag': form.cleaned_data['send_from_tag']
         }
 
         tag_info = form.cleaned_data['delivery_tag_pool'].partition(':')
