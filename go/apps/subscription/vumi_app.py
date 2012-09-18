@@ -44,9 +44,8 @@ class SubscriptionApplication(GoApplicationWorker):
 
         contact = yield user_api.contact_store.contact_for_addr(
             conv.delivery_class, message['from_addr'])
-        if contact is None:
-            print "No contact. :-("
-            return
+        # We're guaranteed to have a contact here, because we create one if we
+        # can't find an existing one.
 
         handlers = self.handlers_for_content(conv, message['content'])
         if not handlers:
@@ -67,11 +66,6 @@ class SubscriptionApplication(GoApplicationWorker):
 
     def consume_delivery_report(self, event):
         return self.vumi_api.mdb.add_event(event)
-
-    def close_session(self, msg):
-        # TODO: Update
-        tag = TaggingMiddleware.map_msg_to_tag(msg)
-        return self.vumi_api.mdb.add_inbound_message(msg, tag=tag)
 
     @inlineCallbacks
     def process_command_send_message(self, *args, **kwargs):
