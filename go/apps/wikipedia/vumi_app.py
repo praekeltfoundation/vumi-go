@@ -69,8 +69,6 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
         if session['sms_offset'] >= len(session['sms_content']):
             session['state'] = None
 
-        log.debug('sending: %s' % (sms_content,))
-
         conv_metadata = yield self.get_conversation_metadata(message)
         from_tagpool = conv_metadata['send_from_tagpool']
         from_addr = conv_metadata['send_from_tag']
