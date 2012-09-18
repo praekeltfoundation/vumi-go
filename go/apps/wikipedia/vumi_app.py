@@ -10,8 +10,12 @@ from go.vumitools.api import VumiApi
 class WikipediaApplication(WikipediaWorker):
     """
     The primary reason for subclassing WikipediaWorker is that we need
-    to do some trickery to get an SMS tag assigned to us via a `VumiApiCommand`
-    before we can start sending out SMSs
+    to do some trickery to get the SMS tag assigned to this conversation.
+
+    In the UI there need to be two conversations, one with an SMS tag and one
+    with a USSD tag. The USSD conversation should reference a conversation
+    with an SMS tag and steal it by storing it in its metadata.
+
     """
 
     def validate_config(self):
