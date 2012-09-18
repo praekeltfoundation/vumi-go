@@ -1,23 +1,22 @@
 from django import forms
 from registration.forms import RegistrationFormUniqueEmail
 
-from bootstrap.forms import BootstrapMixin, BootstrapForm
 
-
-class AccountForm(BootstrapForm):
+class AccountForm(forms.Form):
     name = forms.CharField(required=True)
     surname = forms.CharField(required=True)
     email_address = forms.EmailField(required=True, widget=forms.TextInput(
-        attrs={'autocomplete': 'off'}))
+        attrs={'class': 'input-xlarge required email', 'autocomplete': 'off'}))
     password = forms.CharField(
         label='Type in a password if you want a new one.',
         widget=forms.PasswordInput(attrs={
+            'class': 'input-xlarge',
             'autocomplete': 'off',
         }),
         required=False)
 
 
-class RegistrationForm(BootstrapMixin, RegistrationFormUniqueEmail):
+class RegistrationForm(RegistrationFormUniqueEmail):
     def __init__(self, *args, **kwargs):
         super(RegistrationForm, self).__init__(*args, **kwargs)
         del self.fields['username']
@@ -28,6 +27,6 @@ class RegistrationForm(BootstrapMixin, RegistrationFormUniqueEmail):
         return self.cleaned_data
 
 
-class EmailForm(BootstrapForm):
+class EmailForm(forms.Form):
     subject = forms.CharField()
     message = forms.CharField(widget=forms.Textarea)
