@@ -25,19 +25,19 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
         return self.user_api.wrap_conversation(conv)
 
-    def run_new_conversation(self, selected_option, pool, tag):
+    def run_new_conversation(self, delivery_class, pool, tag):
         # render the form
-        self.assertEqual(len(self.conv_store.list_conversations()), 1)
+        self.assertEqual(len(self.conv_store.list_conversations()), 2)
         response = self.client.get(reverse('sequential_send:new'))
         self.assertEqual(response.status_code, 200)
         # post the form
         response = self.client.post(reverse('sequential_send:new'), {
             'subject': 'the subject',
             'message': 'the message',
-            'delivery_class': 'sms',
-            'delivery_tag_pool': selected_option,
+            'delivery_class': delivery_class,
+            'delivery_tag_pool': '%s:%s' % (pool, tag),
         })
-        self.assertEqual(len(self.conv_store.list_conversations()), 2)
+        self.assertEqual(len(self.conv_store.list_conversations()), 3)
         conversation = max(self.conv_store.list_conversations(),
                            key=lambda c: c.created_at)
         self.assertEqual(conversation.delivery_class, 'sms')
@@ -50,14 +50,14 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
 
     def test_new_conversation(self):
         """test the creation of a new conversation"""
-        self.run_new_conversation('longcode:', 'longcode', None)
 
-    def test_new_conversation_with_user_selected_tags(self):
-        tp_meta = self.api.tpm.get_metadata('longcode')
-        tp_meta['user_selects_tag'] = True
-        self.api.tpm.set_metadata('longcode', tp_meta)
-        self.run_new_conversation('longcode:default10001', 'longcode',
-                                  'default10001')
+        # And a conversation
+        parent = self.conv_store.new_conversation(
+            conversation_type=u'bulk_message', subject=self.TEST_SUBJECT,
+            message=u"Test message", delivery_class=u"sms",
+            delivery_tag_pool=u"longcode", delivery_tag=u"default10001")
+        self.run_new_conversation(
+            parent.key, parent.delivery_tag_pool, parent.delivery_tag)
 
     def test_end(self):
         """

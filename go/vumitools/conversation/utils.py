@@ -60,9 +60,9 @@ class ConversationWrapper(object):
     def set_metadata(self, metadata):
         self.c.metadata = metadata
 
-    def start_batch(self, tag):
+    def start_batch(self, *tags):
         user_account = unicode(self.c.user_account.key)
-        return self.mdb.batch_start([tag], user_account=user_account)
+        return self.mdb.batch_start(tags, user_account=user_account)
 
     def get_batches(self):
         return self.c.batches.get_all(self.base_manager)
@@ -125,12 +125,13 @@ class ConversationWrapper(object):
         return int(status['ack'] / float(status['sent']) * 100)
 
     @Manager.calls_manager
-    def start(self, **extra_params):
+    def start(self, no_batch_tag=False, **extra_params):
         """
         Send the start command to this conversations application worker.
         """
         tag = yield self.acquire_tag()
-        batch_id = yield self.start_batch(tag)
+        batch_tags = [] if no_batch_tag else [tag]
+        batch_id = yield self.start_batch(*batch_tags)
 
         msg_options = {}
         # TODO: transport_type is probably irrelevant
