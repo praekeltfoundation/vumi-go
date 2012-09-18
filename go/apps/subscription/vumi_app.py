@@ -53,10 +53,11 @@ class SubscriptionApplication(GoApplicationWorker):
             return
 
         for handler in handlers:
-            contact.subscription[handler['campaign_name']] = {
+            status = {
                 'subscribe': u'subscribed',
                 'unsubscribe': u'unsubscribed',
                 }[handler['operation']]
+            contact.subscription[handler['campaign_name']] = status
             yield contact.save()
             if handler['reply_copy']:
                 yield self.reply_to(message, handler['reply_copy'])
