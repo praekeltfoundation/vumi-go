@@ -38,7 +38,9 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
     def get_conversation_metadata(self, message):
         gm = self.get_go_metadata(message)
         conversation = yield gm.get_conversation()
-        returnValue(conversation.metadata or {})
+        if conversation and conversation.metadata:
+            returnValue(conversation.metadata)
+        returnValue({})
 
     @inlineCallbacks
     def get_tagpool_metadata(self, tagpool, key, default=None):
@@ -69,19 +71,28 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
         if session['sms_offset'] >= len(session['sms_content']):
             session['state'] = None
 
-        conv_metadata = yield self.get_conversation_metadata(message)
-        from_tagpool = conv_metadata['send_from_tagpool']
-        from_addr = conv_metadata['send_from_tag']
-
         bmsg = message.reply(sms_content)
-        bmsg['from_addr'] = from_addr
         bmsg['transport_type'] = 'sms'
+
+        conv_metadata = yield self.get_conversation_metadata(message)
+        if conv_metadata:
+            # If we've got the metadata then this is the first message
+            # we're sending out which means we need to explicitly set
+            # the from_addr and tagpool_metadata to set the correct
+            # transport_name.
+            #
+            # All replies coming in through this will be received via the
+            # correct transport and tagged accordingly which means replies
+            # are routed back without a problem.
+            from_tagpool = conv_metadata['send_from_tagpool']
+            from_addr = conv_metadata['send_from_tag']
+            bmsg['from_addr'] = from_addr
+            tagpool_metadata = yield self.get_tagpool_metadata(from_tagpool,
+                'msg_options')
+            bmsg.payload.update(tagpool_metadata)
+
         if self.override_sms_address:
             bmsg['to_addr'] = self.override_sms_address
-
-        tagpool_metadata = yield self.get_tagpool_metadata(from_tagpool,
-            'msg_options')
-        bmsg.payload.update(tagpool_metadata)
 
         self.transport_publisher.publish_message(
             bmsg, routing_key='%s.outbound' % (self.sms_transport,))
