@@ -127,6 +127,7 @@ TEMPLATE_DIRS = (
     abspath("apps", "bulk_message", "templates"),
     abspath("apps", "opt_out", "templates"),
     abspath("apps", "sequential_send", "templates"),
+    abspath("apps", "wikipedia", "ussd", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -247,6 +248,14 @@ VUMI_INSTALLED_APPS = {
     'go.apps.subscription': {
         'namespace': 'subscription',
         'display_name': 'Subscription Manager',
+    },
+    'go.apps.wikipedia.ussd': {
+        'namespace': 'wikipedia_ussd',
+        'display_name': 'Wikipedia USSD Connection',
+    },
+    'go.apps.wikipedia.sms': {
+        'namespace': 'wikipedia_sms',
+        'display_name': 'Wikipedia SMS Connection',
     },
 }
 
