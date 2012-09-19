@@ -129,6 +129,8 @@ class ConversationWrapper(object):
         """
         Send the start command to this conversations application worker.
         """
+        # TODO: Move some of this stuff out to a place where it makes more
+        #       sense to have it.
         if acquire_tag:
             tag = yield self.acquire_tag()
         else:
@@ -215,6 +217,7 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def acquire_existing_tag(self):
+        # TODO: Remove this once we have proper routing stuff.
         tag = (self.c.delivery_tag_pool, self.c.delivery_tag)
         inuse_tags = yield self.api.tpm.inuse_tags(tag[0])
         if tag not in inuse_tags:
@@ -223,6 +226,7 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def acquire_tag(self):
+        # TODO: Remove this once we have proper routing stuff.
         if self.c.delivery_tag is None:
             tag = yield self.api.acquire_tag(self.c.delivery_tag_pool)
             if tag is None:
