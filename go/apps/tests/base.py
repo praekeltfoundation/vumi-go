@@ -14,6 +14,9 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
     TEST_CONTACT_SURNAME = u"Surname"
     TEST_SUBJECT = u"Test Conversation"
     TEST_CONVERSATION_TYPE = u'bulk_message'
+    TEST_CONVERSATION_PARAMS = None
+    TEST_START_PARAMS = None
+    VIEWS_CLASS = None
 
     def setUp(self):
         super(DjangoGoApplicationTestCase, self).setUp()
@@ -28,6 +31,10 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         self.user = User.objects.get(username='username')
         self.setup_user_api(self.user)
 
+        if self.VIEWS_CLASS is not None:
+            self.TEST_CONVERSATION_TYPE = self.VIEWS_CLASS.conversation_type
+            self.TEST_START_PARAMS = self.VIEWS_CLASS.conversation_start_params
+
         # We need a group
         self.group = self.contact_store.new_group(self.TEST_GROUP_NAME)
         self.group_key = self.group.key
@@ -41,11 +48,17 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         self.contact_key = self.contact.key
 
         # And a conversation
-        self.conversation = self.conv_store.new_conversation(
-            conversation_type=self.TEST_CONVERSATION_TYPE,
-            subject=self.TEST_SUBJECT,
-            message=u"Test message", delivery_class=u"sms",
-            delivery_tag_pool=u"longcode", groups=[self.group_key])
+        params = {
+            'conversation_type': self.TEST_CONVERSATION_TYPE,
+            'subject': self.TEST_SUBJECT,
+            'message': u"Test message",
+            'delivery_class': u"sms",
+            'delivery_tag_pool': u"longcode",
+            'groups': [self.group_key],
+            }
+        if self.TEST_CONVERSATION_PARAMS:
+            params.update(self.TEST_CONVERSATION_PARAMS)
+        self.conversation = self.conv_store.new_conversation(**params)
         self.conv_key = self.conversation.key
 
     def mkconversation(self, **kwargs):
