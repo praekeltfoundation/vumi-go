@@ -41,6 +41,6 @@ class WikipediaTestCase(DjangoGoApplicationTestCase):
             'send_from_tagpool': 'devnull',
             'send_from_tag': '10017@devnull',
             })
-        self.assertRedirects(response, reverse('wikipedia_ussd:people', kwargs={
+        self.assertRedirects(response, reverse('wikipedia_ussd:start', kwargs={
             'conversation_key': conversation.key,
         }))
