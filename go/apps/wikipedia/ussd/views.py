@@ -53,7 +53,7 @@ class WikipediaUSSDConversationViews(ConversationViews):
     new_conversation_view = NewWikipediaConversationView
     conversation_type = u'wikipedia_ussd'
     conversation_display_name = u'Wikipedia USSD'
-    conversation_initiator = u'server'
+    conversation_initiator = u'client'
     edit_conversation_forms = None
     conversation_start_params = {'no_batch_tag': True}
     conversation_form = WikipediaConversationForm
