@@ -125,11 +125,14 @@ class ConversationWrapper(object):
         return int(status['ack'] / float(status['sent']) * 100)
 
     @Manager.calls_manager
-    def start(self, no_batch_tag=False, **extra_params):
+    def start(self, no_batch_tag=False, acquire_tag=True, **extra_params):
         """
         Send the start command to this conversations application worker.
         """
-        tag = yield self.acquire_tag()
+        if acquire_tag:
+            tag = yield self.acquire_tag()
+        else:
+            tag = yield self.acquire_existing_tag()
         batch_tags = [] if no_batch_tag else [tag]
         batch_id = yield self.start_batch(*batch_tags)
 
@@ -209,6 +212,14 @@ class ConversationWrapper(object):
                 })
         returnValue(sorted(outbound_statuses, key=lambda sent: sent['time'],
                            reverse=True))
+
+    @Manager.calls_manager
+    def acquire_existing_tag(self):
+        tag = (self.c.delivery_tag_pool, self.c.delivery_tag)
+        inuse_tags = yield self.api.tpm.inuse_tags(tag[0])
+        if tag not in inuse_tags:
+            raise ConversationSendError("Requested tag not pre-acquired.")
+        returnValue(tag)
 
     @Manager.calls_manager
     def acquire_tag(self):
