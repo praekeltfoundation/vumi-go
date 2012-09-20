@@ -87,7 +87,6 @@ def _clear_empties(cleaned_data):
     """
     return [cd for cd in cleaned_data if cd.get('copy')]
 
-
 @login_required
 def contents(request, conversation_key):
     conversation = conversation_or_404(request.user_api, conversation_key)
@@ -225,4 +224,44 @@ def show(request, conversation_key):
     return render(request, 'surveys/show.html', {
         'conversation': conversation,
         'poll_id': poll_id,
+    })
+
+@login_required
+def edit(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
+    poll_id = 'poll-%s' % (conversation.key,)
+    pm, poll_data = get_poll_config(poll_id)
+    questions_data = poll_data.get('questions', [])
+
+    if request.method == 'POST':
+        post_data = request.POST.copy()
+        post_data.update({
+            'poll_id': poll_id,
+        })
+
+        questions_formset = forms.make_form_set(data=post_data)
+        poll_form = forms.SurveyPollForm(data=post_data)
+        if questions_formset.is_valid() and poll_form.is_valid():
+            data = poll_form.cleaned_data.copy()
+            data.update({
+                'questions': _clear_empties(questions_formset.cleaned_data)
+                })
+            pm.set(poll_id, data)
+            messages.info(request, 'Conversation updated.')
+            if request.POST.get('_save_contents'):
+                return redirect(reverse('survey:edit', kwargs={
+                    'conversation_key': conversation.key,
+                }))
+            else:
+                return redirect(reverse('survey:show', kwargs={
+                    'conversation_key': conversation.key,
+                }))
+    else:
+        poll_form = forms.SurveyPollForm(initial=poll_data)
+        questions_formset = forms.make_form_set(initial=questions_data)
+
+    return render(request, 'surveys/edit.html', {
+        'conversation': conversation,
+        'poll_form': poll_form,
+        'questions_formset': questions_formset,
     })
