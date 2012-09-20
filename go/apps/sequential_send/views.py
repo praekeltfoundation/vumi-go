@@ -2,16 +2,18 @@ import itertools
 
 from django import forms
 
+from bootstrap.forms import BootstrapForm
+
 from go.conversation.base import ConversationViews
 from go.conversation.forms import VumiModelForm
 
 
-class ScheduleForm(forms.Form):
+class ScheduleForm(BootstrapForm):
     recurring = forms.CharField()
     time = forms.CharField()
 
 
-class MessageForm(forms.Form):
+class MessageForm(BootstrapForm):
     message = forms.CharField()
 
 
@@ -120,5 +122,5 @@ class SequentialSendConversationViews(ConversationViews):
         ('schedule', ScheduleForm),
         ('messages', MessageFormSet),
         )
-    conversation_start_params = {'no_batch_tag': True}
+    conversation_start_params = {'no_batch_tag': True, 'acquire_tag': False}
     conversation_form = UsedTagConversationForm
