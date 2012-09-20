@@ -1,12 +1,20 @@
 from django.forms.formsets import formset_factory
 
-from bootstrap.forms import BootstrapMixin
+from bootstrap.forms import BootstrapMixin, Fieldset
 
 from vxpolls.content import forms
 
 
 class SurveyPollForm(BootstrapMixin, forms.PollForm):
-    pass
+    class Meta:
+        layout = (
+            Fieldset('Miscellaneous'),
+            'poll_id',
+            'repeatable',
+            'case_sensitive',
+            'include_labels',
+            'survey_completed_response',
+        )
 
 class SurveyQuestionForm(BootstrapMixin, forms.QuestionForm):
     pass

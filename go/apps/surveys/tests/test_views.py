@@ -3,6 +3,7 @@ from django.core.urlresolvers import reverse
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.apps.surveys.views import get_poll_config
 
 
 TEST_GROUP_NAME = u"Test Group"
@@ -168,3 +169,49 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.subject, 'Test Conversation')
+
+    def test_edit(self):
+        survey_url = reverse('survey:edit', kwargs={
+            'conversation_key': self.conv_key,
+            })
+        show_url = reverse('survey:show', kwargs={
+            'conversation_key': self.conv_key,
+            })
+        response = self.client.post(survey_url, {
+            'form-TOTAL_FORMS': 1,
+            'form-INITIAL_FORMS': 0,
+            'form-MAX_NUM_FORMS': '',
+            'form-0-copy': 'What is your favorite music?',
+            'form-0-label': 'favorite music',
+            'form-0-valid_responses': 'rock, jazz, techno',
+        })
+        self.assertRedirects(response, show_url)
+        poll_id = 'poll-%s' % (self.conv_key,)
+        pm, config = get_poll_config(poll_id)
+        [question] = config['questions']
+        self.assertEqual(question['copy'], 'What is your favorite music?')
+        self.assertEqual(question['valid_responses'], [
+            'rock', 'jazz', 'techno'])
+        self.assertEqual(question['label'], 'favorite music')
+
+    def test_edit_continue_editing(self):
+        survey_url = reverse('survey:edit', kwargs={
+            'conversation_key': self.conv_key,
+        })
+        response = self.client.post(survey_url, {
+            'form-TOTAL_FORMS': 1,
+            'form-INITIAL_FORMS': 0,
+            'form-MAX_NUM_FORMS': '',
+            'form-0-copy': 'What is your favorite music?',
+            'form-0-label': 'favorite music',
+            'form-0-valid_responses': 'rock, jazz, techno',
+            '_save_contents': 1
+        })
+        self.assertRedirects(response, survey_url)
+        poll_id = 'poll-%s' % (self.conv_key,)
+        pm, config = get_poll_config(poll_id)
+        [question] = config['questions']
+        self.assertEqual(question['copy'], 'What is your favorite music?')
+        self.assertEqual(question['valid_responses'], [
+            'rock', 'jazz', 'techno'])
+        self.assertEqual(question['label'], 'favorite music')
