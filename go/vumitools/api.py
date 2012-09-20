@@ -27,6 +27,7 @@ from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
 
 from django.conf import settings
+from django.utils.datastructures import SortedDict
 
 
 class TagpoolSet(object):
@@ -153,9 +154,9 @@ class VumiUserApi(object):
         permissions = yield user_account.applications.get_all()
         applications = [p.application for p in permissions]
         app_settings = settings.VUMI_INSTALLED_APPS
-        returnValue(dict([(application,
+        returnValue(SortedDict([(application,
                         app_settings[application])
-                        for application in applications
+                        for application in sorted(applications)
                         if application in app_settings]))
 
     def list_groups(self):
