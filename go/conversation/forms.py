@@ -45,7 +45,7 @@ class VumiModelForm(BootstrapForm):
 
 class ConversationForm(VumiModelForm):
     subject = forms.CharField(required=True)
-    message = forms.CharField(required=True)
+    message = forms.CharField(required=True, widget=forms.Textarea)
     start_date = forms.DateField(required=False)
     start_time = forms.TimeField(required=False)
     # widget choices populated in __init__
