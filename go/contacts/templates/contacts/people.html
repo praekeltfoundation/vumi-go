@@ -24,7 +24,7 @@
             <form id="search-filter" name="search-filter" action="" method="get" class="well form-search">
                 <input type="text" id="search-filter-input" name="q" value="{{query|default:''}}" placeholder="Find people..." class="input-large search-query">
                 <button type="submit" id="search-filter-btn" class="btn">Search</button>
-                {% if query and selected_contacts %}
+                {% if query %}
                 <span class="help-block">
                     Create a <a href="#createSmartGroup" data-toggle="modal">Smart Group</a> using these results.
                 </span>
