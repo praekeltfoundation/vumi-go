@@ -1,0 +1,29 @@
+{% extends "app.html" %}
+
+{% block extra_header %}
+    <link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
+    <link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
+{% endblock %}
+
+{% block main %}
+    <div class="row">
+        <div class="span12">
+            <div id="welcome">
+                <h1><a href="{% url conversations:index %}">Surveys</a> &raquo; {{conversation.subject}}</h1>
+            </div>
+        </div>
+    </div>
+    <form name="conversation" id="conversation" method="post" action="">
+        <fieldset>
+            {% include "surveys/includes/contents.html" with form=form %}
+            <div class="btn-toolbar">
+                <input type="submit" name="_save_contents" value="Save and add another question" class="btn btn-primary" />
+                <input type="submit" value="Continue &rarr;" class="btn" />
+            </div>
+            <div class="btn-toolbar">
+                <input type="submit" name="_delete_survey" value="Remove !" class="btn btn-danger" />
+            </div>
+        </fieldset>
+    </form>
+{% endblock %}
+
