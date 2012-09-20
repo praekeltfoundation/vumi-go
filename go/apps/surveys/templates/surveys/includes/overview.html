@@ -7,7 +7,7 @@
                 <form id="conversation-end" name="conversation-end" method="post" action="{{ conversation.get_absolute_url }}end/">
                      <a href="{{conversation.get_absolute_url}}edit/" class="btn btn-success"><i class="icon-edit icon-white"></i> Edit Conversation</a>
                     {% csrf_token %}
-                    <a href="javascript: document.getElementById('conversation-end').submit(); }" class="btn btn-danger"><i class="icon-remove-sign icon-white"></i> End</a>
+                    <button type="submit" class="btn btn-danger"><i class="icon-remove-sign icon-white"></i> End</button>
                 </form>
             {% endif %}
         </div>
