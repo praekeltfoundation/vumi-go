@@ -13,17 +13,27 @@
             </div>
         </div>
     </div>
-    <form name="conversation" id="conversation" method="post" action="">
-        <fieldset>
-            {% include "surveys/includes/contents.html" with form=form %}
-            <div class="btn-toolbar">
-                <input type="submit" name="_save_contents" value="Save and add another question" class="btn btn-primary" />
-                <input type="submit" value="Continue &rarr;" class="btn" />
-            </div>
-            <div class="btn-toolbar">
-                <input type="submit" name="_delete_survey" value="Remove !" class="btn btn-danger" />
-            </div>
-        </fieldset>
-    </form>
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            <form name="conversation" class="form-horizontal" id="conversation" method="post" action="">
+                <fieldset>
+                    {% include "surveys/includes/contents.html" with form=form %}
+                    <div class="control-group>"
+                        <label class="control-label">&nbsp;</label>
+                        <div class="controls">
+                            <input type="submit" name="_save_contents" value="Save and add another question" class="btn btn-primary" />
+                            <input type="submit" value="Return to Conversation &rarr;" class="btn" />
+                        </div>
+                    </div>
+                </fieldset>
+                {% csrf_token %}
+            </form>
+        </div>
+    </div>
 {% endblock %}
 

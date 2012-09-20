@@ -240,19 +240,24 @@ def edit(request, conversation_key):
         })
 
         questions_formset = forms.make_form_set(data=post_data)
-        poll_form = forms.PollForm(data=post_data)
+        poll_form = forms.SurveyPollForm(data=post_data)
         if questions_formset.is_valid() and poll_form.is_valid():
             data = poll_form.cleaned_data.copy()
             data.update({
                 'questions': _clear_empties(questions_formset.cleaned_data)
                 })
             pm.set(poll_id, data)
-
-            return redirect(reverse('survey:show', kwargs={
-                'conversation_key': conversation.key,
-            }))
+            messages.info(request, 'Conversation updated.')
+            if request.POST.get('_save_contents'):
+                return redirect(reverse('survey:edit', kwargs={
+                    'conversation_key': conversation.key,
+                }))
+            else:
+                return redirect(reverse('survey:show', kwargs={
+                    'conversation_key': conversation.key,
+                }))
     else:
-        poll_form = forms.PollForm(initial=poll_data)
+        poll_form = forms.SurveyPollForm(initial=poll_data)
         questions_formset = forms.make_form_set(initial=questions_data)
 
     return render(request, 'surveys/edit.html', {
