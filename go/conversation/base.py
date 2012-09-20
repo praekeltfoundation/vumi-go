@@ -361,7 +361,8 @@ class ConversationViews(object):
             tagpool_filter=self.tagpool_filter,
             conversation_initiator=self.conversation_initiator,
             conversation_display_name=self.conversation_display_name,
-            edit_conversation_forms=self.edit_conversation_forms)
+            edit_conversation_forms=self.edit_conversation_forms,
+            conversation_start_params=self.conversation_start_params)
 
     def mkurl(self, name, regex=None):
         if regex is None:
