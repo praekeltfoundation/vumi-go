@@ -2,16 +2,18 @@ import itertools
 
 from django import forms
 
+from bootstrap.forms import BootstrapForm
+
 from go.conversation.base import ConversationViews
 from go.conversation.forms import VumiModelForm
 
 
-class ScheduleForm(forms.Form):
+class ScheduleForm(BootstrapForm):
     recurring = forms.CharField()
     time = forms.CharField()
 
 
-class MessageForm(forms.Form):
+class MessageForm(BootstrapForm):
     message = forms.CharField()
 
 
