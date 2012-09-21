@@ -355,14 +355,37 @@ class GoApplicationRouter(BaseDispatchRouter):
         self.vumi_api = None
 
     @inlineCallbacks
-    def find_application_for_msg(self, msg):
+    def get_vumi_api(self):
         if self.vumi_api is None:
             self.vumi_api = yield self.vumi_api_d
-        md = GoMessageMetadata(self.vumi_api, msg)
+        returnValue(self.vumi_api)
+
+    @inlineCallbacks
+    def find_application_for_msg(self, msg):
+        vumi_api = yield self.get_vumi_api()
+        md = GoMessageMetadata(vumi_api, msg)
         conversation_info = yield md.get_conversation_info()
         if conversation_info:
             conversation_key, conversation_type = conversation_info
             returnValue(self.conversation_mappings[conversation_type])
+
+    @inlineCallbacks
+    def find_application_for_event(self, event):
+        """
+        Look up the application for a given event by first looking up the
+        message that the event is for and then using
+        `find_application_for_msg()` to look up the application.
+        """
+        vumi_api = yield self.get_vumi_api()
+        user_message_id = event.get('user_message_id')
+        if user_message_id is None:
+            log.error('Received event without user_message_id: %s' % (event,))
+        message = yield vumi_api.mdb.get_outbound_message(user_message_id)
+        if message is None:
+            log.error('Unable to find message for event: %s' % (event,))
+
+        application = yield self.find_application_for_msg(message)
+        returnValue(application)
 
     @inlineCallbacks
     def dispatch_inbound_message(self, msg):
@@ -380,14 +403,14 @@ class GoApplicationRouter(BaseDispatchRouter):
                             'type: %s' % (msg,))
 
     @inlineCallbacks
-    def dispatch_inbound_event(self, msg):
-        application = yield self.find_application_for_msg(msg)
+    def dispatch_inbound_event(self, event):
+        application = yield self.find_application_for_event(event)
         if application:
             publisher = self.dispatcher.exposed_event_publisher[application]
-            yield publisher.publish_message(msg)
+            yield publisher.publish_message(event)
         else:
             log.error('No application setup for inbount event type: %s' % (
-                        msg,))
+                        event,))
 
     @inlineCallbacks
     def dispatch_outbound_message(self, msg):
