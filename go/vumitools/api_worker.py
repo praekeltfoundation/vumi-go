@@ -130,9 +130,12 @@ class GoMessageMetadata(object):
         tag_info = yield self._get_tag_info()
         if tag_info:
             batch = yield tag_info.current_batch.get()
-            self._store_objects['batch'] = batch
-            self._go_metadata['batch_key'] = batch.key
-            returnValue(batch)
+            if batch is not None:
+                self._store_objects['batch'] = batch
+                self._go_metadata['batch_key'] = batch.key
+                returnValue(batch)
+            else:
+                log.error('Cannot find batch for tag_info %s' % (tag_info,))
 
     @inlineCallbacks
     def get_batch_key(self):
