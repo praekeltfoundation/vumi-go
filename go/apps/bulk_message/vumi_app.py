@@ -35,6 +35,10 @@ class BulkMessageApplication(GoApplicationWorker):
             return
 
         conv = yield self.get_conversation(batch_id, conversation_key)
+        if conv is None:
+            log.warning('Cannot find conversation for batch_id: %s '
+                'and conversation_key: %s' % (batch_id, conversation_key))
+            return
 
         to_addresses = yield conv.get_opted_in_addresses()
         if extra_params.get('dedupe'):
