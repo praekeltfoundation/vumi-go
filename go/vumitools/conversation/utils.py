@@ -125,6 +125,22 @@ class ConversationWrapper(object):
         return int(status['ack'] / float(status['sent']) * 100)
 
     @Manager.calls_manager
+    def make_message_options(self, tag):
+        msg_options = {}
+        # TODO: transport_type is probably irrelevant
+        msg_options['transport_type'] = yield self.get_tagpool_metadata(
+            'transport_type')
+        # TODO: not sure whether to declare that tag names must always be
+        #       valid from_addr values or whether to put in a mapping somewhere
+        msg_options['from_addr'] = tag[1]
+        msg_options.update(
+            (yield self.get_tagpool_metadata('msg_options', {})))
+        TaggingMiddleware.add_tag_to_payload(msg_options, tag)
+        DebitAccountMiddleware.add_user_to_payload(msg_options,
+                                                   self.c.user_account.key)
+        returnValue(msg_options)
+
+    @Manager.calls_manager
     def start(self, no_batch_tag=False, acquire_tag=True, **extra_params):
         """
         Send the start command to this conversations application worker.
@@ -138,18 +154,7 @@ class ConversationWrapper(object):
         batch_tags = [] if no_batch_tag else [tag]
         batch_id = yield self.start_batch(*batch_tags)
 
-        msg_options = {}
-        # TODO: transport_type is probably irrelevant
-        msg_options['transport_type'] = yield self.get_tagpool_metadata(
-            'transport_type')
-        # TODO: not sure whether to declare that tag names must always be
-        #       valid from_addr values or whether to put in a mapping somewhere
-        msg_options['from_addr'] = tag[1]
-        msg_options.update(
-            (yield self.get_tagpool_metadata('msg_options', {})))
-        TaggingMiddleware.add_tag_to_payload(msg_options, tag)
-        DebitAccountMiddleware.add_user_to_payload(msg_options,
-                                                   self.c.user_account.key)
+        msg_options = yield self.make_message_options(tag)
 
         is_client_initiated = yield self.is_client_initiated()
         yield self.dispatch_command('start',

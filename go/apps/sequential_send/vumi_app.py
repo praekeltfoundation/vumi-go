@@ -110,6 +110,8 @@ class SequentialSendApplication(GoApplicationWorker):
         conv_jsons = yield self._get_scheduled_conversations()
         conversations = yield self.get_conversations(
             [json.loads(c) for c in conv_jsons])
+        log.debug("Processing %s to %s: %s" % (
+            then, now, [c.key for c in conversations]))
         for conv in conversations:
             yield self.process_conversation_schedule(then, now, conv)
 
@@ -124,6 +126,8 @@ class SequentialSendApplication(GoApplicationWorker):
         messages = conv.get_metadata()['messages']
         batch_id = conv.get_batch_keys()[0]
         contacts = yield self.get_contacts_with_addresses(conv)
+        tag = (conv.c.delivery_tag_pool, conv.c.delivery_tag)
+        message_options = yield conv.make_message_options(tag)
 
         for contact, to_addr in contacts:
             index_key = 'scheduled_message_index_%s' % (conv.key,)
@@ -133,7 +137,7 @@ class SequentialSendApplication(GoApplicationWorker):
                 continue
 
             yield self.send_message(
-                batch_id, to_addr, messages[message_index], {})
+                batch_id, to_addr, messages[message_index], message_options)
 
             contact.extra[index_key] = u'%s' % (message_index + 1)
             yield contact.save()
@@ -173,10 +177,13 @@ class SequentialSendApplication(GoApplicationWorker):
                               conversation_key, msg_options,
                               is_client_initiated, **extra_params):
 
-        if is_client_initiated:
-            log.warning('Trying to start a client initiated conversation '
-                        'on a sequential send.')
-            return
+        # # This stuff is broken, because `is_client_initiated` depends on the
+        # # tagpool rather than the conversation.
+        # if is_client_initiated:
+        #     log.warning('Trying to start a client initiated conversation '
+        #                 'on a sequential send.')
+        #     return
 
+        log.debug("Scheduling conversation: %s" % (conversation_key,))
         yield self.redis.sadd('scheduled_conversations', json.dumps(
                 [batch_id, conversation_key]))

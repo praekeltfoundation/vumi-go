@@ -64,9 +64,10 @@ class UsedTagConversationForm(VumiModelForm):
         kw.pop('tagpool_filter', None)  # We need to get rid of this.
         super(UsedTagConversationForm, self).__init__(*args, **kw)
 
-        self.conversations = sorted(
+        convs = sorted(
             user_api.conversation_store.list_conversations(),
             key=lambda c: c.created_at, reverse=True)
+        self.conversations = [c for c in convs if not c.ended()]
 
         self.tag_options = self._load_tag_options()
         self.fields['delivery_tag_pool'].widget.choices = list(
@@ -92,9 +93,6 @@ class UsedTagConversationForm(VumiModelForm):
     def tagpools_by_delivery_class(self):
         delivery_classes = []
         for conv in self.conversations:
-            delivery_class = conv.delivery_class
-            if delivery_class is None:
-                continue
             display_name = conv.subject
             delivery_classes.append((conv.key, [
                         (display_name, self.tag_options[conv.key])]))
