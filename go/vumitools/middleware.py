@@ -1,10 +1,15 @@
 # -*- test-case-name: go.vumitools.tests.test_middleware -*-
 import sys
+import time
+
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.middleware.base import TransportMiddleware, BaseMiddleware
 from vumi.utils import normalize_msisdn
 from vumi.components.tagpool import TagpoolManager
+from vumi.blinkenlights.metrics import MetricManager, Count, Metric
+from vumi.persist.txredis_manager import TxRedisManager
 
 from go.vumitools.credit import CreditManager
 
@@ -151,3 +156,110 @@ class DebitAccountMiddleware(TransportMiddleware):
                                      " to debit %r." %
                                      (user_account_key, credits_per_message))
         return msg
+
+class MetricsMiddleware(BaseMiddleware):
+    """
+    Middleware that publishes metrics on messages flowing through.
+    It tracks the number of messages sent & received on the various
+    transports and the average response times for messages received.
+
+    :param str manager_name:
+        The name of the metrics publisher, this is used for the MetricManager
+        publisher and all metric names will be prefixed with it.
+    :param str count_suffix:
+        Defaults to 'count'. This is the suffix appended to all `transport_name`
+        based counters. If a message is received on endpoint 'foo', counters
+        are published on '<manager_name>.foo.inbound.<count_suffix>'
+    :param str response_time_suffix:
+        Defaults to 'response_time'. This is the suffix appended to all
+        `transport_name` based average response time metrics. If a message is
+        received its `message_id` is stored and when a reply for the given
+        `message_id` is sent out, the timestamps are compared and a averaged
+        metric is published.
+    :param dict redis_manager:
+        Connection configuration details for Redis.
+    """
+
+    def validate_config(self):
+        self.manager_name = self.config['manager_name']
+        self.count_suffix = self.config.get('count_suffix', 'count')
+        self.response_time_suffix = self.config.get('response_time_suffix',
+            'response_time')
+
+    @inlineCallbacks
+    def setup_middleware(self):
+        self.validate_config()
+        self.redis = yield TxRedisManager.from_config(
+            self.config['redis_manager'])
+        self.metric_manager = yield self.worker.start_publisher(MetricManager,
+            "%s." % (self.manager_name,))
+
+    def teardown_middleware(self):
+        self.metric_manager.stop()
+
+    def get_or_create_metric(self, name, metric_class, *args, **kwargs):
+        """
+        Get the metric for `name`, create it with
+        `metric_class(*args, **kwargs)` if it doesn't exist yet.
+        """
+        if name not in self.metric_manager:
+            self.metric_manager.register(metric_class(name, *args, **kwargs))
+        return self.metric_manager[name]
+
+    def get_counter_metric(self, name):
+        metric_name = '%s.%s' % (name, self.count_suffix)
+        return self.get_or_create_metric(metric_name, Count)
+
+    def increment_counter(self, transport_name, message_type):
+        metric = self.get_counter_metric('%s.%s' % (transport_name,
+            message_type))
+        metric.inc()
+
+    def get_response_time_metric(self, name):
+        metric_name = '%s.%s' % (name, self.response_time_suffix)
+        return self.get_or_create_metric(metric_name, Metric)
+
+    def set_response_time(self, transport_name, time):
+        metric = self.get_response_time_metric(transport_name)
+        metric.set(time)
+
+    def key(self, transport_name, message_id):
+        return '%s:%s' % (transport_name, message_id)
+
+    def set_inbound_timestamp(self, transport_name, message):
+        key = self.key(transport_name, message['message_id'])
+        return self.redis.set(key, repr(time.time()))
+
+    @inlineCallbacks
+    def get_outbound_timestamp(self, transport_name, message):
+        key = self.key(transport_name, message['in_reply_to'])
+        timestamp = yield self.redis.get(key)
+        if timestamp:
+            returnValue(float(timestamp))
+
+    @inlineCallbacks
+    def compare_timestamps(self, transport_name, message):
+        timestamp = yield self.get_outbound_timestamp(transport_name, message)
+        if timestamp:
+            self.set_response_time(transport_name, time.time() - timestamp)
+
+    @inlineCallbacks
+    def handle_inbound(self, message, endpoint):
+        self.increment_counter(message['transport_name'], 'inbound')
+        yield self.set_inbound_timestamp(message['transport_name'], message)
+        returnValue(message)
+
+    @inlineCallbacks
+    def handle_outbound(self, message, endpoint):
+        self.increment_counter(message['transport_name'], 'outbound')
+        yield self.compare_timestamps(message['transport_name'], message)
+        returnValue(message)
+
+    def handle_event(self, event, endpoint):
+        self.increment_counter(event['transport_name'], 'event')
+        return event
+
+    def handle_failure(self, failure, endpoint):
+        self.increment_counter(failure['transport_name'], 'failure')
+        return failure
+
