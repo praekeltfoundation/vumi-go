@@ -1,7 +1,7 @@
 """Tests for go.vumitools.middleware"""
 import time
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks, returnValue, maybeDeferred
 
 from vumi.message import TransportUserMessage
 from vumi.application.tests.test_base import DummyApplicationWorker
@@ -119,8 +119,12 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(MetricsMiddlewareTestCase, self).setUp()
-        self.config = self.default_config.copy()
-        self.config.update({
+        self._middlewares = []
+
+    @inlineCallbacks
+    def get_middleware(self, config=None, mw_class=MetricsMiddleware):
+        default_config = self.default_config.copy()
+        default_config.update({
             'manager_name': 'metrics_manager',
             'count_suffix': 'counter',
             'response_time_suffix': 'timer',
@@ -128,64 +132,114 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
                 'FAKE_REDIS': 'yes please',
             }
         })
-        self.mw = yield self.create_middleware(MetricsMiddleware,
-            config=self.config)
+        if config is not None:
+            default_config.update(config)
+        mw = yield self.create_middleware(MetricsMiddleware,
+            config=default_config)
+        self._middlewares.append(mw)
+        returnValue(mw)
 
+    @inlineCallbacks
     def tearDown(self):
-        self.mw.teardown_middleware()
+        for mw in self._middlewares:
+            yield maybeDeferred(mw.teardown_middleware)
 
     @inlineCallbacks
-    def test_inbound_counters(self):
+    def test_active_inbound_counters(self):
+        mw = yield self.get_middleware({'inspection_mode': 'active'})
         msg1 = self.mk_msg(transport_name='endpoint_0')
         msg2 = self.mk_msg(transport_name='endpoint_1')
         msg3 = self.mk_msg(transport_name='endpoint_1')
         # The middleware inspects the message's transport_name value, not
         # the dispatcher endpoint it was received on.
-        yield self.mw.handle_inbound(msg1, 'dummy_endpoint')
-        yield self.mw.handle_inbound(msg2, 'dummy_endpoint')
-        yield self.mw.handle_inbound(msg3, 'dummy_endpoint')
-        endpoint0_metric = self.mw.metric_manager['endpoint_0.inbound.counter']
+        yield mw.handle_inbound(msg1, 'dummy_endpoint')
+        yield mw.handle_inbound(msg2, 'dummy_endpoint')
+        yield mw.handle_inbound(msg3, 'dummy_endpoint')
+        endpoint0_metric = mw.metric_manager['endpoint_0.inbound.counter']
         endpoint0_values = endpoint0_metric.poll()
-        endpoint1_metric = self.mw.metric_manager['endpoint_1.inbound.counter']
+        endpoint1_metric = mw.metric_manager['endpoint_1.inbound.counter']
         endpoint1_values = endpoint1_metric.poll()
         self.assertEqual(sum([m[1] for m in endpoint0_values]), 1)
         self.assertEqual(sum([m[1] for m in endpoint1_values]), 2)
 
     @inlineCallbacks
-    def test_outbound_counters(self):
+    def test_passive_inbound_counters(self):
+        mw = yield self.get_middleware({'inspection_mode': 'passive'})
+        msg1 = self.mk_msg(transport_name='endpoint_0')
+        yield mw.handle_inbound(msg1, 'dummy_endpoint')
+        [metric] = mw.metric_manager['dummy_endpoint.inbound.counter'].poll()
+        self.assertEqual(metric[1], 1)
+
+    @inlineCallbacks
+    def test_active_outbound_counters(self):
+        mw = yield self.get_middleware({'inspection_mode': 'active'})
         msg1 = self.mk_msg(transport_name='endpoint_0')
         msg2 = self.mk_msg(transport_name='endpoint_1')
         msg3 = self.mk_msg(transport_name='endpoint_1')
         # The middleware inspects the message's transport_name value, not
         # the dispatcher endpoint it was received on.
-        yield self.mw.handle_outbound(msg1, 'dummy_endpoint')
-        yield self.mw.handle_outbound(msg2, 'dummy_endpoint')
-        yield self.mw.handle_outbound(msg3, 'dummy_endpoint')
-        endpoint0_metric = self.mw.metric_manager['endpoint_0.outbound.counter']
+        yield mw.handle_outbound(msg1, 'dummy_endpoint')
+        yield mw.handle_outbound(msg2, 'dummy_endpoint')
+        yield mw.handle_outbound(msg3, 'dummy_endpoint')
+        endpoint0_metric = mw.metric_manager['endpoint_0.outbound.counter']
         endpoint0_values = endpoint0_metric.poll()
-        endpoint1_metric = self.mw.metric_manager['endpoint_1.outbound.counter']
+        endpoint1_metric = mw.metric_manager['endpoint_1.outbound.counter']
         endpoint1_values = endpoint1_metric.poll()
         self.assertEqual(sum([m[1] for m in endpoint0_values]), 1)
         self.assertEqual(sum([m[1] for m in endpoint1_values]), 2)
 
     @inlineCallbacks
-    def test_response_time_inbound(self):
+    def test_passive_outbound_counters(self):
+        mw = yield self.get_middleware({'inspection_mode': 'passive'})
+        msg1 = self.mk_msg(transport_name='endpoint_0')
+        yield mw.handle_outbound(msg1, 'dummy_endpoint')
+        [metric] = mw.metric_manager['dummy_endpoint.outbound.counter'].poll()
+        self.assertEqual(metric[1], 1)
+
+    @inlineCallbacks
+    def test_active_response_time_inbound(self):
+        mw = yield self.get_middleware({'inspection_mode': 'active'})
         msg = self.mk_msg(transport_name='endpoint_0')
-        yield self.mw.handle_inbound(msg, 'dummy_endpoint')
-        key = self.mw.key('endpoint_0', msg['message_id'])
-        timestamp = yield self.mw.redis.get(key)
+        yield mw.handle_inbound(msg, 'dummy_endpoint')
+        key = mw.key('endpoint_0', msg['message_id'])
+        timestamp = yield mw.redis.get(key)
         self.assertTrue(timestamp)
 
     @inlineCallbacks
-    def test_response_time_comparison_on_outbound(self):
+    def test_passive_response_time_inbound(self):
+        mw = yield self.get_middleware({'inspection_mode': 'passive'})
+        msg = self.mk_msg(transport_name='endpoint_0')
+        yield mw.handle_inbound(msg, 'dummy_endpoint')
+        key = mw.key('dummy_endpoint', msg['message_id'])
+        timestamp = yield mw.redis.get(key)
+        self.assertTrue(timestamp)
+
+    @inlineCallbacks
+    def test_active_response_time_comparison_on_outbound(self):
+        mw = yield self.get_middleware({'inspection_mode': 'active'})
         inbound_msg = self.mk_msg(transport_name='endpoint_0')
-        key = self.mw.key('endpoint_0', inbound_msg['message_id'])
+        key = mw.key('endpoint_0', inbound_msg['message_id'])
         # Fake it to be 10 seconds in the past
         timestamp = time.time() - 10
-        yield self.mw.redis.set(key, repr(timestamp))
+        yield mw.redis.set(key, repr(timestamp))
         outbound_msg = self.mk_msg(transport_name='endpoint_0',
             in_reply_to=inbound_msg['message_id'])
-        yield self.mw.handle_outbound(outbound_msg, 'dummy_endpoint')
-        [timer_metric] = self.mw.metric_manager['endpoint_0.timer'].poll()
+        yield mw.handle_outbound(outbound_msg, 'dummy_endpoint')
+        [timer_metric] = mw.metric_manager['endpoint_0.timer'].poll()
+        [timestamp, value] = timer_metric
+        self.assertTrue(value > 10)
+
+    @inlineCallbacks
+    def test_passive_response_time_comparison_on_outbound(self):
+        mw = yield self.get_middleware({'inspection_mode': 'passive'})
+        inbound_msg = self.mk_msg(transport_name='endpoint_0')
+        key = mw.key('dummy_endpoint', inbound_msg['message_id'])
+        # Fake it to be 10 seconds in the past
+        timestamp = time.time() - 10
+        yield mw.redis.set(key, repr(timestamp))
+        outbound_msg = self.mk_msg(transport_name='endpoint_0',
+            in_reply_to=inbound_msg['message_id'])
+        yield mw.handle_outbound(outbound_msg, 'dummy_endpoint')
+        [timer_metric] = mw.metric_manager['dummy_endpoint.timer'].poll()
         [timestamp, value] = timer_metric
         self.assertTrue(value > 10)

@@ -10,6 +10,7 @@ from vumi.utils import normalize_msisdn
 from vumi.components.tagpool import TagpoolManager
 from vumi.blinkenlights.metrics import MetricManager, Count, Metric
 from vumi.persist.txredis_manager import TxRedisManager
+from vumi.errors import ConfigError
 
 from go.vumitools.credit import CreditManager
 
@@ -178,13 +179,26 @@ class MetricsMiddleware(BaseMiddleware):
         metric is published.
     :param dict redis_manager:
         Connection configuration details for Redis.
+    :param str inspection_mode:
+        What mode to operate in, options are `passive` or `active`.
+        Defaults to passive.
+        *passive*:  assumes the middleware endpoints are to be used as the names
+                    for metrics publishing.
+        *active*:   assumes that the individual messages are to be inspected
+                    for their `transport_name` values.
     """
+
+    KNOWN_MODES = frozenset(['active', 'passive'])
 
     def validate_config(self):
         self.manager_name = self.config['manager_name']
         self.count_suffix = self.config.get('count_suffix', 'count')
         self.response_time_suffix = self.config.get('response_time_suffix',
             'response_time')
+        self.inspection_mode = self.config.get('inspection_mode', 'passive')
+        if self.inspection_mode not in self.KNOWN_MODES:
+            raise ConfigError('Unknown inspection_mode: %s' % (
+                self.inspection_mode,))
 
     @inlineCallbacks
     def setup_middleware(self):
@@ -243,16 +257,23 @@ class MetricsMiddleware(BaseMiddleware):
         if timestamp:
             self.set_response_time(transport_name, time.time() - timestamp)
 
+    def mode(self, message, endpoint):
+        if self.inspection_mode == 'active':
+            return message['transport_name']
+        return endpoint
+
     @inlineCallbacks
     def handle_inbound(self, message, endpoint):
-        self.increment_counter(message['transport_name'], 'inbound')
-        yield self.set_inbound_timestamp(message['transport_name'], message)
+        self.increment_counter(self.mode(message, endpoint),
+            'inbound')
+        yield self.set_inbound_timestamp(self.mode(message, endpoint), message)
         returnValue(message)
 
     @inlineCallbacks
     def handle_outbound(self, message, endpoint):
-        self.increment_counter(message['transport_name'], 'outbound')
-        yield self.compare_timestamps(message['transport_name'], message)
+        self.increment_counter(self.mode(message, endpoint),
+            'outbound')
+        yield self.compare_timestamps(self.mode(message, endpoint), message)
         returnValue(message)
 
     def handle_event(self, event, endpoint):
