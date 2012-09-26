@@ -186,6 +186,10 @@ class MetricsMiddleware(BaseMiddleware):
                     for metrics publishing.
         *active*:   assumes that the individual messages are to be inspected
                     for their `transport_name` values.
+
+        NOTE:   This does not apply for events or failures, the endpoints
+                are always used for those since those message types are not
+                guaranteed to have a `transport_name` value.
     """
 
     KNOWN_MODES = frozenset(['active', 'passive'])
@@ -277,10 +281,15 @@ class MetricsMiddleware(BaseMiddleware):
         returnValue(message)
 
     def handle_event(self, event, endpoint):
-        self.increment_counter(event['transport_name'], 'event')
+        self.increment_counter(endpoint, 'event')
+        self.increment_counter(endpoint, 'event.%s' % (event['event_type']))
+        if event['event_type'] == 'delivery_report':
+            self.increment_counter(endpoint, 'event.%s.%s' % (
+                event['event_type'], event['delivery_status']))
         return event
 
     def handle_failure(self, failure, endpoint):
-        self.increment_counter(failure['transport_name'], 'failure')
+        self.increment_counter(endpoint, 'failure')
+        self.increment_counter(endpoint, 'failure.%s' % (
+            failure['failure_code'] or 'unspecified',))
         return failure
-
