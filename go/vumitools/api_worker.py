@@ -347,6 +347,7 @@ class GoApplicationRouter(BaseDispatchRouter):
     based on their tags.
 
     """
+    @inlineCallbacks
     def setup_routing(self):
         # map conversation types to applications that deal with them
         self.conversation_mappings = self.config['conversation_mappings']
@@ -354,19 +355,11 @@ class GoApplicationRouter(BaseDispatchRouter):
         self.optout_transport = self.config['optout_transport']
 
         # TODO: Fix this madness.
-        self.vumi_api_d = VumiApi.from_config_async(self.config)
-        self.vumi_api = None
-
-    @inlineCallbacks
-    def get_vumi_api(self):
-        if self.vumi_api is None:
-            self.vumi_api = yield self.vumi_api_d
-        returnValue(self.vumi_api)
+        self.vumi_api = yield VumiApi.from_config_async(self.config)
 
     @inlineCallbacks
     def find_application_for_msg(self, msg):
-        vumi_api = yield self.get_vumi_api()
-        md = GoMessageMetadata(vumi_api, msg)
+        md = GoMessageMetadata(self.vumi_api, msg)
         conversation_info = yield md.get_conversation_info()
         if conversation_info:
             conversation_key, conversation_type = conversation_info
@@ -379,11 +372,10 @@ class GoApplicationRouter(BaseDispatchRouter):
         message that the event is for and then using
         `find_application_for_msg()` to look up the application.
         """
-        vumi_api = yield self.get_vumi_api()
         user_message_id = event.get('user_message_id')
         if user_message_id is None:
             log.error('Received event without user_message_id: %s' % (event,))
-        message = yield vumi_api.mdb.get_outbound_message(user_message_id)
+        message = yield self.vumi_api.mdb.get_outbound_message(user_message_id)
         if message is None:
             log.error('Unable to find message for event: %s' % (event,))
 
