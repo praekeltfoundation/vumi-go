@@ -5,6 +5,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue, maybeDeferred
 
 from vumi.message import TransportUserMessage
 from vumi.application.tests.test_base import DummyApplicationWorker
+from vumi.transports.failures import FailureMessage
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.middleware import (NormalizeMsisdnMiddleware,
@@ -146,7 +147,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_active_inbound_counters(self):
-        mw = yield self.get_middleware({'inspection_mode': 'active'})
+        mw = yield self.get_middleware({'op_mode': 'active'})
         msg1 = self.mk_msg(transport_name='endpoint_0')
         msg2 = self.mk_msg(transport_name='endpoint_1')
         msg3 = self.mk_msg(transport_name='endpoint_1')
@@ -164,7 +165,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_passive_inbound_counters(self):
-        mw = yield self.get_middleware({'inspection_mode': 'passive'})
+        mw = yield self.get_middleware({'op_mode': 'passive'})
         msg1 = self.mk_msg(transport_name='endpoint_0')
         yield mw.handle_inbound(msg1, 'dummy_endpoint')
         [metric] = mw.metric_manager['dummy_endpoint.inbound.counter'].poll()
@@ -172,7 +173,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_active_outbound_counters(self):
-        mw = yield self.get_middleware({'inspection_mode': 'active'})
+        mw = yield self.get_middleware({'op_mode': 'active'})
         msg1 = self.mk_msg(transport_name='endpoint_0')
         msg2 = self.mk_msg(transport_name='endpoint_1')
         msg3 = self.mk_msg(transport_name='endpoint_1')
@@ -190,7 +191,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_passive_outbound_counters(self):
-        mw = yield self.get_middleware({'inspection_mode': 'passive'})
+        mw = yield self.get_middleware({'op_mode': 'passive'})
         msg1 = self.mk_msg(transport_name='endpoint_0')
         yield mw.handle_outbound(msg1, 'dummy_endpoint')
         [metric] = mw.metric_manager['dummy_endpoint.outbound.counter'].poll()
@@ -198,7 +199,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_active_response_time_inbound(self):
-        mw = yield self.get_middleware({'inspection_mode': 'active'})
+        mw = yield self.get_middleware({'op_mode': 'active'})
         msg = self.mk_msg(transport_name='endpoint_0')
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         key = mw.key('endpoint_0', msg['message_id'])
@@ -207,7 +208,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_passive_response_time_inbound(self):
-        mw = yield self.get_middleware({'inspection_mode': 'passive'})
+        mw = yield self.get_middleware({'op_mode': 'passive'})
         msg = self.mk_msg(transport_name='endpoint_0')
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         key = mw.key('dummy_endpoint', msg['message_id'])
@@ -216,7 +217,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_active_response_time_comparison_on_outbound(self):
-        mw = yield self.get_middleware({'inspection_mode': 'active'})
+        mw = yield self.get_middleware({'op_mode': 'active'})
         inbound_msg = self.mk_msg(transport_name='endpoint_0')
         key = mw.key('endpoint_0', inbound_msg['message_id'])
         # Fake it to be 10 seconds in the past
@@ -231,7 +232,7 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_passive_response_time_comparison_on_outbound(self):
-        mw = yield self.get_middleware({'inspection_mode': 'passive'})
+        mw = yield self.get_middleware({'op_mode': 'passive'})
         inbound_msg = self.mk_msg(transport_name='endpoint_0')
         key = mw.key('dummy_endpoint', inbound_msg['message_id'])
         # Fake it to be 10 seconds in the past
@@ -243,3 +244,44 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
         [timer_metric] = mw.metric_manager['dummy_endpoint.timer'].poll()
         [timestamp, value] = timer_metric
         self.assertTrue(value > 10)
+
+    @inlineCallbacks
+    def test_ack_event(self):
+        mw = yield self.get_middleware({'op_mode': 'passive'})
+        event = self.mkmsg_ack()
+        mw.handle_event(event, 'dummy_endpoint')
+        [counter] = mw.metric_manager['dummy_endpoint.event.ack.counter'].poll()
+        self.assertEqual(counter[1], 1)
+
+    @inlineCallbacks
+    def test_delivery_report_event(self):
+        mw = yield self.get_middleware({'op_mode': 'passive'})
+        for status in ['delivered', 'failed']:
+            event = self.mkmsg_delivery(status=status)
+            mw.handle_event(event, 'dummy_endpoint')
+
+        def metric_name(status):
+            return 'dummy_endpoint.event.delivery_report.%s.counter' % (status,)
+
+        [delivered] = mw.metric_manager[metric_name('delivered')].poll()
+        [failed] = mw.metric_manager[metric_name('failed')].poll()
+        self.assertEqual(delivered[1], 1)
+        self.assertEqual(failed[1], 1)
+
+    @inlineCallbacks
+    def test_failure(self):
+        mw = yield self.get_middleware({'op_mode': 'passive'})
+        for failure in ['permanent', 'temporary', None]:
+            fail_msg = FailureMessage(message='foo', failure_code=failure,
+                reason='bar')
+            mw.handle_failure(fail_msg, 'dummy_endpoint')
+
+        def metric_name(status):
+            return 'dummy_endpoint.failure.%s.counter' % (status,)
+
+        [permanent] = mw.metric_manager[metric_name('permanent')].poll()
+        [temporary] = mw.metric_manager[metric_name('temporary')].poll()
+        [unspecified] = mw.metric_manager[metric_name('unspecified')].poll()
+        self.assertEqual(permanent[1], 1)
+        self.assertEqual(temporary[1], 1)
+        self.assertEqual(unspecified[1], 1)

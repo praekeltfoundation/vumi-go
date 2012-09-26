@@ -179,7 +179,7 @@ class MetricsMiddleware(BaseMiddleware):
         metric is published.
     :param dict redis_manager:
         Connection configuration details for Redis.
-    :param str inspection_mode:
+    :param str op_mode:
         What mode to operate in, options are `passive` or `active`.
         Defaults to passive.
         *passive*:  assumes the middleware endpoints are to be used as the names
@@ -199,10 +199,10 @@ class MetricsMiddleware(BaseMiddleware):
         self.count_suffix = self.config.get('count_suffix', 'count')
         self.response_time_suffix = self.config.get('response_time_suffix',
             'response_time')
-        self.inspection_mode = self.config.get('inspection_mode', 'passive')
-        if self.inspection_mode not in self.KNOWN_MODES:
-            raise ConfigError('Unknown inspection_mode: %s' % (
-                self.inspection_mode,))
+        self.op_mode = self.config.get('op_mode', 'passive')
+        if self.op_mode not in self.KNOWN_MODES:
+            raise ConfigError('Unknown op_mode: %s' % (
+                self.op_mode,))
 
     @inlineCallbacks
     def setup_middleware(self):
@@ -261,27 +261,26 @@ class MetricsMiddleware(BaseMiddleware):
         if timestamp:
             self.set_response_time(transport_name, time.time() - timestamp)
 
-    def mode(self, message, endpoint):
-        if self.inspection_mode == 'active':
+    def get_name(self, message, endpoint):
+        if self.op_mode == 'active':
             return message['transport_name']
         return endpoint
 
     @inlineCallbacks
     def handle_inbound(self, message, endpoint):
-        self.increment_counter(self.mode(message, endpoint),
-            'inbound')
-        yield self.set_inbound_timestamp(self.mode(message, endpoint), message)
+        name = self.get_name(message, endpoint)
+        self.increment_counter(name, 'inbound')
+        yield self.set_inbound_timestamp(name, message)
         returnValue(message)
 
     @inlineCallbacks
     def handle_outbound(self, message, endpoint):
-        self.increment_counter(self.mode(message, endpoint),
-            'outbound')
-        yield self.compare_timestamps(self.mode(message, endpoint), message)
+        name = self.get_name(message, endpoint)
+        self.increment_counter(name, 'outbound')
+        yield self.compare_timestamps(name, message)
         returnValue(message)
 
     def handle_event(self, event, endpoint):
-        self.increment_counter(endpoint, 'event')
         self.increment_counter(endpoint, 'event.%s' % (event['event_type']))
         if event['event_type'] == 'delivery_report':
             self.increment_counter(endpoint, 'event.%s.%s' % (
@@ -289,7 +288,6 @@ class MetricsMiddleware(BaseMiddleware):
         return event
 
     def handle_failure(self, failure, endpoint):
-        self.increment_counter(endpoint, 'failure')
         self.increment_counter(endpoint, 'failure.%s' % (
             failure['failure_code'] or 'unspecified',))
         return failure
