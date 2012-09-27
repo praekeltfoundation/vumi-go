@@ -49,10 +49,8 @@ class WindowManagerTestCase(TestCase):
         flight2 = yield self.wm.next(self.window_id)
         self.assertEqual(len(flight2), 2)
 
-        # for key in flight2:
-        #     yield self.wm.remove(self.window_id, key)
+        for key in flight2:
+            yield self.wm.remove(self.window_id, key)
 
-        # flight3 = yield self.wm.next(self.window_id)
-        # self.assertEqual(flight3, [])
-
-
+        flight3 = yield self.wm.next(self.window_id)
+        self.assertEqual(flight3, None)

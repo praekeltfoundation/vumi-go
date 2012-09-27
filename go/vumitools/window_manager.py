@@ -55,7 +55,8 @@ class WindowManager(object):
         def check(d):
             waiting_list = yield self.redis.zcard(window_key)
             if waiting_list == 0:
-                raise StopIteration()
+                d.callback(None)
+                return
 
             flight_size = yield self.redis.scard(flight_key)
             room_available = self.window_size - flight_size
