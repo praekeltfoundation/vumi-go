@@ -38,10 +38,10 @@ class WindowManager(object):
 
     @inlineCallbacks
     def remove_window(self, window_id):
-        waiting_list = yield self.count_waiting()
+        waiting_list = yield self.count_waiting(window_id)
         if waiting_list:
             raise WindowException('Window not empty')
-        yield self.redis.zrem(window_id)
+        yield self.redis.zrem(self.WINDOW_KEY, window_id)
 
     @inlineCallbacks
     def add(self, window_id, data):
