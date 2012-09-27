@@ -3,8 +3,7 @@ import json
 import uuid
 import time
 
-from twisted.internet.defer import inlineCallbacks, Deferred
-from twisted.internet import reactor
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 
 class WindowException(Exception):
@@ -46,33 +45,28 @@ class WindowManager(object):
         yield self.redis.set(self.window_key(window_id, key),
             json.dumps([args, kwargs]))
 
+    @inlineCallbacks
     def next(self, window_id):
 
         window_key = self.window_key(window_id)
         flight_key = self.flight_key(window_id)
 
-        @inlineCallbacks
-        def check(d):
-            waiting_list = yield self.redis.zcard(window_key)
-            if waiting_list == 0:
-                d.callback(None)
-                return
+        waiting_list = yield self.redis.zcard(window_key)
+        if waiting_list == 0:
+            return
 
-            flight_size = yield self.redis.scard(flight_key)
-            room_available = self.window_size - flight_size
-            if room_available:
-                next_keys = yield self.redis.zrange(window_key, 0,
-                    room_available - 1)
-                for key in next_keys:
-                    yield self.redis.sadd(flight_key, key)
-                    yield self.redis.zrem(self.window_key(window_id), key)
-                d.callback(next_keys)
-            else:
-                d.callback([])
+        flight_size = yield self.redis.scard(flight_key)
+        room_available = self.window_size - flight_size
 
-        next_available = Deferred()
-        reactor.callLater(0, check, next_available)
-        return next_available
+        if room_available:
+            next_keys = yield self.redis.zrange(window_key, 0,
+                room_available - 1)
+            for key in next_keys:
+                yield self.redis.sadd(flight_key, key)
+                yield self.redis.zrem(self.window_key(window_id), key)
+            returnValue(next_keys)
+        else:
+            returnValue([])
 
     def get(self, window_id, key):
         return self.redis.get(self.window_key(window_id, key))
