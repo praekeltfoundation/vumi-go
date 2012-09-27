@@ -32,6 +32,17 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
             WindowException)
 
     @inlineCallbacks
+    def test_window_removal(self):
+        yield self.wm.add(self.window_id, 1)
+        yield self.assertFailure(self.wm.remove_window(self.window_id),
+            WindowException)
+        [key] = yield self.wm.next(self.window_id)
+        item = yield self.wm.get(self.window_id, key)
+        self.assertEqual(item, 1)
+        yield self.wm.remove(self.window_id, key)
+        self.assertEqual((yield self.wm.remove_window(self.window_id)), None)
+
+    @inlineCallbacks
     def test_adding_to_window(self):
         for i in range(10):
             yield self.wm.add(self.window_id, i)
