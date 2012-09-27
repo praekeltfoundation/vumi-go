@@ -24,6 +24,7 @@ class MiddlewareTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def tearDown(self):
+        yield super(MiddlewareTestCase, self).tearDown()
         for mw in self._middlewares:
             yield maybeDeferred(mw.teardown_middleware)
 
