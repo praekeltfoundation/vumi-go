@@ -37,13 +37,13 @@ class WindowManager(object):
         yield self.redis.sadd(self.WINDOW_KEY, window_id)
 
     @inlineCallbacks
-    def add(self, window_id, *args, **kwargs):
+    def add(self, window_id, data):
         key = uuid.uuid4().get_hex()
         yield self.redis.zadd(self.window_key(window_id), **{
             key: time.time()
             })
         yield self.redis.set(self.window_key(window_id, key),
-            json.dumps([args, kwargs]))
+            json.dumps(data))
 
     @inlineCallbacks
     def next(self, window_id):
@@ -76,8 +76,10 @@ class WindowManager(object):
         flight_key = self.flight_key(window_id)
         return self.redis.scard(flight_key)
 
+    @inlineCallbacks
     def get(self, window_id, key):
-        return self.redis.get(self.window_key(window_id, key))
+        json_data = yield self.redis.get(self.window_key(window_id, key))
+        returnValue(json.loads(json_data))
 
     @inlineCallbacks
     def remove(self, window_id, key):

@@ -50,7 +50,9 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         self.assertEqual((yield self.wm.count_waiting(self.window_id)), 2)
         self.assertEqual((yield self.wm.count_in_flight(self.window_id)), 10)
 
-        for key in flight1:
+        for i, key in enumerate(flight1):
+            result = yield self.wm.get(self.window_id, key)
+            self.assertEqual(result, i)
             yield self.wm.remove(self.window_id, key)
 
         self.assertEqual((yield self.wm.count_waiting(self.window_id)), 2)
@@ -61,7 +63,9 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         self.assertEqual((yield self.wm.count_waiting(self.window_id)), 0)
         self.assertEqual((yield self.wm.count_in_flight(self.window_id)), 2)
 
-        for key in flight2:
+        for i, key in enumerate(flight2):
+            result = yield self.wm.get(self.window_id, key)
+            self.assertEqual(result, i + 10)
             yield self.wm.remove(self.window_id, key)
 
         self.assertEqual((yield self.wm.count_in_flight(self.window_id)), 0)
