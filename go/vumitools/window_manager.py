@@ -9,16 +9,20 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 class WindowException(Exception):
     pass
 
+class WindowLockException(WindowException):
+    pass
+
 class WindowManager(object):
 
     WINDOW_KEY = 'windows'
     FLIGHT_KEY = 'inflight'
+    LOCK_KEY = 'locks'
 
     def __init__(self, redis, name='window_manager', window_size=100,
-        check_interval=2):
+        lock_lifetime=10):
         self.name = name
         self.window_size = window_size
-        self.check_interval = 2
+        self.lock_lifetime = 10
         self.redis = redis.sub_manager(self.name)
 
     def get_windows(self):
@@ -29,6 +33,9 @@ class WindowManager(object):
 
     def flight_key(self, *keys):
         return self.window_key(self.FLIGHT_KEY, *keys)
+
+    def lock_key(self, *keys):
+        return self.window_key(self.LOCK_KEY, *keys)
 
     @inlineCallbacks
     def create(self, window_id):
@@ -84,12 +91,45 @@ class WindowManager(object):
         return self.redis.zcard(flight_key)
 
     @inlineCallbacks
-    def get(self, window_id, key):
-        json_data = yield self.redis.get(self.window_key(window_id, key))
-        returnValue(json.loads(json_data))
+    def find_lock(self, window_id, key):
+        lock = yield self.redis.get(self.lock_key(window_id, key))
+        if lock:
+            returnValue(json.loads(lock))
 
     @inlineCallbacks
-    def remove(self, window_id, key):
-        yield self.redis.zrem(self.flight_key(window_id), key)
-        yield self.redis.delete(self.window_key(window_id, key))
+    def acquire_lock(self, window_id, key):
+        lock = yield self.find_lock(window_id, key)
+        if lock:
+            raise WindowLockException('Already locked')
 
+        lock = time.time()
+        lock_key = self.lock_key(window_id, key)
+        yield self.redis.set(lock_key, json.dumps(lock))
+        yield self.redis.expire(lock_key, self.lock_lifetime)
+        returnValue(lock)
+
+    @inlineCallbacks
+    def release_lock(self, window_id, key, lock):
+        found_lock = yield self.find_lock(window_id, key)
+        if found_lock == lock:
+            yield self.redis.delete(self.lock_key(window_id, key))
+            returnValue(True)
+        returnValue(False)
+
+    @inlineCallbacks
+    def get(self, window_id, key, lock):
+        found_lock = yield self.find_lock(window_id, key)
+        if found_lock and found_lock == lock:
+            json_data = yield self.redis.get(self.window_key(window_id, key))
+            returnValue(json.loads(json_data))
+        else:
+            raise WindowLockException('Invalid lock')
+
+    @inlineCallbacks
+    def remove(self, window_id, key, lock):
+        found_lock = yield self.find_lock(window_id, key)
+        if found_lock == lock:
+            yield self.redis.zrem(self.flight_key(window_id), key)
+            yield self.redis.delete(self.window_key(window_id, key))
+        else:
+            raise WindowLockException('Invalid lock')
