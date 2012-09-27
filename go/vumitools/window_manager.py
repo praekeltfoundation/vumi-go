@@ -51,11 +51,11 @@ class WindowManager(object):
         window_key = self.window_key(window_id)
         flight_key = self.flight_key(window_id)
 
-        waiting_list = yield self.redis.zcard(window_key)
+        waiting_list = yield self.count_waiting(window_id)
         if waiting_list == 0:
             return
 
-        flight_size = yield self.redis.scard(flight_key)
+        flight_size = yield self.count_in_flight(window_id)
         room_available = self.window_size - flight_size
 
         if room_available:
@@ -67,6 +67,14 @@ class WindowManager(object):
             returnValue(next_keys)
         else:
             returnValue([])
+
+    def count_waiting(self, window_id):
+        window_key = self.window_key(window_id)
+        return self.redis.zcard(window_key)
+
+    def count_in_flight(self, window_id):
+        flight_key = self.flight_key(window_id)
+        return self.redis.scard(flight_key)
 
     def get(self, window_id, key):
         return self.redis.get(self.window_key(window_id, key))
