@@ -65,9 +65,10 @@ class WindowManager(object):
                     room_available - 1)
                 for key in next_keys:
                     yield self.redis.sadd(flight_key, key)
+                    yield self.redis.zrem(self.window_key(window_id), key)
                 d.callback(next_keys)
             else:
-                reactor.callLater(self.check_interval, check, d)
+                d.callback([])
 
         next_available = Deferred()
         reactor.callLater(0, check, next_available)
@@ -79,6 +80,5 @@ class WindowManager(object):
     @inlineCallbacks
     def remove(self, window_id, key):
         yield self.redis.srem(self.flight_key(window_id), key)
-        yield self.redis.zrem(self.window_key(window_id), key)
         yield self.redis.delete(self.window_key(window_id, key))
 
