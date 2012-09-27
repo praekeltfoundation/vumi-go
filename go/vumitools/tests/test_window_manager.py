@@ -37,9 +37,10 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         yield self.assertFailure(self.wm.remove_window(self.window_id),
             WindowException)
         [key] = yield self.wm.next(self.window_id)
-        item = yield self.wm.get(self.window_id, key)
+        lock = yield self.wm.acquire_lock(self.window_id, key)
+        item = yield self.wm.get(self.window_id, key, lock)
         self.assertEqual(item, 1)
-        yield self.wm.remove(self.window_id, key)
+        yield self.wm.remove(self.window_id, key, lock)
         self.assertEqual((yield self.wm.remove_window(self.window_id)), None)
 
     @inlineCallbacks
@@ -62,9 +63,10 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         self.assertEqual((yield self.wm.count_in_flight(self.window_id)), 10)
 
         for i, key in enumerate(flight1):
-            result = yield self.wm.get(self.window_id, key)
+            lock = yield self.wm.acquire_lock(self.window_id, key)
+            result = yield self.wm.get(self.window_id, key, lock)
             self.assertEqual(result, i)
-            yield self.wm.remove(self.window_id, key)
+            yield self.wm.remove(self.window_id, key, lock)
 
         self.assertEqual((yield self.wm.count_waiting(self.window_id)), 2)
         self.assertEqual((yield self.wm.count_in_flight(self.window_id)), 0)
@@ -76,9 +78,10 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         self.assertEqual((yield self.wm.count_in_flight(self.window_id)), 2)
 
         for i, key in enumerate(flight2):
-            result = yield self.wm.get(self.window_id, key)
+            lock = yield self.wm.acquire_lock(self.window_id, key)
+            result = yield self.wm.get(self.window_id, key, lock)
             self.assertEqual(result, i + 10)
-            yield self.wm.remove(self.window_id, key)
+            yield self.wm.remove(self.window_id, key, lock)
 
         self.assertEqual((yield self.wm.count_in_flight(self.window_id)), 0)
         self.assertEqual((yield self.wm.next(self.window_id)), None)
