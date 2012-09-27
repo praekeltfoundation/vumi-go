@@ -391,15 +391,6 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
                 u'bulk_message', u'subject', u'message'))
 
     @inlineCallbacks
-    def tearDown(self):
-        # These aren't ready until we use the dispatcher, so we add them here
-        # instead of in setUp()
-        vumi_api = yield self.dispatcher._router.get_vumi_api()
-        self._persist_riak_managers.append(vumi_api.manager)
-        self._persist_redis_managers.append(vumi_api.redis)
-        yield super(GoApplicationRouterTestCase, self).tearDown()
-
-    @inlineCallbacks
     def test_tag_retrieval_and_message_dispatching(self):
         msg = self.mkmsg_in(transport_type='xmpp',
                                 transport_name=self.transport_name)
