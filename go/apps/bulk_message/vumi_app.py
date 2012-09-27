@@ -2,88 +2,14 @@
 # -*- coding: utf-8 -*-
 
 """Vumi application worker for the vumitools API."""
-import json
-import uuid
-import time
-
-from twisted.internet.defer import inlineCallbacks, returnValue, Deferred
-from twisted.internet import reactor
+from twisted.internet.defer import inlineCallbacks
 
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationWorker
+from go.vumitools.window_manager import WindowManager
 
-
-class WindowException(Exception):
-    pass
-
-class WindowManager(object):
-
-    WINDOW_KEY = 'windows'
-    FLIGHT_KEY = 'inflight'
-
-    def __init__(self, redis, name='window_manager', window_size=100,
-        check_interval=2):
-        self.name = name
-        self.window_size = window_size
-        self.check_interval = 2
-        self.redis = redis.submanager(self.name)
-
-    def get_windows(self):
-        return self.redis.smembers(self.WINDOW_KEY)
-
-    def window_key(self, *keys):
-        return ':'.join([self.WINDOW_KEY] + map(str, keys))
-
-    def flight_key(self, *keys):
-        return self.window_key(self.FLIGHT_KEY, *keys)
-
-    @inlineCallbacks
-    def create(self, window_id):
-        if (yield self.redis.sismember(self.WINDOW_KEY, window_id)):
-            raise WindowException('Window already exists: %s' % (window_id,))
-        yield self.redis.sadd(self.WINDOW_KEY, window_id)
-
-    @inlineCallbacks
-    def add(self, window_id, *args, **kwargs):
-        key = uuid.uuid4().get_hex()
-        yield self.redis.zadd(self.window_key(window_id), key=time.time())
-        yield self.redis.set(self.window_key(window_id, key),
-            json.dumps([args, kwargs]))
-
-    def next(self, window_id):
-
-        window_key = self.window_key(window_id)
-        flight_key = self.flight_key(window_id)
-
-        @inlineCallbacks
-        def check(d):
-            window_size = yield self.redis.scard(window_key)
-            if window_size == 0:
-                raise StopIteration()
-
-            flight_size = yield self.redis.scard(flight_key)
-            room_available = window_size - flight_size
-            if room_available:
-                next_keys = self.redis.zrange(window_key, 0, room_available)
-                for key in next_keys:
-                    yield self.redis.sadd(flight_key, key)
-                d.callback(next_keys)
-            else:
-                reactor.callLater(self.check_interval, check, d)
-
-        next_available = Deferred()
-        reactor.callLater(0, self.next, next_available)
-        return next_available
-
-    def get(self, window_id, key):
-        return self.redis.get(self.window_key(window_id, key))
-
-    @inlineCallbacks
-    def remove(self, window_id, key):
-        yield self.redis.zrem(self.window_key(window_id), key)
-        yield self.redis.delete(self.window_key(window_id, key))
 
 class BulkMessageApplication(GoApplicationWorker):
     """
