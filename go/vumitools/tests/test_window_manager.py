@@ -2,22 +2,25 @@ from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks
 
 from go.vumitools.window_manager import WindowManager, WindowException
-from vumi.persist.txredis_manager import TxRedisManager
+from vumi.tests.utils import PersistenceMixin
 
 
-class WindowManagerTestCase(TestCase):
+class WindowManagerTestCase(TestCase, PersistenceMixin):
 
     timeout = 1
 
     @inlineCallbacks
     def setUp(self):
-        redis = yield TxRedisManager.from_config({
-            'FAKE_REDIS': 'yes please',
-        })
+        self._persist_setUp()
+        redis = yield self.get_redis_manager()
         self.window_id = 'window_id'
         self.wm = WindowManager(redis, window_size=10)
-        self.wm.create(self.window_id)
+        yield self.wm.create(self.window_id)
         self.redis = self.wm.redis
+
+    @inlineCallbacks
+    def tearDown(self):
+        yield self._persist_tearDown()
 
     @inlineCallbacks
     def test_windows(self):
@@ -25,7 +28,8 @@ class WindowManagerTestCase(TestCase):
         self.assertTrue(self.window_id in windows)
 
     def test_window_recreation(self):
-        self.assertFailure(self.wm.create(self.window_id), WindowException)
+        return self.assertFailure(self.wm.create(self.window_id),
+            WindowException)
 
     @inlineCallbacks
     def test_adding_to_window(self):
