@@ -22,7 +22,7 @@ class WindowManager(object):
         self.redis = redis.sub_manager(self.name)
 
     def get_windows(self):
-        return self.redis.smembers(self.WINDOW_KEY)
+        return self.redis.zrange(self.WINDOW_KEY, 0, -1)
 
     def window_key(self, *keys):
         return ':'.join([self.WINDOW_KEY] + map(str, keys))
@@ -32,9 +32,16 @@ class WindowManager(object):
 
     @inlineCallbacks
     def create(self, window_id):
-        if (yield self.redis.sismember(self.WINDOW_KEY, window_id)):
+        if (yield self.redis.zscore(self.WINDOW_KEY, window_id)):
             raise WindowException('Window already exists: %s' % (window_id,))
-        yield self.redis.sadd(self.WINDOW_KEY, window_id)
+        yield self.redis.zadd(self.WINDOW_KEY, **{window_id: time.time()})
+
+    @inlineCallbacks
+    def remove_window(self, window_id):
+        waiting_list = yield self.count_waiting()
+        if waiting_list:
+            raise WindowException('Window not empty')
+        yield self.redis.zrem(window_id)
 
     @inlineCallbacks
     def add(self, window_id, data):
@@ -62,7 +69,7 @@ class WindowManager(object):
             next_keys = yield self.redis.zrange(window_key, 0,
                 room_available - 1)
             for key in next_keys:
-                yield self.redis.sadd(flight_key, key)
+                yield self.redis.zadd(flight_key, **{key: time.time()})
                 yield self.redis.zrem(self.window_key(window_id), key)
             returnValue(next_keys)
         else:
@@ -74,7 +81,7 @@ class WindowManager(object):
 
     def count_in_flight(self, window_id):
         flight_key = self.flight_key(window_id)
-        return self.redis.scard(flight_key)
+        return self.redis.zcard(flight_key)
 
     @inlineCallbacks
     def get(self, window_id, key):
@@ -83,6 +90,6 @@ class WindowManager(object):
 
     @inlineCallbacks
     def remove(self, window_id, key):
-        yield self.redis.srem(self.flight_key(window_id), key)
+        yield self.redis.zrem(self.flight_key(window_id), key)
         yield self.redis.delete(self.window_key(window_id, key))
 

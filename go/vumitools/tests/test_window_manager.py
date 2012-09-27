@@ -57,6 +57,7 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
 
         self.assertEqual((yield self.wm.count_waiting(self.window_id)), 2)
         self.assertEqual((yield self.wm.count_in_flight(self.window_id)), 0)
+
         flight2 = yield self.wm.next(self.window_id)
         self.assertEqual(len(flight2), 2)
         self.assertEqual((yield self.wm.next(self.window_id)), None)
