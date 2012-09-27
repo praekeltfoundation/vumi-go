@@ -20,6 +20,12 @@ class MiddlewareTestCase(AppWorkerTestCase):
     def setUp(self):
         yield super(MiddlewareTestCase, self).setUp()
         self.default_config = self.mk_config({})
+        self._middlewares = []
+
+    @inlineCallbacks
+    def tearDown(self):
+        for mw in self._middlewares:
+            yield maybeDeferred(mw.teardown_middleware)
 
     @inlineCallbacks
     def create_middleware(self, middleware_class, name='dummy_middleware',
@@ -28,6 +34,20 @@ class MiddlewareTestCase(AppWorkerTestCase):
         mw = middleware_class(name, config or self.default_config,
                                 dummy_worker)
         mw.setup_middleware()
+        returnValue(mw)
+
+    @inlineCallbacks
+    def get_middleware(self, config=None, mw_class=MetricsMiddleware):
+        default_config = self.mk_config({
+            'manager_name': 'metrics_manager',
+            'count_suffix': 'counter',
+            'response_time_suffix': 'timer',
+        })
+        if config is not None:
+            default_config.update(config)
+        mw = yield self.create_middleware(MetricsMiddleware,
+            config=default_config)
+        self._middlewares.append(mw)
         returnValue(mw)
 
     def mk_msg(self, **kwargs):
@@ -116,34 +136,6 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
         })
 
 class MetricsMiddlewareTestCase(MiddlewareTestCase):
-
-    @inlineCallbacks
-    def setUp(self):
-        yield super(MetricsMiddlewareTestCase, self).setUp()
-        self._middlewares = []
-
-    @inlineCallbacks
-    def get_middleware(self, config=None, mw_class=MetricsMiddleware):
-        default_config = self.default_config.copy()
-        default_config.update({
-            'manager_name': 'metrics_manager',
-            'count_suffix': 'counter',
-            'response_time_suffix': 'timer',
-            'redis_manager': {
-                'FAKE_REDIS': 'yes please',
-            }
-        })
-        if config is not None:
-            default_config.update(config)
-        mw = yield self.create_middleware(MetricsMiddleware,
-            config=default_config)
-        self._middlewares.append(mw)
-        returnValue(mw)
-
-    @inlineCallbacks
-    def tearDown(self):
-        for mw in self._middlewares:
-            yield maybeDeferred(mw.teardown_middleware)
 
     @inlineCallbacks
     def test_active_inbound_counters(self):
