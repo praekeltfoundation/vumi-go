@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.core.paginator import Paginator
+from django.contrib import messages
 
 from go.conversation.forms import ConversationSearchForm
 
@@ -47,8 +48,16 @@ def index(request):
                 "Unknown conversation status: %s" % (conversation_status,))
 
     if not (conversation_type or conversation_status or query):
+        active_conversations = request.user_api.active_conversations()
         conversations = [request.user_api.wrap_conversation(conversation) for
-                    conversation in request.user_api.active_conversations()]
+                    conversation in active_conversations]
+
+        has_active_sms_conversation = any([c.delivery_class=='sms'
+                                            for c in active_conversations])
+        has_archived_conversations = conv_store.list_conversations()
+        if not (has_active_sms_conversation) and has_archived_conversations:
+            messages.error(request, "You do not have any active SMS "
+                "conversations. Opt-outs will not work until you do.")
 
     # We want to pad with None to a multiple of the conversation size.
     # NOTE: If we have no conversations, we don't pad.

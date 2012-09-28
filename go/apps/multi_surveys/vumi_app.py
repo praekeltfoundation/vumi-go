@@ -12,7 +12,8 @@ from go.vumitools.app_worker import GoApplicationMixin
 
 def hacky_hack_hack(config):
     from vumi.persist.redis_manager import RedisManager
-    return RedisManager.from_config(dict(config, key_separator=':'))
+    hacked_config = config.copy()
+    return RedisManager.from_config(dict(hacked_config))
 
 
 class MamaPollApplication(MultiPollApplication):
@@ -51,25 +52,23 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
 
     def consume_user_message(self, message):
         helper_metadata = message['helper_metadata']
-        conv_info = helper_metadata.get('conversations')
+        go = helper_metadata.get('go')
         helper_metadata['poll_id'] = 'poll-%s' % (
-            conv_info.get('conversation_key'),)
+            go.get('conversation_key'),)
         super(MultiSurveyApplication, self).consume_user_message(message)
 
     def start_survey(self, to_addr, conversation, **msg_options):
         log.debug('Starting %r -> %s' % (conversation, to_addr))
-
-        helper_metadata = msg_options.setdefault('helper_metadata', {})
-        helper_metadata['conversations'] = {
-            'conversation_key': conversation.key,
-            'conversation_type': conversation.conversation_type,
-        }
 
         # We reverse the to_addr & from_addr since we're faking input
         # from the client to start the survey.
         from_addr = msg_options.pop('from_addr')
         msg = TransportUserMessage(from_addr=to_addr, to_addr=from_addr,
                 content='', **msg_options)
+
+        gmt = self.get_go_metadata(msg)
+        gmt.set_conversation_info(conversation)
+
         self.consume_user_message(msg)
 
     @inlineCallbacks

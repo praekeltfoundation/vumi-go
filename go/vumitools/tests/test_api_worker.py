@@ -11,8 +11,10 @@ from vumi.dispatchers.base import BaseDispatchWorker
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.utils import LogCatcher
 
-from go.vumitools.api_worker import CommandDispatcher, GoMessageMetadata
-from go.vumitools.api import VumiApi, VumiUserApi, VumiApiCommand
+from go.vumitools.api_worker import (
+    EventDispatcher, CommandDispatcher, GoMessageMetadata)
+from go.vumitools.api import VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent
+from go.vumitools.handler import EventHandler, SendMessageCommandHandler
 from go.vumitools.tests.utils import AppWorkerTestCase, GoPersistenceMixin
 
 
@@ -61,6 +63,8 @@ class GoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
         self._persist_setUp()
 
         self.vumi_api = yield VumiApi.from_config_async(self._persist_config)
+        self._persist_riak_managers.append(self.vumi_api.manager)
+        self._persist_redis_managers.append(self.vumi_api.redis)
         self.account = yield self.vumi_api.account_store.new_user(u'user')
         self.user_api = VumiUserApi(self.vumi_api, self.account.key)
         self.tag = ('xmpp', 'test1@xmpp.org')
@@ -188,7 +192,161 @@ class GoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
         self.assertEqual(md._go_metadata, other_md._go_metadata)
 
 
-class GoApplicationRouterTestCase(DispatcherTestCase):
+class ToyHandler(EventHandler):
+    def setup_handler(self):
+        self.handled_events = []
+
+    def handle_event(self, event, handler_config):
+        self.handled_events.append((event, handler_config))
+
+
+class EventDispatcherTestCase(AppWorkerTestCase):
+
+    application_class = EventDispatcher
+
+    @inlineCallbacks
+    def setUp(self):
+        yield super(EventDispatcherTestCase, self).setUp()
+        self.ed = yield self.get_application(self.mk_config({
+            'event_handlers': {
+                    'handler1': '%s.ToyHandler' % __name__,
+                    'handler2': '%s.ToyHandler' % __name__,
+                    },
+        }))
+        self.handler1 = self.ed.handlers['handler1']
+        self.handler2 = self.ed.handlers['handler2']
+
+    def publish_event(self, cmd):
+        return self.dispatch(cmd, rkey='vumi.event')
+
+    def mkevent(self, event_type, content, conv_key="conv_key",
+                account_key="acct"):
+        return VumiApiEvent.event(
+            account_key, conv_key, event_type, content)
+
+    @inlineCallbacks
+    def test_handle_event(self):
+        self.ed.account_config['acct'] = {
+            ('conv_key', 'my_event'): [('handler1', {})]}
+        event = self.mkevent("my_event", {"foo": "bar"})
+        self.assertEqual([], self.handler1.handled_events)
+        yield self.publish_event(event)
+        self.assertEqual([(event, {})], self.handler1.handled_events)
+        self.assertEqual([], self.handler2.handled_events)
+
+    @inlineCallbacks
+    def test_handle_event_uncached(self):
+        user_account = yield self.ed.vumi_api.account_store.new_user(u'dbacct')
+        user_account.event_handler_config = [
+            [['conv_key', 'my_event'], [('handler1', {})]]
+            ]
+        yield user_account.save()
+        event = self.mkevent(
+            "my_event", {"foo": "bar"}, account_key=user_account.key)
+        self.assertEqual([], self.handler1.handled_events)
+        yield self.publish_event(event)
+        self.assertEqual([(event, {})], self.handler1.handled_events)
+        self.assertEqual([], self.handler2.handled_events)
+
+    @inlineCallbacks
+    def test_handle_events(self):
+        self.ed.account_config['acct'] = {
+            ('conv_key', 'my_event'): [('handler1', {'animal': 'puppy'})],
+            ('conv_key', 'other_event'): [
+                ('handler1', {'animal': 'kitten'}),
+                ('handler2', {})
+                ],
+            }
+        event = self.mkevent("my_event", {"foo": "bar"})
+        event2 = self.mkevent("other_event", {"foo": "bar"})
+        self.assertEqual([], self.handler1.handled_events)
+        self.assertEqual([], self.handler2.handled_events)
+        yield self.publish_event(event)
+        yield self.publish_event(event2)
+        self.assertEqual(
+            [(event, {'animal': 'puppy'}), (event2, {'animal': 'kitten'})],
+            self.handler1.handled_events)
+        self.assertEqual([(event2, {})], self.handler2.handled_events)
+
+
+class SendingEventDispatcherTestCase(AppWorkerTestCase):
+    application_class = EventDispatcher
+
+    @inlineCallbacks
+    def setUp(self):
+        yield super(SendingEventDispatcherTestCase, self).setUp()
+        ed_config = self.mk_config({
+                'event_handlers': {
+                    'handler1': "%s.%s" % (
+                        SendMessageCommandHandler.__module__,
+                        SendMessageCommandHandler.__name__)
+                    },
+                })
+        self.ed = yield self.get_application(ed_config)
+        self.handler1 = self.ed.handlers['handler1']
+
+    def publish_event(self, cmd):
+        return self.dispatch(cmd, rkey='vumi.event')
+
+    def mkevent(self, event_type, content, conv_key="conv_key",
+                account_key="acct"):
+        return VumiApiEvent.event(
+            account_key, conv_key, event_type, content)
+
+    @inlineCallbacks
+    def test_handle_events(self):
+        user_account = yield self.ed.vumi_api.account_store.new_user(u'dbacct')
+        yield user_account.save()
+
+        user_api = VumiUserApi(self.ed.vumi_api, user_account.key)
+        yield user_api.api.declare_tags([("pool", "tag1")])
+        yield user_api.api.set_pool_metadata("pool", {
+            "transport_type": "other",
+            "msg_options": {"transport_name": "other_transport"},
+            })
+
+        conversation = yield user_api.new_conversation(
+                                    u'bulk_message', u'subject', u'message',
+                                    delivery_tag_pool=u'pool',
+                                    delivery_class=u'sms')
+
+        conversation = user_api.wrap_conversation(conversation)
+        yield conversation.start()
+
+        user_account.event_handler_config = [
+            [[conversation.key, 'my_event'], [('handler1', {
+                'worker_name': 'other_worker',
+                'conversation_key': 'other_conv',
+                })]]
+            ]
+        yield user_account.save()
+
+        event = self.mkevent("my_event",
+                {"to_addr": "12345", "content": "hello"},
+                account_key=user_account.key,
+                conv_key=conversation.key)
+        yield self.publish_event(event)
+
+        [start_command, api_command] = self._amqp.get_messages('vumi',
+                                                               'vumi.api')
+        self.assertEqual(start_command['command'], 'start')
+        self.assertEqual(api_command['worker_name'], 'other_worker')
+        self.assertEqual(api_command['kwargs']['command_data'], {
+                'content': 'hello',
+                'batch_id': conversation.batches.keys()[0],
+                'to_addr': '12345',
+                'msg_options': {
+                    'transport_name': 'other_transport',
+                    'helper_metadata': {
+                        'go': {'user_account': user_account.key},
+                        'tag': {'tag': ['pool', 'tag1']},
+                        },
+                    'transport_type': 'other',
+                    'from_addr': 'tag1',
+                    }})
+
+
+class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
 
     dispatcher_class = BaseDispatchWorker
     transport_name = 'test_transport'
@@ -196,7 +354,7 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(GoApplicationRouterTestCase, self).setUp()
-        self.dispatcher = yield self.get_dispatcher({
+        self.dispatcher = yield self.get_dispatcher(self.mk_config({
             'router_class': 'go.vumitools.api_worker.GoApplicationRouter',
             'transport_names': [
                 self.transport_name,
@@ -219,10 +377,12 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
             'optout_mw': {
                 'optout_keywords': ['stop']
             }
-            })
+            }))
 
         # get the router to test
         self.vumi_api = yield VumiApi.from_config_async(self._persist_config)
+        self._persist_riak_managers.append(self.vumi_api.manager)
+        self._persist_redis_managers.append(self.vumi_api.redis)
 
         self.account = yield self.vumi_api.account_store.new_user(u'user')
         self.user_api = VumiUserApi(self.vumi_api, self.account.key)
@@ -232,7 +392,12 @@ class GoApplicationRouterTestCase(DispatcherTestCase):
 
     @inlineCallbacks
     def tearDown(self):
-        yield self._persist_tearDown()
+        # These aren't ready until we use the dispatcher, so we add them here
+        # instead of in setUp()
+        self._persist_riak_managers.append(
+            self.dispatcher._router.vumi_api.manager)
+        self._persist_redis_managers.append(
+            self.dispatcher._router.vumi_api.redis)
         yield super(GoApplicationRouterTestCase, self).tearDown()
 
     @inlineCallbacks

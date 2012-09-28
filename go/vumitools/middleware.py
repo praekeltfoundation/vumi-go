@@ -1,8 +1,8 @@
 # -*- test-case-name: go.vumitools.tests.test_middleware -*-
 import sys
 
-from vumi.middleware import (
-    TransportMiddleware, TaggingMiddleware, BaseMiddleware)
+from vumi.middleware.tagger import TaggingMiddleware
+from vumi.middleware.base import TransportMiddleware, BaseMiddleware
 from vumi.utils import normalize_msisdn
 from vumi.components.tagpool import TagpoolManager
 
@@ -76,7 +76,7 @@ class OptOutMiddleware(BaseMiddleware):
 
     @staticmethod
     def is_optout_message(message):
-        return message['helper_metadata'].setdefault('optout').get('optout')
+        return message['helper_metadata'].get('optout', {}).get('optout')
 
 
 class DebitAccountMiddleware(TransportMiddleware):

@@ -5,7 +5,7 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.middleware import TaggingMiddleware
+from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationWorker
@@ -37,6 +37,8 @@ class BulkMessageApplication(GoApplicationWorker):
         conv = yield self.get_conversation(batch_id, conversation_key)
 
         to_addresses = yield conv.get_opted_in_addresses()
+        if extra_params.get('dedupe') == True:
+            to_addresses = set(to_addresses)
         for to_addr in to_addresses:
             yield self.send_message(batch_id, to_addr,
                                     conv.message, msg_options)
@@ -54,3 +56,13 @@ class BulkMessageApplication(GoApplicationWorker):
     def close_session(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
         return self.vumi_api.mdb.add_inbound_message(msg, tag=tag)
+
+    @inlineCallbacks
+    def process_command_send_message(self, *args, **kwargs):
+        command_data = kwargs['command_data']
+        log.info('Processing send_message: %s' % kwargs)
+        yield self.send_message(
+                command_data['batch_id'],
+                command_data['to_addr'],
+                command_data['content'],
+                command_data['msg_options'])

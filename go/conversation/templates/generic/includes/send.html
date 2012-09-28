@@ -1,0 +1,56 @@
+<div class="span4">
+    <div class="box shadow conv-disabled">
+        <h3>2. Message Recipients</h3>
+        <br>
+        {% include "conversation/includes/groups-selected.html" with groups=groups %}
+    </div>
+</div>
+<div class="span4">
+    <div class="box shadow">
+        <h3>3. Send Message</h3>
+        <br><a name="step3" id="step3"></a>
+        <p>Please review before sending:</p>
+        <table class="table table-condensed cost">
+            <thead>
+                <tr>
+                    <th colspan="4">Text Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th>Type</th>
+                    <th class="right">Recipients</th>
+                    <th class="right">Unit Cost</th>
+                    <th class="right">Total</th>
+                </tr>
+                <tr>
+                    <td>{{conversation.delivery_class}}</td>
+                    <td class="right">{{people|length}}</td>
+                    <td class="right">1</td>
+                    <td class="right">{{people|length}}</td>
+                </tr>
+                <tr>
+                    <th colspan="4" class="right"><h1>{{people|length}}</h1><small style="display: block">Vumi Credits Required</small></th>
+                </tr>
+                <tr>
+                    <th colspan="4" class="right"><h1>{{people|length}}</h1><small style="display: block">Total Recipients</small></th>
+                </tr>
+            </tbody>
+        </table>
+        <div class="btn-toolbar">
+            <div class="btn-group">
+                <input type="submit" class="btn btn-success btn-large" value="Send Message &rarr;">
+            </div>
+            <div class="btn-group"><input type="reset" class="btn" onClick="javascript:history.go(-1)" value="Go Back"></div>
+            <div class="btn-group">
+                <label class="checkbox">
+                    <input type="checkbox" value="1" name="dedupe" />
+                    Filter out duplicates from groups
+                </label>
+            </div>
+            <!--
+            <div class="btn-group"><input type="reset" class="btn" value="Cancel"></div>
+            -->
+        </div>
+    </div>
+</div>

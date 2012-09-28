@@ -1,5 +1,6 @@
 <!doctype html>
 {% load url from future %}
+{% load compress %}
 <!--[if lt IE 7]> <html class="no-js lt-ie9 lt-ie8 lt-ie7" lang="en"> <![endif]-->
 <!--[if IE 7]>    <html class="no-js lt-ie9 lt-ie8" lang="en"> <![endif]-->
 <!--[if IE 8]>    <html class="no-js lt-ie9" lang="en"> <![endif]-->
@@ -17,9 +18,6 @@
     <meta name="viewport" content="width=device-width">
     <link rel="stylesheet/less" href="{{ STATIC_URL }}less/style.less">
     <script src="{{ STATIC_URL }}js/libs/less-1.2.1.min.js"></script>
-    <!-- Use SimpLESS (Win/Linux/Mac) or LESS.app (Mac) to compile your .less files to style.css, and replace the 2 lines above by this one:
-    <link rel="stylesheet/less" href="{{ STATIC_URL }}less/style.css">
-     -->
     <script src="{{ STATIC_URL }}js/libs/modernizr-2.5.2-respond-1.1.0.min.js"></script>
     {% block extra_header %}{% endblock %}
 </head>

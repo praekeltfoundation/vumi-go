@@ -7,7 +7,7 @@ from contextlib import contextmanager
 import json
 
 from twisted.python.monkey import MonkeyPatcher
-from twisted.internet.defer import DeferredList, inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 from celery.app import app_or_default
 
 from vumi.persist.fields import ForeignKeyProxy, ManyToManyProxy, DynamicProxy
@@ -159,25 +159,21 @@ class CeleryTestMixIn(object):
 
 class GoPersistenceMixin(PersistenceMixin):
 
+    @PersistenceMixin.sync_or_async
     def _clear_bucket_properties(self, account_keys, manager):
-        from vumi.persist import txriak_manager
-        if not hasattr(txriak_manager, 'delete_bucket_properties'):
+        # TODO: Fix this hackery when we can.
+        import sys
+        manager_module = sys.modules[manager.__module__]
+        del_bp = getattr(manager_module, 'delete_bucket_properties', None)
+        if del_bp is None:
             # This doesn't exist everywhere yet.
             return
 
         client = manager.client
-        deferreds = []
-
         for account_key in account_keys:
             sub_manager = manager.sub_manager(account_key)
-            deferreds.extend([
-                    txriak_manager.delete_bucket_properties(
-                        client.bucket(sub_manager.bucket_name(Contact))),
-                    txriak_manager.delete_bucket_properties(
-                        client.bucket(sub_manager.bucket_name(ContactGroup))),
-                    ])
-
-        return DeferredList(deferreds)
+            yield del_bp(client.bucket(sub_manager.bucket_name(Contact)))
+            yield del_bp(client.bucket(sub_manager.bucket_name(ContactGroup)))
 
     def _list_accounts(self, manager):
         bucket = manager.client.bucket(
@@ -219,7 +215,7 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
         self.setup_celery_for_tests()
 
     @inlineCallbacks
-    def _aw_tearDown(self):
+    def tearDown(self):
         self.restore_celery()
         yield super(AppWorkerTestCase, self).tearDown()
 
@@ -234,8 +230,20 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
         return self._amqp.get_messages('vumi',
                                        "%s.control" % self.app.worker_name)
 
+    def get_dispatched_app_events(self):
+        return self._amqp.get_messages('vumi', 'vumi.event')
+
     def publish_event(self, **kw):
         event = TransportEvent(**kw)
         d = self.dispatch(event, rkey=self.rkey('event'))
         d.addCallback(lambda _result: event)
         return d
+
+    @inlineCallbacks
+    def get_application(self, *args, **kw):
+        worker = yield super(AppWorkerTestCase, self).get_application(
+            *args, **kw)
+        if hasattr(worker, 'vumi_api'):
+            self._persist_riak_managers.append(worker.vumi_api.manager)
+            self._persist_redis_managers.append(worker.vumi_api.redis)
+        returnValue(worker)

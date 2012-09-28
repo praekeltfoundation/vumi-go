@@ -5,7 +5,7 @@
 find ./go -name '*.pyc' -delete
 
 # These are expected to be Twisted tests that trial should run.
-vumi_tests="go/vumitools `find ./go -name 'test*vumi_app*.py'`"
+vumi_tests="go/vumitools `find ./go -name 'test*vumi_app*.py'` `find ./go -name 'test_handlers.py'`"
 
 eval $COVERAGE_COMMAND `which trial` ${vumi_tests}
 r1=$?
