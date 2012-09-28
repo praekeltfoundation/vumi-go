@@ -9,4 +9,5 @@ urlpatterns = patterns('',
     url(r'^(?P<conversation_key>\w+)/people/$', views.people, name='people'),
     url(r'^(?P<conversation_key>\w+)/start/$', views.start, name='start'),
     url(r'^(?P<conversation_key>\w+)/end/$', views.end, name='end'),
+    url(r'^(?P<conversation_key>\w+)/edit/$', views.edit, name='edit'),
 )

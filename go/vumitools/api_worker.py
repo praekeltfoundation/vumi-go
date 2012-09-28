@@ -130,9 +130,12 @@ class GoMessageMetadata(object):
         tag_info = yield self._get_tag_info()
         if tag_info:
             batch = yield tag_info.current_batch.get()
-            self._store_objects['batch'] = batch
-            self._go_metadata['batch_key'] = batch.key
-            returnValue(batch)
+            if batch is not None:
+                self._store_objects['batch'] = batch
+                self._go_metadata['batch_key'] = batch.key
+                returnValue(batch)
+            else:
+                log.error('Cannot find batch for tag_info %s' % (tag_info,))
 
     @inlineCallbacks
     def get_batch_key(self):
@@ -179,7 +182,7 @@ class GoMessageMetadata(object):
         returnValue(conv_store)
 
     @inlineCallbacks
-    def _find_conversation(self):
+    def get_conversation(self):
         if 'conversation' in self._store_objects:
             # We already have this, no need to look it up.
             returnValue(self._store_objects['conversation'])
@@ -222,7 +225,7 @@ class GoMessageMetadata(object):
     @inlineCallbacks
     def get_conversation_info(self):
         if 'conversation_key' not in self._go_metadata:
-            conv = yield self._find_conversation()
+            conv = yield self.get_conversation()
             if conv is None:
                 # We couldn't find a conversation.
                 return
@@ -344,6 +347,7 @@ class GoApplicationRouter(BaseDispatchRouter):
     based on their tags.
 
     """
+    @inlineCallbacks
     def setup_routing(self):
         # map conversation types to applications that deal with them
         self.conversation_mappings = self.config['conversation_mappings']
@@ -351,18 +355,32 @@ class GoApplicationRouter(BaseDispatchRouter):
         self.optout_transport = self.config['optout_transport']
 
         # TODO: Fix this madness.
-        self.vumi_api_d = VumiApi.from_config_async(self.config)
-        self.vumi_api = None
+        self.vumi_api = yield VumiApi.from_config_async(self.config)
 
     @inlineCallbacks
     def find_application_for_msg(self, msg):
-        if self.vumi_api is None:
-            self.vumi_api = yield self.vumi_api_d
         md = GoMessageMetadata(self.vumi_api, msg)
         conversation_info = yield md.get_conversation_info()
         if conversation_info:
             conversation_key, conversation_type = conversation_info
             returnValue(self.conversation_mappings[conversation_type])
+
+    @inlineCallbacks
+    def find_application_for_event(self, event):
+        """
+        Look up the application for a given event by first looking up the
+        message that the event is for and then using
+        `find_application_for_msg()` to look up the application.
+        """
+        user_message_id = event.get('user_message_id')
+        if user_message_id is None:
+            log.error('Received event without user_message_id: %s' % (event,))
+        message = yield self.vumi_api.mdb.get_outbound_message(user_message_id)
+        if message is None:
+            log.error('Unable to find message for event: %s' % (event,))
+
+        application = yield self.find_application_for_msg(message)
+        returnValue(application)
 
     @inlineCallbacks
     def dispatch_inbound_message(self, msg):
@@ -380,14 +398,14 @@ class GoApplicationRouter(BaseDispatchRouter):
                             'type: %s' % (msg,))
 
     @inlineCallbacks
-    def dispatch_inbound_event(self, msg):
-        application = yield self.find_application_for_msg(msg)
+    def dispatch_inbound_event(self, event):
+        application = yield self.find_application_for_event(event)
         if application:
             publisher = self.dispatcher.exposed_event_publisher[application]
-            yield publisher.publish_message(msg)
+            yield publisher.publish_message(event)
         else:
             log.error('No application setup for inbount event type: %s' % (
-                        msg,))
+                        event,))
 
     @inlineCallbacks
     def dispatch_outbound_message(self, msg):

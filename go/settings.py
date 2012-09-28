@@ -92,7 +92,7 @@ STATICFILES_DIRS = (
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    # 'django.contrib.staticfiles.finders.DefaultStorageFinder',
     'compressor.finders.CompressorFinder',
 )
 
@@ -103,7 +103,7 @@ SECRET_KEY = 'oe)=p0z-r*pu7=%s!fd^sgcyx$=f0_tq=m@4%h1km*^d)3np5w'
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',
     'django.template.loaders.app_directories.Loader',
-#     'django.template.loaders.eggs.Loader',
+    # 'django.template.loaders.eggs.Loader',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -127,6 +127,8 @@ TEMPLATE_DIRS = (
     abspath("apps", "multi_surveys", "templates"),
     abspath("apps", "bulk_message", "templates"),
     abspath("apps", "opt_out", "templates"),
+    abspath("apps", "sequential_send", "templates"),
+    abspath("apps", "wikipedia", "ussd", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -239,6 +241,22 @@ VUMI_INSTALLED_APPS = {
     'go.apps.opt_out': {
         'namespace': 'opt_out',
         'display_name': 'Opt Out Handler',
+    },
+    'go.apps.sequential_send': {
+        'namespace': 'sequential_send',
+        'display_name': 'Sequential Send',
+    },
+    'go.apps.subscription': {
+        'namespace': 'subscription',
+        'display_name': 'Subscription Manager',
+    },
+    'go.apps.wikipedia.ussd': {
+        'namespace': 'wikipedia_ussd',
+        'display_name': 'Wikipedia USSD Connection',
+    },
+    'go.apps.wikipedia.sms': {
+        'namespace': 'wikipedia_sms',
+        'display_name': 'Wikipedia SMS Connection',
     },
     'go.apps.jsbox': {
         'namespace': 'jsbox',

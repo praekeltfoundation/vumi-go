@@ -391,17 +391,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
                 u'bulk_message', u'subject', u'message'))
 
     @inlineCallbacks
-    def tearDown(self):
-        # These aren't ready until we use the dispatcher, so we add them here
-        # instead of in setUp()
-        self._persist_riak_managers.append(
-            self.dispatcher._router.vumi_api.manager)
-        self._persist_redis_managers.append(
-            self.dispatcher._router.vumi_api.redis)
-        yield super(GoApplicationRouterTestCase, self).tearDown()
-
-    @inlineCallbacks
-    def test_tag_retrieval_and_dispatching(self):
+    def test_tag_retrieval_and_message_dispatching(self):
         msg = self.mkmsg_in(transport_type='xmpp',
                                 transport_name=self.transport_name)
 
@@ -422,6 +412,34 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
                          self.conversation.conversation_type)
         self.assertEqual(go_metadata['conversation_key'],
                          self.conversation.key)
+
+    @inlineCallbacks
+    def test_tag_retrieval_and_event_dispatching(self):
+        # first create an outbound message and then publish an inbound
+        # event for it.
+        msg = self.mkmsg_out(transport_type='xmpp',
+                                transport_name=self.transport_name)
+
+        # Make sure stuff is tagged properly so it can be routed.
+        tag = ('xmpp', 'test1@xmpp.org')
+        batch_id = yield self.vumi_api.mdb.batch_start([tag],
+            user_account=unicode(self.account.key))
+        self.conversation.batches.add_key(batch_id)
+        yield self.conversation.save()
+        TaggingMiddleware.add_tag_to_msg(msg, tag)
+
+        # Fake that it has been sent by storing it as a sent message
+        yield self.vumi_api.mdb.add_outbound_message(msg, tag=tag,
+            batch_id=batch_id)
+
+        ack = self.mkmsg_ack(event_type='ack',
+            user_message_id=msg['message_id'],
+            transport_name=self.transport_name)
+
+        yield self.dispatch(ack, self.transport_name, 'event')
+
+        [event] = self.get_dispatched_messages('app_1', direction='event')
+        self.assertEqual(event['user_message_id'], msg['message_id'])
 
     @inlineCallbacks
     def test_no_tag(self):

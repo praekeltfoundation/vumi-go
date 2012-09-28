@@ -1,0 +1,89 @@
+<div class="row">
+    <div class="span12">
+        <div class="pull-right">
+            {% include button_template %}
+            {% if is_editable %}
+                <form id="conversation-edit" name="conversation-edit" method="get" action="{{ conversation.get_absolute_url }}edit/">
+                {% csrf_token %}
+                    <div class="btn-group"><input type="submit" class="btn btn-primary" value="Edit"></div>
+                </form>
+            {% endif %}
+        </div>
+        <span class="label label-info">{{conversation.start_timestamp|date:"d F Y"}}</span>
+        <span class="label">{{conversation.delivery_class_description}}</span>
+
+        {% for group in conversation.groups.get_all %}
+        <span class="label label-inverse">{{group.name}}</span>
+        {% endfor %}
+         <h3>{{conversation.subject}}</h3>
+         <p>{{conversation.message}}</p>
+    </div>
+</div>
+<div class="row">
+    <div class="span12">
+        <table class="table table-bordered table-striped">
+            <tr>
+                <th>Channel</th>
+                <th colspan="2">Progress</th>
+            </tr>
+            {% for batch in conversation.get_batches %}
+            {% for tagpool, tag_account in batch.tags %}
+            <tr>
+                <td>
+                    <i class="icon-comment">&nbsp;</i>
+                    {{tag_account}}
+                </td>
+                <td width="50%">
+                    {% if not conversation.get_progress_percentage %}
+                        <div class="progress progress-info progress-striped active">
+                            <div class="bar" style="width: 100%;"/>
+                        </div>
+                    {% else %}
+                        {% with conversation.get_progress_status as status %}
+                        <div class="progress progress-primary">
+                          <div class="bar" style="width: {% widthratio status.sent status.sent 100 %}%;">
+                            <span>{{ status.sent }} sent for delivery to the networks.</span>
+                            </div>
+                        </div>
+                        {% if status.ack %}
+                        <div class="progress progress-info">
+                          <div class="bar" style="width: {% widthratio status.ack status.sent 100 %}%;">
+                            <span>{{ status.ack }} accepted for delivery by the networks.</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if status.delivery_report_delivered %}
+                        <div class="progress progress-success">
+                          <div class="bar" style="width: {% widthratio status.delivery_report_delivered status.sent 100 %}%;">
+                            <span>{{ status.delivery_report_delivered }} delivered.</span>
+                          </div>
+                        </div>
+                        {% endif %}
+                        {% if status.delivery_report_failed %}
+                        <div class="progress progress-danger">
+                          <div class="bar" style="width: {% widthratio status.delivery_report_failed status.sent 100 %}%;">
+                            <span>{{ status.delivery_report_failed }} delivery unsuccessful.</span>
+                          </div>
+                        </div>
+                        {% endif %}
+                        {% if status.delivery_report_pending %}
+                        <div class="progress progress-warning active">
+                          <div class="bar" style="width: {% widthratio status.delivery_report_pending status.sent 100 %}%;">
+                            <span>{{status.delivery_report_pending}} delivery status unknown.</span>
+                          </div>
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                    {% endif %}
+                </td>
+                <td>
+                    {{conversation.get_progress_status.sent}} sent
+                </td
+            </tr>
+            {% endfor %}
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+<hr>

@@ -60,9 +60,9 @@ class ConversationWrapper(object):
     def set_metadata(self, metadata):
         self.c.metadata = metadata
 
-    def start_batch(self, tag):
+    def start_batch(self, *tags):
         user_account = unicode(self.c.user_account.key)
-        return self.mdb.batch_start([tag], user_account=user_account)
+        return self.mdb.batch_start(tags, user_account=user_account)
 
     def get_batches(self):
         return self.c.batches.get_all(self.base_manager)
@@ -125,13 +125,7 @@ class ConversationWrapper(object):
         return int(status['ack'] / float(status['sent']) * 100)
 
     @Manager.calls_manager
-    def start(self, **extra_params):
-        """
-        Send the start command to this conversations application worker.
-        """
-        tag = yield self.acquire_tag()
-        batch_id = yield self.start_batch(tag)
-
+    def make_message_options(self, tag):
         msg_options = {}
         # TODO: transport_type is probably irrelevant
         msg_options['transport_type'] = yield self.get_tagpool_metadata(
@@ -144,6 +138,23 @@ class ConversationWrapper(object):
         TaggingMiddleware.add_tag_to_payload(msg_options, tag)
         DebitAccountMiddleware.add_user_to_payload(msg_options,
                                                    self.c.user_account.key)
+        returnValue(msg_options)
+
+    @Manager.calls_manager
+    def start(self, no_batch_tag=False, acquire_tag=True, **extra_params):
+        """
+        Send the start command to this conversations application worker.
+        """
+        # TODO: Move some of this stuff out to a place where it makes more
+        #       sense to have it.
+        if acquire_tag:
+            tag = yield self.acquire_tag()
+        else:
+            tag = yield self.acquire_existing_tag()
+        batch_tags = [] if no_batch_tag else [tag]
+        batch_id = yield self.start_batch(*batch_tags)
+
+        msg_options = yield self.make_message_options(tag)
 
         is_client_initiated = yield self.is_client_initiated()
         yield self.dispatch_command('start',
@@ -210,7 +221,17 @@ class ConversationWrapper(object):
                            reverse=True))
 
     @Manager.calls_manager
+    def acquire_existing_tag(self):
+        # TODO: Remove this once we have proper routing stuff.
+        tag = (self.c.delivery_tag_pool, self.c.delivery_tag)
+        inuse_tags = yield self.api.tpm.inuse_tags(tag[0])
+        if tag not in inuse_tags:
+            raise ConversationSendError("Requested tag not pre-acquired.")
+        returnValue(tag)
+
+    @Manager.calls_manager
     def acquire_tag(self):
+        # TODO: Remove this once we have proper routing stuff.
         if self.c.delivery_tag is None:
             tag = yield self.api.acquire_tag(self.c.delivery_tag_pool)
             if tag is None:
@@ -256,6 +277,15 @@ class ConversationWrapper(object):
         return u'/app/%s/%s/' % (self.conversation_type, self.key)
 
     @Manager.calls_manager
+    def get_opted_in_contacts(self):
+        """
+        Get all the contacts that are both assigned to this group and opted in.
+        """
+        contact_store = self.user_api.contact_store
+        contacts = yield contact_store.get_contacts_for_conversation(self.c)
+        returnValue(contacts)
+
+    @Manager.calls_manager
     def get_opted_in_addresses(self):
         """
         Get the contacts assigned to this group with an address attribute
@@ -268,7 +298,8 @@ class ConversationWrapper(object):
         optouts = yield opt_out_store.list_opt_outs()
         optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
                             if optout.key.startswith('msisdn:')]
-        all_addrs = yield self.get_contacts_addresses()
+        contacts = yield self.get_opted_in_contacts()
+        all_addrs = yield self.get_contacts_addresses(contacts)
         opted_in_addrs = [addr for addr in all_addrs
                             if addr not in optout_addrs]
         returnValue(opted_in_addrs)
