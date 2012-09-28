@@ -3,7 +3,6 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationWorker
@@ -31,7 +30,8 @@ class SubscriptionApplication(GoApplicationWorker):
                         'on a subscription handler.')
 
     def handlers_for_content(self, conv, content):
-        keyword = content.strip().split()[0].lower()
+        words = (content or '').strip().split() + ['']
+        keyword = words[0].lower()
         handlers = conv.get_metadata(default={}).get('handlers', [])
         return [handler for handler in handlers
                 if handler['keyword'].lower() == keyword]
