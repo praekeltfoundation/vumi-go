@@ -1,10 +1,9 @@
 from django.test.client import Client
 from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.base.utils import vumi_api_for_user
+from go.apps.surveys.views import get_poll_config
 
 
 TEST_GROUP_NAME = u"Test Group"
@@ -25,32 +24,6 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.patch_settings(VXPOLLS_REDIS_CONFIG={'FAKE_REDIS': 'sure'})
 
         self.setup_riak_fixtures()
-
-    def setup_riak_fixtures(self):
-        self.user = User.objects.get(username='username')
-        self.user_api = vumi_api_for_user(self.user)
-        self.contact_store = self.user_api.contact_store
-        self.contact_store.contacts.enable_search()
-        self.conv_store = self.user_api.conversation_store
-
-        # We need a group
-        group = self.contact_store.new_group(TEST_GROUP_NAME)
-        self.group_key = group.key
-
-        # Also a contact
-        contact = self.contact_store.new_contact(
-            name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
-            msisdn=u"+27761234567")
-        contact.add_to_group(group)
-        contact.save()
-        self.contact_key = contact.key
-
-        # And a conversation
-        conversation = self.conv_store.new_conversation(
-            conversation_type=u'survey', subject=TEST_SUBJECT,
-            message=u"Test message", delivery_class=u"sms",
-            delivery_tag_pool=u"longcode", groups=[self.group_key])
-        self.conv_key = conversation.key
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
@@ -155,7 +128,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         [cmd] = self.fetch_cmds(consumer)
         [batch] = conversation.get_batches()
         [tag] = list(batch.tags)
-        [contact] = conversation.people()
+        [contact] = self.get_contacts_for_conversation(conversation)
         msg_options = {
             "transport_type": "sms",
             "from_addr": "default10001",
@@ -196,3 +169,49 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.subject, 'Test Conversation')
+
+    def test_edit(self):
+        survey_url = reverse('survey:edit', kwargs={
+            'conversation_key': self.conv_key,
+            })
+        show_url = reverse('survey:show', kwargs={
+            'conversation_key': self.conv_key,
+            })
+        response = self.client.post(survey_url, {
+            'form-TOTAL_FORMS': 1,
+            'form-INITIAL_FORMS': 0,
+            'form-MAX_NUM_FORMS': '',
+            'form-0-copy': 'What is your favorite music?',
+            'form-0-label': 'favorite music',
+            'form-0-valid_responses': 'rock, jazz, techno',
+        })
+        self.assertRedirects(response, show_url)
+        poll_id = 'poll-%s' % (self.conv_key,)
+        pm, config = get_poll_config(poll_id)
+        [question] = config['questions']
+        self.assertEqual(question['copy'], 'What is your favorite music?')
+        self.assertEqual(question['valid_responses'], [
+            'rock', 'jazz', 'techno'])
+        self.assertEqual(question['label'], 'favorite music')
+
+    def test_edit_continue_editing(self):
+        survey_url = reverse('survey:edit', kwargs={
+            'conversation_key': self.conv_key,
+        })
+        response = self.client.post(survey_url, {
+            'form-TOTAL_FORMS': 1,
+            'form-INITIAL_FORMS': 0,
+            'form-MAX_NUM_FORMS': '',
+            'form-0-copy': 'What is your favorite music?',
+            'form-0-label': 'favorite music',
+            'form-0-valid_responses': 'rock, jazz, techno',
+            '_save_contents': 1
+        })
+        self.assertRedirects(response, survey_url)
+        poll_id = 'poll-%s' % (self.conv_key,)
+        pm, config = get_poll_config(poll_id)
+        [question] = config['questions']
+        self.assertEqual(question['copy'], 'What is your favorite music?')
+        self.assertEqual(question['valid_responses'], [
+            'rock', 'jazz', 'techno'])
+        self.assertEqual(question['label'], 'favorite music')

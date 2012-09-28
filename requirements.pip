@@ -21,3 +21,5 @@ django-registration==0.8
 -e git+git://github.com/jezdez/django_compressor@236e0d711#egg=compressor
 lesscpy==0.9h
 xlrd==0.8.0
+-e git+git://github.com/earle/django-bootstrap.git@9ec5697#egg=bootstrap
+-e git+git://github.com/praekelt/vumi-wikipedia@develop#egg=vumi-wikipedia

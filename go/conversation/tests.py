@@ -144,7 +144,7 @@ class ConversationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         Test replies helper function
         """
         conversation = self.get_wrapped_conv()
-        [contact] = conversation.people()
+        [contact] = conversation.get_opted_in_contacts()
         self.assertEqual(conversation.replies(), [])
         conversation.start()
         [batch] = conversation.get_batches()

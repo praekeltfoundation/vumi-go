@@ -52,8 +52,8 @@ def index(request):
         conversations = [request.user_api.wrap_conversation(conversation) for
                     conversation in active_conversations]
 
-        has_active_sms_conversation = any([c.delivery_class=='sms'
-                                            for c in active_conversations])
+        has_active_sms_conversation = any([c.delivery_class == 'sms'
+                                           for c in active_conversations])
         has_archived_conversations = conv_store.list_conversations()
         if not (has_active_sms_conversation) and has_archived_conversations:
             messages.error(request, "You do not have any active SMS "
