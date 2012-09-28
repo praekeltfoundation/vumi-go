@@ -93,6 +93,7 @@ def contents(request, conversation_key):
     poll_id = 'poll-%s' % (conversation.key,)
     pm, poll_data = get_poll_config(poll_id)
     questions_data = poll_data.get('questions', [])
+    completed_response_data = poll_data.get('survey_completed_responses', [])
 
     if request.method == 'POST':
         post_data = request.POST.copy()
@@ -101,11 +102,16 @@ def contents(request, conversation_key):
         })
 
         questions_formset = forms.make_form_set(data=post_data)
+        completed_response_formset = forms.make_completed_response_form_set(
+            data=post_data)
         poll_form = forms.SurveyPollForm(data=post_data)
-        if questions_formset.is_valid() and poll_form.is_valid():
+        if (questions_formset.is_valid() and poll_form.is_valid() and
+            completed_response_formset.is_valid()):
             data = poll_form.cleaned_data.copy()
             data.update({
-                'questions': _clear_empties(questions_formset.cleaned_data)
+                'questions': _clear_empties(questions_formset.cleaned_data),
+                'survey_completed_responses': _clear_empties(
+                    completed_response_formset.cleaned_data)
                 })
             pm.set(poll_id, data)
             if request.POST.get('_save_contents'):
@@ -119,6 +125,8 @@ def contents(request, conversation_key):
     else:
         poll_form = forms.SurveyPollForm(initial=poll_data)
         questions_formset = forms.make_form_set(initial=questions_data)
+        completed_response_formset = forms.make_completed_response_form_set(
+            initial=completed_response_data)
 
     survey_form = make_read_only_form(ConversationForm(request.user_api,
         instance=conversation, initial={
@@ -129,6 +137,7 @@ def contents(request, conversation_key):
     return render(request, 'surveys/contents.html', {
         'poll_form': poll_form,
         'questions_formset': questions_formset,
+        'completed_response_formset': completed_response_formset,
         'survey_form': survey_form,
     })
 
@@ -232,6 +241,7 @@ def edit(request, conversation_key):
     poll_id = 'poll-%s' % (conversation.key,)
     pm, poll_data = get_poll_config(poll_id)
     questions_data = poll_data.get('questions', [])
+    completed_response_data = poll_data.get('survey_completed_responses', [])
 
     if request.method == 'POST':
         post_data = request.POST.copy()
@@ -241,10 +251,15 @@ def edit(request, conversation_key):
 
         questions_formset = forms.make_form_set(data=post_data)
         poll_form = forms.SurveyPollForm(data=post_data)
-        if questions_formset.is_valid() and poll_form.is_valid():
+        completed_response_formset = forms.make_completed_response_form_set(
+            data=post_data)
+        if (questions_formset.is_valid() and poll_form.is_valid() and
+            completed_response_formset.is_valid()):
             data = poll_form.cleaned_data.copy()
             data.update({
-                'questions': _clear_empties(questions_formset.cleaned_data)
+                'questions': _clear_empties(questions_formset.cleaned_data),
+                'survey_completed_responses': _clear_empties(
+                    completed_response_formset.cleaned_data)
                 })
             pm.set(poll_id, data)
             messages.info(request, 'Conversation updated.')
@@ -259,9 +274,12 @@ def edit(request, conversation_key):
     else:
         poll_form = forms.SurveyPollForm(initial=poll_data)
         questions_formset = forms.make_form_set(initial=questions_data)
+        completed_response_formset = forms.make_completed_response_form_set(
+            initial=completed_response_data)
 
     return render(request, 'surveys/edit.html', {
         'conversation': conversation,
         'poll_form': poll_form,
         'questions_formset': questions_formset,
+        'completed_response_formset': completed_response_formset,
     })
