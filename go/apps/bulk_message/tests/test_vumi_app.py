@@ -5,9 +5,10 @@
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportUserMessage
+from vumi.persist.txriak_manager import TxRiakManager
 
 from go.vumitools.api_worker import CommandDispatcher
-from go.vumitools.api import VumiUserApi
+from go.vumitools.api import VumiUserApi, VumiApiCommand
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
 
@@ -28,7 +29,6 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
-        self._persist_riak_managers.append(self.vumi_api.manager)
 
         # Create a test user account
         self.user_account = yield self.vumi_api.account_store.new_user(
@@ -40,8 +40,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_start(self):
-        user_api = yield VumiUserApi.from_config_async(
-            self.user_account.key, self.config)
+        user_api = self.user_api
         yield user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
         yield user_api.api.set_pool_metadata("pool", {
             "transport_type": "sphex",
@@ -99,6 +98,48 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         self.assertEqual(dbmsg2, msg2)
 
     @inlineCallbacks
+    def test_start_with_deduplication(self):
+        yield self.vumi_api.account_store.new_user(u'testuser')
+        user_api = self.user_api
+        user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
+        user_api.api.set_pool_metadata("pool", {
+            "transport_type": "sphex",
+            })
+        group = yield user_api.contact_store.new_group(u'test group')
+
+        # Create two contacts with the same to_addr, they should be deduped
+
+        contact1 = yield user_api.contact_store.new_contact(
+            name=u'First', surname=u'Contact', msisdn=u'27831234567',
+            groups=[group])
+        contact2 = yield user_api.contact_store.new_contact(
+            name=u'Second', surname=u'Contact', msisdn=u'27831234567',
+            groups=[group])
+        conversation = yield user_api.new_conversation(
+            u'bulk_message', u'Subject', u'Message', delivery_tag_pool=u"pool",
+            delivery_class=u'sms')
+        conversation.add_group(group)
+        yield conversation.save()
+        conversation = user_api.wrap_conversation(conversation)
+
+        # Provide the dedupe option to the conversation
+        yield conversation.start(dedupe=True)
+        yield self._amqp.kick_delivery()
+
+        # assert that we've sent the message to the two contacts
+        msgs = yield self.get_dispatched_messages()
+        msgs.sort(key=lambda msg: msg['to_addr'])
+
+        # Make sure only 1 message is sent, the rest were duplicates to the
+        # same to_addr and were filtered out as a result.
+        [msg] = msgs
+
+        # check that the right to_addr & from_addr are set and that the content
+        # of the message equals conversation.message
+        self.assertEqual(msg['to_addr'], contact1.msisdn)
+        self.assertEqual(msg['to_addr'], contact2.msisdn)
+
+    @inlineCallbacks
     def test_consume_ack(self):
         yield self.store_outbound(message_id='123')
         ack_event = yield self.publish_event(user_message_id='123',
@@ -129,3 +170,42 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         yield self.dispatch(msg)
         dbmsg = yield self.vumi_api.mdb.get_inbound_message(msg['message_id'])
         self.assertEqual(dbmsg, msg)
+
+    @inlineCallbacks
+    def test_send_message_command(self):
+        user_account_key = "4f5gfdtrfe44rgffserf"
+        msg_options = {
+            'transport_name': 'sphex_transport',
+            'from_addr': '666666',
+            'transport_type': 'sphex',
+            "helper_metadata": {
+                "go": {
+                    "user_account": user_account_key
+                },
+                'tag': {
+                    'tag': ['pool', 'tag1']
+                },
+            }
+        }
+        sm_cmd = VumiApiCommand.command(
+                self.app.worker_name,
+                "send_message",
+                command_data={
+                    "batch_id": "345dt54fgtffdsft54ffg",
+                    "to_addr": "123456",
+                    "content": "hello world",
+                    "msg_options": msg_options
+                    })
+        yield self.dispatch(sm_cmd, rkey='%s.control' % self.app.worker_name)
+
+        [msg] = yield self.get_dispatched_messages()
+        self.assertEqual(msg.payload['to_addr'], "123456")
+        self.assertEqual(msg.payload['from_addr'], "666666")
+        self.assertEqual(msg.payload['content'], "hello world")
+        self.assertEqual(msg.payload['transport_name'], "sphex_transport")
+        self.assertEqual(msg.payload['transport_type'], "sphex")
+        self.assertEqual(msg.payload['message_type'], "user_message")
+        self.assertEqual(msg.payload['helper_metadata']['go']['user_account'],
+                                                            user_account_key)
+        self.assertEqual(msg.payload['helper_metadata']['tag']['tag'],
+                                                            ['pool', 'tag1'])

@@ -7,7 +7,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.api import (
-    VumiApi, VumiUserApi, MessageSender, VumiApiCommand)
+    VumiApi, VumiUserApi, MessageSender, VumiApiCommand, VumiApiEvent)
 from go.vumitools.tests.utils import AppWorkerTestCase, CeleryTestMixIn
 
 
@@ -21,11 +21,8 @@ class TestTxVumiApi(AppWorkerTestCase):
             self.api = VumiApi.from_config(self._persist_config)
         else:
             self.api = yield VumiApi.from_config_async(self._persist_config)
-
-    @inlineCallbacks
-    def tearDown(self):
-        self.restore_celery()
-        yield self.api.manager.purge_all()
+        self._persist_riak_managers.append(self.api.manager)
+        self._persist_redis_managers.append(self.api.redis)
 
     @inlineCallbacks
     def test_batch_start(self):
@@ -89,13 +86,13 @@ class TestTxVumiApi(AppWorkerTestCase):
     @inlineCallbacks
     def test_declare_acquire_and_release_tags(self):
         tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
-        self.api.declare_tags([tag1, tag2])
+        yield self.api.declare_tags([tag1, tag2])
         self.assertEqual((yield self.api.acquire_tag("poolA")), tag1)
         self.assertEqual((yield self.api.acquire_tag("poolA")), tag2)
         self.assertEqual((yield self.api.acquire_tag("poolA")), None)
         self.assertEqual((yield self.api.acquire_tag("poolB")), None)
 
-        self.api.release_tag(tag2)
+        yield self.api.release_tag(tag2)
         self.assertEqual((yield self.api.acquire_tag("poolA")), tag2)
         self.assertEqual((yield self.api.acquire_tag("poolA")), None)
 
@@ -148,6 +145,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     def tearDown(self):
         self.restore_celery()
         yield self.api.manager.purge_all()
+        yield self.api.redis._purge_all()
+        yield self.api.redis.close_manager()
 
     @inlineCallbacks
     def test_optout_filtering(self):
@@ -226,3 +225,18 @@ class TestVumiApiCommand(TestCase):
             },
             'to_addr': '+4567'
         })
+
+
+class TestVumiApiEvent(TestCase):
+    def test_default_routing_config(self):
+        cfg = VumiApiEvent.default_routing_config()
+        self.assertEqual(set(cfg.keys()),
+                         set(['exchange', 'exchange_type', 'routing_key']))
+
+    def test_event(self):
+        event = VumiApiEvent.event(
+            'me', 'my_conv', 'my_event', {"foo": "bar"})
+        self.assertEqual(event['account_key'], 'me')
+        self.assertEqual(event['conversation_key'], 'my_conv')
+        self.assertEqual(event['event_type'], 'my_event')
+        self.assertEqual(event['content'], {"foo": "bar"})

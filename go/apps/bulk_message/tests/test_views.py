@@ -32,14 +32,14 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.conv_store = self.user_api.conversation_store
 
         # We need a group
-        group = self.contact_store.new_group(TEST_GROUP_NAME)
-        self.group_key = group.key
+        self.group = self.contact_store.new_group(TEST_GROUP_NAME)
+        self.group_key = self.group.key
 
         # Also a contact
         contact = self.contact_store.new_contact(
             name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
             msisdn=u"+27761234567")
-        contact.add_to_group(group)
+        contact.add_to_group(self.group)
         contact.save()
         self.contact_key = contact.key
 
@@ -108,7 +108,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         response = self.client.post(reverse('bulk_message:people',
             kwargs={'conversation_key': self.conv_key}), {'groups': [
                     grp.key for grp in self.contact_store.list_groups()]})
-        self.assertRedirects(response, reverse('bulk_message:send', kwargs={
+        self.assertRedirects(response, reverse('bulk_message:start', kwargs={
             'conversation_key': self.conv_key}))
 
     def test_start(self):
@@ -117,7 +117,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """
         conversation = self.get_wrapped_conv()
 
-        response = self.client.post(reverse('bulk_message:send', kwargs={
+        response = self.client.post(reverse('bulk_message:start', kwargs={
             'conversation_key': conversation.key}))
         self.assertRedirects(response, reverse('bulk_message:show', kwargs={
             'conversation_key': conversation.key}))
@@ -139,12 +139,30 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         expected_cmd = VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,), 'start',
             batch_id=batch.key,
+            dedupe=False,
             msg_options=msg_options,
             conversation_type=conversation.conversation_type,
             conversation_key=conversation.key,
             is_client_initiated=conversation.is_client_initiated(),
             )
         self.assertEqual(cmd, expected_cmd)
+
+    def test_start_with_deduplication(self):
+        conversation = self.get_wrapped_conv()
+        self.client.post(reverse('bulk_message:start', kwargs={
+            'conversation_key': conversation.key}), {
+            'dedupe': '1'
+        })
+        [cmd] = self.get_api_commands_sent()
+        self.assertEqual(cmd.payload['kwargs']['dedupe'], True)
+
+    def test_start_without_deduplication(self):
+        conversation = self.get_wrapped_conv()
+        self.client.post(reverse('bulk_message:start', kwargs={
+            'conversation_key': conversation.key}), {
+        })
+        [cmd] = self.get_api_commands_sent()
+        self.assertEqual(cmd.payload['kwargs']['dedupe'], False)
 
     def test_send_fails(self):
         """
@@ -153,9 +171,9 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         conversation = self.get_wrapped_conv()
         self.acquire_all_longcode_tags()
         consumer = self.get_cmd_consumer()
-        response = self.client.post(reverse('bulk_message:send', kwargs={
+        response = self.client.post(reverse('bulk_message:start', kwargs={
             'conversation_key': conversation.key}), follow=True)
-        self.assertRedirects(response, reverse('bulk_message:send', kwargs={
+        self.assertRedirects(response, reverse('bulk_message:start', kwargs={
             'conversation_key': conversation.key}))
         [] = self.fetch_cmds(consumer)
         [msg] = response.context['messages']

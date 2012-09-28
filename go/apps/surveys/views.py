@@ -10,7 +10,7 @@ from vumi.persist.redis_manager import RedisManager
 
 from go.base.utils import (make_read_only_form, make_read_only_formset,
     conversation_or_404)
-from go.vumitools.api import ConversationSendError
+from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
 
 from vxpolls.content import forms
@@ -25,8 +25,6 @@ def get_poll_config(poll_id):
     config = pm.get_config(poll_id)
     config.update({
         'poll_id': poll_id,
-        'transport_name': settings.VXPOLLS_TRANSPORT_NAME,
-        'worker_name': settings.VXPOLLS_WORKER_NAME,
     })
 
     config.setdefault('repeatable', True)

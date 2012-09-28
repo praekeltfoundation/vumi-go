@@ -9,8 +9,15 @@ coverage==3.4
 South==0.7.3
 psycopg2==2.4
 Fabric==1.2.2
+celery==2.5.3
 django-celery==2.4.2
 django-celery-email
 -e git+git://github.com/praekelt/vumi@develop#egg=vumi
 -e git+git://github.com/praekelt/vxpolls.git@develop#egg=vxpolls
 Markdown==2.1.1
+django-registration==0.8
+# django_compressor==1.1.2 on Pypi has a bug, install from GitHub
+# until a new version has been published to pypi
+-e git+git://github.com/jezdez/django_compressor@236e0d711#egg=compressor
+lesscpy==0.9h
+xlrd==0.8.0
