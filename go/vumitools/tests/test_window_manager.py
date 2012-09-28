@@ -37,10 +37,8 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         yield self.assertFailure(self.wm.remove_window(self.window_id),
             WindowException)
         [key] = yield self.wm.next(self.window_id)
-        lock = yield self.wm.acquire_lock(self.window_id, key)
-        item = yield self.wm.get(self.window_id, key, lock)
+        item = yield self.wm.get(self.window_id, key)
         self.assertEqual(item, 1)
-        yield self.wm.remove(self.window_id, key, lock)
         self.assertEqual((yield self.wm.remove_window(self.window_id)), None)
 
     @inlineCallbacks
@@ -48,7 +46,7 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         for i in range(10):
             yield self.wm.add(self.window_id, i)
         window_key = self.wm.window_key(self.window_id)
-        window_members = yield self.redis.zcard(window_key)
+        window_members = yield self.redis.llen(window_key)
         self.assertEqual(window_members, 10)
 
     @inlineCallbacks
@@ -56,32 +54,21 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         for i in range(12):
             yield self.wm.add(self.window_id, i)
 
-        flight1 = yield self.wm.next(self.window_id)
-        self.assertEqual(len(flight1), 10)
-        self.assertEqual((yield self.wm.next(self.window_id)), [])
-        self.assertEqual((yield self.wm.count_waiting(self.window_id)), 2)
-        self.assertEqual((yield self.wm.count_in_flight(self.window_id)), 10)
+        flight_keys = []
+        for i in range(10):
+            flight_key = yield self.wm.next(self.window_id)
+            self.assertTrue(flight_key)
+            flight_keys.append(flight_key)
 
-        for i, key in enumerate(flight1):
-            lock = yield self.wm.acquire_lock(self.window_id, key)
-            result = yield self.wm.get(self.window_id, key, lock)
-            self.assertEqual(result, i)
-            yield self.wm.remove(self.window_id, key, lock)
+        out_of_window_flight = yield self.wm.next(self.window_id)
+        self.assertEqual(out_of_window_flight, None)
 
-        self.assertEqual((yield self.wm.count_waiting(self.window_id)), 2)
-        self.assertEqual((yield self.wm.count_in_flight(self.window_id)), 0)
+        # We should get data out in the order we put it in
+        for i, flight_key in enumerate(flight_keys):
+            data = yield self.wm.get(self.window_id, flight_key)
+            self.assertEqual(data, i)
 
-        flight2 = yield self.wm.next(self.window_id)
-        self.assertEqual(len(flight2), 2)
-        self.assertEqual((yield self.wm.next(self.window_id)), None)
-        self.assertEqual((yield self.wm.count_waiting(self.window_id)), 0)
-        self.assertEqual((yield self.wm.count_in_flight(self.window_id)), 2)
-
-        for i, key in enumerate(flight2):
-            lock = yield self.wm.acquire_lock(self.window_id, key)
-            result = yield self.wm.get(self.window_id, key, lock)
-            self.assertEqual(result, i + 10)
-            yield self.wm.remove(self.window_id, key, lock)
-
-        self.assertEqual((yield self.wm.count_in_flight(self.window_id)), 0)
-        self.assertEqual((yield self.wm.next(self.window_id)), None)
+        # Removing one should allow for space for the next to fill up
+        yield self.wm.remove(self.window_id, flight_keys[0])
+        next_flight_key = yield self.wm.next(self.window_id)
+        self.assertTrue(next_flight_key)
