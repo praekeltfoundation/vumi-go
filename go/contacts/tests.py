@@ -677,20 +677,20 @@ class TestFieldNormalizer(TestCase):
         self.assertNormalizedMsisdn('27', '+27761234567', '+27761234567')
 
     def test_integer(self):
-        self.assertNormalized('integer', '0.1', 0)
-        self.assertNormalized('integer', '1.1', 1)
-        self.assertNormalized('integer', 2.1, 2)
+        self.assertNormalized('integer', '0.1', '0')
+        self.assertNormalized('integer', '1.1', '1')
+        self.assertNormalized('integer', 2.1, '2')
         self.assertNormalized('integer', '', '')
         self.assertNormalized('integer', 'None', 'None')
-        self.assertNormalized('integer', None, None)
+        self.assertNormalized('integer', None, 'None')
 
     def test_float(self):
-        self.assertNormalized('float', '0.1', 0.1)
-        self.assertNormalized('float', '1.1', 1.1)
-        self.assertNormalized('float', 2.1, 2.1)
+        self.assertNormalized('float', '0.1', '0.1')
+        self.assertNormalized('float', '1.1', '1.1')
+        self.assertNormalized('float', 2.1, '2.1')
         self.assertNormalized('float', '', '')
         self.assertNormalized('float', 'None', 'None')
-        self.assertNormalized('float', None, None)
+        self.assertNormalized('float', None, 'None')
 
     def test_string(self):
         self.assertNormalized('string', 761234567.0, '761234567.0')
@@ -698,4 +698,11 @@ class TestFieldNormalizer(TestCase):
         self.assertNormalized('string', '', '')
         self.assertNormalized('string', 'None', 'None')
         self.assertNormalized('string', None, 'None')
+
+    def test_unknown(self):
+        self.assertNormalized('foo', 761234567.0, '761234567.0')
+        self.assertNormalized('bar', '1.1', '1.1')
+        self.assertNormalized('baz', '', '')
+        self.assertNormalized('fubar', 'None', 'None')
+        self.assertNormalized('zab', None, 'None')
 
