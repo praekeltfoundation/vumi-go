@@ -208,7 +208,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         group = newest(self.contact_store.list_groups())
         self.assertEqual(group.name, new_group_name)
         self.assertRedirects(response, group_url(group.key))
-        response = self.specify_columns(group_key=group.key)
+        self.specify_columns(group_key=group.key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
