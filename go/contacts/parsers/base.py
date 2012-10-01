@@ -27,7 +27,7 @@ class FieldNormalizer(object):
 
     def normalize(self, name, value):
         normalizer = getattr(self, 'normalize_%s' % (name,), lambda v: v)
-        return normalizer(value)
+        return unicode(normalizer(value))
 
     def normalize_string(self, value):
         return str(value)
