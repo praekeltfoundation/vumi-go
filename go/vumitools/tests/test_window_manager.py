@@ -36,7 +36,7 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         yield self.wm.add(self.window_id, 1)
         yield self.assertFailure(self.wm.remove_window(self.window_id),
             WindowException)
-        [key] = yield self.wm.next(self.window_id)
+        key = yield self.wm.next(self.window_id)
         item = yield self.wm.get(self.window_id, key)
         self.assertEqual(item, 1)
         self.assertEqual((yield self.wm.remove_window(self.window_id)), None)
