@@ -1,5 +1,6 @@
 from twisted.trial.unittest import TestCase
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.task import Clock
 
 from go.vumitools.window_manager import WindowManager, WindowException
 from vumi.tests.utils import PersistenceMixin
@@ -14,13 +15,16 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         self._persist_setUp()
         redis = yield self.get_redis_manager()
         self.window_id = 'window_id'
-        self.wm = WindowManager(redis, window_size=10)
+        self.wm = WindowManager(redis, window_size=10,
+            max_flight_retries=3)
         yield self.wm.create(self.window_id)
+        self.wm.gc.clock = self.clock = Clock()
         self.redis = self.wm.redis
 
     @inlineCallbacks
     def tearDown(self):
         yield self._persist_tearDown()
+        self.wm.stop()
 
     @inlineCallbacks
     def test_windows(self):
@@ -72,3 +76,41 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         yield self.wm.remove(self.window_id, flight_keys[0])
         next_flight_key = yield self.wm.next(self.window_id)
         self.assertTrue(next_flight_key)
+
+    @inlineCallbacks
+    def assert_count_waiting(self, window_id, amount):
+        self.assertEqual((yield self.wm.count_waiting(window_id)), amount)
+
+    @inlineCallbacks
+    def assert_expired_keys(self, window_id, amount, expected_tries=1):
+        # Stuff has taken too long and so we should get 10 expired keys
+        expired_keys = yield self.wm.get_expired_flight_keys(window_id)
+        self.assertEqual(len(expired_keys), amount)
+        for key in expired_keys:
+            tries = yield self.wm.get_tries(window_id, key)
+            self.assertEqual(int(tries), expected_tries)
+
+    @inlineCallbacks
+    def assert_in_flight(self, window_id, amount):
+        self.assertEqual((yield self.wm.count_in_flight(window_id)),
+            amount)
+
+    @inlineCallbacks
+    def slide_window(self, limit=10):
+        for i in range(limit):
+            yield self.wm.next(self.window_id)
+
+    @inlineCallbacks
+    def test_retries(self):
+
+        for i in range(10):
+            yield self.wm.add(self.window_id, i)
+
+        for i in range(3):  # max nr of retries + 1
+            yield self.slide_window()
+            self.clock.advance(10)
+            yield self.wm.clear_or_retry_flight_keys()
+
+        self.assert_in_flight(self.window_id, 0)
+        self.assert_count_waiting(self.window_id, 0)
+        self.assert_expired_keys(self.window_id, 0, None)
