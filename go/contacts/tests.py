@@ -10,7 +10,7 @@ from django.core.urlresolvers import reverse
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from django.core import mail
 
-from go.contacts.parsers import FieldNormalizer
+from go.contacts.parsers.base import FieldNormalizer
 
 TEST_GROUP_NAME = u"Test Group"
 TEST_CONTACT_NAME = u"Name"
