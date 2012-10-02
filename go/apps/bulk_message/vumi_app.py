@@ -29,25 +29,32 @@ class BulkMessageApplication(GoApplicationWorker):
             window_size=self.allowed_ack_window,
             flight_lifetime=self.max_ack_wait,
             max_flight_retries=self.max_ack_retries)
-        self.window_manager.monitor(self.send_in_window)
+        self.window_manager.monitor(self.on_window_key_ready,
+            self.on_window_cleanup)
 
     def teardown_application(self):
         self.window_manager.stop()
 
     @inlineCallbacks
-    def send_in_window(self, window_id, flight_key):
+    def on_window_key_ready(self, window_id, flight_key):
         data = yield self.window_manager.get(window_id, flight_key)
+        batch_id = data['batch_id']
         to_addr = data['to_addr']
         content = data['content']
         msg_options = data['msg_options']
         msg = yield self.send_to(to_addr, content, **msg_options)
-        yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=window_id)
+        yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=batch_id)
         log.info('Stored outbound %s' % (msg,))
+
+    def on_window_cleanup(self, window_id):
+        log.info('Finished window %s, removing.' % (window_id,))
 
     @inlineCallbacks
     def send_message(self, batch_id, to_addr, content, msg_options):
-        yield self.window_manager.create_window(batch_id, strict=False)
-        yield self.window_manager.add(batch_id, {
+        window_id = 'window-batch-%s' % (batch_id,)
+        yield self.window_manager.create_window(window_id, strict=False)
+        yield self.window_manager.add(window_id, {
+            'batch_id': batch_id,
             'to_addr': to_addr,
             'content': content,
             'msg_options': msg_options,
