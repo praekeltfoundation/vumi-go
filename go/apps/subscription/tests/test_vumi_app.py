@@ -107,3 +107,11 @@ class TestSubscriptionApplication(AppWorkerTestCase):
 
         yield self.assert_subscription(self.contact, 'foo', 'unsubscribed')
         yield self.assert_subscription(self.contact, 'bar', 'subscribed')
+
+    @inlineCallbacks
+    def test_empty_message(self):
+        yield self.assert_subscription(self.contact, 'foo', None)
+        yield self.dispatch_from(self.contact, None)
+        [reply] = yield self.get_dispatched_messages()
+        self.assertEqual('Unrecognised keyword.', reply['content'])
+        yield self.assert_subscription(self.contact, 'foo', None)
