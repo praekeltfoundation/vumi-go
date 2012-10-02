@@ -8,12 +8,14 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from django.utils.datastructures import SortedDict
 
 from go.contacts.forms import (
     ContactForm, ContactGroupForm, UploadContactsForm, SmartGroupForm,
     SelectContactGroupForm)
 from go.contacts import tasks, utils
 from go.contacts.parsers import ContactFileParser, ContactParserException
+from go.contacts.parsers.base import FieldNormalizer
 
 
 def _query_to_kwargs(query):
@@ -132,10 +134,13 @@ def _static_group(request, contact_store, group):
                 # posted
                 field_names = [request.POST.get('column-%s' % i) for i in
                                 range(len(sample_row))]
+                normalizers = [request.POST.get('normalize-%s' % i, '')
+                                for i in range(len(sample_row))]
+                fields = SortedDict(zip(field_names, normalizers))
 
                 tasks.import_contacts_file.delay(
                     request.user_api.user_account_key, group.key, file_name,
-                    file_path, field_names, has_header)
+                    file_path, fields, has_header)
 
                 messages.info(request, 'The contacts are being imported. '
                     'We will notify you via email when the import has '
@@ -177,6 +182,7 @@ def _static_group(request, contact_store, group):
             has_header, headers, row = parser.guess_headers_and_row(file_path)
             context.update({
                 'contact_data_headers': headers,
+                'field_normalizer': FieldNormalizer(),
                 'contact_data_row': row,
             })
         except (ValueError, ContactParserException):

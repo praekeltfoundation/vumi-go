@@ -41,7 +41,7 @@ def delete_group_contacts(account_key, group_key):
 
 @task(ignore_result=True)
 def import_contacts_file(account_key, group_key, file_name, file_path,
-                            field_names, has_header):
+                            fields, has_header):
     api = VumiUserApi.from_config(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
@@ -55,7 +55,7 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
     try:
         extension, parser = ContactFileParser.get_parser(file_name)
 
-        contact_dictionaries = parser.parse_file(file_path, field_names,
+        contact_dictionaries = parser.parse_file(file_path, fields,
             has_header)
         for counter, contact_dictionary in enumerate(contact_dictionaries):
 
@@ -88,7 +88,7 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
                 'account_key': account_key,
                 'file_name': file_name,
                 'file_path': file_path,
-                'field_names': field_names,
+                'fields': fields,
                 'has_header': has_header,
                 'exception_type': exc_type,
                 'exception_value': exc_value,
