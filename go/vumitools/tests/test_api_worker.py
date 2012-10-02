@@ -370,13 +370,6 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
                 'bulk_message': 'app_1',
                 'survey': 'app_2',
             },
-            'middleware': [
-                {'optout_mw':
-                    'go.vumitools.middleware.OptOutMiddleware'},
-            ],
-            'optout_mw': {
-                'optout_keywords': ['stop']
-            }
             }))
 
         # get the router to test
@@ -463,7 +456,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
     @inlineCallbacks
     def test_optout_message(self):
         msg = self.mkmsg_in(transport_type='xmpp',
-                                transport_name='xmpp_transport')
+                            transport_name='xmpp_transport')
         msg['content'] = 'stop'
         tag = ('xmpp', 'test1@xmpp.org')
         batch_id = yield self.vumi_api.mdb.batch_start([tag],
@@ -472,6 +465,9 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         self.conversation.save()
 
         TaggingMiddleware.add_tag_to_msg(msg, tag)
+        # Fake the opt-out middleware processing.
+        msg['helper_metadata']['optout'] = {
+            'optout': True, 'optout_keyword': 'stop'}
         yield self.dispatch(msg, self.transport_name)
 
         [dispatched] = self.get_dispatched_messages('optout_app',
