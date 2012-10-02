@@ -33,6 +33,8 @@ class FieldNormalizer(object):
             ('msisdn_gh', 'Ghanaian contact number (+233)'),
             ('msisdn_cm', 'Cameroonian contact number (+237)'),
             ('msisdn_ng', 'Nigerian contact number (+234)'),
+            ('msisdn_int',
+                'Contact number (already prefixed with country code)'),
         ]
 
     def __iter__(self):
@@ -83,6 +85,11 @@ class FieldNormalizer(object):
 
     def normalize_msisdn_ng(self, value):
         return self.do_msisdn(value, '234')
+
+    def normalize_msisdn_int(self, value):
+        str_value = self.normalize_string(value).lstrip('+')
+        str_value = str_value.lstrip('00')
+        return '+%s' % (str_value,)
 
 class ContactFileParser(object):
 
