@@ -174,10 +174,14 @@ class ContactFileParser(object):
         things like account details. Attributes that can be set are in the
         SETTABLE_ATTRIBUTES list, which defaults to the DEFAULT_HEADERS keys.
         """
-
+        # We receive the fields as list of tuples, not a dict because the
+        # order is important and needs to stay intact while being encoded
+        # and decoded as JSON
+        field_names = [field[0] for field in fields]
+        field_map = dict(fields)
         # We're expecting a generator so loop over it and save as contacts
         # in the contact_store, normalizing anything we need to
-        data_dictionaries = self.read_data_from_file(file_path, fields.keys(),
+        data_dictionaries = self.read_data_from_file(file_path, field_names,
             has_header)
         for data_dictionary in data_dictionaries:
 
@@ -185,7 +189,7 @@ class ContactFileParser(object):
             # contact to be saved
             contact_dictionary = {}
             for key, value in data_dictionary.items():
-                value = self.normalizer.normalize(fields[key], value)
+                value = self.normalizer.normalize(field_map[key], value)
                 if not isinstance(value, basestring):
                     value = unicode(str(value), self.ENCODING,
                         self.ENCODING_ERRORS)

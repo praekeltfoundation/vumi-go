@@ -8,7 +8,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
-from django.utils.datastructures import SortedDict
 
 from go.contacts.forms import (
     ContactForm, ContactGroupForm, UploadContactsForm, SmartGroupForm,
@@ -136,7 +135,7 @@ def _static_group(request, contact_store, group):
                                 range(len(sample_row))]
                 normalizers = [request.POST.get('normalize-%s' % i, '')
                                 for i in range(len(sample_row))]
-                fields = SortedDict(zip(field_names, normalizers))
+                fields = zip(field_names, normalizers)
 
                 tasks.import_contacts_file.delay(
                     request.user_api.user_account_key, group.key, file_name,
