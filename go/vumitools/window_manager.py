@@ -15,6 +15,7 @@ class WindowManager(object):
     WINDOW_KEY = 'windows'
     FLIGHT_KEY = 'inflight'
     FLIGHT_STATS_KEY = 'flightstats'
+    MAP_KEY = 'keymap'
 
     def __init__(self, redis, name='window_manager', window_size=100,
         flight_lifetime=10, max_flight_retries=10, gc_interval=10):
@@ -59,6 +60,9 @@ class WindowManager(object):
     def stats_key(self, *keys):
         return self.window_key(self.FLIGHT_STATS_KEY, *keys)
 
+    def map_key(self, *keys):
+        return self.window_key(self.MAP_KEY, *keys)
+
     def get_clock(self):
         return reactor
 
@@ -83,8 +87,8 @@ class WindowManager(object):
         yield self.redis.zrem(self.WINDOW_KEY, window_id)
 
     @inlineCallbacks
-    def add(self, window_id, data):
-        key = uuid.uuid4().get_hex()
+    def add(self, window_id, data, key=None):
+        key = key or uuid.uuid4().get_hex()
         yield self.redis.lpush(self.window_key(window_id), key)
         yield self.redis.set(self.window_key(window_id, key),
             json.dumps(data))
@@ -164,6 +168,25 @@ class WindowManager(object):
         yield self.redis.lrem(self.flight_key(window_id), key, 1)
         yield self.redis.delete(self.window_key(window_id, key))
         yield self.redis.delete(self.stats_key(window_id, key))
+        yield self.redis.clear_external_id(window_id, key)
+        yield self.clear_timestamp(window_id, key)
+
+    @inlineCallbacks
+    def set_external_id(self, window_id, flight_key, external_id):
+        yield self.redis.set(self.map_key(window_id, 'internal', external_id),
+            flight_key)
+        yield self.redis.set(self.map_key(window_id, 'external', flight_key),
+            external_id)
+
+    def get_internal_id(self, window_id, external_id):
+        return self.redis.get(self.map_key(window_id, 'internal', external_id))
+
+    def clear_external_id(self, window_id, flight_key):
+        external_id = yield self.redis.delete(self.map_key(window_id,
+            'external', flight_key))
+        if external_id:
+            yield self.redis.delete(self.map_key(window_id, 'internal',
+                external_id))
 
     def monitor(self, key_callback, interval=10, cleanup=True,
         cleanup_callback=None):

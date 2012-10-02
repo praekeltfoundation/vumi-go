@@ -44,6 +44,8 @@ class BulkMessageApplication(GoApplicationWorker):
         msg_options = data['msg_options']
         msg = yield self.send_to(to_addr, content, **msg_options)
         yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=batch_id)
+        self.window_manager.set_external_id(window_id, flight_key,
+            msg['message_id'])
         log.info('Stored outbound %s' % (msg,))
 
     def on_window_cleanup(self, window_id):
@@ -89,10 +91,8 @@ class BulkMessageApplication(GoApplicationWorker):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
         return self.vumi_api.mdb.add_inbound_message(msg, tag=tag)
 
-    @inlineCallbacks
     def consume_ack(self, event):
-        self.ack_window_redis.rpop()
-        return self.vumi_api.mdb.add_event(event)
+        yield self.vumi_api.mdb.add_event(event)
 
     def consume_delivery_report(self, event):
         return self.vumi_api.mdb.add_event(event)
