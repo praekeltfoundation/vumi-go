@@ -50,8 +50,7 @@ class BulkMessageApplication(GoApplicationWorker):
         log.info('Finished window %s, removing.' % (window_id,))
 
     @inlineCallbacks
-    def send_message(self, batch_id, to_addr, content, msg_options):
-        window_id = 'window-batch-%s' % (batch_id,)
+    def send_message(self, window_id, batch_id, to_addr, content, msg_options):
         yield self.window_manager.create_window(window_id, strict=False)
         yield self.window_manager.add(window_id, {
             'batch_id': batch_id,
@@ -79,17 +78,11 @@ class BulkMessageApplication(GoApplicationWorker):
         to_addresses = yield conv.get_opted_in_addresses()
         if extra_params.get('dedupe'):
             to_addresses = set(to_addresses)
-        yield self.send_chunk(batch_id, msg_options, conv, to_addresses)
 
-    @inlineCallbacks
-    def create_window(self, key, to_addrs, *args, **kwargs):
-        for to_addr in to_addrs:
-            yield self.ack_window_redis.lpush(key, to_addr)
+        window_id = '%s:%s' % (conversation_key, batch_id,)
 
-    @inlineCallbacks
-    def send_chunk(self, batch_id, msg_options, conv, to_addresses):
         for to_addr in to_addresses:
-            yield self.send_message(batch_id, to_addr,
+            yield self.send_message(window_id, batch_id, to_addr,
                                     conv.message, msg_options)
 
     def consume_user_message(self, msg):
