@@ -58,7 +58,6 @@ class InsufficientCredit(DebitAccountError):
 class OptOutMiddleware(BaseMiddleware):
 
     def setup_middleware(self):
-        self.keyword_separator = self.config.get('keyword_separator', ' ')
         self.case_sensitive = self.config.get('case_sensitive', False)
         keywords = self.config.get('optout_keywords', [])
         self.optout_keywords = set([self.casing(word)

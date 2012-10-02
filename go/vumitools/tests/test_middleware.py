@@ -34,7 +34,7 @@ class MiddlewareTestCase(AppWorkerTestCase):
         dummy_worker = yield self.get_application({})
         mw = middleware_class(name, config or self.default_config,
                                 dummy_worker)
-        mw.setup_middleware()
+        yield mw.setup_middleware()
         returnValue(mw)
 
     @inlineCallbacks
@@ -83,16 +83,15 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
         yield super(OptOutMiddlewareTestCase, self).setUp()
         self.config = self.default_config.copy()
         self.config.update({
-            'keyword_separator': '-',
             'optout_keywords': ['STOP', 'HALT', 'QUIT']
         })
         self.mw = yield self.create_middleware(OptOutMiddleware,
             config=self.config)
 
+    @inlineCallbacks
     def send_keyword(self, mw, word, expected_response):
-        msg = self.mk_msg('to@domain.org', 'from@domain.org')
-        msg['content'] = '%s%sfoo' % (
-            word, self.config['keyword_separator'])
+        msg = self.mk_msg(
+            content=word, to_addr='to@domain.org', from_addr='from@domain.org')
         yield mw.handle_inbound(msg, 'dummy_endpoint')
         self.assertEqual(msg['helper_metadata'], expected_response)
 
@@ -135,6 +134,7 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
                 'optout': False,
             }
         })
+
 
 class MetricsMiddlewareTestCase(MiddlewareTestCase):
 
