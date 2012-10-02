@@ -4,7 +4,6 @@ from django.test import TestCase
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-from django.utils.datastructures import SortedDict
 
 from go.contacts.parsers.csv_parser import CSVFileParser
 from go.contacts.parsers.xls_parser import XLSFileParser
@@ -46,9 +45,9 @@ class CSVParserTestCase(ParserTestCase):
     def test_contacts_parsing(self):
         csv_file = self.fixture('sample-contacts-with-headers.csv')
         fp = default_storage.open(csv_file, 'rU')
-        contacts = list(self.parser.parse_file(fp, SortedDict(zip(
+        contacts = list(self.parser.parse_file(fp, zip(
             ['name', 'surname', 'msisdn'],
-            ['string', 'string', 'msisdn_za'])), has_header=True))
+            ['string', 'string', 'msisdn_za']), has_header=True))
         self.assertEqual(contacts, [
             {
                 'msisdn': '+27761234561',
@@ -89,9 +88,9 @@ class XLSParserTestCase(ParserTestCase):
 
     def test_contacts_parsing(self):
         xls_file = self.fixture('sample-contacts-with-headers.xlsx')
-        contacts = list(self.parser.parse_file(xls_file, SortedDict(zip(
+        contacts = list(self.parser.parse_file(xls_file, zip(
             ['name', 'surname', 'msisdn'],
-            ['string', 'integer', 'number'])), has_header=True))
+            ['string', 'integer', 'number']), has_header=True))
         self.assertEqual(contacts[0], {
                 'msisdn': '1.0',
                 'surname': '2',
