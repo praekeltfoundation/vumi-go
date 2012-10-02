@@ -677,6 +677,11 @@ class TestFieldNormalizer(TestCase):
         self.assertNormalizedMsisdn('27', '0027761234567', '+27761234567')
         self.assertNormalizedMsisdn('27', '+27761234567', '+27761234567')
 
+    def test_internationalized_msisdn(self):
+        self.assertNormalized('msisdn_int', '0027761234567', '+27761234567')
+        self.assertNormalized('msisdn_int', '27761234567', '+27761234567')
+        self.assertNormalized('msisdn_int', '+27761234567', '+27761234567')
+
     def test_integer(self):
         self.assertNormalized('integer', '0.1', 0)
         self.assertNormalized('integer', '1.1', 1)
