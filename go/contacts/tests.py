@@ -3,11 +3,14 @@ from os import path
 from StringIO import StringIO
 
 from django.conf import settings
+from django.test import TestCase
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from django.core import mail
+
+from go.contacts.parsers import FieldNormalizer
 
 TEST_GROUP_NAME = u"Test Group"
 TEST_CONTACT_NAME = u"Name"
@@ -96,6 +99,9 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
             'column-0': 'name',
             'column-1': 'surname',
             'column-2': 'msisdn',
+            'normalize-0': '',
+            'normalize-1': '',
+            'normalize-2': '',
             '_complete_contact_upload': '1',
         }
         if columns:
@@ -174,6 +180,14 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
             'column-5': 'gender',
             'column-6': 'language',
             'column-7': 'occupation',
+            'normalize-0': '',
+            'normalize-1': '',
+            'normalize-2': '',
+            'normalize-3': '',
+            'normalize-4': '',
+            'normalize-5': '',
+            'normalize-6': '',
+            'normalize-7': '',
             })
         group = self.contact_store.get_group(self.group_key)
         self.assertEqual(len(group.backlinks.contacts()), 2)
@@ -283,12 +297,45 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
             'column-0': 'name',
             'column-1': 'surname',
             'column-2': 'msisdn',
+            'normalize-0': '',
+            'normalize-1': '',
+            'normalize-2': '',
             })
         group = newest(self.contact_store.list_groups())
         contacts = group.backlinks.contacts()
         self.assertEqual(len(contacts), 0)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('went wrong' in mail.outbox[0].subject)
+
+    def test_normalization(self):
+        csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
+            'fixtures', 'sample-non-normalized-contacts.csv'))
+        response = self.client.post(reverse('contacts:people'), {
+            'name': 'non-normalized-contacts',
+            'file': csv_file,
+            })
+        group = newest(self.contact_store.list_groups())
+        self.assertRedirects(response, group_url(group.key))
+        response = self.specify_columns(group_key=group.key, columns={
+            'column-0': 'name',
+            'column-1': 'surname',
+            'column-2': 'integer',
+            'column-3': 'float',
+            'column-4': 'msisdn',
+            'normalize-0': 'string',
+            'normalize-1': 'string',
+            'normalize-2': 'integer',
+            'normalize-3': 'float',
+            'normalize-4': 'msisdn_za',
+            })
+        contacts = group.backlinks.contacts()
+
+        self.assertTrue(all([contact.msisdn == '+27761234561' for contact in
+            contacts]))
+        self.assertTrue(all([contact.extra['integer'] == '2' for contact in
+            contacts]))
+        self.assertTrue(all([contact.extra['float'] == '2.0' for contact in
+            contacts]))
 
     def test_contact_letter_filter(self):
         people_url = reverse('contacts:people')
@@ -609,3 +656,59 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
         contacts = self.contact_store.get_contacts_for_conversation(
             conversation)
         self.assertEqualContacts(contacts, set([contact1, contact2, contact3]))
+
+
+class TestFieldNormalizer(TestCase):
+
+    def setUp(self):
+        self.fn = FieldNormalizer()
+
+    def assertNormalizedMsisdn(self, country_code, value, expected):
+        self.assertEqual(self.fn.do_msisdn(value, country_code), expected)
+
+    def assertNormalized(self, name, value, expected):
+        self.assertEqual(self.fn.normalize(name, value), expected)
+
+    def test_msisdns(self):
+        self.assertNormalizedMsisdn('27', '761234567', '+27761234567')
+        self.assertNormalizedMsisdn('27', '761234567.0', '+27761234567')
+        self.assertNormalizedMsisdn('27', '0761234567', '+27761234567')
+        self.assertNormalizedMsisdn('27', '27761234567', '+27761234567')
+        self.assertNormalizedMsisdn('27', '0027761234567', '+27761234567')
+        self.assertNormalizedMsisdn('27', '+27761234567', '+27761234567')
+
+    def test_internationalized_msisdn(self):
+        self.assertNormalized('msisdn_int', '0027761234567', '+27761234567')
+        self.assertNormalized('msisdn_int', '27761234567', '+27761234567')
+        self.assertNormalized('msisdn_int', '+27761234567', '+27761234567')
+
+    def test_integer(self):
+        self.assertNormalized('integer', '0.1', 0)
+        self.assertNormalized('integer', '1.1', 1)
+        self.assertNormalized('integer', 2.1, 2)
+        self.assertNormalized('integer', '', '')
+        self.assertNormalized('integer', 'None', 'None')
+        self.assertNormalized('integer', None, None)
+
+    def test_float(self):
+        self.assertNormalized('float', '0.1', 0.1)
+        self.assertNormalized('float', '1.1', 1.1)
+        self.assertNormalized('float', 2.1, 2.1)
+        self.assertNormalized('float', '', '')
+        self.assertNormalized('float', 'None', 'None')
+        self.assertNormalized('float', None, None)
+
+    def test_string(self):
+        self.assertNormalized('string', 761234567.0, '761234567.0')
+        self.assertNormalized('string', '1.1', '1.1')
+        self.assertNormalized('string', '', '')
+        self.assertNormalized('string', 'None', 'None')
+        self.assertNormalized('string', None, None)
+
+    def test_unknown(self):
+        self.assertNormalized('foo', 761234567.0, 761234567.0)
+        self.assertNormalized('bar', '1.1', '1.1')
+        self.assertNormalized('baz', '', '')
+        self.assertNormalized('fubar', 'None', 'None')
+        self.assertNormalized('zab', None, None)
+

@@ -1,11 +1,95 @@
 import os.path
 
-from vumi.utils import load_class
+from vumi.utils import load_class, normalize_msisdn
 
 
 class ContactParserException(Exception):
     pass
 
+class FieldNormalizer(object):
+    """
+    Normalizes values before import. This is primarily important for our
+    XLSFileParser. MS Excel does some "intelligent" handling of values it
+    tries to store. This particularly affects MSISDNs and numeric values.
+    XLS stores MSISDNs such as '0761234567' (str) as `761234567.0` (float).
+    The same applies for Integers '2' (str) becomes `2.0` (float) when
+    read from the file itself.
+
+    NOTE:   If `normalize()` is called with the name of an unknown normalizer
+            then it is returned as is and no warning or exception is raised.
+            This class only touches values if it knows what to do with it and
+            does not do any type of validation.
+    """
+
+    def __init__(self):
+        self.normalizers = [
+            ('', 'Leave as is'),
+            ('string', 'Plain Text'),
+            ('integer', 'Whole Numbers (0, 10, 245, ... )'),
+            ('float', 'Numbers (0.1, 3.14, 4.165, ...)'),
+            ('msisdn_za', 'South African contact number (+27)'),
+            ('msisdn_ke', 'Kenyan contact number (+254)'),
+            ('msisdn_ug', 'Ugandan contact number (+256)'),
+            ('msisdn_gh', 'Ghanaian contact number (+233)'),
+            ('msisdn_cm', 'Cameroonian contact number (+237)'),
+            ('msisdn_ng', 'Nigerian contact number (+234)'),
+            ('msisdn_int',
+                'Contact number (already prefixed with country code)'),
+        ]
+
+    def __iter__(self):
+        return iter(self.normalizers)
+
+    def normalize(self, name, value):
+        normalizer = getattr(self, 'normalize_%s' % (name,), lambda v: v)
+        return normalizer(value)
+
+    def normalize_string(self, value):
+        if value is not None:
+            return str(value)
+
+    def is_numeric(self, value):
+        return str(value).replace('.', '').isdigit()
+
+    def normalize_integer(self, value):
+        if value and self.is_numeric(value):
+            return int(float(value))
+        return value
+
+    def normalize_float(self, value):
+        if value and self.is_numeric(value):
+            return float(value)
+        return value
+
+    def do_msisdn(self, value, country_code):
+        value = value.rsplit('.', 1)[0]
+        if not (value.startswith('0') or value.startswith(country_code) or
+            value.startswith('+')):
+            value = '0%s' % (int(float(value)),)
+        return normalize_msisdn(value, country_code=country_code)
+
+    def normalize_msisdn_za(self, value):
+        return self.do_msisdn(value, '27')
+
+    def normalize_msisdn_ke(self, value):
+        return self.do_msisdn(value, '254')
+
+    def normalize_msisdn_ug(self, value):
+        return self.do_msisdn(value, '256')
+
+    def normalize_msisdn_gh(self, value):
+        return self.do_msisdn(value, '233')
+
+    def normalize_msisdn_cm(self, value):
+        return self.do_msisdn(value, '237')
+
+    def normalize_msisdn_ng(self, value):
+        return self.do_msisdn(value, '234')
+
+    def normalize_msisdn_int(self, value):
+        str_value = self.normalize_string(value).lstrip('+')
+        str_value = str_value.lstrip('00')
+        return '+%s' % (str_value,)
 
 class ContactFileParser(object):
 
@@ -21,7 +105,13 @@ class ContactFileParser(object):
         'email_address': 'Email address',
     }
 
+    ENCODING = 'utf-8'
+    ENCODING_ERRORS = 'strict'
+
     SETTABLE_ATTRIBUTES = set(DEFAULT_HEADERS.keys())
+
+    def __init__(self):
+        self.normalizer = FieldNormalizer()
 
     def is_header_row(self, columns):
         """
@@ -73,7 +163,7 @@ class ContactFileParser(object):
         """
         raise NotImplementedError('Subclasses should implement this.')
 
-    def parse_file(self, file_path, field_names, has_header):
+    def parse_file(self, file_path, fields, has_header):
         """
         Parses the file and returns dictionaries ready to be fed
         the ContactStore.new_contact method.
@@ -85,7 +175,7 @@ class ContactFileParser(object):
 
         # We're expecting a generator so loop over it and save as contacts
         # in the contact_store, normalizing anything we need to
-        data_dictionaries = self.read_data_from_file(file_path, field_names,
+        data_dictionaries = self.read_data_from_file(file_path, fields.keys(),
             has_header)
         for data_dictionary in data_dictionaries:
 
@@ -93,6 +183,14 @@ class ContactFileParser(object):
             # contact to be saved
             contact_dictionary = {}
             for key, value in data_dictionary.items():
+                value = self.normalizer.normalize(fields[key], value)
+                if not isinstance(value, basestring):
+                    value = unicode(str(value), self.ENCODING,
+                        self.ENCODING_ERRORS)
+                elif isinstance(value, str):
+                    value = unicode(value, self.ENCODING,
+                        self.ENCODING_ERRORS)
+
                 if key in self.SETTABLE_ATTRIBUTES:
                     contact_dictionary[key] = value
                 else:
