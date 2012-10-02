@@ -57,28 +57,38 @@ class InsufficientCredit(DebitAccountError):
 
 class OptOutMiddleware(BaseMiddleware):
 
+    @inlineCallbacks
     def setup_middleware(self):
-        self.keyword_separator = self.config.get('keyword_separator', ' ')
+        from go.vumitools.api import VumiApi
+        self.vumi_api = yield VumiApi.from_config_async(self.config)
+
         self.case_sensitive = self.config.get('case_sensitive', False)
         keywords = self.config.get('optout_keywords', [])
-        self.optout_keywords = set([self.casing(word)
-                                        for word in keywords])
+        self.optout_keywords = set([self.casing(word) for word in keywords])
 
     def casing(self, word):
         if not self.case_sensitive:
             return word.lower()
         return word
 
+    @inlineCallbacks
     def handle_inbound(self, message, endpoint):
+        optout_disabled = False
+        tag = TaggingMiddleware.map_msg_to_tag(message)
+        if tag is not None:
+            tagpool_metadata = yield self.vumi_api.tpm.get_metadata(tag[0])
+            optout_disabled = tagpool_metadata.get(
+                'disable_global_opt_out', False)
         keyword = (message['content'] or '').strip()
         helper_metadata = message['helper_metadata']
-        optout_metadata = helper_metadata.setdefault('optout', {})
-        if self.casing(keyword) in self.optout_keywords:
+        optout_metadata = helper_metadata.setdefault(
+            'optout', {'optout': False})
+
+        if (not optout_disabled
+                and self.casing(keyword) in self.optout_keywords):
             optout_metadata['optout'] = True
             optout_metadata['optout_keyword'] = self.casing(keyword)
-        else:
-            optout_metadata['optout'] = False
-        return message
+        returnValue(message)
 
     @staticmethod
     def is_optout_message(message):
