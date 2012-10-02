@@ -2,6 +2,7 @@
 import json
 import uuid
 
+from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet.task import LoopingCall
 
@@ -22,18 +23,32 @@ class WindowManager(object):
         self.flight_lifetime = flight_lifetime
         self.max_flight_retries = max_flight_retries
         self.redis = redis.sub_manager(self.name)
+        self.clock = self.get_clock()
         self.gc = LoopingCall(self.clear_or_retry_flight_keys)
+        self.gc.clock = self.clock
         self.gc.start(gc_interval)
+        self.window_monitors = []
+
+    def noop(self, *args, **kwargs):
+        pass
 
     def stop(self):
+        for poller in self.window_monitors:
+            if poller.running:
+                poller.stop()
+
         if self.gc.running:
             self.gc.stop()
 
     def get_windows(self):
         return self.redis.zrange(self.window_key(), 0, -1)
 
+    @inlineCallbacks
     def window_exists(self, window_id):
-        return self.redis.zscore(self.window_key(), window_id)
+        score = yield self.redis.zscore(self.window_key(), window_id)
+        if score is not None:
+            returnValue(True)
+        returnValue(False)
 
     def window_key(self, *keys):
         return ':'.join([self.WINDOW_KEY] + map(str, keys))
@@ -44,16 +59,21 @@ class WindowManager(object):
     def stats_key(self, *keys):
         return self.window_key(self.FLIGHT_STATS_KEY, *keys)
 
+    def get_clock(self):
+        return reactor
+
     def get_clocktime(self):
-        return self.gc.clock.seconds()
+        return self.clock.seconds()
 
     @inlineCallbacks
-    def create(self, window_id):
-        if (yield self.window_exists(window_id)):
+    def create_window(self, window_id, strict=False):
+        if strict and (yield self.window_exists(window_id)):
             raise WindowException('Window already exists: %s' % (window_id,))
+        clock_time = self.get_clocktime()
         yield self.redis.zadd(self.WINDOW_KEY, **{
-            window_id: self.get_clocktime(),
+            window_id: clock_time,
             })
+        returnValue(clock_time)
 
     @inlineCallbacks
     def remove_window(self, window_id):
@@ -144,3 +164,28 @@ class WindowManager(object):
         yield self.redis.lrem(self.flight_key(window_id), key, 1)
         yield self.redis.delete(self.window_key(window_id, key))
         yield self.redis.delete(self.stats_key(window_id, key))
+
+    def monitor(self, key_callback, interval=10, cleanup=True,
+        cleanup_callback=None):
+        monitor = LoopingCall(lambda: self._monitor_windows(
+            key_callback, cleanup, cleanup_callback))
+        monitor.clock = self.get_clock()
+        monitor.start(interval)
+        self.window_monitors.append(monitor)
+
+    @inlineCallbacks
+    def _monitor_windows(self, key_callback, cleanup=True,
+        cleanup_callback=None):
+        windows = yield self.get_windows()
+        for window_id in windows:
+            key = (yield self.next(window_id))
+            while key:
+                yield key_callback(window_id, key)
+                key = (yield self.next(window_id))
+
+            # Remove empty windows if required
+            if cleanup and not ((yield self.count_waiting(window_id)) or
+                                (yield self.count_in_flight(window_id))):
+                if cleanup_callback:
+                    cleanup_callback(window_id)
+                yield self.remove_window(window_id)

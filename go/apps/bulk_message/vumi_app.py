@@ -17,19 +17,41 @@ class BulkMessageApplication(GoApplicationWorker):
     """
     SEND_TO_TAGS = frozenset(['default'])
     worker_name = 'bulk_message_application'
-    allowed_ack_window = 100
+    max_ack_window = 100
+    max_ack_wait = 10
+    max_ack_retries = 10
 
 
     @inlineCallbacks
     def setup_application(self):
         yield super(BulkMessageApplication, self).setup_application()
-        self.window_manager = WindowManager()
+        self.window_manager = WindowManager(callback=self.send_in_window,
+            window_size=self.allowed_ack_window,
+            flight_lifetime=self.max_ack_wait,
+            max_flight_retries=self.max_ack_retries)
+        self.window_manager.monitor(self.send_in_window)
+
+    def teardown_application(self):
+        self.window_manager.stop()
+
+    @inlineCallbacks
+    def send_in_window(self, window_id, flight_key):
+        data = yield self.window_manager.get(window_id, flight_key)
+        to_addr = data['to_addr']
+        content = data['content']
+        msg_options = data['msg_options']
+        msg = yield self.send_to(to_addr, content, **msg_options)
+        yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=window_id)
+        log.info('Stored outbound %s' % (msg,))
 
     @inlineCallbacks
     def send_message(self, batch_id, to_addr, content, msg_options):
-        msg = yield self.send_to(to_addr, content, **msg_options)
-        yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=batch_id)
-        log.info('Stored outbound %s' % (msg,))
+        yield self.window_manager.create_window(batch_id, strict=False)
+        yield self.window_manager.add(batch_id, {
+            'to_addr': to_addr,
+            'content': content,
+            'msg_options': msg_options,
+            })
 
     @inlineCallbacks
     def process_command_start(self, batch_id, conversation_type,
