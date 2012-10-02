@@ -62,6 +62,8 @@ class FieldNormalizer(object):
         return value
 
     def do_msisdn(self, value, country_code):
+        if not isinstance(value, str):
+            value = str(value)
         value = value.rsplit('.', 1)[0]
         if not (value.startswith('0') or value.startswith(country_code) or
             value.startswith('+')):
