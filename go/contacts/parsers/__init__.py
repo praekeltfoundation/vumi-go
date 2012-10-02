@@ -1,4 +1,3 @@
-from go.contacts.parsers.base import (ContactFileParser, ContactParserException,
-    FieldNormalizer)
+from go.contacts.parsers.base import ContactFileParser, ContactParserException
 
-__all__ = ['ContactParserException', 'ContactFileParser', 'FieldNormalizer']
+__all__ = ['ContactParserException', 'ContactFileParser']

@@ -14,8 +14,8 @@ from go.contacts.forms import (
     ContactForm, ContactGroupForm, UploadContactsForm, SmartGroupForm,
     SelectContactGroupForm)
 from go.contacts import tasks, utils
-from go.contacts.parsers import (ContactFileParser, ContactParserException,
-    FieldNormalizer)
+from go.contacts.parsers import ContactFileParser, ContactParserException
+from go.contacts.parsers.base import FieldNormalizer
 
 
 def _query_to_kwargs(query):
