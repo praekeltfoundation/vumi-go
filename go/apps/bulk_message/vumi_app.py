@@ -25,12 +25,12 @@ class BulkMessageApplication(GoApplicationWorker):
     @inlineCallbacks
     def setup_application(self):
         yield super(BulkMessageApplication, self).setup_application()
-        self.window_manager = WindowManager(callback=self.send_in_window,
-            window_size=self.allowed_ack_window,
+        self.window_manager = WindowManager(self.redis,
+            window_size=self.max_ack_window,
             flight_lifetime=self.max_ack_wait,
             max_flight_retries=self.max_ack_retries)
         self.window_manager.monitor(self.on_window_key_ready,
-            self.on_window_cleanup)
+            cleanup_callback=self.on_window_cleanup)
 
     def teardown_application(self):
         self.window_manager.stop()
@@ -50,6 +50,9 @@ class BulkMessageApplication(GoApplicationWorker):
 
     def on_window_cleanup(self, window_id):
         log.info('Finished window %s, removing.' % (window_id,))
+
+    def get_window_id(self, conversation_key, batch_id):
+        return ':'.join([conversation_key, batch_id])
 
     @inlineCallbacks
     def send_message(self, window_id, batch_id, to_addr, content, msg_options):
@@ -81,7 +84,7 @@ class BulkMessageApplication(GoApplicationWorker):
         if extra_params.get('dedupe'):
             to_addresses = set(to_addresses)
 
-        window_id = '%s:%s' % (conversation_key, batch_id,)
+        window_id = self.get_window_id(conversation_key, batch_id)
 
         for to_addr in to_addresses:
             yield self.send_message(window_id, batch_id, to_addr,
@@ -91,8 +94,24 @@ class BulkMessageApplication(GoApplicationWorker):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
         return self.vumi_api.mdb.add_inbound_message(msg, tag=tag)
 
+    @inlineCallbacks
     def consume_ack(self, event):
         yield self.vumi_api.mdb.add_event(event)
+
+        message = yield self.find_message_for_event(event)
+        if message is None:
+            log.error('Unable to find message for %s, user_message_id: %s' % (
+                event['event_type'], event.get('user_message_id')))
+            return
+
+        gm = self.get_go_metadata(message)
+        conversation = yield gm.get_conversation()
+        batch_key = yield gm.get_batch_key()
+        if conversation and batch_key:
+            window_id = self.get_window_id(conversation.key, batch_key)
+            flight_key = self.window_manager.get_internal_id(window_id,
+                message['message_id'])
+            yield self.window_manager.remove(window_id, flight_key)
 
     def consume_delivery_report(self, event):
         return self.vumi_api.mdb.add_event(event)
@@ -100,13 +119,3 @@ class BulkMessageApplication(GoApplicationWorker):
     def close_session(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
         return self.vumi_api.mdb.add_inbound_message(msg, tag=tag)
-
-    @inlineCallbacks
-    def process_command_send_message(self, *args, **kwargs):
-        command_data = kwargs['command_data']
-        log.info('Processing send_message: %s' % kwargs)
-        yield self.send_message(
-                command_data['batch_id'],
-                command_data['to_addr'],
-                command_data['content'],
-                command_data['msg_options'])
