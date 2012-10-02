@@ -7,6 +7,19 @@ class ContactParserException(Exception):
     pass
 
 class FieldNormalizer(object):
+    """
+    Normalizes values before import. This is primarily important for our
+    XLSFileParser. MS Excel does some "intelligent" handling of values it
+    tries to store. This particularly affects MSISDNs and numeric values.
+    XLS stores MSISDNs such as '0761234567' (str) as `761234567.0` (float).
+    The same applies for Integers '2' (str) becomes `2.0` (float) when
+    read from the file itself.
+
+    NOTE:   If `normalize()` is called with the name of an unknown normalizer
+            then it is returned as is and no warning or exception is raised.
+            This class only touches values if it knows what to do with it and
+            does not do any type of validation.
+    """
 
     def __init__(self):
         self.normalizers = [
@@ -26,8 +39,10 @@ class FieldNormalizer(object):
         return iter(self.normalizers)
 
     def normalize(self, name, value):
-        normalizer = getattr(self, 'normalize_%s' % (name,), lambda v: v)
-        return unicode(normalizer(value))
+        normalizer = getattr(self, 'normalize_%s' % (name,))
+        if normalizer:
+            return unicode(normalizer(value))
+        return value
 
     def normalize_string(self, value):
         return str(value)
