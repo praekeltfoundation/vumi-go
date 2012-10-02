@@ -39,13 +39,12 @@ class FieldNormalizer(object):
         return iter(self.normalizers)
 
     def normalize(self, name, value):
-        normalizer = getattr(self, 'normalize_%s' % (name,))
-        if normalizer:
-            return unicode(normalizer(value))
-        return value
+        normalizer = getattr(self, 'normalize_%s' % (name,), lambda v: v)
+        return normalizer(value)
 
     def normalize_string(self, value):
-        return str(value)
+        if value is not None:
+            return str(value)
 
     def is_numeric(self, value):
         return str(value).replace('.', '').isdigit()
@@ -98,6 +97,9 @@ class ContactFileParser(object):
         'twitter_handle': 'Twitter handle',
         'email_address': 'Email address',
     }
+
+    ENCODING = 'utf-8'
+    ENCODING_ERRORS = 'strict'
 
     SETTABLE_ATTRIBUTES = set(DEFAULT_HEADERS.keys())
 
@@ -175,6 +177,13 @@ class ContactFileParser(object):
             contact_dictionary = {}
             for key, value in data_dictionary.items():
                 value = self.normalizer.normalize(fields[key], value)
+                if not isinstance(value, basestring):
+                    value = unicode(str(value), self.ENCODING,
+                        self.ENCODING_ERRORS)
+                elif isinstance(value, str):
+                    value = unicode(value, self.ENCODING,
+                        self.ENCODING_ERRORS)
+
                 if key in self.SETTABLE_ATTRIBUTES:
                     contact_dictionary[key] = value
                 else:
