@@ -48,14 +48,14 @@ class FieldNormalizer(object):
 
     def normalize_string(self, value):
         if value is not None:
-            if isinstance(value, str):
+            try:
                 return unicode(value, self.encoding, self.encoding_errors)
-            else:
+            except TypeError:
                 return unicode(value)
 
     def is_numeric(self, value):
         str_value = self.normalize_string(value)
-        return str_value.replace('.', '').isdigit()
+        return str_value.replace('.', '', 1).isdigit()
 
     def normalize_integer(self, value):
         if value and self.is_numeric(value):
@@ -72,8 +72,9 @@ class FieldNormalizer(object):
         value = value.rsplit('.', 1)[0]
         if not (value.startswith('0') or value.startswith(country_code) or
             value.startswith('+')):
-            value = '0%s' % (int(float(value)),)
-        return normalize_msisdn(value, country_code=country_code)
+            value = u'0%s' % (int(float(value)),)
+        return unicode(normalize_msisdn(value, country_code=country_code),
+            self.encoding, self.encoding_errors)
 
     def normalize_msisdn_za(self, value):
         return self.do_msisdn(value, '27')
