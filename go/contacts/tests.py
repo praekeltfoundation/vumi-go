@@ -584,9 +584,6 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
             self.contact_store.get_contacts_for_conversation(conversation),
             set([]))
 
-    def assertEqualContact(self, contact1, contact2):
-        self.assertSameContacts([contact1], [contact2])
-
     def assertEqualContacts(self, contacts1, contacts2):
         self.assertEqual(
             set([contact.key for contact in contacts1]),
@@ -663,11 +660,17 @@ class TestFieldNormalizer(TestCase):
     def setUp(self):
         self.fn = FieldNormalizer()
 
-    def assertNormalizedMsisdn(self, country_code, value, expected):
-        self.assertEqual(self.fn.do_msisdn(value, country_code), expected)
+    def assertNormalizedMsisdn(self, country_code, value, expected,
+        instance_type=unicode):
+        normalized = self.fn.do_msisdn(value, country_code)
+        self.assertEqual(normalized, expected)
+        self.assertTrue(isinstance(normalized, instance_type))
 
-    def assertNormalized(self, name, value, expected):
-        self.assertEqual(self.fn.normalize(name, value), expected)
+    def assertNormalized(self, name, value, expected, instance_type=None):
+        normalized = self.fn.normalize(name, value)
+        self.assertEqual(normalized, expected)
+        if instance_type:
+            self.assertTrue(isinstance(normalized, instance_type))
 
     def test_msisdns(self):
         self.assertNormalizedMsisdn('27', '761234567', '+27761234567')
@@ -681,38 +684,43 @@ class TestFieldNormalizer(TestCase):
         self.assertNormalizedMsisdn('27', 27761234567, '+27761234567')
 
     def test_internationalized_msisdn(self):
-        self.assertNormalized('msisdn_int', '0027761234567', '+27761234567')
-        self.assertNormalized('msisdn_int', '27761234567', '+27761234567')
-        self.assertNormalized('msisdn_int', 27761234567, '+27761234567')
-        self.assertNormalized('msisdn_int', '+27761234567', '+27761234567')
+        self.assertNormalized('msisdn_int', '0027761234567', '+27761234567',
+            unicode)
+        self.assertNormalized('msisdn_int', '27761234567', '+27761234567',
+            unicode)
+        self.assertNormalized('msisdn_int', 27761234567, '+27761234567',
+            unicode)
+        self.assertNormalized('msisdn_int', '+27761234567', '+27761234567',
+            unicode)
 
     def test_integer(self):
-        self.assertNormalized('integer', '0.1', 0)
-        self.assertNormalized('integer', '1.1', 1)
-        self.assertNormalized('integer', 2.1, 2)
-        self.assertNormalized('integer', '', '')
-        self.assertNormalized('integer', 'None', 'None')
+        self.assertNormalized('integer', '0.1', 0, int)
+        self.assertNormalized('integer', '1.1', 1, int)
+        self.assertNormalized('integer', 2.1, 2, int)
+        self.assertNormalized('integer', '', '', str)
+        self.assertNormalized('integer', 'None', 'None', str)
         self.assertNormalized('integer', None, None)
 
     def test_float(self):
-        self.assertNormalized('float', '0.1', 0.1)
-        self.assertNormalized('float', '1.1', 1.1)
-        self.assertNormalized('float', 2.1, 2.1)
-        self.assertNormalized('float', '', '')
-        self.assertNormalized('float', 'None', 'None')
+        self.assertNormalized('float', '0.1', 0.1, float)
+        self.assertNormalized('float', '1.1', 1.1, float)
+        self.assertNormalized('float', 2.1, 2.1, float)
+        self.assertNormalized('float', '', '', str)
+        self.assertNormalized('float', 'None', 'None', str)
         self.assertNormalized('float', None, None)
 
     def test_string(self):
-        self.assertNormalized('string', 761234567.0, '761234567.0')
-        self.assertNormalized('string', '1.1', '1.1')
-        self.assertNormalized('string', '', '')
-        self.assertNormalized('string', 'None', 'None')
+        self.assertNormalized('string', 761234567.0, '761234567.0', unicode)
+        self.assertNormalized('string', '1.1', '1.1', unicode)
+        self.assertNormalized('string', '', '', unicode)
+        self.assertNormalized('string', 'None', 'None', unicode)
         self.assertNormalized('string', None, None)
 
     def test_unknown(self):
-        self.assertNormalized('foo', 761234567.0, 761234567.0)
-        self.assertNormalized('bar', '1.1', '1.1')
-        self.assertNormalized('baz', '', '')
-        self.assertNormalized('fubar', 'None', 'None')
+        self.assertNormalized('foo', 761234567.0, 761234567.0, float)
+        self.assertNormalized('bar', '1.1', '1.1', str)
+        self.assertNormalized('bas', u'1.1', u'1.1', unicode)
+        self.assertNormalized('baz', '', '', str)
+        self.assertNormalized('fubar', 'None', 'None', str)
         self.assertNormalized('zab', None, None)
 
