@@ -21,7 +21,7 @@ class FieldNormalizer(object):
             does not do any type of validation.
     """
 
-    def __init__(self):
+    def __init__(self, encoding='utf-8', encoding_errors='strict'):
         self.normalizers = [
             ('', 'Leave as is'),
             ('string', 'Plain Text'),
@@ -36,6 +36,8 @@ class FieldNormalizer(object):
             ('msisdn_int',
                 'Contact number (already prefixed with country code)'),
         ]
+        self.encoding = encoding
+        self.encoding_errors = encoding_errors
 
     def __iter__(self):
         return iter(self.normalizers)
@@ -46,10 +48,14 @@ class FieldNormalizer(object):
 
     def normalize_string(self, value):
         if value is not None:
-            return str(value)
+            if isinstance(value, str):
+                return unicode(value, self.encoding, self.encoding_errors)
+            else:
+                return unicode(value)
 
     def is_numeric(self, value):
-        return str(value).replace('.', '').isdigit()
+        str_value = self.normalize_string(value)
+        return str_value.replace('.', '').isdigit()
 
     def normalize_integer(self, value):
         if value and self.is_numeric(value):
@@ -62,8 +68,7 @@ class FieldNormalizer(object):
         return value
 
     def do_msisdn(self, value, country_code):
-        if not isinstance(value, str):
-            value = str(value)
+        value = self.normalize_string(value)
         value = value.rsplit('.', 1)[0]
         if not (value.startswith('0') or value.startswith(country_code) or
             value.startswith('+')):
@@ -120,7 +125,7 @@ class ContactFileParser(object):
         Determines whether the given columns have something that might hint
         at the row being a row with column headers and not column values.
         """
-        column_set = set([column.lower() for column in columns])
+        column_set = set([column.lower().strip() for column in columns])
         hint_set = set(['phone', 'contact', 'msisdn', 'number'])
         return hint_set.intersection(column_set)
 
@@ -196,6 +201,9 @@ class ContactFileParser(object):
                 elif isinstance(value, str):
                     value = unicode(value, self.ENCODING,
                         self.ENCODING_ERRORS)
+
+                if value is None or value == '':
+                    continue
 
                 if key in self.SETTABLE_ATTRIBUTES:
                     contact_dictionary[key] = value
