@@ -695,6 +695,7 @@ class TestFieldNormalizer(TestCase):
         self.assertNormalized('msisdn_int', '+27761234567', '+27761234567',
             unicode)
         self.assertNormalized('msisdn_int', '2.74727E+10', '+27472700000')
+        self.assertNormalized('msisdn_int', 2.74727E+10, '+27472700000')
 
     def test_integer(self):
         self.assertNormalized('integer', '0.1', 0, int)
