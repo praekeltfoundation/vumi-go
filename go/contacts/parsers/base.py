@@ -6,6 +6,9 @@ from vumi.utils import load_class, normalize_msisdn
 class ContactParserException(Exception):
     pass
 
+class FieldNormalizerException(Exception):
+    pass
+
 class FieldNormalizer(object):
     """
     Normalizes values before import. This is primarily important for our
@@ -55,7 +58,10 @@ class FieldNormalizer(object):
 
     def is_numeric(self, value):
         str_value = self.normalize_string(value)
-        return str_value.replace('.', '', 1).isdigit()
+        try:
+            return float(str_value)
+        except ValueError:
+            return False
 
     def normalize_integer(self, value):
         if value and self.is_numeric(value):
@@ -67,14 +73,24 @@ class FieldNormalizer(object):
             return float(value)
         return value
 
+    def lchop(self, chops, string):
+        string = self.normalize_string(string)
+        for chop in chops:
+            if string.startswith(chop):
+                string = string[len(chop):]
+        return string
+
     def do_msisdn(self, value, country_code):
         value = self.normalize_string(value)
-        value = value.rsplit('.', 1)[0]
-        if not (value.startswith('0') or value.startswith(country_code) or
-            value.startswith('+')):
-            value = u'0%s' % (int(float(value)),)
-        return unicode(normalize_msisdn(value, country_code=country_code),
-            self.encoding, self.encoding_errors)
+        value = self.lchop(['+'], value)
+        float_value = self.normalize_float(value)
+        if not (self.is_numeric(value) and float_value.is_integer()):
+            raise FieldNormalizerException('Invalid MSISDN: %s' % (value,))
+
+        msisdn = self.normalize_string(self.normalize_integer(float_value))
+        msisdn = self.lchop([country_code], msisdn)
+        msisdn = '0%s' % (msisdn,)
+        return self.normalize_string(normalize_msisdn(msisdn, country_code))
 
     def normalize_msisdn_za(self, value):
         return self.do_msisdn(value, '27')
@@ -95,9 +111,15 @@ class FieldNormalizer(object):
         return self.do_msisdn(value, '234')
 
     def normalize_msisdn_int(self, value):
-        str_value = self.normalize_string(value).lstrip('+')
-        str_value = str_value.lstrip('00')
-        return '+%s' % (str_value,)
+        value = self.normalize_string(value)
+        value = self.lchop(['+', '00'], value)
+        float_value = self.normalize_float(value)
+        if not (self.is_numeric(value) and float_value.is_integer()):
+            raise FieldNormalizerException('Invalid MSISDN: %s' % (value,))
+
+        msisdn = self.normalize_string(self.normalize_integer(float_value))
+        country_code = msisdn[:3]
+        return self.normalize_string(normalize_msisdn(msisdn, country_code))
 
 class ContactFileParser(object):
 
