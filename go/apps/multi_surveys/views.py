@@ -12,6 +12,7 @@ from go.base.utils import make_read_only_form, conversation_or_404
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
 from go.apps.surveys import forms
+from go.apps.surveys.views import _clear_empties
 
 from vxpolls.manager import PollManager
 
@@ -160,14 +161,6 @@ def new_survey(request, conversation_key):
         'form': form,
         'survey_form': survey_form,
     })
-
-def _clear_empties(cleaned_data):
-    """
-    FIXME:  this is a work around because for some reason Django is seeing
-            the new (empty) forms in the formsets as stuff that is to be
-            stored when it really should be discarded.
-    """
-    return [cd for cd in cleaned_data if cd.get('copy')]
 
 @login_required
 def survey(request, conversation_key, poll_name):
