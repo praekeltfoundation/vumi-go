@@ -11,9 +11,8 @@ from vumi.persist.redis_manager import RedisManager
 from go.base.utils import make_read_only_form, conversation_or_404
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
-from go.apps.surveys import forms as sforms
+from go.apps.surveys import forms
 
-from vxpolls.content import forms
 from vxpolls.manager import PollManager
 
 
@@ -162,6 +161,13 @@ def new_survey(request, conversation_key):
         'survey_form': survey_form,
     })
 
+def _clear_empties(cleaned_data):
+    """
+    FIXME:  this is a work around because for some reason Django is seeing
+            the new (empty) forms in the formsets as stuff that is to be
+            stored when it really should be discarded.
+    """
+    return [cd for cd in cleaned_data if cd.get('copy')]
 
 @login_required
 def survey(request, conversation_key, poll_name):
@@ -182,14 +188,19 @@ def survey(request, conversation_key, poll_name):
         post_data.update({
             'poll_id': poll_id,
         })
-        form = forms.make_form(data=post_data, initial=config)
 
         questions_formset = forms.make_form_set(data=post_data)
         completed_response_formset = forms.make_completed_response_form_set(
             data=post_data)
-        #poll_form = forms.SurveyPollForm(data=post_data)
-        if form.is_valid():
-            pm.set(poll_id, form.export())
+        poll_form = forms.SurveyPollForm(data=post_data)
+        if poll_form.is_valid():
+            data = poll_form.cleaned_data.copy()
+            data.update({
+                'questions': _clear_empties(questions_formset.cleaned_data),
+                'survey_completed_responses': _clear_empties(
+                    completed_response_formset.cleaned_data)
+                })
+            pm.set(poll_id, data)
             link_poll_to_conversation(poll_name, poll_id, conversation)
             if request.POST.get('_save_contents'):
                 for k, v in post_data.items():
@@ -203,7 +214,7 @@ def survey(request, conversation_key, poll_name):
                     'conversation_key': conversation.key,
                 }))
     else:
-        form = forms.make_form(data=config, initial=config)
+        poll_form = forms.SurveyPollForm(initial=config)
         questions_formset = forms.make_form_set(initial=questions_data)
         completed_response_formset = forms.make_completed_response_form_set(
             initial=completed_response_data)
@@ -213,8 +224,9 @@ def survey(request, conversation_key, poll_name):
             'start_date': conversation.start_timestamp.date(),
             'start_time': conversation.start_timestamp.time(),
         }))
+
     return render(request, 'multi_surveys/contents.html', {
-        'form': form,
+        'poll_form': poll_form,
         'questions_formset': questions_formset,
         'completed_response_formset': completed_response_formset,
         'survey_form': survey_form,
