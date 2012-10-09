@@ -167,8 +167,6 @@ def survey(request, conversation_key, poll_name):
     conversation = conversation_or_404(request.user_api, conversation_key)
     poll_id = generate_poll_id(conversation, poll_name)
     pm, config = get_poll_config(poll_id)
-    questions_data = config.get('questions', [])
-    completed_response_data = config.get('survey_completed_responses', [])
 
     if request.method == 'POST':
         if request.POST.get('_delete_survey'):
@@ -207,6 +205,8 @@ def survey(request, conversation_key, poll_name):
                 }))
     else:
         poll_form = forms.SurveyPollForm(initial=config)
+        questions_data = config.get('questions', [])
+        completed_response_data = config.get('survey_completed_responses', [])
         questions_formset = forms.make_form_set(initial=questions_data)
         completed_response_formset = forms.make_completed_response_form_set(
             initial=completed_response_data)
