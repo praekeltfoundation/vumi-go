@@ -11,6 +11,7 @@ from vumi.persist.redis_manager import RedisManager
 from go.base.utils import make_read_only_form, conversation_or_404
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
+from go.apps.surveys import forms as sforms
 
 from vxpolls.content import forms
 from vxpolls.manager import PollManager
@@ -167,8 +168,10 @@ def survey(request, conversation_key, poll_name):
     conversation = conversation_or_404(request.user_api, conversation_key)
     poll_id = generate_poll_id(conversation, poll_name)
     pm, config = get_poll_config(poll_id)
-    if request.method == 'POST':
+    questions_data = config.get('questions', [])
+    completed_response_data = config.get('survey_completed_responses', [])
 
+    if request.method == 'POST':
         if request.POST.get('_delete_survey'):
             unlink_poll_from_conversation(poll_name, conversation)
             return redirect(reverse('multi_survey:surveys', kwargs={
@@ -180,10 +183,17 @@ def survey(request, conversation_key, poll_name):
             'poll_id': poll_id,
         })
         form = forms.make_form(data=post_data, initial=config)
+
+        questions_formset = forms.make_form_set(data=post_data)
+        completed_response_formset = forms.make_completed_response_form_set(
+            data=post_data)
+        #poll_form = forms.SurveyPollForm(data=post_data)
         if form.is_valid():
             pm.set(poll_id, form.export())
             link_poll_to_conversation(poll_name, poll_id, conversation)
             if request.POST.get('_save_contents'):
+                for k, v in post_data.items():
+                    print k, v
                 return redirect(reverse('multi_survey:survey', kwargs={
                     'conversation_key': conversation.key,
                     'poll_name': poll_name,
@@ -194,6 +204,9 @@ def survey(request, conversation_key, poll_name):
                 }))
     else:
         form = forms.make_form(data=config, initial=config)
+        questions_formset = forms.make_form_set(initial=questions_data)
+        completed_response_formset = forms.make_completed_response_form_set(
+            initial=completed_response_data)
 
     survey_form = make_read_only_form(ConversationForm(request.user_api,
         instance=conversation, initial={
@@ -202,6 +215,8 @@ def survey(request, conversation_key, poll_name):
         }))
     return render(request, 'multi_surveys/contents.html', {
         'form': form,
+        'questions_formset': questions_formset,
+        'completed_response_formset': completed_response_formset,
         'survey_form': survey_form,
     })
 
