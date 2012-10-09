@@ -193,7 +193,8 @@ def survey(request, conversation_key, poll_name):
         completed_response_formset = forms.make_completed_response_form_set(
             data=post_data)
         poll_form = forms.SurveyPollForm(data=post_data)
-        if poll_form.is_valid():
+        if (questions_formset.is_valid() and poll_form.is_valid() and
+            completed_response_formset.is_valid()):
             data = poll_form.cleaned_data.copy()
             data.update({
                 'questions': _clear_empties(questions_formset.cleaned_data),
@@ -203,8 +204,6 @@ def survey(request, conversation_key, poll_name):
             pm.set(poll_id, data)
             link_poll_to_conversation(poll_name, poll_id, conversation)
             if request.POST.get('_save_contents'):
-                for k, v in post_data.items():
-                    print k, v
                 return redirect(reverse('multi_survey:survey', kwargs={
                     'conversation_key': conversation.key,
                     'poll_name': poll_name,
