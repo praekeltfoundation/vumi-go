@@ -3,12 +3,14 @@
 """Tests for go.vumitools.bulk_send_application"""
 
 from twisted.internet.defer import inlineCallbacks
+from twisted.internet.task import Clock
 
 from vumi.message import TransportUserMessage
 
 from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi, VumiApiCommand
 from go.vumitools.tests.utils import AppWorkerTestCase
+from go.vumitools.window_manager import WindowManager
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
 
 
@@ -19,6 +21,11 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         super(TestBulkMessageApplication, self).setUp()
+
+        # Patch the clock so we can control time
+        self.clock = Clock()
+        self.patch(WindowManager, 'get_clock', lambda _: self.clock)
+
         self.config = self.mk_config({})
         self.app = yield self.get_application(self.config)
         self.cmd_dispatcher = yield self.get_application({
@@ -64,17 +71,42 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         [batch_id] = conversation.batches.keys()
 
         # check commands made it through to the dispatcher and the vumi_app
-        # yield self._amqp.wait_messages('vumi', 'vumi.api', 1)
         [disp_cmd] = self.get_dispatcher_commands()
         self.assertEqual(disp_cmd['command'], 'start')
         [bulk_cmd] = self.get_bulk_message_commands()
         self.assertEqual(bulk_cmd['command'], 'start')
+
+        # Force processing of messages
         yield self._amqp.kick_delivery()
 
+        # Assert that the messages are in the window managers' flight window
+        window_id = self.app.get_window_id(conversation.key, batch_id)
+        self.assertEqual(
+            (yield self.app.window_manager.count_waiting(window_id)), 2)
+
+        # Go past the monitoring interval to ensure the window is
+        # being worked through for delivery
+        self.clock.advance(self.app.monitor_interval + 1)
+
         # assert that we've sent the message to the two contacts
-        msgs = yield self.get_dispatched_messages()
+        msgs = yield self.wait_for_dispatched_messages(2)
         msgs.sort(key=lambda msg: msg['to_addr'])
         [msg1, msg2] = msgs
+
+        # Create acks for messages
+        ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'],
+            sent_message_id=msg1['message_id'])
+        ack2 = self.mkmsg_ack(user_message_id=msg2['message_id'],
+            sent_message_id=msg2['message_id'])
+
+        yield self.dispatch(ack1, rkey='%s.event' % (self.transport_name,))
+        yield self.dispatch(ack2, rkey='%s.event' % (self.transport_name,))
+
+        # Assert that the window's now empty because acks have been received
+        self.assertEqual(
+            (yield self.app.window_manager.count_in_flight(window_id)), 0)
+        self.assertEqual(
+            (yield self.app.window_manager.count_waiting(window_id)), 0)
 
         # check that the right to_addr & from_addr are set and that the content
         # of the message equals conversation.message
@@ -123,15 +155,18 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
         # Provide the dedupe option to the conversation
         yield conversation.start(dedupe=True)
+
         yield self._amqp.kick_delivery()
 
-        # assert that we've sent the message to the two contacts
-        msgs = yield self.get_dispatched_messages()
-        msgs.sort(key=lambda msg: msg['to_addr'])
+        # Go past the monitoring interval to ensure the window is
+        # being worked through for delivery
+        self.clock.advance(self.app.monitor_interval + 1)
+
+        yield self._amqp.kick_delivery()
 
         # Make sure only 1 message is sent, the rest were duplicates to the
         # same to_addr and were filtered out as a result.
-        [msg] = msgs
+        [msg] = self.get_dispatched_messages()
 
         # check that the right to_addr & from_addr are set and that the content
         # of the message equals conversation.message
