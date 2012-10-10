@@ -28,15 +28,14 @@ class WindowManager(object):
         self.gc = LoopingCall(self.clear_or_retry_flight_keys)
         self.gc.clock = self.clock
         self.gc.start(gc_interval)
-        self.window_monitors = []
+        self._monitor = None
 
     def noop(self, *args, **kwargs):
         pass
 
     def stop(self):
-        for poller in self.window_monitors:
-            if poller.running:
-                poller.stop()
+        if self._monitor and self._monitor.running:
+            self._monitor.stop()
 
         if self.gc.running:
             self.gc.stop()
@@ -188,11 +187,14 @@ class WindowManager(object):
 
     def monitor(self, key_callback, interval=10, cleanup=True,
         cleanup_callback=None):
-        monitor = LoopingCall(lambda: self._monitor_windows(
+
+        if self._monitor is not None:
+            raise WindowException('Monitor already started')
+
+        self._monitor = LoopingCall(lambda: self._monitor_windows(
             key_callback, cleanup, cleanup_callback))
-        monitor.clock = self.get_clock()
-        monitor.start(interval)
-        self.window_monitors.append(monitor)
+        self._monitor.clock = self.get_clock()
+        self._monitor.start(interval)
 
     @inlineCallbacks
     def _monitor_windows(self, key_callback, cleanup=True,
