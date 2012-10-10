@@ -1,3 +1,5 @@
+import time
+
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import Clock
@@ -7,6 +9,8 @@ from vumi.tests.utils import PersistenceMixin
 
 
 class WindowManagerTestCase(TestCase, PersistenceMixin):
+
+    timeout = 5
 
     @inlineCallbacks
     def setUp(self):
@@ -110,13 +114,31 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
     @inlineCallbacks
     def test_retries(self):
 
+        def mock_clock_time(self):
+            return self._clocktime
+
+        self.patch(WindowManager, 'get_clocktime', mock_clock_time)
+        self.wm._clocktime = 0
+
         for i in range(10):
             yield self.wm.add(self.window_id, i)
 
-        for i in range(3):  # max nr of retries + 1
-            yield self.slide_window()
-            self.clock.advance(10)
-            yield self.wm.clear_or_retry_flight_keys()
+        # There's a max of 3 retries, we're manually setting the clock
+        # instead of using clock.advance() so we can wait for the deferreds
+        # to finish before continuing to the next clear_or_retry run
+        # since LoopingCall() will only fire again if the previous run has
+        # completed.
+        yield self.slide_window()
+        self.wm._clocktime = 10
+        yield self.wm.clear_or_retry_flight_keys()
+
+        yield self.slide_window()
+        self.wm._clocktime = 20
+        yield self.wm.clear_or_retry_flight_keys()
+
+        yield self.slide_window()
+        self.wm._clocktime = 30
+        yield self.wm.clear_or_retry_flight_keys()
 
         self.assert_in_flight(self.window_id, 0)
         self.assert_count_waiting(self.window_id, 0)
