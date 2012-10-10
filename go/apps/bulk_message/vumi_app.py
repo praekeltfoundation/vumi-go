@@ -20,7 +20,8 @@ class BulkMessageApplication(GoApplicationWorker):
     max_ack_window = 100
     max_ack_wait = 10
     max_ack_retries = 10
-
+    monitor_interval = 10
+    monitor_window_cleanup = True
 
     @inlineCallbacks
     def setup_application(self):
@@ -30,6 +31,8 @@ class BulkMessageApplication(GoApplicationWorker):
             flight_lifetime=self.max_ack_wait,
             max_flight_retries=self.max_ack_retries)
         self.window_manager.monitor(self.on_window_key_ready,
+            interval=self.monitor_interval,
+            cleanup=self.monitor_window_cleanup,
             cleanup_callback=self.on_window_cleanup)
 
     def teardown_application(self):
@@ -85,7 +88,6 @@ class BulkMessageApplication(GoApplicationWorker):
             to_addresses = set(to_addresses)
 
         window_id = self.get_window_id(conversation_key, batch_id)
-
         for to_addr in to_addresses:
             yield self.send_message(window_id, batch_id, to_addr,
                                     conv.message, msg_options)
