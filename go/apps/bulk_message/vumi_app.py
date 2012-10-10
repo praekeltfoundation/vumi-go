@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Vumi application worker for the vumitools API."""
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
@@ -49,11 +49,9 @@ class BulkMessageApplication(GoApplicationWorker):
         to_addr = data['to_addr']
         content = data['content']
         msg_options = data['msg_options']
-        msg = yield self.send_to(to_addr, content, **msg_options)
-        yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=batch_id)
-        self.window_manager.set_external_id(window_id, flight_key,
+        msg = yield self.send_message(batch_id, to_addr, content, msg_options)
+        yield self.window_manager.set_external_id(window_id, flight_key,
             msg['message_id'])
-        log.info('Stored outbound %s' % (msg,))
 
     def on_window_cleanup(self, window_id):
         log.info('Finished window %s, removing.' % (window_id,))
@@ -62,7 +60,8 @@ class BulkMessageApplication(GoApplicationWorker):
         return ':'.join([conversation_key, batch_id])
 
     @inlineCallbacks
-    def send_message(self, window_id, batch_id, to_addr, content, msg_options):
+    def send_message_via_window(self, window_id, batch_id, to_addr, content,
+                                    msg_options):
         yield self.window_manager.create_window(window_id, strict=False)
         yield self.window_manager.add(window_id, {
             'batch_id': batch_id,
@@ -70,6 +69,13 @@ class BulkMessageApplication(GoApplicationWorker):
             'content': content,
             'msg_options': msg_options,
             })
+
+    @inlineCallbacks
+    def send_message(self, batch_id, to_addr, content, msg_options):
+        msg = yield self.send_to(to_addr, content, **msg_options)
+        yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=batch_id)
+        log.info('Stored outbound %s' % (msg,))
+        returnValue(msg)
 
     @inlineCallbacks
     def process_command_start(self, batch_id, conversation_type,
@@ -93,7 +99,7 @@ class BulkMessageApplication(GoApplicationWorker):
 
         window_id = self.get_window_id(conversation_key, batch_id)
         for to_addr in to_addresses:
-            yield self.send_message(window_id, batch_id, to_addr,
+            yield self.send_message_via_window(window_id, batch_id, to_addr,
                                     conv.message, msg_options)
 
     def consume_user_message(self, msg):
@@ -125,3 +131,13 @@ class BulkMessageApplication(GoApplicationWorker):
     def close_session(self, msg):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
         return self.vumi_api.mdb.add_inbound_message(msg, tag=tag)
+
+    @inlineCallbacks
+    def process_command_send_message(self, *args, **kwargs):
+        command_data = kwargs['command_data']
+        log.info('Processing send_message: %s' % kwargs)
+        yield self.send_message(
+                command_data['batch_id'],
+                command_data['to_addr'],
+                command_data['content'],
+                command_data['msg_options'])
