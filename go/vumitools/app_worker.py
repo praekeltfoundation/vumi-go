@@ -105,6 +105,19 @@ class GoApplicationMixin(object):
         return GoMessageMetadata(self.vumi_api, msg)
 
     @inlineCallbacks
+    def find_message_for_event(self, event):
+        user_message_id = event.get('user_message_id')
+        if user_message_id is None:
+            log.error('Received event without user_message_id: %s' % (event,))
+            return
+
+        message = yield self.vumi_api.mdb.get_outbound_message(user_message_id)
+        if message is None:
+            log.error('Unable to find message for event: %s' % (event,))
+
+        returnValue(message)
+
+    @inlineCallbacks
     def event_for_message(self, message, event_type, content):
         gmt = self.get_go_metadata(message)
         account_key = yield gmt.get_account_key()

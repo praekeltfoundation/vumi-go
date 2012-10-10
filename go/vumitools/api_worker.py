@@ -375,6 +375,8 @@ class GoApplicationRouter(BaseDispatchRouter):
         user_message_id = event.get('user_message_id')
         if user_message_id is None:
             log.error('Received event without user_message_id: %s' % (event,))
+            return
+
         message = yield self.vumi_api.mdb.get_outbound_message(user_message_id)
         if message is None:
             log.error('Unable to find message for event: %s' % (event,))
