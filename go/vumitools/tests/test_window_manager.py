@@ -37,7 +37,8 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
 
     def test_strict_window_recreation(self):
         return self.assertFailure(
-            self.wm.create_window(self.window_id, strict=True), WindowException)
+            self.wm.create_window(self.window_id, strict=True),
+                                    WindowException)
 
     def test_window_recreation(self):
         clock_time = yield self.wm.create_window(self.window_id)
@@ -134,10 +135,12 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
                 yield self.wm.add(window_id, i)
 
         key_callbacks = {}
+
         def callback(window_id, key):
             key_callbacks.setdefault(window_id, []).append(key)
 
         cleanup_callbacks = []
+
         def cleanup_callback(window_id):
             cleanup_callbacks.append(window_id)
 
