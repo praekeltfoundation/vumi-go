@@ -142,13 +142,13 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         def cleanup_callback(window_id):
             cleanup_callbacks.append(window_id)
 
-        self.wm._monitor_windows(callback, False)
+        yield self.wm._monitor_windows(callback, False)
 
         self.assertEqual(set(key_callbacks.keys()), set(window_ids))
         self.assertEqual(len(key_callbacks.values()[0]), 10)
         self.assertEqual(len(key_callbacks.values()[1]), 10)
 
-        self.wm._monitor_windows(callback, False)
+        yield self.wm._monitor_windows(callback, False)
 
         # Nothing should've changed since we haven't removed anything.
         self.assertEqual(len(key_callbacks.values()[0]), 10)
@@ -158,7 +158,7 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
             for key in keys:
                 yield self.wm.remove_key(window_id, key)
 
-        self.wm._monitor_windows(callback, False)
+        yield self.wm._monitor_windows(callback, False)
         # Everything should've been processed now
         self.assertEqual(len(key_callbacks.values()[0]), 20)
         self.assertEqual(len(key_callbacks.values()[1]), 20)
@@ -169,7 +169,7 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
             for key in keys:
                 yield self.wm.remove_key(window_id, key)
 
-        self.wm._monitor_windows(callback, True, cleanup_callback)
+        yield self.wm._monitor_windows(callback, True, cleanup_callback)
         self.assertEqual(len(key_callbacks.values()[0]), 20)
         self.assertEqual(len(key_callbacks.values()[1]), 20)
         self.assertEqual((yield self.wm.get_windows()), [])
