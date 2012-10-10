@@ -157,7 +157,7 @@ class WindowManager(object):
                     yield self.redis.rpoplpush(inflight_key, window_key)
                     yield self._clear_timestamp(window_id, key)
                 else:
-                    yield self.remove(window_id, key)
+                    yield self.remove_key(window_id, key)
 
     @inlineCallbacks
     def get_data(self, window_id, key):
@@ -165,7 +165,7 @@ class WindowManager(object):
         returnValue(json.loads(json_data))
 
     @inlineCallbacks
-    def remove(self, window_id, key):
+    def remove_key(self, window_id, key):
         yield self.redis.lrem(self.flight_key(window_id), key, 1)
         yield self.redis.delete(self.window_key(window_id, key))
         yield self.redis.delete(self.stats_key(window_id, key))
