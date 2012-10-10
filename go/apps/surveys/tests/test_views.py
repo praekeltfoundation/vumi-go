@@ -178,12 +178,15 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             'conversation_key': self.conv_key,
             })
         response = self.client.post(survey_url, {
-            'form-TOTAL_FORMS': 1,
-            'form-INITIAL_FORMS': 0,
-            'form-MAX_NUM_FORMS': '',
-            'form-0-copy': 'What is your favorite music?',
-            'form-0-label': 'favorite music',
-            'form-0-valid_responses': 'rock, jazz, techno',
+            'questions-TOTAL_FORMS': 1,
+            'questions-INITIAL_FORMS': 0,
+            'questions-MAX_NUM_FORMS': '',
+            'questions-0-copy': 'What is your favorite music?',
+            'questions-0-label': 'favorite music',
+            'questions-0-valid_responses': 'rock, jazz, techno',
+            'completed_response-TOTAL_FORMS': 0,
+            'completed_response-INITIAL_FORMS': 0,
+            'completed_response-MAX_NUM_FORMS': '',
         })
         self.assertRedirects(response, show_url)
         poll_id = 'poll-%s' % (self.conv_key,)
@@ -199,12 +202,15 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             'conversation_key': self.conv_key,
         })
         response = self.client.post(survey_url, {
-            'form-TOTAL_FORMS': 1,
-            'form-INITIAL_FORMS': 0,
-            'form-MAX_NUM_FORMS': '',
-            'form-0-copy': 'What is your favorite music?',
-            'form-0-label': 'favorite music',
-            'form-0-valid_responses': 'rock, jazz, techno',
+            'questions-TOTAL_FORMS': 1,
+            'questions-INITIAL_FORMS': 0,
+            'questions-MAX_NUM_FORMS': '',
+            'questions-0-copy': 'What is your favorite music?',
+            'questions-0-label': 'favorite music',
+            'questions-0-valid_responses': 'rock, jazz, techno',
+            'completed_response-TOTAL_FORMS': 0,
+            'completed_response-INITIAL_FORMS': 0,
+            'completed_response-MAX_NUM_FORMS': '',
             '_save_contents': 1
         })
         self.assertRedirects(response, survey_url)

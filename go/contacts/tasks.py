@@ -6,6 +6,7 @@ from celery.task import task
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from django.utils.safestring import mark_safe
 
 from go.vumitools.api import VumiUserApi
 from go.base.models import UserProfile
@@ -91,8 +92,9 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
                 'fields': fields,
                 'has_header': has_header,
                 'exception_type': exc_type,
-                'exception_value': exc_value,
-                'exception_traceback': traceback.format_tb(exc_traceback),
+                'exception_value': mark_safe(exc_value),
+                'exception_traceback': mark_safe(
+                    traceback.format_tb(exc_traceback)),
             }), settings.DEFAULT_FROM_EMAIL, [
                 user_profile.user.email,
                 'support+contact-import@vumi.org',

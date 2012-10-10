@@ -6,6 +6,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue, maybeDeferred
 from vumi.message import TransportUserMessage
 from vumi.application.tests.test_base import DummyApplicationWorker
 from vumi.transports.failures import FailureMessage
+from vumi.middleware.tagger import TaggingMiddleware
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.middleware import (NormalizeMsisdnMiddleware,
@@ -34,7 +35,7 @@ class MiddlewareTestCase(AppWorkerTestCase):
         dummy_worker = yield self.get_application({})
         mw = middleware_class(name, config or self.default_config,
                                 dummy_worker)
-        mw.setup_middleware()
+        yield mw.setup_middleware()
         returnValue(mw)
 
     @inlineCallbacks
@@ -83,17 +84,25 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
         yield super(OptOutMiddlewareTestCase, self).setUp()
         self.config = self.default_config.copy()
         self.config.update({
-            'keyword_separator': '-',
             'optout_keywords': ['STOP', 'HALT', 'QUIT']
         })
         self.mw = yield self.create_middleware(OptOutMiddleware,
             config=self.config)
+        self._persist_redis_managers.append(self.mw.vumi_api.redis)
+        yield self.mw.vumi_api.declare_tags([("pool", "tag1")])
+        yield self.mw.vumi_api.set_pool_metadata("pool", {
+                "transport_type": "other",
+                "msg_options": {"transport_name": "other_transport"},
+                })
 
+    @inlineCallbacks
     def send_keyword(self, mw, word, expected_response):
-        msg = self.mk_msg('to@domain.org', 'from@domain.org')
-        msg['content'] = '%s%sfoo' % (
-            word, self.config['keyword_separator'])
+        msg = self.mk_msg(
+            content=word, to_addr='to@domain.org', from_addr='from@domain.org')
+        TaggingMiddleware.add_tag_to_msg(msg, ("pool", "tag1"))
         yield mw.handle_inbound(msg, 'dummy_endpoint')
+        expected_response = dict(expected_response,
+                                 tag={'tag': ['pool', 'tag1']})
         self.assertEqual(msg['helper_metadata'], expected_response)
 
     @inlineCallbacks
@@ -116,12 +125,33 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
             })
 
     @inlineCallbacks
+    def test_disabled_by_tagpool(self):
+        yield self.mw.vumi_api.set_pool_metadata("pool", {
+                "transport_type": "other",
+                "msg_options": {"transport_name": "other_transport"},
+                "disable_global_opt_out": True,
+                })
+        yield self.send_keyword(self.mw, 'STOP', {
+            'optout': {
+                'optout': False,
+            }
+        })
+
+    @inlineCallbacks
     def test_case_sensitivity(self):
         config = self.config.copy()
         config.update({
             'case_sensitive': True,
         })
+
+        # This is a bit ugly. We get a new fakeredis here.
         mw = yield self.create_middleware(OptOutMiddleware, config=config)
+        self._persist_redis_managers.append(mw.vumi_api.redis)
+        yield mw.vumi_api.declare_tags([("pool", "tag1")])
+        yield mw.vumi_api.set_pool_metadata("pool", {
+                "transport_type": "other",
+                "msg_options": {"transport_name": "other_transport"},
+                })
 
         yield self.send_keyword(mw, 'STOP', {
             'optout': {
@@ -135,6 +165,7 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
                 'optout': False,
             }
         })
+
 
 class MetricsMiddlewareTestCase(MiddlewareTestCase):
 
