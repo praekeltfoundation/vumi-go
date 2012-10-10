@@ -112,8 +112,6 @@ class WindowManager(object):
             yield self._set_timestamp(window_id, next_key)
             yield self._increment_tries(window_id, next_key)
             returnValue(next_key)
-        else:
-            returnValue(None)
 
     def _set_timestamp(self, window_id, flight_key):
         return self.redis.zadd(self.stats_key(window_id), **{
