@@ -10,6 +10,7 @@ from twisted.internet.task import LoopingCall
 class WindowException(Exception):
     pass
 
+
 class WindowManager(object):
 
     WINDOW_KEY = 'windows'
