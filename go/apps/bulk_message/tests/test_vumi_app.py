@@ -140,15 +140,18 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
         # Provide the dedupe option to the conversation
         yield conversation.start(dedupe=True)
+
         yield self._amqp.kick_delivery()
 
-        # assert that we've sent the message to the two contacts
-        msgs = yield self.get_dispatched_messages()
-        msgs.sort(key=lambda msg: msg['to_addr'])
+        # Go past the monitoring interval to ensure the window is
+        # being worked through for delivery
+        self.clock.advance(self.app.monitor_interval + 1)
+
+        yield self._amqp.kick_delivery()
 
         # Make sure only 1 message is sent, the rest were duplicates to the
         # same to_addr and were filtered out as a result.
-        [msg] = msgs
+        [msg] = self.get_dispatched_messages()
 
         # check that the right to_addr & from_addr are set and that the content
         # of the message equals conversation.message

@@ -49,8 +49,8 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         yield self.wm.add(self.window_id, 1)
         yield self.assertFailure(self.wm.remove_window(self.window_id),
             WindowException)
-        key = yield self.wm.next(self.window_id)
-        item = yield self.wm.get(self.window_id, key)
+        key = yield self.wm.get_next_key(self.window_id)
+        item = yield self.wm.get_data(self.window_id, key)
         self.assertEqual(item, 1)
         self.assertEqual((yield self.wm.remove_window(self.window_id)), None)
 
@@ -69,21 +69,21 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
 
         flight_keys = []
         for i in range(10):
-            flight_key = yield self.wm.next(self.window_id)
+            flight_key = yield self.wm.get_next_key(self.window_id)
             self.assertTrue(flight_key)
             flight_keys.append(flight_key)
 
-        out_of_window_flight = yield self.wm.next(self.window_id)
+        out_of_window_flight = yield self.wm.get_next_key(self.window_id)
         self.assertEqual(out_of_window_flight, None)
 
         # We should get data out in the order we put it in
         for i, flight_key in enumerate(flight_keys):
-            data = yield self.wm.get(self.window_id, flight_key)
+            data = yield self.wm.get_data(self.window_id, flight_key)
             self.assertEqual(data, i)
 
         # Removing one should allow for space for the next to fill up
         yield self.wm.remove(self.window_id, flight_keys[0])
-        next_flight_key = yield self.wm.next(self.window_id)
+        next_flight_key = yield self.wm.get_next_key(self.window_id)
         self.assertTrue(next_flight_key)
 
     @inlineCallbacks
@@ -107,7 +107,7 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
     @inlineCallbacks
     def slide_window(self, limit=10):
         for i in range(limit):
-            yield self.wm.next(self.window_id)
+            yield self.wm.get_next_key(self.window_id)
 
     @inlineCallbacks
     def test_retries(self):

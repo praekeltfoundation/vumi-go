@@ -96,7 +96,7 @@ class WindowManager(object):
         returnValue(key)
 
     @inlineCallbacks
-    def next(self, window_id):
+    def get_next_key(self, window_id):
 
         window_key = self.window_key(window_id)
         inflight_key = self.flight_key(window_id)
@@ -110,18 +110,18 @@ class WindowManager(object):
 
         if room_available:
             next_key = yield self.redis.rpoplpush(window_key, inflight_key)
-            yield self.set_timestamp(window_id, next_key)
-            yield self.increment_tries(window_id, next_key)
+            yield self._set_timestamp(window_id, next_key)
+            yield self._increment_tries(window_id, next_key)
             returnValue(next_key)
         else:
             returnValue(None)
 
-    def set_timestamp(self, window_id, flight_key):
+    def _set_timestamp(self, window_id, flight_key):
         return self.redis.zadd(self.stats_key(window_id), **{
                 flight_key: self.get_clocktime(),
         })
 
-    def clear_timestamp(self, window_id, flight_key):
+    def _clear_timestamp(self, window_id, flight_key):
         return self.redis.zrem(self.stats_key(window_id), flight_key)
 
     @inlineCallbacks
@@ -129,7 +129,7 @@ class WindowManager(object):
         tries = yield self.redis.get(self.stats_key(window_id, flight_key))
         returnValue(int(tries or 0))
 
-    def increment_tries(self, window_id, flight_key):
+    def _increment_tries(self, window_id, flight_key):
         return self.redis.incr(self.stats_key(window_id, flight_key))
 
     def count_waiting(self, window_id):
@@ -150,17 +150,17 @@ class WindowManager(object):
         for window_id in windows:
             expired_keys = yield self.get_expired_flight_keys(window_id)
             for key in expired_keys:
-                tries = yield self.increment_tries(window_id, key)
+                tries = yield self._increment_tries(window_id, key)
                 window_key = self.window_key(window_id)
                 inflight_key = self.flight_key(window_id)
                 if tries < self.max_flight_retries:
                     yield self.redis.rpoplpush(inflight_key, window_key)
-                    yield self.clear_timestamp(window_id, key)
+                    yield self._clear_timestamp(window_id, key)
                 else:
                     yield self.remove(window_id, key)
 
     @inlineCallbacks
-    def get(self, window_id, key):
+    def get_data(self, window_id, key):
         json_data = yield self.redis.get(self.window_key(window_id, key))
         returnValue(json.loads(json_data))
 
@@ -169,8 +169,8 @@ class WindowManager(object):
         yield self.redis.lrem(self.flight_key(window_id), key, 1)
         yield self.redis.delete(self.window_key(window_id, key))
         yield self.redis.delete(self.stats_key(window_id, key))
-        yield self.redis.clear_external_id(window_id, key)
-        yield self.clear_timestamp(window_id, key)
+        yield self.clear_external_id(window_id, key)
+        yield self._clear_timestamp(window_id, key)
 
     @inlineCallbacks
     def set_external_id(self, window_id, flight_key, external_id):
@@ -202,10 +202,10 @@ class WindowManager(object):
         cleanup_callback=None):
         windows = yield self.get_windows()
         for window_id in windows:
-            key = (yield self.next(window_id))
+            key = (yield self.get_next_key(window_id))
             while key:
                 yield key_callback(window_id, key)
-                key = (yield self.next(window_id))
+                key = (yield self.get_next_key(window_id))
 
             # Remove empty windows if required
             if cleanup and not ((yield self.count_waiting(window_id)) or
