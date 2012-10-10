@@ -6,8 +6,10 @@ from vumi.utils import load_class, normalize_msisdn
 class ContactParserException(Exception):
     pass
 
+
 class FieldNormalizerException(Exception):
     pass
+
 
 class FieldNormalizer(object):
     """
@@ -73,7 +75,7 @@ class FieldNormalizer(object):
             return float(value)
         return value
 
-    def lchop(self, chops, string):
+    def lchop(self, string, chops):
         string = self.normalize_string(string)
         for chop in chops:
             if string.startswith(chop):
@@ -82,13 +84,13 @@ class FieldNormalizer(object):
 
     def do_msisdn(self, value, country_code):
         value = self.normalize_string(value)
-        value = self.lchop(['+'], value)
+        value = self.lchop(value, ['+'])
         float_value = self.normalize_float(value)
         if not (self.is_numeric(value) and float_value.is_integer()):
             raise FieldNormalizerException('Invalid MSISDN: %s' % (value,))
 
         msisdn = self.normalize_string(self.normalize_integer(float_value))
-        msisdn = self.lchop([country_code], msisdn)
+        msisdn = self.lchop(msisdn, [country_code])
         msisdn = '0%s' % (msisdn,)
         return self.normalize_string(normalize_msisdn(msisdn, country_code))
 
@@ -112,7 +114,7 @@ class FieldNormalizer(object):
 
     def normalize_msisdn_int(self, value):
         value = self.normalize_string(value)
-        value = self.lchop(['+', '00'], value)
+        value = self.lchop(value, ['+', '00'])
         float_value = self.normalize_float(value)
         if not (self.is_numeric(value) and float_value.is_integer()):
             raise FieldNormalizerException('Invalid MSISDN: %s' % (value,))
@@ -120,6 +122,7 @@ class FieldNormalizer(object):
         msisdn = self.normalize_string(self.normalize_integer(float_value))
         country_code = msisdn[:3]
         return self.normalize_string(normalize_msisdn(msisdn, country_code))
+
 
 class ContactFileParser(object):
 
