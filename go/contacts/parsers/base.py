@@ -61,7 +61,8 @@ class FieldNormalizer(object):
     def is_numeric(self, value):
         str_value = self.normalize_string(value)
         try:
-            return float(str_value)
+            float(str_value)
+            return True
         except ValueError:
             return False
 
