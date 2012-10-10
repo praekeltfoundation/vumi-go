@@ -1,5 +1,3 @@
-import time
-
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import Clock
@@ -9,8 +7,6 @@ from vumi.tests.utils import PersistenceMixin
 
 
 class WindowManagerTestCase(TestCase, PersistenceMixin):
-
-    timeout = 5
 
     @inlineCallbacks
     def setUp(self):
