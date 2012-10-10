@@ -18,13 +18,12 @@ class WindowManager(object):
     FLIGHT_STATS_KEY = 'flightstats'
     MAP_KEY = 'keymap'
 
-    def __init__(self, redis, name='window_manager', window_size=100,
+    def __init__(self, redis, window_size=100,
         flight_lifetime=10, max_flight_retries=10, gc_interval=10):
-        self.name = name
         self.window_size = window_size
         self.flight_lifetime = flight_lifetime
         self.max_flight_retries = max_flight_retries
-        self.redis = redis.sub_manager(self.name)
+        self.redis = redis
         self.clock = self.get_clock()
         self.gc = LoopingCall(self.clear_or_retry_flight_keys)
         self.gc.clock = self.clock
