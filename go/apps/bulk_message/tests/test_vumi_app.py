@@ -93,6 +93,21 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         msgs.sort(key=lambda msg: msg['to_addr'])
         [msg1, msg2] = msgs
 
+        # Create acks for messages
+        ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'],
+            sent_message_id=msg1['message_id'])
+        ack2 = self.mkmsg_ack(user_message_id=msg2['message_id'],
+            sent_message_id=msg2['message_id'])
+
+        yield self.dispatch(ack1, rkey='%s.event' % (self.transport_name,))
+        yield self.dispatch(ack2, rkey='%s.event' % (self.transport_name,))
+
+        # Assert that the window's now empty because acks have been received
+        self.assertEqual(
+            (yield self.app.window_manager.count_in_flight(window_id)), 0)
+        self.assertEqual(
+            (yield self.app.window_manager.count_waiting(window_id)), 0)
+
         # check that the right to_addr & from_addr are set and that the content
         # of the message equals conversation.message
         self.assertEqual(msg1['to_addr'], contact1.msisdn)

@@ -19,8 +19,8 @@ class BulkMessageApplication(GoApplicationWorker):
     worker_name = 'bulk_message_application'
     max_ack_window = 100
     max_ack_wait = 10
-    max_ack_retries = 10
-    monitor_interval = 10
+    max_ack_retries = 2
+    monitor_interval = 1
     monitor_window_cleanup = True
 
     @inlineCallbacks
@@ -121,8 +121,8 @@ class BulkMessageApplication(GoApplicationWorker):
         batch_key = yield gm.get_batch_key()
         if conversation and batch_key:
             window_id = self.get_window_id(conversation.key, batch_key)
-            flight_key = self.window_manager.get_internal_id(window_id,
-                message['message_id'])
+            flight_key = yield self.window_manager.get_internal_id(window_id,
+                                message['message_id'])
             yield self.window_manager.remove_key(window_id, flight_key)
 
     def consume_delivery_report(self, event):
