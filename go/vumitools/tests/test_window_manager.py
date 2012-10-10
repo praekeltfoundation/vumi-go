@@ -8,8 +8,6 @@ from vumi.tests.utils import PersistenceMixin
 
 class WindowManagerTestCase(TestCase, PersistenceMixin):
 
-    timeout = 1
-
     @inlineCallbacks
     def setUp(self):
         self._persist_setUp()

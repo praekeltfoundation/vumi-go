@@ -37,7 +37,9 @@ class BulkMessageApplication(GoApplicationWorker):
             cleanup=self.monitor_window_cleanup,
             cleanup_callback=self.on_window_cleanup)
 
+    @inlineCallbacks
     def teardown_application(self):
+        yield super(BulkMessageApplication, self).teardown_application()
         self.window_manager.stop()
 
     @inlineCallbacks
