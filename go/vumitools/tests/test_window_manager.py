@@ -82,7 +82,7 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
             self.assertEqual(data, i)
 
         # Removing one should allow for space for the next to fill up
-        yield self.wm.remove(self.window_id, flight_keys[0])
+        yield self.wm.remove_key(self.window_id, flight_keys[0])
         next_flight_key = yield self.wm.get_next_key(self.window_id)
         self.assertTrue(next_flight_key)
 
@@ -158,7 +158,7 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
 
         for window_id, keys in key_callbacks.items():
             for key in keys:
-                yield self.wm.remove(window_id, key)
+                yield self.wm.remove_key(window_id, key)
 
         self.wm._monitor_windows(callback, False)
         # Everything should've been processed now
@@ -169,7 +169,7 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         self.assertEqual(set((yield self.wm.get_windows())), set(window_ids))
         for window_id, keys in key_callbacks.items():
             for key in keys:
-                yield self.wm.remove(window_id, key)
+                yield self.wm.remove_key(window_id, key)
 
         self.wm._monitor_windows(callback, True, cleanup_callback)
         self.assertEqual(len(key_callbacks.values()[0]), 20)

@@ -113,7 +113,7 @@ class BulkMessageApplication(GoApplicationWorker):
             window_id = self.get_window_id(conversation.key, batch_key)
             flight_key = self.window_manager.get_internal_id(window_id,
                 message['message_id'])
-            yield self.window_manager.remove(window_id, flight_key)
+            yield self.window_manager.remove_key(window_id, flight_key)
 
     def consume_delivery_report(self, event):
         return self.vumi_api.mdb.add_event(event)
