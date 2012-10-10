@@ -26,7 +26,9 @@ class BulkMessageApplication(GoApplicationWorker):
     @inlineCallbacks
     def setup_application(self):
         yield super(BulkMessageApplication, self).setup_application()
-        self.window_manager = WindowManager(self.redis,
+        wm_redis = self.redis.sub_manager('%s:window_manager' % (
+            self.worker_name,))
+        self.window_manager = WindowManager(wm_redis,
             window_size=self.max_ack_window,
             flight_lifetime=self.max_ack_wait,
             max_flight_retries=self.max_ack_retries)
