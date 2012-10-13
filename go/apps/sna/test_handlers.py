@@ -76,3 +76,25 @@ class USSDOptOutHandlerTestCase(EventHandlerTestCase):
 
         [opt_out] = yield self.oo_store.list_opt_outs()
         self.assertTrue(opt_out)
+
+    @inlineCallbacks
+    def test_opt_out_for_empty_outed_out_value(self):
+        msisdn = u'+2345'
+        message_id = u'message-id'
+        event = self.mkevent('survey_completed', {
+            'from_addr': msisdn,
+            'message_id': message_id,
+            'transport_type': 'ussd',
+            }, conv_key=self.conversation.key, account_key=self.account.key)
+
+        contact = yield self.contact_store.new_contact(msisdn=msisdn)
+        contact.extra['opted_out'] = u''
+        yield contact.save()
+
+        opt_outs = yield self.oo_store.list_opt_outs()
+        self.assertEqual(opt_outs, [])
+
+        yield self.publish_event(event)
+
+        opt_outs = yield self.oo_store.list_opt_outs()
+        self.assertEqual(opt_outs, [])
