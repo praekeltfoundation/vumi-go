@@ -274,8 +274,8 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
         mw = yield self.get_middleware({'op_mode': 'passive'})
         event = self.mkmsg_ack()
         mw.handle_event(event, 'dummy_endpoint')
-        [counter] = mw.metric_manager['dummy_endpoint.event.ack.counter'].poll()
-        self.assertEqual(counter[1], 1)
+        [count] = mw.metric_manager['dummy_endpoint.event.ack.counter'].poll()
+        self.assertEqual(count[1], 1)
 
     @inlineCallbacks
     def test_delivery_report_event(self):
@@ -285,7 +285,8 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
             mw.handle_event(event, 'dummy_endpoint')
 
         def metric_name(status):
-            return 'dummy_endpoint.event.delivery_report.%s.counter' % (status,)
+            return 'dummy_endpoint.event.delivery_report.%s.counter' % (
+                status,)
 
         [delivered] = mw.metric_manager[metric_name('delivered')].poll()
         [failed] = mw.metric_manager[metric_name('failed')].poll()

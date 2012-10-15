@@ -168,6 +168,7 @@ class DebitAccountMiddleware(TransportMiddleware):
                                      (user_account_key, credits_per_message))
         return msg
 
+
 class MetricsMiddleware(BaseMiddleware):
     """
     Middleware that publishes metrics on messages flowing through.
@@ -178,9 +179,10 @@ class MetricsMiddleware(BaseMiddleware):
         The name of the metrics publisher, this is used for the MetricManager
         publisher and all metric names will be prefixed with it.
     :param str count_suffix:
-        Defaults to 'count'. This is the suffix appended to all `transport_name`
-        based counters. If a message is received on endpoint 'foo', counters
-        are published on '<manager_name>.foo.inbound.<count_suffix>'
+        Defaults to 'count'. This is the suffix appended to all
+        `transport_name` based counters. If a message is received on endpoint
+        'foo', counters are published on
+        '<manager_name>.foo.inbound.<count_suffix>'
     :param str response_time_suffix:
         Defaults to 'response_time'. This is the suffix appended to all
         `transport_name` based average response time metrics. If a message is
@@ -192,8 +194,8 @@ class MetricsMiddleware(BaseMiddleware):
     :param str op_mode:
         What mode to operate in, options are `passive` or `active`.
         Defaults to passive.
-        *passive*:  assumes the middleware endpoints are to be used as the names
-                    for metrics publishing.
+        *passive*:  assumes the middleware endpoints are to be used as the
+                    names for metrics publishing.
         *active*:   assumes that the individual messages are to be inspected
                     for their `transport_name` values.
 
