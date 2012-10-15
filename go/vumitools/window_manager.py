@@ -18,14 +18,13 @@ class WindowManager(object):
     FLIGHT_STATS_KEY = 'flightstats'
     MAP_KEY = 'keymap'
 
-    def __init__(self, redis, window_size=100,
-        flight_lifetime=10, max_flight_retries=10, gc_interval=10):
+    def __init__(self, redis, window_size=100, flight_lifetime=10,
+        gc_interval=10):
         self.window_size = window_size
         self.flight_lifetime = flight_lifetime
-        self.max_flight_retries = max_flight_retries
         self.redis = redis
         self.clock = self.get_clock()
-        self.gc = LoopingCall(self.clear_or_retry_flight_keys)
+        self.gc = LoopingCall(self.clear_expired_flight_keys)
         self.gc.clock = self.clock
         self.gc.start(gc_interval)
         self._monitor = None
@@ -51,7 +50,7 @@ class WindowManager(object):
         returnValue(False)
 
     def window_key(self, *keys):
-        return ':'.join([self.WINDOW_KEY] + map(str, keys))
+        return ':'.join([self.WINDOW_KEY] + map(unicode, keys))
 
     def flight_key(self, *keys):
         return self.window_key(self.FLIGHT_KEY, *keys)
@@ -109,7 +108,6 @@ class WindowManager(object):
         if room_available:
             next_key = yield self.redis.rpoplpush(window_key, inflight_key)
             yield self._set_timestamp(window_id, next_key)
-            yield self._increment_tries(window_id, next_key)
             returnValue(next_key)
 
     def _set_timestamp(self, window_id, flight_key):
@@ -119,14 +117,6 @@ class WindowManager(object):
 
     def _clear_timestamp(self, window_id, flight_key):
         return self.redis.zrem(self.stats_key(window_id), flight_key)
-
-    @inlineCallbacks
-    def get_tries(self, window_id, flight_key):
-        tries = yield self.redis.get(self.stats_key(window_id, flight_key))
-        returnValue(int(tries or 0))
-
-    def _increment_tries(self, window_id, flight_key):
-        return self.redis.incr(self.stats_key(window_id, flight_key))
 
     def count_waiting(self, window_id):
         window_key = self.window_key(window_id)
@@ -141,19 +131,12 @@ class WindowManager(object):
             '-inf', self.get_clocktime() - self.flight_lifetime)
 
     @inlineCallbacks
-    def clear_or_retry_flight_keys(self):
+    def clear_expired_flight_keys(self):
         windows = yield self.get_windows()
         for window_id in windows:
             expired_keys = yield self.get_expired_flight_keys(window_id)
             for key in expired_keys:
-                tries = yield self._increment_tries(window_id, key)
-                window_key = self.window_key(window_id)
-                inflight_key = self.flight_key(window_id)
-                if tries < self.max_flight_retries:
-                    yield self.redis.rpoplpush(inflight_key, window_key)
-                    yield self._clear_timestamp(window_id, key)
-                else:
-                    yield self.remove_key(window_id, key)
+                yield self.redis.lrem(self.flight_key(window_id), key, 1)
 
     @inlineCallbacks
     def get_data(self, window_id, key):
