@@ -425,7 +425,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         yield self.vumi_api.mdb.add_outbound_message(msg, tag=tag,
             batch_id=batch_id)
 
-        ack = self.mkmsg_ack(event_type='ack',
+        ack = self.mkmsg_ack(
             user_message_id=msg['message_id'],
             transport_name=self.transport_name)
 
