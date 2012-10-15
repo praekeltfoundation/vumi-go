@@ -19,7 +19,7 @@ class WindowManager(object):
     MAP_KEY = 'keymap'
 
     def __init__(self, redis, window_size=100,
-        flight_lifetime=10, max_flight_retries=10, gc_interval=10):
+                 flight_lifetime=10, max_flight_retries=10, gc_interval=10):
         self.window_size = window_size
         self.flight_lifetime = flight_lifetime
         self.max_flight_retries = max_flight_retries
@@ -186,7 +186,7 @@ class WindowManager(object):
                 external_id))
 
     def monitor(self, key_callback, interval=10, cleanup=True,
-        cleanup_callback=None):
+                cleanup_callback=None):
 
         if self._monitor is not None:
             raise WindowException('Monitor already started')
@@ -198,7 +198,7 @@ class WindowManager(object):
 
     @inlineCallbacks
     def _monitor_windows(self, key_callback, cleanup=True,
-        cleanup_callback=None):
+                         cleanup_callback=None):
         windows = yield self.get_windows()
         for window_id in windows:
             key = (yield self.get_next_key(window_id))
