@@ -13,7 +13,7 @@ class WikipediaApplicationTestCase(test_wikipedia.WikipediaWorkerTestCase):
         self.patch(WikipediaApplication, 'get_conversation_metadata',
             lambda s, msg: {'send_from_tagpool': 'devnull',
                             'send_from_tag': '100@devnull',
-            })
+                            })
         self.patch(WikipediaApplication, 'get_tagpool_metadata',
             lambda s, tp, key, default=None: {
                 'transport_name': 'devnull_transport',
