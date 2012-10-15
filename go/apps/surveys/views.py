@@ -87,6 +87,7 @@ def _clear_empties(cleaned_data):
     """
     return [cd for cd in cleaned_data if cd.get('copy')]
 
+
 @login_required
 def contents(request, conversation_key):
     conversation = conversation_or_404(request.user_api, conversation_key)
@@ -106,7 +107,7 @@ def contents(request, conversation_key):
             data=post_data)
         poll_form = forms.SurveyPollForm(data=post_data)
         if (questions_formset.is_valid() and poll_form.is_valid() and
-            completed_response_formset.is_valid()):
+                completed_response_formset.is_valid()):
             data = poll_form.cleaned_data.copy()
             data.update({
                 'questions': _clear_empties(questions_formset.cleaned_data),
@@ -235,6 +236,7 @@ def show(request, conversation_key):
         'poll_id': poll_id,
     })
 
+
 @login_required
 def edit(request, conversation_key):
     conversation = conversation_or_404(request.user_api, conversation_key)
@@ -254,7 +256,7 @@ def edit(request, conversation_key):
         completed_response_formset = forms.make_completed_response_form_set(
             data=post_data)
         if (questions_formset.is_valid() and poll_form.is_valid() and
-            completed_response_formset.is_valid()):
+                completed_response_formset.is_valid()):
             data = poll_form.cleaned_data.copy()
             data.update({
                 'questions': _clear_empties(questions_formset.cleaned_data),

@@ -661,7 +661,7 @@ class TestFieldNormalizer(TestCase):
         self.fn = FieldNormalizer()
 
     def assertNormalizedMsisdn(self, country_code, value, expected,
-        instance_type=unicode):
+                               instance_type=unicode):
         normalized = self.fn.do_msisdn(value, country_code)
         self.assertEqual(normalized, expected)
         self.assertTrue(isinstance(normalized, instance_type))
@@ -727,4 +727,3 @@ class TestFieldNormalizer(TestCase):
         self.assertNormalized('baz', '', '', str)
         self.assertNormalized('fubar', 'None', 'None', str)
         self.assertNormalized('zab', None, None)
-
