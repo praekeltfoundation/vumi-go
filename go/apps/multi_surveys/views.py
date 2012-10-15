@@ -162,6 +162,7 @@ def new_survey(request, conversation_key):
         'survey_form': survey_form,
     })
 
+
 @login_required
 def survey(request, conversation_key, poll_name):
     conversation = conversation_or_404(request.user_api, conversation_key)
@@ -185,7 +186,7 @@ def survey(request, conversation_key, poll_name):
             data=post_data)
         poll_form = forms.SurveyPollForm(data=post_data)
         if (questions_formset.is_valid() and poll_form.is_valid() and
-            completed_response_formset.is_valid()):
+                completed_response_formset.is_valid()):
             data = poll_form.cleaned_data.copy()
             data.update({
                 'questions': _clear_empties(questions_formset.cleaned_data),
