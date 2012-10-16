@@ -47,6 +47,7 @@ class Command(BaseCommand):
 
     """
     args = "<email-address> <command>"
+    encoding = 'utf-8'
 
     def handle(self, *args, **options):
 
@@ -54,7 +55,7 @@ class Command(BaseCommand):
             self.print_command_summary()
             return
         elif len(args) < 2:
-            self.stderr.write('Usage <email-address> <command>\n')
+            self.err(u'Usage <email-address> <command>\n')
             return
 
         email_address = args[0]
@@ -64,7 +65,7 @@ class Command(BaseCommand):
             user = User.objects.get(username=email_address)
             api = self.get_api(user)
         except User.DoesNotExist:
-            self.stderr.write('Account does not exist\n')
+            self.err(u'Account does not exist\n')
 
         handler = getattr(self, 'handle_%s' % (command,), self.unknown_command)
         handler(user, api, args[2:])
@@ -72,19 +73,25 @@ class Command(BaseCommand):
     def get_api(self, user):
         return vumi_api_for_user(user)
 
+    def out(self, data):
+        self.stdout.write(data.encode(self.encoding))
+
+    def err(self, data):
+        self.stderr.write(data.encode(self.encoding))
+
     def print_command_summary(self):
-        self.stdout.write('Known commands:\n')
+        self.out(u'Known commands:\n')
         handlers = [func for func in dir(self)
                         if func.startswith('handle_')]
         for handler in sorted(handlers):
             command = handler.split('_', 1)[1]
             func = getattr(self, handler)
-            self.stdout.write('%s:' % (command,))
-            self.stdout.write('%s\n' % (func.__doc__,))
+            self.out(u'%s:' % (command,))
+            self.out(u'%s\n' % (func.__doc__,))
         return
 
     def unknown_command(self, *args, **kwargs):
-        self.stderr.write('Unknown command\n')
+        self.err(u'Unknown command\n')
 
     def handle_list_conversations(self, user, api, options):
         """
@@ -101,7 +108,7 @@ class Command(BaseCommand):
         if 'active' in options:
             conversations = [c for c in conversations if not c.ended()]
         for index, conversation in enumerate(conversations):
-            self.stdout.write('%s. %s (%s) [%s]\n' % (index,
+            self.out(u'%s. %s (%s) [%s]\n' % (index,
                 conversation.subject, conversation.created_at,
                 conversation.key))
 
@@ -113,13 +120,13 @@ class Command(BaseCommand):
 
         """
         if not len(options) == 1:
-            self.stderr.write('Provide a conversation key')
+            self.err(u'Provide a conversation key')
             return
         conv_key = options[0]
         raw_conv = api.conversation_store.get_conversation_by_key(conv_key)
         conversation = api.wrap_conversation(raw_conv)
 
-        self.stdout.write('Conversation: %s\n' % (conversation.subject,))
+        self.out(u'Conversation: %s\n' % (conversation.subject,))
 
         inbound = get_inbound(conversation)
         outbound = get_outbound(conversation)
@@ -127,10 +134,10 @@ class Command(BaseCommand):
         outbound_msisdns = get_msisdns('to_addr', outbound)
         all_msisdns = inbound_msisdns.union(outbound_msisdns)
 
-        self.stdout.write('Total Received: %s\n' % (len(inbound),))
-        self.stdout.write('Total Sent: %s\n' % (len(outbound),))
-        self.stdout.write('Total Uniques: %s\n' % (len(all_msisdns),))
-        self.stdout.write('Received per date:\n')
+        self.out(u'Total Received: %s\n' % (len(inbound),))
+        self.out(u'Total Sent: %s\n' % (len(outbound),))
+        self.out(u'Total Uniques: %s\n' % (len(all_msisdns),))
+        self.out(u'Received per date:\n')
         print_dates(per_date(inbound), self.stdout)
-        self.stdout.write('Sent per date:\n')
+        self.out(u'Sent per date:\n')
         print_dates(per_date(outbound), self.stdout)
