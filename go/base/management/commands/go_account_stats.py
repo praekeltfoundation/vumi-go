@@ -55,7 +55,7 @@ class Command(BaseCommand):
             self.print_command_summary()
             return
         elif len(args) < 2:
-            self.err('Usage <email-address> <command>\n')
+            self.err(u'Usage <email-address> <command>\n')
             return
 
         email_address = args[0]
@@ -65,7 +65,7 @@ class Command(BaseCommand):
             user = User.objects.get(username=email_address)
             api = self.get_api(user)
         except User.DoesNotExist:
-            self.err('Account does not exist\n')
+            self.err(u'Account does not exist\n')
 
         handler = getattr(self, 'handle_%s' % (command,), self.unknown_command)
         handler(user, api, args[2:])
@@ -80,18 +80,18 @@ class Command(BaseCommand):
         self.stderr.write(data.encode(self.encoding))
 
     def print_command_summary(self):
-        self.out('Known commands:\n')
+        self.out(u'Known commands:\n')
         handlers = [func for func in dir(self)
                         if func.startswith('handle_')]
         for handler in sorted(handlers):
             command = handler.split('_', 1)[1]
             func = getattr(self, handler)
-            self.out('%s:' % (command,))
-            self.out('%s\n' % (func.__doc__,))
+            self.out(u'%s:' % (command,))
+            self.out(u'%s\n' % (func.__doc__,))
         return
 
     def unknown_command(self, *args, **kwargs):
-        self.err('Unknown command\n')
+        self.err(u'Unknown command\n')
 
     def handle_list_conversations(self, user, api, options):
         """
@@ -108,7 +108,7 @@ class Command(BaseCommand):
         if 'active' in options:
             conversations = [c for c in conversations if not c.ended()]
         for index, conversation in enumerate(conversations):
-            self.out('%s. %s (%s) [%s]\n' % (index,
+            self.out(u'%s. %s (%s) [%s]\n' % (index,
                 conversation.subject, conversation.created_at,
                 conversation.key))
 
@@ -120,13 +120,13 @@ class Command(BaseCommand):
 
         """
         if not len(options) == 1:
-            self.err('Provide a conversation key')
+            self.err(u'Provide a conversation key')
             return
         conv_key = options[0]
         raw_conv = api.conversation_store.get_conversation_by_key(conv_key)
         conversation = api.wrap_conversation(raw_conv)
 
-        self.out('Conversation: %s\n' % (conversation.subject,))
+        self.out(u'Conversation: %s\n' % (conversation.subject,))
 
         inbound = get_inbound(conversation)
         outbound = get_outbound(conversation)
@@ -134,10 +134,10 @@ class Command(BaseCommand):
         outbound_msisdns = get_msisdns('to_addr', outbound)
         all_msisdns = inbound_msisdns.union(outbound_msisdns)
 
-        self.out('Total Received: %s\n' % (len(inbound),))
-        self.out('Total Sent: %s\n' % (len(outbound),))
-        self.out('Total Uniques: %s\n' % (len(all_msisdns),))
-        self.out('Received per date:\n')
+        self.out(u'Total Received: %s\n' % (len(inbound),))
+        self.out(u'Total Sent: %s\n' % (len(outbound),))
+        self.out(u'Total Uniques: %s\n' % (len(all_msisdns),))
+        self.out(u'Received per date:\n')
         print_dates(per_date(inbound), self.stdout)
-        self.out('Sent per date:\n')
+        self.out(u'Sent per date:\n')
         print_dates(per_date(outbound), self.stdout)
