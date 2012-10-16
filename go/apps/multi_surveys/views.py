@@ -8,7 +8,8 @@ from django.contrib.auth.decorators import login_required
 
 from vumi.persist.redis_manager import RedisManager
 
-from go.base.utils import make_read_only_form, conversation_or_404
+from go.base.utils import (make_read_only_form, make_read_only_formset,
+    conversation_or_404)
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
 from go.apps.surveys import forms
@@ -232,7 +233,8 @@ def people(request, conversation_key):
     groups = request.user_api.list_groups()
 
     poll_id = "poll-%s" % (conversation.key,)
-    pm, config = get_poll_config(poll_id)
+    pm, poll_data = get_poll_config(poll_id)
+    questions_data = poll_data.get('questions', [])
 
     if request.method == 'POST':
         if conversation.is_client_initiated():
@@ -273,8 +275,8 @@ def people(request, conversation_key):
             'start_date': conversation.start_timestamp.date(),
             'start_time': conversation.start_timestamp.time(),
         }))
-    content_form = forms.make_form(data=config, initial=config, extra=0)
-    read_only_content_form = make_read_only_form(content_form)
+    content_form = forms.make_form_set(initial=questions_data, extra=0)
+    read_only_content_form = make_read_only_formset(content_form)
     return render(request, 'multi_surveys/people.html', {
         'conversation': conversation,
         'survey_form': survey_form,
