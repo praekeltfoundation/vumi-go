@@ -2,9 +2,20 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi import log
 from vumi.application import ApplicationWorker
+from vumi.blinkenlights.metrics import MetricManager, Metric, MAX
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiUserApi, VumiApiEvent
 from go.vumitools.api_worker import GoMessageMetadata
+
+
+class OneShotMetricManager(MetricManager):
+    def _clear_metrics(self):
+        self._metrics = []
+        self._metrics_lookup = {}
+
+    def _publish_metrics(self):
+        super(OneShotMetricManager, self)._publish_metrics()
+        self._clear_metrics()
 
 
 class GoApplicationMixin(object):
@@ -17,6 +28,11 @@ class GoApplicationMixin(object):
         self.app_event_routing_config.update(
             self.config.get('app_event_routing', {}))
         self.control_consumer = None
+        # TODO: Make this less hacky?
+        self.metrics_prefix = self.config.get('metrics_prefix', None)
+        if self.metrics_prefix is None:
+            self.metrics_prefix = self.config['redis_manager']['key_prefix']
+        self.metrics_prefix += '.'
 
     @inlineCallbacks
     def _go_setup_application(self):
@@ -28,6 +44,9 @@ class GoApplicationMixin(object):
 
         self.app_event_publisher = yield self.publish_to(
             self.app_event_routing_config['routing_key'])
+
+        self.metrics = yield self.start_publisher(
+            OneShotMetricManager, self.metrics_prefix)
 
         self.control_consumer = yield self.consume(
             '%s.control' % (self.worker_name,),
@@ -44,6 +63,7 @@ class GoApplicationMixin(object):
         if self.control_consumer is not None:
             yield self.control_consumer.stop()
             self.control_consumer = None
+        self.metrics.stop()
 
     def get_user_api(self, user_account_key):
         return VumiUserApi(self.vumi_api, user_account_key)
@@ -63,7 +83,12 @@ class GoApplicationMixin(object):
         if cmd_method:
             return cmd_method(*args, **kwargs)
         else:
-            return self.process_unknown_cmd(cmd_method_name, )
+            return self.process_unknown_cmd(cmd_method_name, *args, **kwargs)
+
+    def process_command_collect_metrics(self, conversation_key,
+                                        user_account_key):
+        # By default, we don't collect metrics.
+        pass
 
     def process_unknown_cmd(self, method_name, *args, **kwargs):
         log.error("Unknown vumi API command: %s(%s, %s)" % (
@@ -133,6 +158,14 @@ class GoApplicationMixin(object):
 
     def publish_app_event(self, event):
         self.app_event_publisher.publish_message(event)
+
+    def publish_metric(self, name, value, agg=None):
+        if agg is None:
+            agg = MAX
+        if name not in self.metrics:
+            metric = Metric(name, [agg])
+            self.metrics.register(metric)
+        metric.set(value)
 
 
 class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):
