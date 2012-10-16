@@ -46,6 +46,10 @@ class Conversation(Model):
     def ended(self):
         return self.end_timestamp is not None
 
+    def running(self):
+        # TODO: Better way to tell if we're running than looking for batches.
+        return self.batches.keys() and not self.ended()
+
     def get_status(self):
         """
         Get the status of this conversation
@@ -56,7 +60,7 @@ class Conversation(Model):
         """
         if self.ended():
             return CONVERSATION_FINISHED
-        elif self.batches.keys():
+        elif self.running():
             return CONVERSATION_RUNNING
         else:
             return CONVERSATION_DRAFT
