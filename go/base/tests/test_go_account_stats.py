@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from StringIO import StringIO
 from datetime import datetime
 
@@ -27,6 +28,8 @@ class GoAccountStatsCommandTestCase(VumiGoDjangoTestCase):
         self.active_conv = mkconv(u'bulk_message', u'active', u'content')
         self.inactive_conv = mkconv(u'bulk_message', u'inactive', u'content',
             end_timestamp=datetime.now())
+        self.unicode_conv = mkconv(u'bulk_message', u'Zoë destroyer of Ascii',
+            u'content', end_timestamp=datetime.now())
         self.assertTrue(self.inactive_conv.ended())
 
         self.command = go_account_stats.Command()
@@ -42,9 +45,16 @@ class GoAccountStatsCommandTestCase(VumiGoDjangoTestCase):
     def test_list_conversations(self):
         self.command.handle('test@user.com', 'list_conversations')
         output = self.command.stdout.getvalue().strip().split('\n')
-        self.assertEqual(len(output), 2)
+        self.assertEqual(len(output), 3)
         self.assertTrue(self.active_conv.key in output[0])
         self.assertTrue(self.inactive_conv.key in output[1])
+
+    def test_list_conversations_with_unicode(self):
+        self.command.handle('test@user.com', 'list_conversations')
+        output = self.command.stdout.getvalue().strip().split('\n')
+        self.assertEqual(len(output), 3)
+        self.assertTrue(self.unicode_conv.key in output[2])
+        self.assertTrue('Zo\xc3\xab' in output[2])
 
     def test_list_conversations_active(self):
         self.command.handle('test@user.com', 'list_conversations', 'active')
