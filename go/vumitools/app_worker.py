@@ -9,6 +9,9 @@ from go.vumitools.api_worker import GoMessageMetadata
 
 
 class OneShotMetricManager(MetricManager):
+    # TODO: Replace this with appropriate functionality on MetricManager and
+    # actions triggered by conversations ending.
+
     def _clear_metrics(self):
         self._metrics = []
         self._metrics_lookup = {}
