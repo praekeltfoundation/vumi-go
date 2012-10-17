@@ -172,7 +172,7 @@ class TestVumiUserApi(TestTxVumiUserApi):
 class TestMessageSender(TestCase, CeleryTestMixIn):
     def setUp(self):
         self.setup_celery_for_tests()
-        self.mapi = MessageSender({})
+        self.mapi = MessageSender()
 
     def tearDown(self):
         self.restore_celery()
