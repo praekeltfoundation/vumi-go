@@ -180,31 +180,30 @@ class VumiApi(object):
 
         # message sending API
         if sender is None:
-            sender = MessageSender({})
+            sender = MessageSender()
         self.mapi = sender
 
     @staticmethod
     def _parse_config(config):
         riak_config = config.get('riak_manager', {})
         redis_config = config.get('redis_manager', {})
-        sender_config = config.get('message_sender', {})
-        return riak_config, redis_config, sender_config
+        return riak_config, redis_config
 
     @classmethod
     def from_config(cls, config):
-        riak_config, redis_config, sender_config = cls._parse_config(config)
+        riak_config, redis_config = cls._parse_config(config)
         manager = RiakManager.from_config(riak_config)
         redis = RedisManager.from_config(redis_config)
-        sender = MessageSender(sender_config)
+        sender = MessageSender()
         return cls(manager, redis, sender)
 
     @classmethod
     @inlineCallbacks
     def from_config_async(cls, config):
-        riak_config, redis_config, sender_config = cls._parse_config(config)
+        riak_config, redis_config = cls._parse_config(config)
         manager = TxRiakManager.from_config(riak_config)
         redis = yield TxRedisManager.from_config(redis_config)
-        sender = MessageSender(sender_config)
+        sender = MessageSender()
         returnValue(cls(manager, redis, sender))
 
     def batch_start(self, tags):
@@ -382,9 +381,8 @@ class VumiApi(object):
 
 
 class MessageSender(object):
-    def __init__(self, config):
+    def __init__(self):
         from go.vumitools import api_celery
-        self.config = config
         self.sender_api = api_celery
         self.publisher_config = VumiApiCommand.default_routing_config()
 
