@@ -8,20 +8,26 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.api import (
-    VumiApi, VumiUserApi, MessageSender, VumiApiCommand, VumiApiEvent)
-from go.vumitools.tests.utils import AppWorkerTestCase, CeleryTestMixIn
+    VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent)
+from go.vumitools.tests.utils import AppWorkerTestCase
+
+
+def get_fake_amq_client(broker=None):
+    # TODO: Move this into vumi
+    from vumi.tests.utils import get_spec, vumi_resource_path, FakeAMQClient
+    spec = get_spec(vumi_resource_path("amqp-spec-0-8.xml"))
+    return FakeAMQClient(spec, {}, broker)
 
 
 class TestTxVumiApi(AppWorkerTestCase):
-    override_dummy_consumer = False
-
     @inlineCallbacks
     def setUp(self):
         yield super(TestTxVumiApi, self).setUp()
         if self.sync_persistence:
             self.api = VumiApi.from_config(self._persist_config)
         else:
-            self.api = yield VumiApi.from_config_async(self._persist_config)
+            self.api = yield VumiApi.from_config_async(
+                self._persist_config, get_fake_amq_client(self._amqp))
         self._persist_riak_managers.append(self.api.manager)
         self._persist_redis_managers.append(self.api.redis)
 
@@ -111,6 +117,18 @@ class TestTxVumiApi(AppWorkerTestCase):
         yield self.api.batch_done(batch_id)
         self.assertEqual((yield tag_batch(tag)), None)
 
+    @inlineCallbacks
+    def test_send_command(self):
+        for addr in ["+12", "+34"]:
+            yield self.api.send_command(
+                    "dummy_worker", "send",
+                    batch_id="b123", content="Hello!",
+                    msg_options={'from_addr': '+56'}, to_addr=addr)
+
+        [cmd1, cmd2] = self.get_dispatcher_commands()
+        self.assertEqual(cmd1.payload['kwargs']['to_addr'], '+12')
+        self.assertEqual(cmd2.payload['kwargs']['to_addr'], '+34')
+
 
 class TestVumiApi(TestTxVumiApi):
     sync_persistence = True
@@ -167,27 +185,6 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
 class TestVumiUserApi(TestTxVumiUserApi):
     sync_persistence = True
-
-
-class TestMessageSender(TestCase, CeleryTestMixIn):
-    def setUp(self):
-        self.setup_celery_for_tests()
-        self.mapi = MessageSender()
-
-    def tearDown(self):
-        self.restore_celery()
-
-    def test_send_command(self):
-        consumer = self.get_cmd_consumer()
-        for addr in ["+12", "+34"]:
-            cmd = VumiApiCommand.command("dummy_worker", "send",
-                    batch_id="b123", content="Hello!",
-                    msg_options={'from_addr': '+56'}, to_addr=addr)
-            self.mapi.send_command(cmd)
-
-        [cmd1, cmd2] = self.fetch_cmds(consumer)
-        self.assertEqual(cmd1.payload['kwargs']['to_addr'], '+12')
-        self.assertEqual(cmd2.payload['kwargs']['to_addr'], '+34')
 
 
 class TestVumiApiCommand(TestCase):
