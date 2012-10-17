@@ -35,6 +35,7 @@ class GoApplicationMixin(object):
     @inlineCallbacks
     def _go_setup_application(self):
         self.vumi_api = yield VumiApi.from_config_async(self.config)
+        self._metrics_conversations = set()
 
         # In case we need these.
         self.redis = self.vumi_api.redis
@@ -83,14 +84,26 @@ class GoApplicationMixin(object):
         else:
             return self.process_unknown_cmd(cmd_method_name, *args, **kwargs)
 
+    @inlineCallbacks
     def process_command_collect_metrics(self, conversation_key,
                                         user_account_key):
-        # By default, we don't collect metrics.
-        pass
+        key_tuple = (conversation_key, user_account_key)
+        if key_tuple in self._metrics_conversations:
+            log.info("Ignoring conversation %s for user %s because the "
+                     "previous collection run is still going." % (
+                        conversation_key, user_account_key))
+            return
+        self._metrics_conversations.add(key_tuple)
+        yield self.collect_metrics(conversation_key, user_account_key)
+        self._metrics_conversations.remove(key_tuple)
 
     def process_unknown_cmd(self, method_name, *args, **kwargs):
         log.error("Unknown vumi API command: %s(%s, %s)" % (
             method_name, args, kwargs))
+
+    def collect_metrics(self, conversation_key, user_account_key):
+        # By default, we don't collect metrics.
+        pass
 
     @inlineCallbacks
     def get_contact_for_message(self, message):

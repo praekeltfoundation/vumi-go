@@ -80,8 +80,7 @@ class SubscriptionApplication(GoApplicationWorker):
                 command_data['msg_options'])
 
     @inlineCallbacks
-    def process_command_collect_metrics(self, conversation_key,
-                                        user_account_key):
+    def collect_metrics(self, conversation_key, user_account_key):
         user_api = self.get_user_api(user_account_key)
         conv = yield user_api.get_wrapped_conversation(conversation_key)
         contact_proxy = user_api.contact_store.contacts
