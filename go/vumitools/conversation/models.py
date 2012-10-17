@@ -43,12 +43,15 @@ class Conversation(Model):
     batches = ManyToMany(Batch)
     metadata = Json(null=True)
 
+    def started(self):
+        # TODO: Better way to tell if we've started than looking for batches.
+        return bool(self.batches.keys())
+
     def ended(self):
         return self.end_timestamp is not None
 
     def running(self):
-        # TODO: Better way to tell if we're running than looking for batches.
-        return self.batches.keys() and not self.ended()
+        return self.started() and not self.ended()
 
     def get_status(self):
         """
