@@ -26,13 +26,20 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
 
     @inlineCallbacks
     def setup_application(self):
+        # Avoid metrics setup in the underlying app.
+        metrics_prefix, self.metrics_prefix = self.metrics_prefix, None
         yield super(WikipediaApplication, self).setup_application()
+        self.metrics_prefix = metrics_prefix
         yield self._go_setup_application()
 
     @inlineCallbacks
     def teardown_application(self):
         yield super(WikipediaApplication, self).teardown_application()
         yield self._go_teardown_application()
+
+    def fire_metric(self, metric_name, metric_suffix=None, value=1):
+        # Don't try to collect metrics.
+        pass
 
     @inlineCallbacks
     def get_conversation_metadata(self, message):

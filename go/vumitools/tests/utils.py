@@ -193,6 +193,11 @@ class GoPersistenceMixin(PersistenceMixin):
         # don't go away.
         yield self._clear_bucket_properties(accounts, manager)
 
+    def mk_config(self, config):
+        config = super(GoPersistenceMixin, self).mk_config(config)
+        config.setdefault('metrics_prefix', type(self).__module__)
+        return config
+
 
 def dummy_consumer_factory_factory_factory(publish_func):
     def dummy_consumer_factory_factory():
