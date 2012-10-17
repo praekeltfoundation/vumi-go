@@ -82,9 +82,6 @@ class SubscriptionApplication(GoApplicationWorker):
     @inlineCallbacks
     def process_command_collect_metrics(self, conversation_key,
                                         user_account_key):
-        metric = lambda *args: ".".join(
-            (user_account_key, conversation_key) + args)
-
         user_api = self.get_user_api(user_account_key)
         conv = yield user_api.get_wrapped_conversation(conversation_key)
         contact_proxy = user_api.contact_store.contacts
@@ -94,9 +91,11 @@ class SubscriptionApplication(GoApplicationWorker):
             campaign_names.add(handler['campaign_name'])
 
         for campaign_name in campaign_names:
-            self.publish_metric(metric(campaign_name, "subscribed"), (
-                    yield contact_proxy.riak_search_count(
+            self.publish_conversation_metric(
+                conv, '.'.join([campaign_name, "subscribed"]),
+                (yield contact_proxy.riak_search_count(
                         "subscription-%s:subscribed" % (campaign_name,)))[0])
-            self.publish_metric(metric(campaign_name, "unsubscribed"), (
-                    yield contact_proxy.riak_search_count(
+            self.publish_conversation_metric(
+                conv, '.'.join([campaign_name, "unsubscribed"]),
+                (yield contact_proxy.riak_search_count(
                         "subscription-%s:unsubscribed" % (campaign_name,)))[0])

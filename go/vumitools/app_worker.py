@@ -28,11 +28,9 @@ class GoApplicationMixin(object):
         self.app_event_routing_config.update(
             self.config.get('app_event_routing', {}))
         self.control_consumer = None
-        # TODO: Make this less hacky?
-        self.metrics_prefix = self.config.get('metrics_prefix', None)
-        if self.metrics_prefix is None:
-            self.metrics_prefix = self.config['redis_manager']['key_prefix']
-        self.metrics_prefix += '.'
+        # This is now mandatory, so you need to provide it even if the app
+        # doesn't do metrics.
+        self.metrics_prefix = self.config['metrics_prefix']
 
     @inlineCallbacks
     def _go_setup_application(self):
@@ -166,6 +164,11 @@ class GoApplicationMixin(object):
             metric = Metric(name, [agg])
             self.metrics.register(metric)
         metric.set(value)
+
+    def publish_conversation_metric(self, conversation, name, value, agg=None):
+        name = "%s.%s.%s" % (
+            conversation.user_account.key, conversation.key, name)
+        self.publish_metric(name, value, agg)
 
 
 class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):
