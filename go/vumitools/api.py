@@ -12,6 +12,7 @@ from collections import defaultdict
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.errors import VumiError
+from vumi.service import Publisher
 from vumi.message import Message
 from vumi.components.tagpool import TagpoolManager
 from vumi.components.message_store import MessageStore
@@ -191,16 +192,18 @@ class VumiApi(object):
         riak_config, redis_config = cls._parse_config(config)
         manager = RiakManager.from_config(riak_config)
         redis = RedisManager.from_config(redis_config)
-        sender = MessageSender()
+        sender = SyncMessageSender()
         return cls(manager, redis, sender)
 
     @classmethod
     @inlineCallbacks
-    def from_config_async(cls, config):
+    def from_config_async(cls, config, amqp_client=None):
         riak_config, redis_config = cls._parse_config(config)
         manager = TxRiakManager.from_config(riak_config)
         redis = yield TxRedisManager.from_config(redis_config)
-        sender = MessageSender()
+        sender = None
+        if amqp_client is not None:
+            sender = AsyncMessageSender(amqp_client)
         returnValue(cls(manager, redis, sender))
 
     def batch_start(self, tags):
@@ -242,7 +245,7 @@ class VumiApi(object):
         """
         if self.mapi is None:
             raise VumiError("No message sender on API object.")
-        self.mapi.send_command(
+        return self.mapi.send_command(
             VumiApiCommand.command(worker_name, command, *args, **kwargs))
 
     def batch_status(self, batch_id):
@@ -379,14 +382,32 @@ class VumiApi(object):
         return self.tpm.purge_pool(pool)
 
 
-class MessageSender(object):
+class SyncMessageSender(object):
     def __init__(self):
-        from go.vumitools import api_celery
-        self.sender_api = api_celery
         self.publisher_config = VumiApiCommand.default_routing_config()
+        from go.vumitools import api_celery
+        self.api_celery = api_celery
 
     def send_command(self, command):
-        self.sender_api.send_command_task.delay(command, self.publisher_config)
+        self.api_celery.send_command_task.delay(command, self.publisher_config)
+
+
+class AsyncMessageSender(object):
+    def __init__(self, amqp_client):
+        self.publisher_config = VumiApiCommand.default_routing_config()
+        self.amqp_client = amqp_client
+        self.publisher = None
+
+    @inlineCallbacks
+    def send_command(self, command):
+        if self.publisher is None:
+            self.publisher = yield self.amqp_client.start_publisher(
+                self.make_publisher())
+        self.publisher.publish_message(command)
+
+    def make_publisher(self):
+        return type("VumiApiCommandPublisher", (Publisher,),
+                    self.publisher_config.copy())
 
 
 class VumiApiCommand(Message):

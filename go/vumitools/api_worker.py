@@ -269,7 +269,8 @@ class EventDispatcher(ApplicationWorker):
         self.handlers = {}
 
         self.api_command_publisher = yield self.publish_to('vumi.api')
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
+        self.vumi_api = yield VumiApi.from_config_async(
+            self.config, self._amqp_client)
         self.account_config = {}
 
         for name, handler_class in self.handler_config.items():
