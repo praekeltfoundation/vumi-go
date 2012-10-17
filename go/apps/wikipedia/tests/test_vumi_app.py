@@ -2,10 +2,12 @@ from twisted.internet.defer import inlineCallbacks
 
 from vumi_wikipedia.tests import test_wikipedia
 
+from go.vumitools.tests.utils import GoPersistenceMixin
 from go.apps.wikipedia.vumi_app import WikipediaApplication
 
 
-class WikipediaApplicationTestCase(test_wikipedia.WikipediaWorkerTestCase):
+class WikipediaApplicationTestCase(GoPersistenceMixin,
+                                   test_wikipedia.WikipediaWorkerTestCase):
     application_class = WikipediaApplication
 
     @inlineCallbacks
@@ -33,3 +35,11 @@ class WikipediaApplicationTestCase(test_wikipedia.WikipediaWorkerTestCase):
             self.assertEqual(message['transport_name'], self.transport_name)
 
         yield super(WikipediaApplicationTestCase, self).tearDown()
+
+    def assert_metrics(self, expected_metrics):
+        # We aren't collecting these.
+        pass
+
+    def test_no_metrics_prefix(self):
+        # This isn't supported.
+        pass
