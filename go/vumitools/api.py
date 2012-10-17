@@ -247,34 +247,6 @@ class VumiApi(object):
         self.mapi.send_command(
             VumiApiCommand.command(worker_name, command, *args, **kwargs))
 
-    def batch_send(self, batch_id, msg, msg_options, addresses):
-        """Send a batch of text message to a list of addresses.
-
-        Use multiple calls to :meth:`batch_send` if you have *lots* of
-        addresses and don't want to pass them all in one API
-        call. Messages passed to multiple calls to :meth:`batch_send`
-        do not have to be the same.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to append the messages too
-        :type msg: unicode
-        :param msg:
-            text to send
-        :type msg_options: dict
-        :param msg_options:
-            additional paramters for the outgoing Vumi message, usually
-            something like {'from_addr': '+1234'} or {}.
-        :type addresses:
-        :param msg:
-            list of addresses to send messages to
-        :rtype:
-            None.
-        """
-        for address in addresses:
-            command = VumiApiCommand.send(batch_id, msg, msg_options, address)
-            self.mapi.send_command(command)
-
     def batch_status(self, batch_id):
         """Check the status of a batch of messages.
 
@@ -442,13 +414,6 @@ class VumiApiCommand(Message):
                                  # JSON.
             'kwargs': kwargs,
         })
-
-    @classmethod
-    def send(cls, batch_id, msg, msg_options, address):
-        options = msg_options.copy()
-        worker_name = options.pop('worker_name')
-        return cls.command(worker_name, 'send', batch_id=batch_id,
-            content=msg, to_addr=address, msg_options=options)
 
 
 class VumiApiEvent(Message):
