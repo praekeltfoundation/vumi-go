@@ -269,7 +269,7 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
             assert_prefix += '.'
         for name, metric in app.metrics._metrics_lookup.items():
             if assert_prefix is not None:
-                _, sep, name = name.partition(assert_prefix)
-                self.assertEqual(sep, assert_prefix)
+                self.assertTrue(name.startswith(assert_prefix))
+                name = name[len(assert_prefix):]
             values[name] = [v for _, v in metric.poll()]
         return values
