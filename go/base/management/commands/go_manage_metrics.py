@@ -44,7 +44,7 @@ class Command(BaseCommand):
             enable = options['enable']
             disable = options['disable']
 
-            if enable and disable:
+            if (enable and disable) or not (enable or disable):
                 raise CommandError('Please provide specify --enable or '
                     '--disable, not both.')
 
