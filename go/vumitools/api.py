@@ -11,6 +11,7 @@ from collections import defaultdict
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from vumi.errors import VumiError
 from vumi.message import Message
 from vumi.components.tagpool import TagpoolManager
 from vumi.components.message_store import MessageStore
@@ -177,10 +178,6 @@ class VumiApi(object):
         self.mdb = MessageStore(self.manager,
                                 self.redis.sub_manager('message_store'))
         self.account_store = AccountStore(self.manager)
-
-        # message sending API
-        if sender is None:
-            sender = MessageSender()
         self.mapi = sender
 
     @staticmethod
@@ -243,6 +240,8 @@ class VumiApi(object):
         :param *args: Positional args for command.
         :param **kwargs: Keyword args for command.
         """
+        if self.mapi is None:
+            raise VumiError("No message sender on API object.")
         self.mapi.send_command(
             VumiApiCommand.command(worker_name, command, *args, **kwargs))
 
