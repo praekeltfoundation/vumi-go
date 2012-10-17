@@ -39,19 +39,6 @@ class TestTxVumiApi(AppWorkerTestCase):
         self.assertEqual(batch_status['sent'], 0)
 
     @inlineCallbacks
-    def test_batch_send(self):
-        consumer = self.get_cmd_consumer()
-        msg_options = {"from_addr": "+100", "worker_name": "dummy_worker"}
-        yield self.api.batch_send("b123", "Hello!", msg_options,
-                                  ["+12", "+34", "+56"])
-        [cmd1, cmd2, cmd3] = self.fetch_cmds(consumer)
-        send_msg = lambda to_addr: VumiApiCommand.send("b123", "Hello!",
-                                                       msg_options, to_addr)
-        self.assertEqual(cmd1, send_msg("+12"))
-        self.assertEqual(cmd2, send_msg("+34"))
-        self.assertEqual(cmd3, send_msg("+56"))
-
-    @inlineCallbacks
     def test_batch_messages(self):
         batch_id = yield self.api.batch_start([("poolA", "default10001")])
         msgs = [self.mkmsg_out(content=msg, message_id=str(i)) for
@@ -190,10 +177,8 @@ class TestMessageSender(TestCase, CeleryTestMixIn):
     def tearDown(self):
         self.restore_celery()
 
-    def test_batch_send(self):
+    def test_send_command(self):
         consumer = self.get_cmd_consumer()
-        msg_options = {"from_addr": "+56", "worker_name": "dummy_worker"}
-
         for addr in ["+12", "+34"]:
             cmd = VumiApiCommand.command("dummy_worker", "send",
                     batch_id="b123", content="Hello!",
@@ -201,10 +186,8 @@ class TestMessageSender(TestCase, CeleryTestMixIn):
             self.mapi.send_command(cmd)
 
         [cmd1, cmd2] = self.fetch_cmds(consumer)
-        send_msg = lambda to_addr: VumiApiCommand.send("b123", "Hello!",
-                                                       msg_options, to_addr)
-        self.assertEqual(cmd1, send_msg("+12"))
-        self.assertEqual(cmd2, send_msg("+34"))
+        self.assertEqual(cmd1.payload['kwargs']['to_addr'], '+12')
+        self.assertEqual(cmd2.payload['kwargs']['to_addr'], '+34')
 
 
 class TestVumiApiCommand(TestCase):
@@ -212,22 +195,6 @@ class TestVumiApiCommand(TestCase):
         cfg = VumiApiCommand.default_routing_config()
         self.assertEqual(set(cfg.keys()),
                          set(['exchange', 'exchange_type', 'routing_key']))
-
-    def test_send(self):
-        cmd = VumiApiCommand.send('b123', 'content', {
-                "from_addr": "+89",
-                "worker_name": "dummy_worker"
-            }, '+4567')
-        self.assertEqual(cmd['command'], 'send')
-        self.assertEqual(cmd['worker_name'], 'dummy_worker')
-        self.assertEqual(cmd['kwargs'], {
-            'batch_id': 'b123',
-            'content': 'content',
-            'msg_options': {
-                'from_addr': '+89',
-            },
-            'to_addr': '+4567'
-        })
 
 
 class TestVumiApiEvent(TestCase):
