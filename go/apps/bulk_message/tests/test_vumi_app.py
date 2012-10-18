@@ -73,7 +73,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         # check commands made it through to the dispatcher and the vumi_app
         [disp_cmd] = self.get_dispatcher_commands()
         self.assertEqual(disp_cmd['command'], 'start')
-        [bulk_cmd] = self.get_bulk_message_commands()
+        [bulk_cmd] = self.get_app_message_commands()
         self.assertEqual(bulk_cmd['command'], 'start')
 
         # Force processing of messages
