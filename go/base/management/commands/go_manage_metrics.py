@@ -1,4 +1,3 @@
-import uuid
 from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
@@ -8,15 +7,12 @@ from go.base.utils import vumi_api_for_user
 
 
 class Command(BaseCommand):
-    help = "Give a Vumi Go user access to a certain application"
+    help = "Enable or disable metrics for a Vumi Go user"
 
     LOCAL_OPTIONS = [
         make_option('--email-address',
             dest='email-address',
             help='Email address for the Vumi Go user'),
-        make_option('--application-module',
-            dest='application-module',
-            help='The application module to give access to'),
         make_option('--enable',
             dest='enable',
             action='store_true',
@@ -45,7 +41,6 @@ class Command(BaseCommand):
     def handle_validated(self, *args, **options):
         try:
             email_address = options['email-address']
-            application_module = unicode(options['application-module'])
             enable = options['enable']
             disable = options['disable']
 
@@ -54,39 +49,14 @@ class Command(BaseCommand):
                     'Please specify either --enable or --disable.')
 
             user = User.objects.get(username=email_address)
-            account = user.get_profile().get_user_account()
-            existing_applications = [permission.application for permission in
-                                        account.applications.get_all()]
-
-            if disable:
-                if application_module in existing_applications:
-                    permission = [permission for permission in
-                        account.applications.get_all()
-                        if permission.application == application_module][0]
-                    self.disable_application(permission, account)
-                else:
-                    raise CommandError('User does not have this permission')
+            user_api = vumi_api_for_user(user)
+            user_account_key = user_api.user_account_key
+            redis = user_api.api.redis
 
             if enable:
-                if application_module not in existing_applications:
-                    self.enable_application(user, account, application_module)
-                else:
-                    raise CommandError('User already has this permission')
+                redis.sadd('metrics_accounts', user_account_key)
+            elif disable:
+                redis.srem('metrics_accounts', user_account_key)
 
         except User.DoesNotExist, e:
             raise CommandError(e)
-
-    def disable_application(self, app_permission, account):
-        account.applications.remove(app_permission)
-        account.save()
-
-    def enable_application(self, user, account, application_module):
-        user_api = vumi_api_for_user(user)
-        api = user_api.api
-
-        app_permission = api.account_store.application_permissions(
-            uuid.uuid4().hex, application=application_module)
-        app_permission.save()
-
-        account.applications.add(app_permission)
-        account.save()
