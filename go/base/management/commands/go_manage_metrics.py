@@ -45,8 +45,8 @@ class Command(BaseCommand):
             disable = options['disable']
 
             if (enable and disable) or not (enable or disable):
-                raise CommandError('Please provide specify --enable or '
-                    '--disable, not both.')
+                raise CommandError(
+                    'Please specify either --enable or --disable.')
 
             user = User.objects.get(username=email_address)
             user_api = vumi_api_for_user(user)
