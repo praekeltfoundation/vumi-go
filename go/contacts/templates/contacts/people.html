@@ -62,7 +62,11 @@
                     {% if query %}
                         No contact match <strong>{{query}}</strong>
                     {% else %}
-					    No contact surnames start with the letter <strong>{{selected_letter|upper}}</strong>
+                        {% if selected_letter %}
+                            No contact surnames start with the letter <strong>{{selected_letter|upper}}</strong>
+                        {% else %}
+                            Select a letter to filter on surname.
+                        {% endif %}
 					{% endif %}
 					</td>
                 </tr>
