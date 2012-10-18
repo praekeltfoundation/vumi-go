@@ -11,6 +11,8 @@ from collections import defaultdict
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from vumi.errors import VumiError
+from vumi.service import Publisher
 from vumi.message import Message
 from vumi.components.tagpool import TagpoolManager
 from vumi.components.message_store import MessageStore
@@ -127,6 +129,11 @@ class VumiUserApi(object):
         return conversations.by_index(end_timestamp=None)
 
     @Manager.calls_manager
+    def running_conversations(self):
+        conversations = yield self.active_conversations()
+        returnValue([c for c in conversations if c.running()])
+
+    @Manager.calls_manager
     def tagpools(self):
         account_store = self.api.account_store
         user_account = yield account_store.get_user(self.user_account_key)
@@ -177,34 +184,31 @@ class VumiApi(object):
         self.mdb = MessageStore(self.manager,
                                 self.redis.sub_manager('message_store'))
         self.account_store = AccountStore(self.manager)
-
-        # message sending API
-        if sender is None:
-            sender = MessageSender({})
         self.mapi = sender
 
     @staticmethod
     def _parse_config(config):
         riak_config = config.get('riak_manager', {})
         redis_config = config.get('redis_manager', {})
-        sender_config = config.get('message_sender', {})
-        return riak_config, redis_config, sender_config
+        return riak_config, redis_config
 
     @classmethod
     def from_config(cls, config):
-        riak_config, redis_config, sender_config = cls._parse_config(config)
+        riak_config, redis_config = cls._parse_config(config)
         manager = RiakManager.from_config(riak_config)
         redis = RedisManager.from_config(redis_config)
-        sender = MessageSender(sender_config)
+        sender = SyncMessageSender()
         return cls(manager, redis, sender)
 
     @classmethod
     @inlineCallbacks
-    def from_config_async(cls, config):
-        riak_config, redis_config, sender_config = cls._parse_config(config)
+    def from_config_async(cls, config, amqp_client=None):
+        riak_config, redis_config = cls._parse_config(config)
         manager = TxRiakManager.from_config(riak_config)
         redis = yield TxRedisManager.from_config(redis_config)
-        sender = MessageSender(sender_config)
+        sender = None
+        if amqp_client is not None:
+            sender = AsyncMessageSender(amqp_client)
         returnValue(cls(manager, redis, sender))
 
     def batch_start(self, tags):
@@ -244,36 +248,10 @@ class VumiApi(object):
         :param *args: Positional args for command.
         :param **kwargs: Keyword args for command.
         """
-        self.mapi.send_command(
+        if self.mapi is None:
+            raise VumiError("No message sender on API object.")
+        return self.mapi.send_command(
             VumiApiCommand.command(worker_name, command, *args, **kwargs))
-
-    def batch_send(self, batch_id, msg, msg_options, addresses):
-        """Send a batch of text message to a list of addresses.
-
-        Use multiple calls to :meth:`batch_send` if you have *lots* of
-        addresses and don't want to pass them all in one API
-        call. Messages passed to multiple calls to :meth:`batch_send`
-        do not have to be the same.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to append the messages too
-        :type msg: unicode
-        :param msg:
-            text to send
-        :type msg_options: dict
-        :param msg_options:
-            additional paramters for the outgoing Vumi message, usually
-            something like {'from_addr': '+1234'} or {}.
-        :type addresses:
-        :param msg:
-            list of addresses to send messages to
-        :rtype:
-            None.
-        """
-        for address in addresses:
-            command = VumiApiCommand.send(batch_id, msg, msg_options, address)
-            self.mapi.send_command(command)
 
     def batch_status(self, batch_id):
         """Check the status of a batch of messages.
@@ -409,15 +387,33 @@ class VumiApi(object):
         return self.tpm.purge_pool(pool)
 
 
-class MessageSender(object):
-    def __init__(self, config):
-        from go.vumitools import api_celery
-        self.config = config
-        self.sender_api = api_celery
+class SyncMessageSender(object):
+    def __init__(self):
         self.publisher_config = VumiApiCommand.default_routing_config()
+        from go.vumitools import api_celery
+        self.api_celery = api_celery
 
     def send_command(self, command):
-        self.sender_api.send_command_task.delay(command, self.publisher_config)
+        self.api_celery.send_command_task.delay(command, self.publisher_config)
+
+
+class AsyncMessageSender(object):
+    def __init__(self, amqp_client):
+        self.publisher_config = VumiApiCommand.default_routing_config()
+        self.amqp_client = amqp_client
+        self.publisher = None
+
+    @inlineCallbacks
+    def send_command(self, command):
+        if self.publisher is None:
+            self.publisher = yield self.amqp_client.start_publisher(
+                self.make_publisher())
+        self.publisher.publish_message(command)
+
+    def make_publisher(self):
+        "Build a Publisher class with the right attributes on it."
+        return type("VumiApiCommandPublisher", (Publisher,),
+                    self.publisher_config.copy())
 
 
 class VumiApiCommand(Message):
@@ -442,13 +438,6 @@ class VumiApiCommand(Message):
                                  # JSON.
             'kwargs': kwargs,
         })
-
-    @classmethod
-    def send(cls, batch_id, msg, msg_options, address):
-        options = msg_options.copy()
-        worker_name = options.pop('worker_name')
-        return cls.command(worker_name, 'send', batch_id=batch_id,
-            content=msg, to_addr=address, msg_options=options)
 
 
 class VumiApiEvent(Message):

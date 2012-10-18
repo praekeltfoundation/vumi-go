@@ -2,9 +2,23 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi import log
 from vumi.application import ApplicationWorker
+from vumi.blinkenlights.metrics import MetricManager, Metric, MAX
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiUserApi, VumiApiEvent
 from go.vumitools.api_worker import GoMessageMetadata
+
+
+class OneShotMetricManager(MetricManager):
+    # TODO: Replace this with appropriate functionality on MetricManager and
+    # actions triggered by conversations ending.
+
+    def _clear_metrics(self):
+        self._metrics = []
+        self._metrics_lookup = {}
+
+    def _publish_metrics(self):
+        super(OneShotMetricManager, self)._publish_metrics()
+        self._clear_metrics()
 
 
 class GoApplicationMixin(object):
@@ -17,10 +31,15 @@ class GoApplicationMixin(object):
         self.app_event_routing_config.update(
             self.config.get('app_event_routing', {}))
         self.control_consumer = None
+        # This is now mandatory, so you need to provide it even if the app
+        # doesn't do metrics.
+        self.metrics_prefix = self.config['metrics_prefix']
 
     @inlineCallbacks
     def _go_setup_application(self):
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
+        self.vumi_api = yield VumiApi.from_config_async(
+            self.config, self._amqp_client)
+        self._metrics_conversations = set()
 
         # In case we need these.
         self.redis = self.vumi_api.redis
@@ -28,6 +47,9 @@ class GoApplicationMixin(object):
 
         self.app_event_publisher = yield self.publish_to(
             self.app_event_routing_config['routing_key'])
+
+        self.metrics = yield self.start_publisher(
+            OneShotMetricManager, self.metrics_prefix)
 
         self.control_consumer = yield self.consume(
             '%s.control' % (self.worker_name,),
@@ -44,6 +66,7 @@ class GoApplicationMixin(object):
         if self.control_consumer is not None:
             yield self.control_consumer.stop()
             self.control_consumer = None
+        self.metrics.stop()
 
     def get_user_api(self, user_account_key):
         return VumiUserApi(self.vumi_api, user_account_key)
@@ -63,11 +86,28 @@ class GoApplicationMixin(object):
         if cmd_method:
             return cmd_method(*args, **kwargs)
         else:
-            return self.process_unknown_cmd(cmd_method_name, )
+            return self.process_unknown_cmd(cmd_method_name, *args, **kwargs)
+
+    @inlineCallbacks
+    def process_command_collect_metrics(self, conversation_key,
+                                        user_account_key):
+        key_tuple = (conversation_key, user_account_key)
+        if key_tuple in self._metrics_conversations:
+            log.info("Ignoring conversation %s for user %s because the "
+                     "previous collection run is still going." % (
+                        conversation_key, user_account_key))
+            return
+        self._metrics_conversations.add(key_tuple)
+        yield self.collect_metrics(conversation_key, user_account_key)
+        self._metrics_conversations.remove(key_tuple)
 
     def process_unknown_cmd(self, method_name, *args, **kwargs):
         log.error("Unknown vumi API command: %s(%s, %s)" % (
             method_name, args, kwargs))
+
+    def collect_metrics(self, conversation_key, user_account_key):
+        # By default, we don't collect metrics.
+        pass
 
     @inlineCallbacks
     def get_contact_for_message(self, message):
@@ -133,6 +173,19 @@ class GoApplicationMixin(object):
 
     def publish_app_event(self, event):
         self.app_event_publisher.publish_message(event)
+
+    def publish_metric(self, name, value, agg=None):
+        if agg is None:
+            agg = MAX
+        if name not in self.metrics:
+            metric = Metric(name, [agg])
+            self.metrics.register(metric)
+        metric.set(value)
+
+    def publish_conversation_metric(self, conversation, name, value, agg=None):
+        name = "%s.%s.%s" % (
+            conversation.user_account.key, conversation.key, name)
+        self.publish_metric(name, value, agg)
 
 
 class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):
