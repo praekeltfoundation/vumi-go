@@ -188,6 +188,24 @@ class GoApplicationMixin(object):
             conversation.user_account.key, conversation.key, name)
         self.publish_metric(name, value, agg)
 
+    @inlineCallbacks
+    def collect_message_metrics(self, conversation):
+        """Collect message count metrics.
+
+        This is a utility method for collecting common metrics. It has to be
+        called explicitly from :meth:`collect_metrics`
+        """
+        sent = 0
+        received = 0
+        for batch_id in conversation.batches.keys():
+            sent += yield self.vumi_api.mdb.batch_outbound_count(batch_id)
+            received += yield self.vumi_api.mdb.batch_inbound_count(batch_id)
+
+        self.publish_conversation_metric(
+            conversation, 'messages_sent', sent)
+        self.publish_conversation_metric(
+            conversation, 'messages_received', received)
+
 
 class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):
     """

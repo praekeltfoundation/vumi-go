@@ -97,3 +97,5 @@ class SubscriptionApplication(GoApplicationWorker):
                 conv, '.'.join([campaign_name, "unsubscribed"]),
                 (yield contact_proxy.riak_search_count(
                         "subscription-%s:unsubscribed" % (campaign_name,)))[0])
+
+        yield self.collect_message_metrics(conv)

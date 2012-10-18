@@ -145,12 +145,4 @@ class BulkMessageApplication(GoApplicationWorker):
     @inlineCallbacks
     def collect_metrics(self, user_api, conversation_key):
         conv = yield user_api.get_wrapped_conversation(conversation_key)
-
-        sent = 0
-        received = 0
-        for batch_id in conv.batches.keys():
-            sent += yield self.vumi_api.mdb.batch_outbound_count(batch_id)
-            received += yield self.vumi_api.mdb.batch_inbound_count(batch_id)
-
-        self.publish_conversation_metric(conv, 'messages_sent', sent)
-        self.publish_conversation_metric(conv, 'messages_received', received)
+        yield self.collect_message_metrics(conv)

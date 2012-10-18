@@ -271,3 +271,17 @@ class TestSequentialSendApplication(AppWorkerTestCase):
                        key=lambda m: m['to_addr'])
         self.assertEqual(msg['content'], 'bar')
         self.assertEqual(msg['to_addr'], contact3.msisdn)
+
+    @inlineCallbacks
+    def test_collect_metrics(self):
+        conv = yield self.create_conversation()
+        yield conv.start()
+        yield self.dispatch_command(
+            'collect_metrics', conversation_key=conv.key,
+            user_account_key=self.user_account.key)
+        metrics = self.poll_metrics('%s.%s' % (self.user_account.key,
+                                               conv.key))
+        self.assertEqual({
+                u'messages_sent': [0],
+                u'messages_received': [0],
+                }, metrics)
