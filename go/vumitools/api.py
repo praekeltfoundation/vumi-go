@@ -411,6 +411,7 @@ class AsyncMessageSender(object):
         self.publisher.publish_message(command)
 
     def make_publisher(self):
+        "Build a Publisher class with the right attributes on it."
         return type("VumiApiCommandPublisher", (Publisher,),
                     self.publisher_config.copy())
 
