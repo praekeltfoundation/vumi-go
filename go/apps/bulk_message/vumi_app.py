@@ -143,8 +143,7 @@ class BulkMessageApplication(GoApplicationWorker):
                 command_data['msg_options'])
 
     @inlineCallbacks
-    def collect_metrics(self, conversation_key, user_account_key):
-        user_api = self.get_user_api(user_account_key)
+    def collect_metrics(self, user_api, conversation_key):
         conv = yield user_api.get_wrapped_conversation(conversation_key)
 
         sent = 0
