@@ -37,7 +37,8 @@ class GoApplicationMixin(object):
 
     @inlineCallbacks
     def _go_setup_application(self):
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
+        self.vumi_api = yield VumiApi.from_config_async(
+            self.config, self._amqp_client)
         self._metrics_conversations = set()
 
         # In case we need these.
