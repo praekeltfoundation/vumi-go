@@ -41,16 +41,18 @@ class TestBulkMessageApplication(AppWorkerTestCase):
             u'testuser')
         self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
+        yield self.user_api.api.declare_tags([("pool", "tag1"),
+                                              ("pool", "tag2")])
+        yield self.user_api.api.set_pool_metadata("pool", {
+            "transport_type": "sphex",
+            })
+
     def store_outbound(self, **kw):
         return self.vumi_api.mdb.add_outbound_message(self.mkmsg_out(**kw))
 
     @inlineCallbacks
     def test_start(self):
         user_api = self.user_api
-        yield user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
-        yield user_api.api.set_pool_metadata("pool", {
-            "transport_type": "sphex",
-            })
         group = yield user_api.contact_store.new_group(u'test group')
         contact1 = yield user_api.contact_store.new_contact(
             name=u'First', surname=u'Contact', msisdn=u'27831234567',
@@ -73,7 +75,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         # check commands made it through to the dispatcher and the vumi_app
         [disp_cmd] = self.get_dispatcher_commands()
         self.assertEqual(disp_cmd['command'], 'start')
-        [bulk_cmd] = self.get_bulk_message_commands()
+        [bulk_cmd] = self.get_app_message_commands()
         self.assertEqual(bulk_cmd['command'], 'start')
 
         # Force processing of messages
@@ -130,12 +132,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_start_with_deduplication(self):
-        yield self.vumi_api.account_store.new_user(u'testuser')
         user_api = self.user_api
-        user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
-        user_api.api.set_pool_metadata("pool", {
-            "transport_type": "sphex",
-            })
         group = yield user_api.contact_store.new_group(u'test group')
 
         # Create two contacts with the same to_addr, they should be deduped
@@ -243,3 +240,29 @@ class TestBulkMessageApplication(AppWorkerTestCase):
                                                             user_account_key)
         self.assertEqual(msg.payload['helper_metadata']['tag']['tag'],
                                                             ['pool', 'tag1'])
+
+    @inlineCallbacks
+    def test_collect_metrics(self):
+        conv = yield self.user_api.new_conversation(
+            u'bulk_message', u'Subject', u'Message', delivery_tag_pool=u"pool",
+            delivery_class=u'sms')
+        conv = self.user_api.wrap_conversation(conv)
+        yield conv.start()
+        [batch_id] = conv.get_batch_keys()
+
+        yield self.user_api.api.mdb.add_outbound_message(
+            self.mkmsg_out("out 1", message_id=None), batch_id=batch_id)
+        yield self.user_api.api.mdb.add_outbound_message(
+            self.mkmsg_out("out 2", message_id=None), batch_id=batch_id)
+        yield self.user_api.api.mdb.add_inbound_message(
+            self.mkmsg_in("in 2", message_id=None), batch_id=batch_id)
+
+        yield self.dispatch_command(
+            'collect_metrics', conversation_key=conv.key,
+            user_account_key=self.user_account.key)
+        metrics = self.poll_metrics('%s.%s' % (self.user_account.key,
+                                               conv.key))
+        self.assertEqual({
+                u'messages_sent': [2],
+                u'messages_received': [1],
+                }, metrics)

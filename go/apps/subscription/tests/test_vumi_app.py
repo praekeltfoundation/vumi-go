@@ -143,4 +143,6 @@ class TestSubscriptionApplication(AppWorkerTestCase):
                 u'foo.unsubscribed': [0],
                 u'bar.subscribed': [1],
                 u'bar.unsubscribed': [2],
+                u'messages_sent': [0],
+                u'messages_received': [0],
                 }, metrics)
