@@ -217,6 +217,8 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
     def setUp(self):
         yield super(AppWorkerTestCase, self).setUp()
         if self.override_dummy_consumer:
+            # Set up the vumi exchange, in case we don't have one.
+            self._amqp.exchange_declare('vumi', 'direct')
             self.VUMI_COMMANDS_CONSUMER = (
                 dummy_consumer_factory_factory_factory(
                     self._publish_celery_command))
