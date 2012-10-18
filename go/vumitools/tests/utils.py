@@ -193,6 +193,11 @@ class GoPersistenceMixin(PersistenceMixin):
         # don't go away.
         yield self._clear_bucket_properties(accounts, manager)
 
+    def mk_config(self, config):
+        config = super(GoPersistenceMixin, self).mk_config(config)
+        config.setdefault('metrics_prefix', type(self).__module__)
+        return config
+
 
 def dummy_consumer_factory_factory_factory(publish_func):
     def dummy_consumer_factory_factory():
@@ -204,6 +209,8 @@ def dummy_consumer_factory_factory_factory(publish_func):
 
 class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
                         ApplicationTestCase):
+    # TODO: Get rid of all the celery in here.
+
     override_dummy_consumer = True
 
     @inlineCallbacks
@@ -213,7 +220,8 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
             # Set up the vumi exchange, in case we don't have one.
             self._amqp.exchange_declare('vumi', 'direct')
             self.VUMI_COMMANDS_CONSUMER = (
-                dummy_consumer_factory_factory_factory(self.publish_command))
+                dummy_consumer_factory_factory_factory(
+                    self._publish_celery_command))
         self.setup_celery_for_tests()
 
     @inlineCallbacks
@@ -221,9 +229,14 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
         self.restore_celery()
         yield super(AppWorkerTestCase, self).tearDown()
 
-    def publish_command(self, cmd_dict):
+    def _publish_celery_command(self, cmd_dict):
         data = json.dumps(cmd_dict)
         self._amqp.publish_raw('vumi', 'vumi.api', data)
+
+    def dispatch_command(self, command, *args, **kw):
+        app_name = self.application_class.worker_name
+        cmd = VumiApiCommand.command(app_name, command, *args, **kw)
+        return self._dispatch(cmd, '%s.control' % (app_name,))
 
     def get_dispatcher_commands(self):
         return self._amqp.get_messages('vumi', 'vumi.api')
@@ -249,3 +262,16 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
             self._persist_riak_managers.append(worker.vumi_api.manager)
             self._persist_redis_managers.append(worker.vumi_api.redis)
         returnValue(worker)
+
+    def poll_metrics(self, assert_prefix=None, app=None):
+        if app is None:
+            app = self.app
+        values = {}
+        if assert_prefix is not None:
+            assert_prefix += '.'
+        for name, metric in app.metrics._metrics_lookup.items():
+            if assert_prefix is not None:
+                self.assertTrue(name.startswith(assert_prefix))
+                name = name[len(assert_prefix):]
+            values[name] = [v for _, v in metric.poll()]
+        return values

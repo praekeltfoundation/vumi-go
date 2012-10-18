@@ -82,6 +82,13 @@ class TestSubscriptionApplication(AppWorkerTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, ('pool', 'tag1'))
         return self.dispatch(msg)
 
+    def set_subscription(self, contact, subscribed, unsubscribed):
+        for campaign_name in subscribed:
+            contact.subscription[campaign_name] = u'subscribed'
+        for campaign_name in unsubscribed:
+            contact.subscription[campaign_name] = u'unsubscribed'
+        return contact.save()
+
     @inlineCallbacks
     def test_subscribe_unsubscribe(self):
         yield self.assert_subscription(self.contact, 'foo', None)
@@ -115,3 +122,25 @@ class TestSubscriptionApplication(AppWorkerTestCase):
         [reply] = yield self.get_dispatched_messages()
         self.assertEqual('Unrecognised keyword.', reply['content'])
         yield self.assert_subscription(self.contact, 'foo', None)
+
+    @inlineCallbacks
+    def test_collect_metrics(self):
+        second_contact = yield self.user_api.contact_store.new_contact(
+            name=u'Second', surname=u'Contact', msisdn=u'+27831234568')
+        third_contact = yield self.user_api.contact_store.new_contact(
+            name=u'Third', surname=u'Contact', msisdn=u'+27831234569')
+        yield self.set_subscription(self.contact, [], ['bar'])
+        yield self.set_subscription(second_contact, ['foo', 'bar'], [])
+        yield self.set_subscription(third_contact, ['foo'], ['bar'])
+
+        yield self.dispatch_command(
+            'collect_metrics', conversation_key=self.conv.key,
+            user_account_key=self.user_account.key)
+        metrics = self.poll_metrics('%s.%s' % (self.user_account.key,
+                                               self.conv.key))
+        self.assertEqual({
+                u'foo.subscribed': [2],
+                u'foo.unsubscribed': [0],
+                u'bar.subscribed': [1],
+                u'bar.unsubscribed': [2],
+                }, metrics)
