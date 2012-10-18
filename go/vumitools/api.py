@@ -127,6 +127,11 @@ class VumiUserApi(object):
         return conversations.by_index(end_timestamp=None)
 
     @Manager.calls_manager
+    def running_conversations(self):
+        conversations = yield self.active_conversations()
+        returnValue([c for c in conversations if c.running()])
+
+    @Manager.calls_manager
     def tagpools(self):
         account_store = self.api.account_store
         user_account = yield account_store.get_user(self.user_account_key)
