@@ -298,15 +298,17 @@ def _people(request):
     # TODO: A lot of this stuff is duplicated from the similar group search
     #       in the groups() view. We need a function that does that to avoid
     #       the duplication.
-    selected_letter = request.GET.get('l', 'a')
+    selected_letter = request.GET.get('l')
     query = request.GET.get('q', '')
     if query:
         if not ':' in query:
             query = 'name:%s' % (query,)
         selected_contacts = contact_store.contacts.riak_search(query)
-    else:
+    elif selected_letter:
         selected_contacts = contact_store.filter_contacts_on_surname(
             selected_letter)
+    else:
+        selected_contacts = []
 
     smart_group_form = SmartGroupForm(initial={'query': query})
     return render(request, 'contacts/people.html', {
