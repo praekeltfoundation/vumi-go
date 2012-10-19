@@ -7,10 +7,7 @@
     <div class="span12">
         <table>
             <tr>
-                <td>Download <a href="{% url dashboard:export_users poll_id=poll_id %}">User data</a></td>
-            </tr>
-            <tr>
-                <td>Download <a href="{% url dashboard:export_results poll_id=poll_id %}">Poll results</a></td>
+                <td>Download <a href="{% url survey:user_data conversation_key=conversation.key %}">User data</a></td>
             </tr>
         </table>
     </div>
