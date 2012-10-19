@@ -98,14 +98,15 @@ class GoApplicationMixin(object):
                         conversation_key, user_account_key))
             return
         self._metrics_conversations.add(key_tuple)
-        yield self.collect_metrics(conversation_key, user_account_key)
+        user_api = self.get_user_api(user_account_key)
+        yield self.collect_metrics(user_api, conversation_key)
         self._metrics_conversations.remove(key_tuple)
 
     def process_unknown_cmd(self, method_name, *args, **kwargs):
         log.error("Unknown vumi API command: %s(%s, %s)" % (
             method_name, args, kwargs))
 
-    def collect_metrics(self, conversation_key, user_account_key):
+    def collect_metrics(self, user_api, conversation_key):
         # By default, we don't collect metrics.
         pass
 
@@ -186,6 +187,24 @@ class GoApplicationMixin(object):
         name = "%s.%s.%s" % (
             conversation.user_account.key, conversation.key, name)
         self.publish_metric(name, value, agg)
+
+    @inlineCallbacks
+    def collect_message_metrics(self, conversation):
+        """Collect message count metrics.
+
+        This is a utility method for collecting common metrics. It has to be
+        called explicitly from :meth:`collect_metrics`
+        """
+        sent = 0
+        received = 0
+        for batch_id in conversation.batches.keys():
+            sent += yield self.vumi_api.mdb.batch_outbound_count(batch_id)
+            received += yield self.vumi_api.mdb.batch_inbound_count(batch_id)
+
+        self.publish_conversation_metric(
+            conversation, 'messages_sent', sent)
+        self.publish_conversation_metric(
+            conversation, 'messages_received', received)
 
 
 class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):

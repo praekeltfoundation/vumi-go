@@ -241,9 +241,9 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
     def get_dispatcher_commands(self):
         return self._amqp.get_messages('vumi', 'vumi.api')
 
-    def get_bulk_message_commands(self):
-        return self._amqp.get_messages('vumi',
-                                       "%s.control" % self.app.worker_name)
+    def get_app_message_commands(self):
+        app_name = self.application_class.worker_name
+        return self._amqp.get_messages('vumi', "%s.control" % (app_name,))
 
     def get_dispatched_app_events(self):
         return self._amqp.get_messages('vumi', 'vumi.event')
