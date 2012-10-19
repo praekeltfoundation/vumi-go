@@ -49,7 +49,7 @@ class SequentialSendApplication(GoApplicationWorker):
     """
 
     SEND_TO_TAGS = frozenset(['default'])
-    worker_name = 'sequential_send_app'
+    worker_name = 'sequential_send_application'
 
     def validate_config(self):
         super(SequentialSendApplication, self).validate_config()
@@ -187,3 +187,8 @@ class SequentialSendApplication(GoApplicationWorker):
         log.debug("Scheduling conversation: %s" % (conversation_key,))
         yield self.redis.sadd('scheduled_conversations', json.dumps(
                 [batch_id, conversation_key]))
+
+    @inlineCallbacks
+    def collect_metrics(self, user_api, conversation_key):
+        conv = yield user_api.get_wrapped_conversation(conversation_key)
+        yield self.collect_message_metrics(conv)

@@ -80,8 +80,7 @@ class SubscriptionApplication(GoApplicationWorker):
                 command_data['msg_options'])
 
     @inlineCallbacks
-    def collect_metrics(self, conversation_key, user_account_key):
-        user_api = self.get_user_api(user_account_key)
+    def collect_metrics(self, user_api, conversation_key):
         conv = yield user_api.get_wrapped_conversation(conversation_key)
         contact_proxy = user_api.contact_store.contacts
 
@@ -98,3 +97,5 @@ class SubscriptionApplication(GoApplicationWorker):
                 conv, '.'.join([campaign_name, "unsubscribed"]),
                 (yield contact_proxy.riak_search_count(
                         "subscription-%s:unsubscribed" % (campaign_name,)))[0])
+
+        yield self.collect_message_metrics(conv)
