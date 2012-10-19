@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from django.conf import settings
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.urlresolvers import reverse
@@ -285,3 +286,13 @@ def edit(request, conversation_key):
         'questions_formset': questions_formset,
         'completed_response_formset': completed_response_formset,
     })
+
+
+@login_required
+def download_user_data(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
+    poll_id = 'poll-%s' % (conversation.key,)
+    pm, poll_data = get_poll_config(poll_id)
+    poll = pm.get(poll_id)
+    csv_data = pm.export_user_data_as_csv(poll)
+    return HttpResponse(csv_data, content_type='application/csv')
