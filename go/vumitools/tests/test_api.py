@@ -5,18 +5,13 @@
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from vumi.tests.utils import get_fake_amq_client
+
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.api import (
     VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent)
 from go.vumitools.tests.utils import AppWorkerTestCase
-
-
-def get_fake_amq_client(broker=None):
-    # TODO: Move this into vumi
-    from vumi.tests.utils import get_spec, vumi_resource_path, FakeAMQClient
-    spec = get_spec(vumi_resource_path("amqp-spec-0-8.xml"))
-    return FakeAMQClient(spec, {}, broker)
 
 
 class TestTxVumiApi(AppWorkerTestCase):
