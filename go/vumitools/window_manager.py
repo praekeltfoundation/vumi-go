@@ -18,10 +18,10 @@ class WindowManager(object):
     FLIGHT_STATS_KEY = 'flightstats'
     MAP_KEY = 'keymap'
 
-    def __init__(self, redis, window_size=100, flight_lifetime=10,
+    def __init__(self, redis, window_size=100, flight_lifetime=None,
                 gc_interval=10):
         self.window_size = window_size
-        self.flight_lifetime = flight_lifetime
+        self.flight_lifetime = flight_lifetime or (gc_interval * window_size)
         self.redis = redis
         self.clock = self.get_clock()
         self.gc = LoopingCall(self.clear_expired_flight_keys)
