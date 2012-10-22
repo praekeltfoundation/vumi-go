@@ -19,7 +19,6 @@ class BulkMessageApplication(GoApplicationWorker):
     worker_name = 'bulk_message_application'
     max_ack_window = 100
     max_ack_wait = 10
-    max_ack_retries = 2
     monitor_interval = 1
     monitor_window_cleanup = True
 
@@ -30,8 +29,7 @@ class BulkMessageApplication(GoApplicationWorker):
             self.worker_name,))
         self.window_manager = WindowManager(wm_redis,
             window_size=self.max_ack_window,
-            flight_lifetime=self.max_ack_wait,
-            max_flight_retries=self.max_ack_retries)
+            flight_lifetime=self.max_ack_wait)
         self.window_manager.monitor(self.on_window_key_ready,
             interval=self.monitor_interval,
             cleanup=self.monitor_window_cleanup,

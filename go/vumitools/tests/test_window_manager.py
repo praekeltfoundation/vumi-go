@@ -18,8 +18,7 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         self.clock = Clock()
         self.patch(WindowManager, 'get_clock', lambda _: self.clock)
 
-        self.wm = WindowManager(redis, window_size=10,
-            max_flight_retries=3)
+        self.wm = WindowManager(redis, window_size=10, flight_lifetime=10)
         yield self.wm.create_window(self.window_id)
         self.redis = self.wm.redis
 
@@ -89,13 +88,10 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         self.assertEqual((yield self.wm.count_waiting(window_id)), amount)
 
     @inlineCallbacks
-    def assert_expired_keys(self, window_id, amount, expected_tries=1):
+    def assert_expired_keys(self, window_id, amount):
         # Stuff has taken too long and so we should get 10 expired keys
         expired_keys = yield self.wm.get_expired_flight_keys(window_id)
         self.assertEqual(len(expired_keys), amount)
-        for key in expired_keys:
-            tries = yield self.wm.get_tries(window_id, key)
-            self.assertEqual(int(tries), expected_tries)
 
     @inlineCallbacks
     def assert_in_flight(self, window_id, amount):
@@ -108,7 +104,7 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
             yield self.wm.get_next_key(self.window_id)
 
     @inlineCallbacks
-    def test_retries(self):
+    def test_expiry_of_acks(self):
 
         def mock_clock_time(self):
             return self._clocktime
@@ -116,29 +112,30 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         self.patch(WindowManager, 'get_clocktime', mock_clock_time)
         self.wm._clocktime = 0
 
-        for i in range(10):
+        for i in range(30):
             yield self.wm.add(self.window_id, i)
 
-        # There's a max of 3 retries, we're manually setting the clock
-        # instead of using clock.advance() so we can wait for the deferreds
-        # to finish before continuing to the next clear_or_retry run
-        # since LoopingCall() will only fire again if the previous run has
-        # completed.
+        # We're manually setting the clock instead of using clock.advance()
+        # so we can wait for the deferreds to finish before continuing to the
+        # next clear_expired_flight_keys run since LoopingCall() will only fire
+        # again if the previous run has completed.
         yield self.slide_window()
         self.wm._clocktime = 10
-        yield self.wm.clear_or_retry_flight_keys()
+        yield self.wm.clear_expired_flight_keys()
+        self.assert_expired_keys(self.window_id, 10)
 
         yield self.slide_window()
         self.wm._clocktime = 20
-        yield self.wm.clear_or_retry_flight_keys()
+        yield self.wm.clear_expired_flight_keys()
+        self.assert_expired_keys(self.window_id, 20)
 
         yield self.slide_window()
         self.wm._clocktime = 30
-        yield self.wm.clear_or_retry_flight_keys()
+        yield self.wm.clear_expired_flight_keys()
+        self.assert_expired_keys(self.window_id, 30)
 
         self.assert_in_flight(self.window_id, 0)
         self.assert_count_waiting(self.window_id, 0)
-        self.assert_expired_keys(self.window_id, 0, None)
 
     @inlineCallbacks
     def test_monitor_windows(self):
