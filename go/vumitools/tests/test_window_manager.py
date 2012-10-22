@@ -18,7 +18,7 @@ class WindowManagerTestCase(TestCase, PersistenceMixin):
         self.clock = Clock()
         self.patch(WindowManager, 'get_clock', lambda _: self.clock)
 
-        self.wm = WindowManager(redis, window_size=10)
+        self.wm = WindowManager(redis, window_size=10, flight_lifetime=10)
         yield self.wm.create_window(self.window_id)
         self.redis = self.wm.redis
 
