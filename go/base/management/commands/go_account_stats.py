@@ -117,9 +117,7 @@ class Command(BaseCommand):
             self.err(u'Provide a conversation key')
             return
         conv_key = options[0]
-        raw_conv = api.conversation_store.get_conversation_by_key(conv_key)
-
-        conversation = api.wrap_conversation(raw_conv)
+        conversation = api.get_wrapped_conversation(conv_key)
         message_store = api.api.mdb
         self.out(u'Conversation: %s\n' % (conversation.subject,))
 
