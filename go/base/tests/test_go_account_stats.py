@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
+from uuid import uuid4
 from StringIO import StringIO
 from datetime import datetime
 
 from django.contrib.auth.models import User
 
-from go.base.tests.utils import VumiGoDjangoTestCase
+from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.management.commands import go_account_stats
 from go.base.utils import vumi_api_for_user
 
 
-class GoAccountStatsCommandTestCase(VumiGoDjangoTestCase):
+class GoAccountStatsCommandTestCase(DjangoGoApplicationTestCase):
 
     USE_RIAK = True
 
@@ -20,17 +21,37 @@ class GoAccountStatsCommandTestCase(VumiGoDjangoTestCase):
             email='test@user.com')
 
         self.api = vumi_api_for_user(self.user)
+        self.message_store = self.api.api.mdb
 
         def mkconv(*args, **kwargs):
+            options = {
+                'delivery_class': u'sms',
+                'delivery_tag_pool': u'longcode',
+            }
+            options.update(kwargs)
             return self.api.wrap_conversation(
-                self.api.conversation_store.new_conversation(*args, **kwargs))
+                self.api.conversation_store.new_conversation(*args, **options))
 
-        self.active_conv = mkconv(u'bulk_message', u'active', u'content')
+        self.active_conv = mkconv(u'bulk_message', u'active', u'content',)
+        self.active_conv.start()
+
+        [batch_key] = self.active_conv.batches.keys()
+        for i in range(10):
+            msg = self.mkmsg_in(message_id=uuid4().hex, to_addr='shortcode',
+                from_addr='from-%s' % (i,))
+            self.message_store.add_inbound_message(msg, batch_id=batch_key)
+            self.message_store.add_outbound_message(msg.reply('thanks'),
+                batch_id=batch_key)
+
         self.inactive_conv = mkconv(u'bulk_message', u'inactive', u'content',
             end_timestamp=datetime.now())
+        self.inactive_conv.start()
+        self.assertTrue(self.inactive_conv.ended())
+
         self.unicode_conv = mkconv(u'bulk_message', u'Zoë destroyer of Ascii',
             u'content', end_timestamp=datetime.now())
-        self.assertTrue(self.inactive_conv.ended())
+        self.unicode_conv.start()
+        self.assertTrue(self.unicode_conv.ended())
 
         self.command = go_account_stats.Command()
         self.command.stdout = StringIO()
@@ -65,11 +86,14 @@ class GoAccountStatsCommandTestCase(VumiGoDjangoTestCase):
     def test_stats(self):
         self.command.handle('test@user.com', 'stats', self.active_conv.key)
         output = self.command.stdout.getvalue().strip().split('\n')
+        [batch_key] = self.active_conv.batches.keys()
         self.assertEqual(output, [
             u'Conversation: active',
-            u'Total Received: 0',
-            u'Total Sent: 0',
-            u'Total Uniques: 0',
+            u'Total Received in batch %s: 10' % (batch_key,),
+            u'Total Sent in batch %s: 10' % (batch_key,),
+            u'Total Uniques: 10',
             u'Received per date:',
+            u'%s: 10' % (datetime.now().date(),),
             u'Sent per date:',
+            u'%s: 10' % (datetime.now().date(),),
         ])
