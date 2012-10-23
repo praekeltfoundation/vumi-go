@@ -6,7 +6,7 @@ from go.base.utils import vumi_api_for_user
 def per_date(collection):
     bucket = {}
     for message in collection:
-        key = message['timestamp'].date()
+        key = message.msg['timestamp'].date()
         bucket.setdefault(key, 0)
         bucket[key] += 1
     return bucket
@@ -18,26 +18,20 @@ def print_dates(bucket, io):
         io.write('%s: %s\n' % (item.strftime('%Y-%m-%d'), count))
 
 
-def get_inbound(conversation):
-    batch_keys = conversation.get_batch_keys()
-    replies = []
-    for batch_id in batch_keys:
-        replies.extend(conversation.mdb.batch_replies(batch_id))
-    return replies
+def get_inbound(message_store, keys):
+    for key in keys:
+        yield message_store.inbound_messages.load(key)
 
 
-def get_outbound(conversation):
-    batch_keys = conversation.get_batch_keys()
-    messages = []
-    for batch_id in batch_keys:
-        messages.extend(conversation.mdb.batch_messages(batch_id))
-    return messages
+def get_outbound(message_store, keys):
+    for key in keys:
+        yield message_store.outbound_messages.load(key)
 
 
 def get_msisdns(key, collection):
     uniques = set([])
     for message in collection:
-        uniques.add(message[key])
+        uniques.add(message.msg[key])
     return uniques
 
 
@@ -123,19 +117,33 @@ class Command(BaseCommand):
             self.err(u'Provide a conversation key')
             return
         conv_key = options[0]
-        raw_conv = api.conversation_store.get_conversation_by_key(conv_key)
-        conversation = api.wrap_conversation(raw_conv)
-
+        conversation = api.get_wrapped_conversation(conv_key)
+        message_store = api.api.mdb
         self.out(u'Conversation: %s\n' % (conversation.subject,))
 
-        inbound = get_inbound(conversation)
-        outbound = get_outbound(conversation)
+        for batch_key in conversation.batches.keys():
+            self.handle_batch_key(message_store, batch_key)
+            self.handle_batch_key_breakdown(message_store, batch_key)
+
+    def handle_batch_key(self, message_store, batch_key):
+        self.out(u'Total Received in batch %s: %s\n' % (
+            batch_key, message_store.batch_inbound_count(batch_key),))
+        self.out(u'Total Sent in batch %s: %s\n' % (
+            batch_key, message_store.batch_outbound_count(batch_key),))
+
+    def handle_batch_key_breakdown(self, message_store, batch_key):
+        inbound_keys = message_store.inbound_messages.by_index(
+            return_keys=True, batch=batch_key)
+
+        outbound_keys = message_store.outbound_messages.by_index(
+            return_keys=True, batch=batch_key)
+
+        inbound = list(get_inbound(message_store, inbound_keys))
+        outbound = list(get_outbound(message_store, outbound_keys))
         inbound_msisdns = get_msisdns('from_addr', inbound)
         outbound_msisdns = get_msisdns('to_addr', outbound)
         all_msisdns = inbound_msisdns.union(outbound_msisdns)
 
-        self.out(u'Total Received: %s\n' % (len(inbound),))
-        self.out(u'Total Sent: %s\n' % (len(outbound),))
         self.out(u'Total Uniques: %s\n' % (len(all_msisdns),))
         self.out(u'Received per date:\n')
         print_dates(per_date(inbound), self.stdout)
