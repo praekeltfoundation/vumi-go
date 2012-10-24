@@ -191,12 +191,18 @@ class ContactStore(PerAccountStore):
         mr.add_bucket(bucket)
         if group is not None:
             mr.index(bucket, 'groups_bin', group.key)
+        # We need to filter out deleted values here. (Mostly for tests.)
+        # TODO: Make this a general thing?
         js_function = """function(value, keyData, arg){
-            var data = Riak.mapValuesJson(value)[0];
-            if(data.surname) {
-                var surname = data.surname.toLowerCase();
-                if(surname[0] === arg){
-                    return [[value.key, value[0]]];
+            for (i in value.values) {
+                var val = value.values[i]
+                if (!val.metadata['X-Riak-Deleted']) {
+                    var data = JSON.parse(val.data);
+                    if (data.surname) {
+                        if (data.surname.toLowerCase()[0] === arg) {
+                            return [[value.key, val]];
+                        }
+                    }
                 }
             }
             return [];

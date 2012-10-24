@@ -12,11 +12,10 @@ from go.base import utils
 
 class AuthenticationTestCase(VumiGoDjangoTestCase):
 
-    fixtures = ['test_user']
-
     def setUp(self):
         super(AuthenticationTestCase, self).setUp()
-        self.user = User.objects.get(username='username')
+        self.setup_api()
+        self.user = self.mk_django_user()
         self.client = Client()
 
     def test_user_account_created(self):
@@ -73,7 +72,10 @@ class GoTemplateTagsTestCase(VumiGoDjangoTestCase):
 
 class UtilsTestCase(VumiGoDjangoTestCase):
 
-    fixtures = ['test_user']
+    def setUp(self):
+        super(UtilsTestCase, self).setUp()
+        self.setup_api()
+        self.user = self.mk_django_user()
 
     def test_padded_queryset(self):
         short_list = User.objects.all()[:1]

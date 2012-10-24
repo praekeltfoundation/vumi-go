@@ -201,7 +201,7 @@ class GoPersistenceMixin(PersistenceMixin):
         config.setdefault('metrics_prefix', type(self).__module__)
         return config
 
-    @inlineCallbacks
+    @PersistenceMixin.sync_or_async
     def mk_user(self, vumi_api, username):
         key = "test-%s-user" % (self._users_created,)
         self._users_created += 1
