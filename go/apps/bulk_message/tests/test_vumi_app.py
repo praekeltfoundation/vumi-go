@@ -37,8 +37,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         self.vumi_api = self.app.vumi_api  # YOINK!
 
         # Create a test user account
-        self.user_account = yield self.vumi_api.account_store.new_user(
-            u'testuser')
+        self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
         yield self.user_api.api.declare_tags([("pool", "tag1"),

@@ -139,7 +139,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
             self.api = VumiApi.from_config(self._persist_config)
         else:
             self.api = yield VumiApi.from_config_async(self._persist_config)
-        self.user_account = yield self.api.account_store.new_user(u'Buster')
+        self.user_account = yield self.mk_user(self.api, u'Buster')
         self.user_api = VumiUserApi(self.api, self.user_account.key)
 
     @inlineCallbacks
