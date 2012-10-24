@@ -4,7 +4,6 @@
 
 import os
 from contextlib import contextmanager
-import json
 
 from twisted.python.monkey import MonkeyPatcher
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -210,43 +209,13 @@ class GoPersistenceMixin(PersistenceMixin):
         returnValue(user)
 
 
-def dummy_consumer_factory_factory_factory(publish_func):
-    def dummy_consumer_factory_factory():
-        dummy_consumer_factory = DummyConsumerFactory()
-        dummy_consumer_factory.publish = publish_func
-        return dummy_consumer_factory
-    return dummy_consumer_factory_factory
-
-
-class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
-                        ApplicationTestCase):
-    # TODO: Get rid of all the celery in here.
+class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
 
     use_riak = True
-    override_dummy_consumer = True
-
-    @inlineCallbacks
-    def setUp(self):
-        yield super(AppWorkerTestCase, self).setUp()
-        if self.override_dummy_consumer:
-            # Set up the vumi exchange, in case we don't have one.
-            self._amqp.exchange_declare('vumi', 'direct')
-            self.VUMI_COMMANDS_CONSUMER = (
-                dummy_consumer_factory_factory_factory(
-                    self._publish_celery_command))
-        self.setup_celery_for_tests()
-
-    @inlineCallbacks
-    def tearDown(self):
-        self.restore_celery()
-        yield super(AppWorkerTestCase, self).tearDown()
-
-    def _publish_celery_command(self, cmd_dict):
-        data = json.dumps(cmd_dict)
-        self._amqp.publish_raw('vumi', 'vumi.api', data)
+    worker_name = None
 
     def dispatch_command(self, command, *args, **kw):
-        app_name = self.application_class.worker_name
+        app_name = self.worker_name or self.application_class.worker_name
         cmd = VumiApiCommand.command(app_name, command, *args, **kw)
         return self._dispatch(cmd, '%s.control' % (app_name,))
 
@@ -274,6 +243,13 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
             self._persist_riak_managers.append(worker.vumi_api.manager)
             self._persist_redis_managers.append(worker.vumi_api.redis)
         returnValue(worker)
+
+    @inlineCallbacks
+    def start_conversation(self, conversation, *args, **kwargs):
+        yield conversation.start(*args, **kwargs)
+        cmd = self.get_dispatcher_commands()[-1].payload
+        yield self.dispatch_command(
+            cmd['command'], *cmd['args'], **cmd['kwargs'])
 
     def poll_metrics(self, assert_prefix=None, app=None):
         if app is None:
