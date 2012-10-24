@@ -6,7 +6,6 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.middleware.tagger import TaggingMiddleware
 
-from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.subscription.vumi_app import SubscriptionApplication
@@ -22,10 +21,6 @@ class TestSubscriptionApplication(AppWorkerTestCase):
         super(TestSubscriptionApplication, self).setUp()
         self.config = self.mk_config({})
         self.app = yield self.get_application(self.config)
-        self.cmd_dispatcher = yield self.get_application({
-            'transport_name': 'cmd_dispatcher',
-            'worker_names': ['subscription_application'],
-            }, cls=CommandDispatcher)
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
@@ -57,7 +52,7 @@ class TestSubscriptionApplication(AppWorkerTestCase):
                     mkhandler('stop', 'foo', 'unsubscribe', ''),
                     mkhandler('stop', 'bar', 'unsubscribe', 'Unsubscribed.'),
                     ]})
-        yield self.conv.start()
+        yield self.start_conversation(self.conv)
 
     @inlineCallbacks
     def create_conversation(self, **kw):
