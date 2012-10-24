@@ -158,6 +158,9 @@ class CeleryTestMixIn(object):
 
 
 class GoPersistenceMixin(PersistenceMixin):
+    def _persist_setUp(self):
+        self._users_created = 0
+        return super(GoPersistenceMixin, self)._persist_setUp()
 
     @PersistenceMixin.sync_or_async
     def _clear_bucket_properties(self, account_keys, manager):
@@ -198,6 +201,14 @@ class GoPersistenceMixin(PersistenceMixin):
         config.setdefault('metrics_prefix', type(self).__module__)
         return config
 
+    @inlineCallbacks
+    def mk_user(self, vumi_api, username):
+        key = "test-%s-user" % (self._users_created,)
+        self._users_created += 1
+        user = vumi_api.account_store.users(key, username=username)
+        yield user.save()
+        returnValue(user)
+
 
 def dummy_consumer_factory_factory_factory(publish_func):
     def dummy_consumer_factory_factory():
@@ -211,6 +222,7 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
                         ApplicationTestCase):
     # TODO: Get rid of all the celery in here.
 
+    use_riak = True
     override_dummy_consumer = True
 
     @inlineCallbacks

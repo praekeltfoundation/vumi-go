@@ -59,8 +59,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         self._persist_riak_managers.append(self.vumi_api.manager)
 
         # Create a test user account
-        self.user_account = yield self.vumi_api.account_store.new_user(
-            u'testuser')
+        self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
         # Add tags
