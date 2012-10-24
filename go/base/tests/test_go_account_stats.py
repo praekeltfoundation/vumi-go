@@ -61,27 +61,27 @@ class GoAccountStatsCommandTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(output[1], 'list_conversations:')
 
     def test_list_conversations(self):
-        self.command.handle('user@domain.com', 'list_conversations')
+        self.command.handle(self.user.username, 'list_conversations')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 3)
         self.assertTrue(self.active_conv.key in output[0])
         self.assertTrue(self.inactive_conv.key in output[1])
 
     def test_list_conversations_with_unicode(self):
-        self.command.handle('user@domain.com', 'list_conversations')
+        self.command.handle(self.user.username, 'list_conversations')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 3)
         self.assertTrue(self.unicode_conv.key in output[2])
         self.assertTrue('Zo\xc3\xab' in output[2])
 
     def test_list_conversations_active(self):
-        self.command.handle('user@domain.com', 'list_conversations', 'active')
+        self.command.handle(self.user.username, 'list_conversations', 'active')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 1)
         self.assertTrue(self.active_conv.key in output[0])
 
     def test_stats(self):
-        self.command.handle('user@domain.com', 'stats', self.active_conv.key)
+        self.command.handle(self.user.username, 'stats', self.active_conv.key)
         output = self.command.stdout.getvalue().strip().split('\n')
         [batch_key] = self.active_conv.batches.keys()
         self.assertEqual(output, [

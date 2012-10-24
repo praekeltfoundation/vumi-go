@@ -58,11 +58,13 @@ class Command(BaseCommand):
         try:
             user = User.objects.get(username=email_address)
             api = self.get_api(user)
+
+            handler = getattr(self, 'handle_%s' % (command,),
+                self.unknown_command)
+            handler(user, api, args[2:])
+
         except User.DoesNotExist:
             self.err(u'Account does not exist\n')
-
-        handler = getattr(self, 'handle_%s' % (command,), self.unknown_command)
-        handler(user, api, args[2:])
 
     def get_api(self, user):
         return vumi_api_for_user(user)
@@ -122,16 +124,16 @@ class Command(BaseCommand):
         self.out(u'Conversation: %s\n' % (conversation.subject,))
 
         for batch_key in conversation.batches.keys():
-            self.handle_batch_key(message_store, batch_key)
-            self.handle_batch_key_breakdown(message_store, batch_key)
+            self.do_batch_key(message_store, batch_key)
+            self.do_batch_key_breakdown(message_store, batch_key)
 
-    def handle_batch_key(self, message_store, batch_key):
+    def do_batch_key(self, message_store, batch_key):
         self.out(u'Total Received in batch %s: %s\n' % (
             batch_key, message_store.batch_inbound_count(batch_key),))
         self.out(u'Total Sent in batch %s: %s\n' % (
             batch_key, message_store.batch_outbound_count(batch_key),))
 
-    def handle_batch_key_breakdown(self, message_store, batch_key):
+    def do_batch_key_breakdown(self, message_store, batch_key):
         inbound_keys = message_store.inbound_messages.by_index(
             return_keys=True, batch=batch_key)
 
