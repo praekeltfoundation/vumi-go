@@ -216,8 +216,15 @@ class TestSurveyApplication(AppWorkerTestCase):
         clone = participant.copy()
         clone['labels'] = json.loads(participant['labels'])
         clone['polls'] = json.loads(participant['polls'])
-        clone['updated_at'] = int(participant['updated_at'])
+        clone.pop('updated_at')
         return clone
+
+    def assert_participants_equalish(self, participant1, participant2):
+        self.assertEqual(
+            self._reformat_participant_for_comparison(participant1),
+            self._reformat_participant_for_comparison(participant2))
+        self.assertAlmostEqual(
+            participant1['updated_at'], participant2['updated_at'], 2)
 
     @inlineCallbacks
     def complete_survey(self, questions, start_at=0):
@@ -258,9 +265,8 @@ class TestSurveyApplication(AppWorkerTestCase):
             'message_id': last_sent_msg['message_id'],
         })
 
-        self.assertEqual(
-            self._reformat_participant_for_comparison(event_participant),
-            self._reformat_participant_for_comparison(participant.dump()))
+        self.assert_participants_equalish(
+            event_participant, participant.dump())
 
         returnValue(last_msg)
 
