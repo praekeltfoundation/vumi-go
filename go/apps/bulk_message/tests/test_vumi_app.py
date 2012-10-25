@@ -240,12 +240,13 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         yield self.start_conversation(conv)
         [batch_id] = conv.get_batch_keys()
 
+        mkid = TransportUserMessage.generate_id
         yield self.user_api.api.mdb.add_outbound_message(
-            self.mkmsg_out("out 1", message_id=None), batch_id=batch_id)
+            self.mkmsg_out("out 1", message_id=mkid()), batch_id=batch_id)
         yield self.user_api.api.mdb.add_outbound_message(
-            self.mkmsg_out("out 2", message_id=None), batch_id=batch_id)
+            self.mkmsg_out("out 2", message_id=mkid()), batch_id=batch_id)
         yield self.user_api.api.mdb.add_inbound_message(
-            self.mkmsg_in("in 2", message_id=None), batch_id=batch_id)
+            self.mkmsg_in("in 2", message_id=mkid()), batch_id=batch_id)
 
         yield self.dispatch_command(
             'collect_metrics', conversation_key=conv.key,
