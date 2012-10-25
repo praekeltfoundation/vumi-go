@@ -191,7 +191,9 @@ class ContactStore(PerAccountStore):
         mr.add_bucket(bucket)
         if group is not None:
             mr.index(bucket, 'groups_bin', group.key)
-        # We need to filter out deleted values here. (Mostly for tests.)
+        # Deleted values hang around with tombstone markers in Riak for a while
+        # before they get removed, and this happens a lot in tests. We need to
+        # find the real values amongst the deleted ones here.
         # TODO: Make this a general thing?
         js_function = """function(value, keyData, arg){
             for (i in value.values) {
