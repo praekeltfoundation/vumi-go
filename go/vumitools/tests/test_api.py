@@ -17,14 +17,6 @@ from go.vumitools.tests.utils import (
     AppWorkerTestCase, CeleryTestMixIn, DummyConsumerFactory)
 
 
-def dummy_consumer_factory_factory_factory(publish_func):
-    def dummy_consumer_factory_factory():
-        dummy_consumer_factory = DummyConsumerFactory()
-        dummy_consumer_factory.publish = publish_func
-        return dummy_consumer_factory
-    return dummy_consumer_factory_factory
-
-
 class TestTxVumiApi(AppWorkerTestCase, CeleryTestMixIn):
     @inlineCallbacks
     def setUp(self):
@@ -46,9 +38,13 @@ class TestTxVumiApi(AppWorkerTestCase, CeleryTestMixIn):
     def set_up_celery(self):
         # Set up the vumi exchange, in case we don't have one.
         self._amqp.exchange_declare('vumi', 'direct')
-        self.VUMI_COMMANDS_CONSUMER = (
-            dummy_consumer_factory_factory_factory(
-                self._publish_celery_command))
+
+        def consumer_factory():
+            dummy_consumer = DummyConsumerFactory()
+            dummy_consumer.publish = self._publish_celery_command
+            return dummy_consumer
+
+        self.VUMI_COMMANDS_CONSUMER = consumer_factory
         self.setup_celery_for_tests()
 
     def _publish_celery_command(self, cmd_dict):
