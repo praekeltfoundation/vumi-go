@@ -13,6 +13,7 @@ from go.vumitools import metrics_worker
 
 
 class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
+    use_riak = True
 
     @inlineCallbacks
     def setUp(self):
@@ -42,7 +43,7 @@ class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
         return looping_call
 
     def make_account(self, username):
-        return self.worker.vumi_api.account_store.new_user(username)
+        return self.mk_user(self.worker.vumi_api, username)
 
     def make_conv(self, user_api, conv_name, conv_type=u'my_conv'):
         return user_api.conversation_store.new_conversation(

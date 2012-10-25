@@ -6,15 +6,13 @@ from go.apps.tests.base import DjangoGoApplicationTestCase
 
 
 class SubscriptionTestCase(DjangoGoApplicationTestCase):
-
-    fixtures = ['test_user']
     TEST_CONVERSATION_TYPE = u'subscription'
 
     def setUp(self):
         super(SubscriptionTestCase, self).setUp()
+        self.setup_riak_fixtures()
         self.client = Client()
         self.client.login(username='username', password='password')
-        self.setup_riak_fixtures()
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)

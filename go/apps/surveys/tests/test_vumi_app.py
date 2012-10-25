@@ -11,7 +11,6 @@ from vumi.message import TransportUserMessage
 from vumi.tests.utils import LogCatcher
 
 from go.apps.surveys.vumi_app import SurveyApplication
-from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 
@@ -20,6 +19,8 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     application_class = SurveyApplication
     transport_type = u'sms'
+    worker_name = 'survey_application'
+
     default_questions = [{
         'copy': 'What is your favorite color? 1. Red 2. Yellow '
                 '3. Blue',
@@ -54,18 +55,11 @@ class TestSurveyApplication(AppWorkerTestCase):
                 'vxpolls': {'prefix': 'test.'},
                 })
 
-        # Setup the command dispatcher so we cand send it commands
-        self.cmd_dispatcher = yield self.get_application({
-            'transport_name': 'cmd_dispatcher',
-            'worker_names': ['survey_application'],
-            }, cls=CommandDispatcher)
-
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
 
         # Create a test user account
-        self.user_account = yield self.vumi_api.account_store.new_user(
-            u'testuser')
+        self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
         # Add tags
@@ -179,7 +173,7 @@ class TestSurveyApplication(AppWorkerTestCase):
             surname=u'Contact', msisdn=u'+27831234568', groups=[self.group])
         yield self.create_survey(self.conversation)
         with LogCatcher() as log:
-            yield self.conversation.start()
+            yield self.start_conversation(self.conversation)
             self.assertEqual(log.errors, [])
 
         yield pcs_d
@@ -201,7 +195,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         yield contact.save()
 
         self.create_survey(self.conversation)
-        yield self.conversation.start()
+        yield self.start_conversation(self.conversation)
         yield self.submit_answers(self.default_questions,
             answers=[
                 '2',  # Yellow, skips the second question because of the check
@@ -287,7 +281,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         yield self.create_contact(u'First', u'Contact',
             msisdn=u'+27831234567', groups=[self.group])
         self.create_survey(self.conversation)
-        yield self.conversation.start()
+        yield self.start_conversation(self.conversation)
         yield self.complete_survey(self.default_questions)
 
     @inlineCallbacks
@@ -295,7 +289,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         contact = yield self.create_contact(u'First', u'Contact',
             msisdn=u'+27831234567', groups=[self.group])
         self.create_survey(self.conversation)
-        yield self.conversation.start()
+        yield self.start_conversation(self.conversation)
         yield self.complete_survey(self.default_questions)
         # This participant should be empty
         poll_id = 'poll-%s' % (self.conversation.key,)

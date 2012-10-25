@@ -1,17 +1,14 @@
 from datetime import datetime
 
-from django.conf import settings
-from django.contrib.auth.models import User
-
 from go.base.tests.utils import VumiGoDjangoTestCase, declare_longcode_tags
 from go.vumitools.tests.utils import CeleryTestMixIn
-from go.vumitools.api import VumiApi
 from go.base.utils import vumi_api_for_user
 
 from vumi.message import TransportUserMessage
 
 
 class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
+    use_riak = True
 
     TEST_GROUP_NAME = u"Test Group"
     TEST_CONTACT_NAME = u"Name"
@@ -32,11 +29,8 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         self.declare_longcode_tags()
         self.setup_celery_for_tests()
 
-    def setup_api(self):
-        self.api = VumiApi.from_config(settings.VUMI_API_CONFIG)
-
     def setup_riak_fixtures(self):
-        self.user = User.objects.get(username='username')
+        self.user = self.mk_django_user()
         self.setup_user_api(self.user)
 
         if self.VIEWS_CLASS is not None:

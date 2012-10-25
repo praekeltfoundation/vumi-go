@@ -5,22 +5,14 @@ from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
 
 
-TEST_GROUP_NAME = u"Test Group"
-TEST_CONTACT_NAME = u"Name"
-TEST_CONTACT_SURNAME = u"Surname"
-TEST_SUBJECT = u"Test Conversation"
-
-
 class BulkMessageTestCase(DjangoGoApplicationTestCase):
-
-    fixtures = ['test_user']
     TEST_CONVERSATION_TYPE = u'bulk_message'
 
     def setUp(self):
         super(BulkMessageTestCase, self).setUp()
+        self.setup_riak_fixtures()
         self.client = Client()
         self.client.login(username='username', password='password')
-        self.setup_riak_fixtures()
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
@@ -158,4 +150,4 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(reverse('bulk_message:show', kwargs={
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.subject, TEST_SUBJECT)
+        self.assertEqual(conversation.subject, self.TEST_SUBJECT)
