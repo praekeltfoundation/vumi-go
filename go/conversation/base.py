@@ -189,9 +189,9 @@ class ShowConversationView(ConversationView):
 
     def get(self, request, conversation):
         inbound_message_paginator = Paginator(
-            PagedMessageCache(conversation, 'inbound'), 2)
+            PagedMessageCache(conversation, 'inbound'), 20)
         outbound_message_paginator = Paginator(
-            PagedMessageCache(conversation, 'outbound'), 2)
+            PagedMessageCache(conversation, 'outbound'), 20)
 
         page = request.GET.get('p', '')
         message_direction = request.GET.get('direction', 'inbound')
