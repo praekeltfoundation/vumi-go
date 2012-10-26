@@ -12,15 +12,17 @@ from go.vumitools.opt_out import OptOutStore
 
 
 class TestContactStore(GoPersistenceMixin, TestCase):
+    use_riak = True
 
     @inlineCallbacks
     def setUp(self):
         self._persist_setUp()
         self.manager = self.get_riak_manager()
-        # yield self.manager.purge_all()
         self.account_store = AccountStore(self.manager)
-        self.account = yield self.account_store.new_user(u'user')
-        self.account_alt = yield self.account_store.new_user(u'other_user')
+        # We pass `self` in as the VumiApi object here, because mk_user() just
+        # grabs .account_store off it.
+        self.account = yield self.mk_user(self, u'user')
+        self.account_alt = yield self.mk_user(self, u'other_user')
         self.store = ContactStore.from_user_account(self.account)
         self.store_alt = ContactStore.from_user_account(self.account_alt)
 

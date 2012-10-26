@@ -57,6 +57,7 @@ class CommandDispatcherTestCase(AppWorkerTestCase):
 
 
 class GoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
+    use_riak = True
 
     @inlineCallbacks
     def setUp(self):
@@ -65,7 +66,7 @@ class GoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
         self.vumi_api = yield VumiApi.from_config_async(self._persist_config)
         self._persist_riak_managers.append(self.vumi_api.manager)
         self._persist_redis_managers.append(self.vumi_api.redis)
-        self.account = yield self.vumi_api.account_store.new_user(u'user')
+        self.account = yield self.mk_user(self.vumi_api, u'user')
         self.user_api = VumiUserApi(self.vumi_api, self.account.key)
         self.tag = ('xmpp', 'test1@xmpp.org')
 
@@ -236,7 +237,7 @@ class EventDispatcherTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_handle_event_uncached(self):
-        user_account = yield self.ed.vumi_api.account_store.new_user(u'dbacct')
+        user_account = yield self.mk_user(self.ed.vumi_api, u'dbacct')
         user_account.event_handler_config = [
             [['conv_key', 'my_event'], [('handler1', {})]]
             ]
@@ -295,7 +296,7 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_handle_events(self):
-        user_account = yield self.ed.vumi_api.account_store.new_user(u'dbacct')
+        user_account = yield self.mk_user(self.ed.vumi_api, u'dbacct')
         yield user_account.save()
 
         user_api = VumiUserApi(self.ed.vumi_api, user_account.key)
@@ -347,7 +348,7 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
 
 
 class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
-
+    use_riak = True
     dispatcher_class = BaseDispatchWorker
     transport_name = 'test_transport'
 
@@ -377,7 +378,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         self._persist_riak_managers.append(self.vumi_api.manager)
         self._persist_redis_managers.append(self.vumi_api.redis)
 
-        self.account = yield self.vumi_api.account_store.new_user(u'user')
+        self.account = yield self.mk_user(self.vumi_api, u'user')
         self.user_api = VumiUserApi(self.vumi_api, self.account.key)
         self.conversation = (
             yield self.user_api.conversation_store.new_conversation(

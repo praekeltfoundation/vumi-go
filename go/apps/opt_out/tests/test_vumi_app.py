@@ -7,7 +7,6 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.message import TransportUserMessage
 
 from go.apps.opt_out.vumi_app import OptOutApplication
-from go.vumitools.api_worker import CommandDispatcher
 from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.opt_out import OptOutStore
@@ -26,19 +25,12 @@ class TestOptOutApplication(AppWorkerTestCase):
         self.app = yield self.get_application(
                 {'worker_name': 'opt_out_application'})
 
-        # Setup the command dispatcher so we cand send it commands
-        self.cmd_dispatcher = yield self.get_application({
-            'transport_name': 'cmd_dispatcher',
-            'worker_names': ['opt_out_application'],
-            }, cls=CommandDispatcher)
-
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
         self._persist_riak_managers.append(self.vumi_api.manager)
 
         # Create a test user account
-        self.user_account = yield self.vumi_api.account_store.new_user(
-            u'testuser')
+        self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
         # Add tags
@@ -89,7 +81,7 @@ class TestOptOutApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_sms_opt_out(self):
-        yield self.conversation.start()
+        yield self.start_conversation(self.conversation)
         yield self.opt_out("12345", "666", "STOP")
         [msg] = self.get_dispatched_messages()
         self.assertEqual(msg.get('content'), "You have opted out")
@@ -99,7 +91,7 @@ class TestOptOutApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_sms_opt_out_no_account(self):
-        yield self.conversation.start()
+        yield self.start_conversation(self.conversation)
         yield self.opt_out("12345", "666", "STOP", helper_metadata={})
         [msg] = self.get_dispatched_messages()
         self.assertEqual(msg.get('content'),
@@ -108,7 +100,7 @@ class TestOptOutApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_http_opt_out(self):
-        yield self.conversation.start()
+        yield self.start_conversation(self.conversation)
         yield self.opt_out("12345", "666", "STOP", "http_api")
         [msg] = yield self.wait_for_dispatched_messages(1)
         self.assertEqual(msg.get('content'),

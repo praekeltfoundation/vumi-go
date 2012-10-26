@@ -10,16 +10,14 @@ from go.apps.sequential_send.views import SequentialSendConversationViews
 
 
 class SequentialSendTestCase(DjangoGoApplicationTestCase):
-
-    fixtures = ['test_user']
     VIEWS_CLASS = SequentialSendConversationViews
     TEST_CONVERSATION_PARAMS = {'delivery_tag': u"default10001"}
 
     def setUp(self):
         super(SequentialSendTestCase, self).setUp()
+        self.setup_riak_fixtures()
         self.client = Client()
         self.client.login(username='username', password='password')
-        self.setup_riak_fixtures()
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)

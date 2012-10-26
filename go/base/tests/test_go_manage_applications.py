@@ -1,4 +1,3 @@
-from django.contrib.auth.models import User
 from django.core.management.base import CommandError
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_manage_application
@@ -10,8 +9,8 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
 
     def setUp(self):
         super(GoManageApplicationCommandTestCase, self).setUp()
-        self.user = User.objects.create(username='test@user.com',
-            password='password', email='test@user.com')
+        self.setup_api()
+        self.user = self.mk_django_user()
         self.profile = self.user.get_profile()
 
     def get_riak_account(self):
