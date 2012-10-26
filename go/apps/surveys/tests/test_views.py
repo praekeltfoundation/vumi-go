@@ -6,28 +6,24 @@ from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.apps.surveys.views import get_poll_config
 
 
-TEST_GROUP_NAME = u"Test Group"
-TEST_CONTACT_NAME = u"Name"
-TEST_CONTACT_SURNAME = u"Surname"
-TEST_SUBJECT = u"Test Conversation"
-
-
 class SurveyTestCase(DjangoGoApplicationTestCase):
-
-    fixtures = ['test_user']
 
     def setUp(self):
         super(SurveyTestCase, self).setUp()
+        self.setup_riak_fixtures()
         self.client = Client()
         self.client.login(username='username', password='password')
-
         self.patch_settings(VXPOLLS_REDIS_CONFIG={'FAKE_REDIS': 'sure'})
-
-        self.setup_riak_fixtures()
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
         return self.user_api.wrap_conversation(conv)
+
+    def create_poll(self, conversation, **kwargs):
+        poll_id = 'poll-%s' % (conversation.key,)
+        pm, config = get_poll_config(poll_id)
+        config.update(kwargs)
+        return pm, pm.register(poll_id, config)
 
     def run_new_conversation(self, selected_option, pool, tag):
         # render the form
@@ -221,3 +217,29 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(question['valid_responses'], [
             'rock', 'jazz', 'techno'])
         self.assertEqual(question['label'], 'favorite music')
+
+    def test_export_user_data(self):
+        survey_url = reverse('survey:user_data', kwargs={
+            'conversation_key': self.conv_key,
+        })
+        pm, poll = self.create_poll(self.conversation, questions=[{
+                'copy': 'question-1',
+                'label': 'label-1',
+            }, {
+                'copy': 'question-2',
+                'label': 'label-2',
+            }])
+
+        participant = pm.get_participant(poll.poll_id, 'user-1')
+        participant.has_unanswered_question = True
+        participant.set_last_question_index(0)
+        poll.submit_answer(participant, 'answer 1')
+        participant.set_last_question_index(1)
+        poll.submit_answer(participant, 'answer 2')
+
+        response = self.client.get(survey_url)
+        self.assertEqual(response['Content-Type'], 'application/csv')
+        lines = response.content.split('\r\n')
+        self.assertEqual(lines[0], 'user_id,user_timestamp,label-1,label-2')
+        self.assertTrue(lines[1].startswith('user-1'))
+        self.assertTrue(lines[1].endswith(',answer 1,answer 2'))

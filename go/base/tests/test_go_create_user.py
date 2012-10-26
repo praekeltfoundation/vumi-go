@@ -8,6 +8,7 @@ class GoCreateUserCommandTestCase(VumiGoDjangoTestCase):
     USE_RIAK = True
 
     def test_user_creation(self):
+        self.setup_api()
         user_query = User.objects.filter(username='test@user.com')
         self.assertFalse(user_query.exists())
         command = go_create_user.Command()

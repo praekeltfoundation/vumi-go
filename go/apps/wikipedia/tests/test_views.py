@@ -6,16 +6,11 @@ from go.apps.tests.base import DjangoGoApplicationTestCase
 
 class WikipediaTestCase(DjangoGoApplicationTestCase):
 
-    fixtures = ['test_user']
-
     def setUp(self):
         super(WikipediaTestCase, self).setUp()
+        self.setup_riak_fixtures()
         self.client = Client()
         self.client.login(username='username', password='password')
-
-        self.patch_settings(VXPOLLS_REDIS_CONFIG={'FAKE_REDIS': 'sure'})
-
-        self.setup_riak_fixtures()
 
     def test_new_conversation(self):
         # render the form
