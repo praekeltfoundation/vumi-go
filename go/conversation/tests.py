@@ -3,7 +3,6 @@ from datetime import datetime
 
 from django.test.client import Client
 from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User
 from django.conf import settings
 
 from go.vumitools.api import VumiApi
@@ -41,7 +40,7 @@ class ConversationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
             'fixtures', 'sample-contacts.csv'))
 
     def setup_riak_fixtures(self):
-        self.user = User.objects.get(username='username')
+        self.user = self.mk_django_user()
         self.user_api = vumi_api_for_user(self.user)
         self._persist_riak_managers.append(self.user_api.api.manager)
         self.contact_store = self.user_api.contact_store

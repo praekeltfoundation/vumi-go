@@ -104,8 +104,14 @@ class BulkMessageApplication(GoApplicationWorker):
         tag = TaggingMiddleware.map_msg_to_tag(msg)
         return self.vumi_api.mdb.add_inbound_message(msg, tag=tag)
 
-    @inlineCallbacks
     def consume_ack(self, event):
+        return self.handle_event(event)
+
+    def consume_nack(self, event):
+        return self.handle_event(event)
+
+    @inlineCallbacks
+    def handle_event(self, event):
         yield self.vumi_api.mdb.add_event(event)
 
         message = yield self.find_message_for_event(event)

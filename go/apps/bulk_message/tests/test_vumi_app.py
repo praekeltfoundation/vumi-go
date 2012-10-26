@@ -7,8 +7,7 @@ from twisted.internet.task import Clock
 
 from vumi.message import TransportUserMessage
 
-from go.vumitools.api_worker import CommandDispatcher
-from go.vumitools.api import VumiUserApi, VumiApiCommand
+from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.window_manager import WindowManager
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
@@ -28,17 +27,12 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
         self.config = self.mk_config({})
         self.app = yield self.get_application(self.config)
-        self.cmd_dispatcher = yield self.get_application({
-            'transport_name': 'cmd_dispatcher',
-            'worker_names': ['bulk_message_application'],
-            }, cls=CommandDispatcher)
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
 
         # Create a test user account
-        self.user_account = yield self.vumi_api.account_store.new_user(
-            u'testuser')
+        self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
         yield self.user_api.api.declare_tags([("pool", "tag1"),
@@ -67,7 +61,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         yield conversation.save()
         conversation = user_api.wrap_conversation(conversation)
 
-        yield conversation.start()
+        yield self.start_conversation(conversation)
 
         # batch_id
         [batch_id] = conversation.batches.keys()
@@ -95,14 +89,14 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         msgs.sort(key=lambda msg: msg['to_addr'])
         [msg1, msg2] = msgs
 
-        # Create acks for messages
-        ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'],
+        # Create an ack and a nack for the messages
+        ack = self.mkmsg_ack(user_message_id=msg1['message_id'],
             sent_message_id=msg1['message_id'])
-        ack2 = self.mkmsg_ack(user_message_id=msg2['message_id'],
-            sent_message_id=msg2['message_id'])
+        nack = self.mkmsg_nack(user_message_id=msg2['message_id'],
+            nack_reason='unknown')
 
-        yield self.dispatch(ack1, rkey='%s.event' % (self.transport_name,))
-        yield self.dispatch(ack2, rkey='%s.event' % (self.transport_name,))
+        yield self.dispatch(ack, rkey='%s.event' % (self.transport_name,))
+        yield self.dispatch(nack, rkey='%s.event' % (self.transport_name,))
 
         # Assert that the window's now empty because acks have been received
         self.assertEqual(
@@ -151,7 +145,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         conversation = user_api.wrap_conversation(conversation)
 
         # Provide the dedupe option to the conversation
-        yield conversation.start(dedupe=True)
+        yield self.start_conversation(conversation, dedupe=True)
 
         yield self._amqp.kick_delivery()
 
@@ -218,16 +212,12 @@ class TestBulkMessageApplication(AppWorkerTestCase):
                 },
             }
         }
-        sm_cmd = VumiApiCommand.command(
-                self.app.worker_name,
-                "send_message",
-                command_data={
+        yield self.dispatch_command("send_message", command_data={
                     "batch_id": "345dt54fgtffdsft54ffg",
                     "to_addr": "123456",
                     "content": "hello world",
                     "msg_options": msg_options
                     })
-        yield self.dispatch(sm_cmd, rkey='%s.control' % self.app.worker_name)
 
         [msg] = yield self.get_dispatched_messages()
         self.assertEqual(msg.payload['to_addr'], "123456")
@@ -247,15 +237,16 @@ class TestBulkMessageApplication(AppWorkerTestCase):
             u'bulk_message', u'Subject', u'Message', delivery_tag_pool=u"pool",
             delivery_class=u'sms')
         conv = self.user_api.wrap_conversation(conv)
-        yield conv.start()
+        yield self.start_conversation(conv)
         [batch_id] = conv.get_batch_keys()
 
+        mkid = TransportUserMessage.generate_id
         yield self.user_api.api.mdb.add_outbound_message(
-            self.mkmsg_out("out 1", message_id=None), batch_id=batch_id)
+            self.mkmsg_out("out 1", message_id=mkid()), batch_id=batch_id)
         yield self.user_api.api.mdb.add_outbound_message(
-            self.mkmsg_out("out 2", message_id=None), batch_id=batch_id)
+            self.mkmsg_out("out 2", message_id=mkid()), batch_id=batch_id)
         yield self.user_api.api.mdb.add_inbound_message(
-            self.mkmsg_in("in 2", message_id=None), batch_id=batch_id)
+            self.mkmsg_in("in 2", message_id=mkid()), batch_id=batch_id)
 
         yield self.dispatch_command(
             'collect_metrics', conversation_key=conv.key,
