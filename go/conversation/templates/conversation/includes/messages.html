@@ -1,65 +1,70 @@
 <div class="row">
     <div class="span12">
-        <h3>Conversation Messages</h3>
+        <h3>Messages from {{inbound_uniques_count}} unique people.</h3>
     </div>
 </div>
 <div class="tabbable padtop">
     <ul class="nav nav-tabs">
-       <li class="active"><a href="#1" data-toggle="tab"><strong>People</strong></a></li>
-       <li><a href="#2" data-toggle="tab">Our Replies</a></li>
+        <li {% ifequal message_direction 'inbound' %}class="active"{% endifequal %}>
+            <a href="?direction=inbound">
+                {% ifequal message_direction 'inbound' %}<strong>{% endifequal %}
+                {{inbound_message_paginator.count}} Received
+                {% ifequal message_direction 'inbound' %}</strong>{% endifequal %}
+            </a>
+        </li>
+        <li {% ifequal message_direction 'outbound' %}class="active"{% endifequal %}>
+            <a href="?direction=outbound">
+                {% ifequal message_direction 'outbound' %}<strong>{% endifequal %}
+                {{outbound_message_paginator.count}} Sent
+                {% ifequal message_direction 'outbound' %}</strong>{% endifequal %}
+            </a>
+        </li>
     </ul>
     <div class="tab-content">
-        <div class="tab-pane active" id="1">
-        <table class="table table-bordered table-striped">
-            <thead>
-                <tr>
-                    <th width="32">Type</th>
-                    <th>Response</th>
-                    <th width="70">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for reply in conversation.replies %}
-                <tr>
-                    <td><i class="icon-repeat"></i> {{reply.type}}</td>
-                    <td>
-                        <h6><a href="{% url contacts:person person_key=reply.contact.key %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}}</h6>
-                        <p>{{reply.content}}</p></td>
-                    <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="3">No one has replied yet</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
-        <div class="tab-pane" id="2">
-        <table class="table table-bordered table-striped">
-            <thead>
-                <tr>
-                    <th width="32">Type</th>
-                    <th>Response</th>
-                    <th width="70">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for reply in conversation.sent_messages %}
-                <tr>
-                    <td><i class="icon-repeat"></i> {{reply.type}}</td>
-                    <td>
-                        <h6><a href="{% url contacts:person person_key=reply.contact.key %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}}</h6>
-                        <p>{{reply.content}}</p></td>
-                    <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="3">No one has replied yet</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="tab-pane active">
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th width="32">Type</th>
+                        <th>Response</th>
+                        <th width="70">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reply in message_page.object_list %}
+                    <tr>
+                        <td><i class="icon-repeat"></i> {{reply.type}}</td>
+                        <td>
+                            <h6><a href="{% url contacts:person person_key=reply.contact.key %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}}</h6>
+                            <p>{{reply.content}}</p></td>
+                        <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3">No one has replied yet</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="pagination pagination-centered">
+                <ul>
+                    <li class="{% if message_page.has_previous %}{% else %}disabled{% endif %}">
+                        <a href="?direction={{message_direction}}&amp;p={{message_page.previous_page_number}}">
+                            Prev
+                        </a>
+                    </li>
+                    {% for page_number in message_page_range %}
+                        <li class="{% if page_number == message_page.number %}active{% endif %}">
+                            <a href="?direction={{message_direction}}&amp;p={{page_number}}">{{page_number}}</a>
+                        </li>
+                    {% endfor %}
+                    <li class="{% if message_page.has_next %}{% else %}disabled{% endif %}">
+                        <a href="?direction={{message_direction}}&amp;p={{message_page.next_page_number}}">
+                            Next
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
   </div>
