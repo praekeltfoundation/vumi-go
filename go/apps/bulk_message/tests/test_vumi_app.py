@@ -95,8 +95,8 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         nack = self.mkmsg_nack(user_message_id=msg2['message_id'],
             nack_reason='unknown')
 
-        yield self.dispatch(ack, rkey='%s.event' % (self.transport_name,))
-        yield self.dispatch(nack, rkey='%s.event' % (self.transport_name,))
+        yield self.dispatch_event(ack)
+        yield self.dispatch_event(nack)
 
         # Assert that the window's now empty because acks have been received
         self.assertEqual(
