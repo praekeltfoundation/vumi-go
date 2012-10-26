@@ -1,8 +1,11 @@
 from django.conf import settings, UserSettingsHolder
 from django.utils.functional import wraps
 from django.test import TestCase
+from django.contrib.auth.models import User
 
 from go.vumitools.tests.utils import GoPersistenceMixin
+from go.vumitools.api import VumiApi
+from go.base import models as base_models
 
 
 class override_settings(object):
@@ -53,8 +56,22 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
             self.get_redis_manager())
         vumi_config.update(self._persist_config)
         self.patch_settings(VUMI_API_CONFIG=vumi_config)
+        base_models.post_save.disconnect(
+            sender=base_models.User,
+            dispatch_uid='go.base.models.create_user_profile')
+        base_models.post_save.connect(
+            self.create_user_profile,
+            sender=base_models.User,
+            dispatch_uid='VumiGoDjangoTestCase.create_user_profile')
 
     def tearDown(self):
+        base_models.post_save.disconnect(
+            sender=base_models.User,
+            dispatch_uid='VumiGoDjangoTestCase.create_user_profile')
+        base_models.post_save.connect(
+            base_models.create_user_profile,
+            sender=base_models.User,
+            dispatch_uid='go.base.models.create_user_profile')
         self._persist_tearDown()
         for patch in reversed(self._settings_patches):
             patch.disable()
@@ -63,6 +80,27 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         patch = override_settings(**kwargs)
         patch.enable()
         self._settings_patches.append(patch)
+
+    def create_user_profile(self, sender, instance, created, **kwargs):
+        if created:
+            account = self.mk_user(self.api, unicode(instance.username))
+            base_models.UserProfile.objects.create(
+                user=instance, user_account=account.key)
+        user_api = base_models.vumi_api_for_user(instance)
+        # Enable search for the contact & group stores
+        user_api.contact_store.contacts.enable_search()
+        user_api.contact_store.groups.enable_search()
+
+    def setup_api(self):
+        self.api = VumiApi.from_config(settings.VUMI_API_CONFIG)
+
+    def mk_django_user(self):
+        user = User.objects.create_user(
+            'username', 'user@domain.com', 'password')
+        user.first_name = "Test"
+        user.last_name = "User"
+        user.save()
+        return User.objects.get(username='username')
 
 
 def declare_longcode_tags(api):

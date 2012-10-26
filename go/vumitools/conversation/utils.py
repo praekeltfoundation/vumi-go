@@ -101,7 +101,7 @@ class ConversationWrapper(object):
                     indicating ongoing attempts to deliver the message.
         """
         statuses = dict((k, 0) for k in
-                        ('sent', 'ack', 'delivery_report',
+                        ('sent', 'ack', 'nack', 'delivery_report',
                          'delivery_report_delivered', 'delivery_report_failed',
                          'delivery_report_pending'))
 
