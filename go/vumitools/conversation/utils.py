@@ -91,6 +91,8 @@ class ConversationWrapper(object):
             *sent* The number of messages sent.
             *ack* The number of messages that have been acknowledged
                     by the network for delivery
+            *nack* The number of messages that have been seen by the network
+                    but were actively refused for delivery.
             *delivery_report* The number of messages we've received
                     a delivery report for.
             *delivery_report_delivered* The number of delivery reports
@@ -101,7 +103,7 @@ class ConversationWrapper(object):
                     indicating ongoing attempts to deliver the message.
         """
         statuses = dict((k, 0) for k in
-                        ('sent', 'ack', 'delivery_report',
+                        ('sent', 'ack', 'nack', 'delivery_report',
                          'delivery_report_delivered', 'delivery_report_failed',
                          'delivery_report_pending'))
 
