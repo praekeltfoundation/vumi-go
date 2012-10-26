@@ -6,24 +6,14 @@ from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.apps.surveys.views import get_poll_config
 
 
-TEST_GROUP_NAME = u"Test Group"
-TEST_CONTACT_NAME = u"Name"
-TEST_CONTACT_SURNAME = u"Surname"
-TEST_SUBJECT = u"Test Conversation"
-
-
 class SurveyTestCase(DjangoGoApplicationTestCase):
-
-    fixtures = ['test_user']
 
     def setUp(self):
         super(SurveyTestCase, self).setUp()
+        self.setup_riak_fixtures()
         self.client = Client()
         self.client.login(username='username', password='password')
-
         self.patch_settings(VXPOLLS_REDIS_CONFIG={'FAKE_REDIS': 'sure'})
-
-        self.setup_riak_fixtures()
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)

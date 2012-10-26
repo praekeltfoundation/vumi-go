@@ -13,15 +13,15 @@ from go.vumitools.contact import ContactStore
 
 
 class TestConversationStore(GoPersistenceMixin, TestCase):
-
-    timeout = 10
+    use_riak = True
+    timeout = 5
 
     @inlineCallbacks
     def setUp(self):
         yield self._persist_setUp()
         self.manager = self.get_riak_manager()
         self.account_store = AccountStore(self.manager)
-        self.account = yield self.account_store.new_user(u'user')
+        self.account = yield self.mk_user(self, u'user')
         self.optout_store = OptOutStore.from_user_account(self.account)
         self.conv_store = ConversationStore.from_user_account(self.account)
         self.contact_store = ContactStore.from_user_account(self.account)

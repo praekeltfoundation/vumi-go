@@ -9,8 +9,8 @@ from go.apps.wikipedia.vumi_app import WikipediaApplication
 class WikipediaApplicationTestCase(GoPersistenceMixin,
                                    test_wikipedia.WikipediaWorkerTestCase):
     application_class = WikipediaApplication
+    use_riak = True
 
-    @inlineCallbacks
     def setUp(self):
         self.patch(WikipediaApplication, 'get_conversation_metadata',
             lambda s, msg: {'send_from_tagpool': 'devnull',
@@ -20,7 +20,7 @@ class WikipediaApplicationTestCase(GoPersistenceMixin,
             lambda s, tp, key, default=None: {
                 'transport_name': 'devnull_transport',
             })
-        yield super(WikipediaApplicationTestCase, self).setUp()
+        return super(WikipediaApplicationTestCase, self).setUp()
 
     @inlineCallbacks
     def tearDown(self):

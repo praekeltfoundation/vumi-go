@@ -1,4 +1,3 @@
-from django.contrib.auth.models import User
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_list_accounts
 from StringIO import StringIO
@@ -10,9 +9,8 @@ class GoListAccountsCommandTestCase(VumiGoDjangoTestCase):
 
     def setUp(self):
         super(GoListAccountsCommandTestCase, self).setUp()
-        self.user = User.objects.create(username='test@user.com',
-            first_name='Test', last_name='User', password='password',
-            email='test@user.com')
+        self.setup_api()
+        self.user = self.mk_django_user()
 
         self.command = go_list_accounts.Command()
         self.command.stdout = StringIO()
@@ -21,13 +19,13 @@ class GoListAccountsCommandTestCase(VumiGoDjangoTestCase):
     def test_account_listing(self):
         self.command.handle()
         self.assertEqual(self.command.stdout.getvalue(),
-            '0. Test User <test@user.com> [%s]\n' % (
+            '0. Test User <username> [%s]\n' % (
                 self.user.get_profile().user_account))
 
     def test_account_matching(self):
-        self.command.handle('test')
+        self.command.handle('user')
         self.assertEqual(self.command.stdout.getvalue(),
-            '0. Test User <test@user.com> [%s]\n' % (
+            '0. Test User <username> [%s]\n' % (
                 self.user.get_profile().user_account))
 
     def test_account_mismatching(self):

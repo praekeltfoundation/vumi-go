@@ -3,8 +3,6 @@ from uuid import uuid4
 from StringIO import StringIO
 from datetime import datetime
 
-from django.contrib.auth.models import User
-
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.management.commands import go_account_stats
 from go.base.utils import vumi_api_for_user
@@ -16,12 +14,10 @@ class GoAccountStatsCommandTestCase(DjangoGoApplicationTestCase):
 
     def setUp(self):
         super(GoAccountStatsCommandTestCase, self).setUp()
-        self.user = User.objects.create(username='test@user.com',
-            first_name='Test', last_name='User', password='password',
-            email='test@user.com')
+        self.user = self.mk_django_user()
 
-        self.api = vumi_api_for_user(self.user)
-        self.message_store = self.api.api.mdb
+        self.user_api = vumi_api_for_user(self.user)
+        self.message_store = self.api.mdb
 
         def mkconv(*args, **kwargs):
             options = {
@@ -29,8 +25,9 @@ class GoAccountStatsCommandTestCase(DjangoGoApplicationTestCase):
                 'delivery_tag_pool': u'longcode',
             }
             options.update(kwargs)
-            return self.api.wrap_conversation(
-                self.api.conversation_store.new_conversation(*args, **options))
+            return self.user_api.wrap_conversation(
+                self.user_api.conversation_store.new_conversation(
+                    *args, **options))
 
         self.active_conv = mkconv(u'bulk_message', u'active', u'content',)
         self.active_conv.start()
@@ -64,27 +61,27 @@ class GoAccountStatsCommandTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(output[1], 'list_conversations:')
 
     def test_list_conversations(self):
-        self.command.handle('test@user.com', 'list_conversations')
+        self.command.handle(self.user.username, 'list_conversations')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 3)
         self.assertTrue(self.active_conv.key in output[0])
         self.assertTrue(self.inactive_conv.key in output[1])
 
     def test_list_conversations_with_unicode(self):
-        self.command.handle('test@user.com', 'list_conversations')
+        self.command.handle(self.user.username, 'list_conversations')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 3)
         self.assertTrue(self.unicode_conv.key in output[2])
         self.assertTrue('Zo\xc3\xab' in output[2])
 
     def test_list_conversations_active(self):
-        self.command.handle('test@user.com', 'list_conversations', 'active')
+        self.command.handle(self.user.username, 'list_conversations', 'active')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 1)
         self.assertTrue(self.active_conv.key in output[0])
 
     def test_stats(self):
-        self.command.handle('test@user.com', 'stats', self.active_conv.key)
+        self.command.handle(self.user.username, 'stats', self.active_conv.key)
         output = self.command.stdout.getvalue().strip().split('\n')
         [batch_key] = self.active_conv.batches.keys()
         self.assertEqual(output, [
