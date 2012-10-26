@@ -1,13 +1,14 @@
-from django.conf import settings
-from django.contrib.auth.models import User
+from datetime import datetime
 
 from go.base.tests.utils import VumiGoDjangoTestCase, declare_longcode_tags
 from go.vumitools.tests.utils import CeleryTestMixIn
-from go.vumitools.api import VumiApi
 from go.base.utils import vumi_api_for_user
+
+from vumi.message import TransportUserMessage
 
 
 class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
+    use_riak = True
 
     TEST_GROUP_NAME = u"Test Group"
     TEST_CONTACT_NAME = u"Name"
@@ -18,17 +19,18 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
     TEST_START_PARAMS = None
     VIEWS_CLASS = None
 
+    # These are used for the mkmsg_in and mkmsg_out helper methods
+    transport_name = 'sphex'
+    transport_type = 'sms'
+
     def setUp(self):
         super(DjangoGoApplicationTestCase, self).setUp()
         self.setup_api()
         self.declare_longcode_tags()
         self.setup_celery_for_tests()
 
-    def setup_api(self):
-        self.api = VumiApi.from_config(settings.VUMI_API_CONFIG)
-
     def setup_riak_fixtures(self):
-        self.user = User.objects.get(username='username')
+        self.user = self.mk_django_user()
         self.setup_user_api(self.user)
 
         if self.VIEWS_CLASS is not None:
@@ -69,6 +71,62 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         }
         defaults.update(kwargs)
         return self.conv_store.new_conversation(**defaults)
+
+    def mkmsg_in(self, content='hello world', message_id='abc',
+                 to_addr='9292', from_addr='+41791234567', group=None,
+                 session_event=None, transport_type=None,
+                 helper_metadata=None, transport_metadata=None,
+                 transport_name=None):
+        if transport_type is None:
+            transport_type = self.transport_type
+        if helper_metadata is None:
+            helper_metadata = {}
+        if transport_metadata is None:
+            transport_metadata = {}
+        if transport_name is None:
+            transport_name = self.transport_name
+        return TransportUserMessage(
+            from_addr=from_addr,
+            to_addr=to_addr,
+            group=group,
+            message_id=message_id,
+            transport_name=transport_name,
+            transport_type=transport_type,
+            transport_metadata=transport_metadata,
+            helper_metadata=helper_metadata,
+            content=content,
+            session_event=session_event,
+            timestamp=datetime.now(),
+            )
+
+    def mkmsg_out(self, content='hello world', message_id='1',
+                  to_addr='+41791234567', from_addr='9292', group=None,
+                  session_event=None, in_reply_to=None,
+                  transport_type=None, transport_metadata=None,
+                  transport_name=None, helper_metadata=None,
+                  ):
+        if transport_type is None:
+            transport_type = self.transport_type
+        if transport_metadata is None:
+            transport_metadata = {}
+        if transport_name is None:
+            transport_name = self.transport_name
+        if helper_metadata is None:
+            helper_metadata = {}
+        params = dict(
+            to_addr=to_addr,
+            from_addr=from_addr,
+            group=group,
+            message_id=message_id,
+            transport_name=transport_name,
+            transport_type=transport_type,
+            transport_metadata=transport_metadata,
+            content=content,
+            session_event=session_event,
+            in_reply_to=in_reply_to,
+            helper_metadata=helper_metadata,
+            )
+        return TransportUserMessage(**params)
 
     def mkcontact(self, name=None, surname=None, msisdn=u'+1234567890',
                   **kwargs):

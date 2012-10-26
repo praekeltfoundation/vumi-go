@@ -175,12 +175,20 @@ class ContactStore(PerAccountStore):
         mr.add_bucket(bucket)
         if group is not None:
             mr.index(bucket, 'groups_bin', group.key)
+        # Deleted values hang around with tombstone markers in Riak for a while
+        # before they get removed, and this happens a lot in tests. We need to
+        # find the real values amongst the deleted ones here.
+        # TODO: Make this a general thing?
         js_function = """function(value, keyData, arg){
-            var data = Riak.mapValuesJson(value)[0];
-            if(data.surname) {
-                var surname = data.surname.toLowerCase();
-                if(surname[0] === arg){
-                    return [[value.key, value[0]]];
+            for (i in value.values) {
+                var val = value.values[i]
+                if (!val.metadata['X-Riak-Deleted']) {
+                    var data = JSON.parse(val.data);
+                    if (data.surname) {
+                        if (data.surname.toLowerCase()[0] === arg) {
+                            return [[value.key, val]];
+                        }
+                    }
                 }
             }
             return [];

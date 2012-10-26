@@ -10,4 +10,6 @@ urlpatterns = patterns('',
     url(r'^(?P<conversation_key>\w+)/start/$', views.start, name='start'),
     url(r'^(?P<conversation_key>\w+)/end/$', views.end, name='end'),
     url(r'^(?P<conversation_key>\w+)/edit/$', views.edit, name='edit'),
+    url(r'^(?P<conversation_key>\w+)/users\.csv$', views.download_user_data,
+        name='user_data'),
 )

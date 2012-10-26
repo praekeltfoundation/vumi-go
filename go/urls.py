@@ -37,7 +37,6 @@ urlpatterns = patterns('',
         include('go.apps.urls')),
     url(r'^contacts/', include('go.contacts.urls', namespace='contacts')),
     url(r'^account/', include('go.account.urls', namespace='account')),
-    url(r'^', include('vxpolls.urls')),
 )
 
 urlpatterns += patterns('django.contrib.flatpages.views',
