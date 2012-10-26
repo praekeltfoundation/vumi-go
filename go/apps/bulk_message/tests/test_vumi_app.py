@@ -89,14 +89,14 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         msgs.sort(key=lambda msg: msg['to_addr'])
         [msg1, msg2] = msgs
 
-        # Create acks for messages
-        ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'],
+        # Create an ack and a nack for the messages
+        ack = self.mkmsg_ack(user_message_id=msg1['message_id'],
             sent_message_id=msg1['message_id'])
-        ack2 = self.mkmsg_ack(user_message_id=msg2['message_id'],
-            sent_message_id=msg2['message_id'])
+        nack = self.mkmsg_nack(user_message_id=msg2['message_id'],
+            nack_reason='unknown')
 
-        yield self.dispatch(ack1, rkey='%s.event' % (self.transport_name,))
-        yield self.dispatch(ack2, rkey='%s.event' % (self.transport_name,))
+        yield self.dispatch_event(ack)
+        yield self.dispatch_event(nack)
 
         # Assert that the window's now empty because acks have been received
         self.assertEqual(
