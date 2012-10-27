@@ -62,7 +62,7 @@ def page_range_window(page, padding):
     if current_page - padding < 1:
         return range(1, (padding * 2))
     elif current_page + padding > page.paginator.num_pages:
-        return range(page.paginator.num_pages - (padding * 2),
-            page.paginator.num_pages)
+        return range(page.paginator.num_pages - (padding * 2) + 2,
+            page.paginator.num_pages + 1)
     else:
         return range(current_page - padding + 1, current_page + padding)
