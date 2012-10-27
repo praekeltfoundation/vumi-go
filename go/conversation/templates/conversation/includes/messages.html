@@ -46,25 +46,39 @@
                     {% endfor %}
                 </tbody>
             </table>
+            {% if message_page.paginator.count %}
             <div class="pagination pagination-centered">
                 <ul>
-                    <li class="{% if message_page.has_previous %}{% else %}disabled{% endif %}">
+                    {% if message_page.has_previous %}
+                    <li>
                         <a href="?direction={{message_direction}}&amp;p={{message_page.previous_page_number}}">
                             Prev
                         </a>
                     </li>
+                    {% else %}
+                    <li class="disabled">
+                        <a href="#">Prev</a>
+                    </li>
+                    {% endif %}
                     {% for page_number in message_page_range %}
                         <li class="{% if page_number == message_page.number %}active{% endif %}">
                             <a href="?direction={{message_direction}}&amp;p={{page_number}}">{{page_number}}</a>
                         </li>
                     {% endfor %}
-                    <li class="{% if message_page.has_next %}{% else %}disabled{% endif %}">
+                    {% if message_page.has_next %}
+                    <li>
                         <a href="?direction={{message_direction}}&amp;p={{message_page.next_page_number}}">
                             Next
                         </a>
                     </li>
+                    {% else %}
+                    <li class="disabled">
+                        <a href="#">Next</a>
+                    </li>
+                    {% endif %}
                 </ul>
             </div>
+            {% endif %}
         </div>
     </div>
   </div>
