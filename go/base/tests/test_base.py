@@ -100,3 +100,15 @@ class UtilsTestCase(VumiGoDjangoTestCase):
             [5, 6, 7, 8, 9, 10, 11, 12, 13])
         self.assertEqual(utils.page_range_window(paginator.page(20), 5),
             [12, 13, 14, 15, 16, 17, 18, 19, 20])
+
+        paginator = Paginator(range(3), 5)
+        self.assertEqual(utils.page_range_window(paginator.page(1), 5),
+            [1])
+
+        paginator = Paginator(range(3), 3)
+        self.assertEqual(utils.page_range_window(paginator.page(1), 5),
+            [1])
+
+        paginator = Paginator(range(4), 3)
+        self.assertEqual(utils.page_range_window(paginator.page(1), 5),
+            [1, 2])

@@ -179,7 +179,9 @@ class ConversationWrapper(object):
                 using Redis' zunionstore to provide a temporary cached
                 view on all keys for a set of batch_ids)
         """
-        return self.get_batch_keys()[0]
+        batch_keys = self.get_batch_keys()
+        if batch_keys:
+            return batch_keys[0]
 
     def count_replies(self, batch_key=None):
         """
@@ -240,6 +242,8 @@ class ConversationWrapper(object):
             `get_latest_batch_key()` returns.
         """
         batch_key = batch_key or self.get_latest_batch_key()
+        if batch_key is None:
+            returnValue([])
 
         keys = self.mdb.cache.get_inbound_message_keys(batch_key, start,
                                                         limit)
