@@ -223,3 +223,9 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         yield self.conv.save()
         yield self.assertFailure(self.conv.acquire_tag(),
             ConversationSendError)
+
+    def test_get_opted_in_contacts(self):
+        raise NotImplementedError("eep! test missing")
+
+    def test_get_opted_in_addresses(self):
+        raise NotImplementedError("eep! test missing")
