@@ -289,7 +289,7 @@ class ConversationWrapper(object):
         """
         batch_key = batch_key or self.get_latest_batch_key()
 
-        keys = self.mdb.cache.get_outbound_message_keys(batch_key, start,
+        keys = yield self.mdb.cache.get_outbound_message_keys(batch_key, start,
                                                         limit)
 
         sent_messages = []
