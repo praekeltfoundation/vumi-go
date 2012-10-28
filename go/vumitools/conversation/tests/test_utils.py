@@ -30,7 +30,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
         raw_conv = yield self.user_api.conversation_store.new_conversation(
             u'bulk_message', u'subject', u'message',
-            delivery_tag_pool=u'longcode')
+            delivery_tag_pool=u'longcode', delivery_class=u'sms')
         self.conv = ConversationWrapper(raw_conv, self.user_api)
 
     @inlineCallbacks
@@ -46,20 +46,20 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             })
 
     @inlineCallbacks
-    def store_inbound(self, batch_key, count=10):
+    def store_inbound(self, batch_key, count=10, addr_template='from-{0}'):
         inbound = []
         for i in range(count):
-            msg_in = self.mkmsg_in(from_addr='from-%i' % (i,),
+            msg_in = self.mkmsg_in(from_addr=addr_template.format(i),
                 message_id=TransportMessage.generate_id())
             yield self.mdb.add_inbound_message(msg_in, batch_id=batch_key)
             inbound.append(msg_in)
         returnValue(inbound)
 
     @inlineCallbacks
-    def store_outbound(self, batch_key, count=10):
+    def store_outbound(self, batch_key, count=10, addr_template='to-{0}'):
         outbound = []
         for i in range(count):
-            msg_out = self.mkmsg_out(to_addr='to-%s' % (i,),
+            msg_out = self.mkmsg_out(to_addr=addr_template.format(i),
                 message_id=TransportMessage.generate_id())
             yield self.mdb.add_outbound_message(msg_out, batch_id=batch_key)
             outbound.append(msg_out)
@@ -101,7 +101,33 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.assertEqual((yield self.conv.count_sent_messages()), 10)
 
     @inlineCallbacks
-    def test_inbound_uniques(self):
+    def test_count_inbound_uniques(self):
         yield self.conv.start()
-        yield self.store_inbound(self.conv.get_latest_batch_key())
-        self.assertEqual((yield self.conv.count_inbound_uniques()), 10)
+        yield self.store_inbound(self.conv.get_latest_batch_key(), count=5)
+        self.assertEqual((yield self.conv.count_inbound_uniques()), 5)
+        yield self.store_inbound(self.conv.get_latest_batch_key(), count=5,
+            addr_template='from')
+        self.assertEqual((yield self.conv.count_inbound_uniques()), 6)
+
+    @inlineCallbacks
+    def test_count_outbound_uniques(self):
+        yield self.conv.start()
+        yield self.store_outbound(self.conv.get_latest_batch_key(), count=5)
+        self.assertEqual((yield self.conv.count_outbound_uniques()), 5)
+        yield self.store_outbound(self.conv.get_latest_batch_key(), count=5,
+            addr_template='from')
+        self.assertEqual((yield self.conv.count_outbound_uniques()), 6)
+
+    @inlineCallbacks
+    def test_replies(self):
+        yield self.conv.start()
+        batch_key = self.conv.get_latest_batch_key()
+        yield self.store_inbound(batch_key, count=20)
+        replies = yield self.conv.replies(batch_key=batch_key)
+        self.assertEqual(len(replies), 20)
+        self.assertEqual(
+            len((yield self.conv.replies(0, 5, batch_key=batch_key))), 5)
+        self.assertEqual(
+            len((yield self.conv.replies(5, 5, batch_key=batch_key))), 5)
+        self.assertEqual(
+            len((yield self.conv.replies(20, 5, batch_key=batch_key))), 0)
