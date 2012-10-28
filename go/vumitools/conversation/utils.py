@@ -83,6 +83,7 @@ class ConversationWrapper(object):
             tags.extend((yield batch.tags))
         returnValue(tags)
 
+    @Manager.calls_manager
     def get_progress_status(self):
         """
         Get an overview of the progress of this conversation
@@ -108,11 +109,12 @@ class ConversationWrapper(object):
                          'delivery_report_pending'))
 
         for batch_id in self.get_batch_keys():
-            for k, v in self.mdb.batch_status(batch_id).items():
+            batch_status = yield self.mdb.batch_status(batch_id)
+            for k, v in batch_status.items():
                 k = k.replace('.', '_')
                 statuses[k] += v
 
-        return statuses
+        returnValue(statuses)
 
     def get_progress_percentage(self):
         """
@@ -267,7 +269,7 @@ class ConversationWrapper(object):
                             self.delivery_class, message[addr_attribute])
         returnValue({
             'type': self.delivery_class,
-            'source': self.delivery_class_description(),
+            'source': (yield self.delivery_class_description()),
             'contact': contact,
             'time': message['timestamp'],
             'content': message['content'],
@@ -290,7 +292,7 @@ class ConversationWrapper(object):
         batch_key = batch_key or self.get_latest_batch_key()
 
         keys = yield self.mdb.cache.get_outbound_message_keys(batch_key, start,
-                                                        limit)
+                                                        start + limit - 1)
 
         sent_messages = []
         for key in keys:
