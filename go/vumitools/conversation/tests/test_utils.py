@@ -1,3 +1,4 @@
+from twisted.trial.unittest import SkipTest
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import TransportMessage
@@ -225,7 +226,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             ConversationSendError)
 
     def test_get_opted_in_contacts(self):
-        raise NotImplementedError("eep! test missing")
+        raise SkipTest("Waiting for API to stabilize")
 
     def test_get_opted_in_addresses(self):
-        raise NotImplementedError("eep! test missing")
+        raise SkipTest("Waiting for API to stabilize")
