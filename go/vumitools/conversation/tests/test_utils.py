@@ -18,7 +18,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.manager = yield self.get_riak_manager()
         self.redis = yield self.get_redis_manager()
 
-        # Get a dummy worker so we have `self._amqp_client` which we need
+        # Get a dummy worker so we have an amqp_client which we need
         # to set-up the MessageSender in the `VumiApi`
         self.worker = yield self.get_application({})
         self.api = yield VumiApi.from_config_async(self.mk_config({}),
@@ -93,3 +93,9 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         yield self.conv.start()
         yield self.store_inbound(self.conv.get_latest_batch_key())
         self.assertEqual((yield self.conv.count_replies()), 10)
+
+    @inlineCallbacks
+    def test_count_sent_messages(self):
+        yield self.conv.start()
+        yield self.store_outbound(self.conv.get_latest_batch_key())
+        self.assertEqual((yield self.conv.count_sent_messages()), 10)
