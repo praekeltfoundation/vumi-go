@@ -30,7 +30,7 @@ class PagedMessageCache(object):
     def __getitem__(self, value):
         if isinstance(value, slice):
             if not value.step:
-                return self.messages_callback(value.start, value.stop - 1,
+                return self.messages_callback(value.start, value.stop,
                     self.batch_id)
         raise PagedMessageCacheException(
             'Only `[start:stop]` slices accepted.')
