@@ -99,3 +99,9 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         yield self.conv.start()
         yield self.store_outbound(self.conv.get_latest_batch_key())
         self.assertEqual((yield self.conv.count_sent_messages()), 10)
+
+    @inlineCallbacks
+    def test_inbound_uniques(self):
+        yield self.conv.start()
+        yield self.store_inbound(self.conv.get_latest_batch_key())
+        self.assertEqual((yield self.conv.count_inbound_uniques()), 10)
