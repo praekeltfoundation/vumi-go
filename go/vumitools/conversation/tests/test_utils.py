@@ -6,6 +6,7 @@ from vumi.application.tests.test_base import DummyApplicationWorker
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApi, VumiUserApi
 from go.vumitools.conversation.utils import ConversationWrapper
+from go.vumitools.exceptions import ConversationSendError
 
 
 class ConversationWrapperTestCase(AppWorkerTestCase):
@@ -34,16 +35,18 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.conv = ConversationWrapper(raw_conv, self.user_api)
 
     @inlineCallbacks
-    def declare_tags(self):
+    def declare_tags(self, name='longcode', count=4, metadata=None):
         """Declare a set of long codes to the tag pool."""
-        yield self.api.declare_tags([("longcode", "default%s" % i) for i
-                          in range(10001, 10001 + 4)])
-        yield self.api.set_pool_metadata("longcode", {
-            "display_name": "Long code",
+        yield self.api.declare_tags([(name, "%s%s" % (name, i)) for i
+                          in range(10001, 10001 + count)])
+        defaults = {
+            "display_name": name,
             "delivery_class": "sms",
             "transport_type": "sms",
             "server_initiated": True,
-            })
+            }
+        defaults.update(metadata or {})
+        yield self.api.set_pool_metadata(name, defaults)
 
     @inlineCallbacks
     def store_inbound(self, batch_key, count=10, addr_template='from-{0}'):
@@ -190,3 +193,33 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             'delivery_report_failed': 1,
             'delivery_report_pending': 1,
             })
+
+    @inlineCallbacks
+    def test_get_progress_percentage(self):
+        yield self.conv.start()
+        self.assertEqual((yield self.conv.get_progress_percentage()), 0)
+        batch_key = self.conv.get_latest_batch_key()
+        outbound = yield self.store_outbound(batch_key, count=10)
+        yield self.store_event(outbound, 'ack', count=8)
+        self.assertEqual((yield self.conv.get_progress_percentage()), 80)
+
+    @inlineCallbacks
+    def test_acquire_tag(self):
+        tag = yield self.conv.acquire_tag()
+        self.assertEqual(tag, ('longcode', 'default10001'))
+
+    @inlineCallbacks
+    def test_acquire_tag_if_none_available(self):
+        yield self.declare_tags("shortcode", count=0)
+        self.conv.c.delivery_tag_pool = u"shortcode"
+        yield self.conv.save()
+        yield self.assertFailure(self.conv.acquire_tag(),
+            ConversationSendError)
+
+    @inlineCallbacks
+    def test_acquire_tag_if_tag_available(self):
+        self.conv.c.delivery_tag_pool = u"longcode"
+        self.conv.c.delivery_tag = 'this-does-not-exist'
+        yield self.conv.save()
+        yield self.assertFailure(self.conv.acquire_tag(),
+            ConversationSendError)

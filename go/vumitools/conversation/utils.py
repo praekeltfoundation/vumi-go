@@ -116,6 +116,7 @@ class ConversationWrapper(object):
 
         returnValue(statuses)
 
+    @Manager.calls_manager
     def get_progress_percentage(self):
         """
         Get a percentage indication of how far along the sending
@@ -123,10 +124,10 @@ class ConversationWrapper(object):
 
         :rtype: int
         """
-        status = self.get_progress_status()
+        status = yield self.get_progress_status()
         if status['sent'] == 0:
-            return 0
-        return int(status['ack'] / float(status['sent']) * 100)
+            returnValue(0)
+        returnValue(int(status['ack'] / float(status['sent']) * 100))
 
     @Manager.calls_manager
     def make_message_options(self, tag):
