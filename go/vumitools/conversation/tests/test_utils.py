@@ -169,7 +169,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     def test_get_tags(self):
         yield self.conv.start()
         [tag] = yield self.conv.get_tags()
-        self.assertEqual(tag, ('longcode', 'default10001'))
+        self.assertEqual(tag, ('longcode', 'longcode10001'))
 
     @inlineCallbacks
     def test_get_progress_status(self):
@@ -206,7 +206,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_acquire_tag(self):
         tag = yield self.conv.acquire_tag()
-        self.assertEqual(tag, ('longcode', 'default10001'))
+        self.assertEqual(tag, ('longcode', 'longcode10001'))
 
     @inlineCallbacks
     def test_acquire_tag_if_none_available(self):
@@ -217,9 +217,9 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             ConversationSendError)
 
     @inlineCallbacks
-    def test_acquire_tag_if_tag_available(self):
+    def test_acquire_tag_if_tag_unavailable(self):
         self.conv.c.delivery_tag_pool = u"longcode"
-        self.conv.c.delivery_tag = 'this-does-not-exist'
+        self.conv.c.delivery_tag = u'this-does-not-exist'
         yield self.conv.save()
         yield self.assertFailure(self.conv.acquire_tag(),
             ConversationSendError)
