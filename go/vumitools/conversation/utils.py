@@ -1,4 +1,4 @@
-# -*- test-case-name: go.vumitools.tests.test_api -*-
+# -*- test-case-name: go.vumitools.conversation.tests.test_utils -*-
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
