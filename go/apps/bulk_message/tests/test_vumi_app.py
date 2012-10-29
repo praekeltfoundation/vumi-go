@@ -7,7 +7,6 @@ from twisted.internet.task import Clock
 
 from vumi.message import TransportUserMessage
 
-from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.window_manager import WindowManager
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
@@ -33,7 +32,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         yield self.user_api.api.declare_tags([("pool", "tag1"),
                                               ("pool", "tag2")])
