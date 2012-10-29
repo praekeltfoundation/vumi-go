@@ -130,8 +130,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         replies = yield self.conv.replies()
         self.assertEqual(len(replies), 20)
         self.assertEqual(len((yield self.conv.replies(0, 5))), 5)
-        self.assertEqual(len((yield self.conv.replies(5, 5))), 5)
-        self.assertEqual(len((yield self.conv.replies(20, 5))), 0)
+        self.assertEqual(len((yield self.conv.replies(5, 10))), 5)
+        self.assertEqual(len((yield self.conv.replies(20, 25))), 0)
 
     @inlineCallbacks
     def test_replies_dictionary(self):
@@ -152,8 +152,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         sent_messages = yield self.conv.sent_messages()
         self.assertEqual(len(sent_messages), 20)
         self.assertEqual(len((yield self.conv.sent_messages(0, 5))), 5)
-        self.assertEqual(len((yield self.conv.sent_messages(5, 5))), 5)
-        self.assertEqual(len((yield self.conv.sent_messages(20, 5))), 0)
+        self.assertEqual(len((yield self.conv.sent_messages(5, 10))), 5)
+        self.assertEqual(len((yield self.conv.sent_messages(20, 25))), 0)
 
     @inlineCallbacks
     def test_sent_messages_dictionary(self):
