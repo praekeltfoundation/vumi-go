@@ -203,9 +203,10 @@ class GoMessageMetadata(object):
             # Without a batch, we can't get a conversation.
             return
 
-        all_conversations = yield batch.backlinks.conversations(
-            conv_store.manager)
-        conversations = [c for c in all_conversations if not c.ended()]
+        conv_keys = yield batch.backlinks.conversations(conv_store.manager)
+        all_convs = yield conv_store.load_all_from_keys(
+            conv_store.conversations, conv_keys)
+        conversations = [c for c in all_convs if not c.ended()]
         if not conversations:
             # No open conversations for this batch.
             return

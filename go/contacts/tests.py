@@ -56,8 +56,11 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
                 'msisdn': '27761234567',
                 'groups': [self.group_key],
                 })
-        contacts = self.contact_store.list_contacts()
-        contact = max(contacts, key=lambda c: c.created_at)
+        contact = max(
+            self.contact_store.load_all_from_keys(
+                self.contact_store.contacts,
+                self.contact_store.list_contacts()),
+            key=lambda c: c.created_at)
         self.assertRedirects(response, person_url(contact.key))
 
     def test_contact_deleting(self):
@@ -328,7 +331,8 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
             'normalize-3': 'float',
             'normalize-4': 'msisdn_za',
             })
-        contacts = group.backlinks.contacts()
+        contacts = self.contact_store.load_all_from_keys(
+            self.contact_store.contacts, group.backlinks.contacts())
 
         self.assertTrue(all([contact.msisdn == '+27761234561' for contact in
             contacts]))
@@ -456,8 +460,11 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
             'groups': [self.group_key],
             })
 
-        contacts = self.contact_store.list_contacts()
-        contact = max(contacts, key=lambda c: c.created_at)
+        contact = max(
+            self.contact_store.load_all_from_keys(
+                self.contact_store.contacts,
+                self.contact_store.list_contacts()),
+            key=lambda c: c.created_at)
         self.assertRedirects(response, person_url(contact.key))
 
         # Delete the group
@@ -471,8 +478,11 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(response['Location'].endswith(
             reverse('contacts:index')))
 
-        reloaded_contacts = self.contact_store.list_contacts()
-        reloaded_contact = max(reloaded_contacts, key=lambda c: c.created_at)
+        reloaded_contact = max(
+            self.contact_store.load_all_from_keys(
+                self.contact_store.contacts,
+                self.contact_store.list_contacts()),
+            key=lambda c: c.created_at)
         self.assertEqual(reloaded_contact.key, contact.key)
         self.assertEqual(reloaded_contact.groups.get_all(), [])
 
@@ -485,8 +495,10 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
             'groups': [self.group_key],
             })
 
-        contacts = self.contact_store.list_contacts()
-        contact = max(contacts, key=lambda c: c.created_at)
+        contact = max(self.contact_store.load_all_from_keys(
+                self.contact_store.contacts,
+                self.contact_store.list_contacts()),
+            key=lambda c: c.created_at)
         self.assertRedirects(response, person_url(contact.key))
 
         # Clear the group
@@ -498,8 +510,8 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
             })
         self.assertRedirects(response, group_url)
 
-        self.assertEqual(self.contact_store.get_contacts_for_group(self.group),
-            set([]))
+        self.assertEqual(
+            self.contact_store.get_contacts_for_group(self.group), [])
         self.assertFalse(contact in self.contact_store.list_contacts())
 
 
@@ -545,15 +557,15 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
     def test_smart_group_clearing(self):
         contact = self.mkcontact()
         group = self.mksmart_group('msisdn:\+12*')
-        self.assertEqualContacts(set([contact]),
+        self.assertEqual([contact.key],
             self.contact_store.get_contacts_for_group(group))
         response = self.client.post(
             reverse('contacts:group', kwargs={'group_key': group.key}),
             {'_delete_group_contacts': 1})
         self.assertRedirects(response, reverse('contacts:group', kwargs={
             'group_key': group.key}))
-        self.assertEqualContacts(set([]),
-            self.contact_store.get_contacts_for_group(group))
+        self.assertEqual(
+            [], self.contact_store.get_contacts_for_group(group))
 
     def test_smart_group_updating(self):
         group = self.mksmart_group('msisdn:\+12*')
@@ -582,12 +594,7 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(u'msisdn:\+12*', group.query)
         self.assertEqual(
             self.contact_store.get_contacts_for_conversation(conversation),
-            set([]))
-
-    def assertEqualContacts(self, contacts1, contacts2):
-        self.assertEqual(
-            set([contact.key for contact in contacts1]),
-            set([contact.key for contact in contacts2]))
+            [])
 
     def test_smart_groups_with_matches_results(self):
         response = self.client.post(reverse('contacts:groups'), {
@@ -607,12 +614,12 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(u'msisdn:\+12*', group.query)
         self.assertEqual(
             self.contact_store.get_static_contacts_for_group(group), [])
-        self.assertEqualContacts(
+        self.assertEqual(
             self.contact_store.get_dynamic_contacts_for_group(group),
-            [contact])
-        self.assertEqualContacts(
+            [contact.key])
+        self.assertEqual(
             self.contact_store.get_contacts_for_conversation(conversation),
-            [contact])
+            [contact.key])
 
     def test_smart_groups_with_matches_AND_query_results(self):
         self.client.post(reverse('contacts:groups'), {
@@ -632,7 +639,7 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
 
         contacts = self.contact_store.get_contacts_for_conversation(
             conversation)
-        self.assertEqualContacts(contacts, [match])
+        self.assertEqual(contacts, [match.key])
 
     def test_smart_groups_with_matches_OR_query_results(self):
         self.client.post(reverse('contacts:groups'), {
@@ -646,13 +653,13 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
         contact3 = self.mkcontact(name='foo', surname='bar')
 
         group = newest(self.contact_store.list_groups())
-        conversation = self.mkconversation()
-        conversation.groups.add(group)
-        conversation.save()
+        conv = self.mkconversation()
+        conv.groups.add(group)
+        conv.save()
 
-        contacts = self.contact_store.get_contacts_for_conversation(
-            conversation)
-        self.assertEqualContacts(contacts, set([contact1, contact2, contact3]))
+        self.assertEqual(
+            set(self.contact_store.get_contacts_for_conversation(conv)),
+            set([contact1.key, contact2.key, contact3.key]))
 
 
 class TestFieldNormalizer(TestCase):

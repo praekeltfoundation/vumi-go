@@ -118,11 +118,9 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
         batch_status = yield self.vumi_api.mdb.batch_status(batch_id)
         self.assertEqual(batch_status['sent'], 2)
-        dbmsgs = yield self.vumi_api.mdb.batch_messages(batch_id)
-        dbmsgs.sort(key=lambda msg: msg['to_addr'])
-        [dbmsg1, dbmsg2] = dbmsgs
-        self.assertEqual(dbmsg1, msg1)
-        self.assertEqual(dbmsg2, msg2)
+        dbmsgs = yield self.vumi_api.mdb.batch_outbound_keys(batch_id)
+        self.assertEqual(sorted([msg1['message_id'], msg2['message_id']]),
+                         sorted(dbmsgs))
 
     @inlineCallbacks
     def test_start_with_deduplication(self):
@@ -170,8 +168,8 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         ack_event = yield self.publish_event(user_message_id='123',
                                              event_type='ack',
                                              sent_message_id='xyz')
-        [event] = yield self.vumi_api.mdb.message_events('123')
-        self.assertEqual(event, ack_event)
+        [event_id] = yield self.vumi_api.mdb.message_event_keys('123')
+        self.assertEqual(event_id, ack_event['event_id'])
 
     @inlineCallbacks
     def test_consume_delivery_report(self):
@@ -179,8 +177,8 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         dr_event = yield self.publish_event(user_message_id='123',
                                             event_type='delivery_report',
                                             delivery_status='delivered')
-        [event] = yield self.vumi_api.mdb.message_events('123')
-        self.assertEqual(event, dr_event)
+        [event_id] = yield self.vumi_api.mdb.message_event_keys('123')
+        self.assertEqual(event_id, dr_event['event_id'])
 
     @inlineCallbacks
     def test_consume_user_message(self):

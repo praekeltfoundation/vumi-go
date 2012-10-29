@@ -98,7 +98,7 @@ class Command(BaseCommand):
 
         Appending 'active' limits the list to only active conversations.
         """
-        conversations = sorted(map(api.wrap_conversation,
+        conversations = sorted(map(api.get_wrapped_conversation,
                             api.conversation_store.list_conversations()),
                             key=lambda c: c.created_at)
         if 'active' in options:

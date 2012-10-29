@@ -27,8 +27,11 @@ class WikipediaTestCase(DjangoGoApplicationTestCase):
             'send_from_tag': '10017@devnull',
         })
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
-        conversation = max(self.conv_store.list_conversations(),
-                           key=lambda c: c.created_at)
+        conversation = max(
+            self.conv_store.load_all_from_keys(
+                self.conv_store.conversations,
+                self.conv_store.list_conversations()),
+            key=lambda c: c.created_at)
         self.assertEqual(conversation.delivery_class, 'sms')
         self.assertEqual(conversation.delivery_tag_pool, 'longcode')
         self.assertEqual(conversation.delivery_tag, None)

@@ -270,33 +270,25 @@ class VumiApi(object):
         """
         return self.mdb.batch_status(batch_id)
 
-    def batch_messages(self, batch_id):
-        """Return a list of batch message dictionaries.
+    def batch_outbound_keys(self, batch_id):
+        """Return a list of outbound message keys.
 
-        Should only be used on batches that are expected
-        to have a small set of messages.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to get messages for
-        :rtype:
-            list of message dictionaries.
+        :param str batch_id:
+            batch to get outbound message keys for
+        :returns:
+            list of message keys.
         """
-        return self.mdb.batch_messages(batch_id)
+        return self.mdb.batch_outbound_keys(batch_id)
 
-    def batch_replies(self, batch_id):
-        """Return a list of reply message dictionaries.
+    def batch_inbound_keys(self, batch_id):
+        """Return a list of inbound message keys.
 
-        Should only be used on batches that are expected
-        to have a small set of replies.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to get replies for
-        :rtype:
-            list of message dictionaries.
+        :param str batch_id:
+            batch to get inbound message keys for
+        :returns:
+            list of message keys.
         """
-        return self.mdb.batch_replies(batch_id)
+        return self.mdb.batch_inbound_keys(batch_id)
 
     @Manager.calls_manager
     def batch_tags(self, batch_id):
