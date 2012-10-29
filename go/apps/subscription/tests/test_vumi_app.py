@@ -6,7 +6,6 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.middleware.tagger import TaggingMiddleware
 
-from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.subscription.vumi_app import SubscriptionApplication
 
@@ -27,7 +26,7 @@ class TestSubscriptionApplication(AppWorkerTestCase):
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
         # Enable search for the contact store
         yield self.user_api.contact_store.contacts.enable_search()
 

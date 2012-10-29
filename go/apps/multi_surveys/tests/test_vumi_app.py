@@ -9,7 +9,6 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.message import TransportUserMessage
 from vumi.tests.utils import LogCatcher
 
-from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.multi_surveys.vumi_app import MultiSurveyApplication
 
@@ -54,7 +53,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         # Add tags
         self.user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])

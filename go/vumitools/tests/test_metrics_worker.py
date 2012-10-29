@@ -8,7 +8,6 @@ from twisted.internet.task import Clock, LoopingCall
 from vumi.tests.utils import VumiWorkerTestCase
 
 from go.vumitools.tests.utils import GoPersistenceMixin
-from go.vumitools.api import VumiUserApi
 from go.vumitools import metrics_worker
 
 
@@ -90,7 +89,7 @@ class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
     def test_find_conversations_for_account(self):
         acc1 = yield self.make_account(u'acc1')
         akey = acc1.key
-        user_api = VumiUserApi(self.worker.vumi_api, akey)
+        user_api = self.worker.vumi_api.get_user_api(akey)
 
         conv1 = yield self.make_conv(user_api, u'conv1')
         yield self.end_conv(conv1)
@@ -105,7 +104,7 @@ class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
     def test_send_metrics_command(self):
         acc1 = yield self.make_account(u'acc1')
         akey = acc1.key
-        user_api = VumiUserApi(self.worker.vumi_api, akey)
+        user_api = self.worker.vumi_api.get_user_api(akey)
 
         conv1 = yield self.make_conv(user_api, u'conv1')
         yield self.start_conv(conv1)
@@ -121,8 +120,8 @@ class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
         acc2 = yield self.make_account(u'acc2')
         yield self.worker.redis.sadd('metrics_accounts', acc1.key)
         yield self.worker.redis.sadd('metrics_accounts', acc2.key)
-        user_api1 = VumiUserApi(self.worker.vumi_api, acc1.key)
-        user_api2 = VumiUserApi(self.worker.vumi_api, acc2.key)
+        user_api1 = self.worker.vumi_api.get_user_api(acc1.key)
+        user_api2 = self.worker.vumi_api.get_user_api(acc2.key)
 
         conv1 = yield self.make_conv(user_api1, u'conv1')
         yield self.start_conv(conv1)

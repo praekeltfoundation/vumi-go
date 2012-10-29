@@ -11,7 +11,6 @@ from vumi.message import TransportUserMessage
 from vumi.tests.utils import LogCatcher
 
 from go.apps.surveys.vumi_app import SurveyApplication
-from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 
 
@@ -60,7 +59,7 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         # Add tags
         self.vumi_api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
