@@ -1,4 +1,5 @@
 {% extends "app.html" %}
+{% load conversation_tags %}
 
 {% block extra_header %}
     <link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
@@ -23,7 +24,7 @@
 
     {# {% include "conversation/includes/dashboard.html" %} #}
 
-    {% include "conversation/includes/messages.html" %}
+    {% show_conversation_messages conversation direction=request.GET.direction page=request.GET.p %}
 
 {% endblock %}
 
