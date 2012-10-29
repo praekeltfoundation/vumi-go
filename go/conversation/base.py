@@ -8,15 +8,12 @@ from django.shortcuts import redirect
 from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.conf.urls.defaults import url, patterns
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from go.vumitools.conversation.models import (
     CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
-from go.conversation.utils import PagedMessageCache
-from go.base.utils import (make_read_only_form, conversation_or_404,
-    page_range_window)
+from go.base.utils import make_read_only_form, conversation_or_404
 
 
 class ConversationView(TemplateView):
@@ -188,34 +185,8 @@ class ShowConversationView(ConversationView):
     template_name = 'show'
 
     def get(self, request, conversation):
-        inbound_message_paginator = Paginator(
-            PagedMessageCache(conversation, 'inbound'), 20)
-        outbound_message_paginator = Paginator(
-            PagedMessageCache(conversation, 'outbound'), 20)
-
-        page = request.GET.get('p', '')
-        message_direction = request.GET.get('direction', 'inbound')
-        if message_direction == 'inbound':
-            message_paginator = inbound_message_paginator
-        else:
-            message_paginator = outbound_message_paginator
-
-        try:
-            message_page = message_paginator.page(page)
-        except PageNotAnInteger:
-            message_page = message_paginator.page(1)
-        except EmptyPage:
-            message_page = message_paginator.page(message_paginator.num_pages)
-
         params = {
             'conversation': conversation,
-            'inbound_message_paginator': inbound_message_paginator,
-            'outbound_message_paginator': outbound_message_paginator,
-            'inbound_uniques_count': conversation.count_inbound_uniques(),
-            'outbound_uniques_count': conversation.count_outbound_uniques(),
-            'message_direction': message_direction,
-            'message_page': message_page,
-            'message_page_range': page_range_window(message_page, 5),
             'is_editable': (self.edit_conversation_forms is not None),
             }
 
