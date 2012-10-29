@@ -212,19 +212,23 @@ class GoPersistenceMixin(PersistenceMixin):
 class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
 
     use_riak = True
-    worker_name = None
+
+    def _worker_name(self):
+        return self.application_class.worker_name
+
+    def _command_rkey(self):
+        return "%s.control" % (self._worker_name(),)
 
     def dispatch_command(self, command, *args, **kw):
-        app_name = self.worker_name or self.application_class.worker_name
-        cmd = VumiApiCommand.command(app_name, command, *args, **kw)
-        return self._dispatch(cmd, '%s.control' % (app_name,))
+        cmd = VumiApiCommand.command(
+            self._worker_name(), command, *args, **kw)
+        return self._dispatch(cmd, self._command_rkey())
 
     def get_dispatcher_commands(self):
         return self._amqp.get_messages('vumi', 'vumi.api')
 
     def get_app_message_commands(self):
-        app_name = self.application_class.worker_name
-        return self._amqp.get_messages('vumi', "%s.control" % (app_name,))
+        return self._amqp.get_messages('vumi', self._command_rkey())
 
     def get_dispatched_app_events(self):
         return self._amqp.get_messages('vumi', 'vumi.event')

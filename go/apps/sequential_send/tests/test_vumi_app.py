@@ -25,9 +25,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         self.clock = Clock()
         self.patch(sequential_send_module, 'LoopingCall',
                    self.looping_call)
-        self.app = yield self.get_application({
-                'worker_name': 'sequential_send_application',
-                }, start=False)
+        self.app = yield self.get_application({}, start=False)
         yield self.app.startWorker()
 
         # Steal app's vumi_api
