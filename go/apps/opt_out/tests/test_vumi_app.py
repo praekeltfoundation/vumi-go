@@ -21,8 +21,7 @@ class TestOptOutApplication(AppWorkerTestCase):
         super(TestOptOutApplication, self).setUp()
 
         # Setup the OptOutApplication
-        self.app = yield self.get_application(
-                {'worker_name': 'opt_out_application'})
+        self.app = yield self.get_application({})
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!

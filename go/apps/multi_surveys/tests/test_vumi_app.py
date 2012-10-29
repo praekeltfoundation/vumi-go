@@ -17,7 +17,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
 
     application_class = MultiSurveyApplication
     transport_type = u'sms'
-    worker_name = 'multi_survey_application'
 
     default_polls = {
         0: [{
@@ -42,7 +41,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
 
         # Setup the SurveyApplication
         self.app = yield self.get_application({
-                'worker_name': 'multi_survey_application',
                 'vxpolls': {'prefix': 'test.'},
                 'is_demo': False,
                 })
@@ -129,7 +127,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             config.update({
                 'poll_id': poll_id,
                 'transport_name': self.transport_name,
-                'worker_name': 'multi_survey_application',
                 'questions': questions,
                 })
             config.setdefault('survey_completed_response',
