@@ -10,8 +10,6 @@ from go.base.utils import vumi_api_for_user
 
 class GoAccountStatsCommandTestCase(DjangoGoApplicationTestCase):
 
-    USE_RIAK = True
-
     def setUp(self):
         super(GoAccountStatsCommandTestCase, self).setUp()
         self.user = self.mk_django_user()
