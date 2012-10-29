@@ -9,6 +9,8 @@ from go.vumitools.opt_out import OptOutStore
 
 class OptOutApplication(GoApplicationWorker):
 
+    worker_name = 'opt_out_application'
+
     @inlineCallbacks
     def consume_user_message(self, message):
 
