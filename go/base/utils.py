@@ -50,3 +50,21 @@ def make_read_only_form(form):
                 'readonly': 'readonly'
             })
     return form
+
+
+def page_range_window(page, padding):
+    """
+    Sometimes the page range is bigger than we're willing to display in the
+    UI and if that's the case we want to switch to only showing +padding &
+    -padding pages for the paginator.
+    """
+    current_page = page.number
+    if page.paginator.num_pages < padding:
+        return range(1, page.paginator.num_pages + 1)
+    elif current_page - padding < 1:
+        return range(1, (padding * 2))
+    elif current_page + padding > page.paginator.num_pages:
+        return range(page.paginator.num_pages - (padding * 2) + 2,
+            page.paginator.num_pages + 1)
+    else:
+        return range(current_page - padding + 1, current_page + padding)
