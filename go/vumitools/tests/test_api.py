@@ -23,7 +23,7 @@ class TestTxVumiApi(AppWorkerTestCase, CeleryTestMixIn):
         yield super(TestTxVumiApi, self).setUp()
         if self.sync_persistence:
             self.set_up_celery()
-            self.api = VumiApi.from_config(self._persist_config)
+            self.api = VumiApi.from_config_sync(self._persist_config)
         else:
             self.api = yield VumiApi.from_config_async(
                 self._persist_config, get_fake_amq_client(self._amqp))
@@ -161,7 +161,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     def setUp(self):
         yield super(TestTxVumiUserApi, self).setUp()
         if self.sync_persistence:
-            self.api = VumiApi.from_config(self._persist_config)
+            self.api = VumiApi.from_config_sync(self._persist_config)
         else:
             self.api = yield VumiApi.from_config_async(self._persist_config)
         self.user_account = yield self.mk_user(self.api, u'Buster')

@@ -1,11 +1,7 @@
 # -*- test-case-name: go.vumitools.tests.test_api -*-
 # -*- coding: utf-8 -*-
 
-"""Vumi API for high-volume messaging.
-
-NOTE: This uses the synchronous RiakManager, and is therefore unsuitable for
-use in Vumi workers.
-"""
+"""Convenience API, mostly for working with various datastores."""
 
 from collections import defaultdict
 
@@ -98,8 +94,8 @@ class VumiUserApi(object):
                                           self.user_account_key)
 
     @classmethod
-    def from_config(cls, user_account_key, config):
-        return cls(VumiApi.from_config(config), user_account_key)
+    def from_config_sync(cls, user_account_key, config):
+        return cls(VumiApi.from_config_sync(config), user_account_key)
 
     @classmethod
     def from_config_async(cls, user_account_key, config):
@@ -193,7 +189,7 @@ class VumiApi(object):
         return riak_config, redis_config
 
     @classmethod
-    def from_config(cls, config):
+    def from_config_sync(cls, config):
         riak_config, redis_config = cls._parse_config(config)
         manager = RiakManager.from_config(riak_config)
         redis = RedisManager.from_config(redis_config)
