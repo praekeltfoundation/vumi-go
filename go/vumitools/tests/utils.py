@@ -216,6 +216,11 @@ class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
     def _worker_name(self):
         return self.application_class.worker_name
 
+    def _conversation_type(self):
+        # This is a guess based on worker_name.
+        # We need a better way to do this.
+        return self._worker_name().rpartition('_')[0].decode('utf-8')
+
     def _command_rkey(self):
         return "%s.control" % (self._worker_name(),)
 
@@ -247,6 +252,15 @@ class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
             self._persist_riak_managers.append(worker.vumi_api.manager)
             self._persist_redis_managers.append(worker.vumi_api.redis)
         returnValue(worker)
+
+    @inlineCallbacks
+    def create_conversation(self, **kw):
+        conv_type = kw.pop('conversation_type', self._conversation_type())
+        subject = kw.pop('subject', u'Subject')
+        message = kw.pop('message', u'Message')
+        conversation = yield self.user_api.new_conversation(
+            conv_type, subject, message, **kw)
+        returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
     def start_conversation(self, conversation, *args, **kwargs):
