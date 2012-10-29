@@ -41,18 +41,9 @@ class TestOptOutApplication(AppWorkerTestCase):
             },
         })
 
-        self.conversation = yield self.create_conversation(u'opt_out',
-            u'Subject', u'Message',
+        self.conversation = yield self.create_conversation(
             delivery_tag_pool=u'pool',
             delivery_class=self.transport_type)
-        yield self.conversation.save()
-
-    @inlineCallbacks
-    def create_conversation(self, conversation_type, subject, message, **kw):
-        conversation = yield self.user_api.new_conversation(
-            conversation_type, subject, message, **kw)
-        yield conversation.save()
-        returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
     def opt_out(self, from_addr, to_addr, content, transport_type=None,

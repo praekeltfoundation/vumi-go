@@ -72,8 +72,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         # Create a group and a conversation
         self.group = yield self.create_group(u'test group')
 
-        self.conversation = yield self.create_conversation(u'multi_survey',
-            u'Subject', u'Message',
+        self.conversation = yield self.create_conversation(
             delivery_tag_pool=u'pool',
             delivery_class=self.transport_type)
         self.conversation.add_group(self.group)
@@ -91,13 +90,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             surname=surname, **kw)
         yield contact.save()
         returnValue(contact)
-
-    @inlineCallbacks
-    def create_conversation(self, conversation_type, subject, message, **kw):
-        conversation = yield self.user_api.new_conversation(
-            conversation_type, subject, message, **kw)
-        yield conversation.save()
-        returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
     def reply_to(self, msg, content, continue_session=True, **kw):

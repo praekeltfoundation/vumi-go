@@ -53,12 +53,10 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         contact2 = yield user_api.contact_store.new_contact(
             name=u'Second', surname=u'Contact', msisdn=u'27831234568',
             groups=[group])
-        conversation = yield user_api.new_conversation(
-            u'bulk_message', u'Subject', u'Message', delivery_tag_pool=u"pool",
-            delivery_class=u'sms')
+        conversation = yield self.create_conversation(
+            delivery_tag_pool=u'pool', delivery_class=u'sms')
         conversation.add_group(group)
         yield conversation.save()
-        conversation = user_api.wrap_conversation(conversation)
 
         yield self.start_conversation(conversation)
 
@@ -136,12 +134,10 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         contact2 = yield user_api.contact_store.new_contact(
             name=u'Second', surname=u'Contact', msisdn=u'27831234567',
             groups=[group])
-        conversation = yield user_api.new_conversation(
-            u'bulk_message', u'Subject', u'Message', delivery_tag_pool=u"pool",
-            delivery_class=u'sms')
+        conversation = yield self.create_conversation(
+            delivery_tag_pool=u'pool', delivery_class=u'sms')
         conversation.add_group(group)
         yield conversation.save()
-        conversation = user_api.wrap_conversation(conversation)
 
         # Provide the dedupe option to the conversation
         yield self.start_conversation(conversation, dedupe=True)
@@ -232,10 +228,8 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_collect_metrics(self):
-        conv = yield self.user_api.new_conversation(
-            u'bulk_message', u'Subject', u'Message', delivery_tag_pool=u"pool",
-            delivery_class=u'sms')
-        conv = self.user_api.wrap_conversation(conv)
+        conv = yield self.create_conversation(
+            delivery_tag_pool=u'pool', delivery_class=u'sms')
         yield self.start_conversation(conv)
         [batch_id] = conv.get_batch_keys()
 

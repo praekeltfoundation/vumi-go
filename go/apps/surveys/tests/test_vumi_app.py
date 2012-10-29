@@ -81,8 +81,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         # Make the contact store searchable
         yield self.user_api.contact_store.contacts.enable_search()
 
-        self.conversation = yield self.create_conversation(u'survey',
-            u'Subject', u'Message',
+        self.conversation = yield self.create_conversation(
             delivery_tag_pool=u'pool',
             delivery_class=self.transport_type)
         self.conversation.add_group(self.group)
@@ -103,13 +102,6 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     def get_contact(self, contact_key):
         return self.user_api.contact_store.get_contact_by_key(contact_key)
-
-    @inlineCallbacks
-    def create_conversation(self, conversation_type, subject, message, **kw):
-        conversation = yield self.user_api.new_conversation(
-            conversation_type, subject, message, **kw)
-        yield conversation.save()
-        returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
     def reply_to(self, msg, content, continue_session=True, **kw):

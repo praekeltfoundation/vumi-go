@@ -2,7 +2,7 @@
 
 """Tests for go.vumitools.bulk_send_application"""
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
 from vumi.middleware.tagger import TaggingMiddleware
 
@@ -44,7 +44,9 @@ class TestSubscriptionApplication(AppWorkerTestCase):
             'operation': operation,
             'reply_copy': reply_copy,
             }
-        self.conv = yield self.create_conversation(metadata={
+        self.conv = yield self.create_conversation(
+            delivery_tag_pool=u'pool', delivery_class=self.transport_type,
+            metadata={
                 'handlers': [
                     mkhandler('foo', 'foo', 'subscribe', 'Subscribed to foo.'),
                     mkhandler('bar', 'bar', 'subscribe', 'Subscribed to bar.'),
@@ -52,15 +54,6 @@ class TestSubscriptionApplication(AppWorkerTestCase):
                     mkhandler('stop', 'bar', 'unsubscribe', 'Unsubscribed.'),
                     ]})
         yield self.start_conversation(self.conv)
-
-    @inlineCallbacks
-    def create_conversation(self, **kw):
-        conversation = yield self.user_api.new_conversation(
-            u'subscription', u'Subject', u'Message',
-            delivery_tag_pool=u'pool', delivery_class=self.transport_type,
-            **kw)
-        yield conversation.save()
-        returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
     def assert_subscription(self, contact, campaign_name, value):

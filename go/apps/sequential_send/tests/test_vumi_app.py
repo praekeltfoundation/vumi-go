@@ -67,14 +67,10 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         yield contact.save()
         returnValue(contact)
 
-    @inlineCallbacks
     def create_conversation(self, **kw):
-        conversation = yield self.user_api.new_conversation(
-            u'sequential_send', u'Subject', u'Message',
+        return super(TestSequentialSendApplication, self).create_conversation(
             delivery_tag_pool=u'pool', delivery_class=self.transport_type,
             **kw)
-        yield conversation.save()
-        returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
     def reply_to(self, msg, content, continue_session=True, **kw):
