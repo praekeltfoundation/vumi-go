@@ -189,7 +189,6 @@ class ShowConversationView(ConversationView):
             'conversation': conversation,
             'is_editable': (self.edit_conversation_forms is not None),
             }
-
         status = conversation.get_status()
         templ = lambda name: self.get_template_name('includes/%s' % (name,))
 
