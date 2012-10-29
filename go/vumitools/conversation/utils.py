@@ -250,7 +250,7 @@ class ConversationWrapper(object):
 
         # Redis counts from zero, so we - 1 on the limit.
         keys = yield self.mdb.cache.get_inbound_message_keys(batch_key, start,
-                                                        start + limit - 1)
+                                                                limit - 1)
 
         replies = []
         for key in keys:
@@ -293,7 +293,7 @@ class ConversationWrapper(object):
         batch_key = batch_key or self.get_latest_batch_key()
 
         keys = yield self.mdb.cache.get_outbound_message_keys(batch_key, start,
-                                                        start + limit - 1)
+                                                                limit - 1)
 
         sent_messages = []
         for key in keys:

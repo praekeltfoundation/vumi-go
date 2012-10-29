@@ -9,8 +9,11 @@ register = template.Library()
 
 @register.inclusion_tag(
     'conversation/inclusion_tags/show_conversation_messages.html')
-def show_conversation_messages(conversation, direction='inbound', page=1,
+def show_conversation_messages(conversation, direction=None, page=None,
                                 batch_id=None):
+    direction = direction or 'inbound'
+    # Paginator starts counting at 1 so would also be invalid
+    page = page or 1
     inbound_message_paginator = Paginator(
         PagedMessageCache(conversation.count_replies(),
             lambda start, stop: conversation.replies(start, stop, batch_id)),
