@@ -9,8 +9,6 @@ from twisted.internet.task import LoopingCall
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationWorker
-from go.vumitools.opt_out import OptOutStore
-from go.vumitools.contact import ContactStore
 
 
 class ScheduleManager(object):
@@ -125,11 +123,11 @@ class SequentialSendApplication(GoApplicationWorker):
     def send_scheduled_messages(self, conv):
         messages = conv.get_metadata()['messages']
         batch_id = conv.get_batch_keys()[0]
-        contacts = yield self.get_contacts_with_addresses(conv)
+        contacts = yield conv.get_opted_in_contacts()
         tag = (conv.c.delivery_tag_pool, conv.c.delivery_tag)
         message_options = yield conv.make_message_options(tag)
 
-        for contact, to_addr in contacts:
+        for contact in contacts:
             index_key = 'scheduled_message_index_%s' % (conv.key,)
             message_index = int(contact.extra[index_key] or '0')
             if message_index >= len(messages):
@@ -137,34 +135,11 @@ class SequentialSendApplication(GoApplicationWorker):
                 continue
 
             yield self.send_message(
-                batch_id, to_addr, messages[message_index], message_options)
+                batch_id, contact.addr_for(conv.delivery_class),
+                messages[message_index], message_options)
 
             contact.extra[index_key] = u'%s' % (message_index + 1)
             yield contact.save()
-
-    @inlineCallbacks
-    def get_contacts_with_addresses(self, conv):
-        """Get opted-in contacts with their addresses.
-
-        Since the account-level opt-out is per-address, we need to look up the
-        addresses in here. Once we have them, we may as well return them.
-        """
-        # FIXME: We need a more generic way to do this.
-        opt_out_store = OptOutStore(
-            conv.api.manager, conv.user_api.user_account_key)
-        optouts = yield opt_out_store.list_opt_outs()
-        optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
-                        if optout.key.startswith('msisdn:')]
-
-        contact_store = ContactStore(
-            conv.api.manager, conv.user_api.user_account_key)
-        contacts = yield contact_store.get_contacts_for_conversation(conv)
-        result = []
-        for contact in contacts:
-            addr = contact.addr_for(conv.delivery_class)
-            if addr not in optout_addrs:
-                result.append((contact, addr))
-        returnValue(result)
 
     @inlineCallbacks
     def send_message(self, batch_id, to_addr, content, msg_options):

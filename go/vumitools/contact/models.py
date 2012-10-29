@@ -121,13 +121,14 @@ class ContactStore(PerAccountStore):
 
     @Manager.calls_manager
     def get_contacts_for_group(self, group):
+        """Return contact keys for this group."""
         contacts = set([])
         static_contacts = yield self.get_static_contacts_for_group(group)
         contacts.update(static_contacts)
         if group.is_smart_group():
             dynamic_contacts = yield self.get_dynamic_contacts_for_group(group)
             contacts.update(dynamic_contacts)
-        returnValue(contacts)
+        returnValue(list(contacts))
 
     @Manager.calls_manager
     def get_contacts_for_conversation(self, conversation):
@@ -145,24 +146,19 @@ class ContactStore(PerAccountStore):
             group_contacts = yield self.get_contacts_for_group(group)
             contacts.update(group_contacts)
 
-        returnValue(contacts)
+        returnValue(list(contacts))
 
-    @Manager.calls_manager
     def get_static_contacts_for_group(self, group):
         """
         Look up contacts through Riak 2i
         """
-        contacts = yield group.backlinks.contacts()
-        returnValue(contacts)
+        return group.backlinks.contacts()
 
-    @Manager.calls_manager
     def get_dynamic_contacts_for_group(self, group):
         """
         Use Riak search to find matching contacts.
         """
-        keys = yield self.contacts.riak_search(group.query)
-        contacts = yield self.load_all_from_keys(self.contacts, keys)
-        returnValue(contacts)
+        return self.contacts.riak_search(group.query)
 
     @Manager.calls_manager
     def filter_contacts_on_surname(self, letter, group=None):
@@ -209,7 +205,8 @@ class ContactStore(PerAccountStore):
     def list_groups(self):
         # Not stale, because we're using backlinks.
         user_account = yield self.get_user_account()
-        groups = user_account.backlinks.contactgroups(self.manager)
+        group_keys = yield user_account.backlinks.contactgroups(self.manager)
+        groups = yield self.load_all_from_keys(self.groups, group_keys)
         returnValue(sorted(groups, key=lambda group: group.name))
 
     @Manager.calls_manager

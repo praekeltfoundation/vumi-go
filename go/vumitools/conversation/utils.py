@@ -182,6 +182,7 @@ class ConversationWrapper(object):
                 using Redis' zunionstore to provide a temporary cached
                 view on all keys for a set of batch_ids)
         """
+        # TODO: Use the message cache for this?
         batch_keys = self.get_batch_keys()
         if batch_keys:
             return batch_keys[0]
@@ -231,7 +232,7 @@ class ConversationWrapper(object):
         return self.mdb.cache.count_to_addrs(batch_key)
 
     @Manager.calls_manager
-    def replies(self, start=0, limit=100, batch_key=None):
+    def received_messages(self, start=0, limit=100, batch_key=None):
         """
         Get a list of replies from the message store. The keys come from
         the message store's cache.
@@ -359,14 +360,12 @@ class ConversationWrapper(object):
     def get_absolute_url(self):
         return u'/app/%s/%s/' % (self.conversation_type, self.key)
 
-    @Manager.calls_manager
-    def get_opted_in_contacts(self):
+    def get_contact_keys(self):
         """
-        Get all the contacts that are both assigned to this group and opted in.
+        Get all contact keys for this conversation.
         """
         contact_store = self.user_api.contact_store
-        contacts = yield contact_store.get_contacts_for_conversation(self.c)
-        returnValue(contacts)
+        return contact_store.get_contacts_for_conversation(self.c)
 
     @Manager.calls_manager
     def get_opted_in_addresses(self):
@@ -375,14 +374,49 @@ class ConversationWrapper(object):
         that is appropriate for the conversation's delivery_class and
         that are opted in.
         """
-        # TODO: Unhacky this.
+        # TODO: Less hacky address type handling.
         opt_out_store = OptOutStore(
             self.api.manager, self.user_api.user_account_key)
-        optouts = yield opt_out_store.list_opt_outs()
-        optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
-                            if optout.key.startswith('msisdn:')]
-        contacts = yield self.get_opted_in_contacts()
-        all_addrs = yield self.get_contacts_addresses(contacts)
-        opted_in_addrs = [addr for addr in all_addrs
-                            if addr not in optout_addrs]
+        contact_store = self.user_api.contact_store
+        contact_keys = yield self.get_contact_keys()
+        address_type = 'gtalk' if self.delivery_class == 'gtalk' else 'msisdn'
+        opted_in_addrs = []
+        while contact_keys:
+            current_keys = contact_keys[:100]
+            contact_keys = contact_keys[100:]
+            current_contacts = yield contact_store.load_all_from_keys(
+                contact_store.contacts, current_keys)
+            addresses = self.get_contacts_addresses(current_contacts)
+            opt_out_keys = yield opt_out_store.opt_outs_for_addresses(
+                address_type, addresses)
+            opted_out_addrs = set(key.split(':')[1] for key in opt_out_keys)
+            opted_in_addrs.extend(addr for addr in addresses
+                                  if addr not in opted_out_addrs)
         returnValue(opted_in_addrs)
+
+    @Manager.calls_manager
+    def get_opted_in_contacts(self):
+        """
+        Get the contacts assigned to this group with an address attribute
+        that is appropriate for the conversation's delivery_class and
+        that are opted in.
+        """
+        # TODO: Less hacky address type handling.
+        opt_out_store = OptOutStore(
+            self.api.manager, self.user_api.user_account_key)
+        contact_store = self.user_api.contact_store
+        contact_keys = yield self.get_contact_keys()
+        address_type = 'gtalk' if self.delivery_class == 'gtalk' else 'msisdn'
+        opted_in_contacts = []
+        while contact_keys:
+            current_keys = contact_keys[:100]
+            contact_keys = contact_keys[100:]
+            current_contacts = yield contact_store.load_all_from_keys(
+                contact_store.contacts, current_keys)
+            opt_out_keys = yield opt_out_store.opt_outs_for_addresses(
+                address_type, self.get_contacts_addresses(current_contacts))
+            opted_out_addrs = set(key.split(':')[1] for key in opt_out_keys)
+            opted_in_contacts.extend(contact for contact in current_contacts
+                                     if contact.addr_for(self.delivery_class)
+                                         not in opted_out_addrs)
+        returnValue(opted_in_contacts)
