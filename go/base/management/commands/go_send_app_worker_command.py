@@ -11,14 +11,19 @@ class Command(BaseCommand):
         'reconcile_cache',
     ]
 
-    def handle(self, worker_name, command, parameters, **config):
+    def handle(self, worker_name, command, *parameters, **config):
         self.sender = self.sender_class()
         if command not in self.allowed_commands:
             self.stderr.write('Unknown command %s' % (command,))
 
-        command_parameters = dict([parameter.strip().split('=', 1)
-                                    for parameter in parameters.split(' ')])
+        args = []
+        kwargs = {}
+        for parameter in parameters:
+            parameter = parameter.strip()
+            if '=' in parameter:
+                kwargs.update(dict((parameter.split('=', 1),)))
+            else:
+                args.append(parameter)
 
-        cmd = VumiApiCommand.command(worker_name, command,
-            **command_parameters)
+        cmd = VumiApiCommand.command(worker_name, command, *args, **kwargs)
         self.sender.send_command(cmd)
