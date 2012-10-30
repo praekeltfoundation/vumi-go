@@ -7,7 +7,6 @@ from twisted.internet.task import Clock, LoopingCall
 
 from vumi.message import TransportUserMessage
 
-from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.sequential_send.vumi_app import SequentialSendApplication
 from go.apps.sequential_send import vumi_app as sequential_send_module
@@ -26,9 +25,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         self.clock = Clock()
         self.patch(sequential_send_module, 'LoopingCall',
                    self.looping_call)
-        self.app = yield self.get_application({
-                'worker_name': 'sequential_send_application',
-                }, start=False)
+        self.app = yield self.get_application({}, start=False)
         yield self.app.startWorker()
 
         # Steal app's vumi_api
@@ -37,7 +34,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         # Add tags
         self.user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
@@ -70,14 +67,10 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         yield contact.save()
         returnValue(contact)
 
-    @inlineCallbacks
     def create_conversation(self, **kw):
-        conversation = yield self.user_api.new_conversation(
-            u'sequential_send', u'Subject', u'Message',
+        return super(TestSequentialSendApplication, self).create_conversation(
             delivery_tag_pool=u'pool', delivery_class=self.transport_type,
             **kw)
-        yield conversation.save()
-        returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
     def reply_to(self, msg, content, continue_session=True, **kw):

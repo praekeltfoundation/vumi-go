@@ -7,7 +7,6 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.message import TransportUserMessage
 
 from go.apps.opt_out.vumi_app import OptOutApplication
-from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.opt_out import OptOutStore
 
@@ -22,8 +21,7 @@ class TestOptOutApplication(AppWorkerTestCase):
         super(TestOptOutApplication, self).setUp()
 
         # Setup the OptOutApplication
-        self.app = yield self.get_application(
-                {'worker_name': 'opt_out_application'})
+        self.app = yield self.get_application({})
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
@@ -31,7 +29,7 @@ class TestOptOutApplication(AppWorkerTestCase):
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         # Add tags
         yield self.user_api.api.declare_tags([("pool", "tag1"),
@@ -43,18 +41,9 @@ class TestOptOutApplication(AppWorkerTestCase):
             },
         })
 
-        self.conversation = yield self.create_conversation(u'opt_out',
-            u'Subject', u'Message',
+        self.conversation = yield self.create_conversation(
             delivery_tag_pool=u'pool',
             delivery_class=self.transport_type)
-        yield self.conversation.save()
-
-    @inlineCallbacks
-    def create_conversation(self, conversation_type, subject, message, **kw):
-        conversation = yield self.user_api.new_conversation(
-            conversation_type, subject, message, **kw)
-        yield conversation.save()
-        returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
     def opt_out(self, from_addr, to_addr, content, transport_type=None,
