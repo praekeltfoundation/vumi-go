@@ -92,7 +92,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         user_api.contact_store.groups.enable_search()
 
     def setup_api(self):
-        self.api = VumiApi.from_config(settings.VUMI_API_CONFIG)
+        self.api = VumiApi.from_config_sync(settings.VUMI_API_CONFIG)
 
     def mk_django_user(self):
         user = User.objects.create_user(
