@@ -92,6 +92,20 @@ class GoApplicationMixin(object):
     def process_command_collect_metrics(self, conversation_key,
                                         user_account_key):
         key_tuple = (conversation_key, user_account_key)
+        if key_tuple in self._cache_recon_conversations:
+            log.info("Ignoring conversation %s for user %s because the "
+                     "previous recon run is still going." % (
+                        conversation_key, user_account_key))
+            return
+        self._cache_recon_conversations.add(key_tuple)
+        user_api = self.get_user_api(user_account_key)
+        yield self.recon_cache(user_api, conversation_key)
+        self._cache_recon_conversations.remove(key_tuple)
+
+    @inlineCallbacks
+    def process_command_reconcile_cache(self, conversation_key,
+                                        user_account_key):
+        key_tuple = (conversation_key, user_account_key)
         if key_tuple in self._metrics_conversations:
             log.info("Ignoring conversation %s for user %s because the "
                      "previous collection run is still going." % (
@@ -99,7 +113,7 @@ class GoApplicationMixin(object):
             return
         self._metrics_conversations.add(key_tuple)
         user_api = self.get_user_api(user_account_key)
-        yield self.collect_metrics(user_api, conversation_key)
+        yield self.reconcile_cache(user_api, conversation_key)
         self._metrics_conversations.remove(key_tuple)
 
     def process_unknown_cmd(self, method_name, *args, **kwargs):
@@ -109,6 +123,31 @@ class GoApplicationMixin(object):
     def collect_metrics(self, user_api, conversation_key):
         # By default, we don't collect metrics.
         pass
+
+    @inlineCallbacks
+    def reconcile_cache(self, user_api, conversation_key, delta=0.01):
+        """Reconcile the cached values for the conversation.
+
+        Checks whether caches for a conversation are off by a given
+        delta and if so, initiates a full cache reconciliation.
+
+        :param VumiUserApi user_api:
+            The Api for this user
+        :param str conversation_key:
+            The key of the conversation to reconcile
+        :param float delta:
+            If the key count difference between the message_store and
+            the cache is bigger than the delta a reconciliation is initiated.
+        """
+        conv = yield user_api.get_wrapped_conversation(conversation_key)
+        if conv is None:
+            log.error('Conversation does not exist: %s' % (conversation_key,))
+            return
+
+        message_store = user_api.api.mdb
+        for batch_key in conv.get_batch_keys():
+            if (yield message_store.needs_reconciliation(batch_key, delta)):
+                yield message_store.cache.reconcile(batch_key)
 
     @inlineCallbacks
     def get_contact_for_message(self, message):

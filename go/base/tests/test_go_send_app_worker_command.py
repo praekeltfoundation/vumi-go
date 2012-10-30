@@ -26,16 +26,27 @@ class GoSendAppWorkerCommandTestCase(DjangoGoApplicationTestCase):
         self.command.stderr = StringIO()
 
     def test_invalid_command(self):
-        self.command.handle('worker-name', 'bad_command', 'key=1 key=2')
+        self.command.handle('worker-name', 'bad_command', 'key=1', 'key=2')
         self.assertEqual(self.command.stderr.getvalue(),
             'Unknown command bad_command')
 
     def test_valid_command(self):
-        self.command.handle('worker-name', 'good_command', 'key=1 key=2')
+        self.command.handle('worker-name', 'good_command', 'key=1', 'key=2')
         self.assertEqual(self.command.stderr.getvalue(), '')
         self.assertEqual(self.command.stdout.getvalue(), '')
         [cmd] = self.command.sender.outbox
         self.assertEqual(cmd['worker_name'], 'worker-name')
         self.assertEqual(cmd['command'], 'good_command')
         self.assertEqual(cmd['args'], [])
+        self.assertEqual(cmd['kwargs'], {'key': '1', 'key': '2'})
+
+    def test_valid_command_with_args(self):
+        self.command.handle('worker-name', 'good_command', 'positional-arg',
+                            'key=1', 'key=2')
+        self.assertEqual(self.command.stderr.getvalue(), '')
+        self.assertEqual(self.command.stdout.getvalue(), '')
+        [cmd] = self.command.sender.outbox
+        self.assertEqual(cmd['worker_name'], 'worker-name')
+        self.assertEqual(cmd['command'], 'good_command')
+        self.assertEqual(cmd['args'], ['positional-arg'])
         self.assertEqual(cmd['kwargs'], {'key': '1', 'key': '2'})
