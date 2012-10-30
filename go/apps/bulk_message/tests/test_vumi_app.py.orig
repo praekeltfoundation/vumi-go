@@ -29,11 +29,15 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
-        self.message_store = self.vumi_api.mdb
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
+<<<<<<< HEAD
+        self.message_store = self.vumi_api.mdb
+        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+=======
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
+>>>>>>> origin/feature/issue-99-smallish-cleanup-pass
 
         yield self.user_api.api.declare_tags([("pool", "tag1"),
                                               ("pool", "tag2")])
@@ -50,6 +54,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         message=u'message', delivery_tag_pool=u'pool', delivery_class=u'sms',
         from_addr=u'+27831234567{0}'):
         user_api = self.user_api
+<<<<<<< HEAD
         group = yield user_api.contact_store.new_group(group_name)
 
         for i in range(contact_count):
@@ -57,14 +62,26 @@ class TestBulkMessageApplication(AppWorkerTestCase):
                 name=u'First', surname=u'Surname %s' % (i,),
                 msisdn=from_addr.format(i), groups=[group])
 
-        conversation = yield self.create_conversation(
-            conversation_type=conversation_type, subject=subject,
-            message=message, delivery_tag_pool=delivery_tag_pool,
-            delivery_class=delivery_class)
+        conversation = yield user_api.new_conversation(
+            conversation_type, subject, message,
+            delivery_tag_pool=delivery_tag_pool, delivery_class=delivery_class)
         conversation.add_group(group)
         yield conversation.save()
         conversation = user_api.wrap_conversation(conversation)
         returnValue(conversation)
+=======
+        group = yield user_api.contact_store.new_group(u'test group')
+        contact1 = yield user_api.contact_store.new_contact(
+            name=u'First', surname=u'Contact', msisdn=u'27831234567',
+            groups=[group])
+        contact2 = yield user_api.contact_store.new_contact(
+            name=u'Second', surname=u'Contact', msisdn=u'27831234568',
+            groups=[group])
+        conversation = yield self.create_conversation(
+            delivery_tag_pool=u'pool', delivery_class=u'sms')
+        conversation.add_group(group)
+        yield conversation.save()
+>>>>>>> origin/feature/issue-99-smallish-cleanup-pass
 
     @inlineCallbacks
     def test_start(self):
@@ -95,8 +112,22 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     @inlineCallbacks
     def test_start_with_deduplication(self):
         # Create two contacts with the same to_addr, they should be deduped
+<<<<<<< HEAD
         conversation = yield self.setup_conversation(from_addr=u'27831234567',
             contact_count=2)
+=======
+
+        contact1 = yield user_api.contact_store.new_contact(
+            name=u'First', surname=u'Contact', msisdn=u'27831234567',
+            groups=[group])
+        contact2 = yield user_api.contact_store.new_contact(
+            name=u'Second', surname=u'Contact', msisdn=u'27831234567',
+            groups=[group])
+        conversation = yield self.create_conversation(
+            delivery_tag_pool=u'pool', delivery_class=u'sms')
+        conversation.add_group(group)
+        yield conversation.save()
+>>>>>>> origin/feature/issue-99-smallish-cleanup-pass
 
         # Provide the dedupe option to the conversation
         yield self.start_conversation(conversation, dedupe=True)
