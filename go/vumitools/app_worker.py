@@ -4,7 +4,7 @@ from vumi import log
 from vumi.application import ApplicationWorker
 from vumi.blinkenlights.metrics import MetricManager, Metric, MAX
 
-from go.vumitools.api import VumiApiCommand, VumiApi, VumiUserApi, VumiApiEvent
+from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.api_worker import GoMessageMetadata
 
 
@@ -69,7 +69,7 @@ class GoApplicationMixin(object):
         self.metrics.stop()
 
     def get_user_api(self, user_account_key):
-        return VumiUserApi(self.vumi_api, user_account_key)
+        return self.vumi_api.get_user_api(user_account_key)
 
     def consume_control_command(self, command_message):
         """

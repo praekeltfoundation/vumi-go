@@ -13,7 +13,7 @@ from vumi.tests.utils import LogCatcher
 
 from go.vumitools.api_worker import (
     EventDispatcher, CommandDispatcher, GoMessageMetadata)
-from go.vumitools.api import VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent
+from go.vumitools.api import VumiApi, VumiApiCommand, VumiApiEvent
 from go.vumitools.handler import EventHandler, SendMessageCommandHandler
 from go.vumitools.tests.utils import AppWorkerTestCase, GoPersistenceMixin
 
@@ -67,7 +67,7 @@ class GoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
         self._persist_riak_managers.append(self.vumi_api.manager)
         self._persist_redis_managers.append(self.vumi_api.redis)
         self.account = yield self.mk_user(self.vumi_api, u'user')
-        self.user_api = VumiUserApi(self.vumi_api, self.account.key)
+        self.user_api = self.vumi_api.get_user_api(self.account.key)
         self.tag = ('xmpp', 'test1@xmpp.org')
 
     def tearDown(self):
@@ -299,7 +299,7 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
         user_account = yield self.mk_user(self.ed.vumi_api, u'dbacct')
         yield user_account.save()
 
-        user_api = VumiUserApi(self.ed.vumi_api, user_account.key)
+        user_api = self.ed.vumi_api.get_user_api(user_account.key)
         yield user_api.api.declare_tags([("pool", "tag1")])
         yield user_api.api.set_pool_metadata("pool", {
             "transport_type": "other",
@@ -379,7 +379,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         self._persist_redis_managers.append(self.vumi_api.redis)
 
         self.account = yield self.mk_user(self.vumi_api, u'user')
-        self.user_api = VumiUserApi(self.vumi_api, self.account.key)
+        self.user_api = self.vumi_api.get_user_api(self.account.key)
         self.conversation = (
             yield self.user_api.conversation_store.new_conversation(
                 u'bulk_message', u'subject', u'message'))
