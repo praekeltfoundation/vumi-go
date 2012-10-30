@@ -2,11 +2,10 @@
 
 """Tests for go.vumitools.bulk_send_application"""
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
 from vumi.middleware.tagger import TaggingMiddleware
 
-from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.subscription.vumi_app import SubscriptionApplication
 
@@ -27,7 +26,7 @@ class TestSubscriptionApplication(AppWorkerTestCase):
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
         # Enable search for the contact store
         yield self.user_api.contact_store.contacts.enable_search()
 
@@ -45,7 +44,9 @@ class TestSubscriptionApplication(AppWorkerTestCase):
             'operation': operation,
             'reply_copy': reply_copy,
             }
-        self.conv = yield self.create_conversation(metadata={
+        self.conv = yield self.create_conversation(
+            delivery_tag_pool=u'pool', delivery_class=self.transport_type,
+            metadata={
                 'handlers': [
                     mkhandler('foo', 'foo', 'subscribe', 'Subscribed to foo.'),
                     mkhandler('bar', 'bar', 'subscribe', 'Subscribed to bar.'),
@@ -53,15 +54,6 @@ class TestSubscriptionApplication(AppWorkerTestCase):
                     mkhandler('stop', 'bar', 'unsubscribe', 'Unsubscribed.'),
                     ]})
         yield self.start_conversation(self.conv)
-
-    @inlineCallbacks
-    def create_conversation(self, **kw):
-        conversation = yield self.user_api.new_conversation(
-            u'subscription', u'Subject', u'Message',
-            delivery_tag_pool=u'pool', delivery_class=self.transport_type,
-            **kw)
-        yield conversation.save()
-        returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
     def assert_subscription(self, contact, campaign_name, value):
