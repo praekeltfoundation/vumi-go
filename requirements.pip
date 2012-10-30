@@ -1,7 +1,7 @@
 Django==1.4.2
 django-nose==1.0
 nose==1.1.2
-gunicorn==0.13.3
+gunicorn==0.15.0
 pep8==0.6.1
 pyflakes==0.4.0
 supervisor==3.0a10
