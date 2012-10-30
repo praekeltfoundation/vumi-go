@@ -31,7 +31,7 @@ class MamaPollApplication(MultiPollApplication):
 
 class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
 
-    worker_name = None
+    worker_name = 'multi_survey_application'
 
     def validate_config(self):
         self._go_validate_config()

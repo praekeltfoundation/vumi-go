@@ -2,12 +2,11 @@
 
 """Tests for go.vumitools.bulk_send_application"""
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import Clock
 
 from vumi.message import TransportUserMessage
 
-from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.window_manager import WindowManager
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
@@ -30,11 +29,11 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
+        self.message_store = self.vumi_api.message_store
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.message_store = self.vumi_api.mdb
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         yield self.user_api.api.declare_tags([("pool", "tag1"),
                                               ("pool", "tag2")])
@@ -189,10 +188,8 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_collect_metrics(self):
-        conv = yield self.user_api.new_conversation(
-            u'bulk_message', u'Subject', u'Message', delivery_tag_pool=u"pool",
-            delivery_class=u'sms')
-        conv = self.user_api.wrap_conversation(conv)
+        conv = yield self.create_conversation(
+            delivery_tag_pool=u'pool', delivery_class=u'sms')
         yield self.start_conversation(conv)
         [batch_id] = conv.get_batch_keys()
 
