@@ -11,7 +11,6 @@ from vumi.message import TransportUserMessage
 from vumi.tests.utils import LogCatcher
 
 from go.apps.surveys.vumi_app import SurveyApplication
-from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 
 
@@ -19,7 +18,6 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     application_class = SurveyApplication
     transport_type = u'sms'
-    worker_name = 'survey_application'
 
     default_questions = [{
         'copy': 'What is your favorite color? 1. Red 2. Yellow '
@@ -51,7 +49,6 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         # Setup the SurveyApplication
         self.app = yield self.get_application({
-                'worker_name': 'survey_application',
                 'vxpolls': {'prefix': 'test.'},
                 })
 
@@ -60,7 +57,7 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         # Add tags
         self.vumi_api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
@@ -84,8 +81,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         # Make the contact store searchable
         yield self.user_api.contact_store.contacts.enable_search()
 
-        self.conversation = yield self.create_conversation(u'survey',
-            u'Subject', u'Message',
+        self.conversation = yield self.create_conversation(
             delivery_tag_pool=u'pool',
             delivery_class=self.transport_type)
         self.conversation.add_group(self.group)
@@ -106,13 +102,6 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     def get_contact(self, contact_key):
         return self.user_api.contact_store.get_contact_by_key(contact_key)
-
-    @inlineCallbacks
-    def create_conversation(self, conversation_type, subject, message, **kw):
-        conversation = yield self.user_api.new_conversation(
-            conversation_type, subject, message, **kw)
-        yield conversation.save()
-        returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
     def reply_to(self, msg, content, continue_session=True, **kw):
@@ -142,7 +131,6 @@ class TestSurveyApplication(AppWorkerTestCase):
         config.update({
             'poll_id': poll_id,
             'transport_name': self.transport_name,
-            'worker_name': 'survey_application',
             'questions': questions
         })
 

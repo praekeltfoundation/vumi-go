@@ -6,7 +6,7 @@ from twisted.internet.task import LoopingCall
 from vumi import log
 from vumi.service import Worker
 
-from go.vumitools.api import VumiApi, VumiUserApi, VumiApiCommand
+from go.vumitools.api import VumiApi, VumiApiCommand
 
 
 class GoMetricsWorker(Worker):
@@ -62,7 +62,7 @@ class GoMetricsWorker(Worker):
         return self.redis.smembers('metrics_accounts')
 
     def find_conversations_for_account(self, account_key):
-        user_api = VumiUserApi(self.vumi_api, account_key)
+        user_api = self.vumi_api.get_user_api(account_key)
         return user_api.running_conversations()
 
     def send_metrics_command(self, conversation):
