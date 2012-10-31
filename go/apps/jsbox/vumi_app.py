@@ -1,4 +1,4 @@
-# -*- test-case-name: go.apps.bulk_message.tests.test_vumi_app -*-
+# -*- test-case-name: go.apps.jsbox.tests.test_vumi_app -*-
 # -*- coding: utf-8 -*-
 
 """Vumi application worker for the vumitools API."""
@@ -6,11 +6,12 @@
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.application.sandbox import Sandbox, SandboxResource, SandboxCommand
+from vumi.persist.txredis_manager import TxRedisManager
 from vumi import log
 
-from go.vumitools.api import VumiApiCommand, get_redis
-from go.vumitools.middleware import (DebitAccountMiddleware,
-                                     LookupAccountMiddleware)
+from go.vumitools.api import VumiApiCommand
+from go.vumitools.app_worker import GoApplicationMixin
+from go.vumitools.middleware import DebitAccountMiddleware
 
 
 class JsSandboxResource(SandboxResource):
@@ -20,7 +21,7 @@ class JsSandboxResource(SandboxResource):
                                         javascript=javascript))
 
 
-class JsBoxApplication(Sandbox):
+class JsBoxApplication(GoApplicationMixin, Sandbox):
     """
     Application that processes message in a Node.js Javascript Sandbox.
 
@@ -41,36 +42,22 @@ class JsBoxApplication(Sandbox):
 
     def validate_config(self):
         super(JsBoxApplication, self).validate_config()
-        self.resources.add_resource("_js", JsSandboxResource())
-        # worker name
-        self.worker_name = self.config.get('worker_name', self.worker_name)
-        # javascript redis store
-        self.r_server = get_redis(self.config)
-        self.r_prefix = self.worker_name
-        # api worker
-        self.api_routing_config = VumiApiCommand.default_routing_config()
-        self.api_routing_config.update(self.config.get('api_routing', {}))
-        self.control_consumer = None
+        self._go_validate_config()
+        self.resources.add_resource("_js", JsSandboxResource(self.worker_name,
+            self, self.config))
 
     @inlineCallbacks
     def setup_application(self):
         yield super(JsBoxApplication, self).setup_application()
-        self.control_consumer = yield self.consume(
-            '%s.control' % (self.worker_name,),
-            self.consume_control_command,
-            exchange_name=self.api_routing_config['exchange'],
-            exchange_type=self.api_routing_config['exchange_type'],
-            message_class=VumiApiCommand)
+        yield self._go_setup_application()
 
     @inlineCallbacks
     def teardown_application(self):
         yield super(JsBoxApplication, self).teardown_application()
-        if self.control_consumer is not None:
-            yield self.control_consumer.stop()
-            self.control_consumer = None
+        yield self._go_teardown_application()
 
     def javascript_for_sandbox(self, sandbox_id):
-        return self.r_server.get("#".join([self.r_prefix, sandbox_id]))
+        return self.redis.get("#".join([self.r_prefix, sandbox_id]))
 
     # override selecting a sandbox id to retrieve id based on account name
 
