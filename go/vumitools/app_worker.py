@@ -40,6 +40,7 @@ class GoApplicationMixin(object):
         self.vumi_api = yield VumiApi.from_config_async(
             self.config, self._amqp_client)
         self._metrics_conversations = set()
+        self._cache_recon_conversations = set()
 
         # In case we need these.
         self.redis = self.vumi_api.redis
@@ -92,20 +93,6 @@ class GoApplicationMixin(object):
     def process_command_collect_metrics(self, conversation_key,
                                         user_account_key):
         key_tuple = (conversation_key, user_account_key)
-        if key_tuple in self._cache_recon_conversations:
-            log.info("Ignoring conversation %s for user %s because the "
-                     "previous recon run is still going." % (
-                        conversation_key, user_account_key))
-            return
-        self._cache_recon_conversations.add(key_tuple)
-        user_api = self.get_user_api(user_account_key)
-        yield self.recon_cache(user_api, conversation_key)
-        self._cache_recon_conversations.remove(key_tuple)
-
-    @inlineCallbacks
-    def process_command_reconcile_cache(self, conversation_key,
-                                        user_account_key):
-        key_tuple = (conversation_key, user_account_key)
         if key_tuple in self._metrics_conversations:
             log.info("Ignoring conversation %s for user %s because the "
                      "previous collection run is still going." % (
@@ -113,8 +100,22 @@ class GoApplicationMixin(object):
             return
         self._metrics_conversations.add(key_tuple)
         user_api = self.get_user_api(user_account_key)
-        yield self.reconcile_cache(user_api, conversation_key)
+        yield self.collect_metrics(user_api, conversation_key)
         self._metrics_conversations.remove(key_tuple)
+
+    @inlineCallbacks
+    def process_command_reconcile_cache(self, conversation_key,
+                                        user_account_key):
+        key_tuple = (conversation_key, user_account_key)
+        if key_tuple in self._cache_recon_conversations:
+            log.info("Ignoring conversation %s for user %s because the "
+                     "previous cache recon run is still going." % (
+                        conversation_key, user_account_key))
+            return
+        self._cache_recon_conversations.add(key_tuple)
+        user_api = self.get_user_api(user_account_key)
+        yield self.reconcile_cache(user_api, conversation_key)
+        self._cache_recon_conversations.remove(key_tuple)
 
     def process_unknown_cmd(self, method_name, *args, **kwargs):
         log.error("Unknown vumi API command: %s(%s, %s)" % (
@@ -144,6 +145,7 @@ class GoApplicationMixin(object):
             log.error('Conversation does not exist: %s' % (conversation_key,))
             return
 
+        log.msg('Reconciling cache for %s' % (conversation_key,))
         message_store = user_api.api.mdb
         for batch_key in conv.get_batch_keys():
             if (yield message_store.needs_reconciliation(batch_key, delta)):
