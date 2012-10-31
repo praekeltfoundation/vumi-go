@@ -62,7 +62,8 @@ class JsBoxApplication(GoApplicationMixin, Sandbox):
     # override selecting a sandbox id to retrieve id based on account name
 
     def _account_for_message(self, msg):
-        return LookupAccountMiddleware.map_message_to_account_key(msg)
+        metadata = self.get_go_metadata(msg)
+        return metadata.get_account_key()
 
     def sandbox_id_for_message(self, msg):
         """Return the account  as the sandbox id."""
@@ -71,30 +72,6 @@ class JsBoxApplication(GoApplicationMixin, Sandbox):
     def sandbox_id_for_event(self, event):
         """Return the account  as the sandbox id."""
         return self._account_for_message(event)
-
-    # Vumi API command processing
-    # TODO: refactor this out into common code somehow
-
-    def consume_control_command(self, command_message):
-        """
-        Handle a VumiApiCommand message that has arrived.
-
-        :type command_message: VumiApiCommand
-        :param command_message:
-            The command message received for this application.
-        """
-        cmd_method_name = 'process_command_%(command)s' % command_message
-        args = command_message['args']
-        kwargs = command_message['kwargs']
-        cmd_method = getattr(self, cmd_method_name, None)
-        if cmd_method:
-            return cmd_method(*args, **kwargs)
-        else:
-            return self.process_unknown_cmd(cmd_method_name, )
-
-    def process_unknown_cmd(self, method_name, *args, **kwargs):
-        log.error("Unknown vumi API command: %s(%s, %s)" % (
-            method_name, args, kwargs))
 
     @inlineCallbacks
     def process_command_start(self, batch_id, conversation_type,
