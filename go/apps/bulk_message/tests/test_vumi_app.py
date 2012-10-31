@@ -256,16 +256,6 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     def test_reconcile_cache(self):
         conv = yield self.create_conversation(
             delivery_tag_pool=u'pool', delivery_class=u'sms')
-        yield self.start_conversation(conv)
-        [batch_id] = conv.get_batch_keys()
-
-        mkid = TransportUserMessage.generate_id
-        yield self.user_api.api.mdb.add_outbound_message(
-            self.mkmsg_out("out 1", message_id=mkid()), batch_id=batch_id)
-        yield self.user_api.api.mdb.add_outbound_message(
-            self.mkmsg_out("out 2", message_id=mkid()), batch_id=batch_id)
-        yield self.user_api.api.mdb.add_inbound_message(
-            self.mkmsg_in("in 2", message_id=mkid()), batch_id=batch_id)
 
         with LogCatcher() as logger:
             yield self.dispatch_command(
