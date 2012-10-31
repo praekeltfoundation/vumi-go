@@ -11,7 +11,7 @@ from vumi.utils import load_class_by_string
 from vumi import log
 from vumi.middleware.tagger import TaggingMiddleware
 
-from go.vumitools.api import VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent
+from go.vumitools.api import VumiApi, VumiApiCommand, VumiApiEvent
 from go.vumitools.middleware import OptOutMiddleware
 
 
@@ -176,7 +176,7 @@ class GoMessageMetadata(object):
         if not account_key:
             return
 
-        user_api = VumiUserApi(self.vumi_api, account_key)
+        user_api = self.vumi_api.get_user_api(account_key)
         conv_store = user_api.conversation_store
         self._store_objects['conv_store'] = conv_store
         returnValue(conv_store)
@@ -269,7 +269,8 @@ class EventDispatcher(ApplicationWorker):
         self.handlers = {}
 
         self.api_command_publisher = yield self.publish_to('vumi.api')
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
+        self.vumi_api = yield VumiApi.from_config_async(
+            self.config, self._amqp_client)
         self.account_config = {}
 
         for name, handler_class in self.handler_config.items():
@@ -375,6 +376,8 @@ class GoApplicationRouter(BaseDispatchRouter):
         user_message_id = event.get('user_message_id')
         if user_message_id is None:
             log.error('Received event without user_message_id: %s' % (event,))
+            return
+
         message = yield self.vumi_api.mdb.get_outbound_message(user_message_id)
         if message is None:
             log.error('Unable to find message for event: %s' % (event,))

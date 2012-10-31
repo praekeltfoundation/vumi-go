@@ -7,16 +7,12 @@ from go.apps.tests.base import DjangoGoApplicationTestCase
 
 class MultiSurveyTestCase(DjangoGoApplicationTestCase):
 
-    fixtures = ['test_user']
-
     def setUp(self):
         super(MultiSurveyTestCase, self).setUp()
+        self.setup_riak_fixtures()
         self.client = Client()
         self.client.login(username='username', password='password')
-
         self.patch_settings(VXPOLLS_REDIS_CONFIG={'FAKE_REDIS': 'sure'})
-
-        self.setup_riak_fixtures()
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)

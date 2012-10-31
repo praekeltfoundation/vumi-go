@@ -49,9 +49,9 @@ class Command(BaseCommand):
             enable = options['enable']
             disable = options['disable']
 
-            if enable and disable:
-                raise CommandError('Please provide specify --enable or '
-                    '--disable, not both.')
+            if (enable and disable) or not (enable or disable):
+                raise CommandError(
+                    'Please specify either --enable or --disable.')
 
             user = User.objects.get(username=email_address)
             account = user.get_profile().get_user_account()

@@ -45,8 +45,9 @@ class CSVParserTestCase(ParserTestCase):
     def test_contacts_parsing(self):
         csv_file = self.fixture('sample-contacts-with-headers.csv')
         fp = default_storage.open(csv_file, 'rU')
-        contacts = list(self.parser.parse_file(fp,
-            ['name', 'surname', 'msisdn'], has_header=True))
+        contacts = list(self.parser.parse_file(fp, zip(
+            ['name', 'surname', 'msisdn'],
+            ['string', 'string', 'msisdn_za']), has_header=True))
         self.assertEqual(contacts, [
             {
                 'msisdn': '+27761234561',
@@ -87,9 +88,10 @@ class XLSParserTestCase(ParserTestCase):
 
     def test_contacts_parsing(self):
         xls_file = self.fixture('sample-contacts-with-headers.xlsx')
-        contacts = list(self.parser.parse_file(xls_file,
-                        ['name', 'surname', 'msisdn'], has_header=True))
+        contacts = list(self.parser.parse_file(xls_file, zip(
+            ['name', 'surname', 'msisdn'],
+            ['string', 'integer', 'number']), has_header=True))
         self.assertEqual(contacts[0], {
-                'msisdn': 1.0,
-                'surname': 2.0,
+                'msisdn': '1.0',
+                'surname': '2',
                 'name': 'xxx'})

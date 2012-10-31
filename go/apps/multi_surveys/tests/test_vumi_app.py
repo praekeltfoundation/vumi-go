@@ -9,8 +9,6 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.message import TransportUserMessage
 from vumi.tests.utils import LogCatcher
 
-from go.vumitools.api_worker import CommandDispatcher
-from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.multi_surveys.vumi_app import MultiSurveyApplication
 
@@ -43,25 +41,17 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
 
         # Setup the SurveyApplication
         self.app = yield self.get_application({
-                'worker_name': 'multi_survey_application',
                 'vxpolls': {'prefix': 'test.'},
                 'is_demo': False,
                 })
-
-        # Setup the command dispatcher so we cand send it commands
-        self.cmd_dispatcher = yield self.get_application({
-            'transport_name': 'cmd_dispatcher',
-            'worker_names': ['multi_survey_application'],
-            }, cls=CommandDispatcher)
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
         self._persist_riak_managers.append(self.vumi_api.manager)
 
         # Create a test user account
-        self.user_account = yield self.vumi_api.account_store.new_user(
-            u'testuser')
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
+        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         # Add tags
         self.user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
@@ -82,8 +72,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         # Create a group and a conversation
         self.group = yield self.create_group(u'test group')
 
-        self.conversation = yield self.create_conversation(u'multi_survey',
-            u'Subject', u'Message',
+        self.conversation = yield self.create_conversation(
             delivery_tag_pool=u'pool',
             delivery_class=self.transport_type)
         self.conversation.add_group(self.group)
@@ -101,13 +90,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             surname=surname, **kw)
         yield contact.save()
         returnValue(contact)
-
-    @inlineCallbacks
-    def create_conversation(self, conversation_type, subject, message, **kw):
-        conversation = yield self.user_api.new_conversation(
-            conversation_type, subject, message, **kw)
-        yield conversation.save()
-        returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
     def reply_to(self, msg, content, continue_session=True, **kw):
@@ -137,7 +119,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             config.update({
                 'poll_id': poll_id,
                 'transport_name': self.transport_name,
-                'worker_name': 'multi_survey_application',
                 'questions': questions,
                 })
             config.setdefault('survey_completed_response',
@@ -163,7 +144,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             surname=u'Contact', msisdn=u'27831234568', groups=[self.group])
         self.create_survey(self.conversation)
         with LogCatcher() as log:
-            yield self.conversation.start()
+            yield self.start_conversation(self.conversation)
             self.assertEqual(log.errors, [])
 
         [msg1, msg2] = (yield self.wait_for_dispatched_messages(2))
@@ -214,7 +195,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         yield self.create_contact(u'First', u'Contact',
             msisdn=u'27831234567', groups=[self.group])
         self.create_survey(self.conversation)
-        yield self.conversation.start()
+        yield self.start_conversation(self.conversation)
         yield self.complete_survey(self.default_polls)
 
     @inlineCallbacks
@@ -222,7 +203,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         yield self.create_contact(u'First', u'Contact',
             msisdn=u'27831234567', groups=[self.group])
         self.create_survey(self.conversation)
-        yield self.conversation.start()
+        yield self.start_conversation(self.conversation)
         start_at = 0
         for i in range(1):
             msgs = yield self.complete_survey(self.default_polls,
@@ -244,7 +225,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         yield self.create_contact(u'First', u'Contact',
             msisdn=u'27831234567', groups=[self.group])
         self.create_survey(self.conversation)
-        yield self.conversation.start()
+        yield self.start_conversation(self.conversation)
         start_at = 0
         for i in range(3):
             msgs = yield self.complete_survey(self.default_polls,

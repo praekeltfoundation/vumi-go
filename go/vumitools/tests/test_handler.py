@@ -1,6 +1,6 @@
 from go.vumitools.api_worker import EventDispatcher
 from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.api import VumiApiEvent, VumiUserApi
+from go.vumitools.api import VumiApiEvent
 
 from twisted.internet.defer import inlineCallbacks
 
@@ -22,8 +22,8 @@ class EventHandlerTestCase(AppWorkerTestCase):
 
         self.event_dispatcher = yield self.get_application(app_config)
         self.vumi_api = self.event_dispatcher.vumi_api
-        self.account = yield self.vumi_api.account_store.new_user(u'acct')
-        self.user_api = VumiUserApi(self.vumi_api, self.account.key)
+        self.account = yield self.mk_user(self.vumi_api, u'acct')
+        self.user_api = self.vumi_api.get_user_api(self.account.key)
         self.conversation = yield self.user_api.new_conversation(
             u'survey', u'subject', u'message',
             delivery_tag_pool=u'pool',

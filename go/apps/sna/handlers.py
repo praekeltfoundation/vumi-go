@@ -56,7 +56,7 @@ class USSDOptOutHandler(EventHandler):
         contact = yield contact_store.contact_for_addr('ussd', from_addr)
         if contact:
             opted_out = contact.extra['opted_out']
-            if opted_out is not None:
+            if opted_out is not None and opted_out.isdigit():
                 if int(opted_out) > 1:
                     yield oo_store.new_opt_out('msisdn', from_addr, {
                         'message_id': message_id,

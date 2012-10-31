@@ -57,28 +57,38 @@ class InsufficientCredit(DebitAccountError):
 
 class OptOutMiddleware(BaseMiddleware):
 
+    @inlineCallbacks
     def setup_middleware(self):
-        self.keyword_separator = self.config.get('keyword_separator', ' ')
+        from go.vumitools.api import VumiApi
+        self.vumi_api = yield VumiApi.from_config_async(self.config)
+
         self.case_sensitive = self.config.get('case_sensitive', False)
         keywords = self.config.get('optout_keywords', [])
-        self.optout_keywords = set([self.casing(word)
-                                        for word in keywords])
+        self.optout_keywords = set([self.casing(word) for word in keywords])
 
     def casing(self, word):
         if not self.case_sensitive:
             return word.lower()
         return word
 
+    @inlineCallbacks
     def handle_inbound(self, message, endpoint):
+        optout_disabled = False
+        tag = TaggingMiddleware.map_msg_to_tag(message)
+        if tag is not None:
+            tagpool_metadata = yield self.vumi_api.tpm.get_metadata(tag[0])
+            optout_disabled = tagpool_metadata.get(
+                'disable_global_opt_out', False)
         keyword = (message['content'] or '').strip()
         helper_metadata = message['helper_metadata']
-        optout_metadata = helper_metadata.setdefault('optout', {})
-        if self.casing(keyword) in self.optout_keywords:
+        optout_metadata = helper_metadata.setdefault(
+            'optout', {'optout': False})
+
+        if (not optout_disabled
+                and self.casing(keyword) in self.optout_keywords):
             optout_metadata['optout'] = True
             optout_metadata['optout_keyword'] = self.casing(keyword)
-        else:
-            optout_metadata['optout'] = False
-        return message
+        returnValue(message)
 
     @staticmethod
     def is_optout_message(message):
@@ -158,6 +168,7 @@ class DebitAccountMiddleware(TransportMiddleware):
                                      (user_account_key, credits_per_message))
         return msg
 
+
 class MetricsMiddleware(BaseMiddleware):
     """
     Middleware that publishes metrics on messages flowing through.
@@ -168,9 +179,10 @@ class MetricsMiddleware(BaseMiddleware):
         The name of the metrics publisher, this is used for the MetricManager
         publisher and all metric names will be prefixed with it.
     :param str count_suffix:
-        Defaults to 'count'. This is the suffix appended to all `transport_name`
-        based counters. If a message is received on endpoint 'foo', counters
-        are published on '<manager_name>.foo.inbound.<count_suffix>'
+        Defaults to 'count'. This is the suffix appended to all
+        `transport_name` based counters. If a message is received on endpoint
+        'foo', counters are published on
+        '<manager_name>.foo.inbound.<count_suffix>'
     :param str response_time_suffix:
         Defaults to 'response_time'. This is the suffix appended to all
         `transport_name` based average response time metrics. If a message is
@@ -182,8 +194,8 @@ class MetricsMiddleware(BaseMiddleware):
     :param str op_mode:
         What mode to operate in, options are `passive` or `active`.
         Defaults to passive.
-        *passive*:  assumes the middleware endpoints are to be used as the names
-                    for metrics publishing.
+        *passive*:  assumes the middleware endpoints are to be used as the
+                    names for metrics publishing.
         *active*:   assumes that the individual messages are to be inspected
                     for their `transport_name` values.
 

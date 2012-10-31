@@ -4,7 +4,6 @@
 
 import os
 from contextlib import contextmanager
-import json
 
 from twisted.python.monkey import MonkeyPatcher
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -158,6 +157,9 @@ class CeleryTestMixIn(object):
 
 
 class GoPersistenceMixin(PersistenceMixin):
+    def _persist_setUp(self):
+        self._users_created = 0
+        return super(GoPersistenceMixin, self)._persist_setUp()
 
     @PersistenceMixin.sync_or_async
     def _clear_bucket_properties(self, account_keys, manager):
@@ -193,42 +195,45 @@ class GoPersistenceMixin(PersistenceMixin):
         # don't go away.
         yield self._clear_bucket_properties(accounts, manager)
 
+    def mk_config(self, config):
+        config = super(GoPersistenceMixin, self).mk_config(config)
+        config.setdefault('metrics_prefix', type(self).__module__)
+        return config
 
-def dummy_consumer_factory_factory_factory(publish_func):
-    def dummy_consumer_factory_factory():
-        dummy_consumer_factory = DummyConsumerFactory()
-        dummy_consumer_factory.publish = publish_func
-        return dummy_consumer_factory
-    return dummy_consumer_factory_factory
+    @PersistenceMixin.sync_or_async
+    def mk_user(self, vumi_api, username):
+        key = "test-%s-user" % (self._users_created,)
+        self._users_created += 1
+        user = vumi_api.account_store.users(key, username=username)
+        yield user.save()
+        returnValue(user)
 
 
-class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
-                        ApplicationTestCase):
-    override_dummy_consumer = True
+class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
 
-    @inlineCallbacks
-    def setUp(self):
-        yield super(AppWorkerTestCase, self).setUp()
-        if self.override_dummy_consumer:
-            self.VUMI_COMMANDS_CONSUMER = (
-                dummy_consumer_factory_factory_factory(self.publish_command))
-        self.setup_celery_for_tests()
+    use_riak = True
 
-    @inlineCallbacks
-    def tearDown(self):
-        self.restore_celery()
-        yield super(AppWorkerTestCase, self).tearDown()
+    def _worker_name(self):
+        return self.application_class.worker_name
 
-    def publish_command(self, cmd_dict):
-        data = json.dumps(cmd_dict)
-        self._amqp.publish_raw('vumi', 'vumi.api', data)
+    def _conversation_type(self):
+        # This is a guess based on worker_name.
+        # We need a better way to do this.
+        return self._worker_name().rpartition('_')[0].decode('utf-8')
+
+    def _command_rkey(self):
+        return "%s.control" % (self._worker_name(),)
+
+    def dispatch_command(self, command, *args, **kw):
+        cmd = VumiApiCommand.command(
+            self._worker_name(), command, *args, **kw)
+        return self._dispatch(cmd, self._command_rkey())
 
     def get_dispatcher_commands(self):
         return self._amqp.get_messages('vumi', 'vumi.api')
 
-    def get_bulk_message_commands(self):
-        return self._amqp.get_messages('vumi',
-                                       "%s.control" % self.app.worker_name)
+    def get_app_message_commands(self):
+        return self._amqp.get_messages('vumi', self._command_rkey())
 
     def get_dispatched_app_events(self):
         return self._amqp.get_messages('vumi', 'vumi.event')
@@ -247,3 +252,32 @@ class AppWorkerTestCase(GoPersistenceMixin, CeleryTestMixIn,
             self._persist_riak_managers.append(worker.vumi_api.manager)
             self._persist_redis_managers.append(worker.vumi_api.redis)
         returnValue(worker)
+
+    @inlineCallbacks
+    def create_conversation(self, **kw):
+        conv_type = kw.pop('conversation_type', self._conversation_type())
+        subject = kw.pop('subject', u'Subject')
+        message = kw.pop('message', u'Message')
+        conversation = yield self.user_api.new_conversation(
+            conv_type, subject, message, **kw)
+        returnValue(self.user_api.wrap_conversation(conversation))
+
+    @inlineCallbacks
+    def start_conversation(self, conversation, *args, **kwargs):
+        yield conversation.start(*args, **kwargs)
+        cmd = self.get_dispatcher_commands()[-1].payload
+        yield self.dispatch_command(
+            cmd['command'], *cmd['args'], **cmd['kwargs'])
+
+    def poll_metrics(self, assert_prefix=None, app=None):
+        if app is None:
+            app = self.app
+        values = {}
+        if assert_prefix is not None:
+            assert_prefix += '.'
+        for name, metric in app.metrics._metrics_lookup.items():
+            if assert_prefix is not None:
+                self.assertTrue(name.startswith(assert_prefix))
+                name = name[len(assert_prefix):]
+            values[name] = [v for _, v in metric.poll()]
+        return values

@@ -11,8 +11,6 @@ from vumi.message import TransportUserMessage
 from vumi.tests.utils import LogCatcher
 
 from go.apps.surveys.vumi_app import SurveyApplication
-from go.vumitools.api_worker import CommandDispatcher
-from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 
 
@@ -20,6 +18,7 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     application_class = SurveyApplication
     transport_type = u'sms'
+
     default_questions = [{
         'copy': 'What is your favorite color? 1. Red 2. Yellow '
                 '3. Blue',
@@ -50,23 +49,15 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         # Setup the SurveyApplication
         self.app = yield self.get_application({
-                'worker_name': 'survey_application',
                 'vxpolls': {'prefix': 'test.'},
                 })
-
-        # Setup the command dispatcher so we cand send it commands
-        self.cmd_dispatcher = yield self.get_application({
-            'transport_name': 'cmd_dispatcher',
-            'worker_names': ['survey_application'],
-            }, cls=CommandDispatcher)
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
 
         # Create a test user account
-        self.user_account = yield self.vumi_api.account_store.new_user(
-            u'testuser')
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
+        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         # Add tags
         self.vumi_api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
@@ -90,8 +81,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         # Make the contact store searchable
         yield self.user_api.contact_store.contacts.enable_search()
 
-        self.conversation = yield self.create_conversation(u'survey',
-            u'Subject', u'Message',
+        self.conversation = yield self.create_conversation(
             delivery_tag_pool=u'pool',
             delivery_class=self.transport_type)
         self.conversation.add_group(self.group)
@@ -112,13 +102,6 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     def get_contact(self, contact_key):
         return self.user_api.contact_store.get_contact_by_key(contact_key)
-
-    @inlineCallbacks
-    def create_conversation(self, conversation_type, subject, message, **kw):
-        conversation = yield self.user_api.new_conversation(
-            conversation_type, subject, message, **kw)
-        yield conversation.save()
-        returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
     def reply_to(self, msg, content, continue_session=True, **kw):
@@ -148,7 +131,6 @@ class TestSurveyApplication(AppWorkerTestCase):
         config.update({
             'poll_id': poll_id,
             'transport_name': self.transport_name,
-            'worker_name': 'survey_application',
             'questions': questions
         })
 
@@ -179,7 +161,7 @@ class TestSurveyApplication(AppWorkerTestCase):
             surname=u'Contact', msisdn=u'+27831234568', groups=[self.group])
         yield self.create_survey(self.conversation)
         with LogCatcher() as log:
-            yield self.conversation.start()
+            yield self.start_conversation(self.conversation)
             self.assertEqual(log.errors, [])
 
         yield pcs_d
@@ -201,7 +183,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         yield contact.save()
 
         self.create_survey(self.conversation)
-        yield self.conversation.start()
+        yield self.start_conversation(self.conversation)
         yield self.submit_answers(self.default_questions,
             answers=[
                 '2',  # Yellow, skips the second question because of the check
@@ -222,8 +204,15 @@ class TestSurveyApplication(AppWorkerTestCase):
         clone = participant.copy()
         clone['labels'] = json.loads(participant['labels'])
         clone['polls'] = json.loads(participant['polls'])
-        clone['updated_at'] = int(participant['updated_at'])
+        clone.pop('updated_at')
         return clone
+
+    def assert_participants_equalish(self, participant1, participant2):
+        self.assertEqual(
+            self._reformat_participant_for_comparison(participant1),
+            self._reformat_participant_for_comparison(participant2))
+        self.assertAlmostEqual(
+            participant1['updated_at'], participant2['updated_at'], 2)
 
     @inlineCallbacks
     def complete_survey(self, questions, start_at=0):
@@ -264,9 +253,8 @@ class TestSurveyApplication(AppWorkerTestCase):
             'message_id': last_sent_msg['message_id'],
         })
 
-        self.assertEqual(
-            self._reformat_participant_for_comparison(event_participant),
-            self._reformat_participant_for_comparison(participant.dump()))
+        self.assert_participants_equalish(
+            event_participant, participant.dump())
 
         returnValue(last_msg)
 
@@ -281,7 +269,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         yield self.create_contact(u'First', u'Contact',
             msisdn=u'+27831234567', groups=[self.group])
         self.create_survey(self.conversation)
-        yield self.conversation.start()
+        yield self.start_conversation(self.conversation)
         yield self.complete_survey(self.default_questions)
 
     @inlineCallbacks
@@ -289,7 +277,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         contact = yield self.create_contact(u'First', u'Contact',
             msisdn=u'+27831234567', groups=[self.group])
         self.create_survey(self.conversation)
-        yield self.conversation.start()
+        yield self.start_conversation(self.conversation)
         yield self.complete_survey(self.default_questions)
         # This participant should be empty
         poll_id = 'poll-%s' % (self.conversation.key,)

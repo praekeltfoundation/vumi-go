@@ -6,6 +6,7 @@ from celery.task import task
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from django.utils.safestring import mark_safe
 
 from go.vumitools.api import VumiUserApi
 from go.base.models import UserProfile
@@ -20,7 +21,7 @@ def delete_group(account_key, group_key):
     #       the group, new contacts could have been added before the group
     #       has been deleted. If this happens those contacts will have
     #       secondary indexes in Riak pointing to a non-existent Group.
-    api = VumiUserApi.from_config(account_key, settings.VUMI_API_CONFIG)
+    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
     for contact in group.backlinks.contacts():
@@ -31,7 +32,7 @@ def delete_group(account_key, group_key):
 
 @task(ignore_result=True)
 def delete_group_contacts(account_key, group_key):
-    api = VumiUserApi.from_config(account_key, settings.VUMI_API_CONFIG)
+    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
     contacts = contact_store.get_contacts_for_group(group)
@@ -41,8 +42,8 @@ def delete_group_contacts(account_key, group_key):
 
 @task(ignore_result=True)
 def import_contacts_file(account_key, group_key, file_name, file_path,
-                            field_names, has_header):
-    api = VumiUserApi.from_config(account_key, settings.VUMI_API_CONFIG)
+                            fields, has_header):
+    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
 
@@ -55,7 +56,7 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
     try:
         extension, parser = ContactFileParser.get_parser(file_name)
 
-        contact_dictionaries = parser.parse_file(file_path, field_names,
+        contact_dictionaries = parser.parse_file(file_path, fields,
             has_header)
         for counter, contact_dictionary in enumerate(contact_dictionaries):
 
@@ -88,11 +89,12 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
                 'account_key': account_key,
                 'file_name': file_name,
                 'file_path': file_path,
-                'field_names': field_names,
+                'fields': fields,
                 'has_header': has_header,
                 'exception_type': exc_type,
-                'exception_value': exc_value,
-                'exception_traceback': traceback.format_tb(exc_traceback),
+                'exception_value': mark_safe(exc_value),
+                'exception_traceback': mark_safe(
+                    traceback.format_tb(exc_traceback)),
             }), settings.DEFAULT_FROM_EMAIL, [
                 user_profile.user.email,
                 'support+contact-import@vumi.org',
