@@ -5,7 +5,7 @@ from vumi.message import TransportMessage
 from vumi.application.tests.test_base import DummyApplicationWorker
 
 from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.api import VumiApi, VumiUserApi
+from go.vumitools.api import VumiApi
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.exceptions import ConversationSendError
 
@@ -27,7 +27,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             amqp_client=self.worker._amqp_client)
         self.mdb = self.api.mdb
         self.user = yield self.mk_user(self.api, u'username')
-        self.user_api = yield VumiUserApi(self.api, self.user.key)
+        self.user_api = self.api.get_user_api(self.user.key)
         yield self.declare_tags()
 
         raw_conv = yield self.user_api.conversation_store.new_conversation(

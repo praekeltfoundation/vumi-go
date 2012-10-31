@@ -9,7 +9,6 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.message import TransportUserMessage
 from vumi.tests.utils import LogCatcher
 
-from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.multi_surveys.vumi_app import MultiSurveyApplication
 
@@ -18,7 +17,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
 
     application_class = MultiSurveyApplication
     transport_type = u'sms'
-    worker_name = 'multi_survey_application'
 
     default_polls = {
         0: [{
@@ -43,7 +41,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
 
         # Setup the SurveyApplication
         self.app = yield self.get_application({
-                'worker_name': 'multi_survey_application',
                 'vxpolls': {'prefix': 'test.'},
                 'is_demo': False,
                 })
@@ -54,7 +51,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         # Add tags
         self.user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
@@ -75,8 +72,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         # Create a group and a conversation
         self.group = yield self.create_group(u'test group')
 
-        self.conversation = yield self.create_conversation(u'multi_survey',
-            u'Subject', u'Message',
+        self.conversation = yield self.create_conversation(
             delivery_tag_pool=u'pool',
             delivery_class=self.transport_type)
         self.conversation.add_group(self.group)
@@ -94,13 +90,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             surname=surname, **kw)
         yield contact.save()
         returnValue(contact)
-
-    @inlineCallbacks
-    def create_conversation(self, conversation_type, subject, message, **kw):
-        conversation = yield self.user_api.new_conversation(
-            conversation_type, subject, message, **kw)
-        yield conversation.save()
-        returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
     def reply_to(self, msg, content, continue_session=True, **kw):
@@ -130,7 +119,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             config.update({
                 'poll_id': poll_id,
                 'transport_name': self.transport_name,
-                'worker_name': 'multi_survey_application',
                 'questions': questions,
                 })
             config.setdefault('survey_completed_response',
