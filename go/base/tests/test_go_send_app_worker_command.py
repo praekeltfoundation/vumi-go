@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from StringIO import StringIO
 
+from django.core.management.base import CommandError
+
 from go.base.management.commands import go_send_app_worker_command
 from go.apps.tests.base import DjangoGoApplicationTestCase
 
@@ -26,27 +28,19 @@ class GoSendAppWorkerCommandTestCase(DjangoGoApplicationTestCase):
         self.command.stderr = StringIO()
 
     def test_invalid_command(self):
-        self.command.handle('worker-name', 'bad_command', 'key=1', 'key=2')
-        self.assertEqual(self.command.stderr.getvalue(),
-            'Unknown command bad_command')
+        self.assertRaises(CommandError, self.command.handle, 'worker-name',
+            'bad_command', 'key=1', 'key=2')
 
-    def test_valid_command(self):
-        self.command.handle('worker-name', 'good_command', 'key=1', 'key=2')
+    def test_reconcile_cache(self):
+        self.command.handle('worker-name', 'reconcile_cache', 'account_key=1',
+            'conversation_key=2')
         self.assertEqual(self.command.stderr.getvalue(), '')
         self.assertEqual(self.command.stdout.getvalue(), '')
         [cmd] = self.command.sender.outbox
         self.assertEqual(cmd['worker_name'], 'worker-name')
-        self.assertEqual(cmd['command'], 'good_command')
+        self.assertEqual(cmd['command'], 'reconcile_cache')
         self.assertEqual(cmd['args'], [])
-        self.assertEqual(cmd['kwargs'], {'key': '1', 'key': '2'})
-
-    def test_valid_command_with_args(self):
-        self.command.handle('worker-name', 'good_command', 'positional-arg',
-                            'key=1', 'key=2')
-        self.assertEqual(self.command.stderr.getvalue(), '')
-        self.assertEqual(self.command.stdout.getvalue(), '')
-        [cmd] = self.command.sender.outbox
-        self.assertEqual(cmd['worker_name'], 'worker-name')
-        self.assertEqual(cmd['command'], 'good_command')
-        self.assertEqual(cmd['args'], ['positional-arg'])
-        self.assertEqual(cmd['kwargs'], {'key': '1', 'key': '2'})
+        self.assertEqual(cmd['kwargs'], {
+            'user_account_key': '1',
+            'conversation_key': '2',
+        })
