@@ -37,7 +37,7 @@ class Command(BaseCommand):
 
             conversation = user_api.get_wrapped_conversation(conversation_key)
             if conversation is None:
-                raise Command('Conversation does not exist')
+                raise CommandError('Conversation does not exist')
 
             return VumiApiCommand.command(worker_name, command,
                 user_account_key=account_key,

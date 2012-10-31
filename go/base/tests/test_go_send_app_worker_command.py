@@ -29,17 +29,19 @@ class GoSendAppWorkerCommandTestCase(DjangoGoApplicationTestCase):
         self.command.stderr = StringIO()
 
     def test_invalid_command(self):
-        self.assertRaises(CommandError, self.command.handle, 'worker-name',
-            'bad_command', 'key=1', 'key=2')
+        self.assertRaisesRegexp(CommandError, 'Unknown command bad_command',
+            self.command.handle, 'worker-name', 'bad_command',
+            'key=1', 'key=2')
 
     def test_reconcile_cache_invalid_user(self):
-        self.assertRaises(CommandError, self.command.handle, 'worker-name',
-            'reconcile_command', 'account_key=foo', 'conversation_key=bar')
+        self.assertRaisesRegexp(CommandError, 'Account does not exist',
+            self.command.handle, 'worker-name', 'reconcile_cache',
+            'account_key=foo', 'conversation_key=bar')
 
     def test_reconcile_cache_invalid_conversation(self):
-        self.assertRaises(CommandError, self.command.handle, 'worker-name',
-            'reconcile_command', 'account_key=%s' % self.account_key,
-            'conversation_key=bar')
+        self.assertRaisesRegexp(CommandError, 'Conversation does not exist',
+            self.command.handle, 'worker-name', 'reconcile_cache',
+            'account_key=%s' % self.account_key, 'conversation_key=bar')
 
     def test_reconcile_cache(self):
         self.command.handle('worker-name', 'reconcile_cache',
