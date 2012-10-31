@@ -11,7 +11,7 @@ from vumi.utils import load_class_by_string
 from vumi import log
 from vumi.middleware.tagger import TaggingMiddleware
 
-from go.vumitools.api import VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent
+from go.vumitools.api import VumiApi, VumiApiCommand, VumiApiEvent
 from go.vumitools.middleware import OptOutMiddleware
 
 
@@ -176,7 +176,7 @@ class GoMessageMetadata(object):
         if not account_key:
             return
 
-        user_api = VumiUserApi(self.vumi_api, account_key)
+        user_api = self.vumi_api.get_user_api(account_key)
         conv_store = user_api.conversation_store
         self._store_objects['conv_store'] = conv_store
         returnValue(conv_store)

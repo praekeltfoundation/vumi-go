@@ -211,6 +211,9 @@ class VumiApi(object):
             sender = AsyncMessageSender(amqp_client)
         returnValue(cls(manager, redis, sender))
 
+    def get_user_api(self, user_account_key):
+        return VumiUserApi(self, user_account_key)
+
     def batch_start(self, tags):
         """Start a message batch.
 
