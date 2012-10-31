@@ -19,7 +19,8 @@ class GoSendAppWorkerCommandTestCase(DjangoGoApplicationTestCase):
 
     def setUp(self):
         super(GoSendAppWorkerCommandTestCase, self).setUp()
-        self.user = self.mk_django_user()
+        self.setup_riak_fixtures()
+        self.account_key = self.user.get_profile().user_account
 
         self.command = go_send_app_worker_command.Command()
         self.command.sender_class = DummyMessageSender
@@ -31,9 +32,19 @@ class GoSendAppWorkerCommandTestCase(DjangoGoApplicationTestCase):
         self.assertRaises(CommandError, self.command.handle, 'worker-name',
             'bad_command', 'key=1', 'key=2')
 
+    def test_reconcile_cache_invalid_user(self):
+        self.assertRaises(CommandError, self.command.handle, 'worker-name',
+            'reconcile_command', 'account_key=foo', 'conversation_key=bar')
+
+    def test_reconcile_cache_invalid_conversation(self):
+        self.assertRaises(CommandError, self.command.handle, 'worker-name',
+            'reconcile_command', 'account_key=%s' % self.account_key,
+            'conversation_key=bar')
+
     def test_reconcile_cache(self):
-        self.command.handle('worker-name', 'reconcile_cache', 'account_key=1',
-            'conversation_key=2')
+        self.command.handle('worker-name', 'reconcile_cache',
+            'account_key=%s' % (self.account_key,),
+            'conversation_key=%s' % (self.conv_key,))
         self.assertEqual(self.command.stderr.getvalue(), '')
         self.assertEqual(self.command.stdout.getvalue(), '')
         [cmd] = self.command.sender.outbox
@@ -41,6 +52,6 @@ class GoSendAppWorkerCommandTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(cmd['command'], 'reconcile_cache')
         self.assertEqual(cmd['args'], [])
         self.assertEqual(cmd['kwargs'], {
-            'user_account_key': '1',
-            'conversation_key': '2',
+            'user_account_key': self.account_key,
+            'conversation_key': self.conv_key,
         })
