@@ -147,7 +147,7 @@ class GoApplicationMixin(object):
         message_store = user_api.api.mdb
         for batch_key in conv.get_batch_keys():
             if (yield message_store.needs_reconciliation(batch_key, delta)):
-                yield message_store.cache.reconcile(batch_key)
+                yield message_store.reconcile_cache(batch_key)
 
     @inlineCallbacks
     def get_contact_for_message(self, message):
