@@ -7,7 +7,7 @@ from twisted.internet.defer import inlineCallbacks
 
 from vumi import log
 
-from go.vumitools.api import VumiApiCommand, VumiUserApi
+from go.vumitools.api import VumiApiCommand
 
 
 class EventHandler(object):
@@ -16,7 +16,7 @@ class EventHandler(object):
         self.config = config
 
     def get_user_api(self, account_key):
-        return VumiUserApi(self.dispatcher.vumi_api, account_key)
+        return self.dispatcher.vumi_api.get_user_api(account_key)
 
     def setup_handler(self):
         pass

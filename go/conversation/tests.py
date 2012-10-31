@@ -3,35 +3,19 @@ from datetime import datetime
 
 from django.test.client import Client
 from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User
 from django.conf import settings
 
-from go.vumitools.api import VumiApi
-from go.vumitools.tests.utils import CeleryTestMixIn
-from go.base.tests.utils import VumiGoDjangoTestCase, declare_longcode_tags
-from go.base.utils import vumi_api_for_user
-from vumi.message import TransportUserMessage
-
-
-TEST_GROUP_NAME = u"Test Group"
-TEST_CONTACT_NAME = u"Name"
-TEST_CONTACT_SURNAME = u"Surname"
-TEST_SUBJECT = u"Test Conversation"
+from go.apps.tests.base import DjangoGoApplicationTestCase
 
 
 def newest(models):
     return max(models, key=lambda m: m.created_at)
 
 
-class ConversationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
-
-    fixtures = ['test_user']
+class ConversationTestCase(DjangoGoApplicationTestCase):
 
     def setUp(self):
         super(ConversationTestCase, self).setUp()
-        self.setup_api()
-        self.declare_longcode_tags()
-        self.setup_celery_for_tests()
         self.setup_riak_fixtures()
 
         # self.conversation = self.user.conversation_set.latest()
@@ -40,53 +24,8 @@ class ConversationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         self.csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
             'fixtures', 'sample-contacts.csv'))
 
-    def setup_riak_fixtures(self):
-        self.user = User.objects.get(username='username')
-        self.user_api = vumi_api_for_user(self.user)
-        self._persist_riak_managers.append(self.user_api.api.manager)
-        self.contact_store = self.user_api.contact_store
-        self.contact_store.contacts.enable_search()
-        self.conv_store = self.user_api.conversation_store
-
-        # We need a group
-        group = self.contact_store.new_group(TEST_GROUP_NAME)
-        self.group_key = group.key
-
-        # Also a contact
-        contact = self.contact_store.new_contact(
-            name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
-            msisdn=u"+27761234567")
-        contact.add_to_group(group)
-        contact.save()
-        self.contact_key = contact.key
-
-        # And a conversation
-        conversation = self.conv_store.new_conversation(
-            conversation_type=u'bulk_message', subject=TEST_SUBJECT,
-            message=u"Test message", delivery_class=u"sms",
-            delivery_tag_pool=u"longcode", groups=[self.group_key])
-        self.conv_key = conversation.key
-
-    def tearDown(self):
-        self.restore_celery()
-        super(ConversationTestCase, self).tearDown()
-
-    def mkmsg_in(self, content, **kw):
-        kw.setdefault('to_addr', '+123')
-        kw.setdefault('from_addr', '+456')
-        kw.setdefault('transport_name', 'dummy_transport')
-        kw.setdefault('transport_type', 'sms')
-        return TransportUserMessage(content=content, **kw)
-
-    def setup_api(self):
-        self.api = VumiApi.from_config(settings.VUMI_API_CONFIG)
-
-    def declare_longcode_tags(self):
-        declare_longcode_tags(self.api)
-
     def get_wrapped_conv(self):
-        conv = self.conv_store.get_conversation_by_key(self.conv_key)
-        return self.user_api.wrap_conversation(conv)
+        return self.user_api.get_wrapped_conversation(self.conv_key)
 
     def test_index(self):
         """Display all conversations"""
@@ -97,7 +36,7 @@ class ConversationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         """Filter conversations based on query string"""
         response = self.client.get(reverse('conversations:index'), {
             'query': 'something that does not exist in the fixtures'})
-        self.assertNotContains(response, TEST_SUBJECT)
+        self.assertNotContains(response, self.TEST_SUBJECT)
 
     def test_index_search_on_type(self):
         conversation = self.get_wrapped_conv()
@@ -106,7 +45,7 @@ class ConversationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
 
         def search(conversation_type):
             return self.client.get(reverse('conversations:index'), {
-                'query': TEST_SUBJECT,
+                'query': self.TEST_SUBJECT,
                 'conversation_type': conversation_type,
                 })
 
@@ -144,9 +83,8 @@ class ConversationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         Test replies helper function
         """
         conversation = self.get_wrapped_conv()
-        [contact] = conversation.get_opted_in_contacts()
-        self.assertEqual(conversation.replies(), [])
         conversation.start()
+        [contact] = conversation.get_opted_in_contacts()
         [batch] = conversation.get_batches()
         self.assertEqual(conversation.replies(), [])
         [tag] = self.api.batch_tags(batch.key)
@@ -204,11 +142,11 @@ class ConversationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         # Create 10
         for i in range(10):
             self.conv_store.new_conversation(
-                conversation_type=u'bulk_message', subject=TEST_SUBJECT,
+                conversation_type=u'bulk_message', subject=self.TEST_SUBJECT,
                 message=u"", delivery_class=u"sms",
                 delivery_tag_pool=u"longcode")
         response = self.client.get(reverse('conversations:index'))
         # CONVERSATIONS_PER_PAGE = 6
-        self.assertContains(response, TEST_SUBJECT, count=6)
+        self.assertContains(response, self.TEST_SUBJECT, count=6)
         response = self.client.get(reverse('conversations:index'), {'p': 2})
-        self.assertContains(response, TEST_SUBJECT, count=4)
+        self.assertContains(response, self.TEST_SUBJECT, count=4)

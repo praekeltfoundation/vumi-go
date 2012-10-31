@@ -13,7 +13,7 @@ from vumi.tests.utils import LogCatcher
 
 from go.vumitools.api_worker import (
     EventDispatcher, CommandDispatcher, GoMessageMetadata)
-from go.vumitools.api import VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent
+from go.vumitools.api import VumiApi, VumiApiCommand, VumiApiEvent
 from go.vumitools.handler import EventHandler, SendMessageCommandHandler
 from go.vumitools.tests.utils import AppWorkerTestCase, GoPersistenceMixin
 
@@ -57,6 +57,7 @@ class CommandDispatcherTestCase(AppWorkerTestCase):
 
 
 class GoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
+    use_riak = True
 
     @inlineCallbacks
     def setUp(self):
@@ -65,8 +66,8 @@ class GoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
         self.vumi_api = yield VumiApi.from_config_async(self._persist_config)
         self._persist_riak_managers.append(self.vumi_api.manager)
         self._persist_redis_managers.append(self.vumi_api.redis)
-        self.account = yield self.vumi_api.account_store.new_user(u'user')
-        self.user_api = VumiUserApi(self.vumi_api, self.account.key)
+        self.account = yield self.mk_user(self.vumi_api, u'user')
+        self.user_api = self.vumi_api.get_user_api(self.account.key)
         self.tag = ('xmpp', 'test1@xmpp.org')
 
     def tearDown(self):
@@ -236,7 +237,7 @@ class EventDispatcherTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_handle_event_uncached(self):
-        user_account = yield self.ed.vumi_api.account_store.new_user(u'dbacct')
+        user_account = yield self.mk_user(self.ed.vumi_api, u'dbacct')
         user_account.event_handler_config = [
             [['conv_key', 'my_event'], [('handler1', {})]]
             ]
@@ -295,10 +296,10 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_handle_events(self):
-        user_account = yield self.ed.vumi_api.account_store.new_user(u'dbacct')
+        user_account = yield self.mk_user(self.ed.vumi_api, u'dbacct')
         yield user_account.save()
 
-        user_api = VumiUserApi(self.ed.vumi_api, user_account.key)
+        user_api = self.ed.vumi_api.get_user_api(user_account.key)
         yield user_api.api.declare_tags([("pool", "tag1")])
         yield user_api.api.set_pool_metadata("pool", {
             "transport_type": "other",
@@ -347,7 +348,7 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
 
 
 class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
-
+    use_riak = True
     dispatcher_class = BaseDispatchWorker
     transport_name = 'test_transport'
 
@@ -370,13 +371,6 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
                 'bulk_message': 'app_1',
                 'survey': 'app_2',
             },
-            'middleware': [
-                {'optout_mw':
-                    'go.vumitools.middleware.OptOutMiddleware'},
-            ],
-            'optout_mw': {
-                'optout_keywords': ['stop']
-            }
             }))
 
         # get the router to test
@@ -384,8 +378,8 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         self._persist_riak_managers.append(self.vumi_api.manager)
         self._persist_redis_managers.append(self.vumi_api.redis)
 
-        self.account = yield self.vumi_api.account_store.new_user(u'user')
-        self.user_api = VumiUserApi(self.vumi_api, self.account.key)
+        self.account = yield self.mk_user(self.vumi_api, u'user')
+        self.user_api = self.vumi_api.get_user_api(self.account.key)
         self.conversation = (
             yield self.user_api.conversation_store.new_conversation(
                 u'bulk_message', u'subject', u'message'))
@@ -432,7 +426,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         yield self.vumi_api.mdb.add_outbound_message(msg, tag=tag,
             batch_id=batch_id)
 
-        ack = self.mkmsg_ack(event_type='ack',
+        ack = self.mkmsg_ack(
             user_message_id=msg['message_id'],
             transport_name=self.transport_name)
 
@@ -463,7 +457,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
     @inlineCallbacks
     def test_optout_message(self):
         msg = self.mkmsg_in(transport_type='xmpp',
-                                transport_name='xmpp_transport')
+                            transport_name='xmpp_transport')
         msg['content'] = 'stop'
         tag = ('xmpp', 'test1@xmpp.org')
         batch_id = yield self.vumi_api.mdb.batch_start([tag],
@@ -472,6 +466,9 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         self.conversation.save()
 
         TaggingMiddleware.add_tag_to_msg(msg, tag)
+        # Fake the opt-out middleware processing.
+        msg['helper_metadata']['optout'] = {
+            'optout': True, 'optout_keyword': 'stop'}
         yield self.dispatch(msg, self.transport_name)
 
         [dispatched] = self.get_dispatched_messages('optout_app',

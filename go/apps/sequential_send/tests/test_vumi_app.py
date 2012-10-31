@@ -7,8 +7,6 @@ from twisted.internet.task import Clock, LoopingCall
 
 from vumi.message import TransportUserMessage
 
-from go.vumitools.api_worker import CommandDispatcher
-from go.vumitools.api import VumiUserApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.sequential_send.vumi_app import SequentialSendApplication
 from go.apps.sequential_send import vumi_app as sequential_send_module
@@ -27,25 +25,16 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         self.clock = Clock()
         self.patch(sequential_send_module, 'LoopingCall',
                    self.looping_call)
-        self.app = yield self.get_application({
-                'worker_name': 'sequential_send_application',
-                }, start=False)
+        self.app = yield self.get_application({}, start=False)
         yield self.app.startWorker()
-
-        # Setup the command dispatcher so we cand send it commands
-        self.cmd_dispatcher = yield self.get_application({
-                'transport_name': 'cmd_dispatcher',
-                'worker_names': ['sequential_send_application'],
-                }, cls=CommandDispatcher)
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
         self._persist_riak_managers.append(self.vumi_api.manager)
 
         # Create a test user account
-        self.user_account = yield self.vumi_api.account_store.new_user(
-            u'testuser')
-        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+        self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
+        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         # Add tags
         self.user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
@@ -78,14 +67,10 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         yield contact.save()
         returnValue(contact)
 
-    @inlineCallbacks
     def create_conversation(self, **kw):
-        conversation = yield self.user_api.new_conversation(
-            u'sequential_send', u'Subject', u'Message',
+        return super(TestSequentialSendApplication, self).create_conversation(
             delivery_tag_pool=u'pool', delivery_class=self.transport_type,
             **kw)
-        yield conversation.save()
-        returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
     def reply_to(self, msg, content, continue_session=True, **kw):
@@ -137,7 +122,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
 
         conv = yield self.create_conversation(metadata={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
-        yield conv.start()
+        yield self.start_conversation(conv)
 
         yield self._stub_out_async(conv)
         message_convs = []
@@ -171,11 +156,11 @@ class TestSequentialSendApplication(AppWorkerTestCase):
 
         conv1 = yield self.create_conversation(metadata={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
-        yield conv1.start()
+        yield self.start_conversation(conv1)
 
         conv2 = yield self.create_conversation(metadata={
                 'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
-        yield conv2.start()
+        yield self.start_conversation(conv2)
 
         yield self._stub_out_async(conv1, conv2)
         message_convs = []
@@ -205,12 +190,12 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         """
         conv1 = yield self.create_conversation(metadata={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
-        yield conv1.start()
+        yield self.start_conversation(conv1)
         batch_id1 = conv1.get_batch_keys()[0]
 
         conv2 = yield self.create_conversation(metadata={
                 'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
-        yield conv2.start()
+        yield self.start_conversation(conv2)
         batch_id2 = conv2.get_batch_keys()[0]
 
         yield self.create_conversation(metadata={
@@ -238,7 +223,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
                 'messages': ['foo', 'bar'],
                 })
         conv.add_group(group)
-        yield conv.start()
+        yield self.start_conversation(conv)
 
         # Send to two contacts.
         yield self.app.send_scheduled_messages(conv)
@@ -271,3 +256,17 @@ class TestSequentialSendApplication(AppWorkerTestCase):
                        key=lambda m: m['to_addr'])
         self.assertEqual(msg['content'], 'bar')
         self.assertEqual(msg['to_addr'], contact3.msisdn)
+
+    @inlineCallbacks
+    def test_collect_metrics(self):
+        conv = yield self.create_conversation()
+        yield self.start_conversation(conv)
+        yield self.dispatch_command(
+            'collect_metrics', conversation_key=conv.key,
+            user_account_key=self.user_account.key)
+        metrics = self.poll_metrics('%s.%s' % (self.user_account.key,
+                                               conv.key))
+        self.assertEqual({
+                u'messages_sent': [0],
+                u'messages_received': [0],
+                }, metrics)

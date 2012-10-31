@@ -14,6 +14,7 @@ from go.contacts.forms import (
     SelectContactGroupForm)
 from go.contacts import tasks, utils
 from go.contacts.parsers import ContactFileParser, ContactParserException
+from go.contacts.parsers.base import FieldNormalizer
 
 
 def _query_to_kwargs(query):
@@ -132,10 +133,13 @@ def _static_group(request, contact_store, group):
                 # posted
                 field_names = [request.POST.get('column-%s' % i) for i in
                                 range(len(sample_row))]
+                normalizers = [request.POST.get('normalize-%s' % i, '')
+                                for i in range(len(sample_row))]
+                fields = zip(field_names, normalizers)
 
                 tasks.import_contacts_file.delay(
                     request.user_api.user_account_key, group.key, file_name,
-                    file_path, field_names, has_header)
+                    file_path, fields, has_header)
 
                 messages.info(request, 'The contacts are being imported. '
                     'We will notify you via email when the import has '
@@ -177,6 +181,7 @@ def _static_group(request, contact_store, group):
             has_header, headers, row = parser.guess_headers_and_row(file_path)
             context.update({
                 'contact_data_headers': headers,
+                'field_normalizer': FieldNormalizer(),
                 'contact_data_row': row,
             })
         except (ValueError, ContactParserException):
@@ -293,15 +298,17 @@ def _people(request):
     # TODO: A lot of this stuff is duplicated from the similar group search
     #       in the groups() view. We need a function that does that to avoid
     #       the duplication.
-    selected_letter = request.GET.get('l', 'a')
+    selected_letter = request.GET.get('l')
     query = request.GET.get('q', '')
     if query:
         if not ':' in query:
             query = 'name:%s' % (query,)
         selected_contacts = contact_store.contacts.riak_search(query)
-    else:
+    elif selected_letter:
         selected_contacts = contact_store.filter_contacts_on_surname(
             selected_letter)
+    else:
+        selected_contacts = []
 
     smart_group_form = SmartGroupForm(initial={'query': query})
     return render(request, 'contacts/people.html', {

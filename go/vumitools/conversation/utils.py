@@ -1,4 +1,4 @@
-# -*- test-case-name: go.vumitools.tests.test_api -*-
+# -*- test-case-name: go.vumitools.conversation.tests.test_utils -*-
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
@@ -83,6 +83,7 @@ class ConversationWrapper(object):
             tags.extend((yield batch.tags))
         returnValue(tags)
 
+    @Manager.calls_manager
     def get_progress_status(self):
         """
         Get an overview of the progress of this conversation
@@ -91,6 +92,8 @@ class ConversationWrapper(object):
             *sent* The number of messages sent.
             *ack* The number of messages that have been acknowledged
                     by the network for delivery
+            *nack* The number of messages that have been seen by the network
+                    but were actively refused for delivery.
             *delivery_report* The number of messages we've received
                     a delivery report for.
             *delivery_report_delivered* The number of delivery reports
@@ -101,17 +104,19 @@ class ConversationWrapper(object):
                     indicating ongoing attempts to deliver the message.
         """
         statuses = dict((k, 0) for k in
-                        ('sent', 'ack', 'delivery_report',
+                        ('sent', 'ack', 'nack', 'delivery_report',
                          'delivery_report_delivered', 'delivery_report_failed',
                          'delivery_report_pending'))
 
         for batch_id in self.get_batch_keys():
-            for k, v in self.mdb.batch_status(batch_id).items():
+            batch_status = yield self.mdb.batch_status(batch_id)
+            for k, v in batch_status.items():
                 k = k.replace('.', '_')
                 statuses[k] += v
 
-        return statuses
+        returnValue(statuses)
 
+    @Manager.calls_manager
     def get_progress_percentage(self):
         """
         Get a percentage indication of how far along the sending
@@ -119,10 +124,10 @@ class ConversationWrapper(object):
 
         :rtype: int
         """
-        status = self.get_progress_status()
+        status = yield self.get_progress_status()
         if status['sent'] == 0:
-            return 0
-        return int(status['ack'] / float(status['sent']) * 100)
+            returnValue(0)
+        returnValue(int(status['ack'] / float(status['sent']) * 100))
 
     @Manager.calls_manager
     def make_message_options(self, tag):
@@ -167,58 +172,136 @@ class ConversationWrapper(object):
         self.c.batches.add_key(batch_id)
         yield self.c.save()
 
-    @Manager.calls_manager
-    def replies(self, limit=100):
+    def get_latest_batch_key(self):
         """
-        FIXME: this requires a contact to already exist in the database
-                before it can show up as a reply. Isn't going to work
-                for things like USSD and in some cases SMS.
+        We're not storing timestamps on our batches and so we have no
+        way of telling which batch was the most recent for this conversation.
+
+        FIXME:  add timestamps to batches or remove the need for only allowing
+                access to the cache one batch_id at the time (possibly by
+                using Redis' zunionstore to provide a temporary cached
+                view on all keys for a set of batch_ids)
         """
         batch_keys = self.get_batch_keys()
-        reply_statuses = []
-        replies = []
-        cache = {}
-        for batch_id in batch_keys:
-            # TODO: Not look up the batch by key again.
-            replies.extend((yield self.mdb.batch_replies(batch_id)))
-        for reply in replies[:limit]:
-            cache_key = '/'.join([self.delivery_class, reply['from_addr']])
-            contact = cache.get(cache_key, None)
-            if not contact:
-                contact = yield self.user_api.contact_store.contact_for_addr(
-                    self.delivery_class, reply['from_addr'])
-                cache[cache_key] = contact
-            reply_statuses.append({
-                'type': self.delivery_class,
-                'source': self.delivery_class_description(),
-                'contact': contact,
-                'time': reply['timestamp'],
-                'content': reply['content'],
-                })
-        returnValue(sorted(reply_statuses,
-                           key=lambda reply: reply['time'],
-                           reverse=True))
+        if batch_keys:
+            return batch_keys[0]
+
+    def count_replies(self, batch_key=None):
+        """
+        Count the total number of replies received.
+        This is pulled from the cache.
+
+        :param str batch_key:
+            The batch to count, defaults to `get_latest_batch_key()`
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        return self.mdb.cache.count_inbound_message_keys(batch_key)
+
+    def count_sent_messages(self, batch_key=None):
+        """
+        Count the total number of messages sent.
+        This is pulled from the cache.
+
+        :param str batch_key:
+            The batch to count, defaults to `get_latest_batch_key()`
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        return self.mdb.cache.count_outbound_message_keys(batch_key)
+
+    def count_inbound_uniques(self, batch_key=None):
+        """
+        Count the total unique `from_addr` values seen for the batch_key.
+        Pulled from the cache.
+
+        :param str batch_key:
+            The batch to count, defaults to `get_latest_batch_key()`
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        return self.mdb.cache.count_from_addrs(batch_key)
+
+    def count_outbound_uniques(self, batch_key=None):
+        """
+        Count the total unique `to_addr` values seen for the batch_key.
+        Pulled from the cache.
+
+        :param str batch_key:
+            The batch to count, defaults to `get_latest_batch_key()`
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        return self.mdb.cache.count_to_addrs(batch_key)
 
     @Manager.calls_manager
-    def sent_messages(self, limit=100):
-        batch_keys = self.get_batch_keys()
-        outbound_statuses = []
-        messages = []
-        for batch_id in batch_keys:
-            # TODO: Not look up the batch by key again.
-            messages.extend((yield self.mdb.batch_messages(batch_id)))
-        for message in messages[:limit]:
-            contact = yield self.user_api.contact_store.contact_for_addr(
-                    self.delivery_class, message['to_addr'])
-            outbound_statuses.append({
-                'type': self.delivery_class,
-                'source': self.delivery_class_description(),
-                'contact': contact,
-                'time': message['timestamp'],
-                'content': message['content']
-                })
-        returnValue(sorted(outbound_statuses, key=lambda sent: sent['time'],
-                           reverse=True))
+    def replies(self, start=0, limit=100, batch_key=None):
+        """
+        Get a list of replies from the message store. The keys come from
+        the message store's cache.
+
+        :param int start:
+            Where to start in the result set.
+        :param int limit:
+            How many replies to get.
+        :param str batch_key:
+            The batch to get replies for. Defaults to whatever
+            `get_latest_batch_key()` returns.
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        if batch_key is None:
+            returnValue([])
+
+        # Redis counts from zero, so we - 1 on the limit.
+        keys = yield self.mdb.cache.get_inbound_message_keys(batch_key, start,
+                                                                limit - 1)
+
+        replies = []
+        for key in keys:
+            message = yield self.mdb.inbound_messages.load(key)
+            replies.append((
+                yield self._handle_message(message.msg, 'from_addr')))
+
+        returnValue(replies)
+
+    @Manager.calls_manager
+    def _handle_message(self, message, addr_attribute):
+        """
+        FIXME:  The conversation view expects a bunch of other stuff alongside
+                a message. This is horribly complex and needs to be fixed.
+        """
+        contact = yield self.user_api.contact_store.contact_for_addr(
+                            self.delivery_class, message[addr_attribute])
+        returnValue({
+            'type': self.delivery_class,
+            'source': (yield self.delivery_class_description()),
+            'contact': contact,
+            'time': message['timestamp'],
+            'content': message['content'],
+            })
+
+    @Manager.calls_manager
+    def sent_messages(self, start=0, limit=100, batch_key=None):
+        """
+        Get a list of sent_messages from the message store. The keys come from
+        the message store's cache.
+
+        :param int page:
+            Which page to get
+        :param int limit:
+            How many sent messages to get per page
+        :param str batch_key:
+            The batch to get sent messages for. Defaults to whatever
+            `get_latest_batch_key()` returns.
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+
+        keys = yield self.mdb.cache.get_outbound_message_keys(batch_key, start,
+                                                                limit - 1)
+
+        sent_messages = []
+        for key in keys:
+            message = yield (self.mdb.outbound_messages.load(key))
+            sent_messages.append((
+                yield self._handle_message(message.msg, 'to_addr')))
+
+        returnValue(sent_messages)
 
     @Manager.calls_manager
     def acquire_existing_tag(self):

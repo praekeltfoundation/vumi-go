@@ -5,22 +5,14 @@ from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
 
 
-TEST_GROUP_NAME = u"Test Group"
-TEST_CONTACT_NAME = u"Name"
-TEST_CONTACT_SURNAME = u"Surname"
-TEST_SUBJECT = u"Test Conversation"
-
-
 class BulkMessageTestCase(DjangoGoApplicationTestCase):
-
-    fixtures = ['test_user']
     TEST_CONVERSATION_TYPE = u'bulk_message'
 
     def setUp(self):
         super(BulkMessageTestCase, self).setUp()
+        self.setup_riak_fixtures()
         self.client = Client()
         self.client.login(username='username', password='password')
-        self.setup_riak_fixtures()
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
@@ -158,4 +150,36 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(reverse('bulk_message:show', kwargs={
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.subject, TEST_SUBJECT)
+        self.assertEqual(conversation.subject, self.TEST_SUBJECT)
+
+    def test_show_cached_message_pagination(self):
+        # Create 21 inbound & 21 outbound messages, since we have
+        # 20 messages per page it should give us 2 pages
+        self.put_sample_messages_in_conversation(self.user_api,
+                                                    self.conv_key, 21)
+        response = self.client.get(reverse('bulk_message:show', kwargs={
+            'conversation_key': self.conv_key}))
+
+        # Check pagination
+        # We should have 20 links to contacts
+        self.assertContains(response, 'Unknown User', 20)
+        # We should have 2 links to page to, one for the actual page link
+        # and one for the 'Next' page link
+        self.assertContains(response, '&amp;p=2', 2)
+        # There should only be 1 link to the current page
+        self.assertContains(response, '&amp;p=1', 1)
+        # There should not be a link to the previous page since we are not
+        # the first page.
+        self.assertContains(response, '&amp;p=0', 0)
+
+    def test_show_cached_message_overview(self):
+        self.put_sample_messages_in_conversation(self.user_api,
+                                                    self.conv_key, 10)
+        response = self.client.get(reverse('bulk_message:show', kwargs={
+            'conversation_key': self.conv_key
+            }))
+        self.assertContains(response,
+            '10 sent for delivery to the networks.')
+        self.assertContains(response,
+            '10 accepted for delivery by the networks.')
+        self.assertContains(response, '10 delivered.')

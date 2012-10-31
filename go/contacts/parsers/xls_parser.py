@@ -44,4 +44,4 @@ class XLSFileParser(ContactFileParser):
                 default_headers.setdefault(column, column)
             return True, default_headers, sample_row
         return (False, default_headers,
-            SortedDict([(column, None) for column in first_row]))
+            SortedDict([(column, column) for column in first_row]))
