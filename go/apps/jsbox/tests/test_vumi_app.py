@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.application.tests.utils import ApplicationTestCase
+from go.vumitools.tests.utils import AppWorkerTestCase
 
 from go.apps.jsbox.vumi_app import JsBoxApplication
 
 
-class JsBoxApplication(ApplicationTestCase):
+class JsBoxApplication(AppWorkerTestCase):
 
     use_riak = True
     application_class = JsBoxApplication
@@ -19,5 +19,12 @@ class JsBoxApplication(ApplicationTestCase):
             })
         self.app = yield self.get_application(self.config)
 
-    def test_something(self):
-        self.assertEqual(1, 1)
+    @inlineCallbacks
+    def test_start(self):
+        yield self.dispatch_command("start", command_data={
+                    "batch_id": "batch-id",
+                    "conversation_type": "jsbox",
+                    "conversation_key": "key",
+                    "is_client_initiated": False,
+                    "msg_options": {}
+                    })
