@@ -41,9 +41,6 @@ class TestBulkMessageApplication(AppWorkerTestCase):
             "transport_type": "sphex",
             })
 
-    def store_outbound(self, **kw):
-        return self.vumi_api.mdb.add_outbound_message(self.mkmsg_out(**kw))
-
     @inlineCallbacks
     def setup_conversation(self, contact_count=2, group_name=u'test group',
         conversation_type=u'bulk_message', subject=u'subject',
