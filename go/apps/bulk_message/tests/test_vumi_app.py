@@ -53,9 +53,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
                 msisdn=from_addr.format(i), groups=[group])
 
         conversation = yield self.create_conversation(
-            conversation_type=u'bulk_message', subject=u'subject',
-            message=u'message', delivery_tag_pool=u'pool',
-            delivery_class=u'sms')
+            delivery_tag_pool=u'pool', delivery_class=u'sms')
         conversation.add_group(group)
         yield conversation.save()
         returnValue(conversation)
