@@ -150,6 +150,7 @@ class GoApplicationMixin(object):
         for batch_key in conv.get_batch_keys():
             if (yield message_store.needs_reconciliation(batch_key, delta)):
                 yield message_store.reconcile_cache(batch_key)
+        log.msg('Cache reconciled for %s' % (conversation_key,))
 
     @inlineCallbacks
     def get_contact_for_message(self, message):
