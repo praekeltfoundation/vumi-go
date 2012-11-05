@@ -158,10 +158,12 @@ class ContactStore(PerAccountStore):
         """
         Use Riak search to find matching contacts.
         """
-        return self.contacts.riak_search(group.query)
+        return self.contacts.raw_search(group.query).get_keys()
 
     @Manager.calls_manager
     def filter_contacts_on_surname(self, letter, group=None):
+        # FIXME: This does a mapreduce over a bucket, which means hitting every
+        #        key in riak.
         # TODO: vumi.persist needs to have better ways of supporting
         #       generic map reduce functions. There's a bunch of boilerplate
         #       around getting bucket names and indexes that I'm doing
@@ -224,7 +226,7 @@ class ContactStore(PerAccountStore):
     def contact_for_addr(self, delivery_class, addr):
         if delivery_class in ('sms', 'ussd'):
             addr = '+' + addr.lstrip('+')
-            keys = yield self.contacts.search(msisdn=addr)
+            keys = yield self.contacts.search(msisdn=addr).get_keys()
             if keys:
                 contact = yield self.contacts.load(keys[0])
                 returnValue(contact)
@@ -234,7 +236,7 @@ class ContactStore(PerAccountStore):
                                       msisdn=addr))
         elif delivery_class == 'gtalk':
             addr = addr.partition('/')[0]
-            keys = yield self.contacts.search(gtalk_id=addr)
+            keys = yield self.contacts.search(gtalk_id=addr).get_keys()
             if keys:
                 contact = yield self.contacts.load(keys[0])
                 returnValue(contact)

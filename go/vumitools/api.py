@@ -123,7 +123,8 @@ class VumiUserApi(object):
     @Manager.calls_manager
     def active_conversations(self):
         conversations = self.conversation_store.conversations
-        keys = yield conversations.by_index(end_timestamp=None)
+        keys = yield conversations.index_lookup(
+            'end_timestamp', None).get_keys()
         convs = yield self.conversation_store.load_all_from_keys(
             conversations, keys)
         returnValue(convs)

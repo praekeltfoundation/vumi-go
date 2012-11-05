@@ -134,11 +134,11 @@ class Command(BaseCommand):
             batch_key, message_store.batch_outbound_count(batch_key),))
 
     def do_batch_key_breakdown(self, message_store, batch_key):
-        inbound_keys = message_store.inbound_messages.by_index(
-            batch=batch_key)
+        inbound_keys = message_store.inbound_messages.index_lookup(
+            'batch', batch_key).get_keys()
 
-        outbound_keys = message_store.outbound_messages.by_index(
-            batch=batch_key)
+        outbound_keys = message_store.outbound_messages.index_lookup(
+            'batch', batch_key).get_keys()
 
         inbound = list(get_inbound(message_store, inbound_keys))
         outbound = list(get_outbound(message_store, outbound_keys))

@@ -91,11 +91,13 @@ class SubscriptionApplication(GoApplicationWorker):
         for campaign_name in campaign_names:
             self.publish_conversation_metric(
                 conv, '.'.join([campaign_name, "subscribed"]),
-                (yield contact_proxy.riak_search_count(
-                        "subscription-%s:subscribed" % (campaign_name,)))[0])
+                (yield contact_proxy.raw_search(
+                    "subscription-%s:subscribed" % (
+                        campaign_name,)).get_count()))
             self.publish_conversation_metric(
                 conv, '.'.join([campaign_name, "unsubscribed"]),
-                (yield contact_proxy.riak_search_count(
-                        "subscription-%s:unsubscribed" % (campaign_name,)))[0])
+                (yield contact_proxy.raw_search(
+                    "subscription-%s:unsubscribed" % (
+                        campaign_name,)).get_count()))
 
         yield self.collect_message_metrics(conv)
