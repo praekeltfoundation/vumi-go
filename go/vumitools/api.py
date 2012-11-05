@@ -118,7 +118,8 @@ class VumiUserApi(object):
     def get_wrapped_conversation(self, conversation_key):
         conversation = yield self.conversation_store.get_conversation_by_key(
             conversation_key)
-        returnValue(self.wrap_conversation(conversation))
+        if conversation:
+            returnValue(self.wrap_conversation(conversation))
 
     def active_conversations(self):
         conversations = self.conversation_store.conversations
