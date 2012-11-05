@@ -60,7 +60,7 @@ def groups(request):
     if query:
         if ':' not in query:
             query = 'name:%s' % (query,)
-        keys = contact_store.groups.riak_search(query)
+        keys = contact_store.groups.raw_search(query).get_keys()
         groups = contact_store.load_all_from_keys(contact_store.groups, keys)
     else:
         groups = contact_store.list_groups()
@@ -196,7 +196,7 @@ def _static_group(request, contact_store, group):
             query_kwargs = _query_to_kwargs(request.GET.get('q'))
         else:
             query_kwargs = _query_to_kwargs('name:%s' % query)
-        keys = contact_store.contacts.search(**query_kwargs)
+        keys = contact_store.contacts.search(**query_kwargs).get_keys()
         selected_contacts = contact_store.load_all_from_keys(
             contact_store.contacts, keys)
     else:
@@ -238,7 +238,7 @@ def _smart_group(request, contact_store, group):
             'query': group.query,
             })
 
-    keys = contact_store.contacts.riak_search(group.query)
+    keys = contact_store.contacts.raw_search(group.query).get_keys()
     selected_contacts = contact_store.contacts.load_from_keys(keys[:100])
     return render(request, 'contacts/smart_group.html', {
         'group': group,
@@ -307,7 +307,7 @@ def _people(request):
     if query:
         if not ':' in query:
             query = 'name:%s' % (query,)
-        keys = contact_store.contacts.riak_search(query)
+        keys = contact_store.contacts.raw_search(query).get_keys()
         selected_contacts = contact_store.load_all_from_keys(
             contact_store.contacts, keys)
     elif selected_letter:
