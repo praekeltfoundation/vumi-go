@@ -4,7 +4,6 @@
 """Vumi application worker for the vumitools API."""
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationWorker
@@ -71,8 +70,6 @@ class BulkMessageApplication(GoApplicationWorker):
     @inlineCallbacks
     def send_message(self, batch_id, to_addr, content, msg_options):
         msg = yield self.send_to(to_addr, content, **msg_options)
-        yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=batch_id)
-        log.info('Stored outbound %s' % (msg,))
         returnValue(msg)
 
     @inlineCallbacks
@@ -100,10 +97,6 @@ class BulkMessageApplication(GoApplicationWorker):
             yield self.send_message_via_window(window_id, batch_id, to_addr,
                                     conv.message, msg_options)
 
-    def consume_user_message(self, msg):
-        tag = TaggingMiddleware.map_msg_to_tag(msg)
-        return self.vumi_api.mdb.add_inbound_message(msg, tag=tag)
-
     def consume_ack(self, event):
         return self.handle_event(event)
 
@@ -112,8 +105,6 @@ class BulkMessageApplication(GoApplicationWorker):
 
     @inlineCallbacks
     def handle_event(self, event):
-        yield self.vumi_api.mdb.add_event(event)
-
         message = yield self.find_message_for_event(event)
         if message is None:
             log.error('Unable to find message for %s, user_message_id: %s' % (
@@ -128,13 +119,6 @@ class BulkMessageApplication(GoApplicationWorker):
             flight_key = yield self.window_manager.get_internal_id(window_id,
                                 message['message_id'])
             yield self.window_manager.remove_key(window_id, flight_key)
-
-    def consume_delivery_report(self, event):
-        return self.vumi_api.mdb.add_event(event)
-
-    def close_session(self, msg):
-        tag = TaggingMiddleware.map_msg_to_tag(msg)
-        return self.vumi_api.mdb.add_inbound_message(msg, tag=tag)
 
     @inlineCallbacks
     def process_command_send_message(self, *args, **kwargs):
