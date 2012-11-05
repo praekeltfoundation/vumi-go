@@ -20,6 +20,8 @@
          <h3>{{conversation.subject}}</h3>
          <p>{{conversation.message}}</p>
     </div>
+</div>
+<div class="row">
     <div class="span12">
         <table class="table table-bordered table-striped">
             <tr>
@@ -35,18 +37,57 @@
                 </td>
                 <td width="50%">
                     {% if not conversation.get_progress_percentage %}
-                        <div class="progress progress-striped active">
+                        <div class="progress progress-info progress-striped active">
                             <div class="bar" style="width: 100%;"/>
                         </div>
                     {% else %}
-                        <div class="progress progress-striped">
-                            <div class="bar" style="width: {{conversation.get_progress_percentage}}%"/>
+                        {% with conversation.get_progress_status as status %}
+                        <div class="progress progress-primary">
+                          <div class="bar" style="width: {% widthratio status.sent status.sent 100 %}%;">
+                            <span>{{ status.sent }} sent for delivery to the networks.</span>
+                          </div>
                         </div>
+                        {% if status.ack %}
+                        <div class="progress progress-info">
+                          <div class="bar" style="width: {% widthratio status.ack status.sent 100 %}%;">
+                            <span>{{ status.ack }} accepted for delivery by the networks.</span>
+                          </div>
+                        </div>
+                        {% endif %}
+                        {% if status.delivery_report_delivered %}
+                        <div class="progress progress-success">
+                          <div class="bar" style="width: {% widthratio status.delivery_report_delivered status.sent 100 %}%;">
+                            <span>{{ status.delivery_report_delivered }} delivered.</span>
+                          </div>
+                        </div>
+                        {% endif %}
+                        {% if status.delivery_report_failed %}
+                        <div class="progress progress-danger">
+                          <div class="bar" style="width: {% widthratio status.delivery_report_failed status.sent 100 %}%;">
+                            <span>{{ status.delivery_report_failed }} delivery unsuccessful.</span>
+                          </div>
+                        </div>
+                        {% endif %}
+                        {% if status.nack %}
+                        <div class="progress progress-danger">
+                          <div class="bar" style="width: {% widthratio status.nack status.sent 100 %}%;">
+                            <span>{{ status.nack }} rejected for delivery by the networks.</span>
+                          </div>
+                        </div>
+                        {% endif %}
+                        {% if status.delivery_report_pending %}
+                        <div class="progress progress-warning active">
+                          <div class="bar" style="width: {% widthratio status.delivery_report_pending status.sent 100 %}%;">
+                            <span>{{status.delivery_report_pending}} delivery status unknown.</span>
+                          </div>
+                        </div>
+                        {% endif %}
+                        {% endwith %}
                     {% endif %}
                 </td>
                 <td>
                     {{conversation.get_progress_status.sent}} sent
-                </td
+                </td>
             </tr>
             {% endfor %}
             {% endfor %}
