@@ -58,7 +58,6 @@ class TestBulkMessageApplication(AppWorkerTestCase):
             delivery_class=u'sms')
         conversation.add_group(group)
         yield conversation.save()
-        conversation = user_api.wrap_conversation(conversation)
         returnValue(conversation)
 
     @inlineCallbacks
