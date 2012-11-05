@@ -114,7 +114,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         self.assertEqual(msg['to_addr'], contact2.msisdn)
 
     @inlineCallbacks
-    def test_consume_ack(self):
+    def test_consume_events(self):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
         batch_id = conversation.get_latest_batch_key()
