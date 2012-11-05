@@ -42,12 +42,10 @@ class TestBulkMessageApplication(AppWorkerTestCase):
             })
 
     @inlineCallbacks
-    def setup_conversation(self, contact_count=2, group_name=u'test group',
-        conversation_type=u'bulk_message', subject=u'subject',
-        message=u'message', delivery_tag_pool=u'pool', delivery_class=u'sms',
-        from_addr=u'+27831234567{0}'):
+    def setup_conversation(self, contact_count=2,
+                            from_addr=u'+27831234567{0}'):
         user_api = self.user_api
-        group = yield user_api.contact_store.new_group(group_name)
+        group = yield user_api.contact_store.new_group(u'test group')
 
         for i in range(contact_count):
             yield user_api.contact_store.new_contact(
@@ -55,9 +53,9 @@ class TestBulkMessageApplication(AppWorkerTestCase):
                 msisdn=from_addr.format(i), groups=[group])
 
         conversation = yield self.create_conversation(
-            conversation_type=conversation_type, subject=subject,
-            message=message, delivery_tag_pool=delivery_tag_pool,
-            delivery_class=delivery_class)
+            conversation_type=u'bulk_message', subject=u'subject',
+            message=u'message', delivery_tag_pool=u'pool',
+            delivery_class=u'sms')
         conversation.add_group(group)
         yield conversation.save()
         conversation = user_api.wrap_conversation(conversation)
