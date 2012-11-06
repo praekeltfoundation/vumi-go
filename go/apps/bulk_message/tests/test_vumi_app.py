@@ -6,6 +6,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet.task import Clock
 
 from vumi.message import TransportUserMessage
+from vumi.tests.utils import LogCatcher
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.window_manager import WindowManager
@@ -203,3 +204,23 @@ class TestBulkMessageApplication(AppWorkerTestCase):
                 u'messages_sent': [2],
                 u'messages_received': [1],
                 }, metrics)
+
+    @inlineCallbacks
+    def test_reconcile_cache(self):
+        conv = yield self.create_conversation(
+            delivery_tag_pool=u'pool', delivery_class=u'sms')
+
+        with LogCatcher() as logger:
+            yield self.dispatch_command(
+                'reconcile_cache', conversation_key='bogus key',
+                user_account_key=self.user_account.key)
+
+            yield self.dispatch_command(
+                'reconcile_cache', conversation_key=conv.key,
+                user_account_key=self.user_account.key)
+
+            [err] = logger.errors
+            [msg] = logger.messages()
+            self.assertTrue('Conversation does not exist: bogus key'
+                                in err['message'][0])
+            self.assertEqual('Reconciling cache for %s' % (conv.key,), msg)
