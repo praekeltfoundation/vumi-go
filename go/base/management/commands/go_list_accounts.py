@@ -33,6 +33,6 @@ class Command(BaseCommand):
             self.stderr.write('No accounts found.\n')
         for index, user in enumerate(users):
             profile = user.get_profile()
-            output = u'%s. %s <%s> [%s]\n' % (index, profile, user.username,
-                                                profile.user_account)
+            output = u'%s. %s %s <%s> [%s]\n' % (index, user.first_name,
+                user.last_name, user.username, profile.user_account)
             self.stdout.write(output.encode(self.encoding))
