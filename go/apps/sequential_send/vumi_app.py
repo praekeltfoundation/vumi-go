@@ -134,9 +134,14 @@ class SequentialSendApplication(GoApplicationWorker):
                 # We have nothing more to send to this person.
                 continue
 
+            to_addr = contact.addr_for(conv.delivery_class)
+            if not to_addr:
+                log.info("No suitable address found for contact %s %r" % (
+                    contact.key, contact,))
+                continue
+
             yield self.send_message(
-                batch_id, contact.addr_for(conv.delivery_class),
-                messages[message_index], message_options)
+                batch_id, to_addr, messages[message_index], message_options)
 
             contact.extra[index_key] = u'%s' % (message_index + 1)
             yield contact.save()
