@@ -49,6 +49,17 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         contact.groups.clear()
         contact.save()
 
+    def get_all_contacts(self, keys=None):
+        if keys is None:
+            keys = self.contact_store.list_contacts()
+        contacts = []
+        for batch in self.contact_store.contacts.load_all_bunches(keys):
+            contacts.extend(batch)
+        return contacts
+
+    def get_latest_contact(self):
+        return max(self.get_all_contacts(), key=lambda c: c.created_at)
+
     def test_contact_creation(self):
         response = self.client.post(reverse('contacts:new_person'), {
                 'name': 'New',
@@ -56,11 +67,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
                 'msisdn': '27761234567',
                 'groups': [self.group_key],
                 })
-        contact = max(
-            self.contact_store.load_all_from_keys(
-                self.contact_store.contacts,
-                self.contact_store.list_contacts()),
-            key=lambda c: c.created_at)
+        contact = self.get_latest_contact()
         self.assertRedirects(response, person_url(contact.key))
 
     def test_contact_deleting(self):
@@ -91,7 +98,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(contact.name, 'changed name')
         self.assertEqual(contact.surname, 'changed surname')
         self.assertEqual(contact.msisdn, '112')
-        self.assertEqual(set([g.key for g in contact.groups.get_all()]),
+        self.assertEqual(set(contact.groups.keys()),
                     set([g.key for g in self.contact_store.list_groups()]))
 
     def specify_columns(self, group_key=None, columns=None):
@@ -331,8 +338,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
             'normalize-3': 'float',
             'normalize-4': 'msisdn_za',
             })
-        contacts = self.contact_store.load_all_from_keys(
-            self.contact_store.contacts, group.backlinks.contacts())
+        contacts = self.get_all_contacts(group.backlinks.contacts())
 
         self.assertTrue(all([contact.msisdn == '+27761234561' for contact in
             contacts]))
@@ -389,6 +395,17 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         self.setup_riak_fixtures()
         self.client = Client()
         self.client.login(username='username', password='password')
+
+    def get_all_contacts(self, keys=None):
+        if keys is None:
+            keys = self.contact_store.list_contacts()
+        contacts = []
+        for batch in self.contact_store.contacts.load_all_bunches(keys):
+            contacts.extend(batch)
+        return contacts
+
+    def get_latest_contact(self):
+        return max(self.get_all_contacts(), key=lambda c: c.created_at)
 
     def test_groups_creation(self):
         response = self.client.post(reverse('contacts:groups'), {
@@ -460,11 +477,7 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
             'groups': [self.group_key],
             })
 
-        contact = max(
-            self.contact_store.load_all_from_keys(
-                self.contact_store.contacts,
-                self.contact_store.list_contacts()),
-            key=lambda c: c.created_at)
+        contact = self.get_latest_contact()
         self.assertRedirects(response, person_url(contact.key))
 
         # Delete the group
@@ -478,13 +491,9 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(response['Location'].endswith(
             reverse('contacts:index')))
 
-        reloaded_contact = max(
-            self.contact_store.load_all_from_keys(
-                self.contact_store.contacts,
-                self.contact_store.list_contacts()),
-            key=lambda c: c.created_at)
+        reloaded_contact = self.get_latest_contact()
         self.assertEqual(reloaded_contact.key, contact.key)
-        self.assertEqual(reloaded_contact.groups.get_all(), [])
+        self.assertEqual(reloaded_contact.groups.keys(), [])
 
     def test_group_clearing(self):
         # Create a contact in the group
@@ -495,10 +504,7 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
             'groups': [self.group_key],
             })
 
-        contact = max(self.contact_store.load_all_from_keys(
-                self.contact_store.contacts,
-                self.contact_store.list_contacts()),
-            key=lambda c: c.created_at)
+        contact = self.get_latest_contact()
         self.assertRedirects(response, person_url(contact.key))
 
         # Clear the group

@@ -126,8 +126,11 @@ class VumiUserApi(object):
         conversations = self.conversation_store.conversations
         keys = yield conversations.index_lookup(
             'end_timestamp', None).get_keys()
-        convs = yield self.conversation_store.load_all_from_keys(
-            conversations, keys)
+        # NOTE: This assumes that we don't have very large numbers of active
+        #       conversations.
+        convs = []
+        for convs_bunch in conversations.load_all_bunches(keys):
+            convs.extend((yield convs_bunch))
         returnValue(convs)
 
     @Manager.calls_manager
@@ -139,16 +142,18 @@ class VumiUserApi(object):
     def tagpools(self):
         account_store = self.api.account_store
         user_account = yield account_store.get_user(self.user_account_key)
-        user_tagpools = yield user_account.tagpools.get_all()
         active_conversations = yield self.active_conversations()
 
         tp_usage = defaultdict(int)
         for conv in active_conversations:
             tp_usage[conv.delivery_tag_pool] += 1
 
-        allowed_set = set(tp.tagpool for tp in user_tagpools
-                          if (tp.max_keys is None
-                              or tp.max_keys > tp_usage[tp.tagpool]))
+        allowed_set = set()
+        for tp_bunch in user_account.tagpools.load_all_bunches():
+            for tp in (yield tp_bunch):
+                if (tp.max_keys is None
+                        or tp.max_keys > tp_usage[tp.tagpool]):
+                    allowed_set.add(tp.tagpool)
 
         available_set = yield self.api.tpm.list_pools()
         pool_names = list(allowed_set & available_set)
@@ -160,8 +165,11 @@ class VumiUserApi(object):
     def applications(self):
         account_store = self.api.account_store
         user_account = yield account_store.get_user(self.user_account_key)
-        permissions = yield user_account.applications.get_all()
-        applications = [p.application for p in permissions]
+        # NOTE: This assumes that we don't have very large numbers of
+        #       applications.
+        applications = []
+        for permissions in user_account.applications.load_all_bunches():
+            applications.extend((yield permissions))
         app_settings = settings.VUMI_INSTALLED_APPS
         returnValue(SortedDict([(application,
                         app_settings[application])

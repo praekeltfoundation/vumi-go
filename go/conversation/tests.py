@@ -84,7 +84,10 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         """
         conversation = self.get_wrapped_conv()
         conversation.start()
-        [contact] = conversation.get_opted_in_contacts()
+        contacts = []
+        for bunch in conversation.get_opted_in_contact_bunches():
+            contacts.extend(bunch)
+        [contact] = contacts
         [batch] = conversation.get_batches()
         self.assertEqual(conversation.received_messages(), [])
         [tag] = self.api.batch_tags(batch.key)

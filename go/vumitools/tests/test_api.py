@@ -186,11 +186,15 @@ class TestTxVumiUserApi(AppWorkerTestCase):
             'message_id': u'the-message-id'
         })
         contact_keys = yield contact_store.get_contacts_for_conversation(conv)
-        contacts = yield contact_store.load_all_from_keys(
-            contact_store.contacts, contact_keys)
-        all_addrs = yield conv.get_contacts_addresses(contacts)
+        all_addrs = []
+        for contacts in contact_store.contacts.load_all_bunches(contact_keys):
+            for contact in (yield contacts):
+                all_addrs.append(contact.addr_for(conv.delivery_class))
         self.assertEqual(set(all_addrs), set(['+27760000000', '+27761234567']))
-        optedin_addrs = yield conv.get_opted_in_addresses()
+        optedin_addrs = []
+        for contacts in (yield conv.get_opted_in_contact_bunches()):
+            for contact in (yield contacts):
+                optedin_addrs.append(contact.addr_for(conv.delivery_class))
         self.assertEqual(optedin_addrs, ['+27760000000'])
 
 

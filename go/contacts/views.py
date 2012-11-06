@@ -61,7 +61,9 @@ def groups(request):
         if ':' not in query:
             query = 'name:%s' % (query,)
         keys = contact_store.groups.raw_search(query).get_keys()
-        groups = contact_store.load_all_from_keys(contact_store.groups, keys)
+        groups = []
+        for group_bunch in contact_store.groups.load_all_bunches(keys):
+            groups.extend(group_bunch)
     else:
         groups = contact_store.list_groups()
 
@@ -197,8 +199,9 @@ def _static_group(request, contact_store, group):
         else:
             query_kwargs = _query_to_kwargs('name:%s' % query)
         keys = contact_store.contacts.search(**query_kwargs).get_keys()
-        selected_contacts = contact_store.load_all_from_keys(
-            contact_store.contacts, keys)
+        selected_contacts = []
+        for contact_bunch in contact_store.contacts.load_all_bunches(keys):
+            selected_contacts.extend(contact_bunch)
     else:
         selected_contacts = contact_store.filter_contacts_on_surname(
             selected_letter, group=group)
@@ -239,7 +242,9 @@ def _smart_group(request, contact_store, group):
             })
 
     keys = contact_store.contacts.raw_search(group.query).get_keys()
-    selected_contacts = contact_store.contacts.load_from_keys(keys[:100])
+    selected_contacts = []
+    for contacts in contact_store.contacts.load_all_bunches(keys[:100]):
+        selected_contacts.extend(contacts)
     return render(request, 'contacts/smart_group.html', {
         'group': group,
         'selected_contacts': selected_contacts,
@@ -308,8 +313,9 @@ def _people(request):
         if not ':' in query:
             query = 'name:%s' % (query,)
         keys = contact_store.contacts.raw_search(query).get_keys()
-        selected_contacts = contact_store.load_all_from_keys(
-            contact_store.contacts, keys)
+        selected_contacts = []
+        for contact_bunch in contact_store.contacts.load_all_bunches(keys):
+            selected_contacts.extend(contact_bunch)
     elif selected_letter:
         selected_contacts = contact_store.filter_contacts_on_surname(
             selected_letter)
@@ -366,7 +372,7 @@ def person(request, person_key):
             'bbm_pin': contact.bbm_pin,
             'gtalk_id': contact.gtalk_id,
             'dob': contact.dob,
-            'groups': [group.key for group in contact.groups.get_all()],
+            'groups': contact.groups.keys(),
         })
 
     if contact_store.contact_has_opted_out(contact):

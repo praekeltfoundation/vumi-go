@@ -152,6 +152,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         if not conv:
             return
 
-        to_addresses = yield conv.get_opted_in_addresses()
-        for to_addr in to_addresses:
-            yield self.start_survey(to_addr, conv, **msg_options)
+        for contacts in (yield conv.get_opted_in_contact_bunches()):
+            for contact in (yield contacts):
+                to_addr = contact.addr_for(conv.delivery_class)
+                yield self.start_survey(to_addr, conv, **msg_options)

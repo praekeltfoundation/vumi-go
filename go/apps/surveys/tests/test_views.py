@@ -38,11 +38,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             'delivery_tag_pool': selected_option,
         })
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
-        conversation = max(
-            self.conv_store.load_all_from_keys(
-                self.conv_store.conversations,
-                self.conv_store.list_conversations()),
-            key=lambda c: c.created_at)
+        conversation = self.get_latest_conversation()
         self.assertEqual(conversation.delivery_class, 'sms')
         self.assertEqual(conversation.delivery_tag_pool, pool)
         self.assertEqual(conversation.delivery_tag, tag)

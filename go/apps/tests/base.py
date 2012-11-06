@@ -72,6 +72,13 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         defaults.update(kwargs)
         return self.conv_store.new_conversation(**defaults)
 
+    def get_latest_conversation(self):
+        # We won't have too many here, so doing it naively is fine.
+        conversations = []
+        for key in self.conv_store.list_conversations():
+            conversations.append(self.conv_store.get_conversation_by_key(key))
+        return max(conversations, key=lambda c: c.created_at)
+
     def mkmsg_ack(self, user_message_id='1', sent_message_id='abc',
                   transport_metadata=None, transport_name=None):
         if transport_metadata is None:

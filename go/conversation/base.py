@@ -158,12 +158,16 @@ class StartConversationView(ConversationView):
                     'conversation': conversation,
                     })
 
+        conv_groups = []
+        for bunch in conversation.groups.load_all_bunches():
+            conv_groups.extend(bunch)
+
         return self.render_to_response({
                 'send_messages': True,
                 'conversation': conversation,
                 'conversation_form': conversation_form,
                 'group_form': group_form,
-                'groups': conversation.groups.get_all(),
+                'groups': conv_groups,
                 })
 
     def post(self, request, conversation):
