@@ -21,6 +21,7 @@ class Command(BaseCommand):
 
     """
     args = "[optional username regex]"
+    encoding = 'utf-8'
 
     def handle(self, *usernames, **options):
         users = User.objects.all().order_by('date_joined')
@@ -32,5 +33,6 @@ class Command(BaseCommand):
             self.stderr.write('No accounts found.\n')
         for index, user in enumerate(users):
             profile = user.get_profile()
-            self.stdout.write('%s. %s <%s> [%s]\n' % (index, profile,
-                user.username, profile.user_account))
+            output = u'%s. %s <%s> [%s]\n' % (index, profile, user.username,
+                                                profile.user_account)
+            self.stdout.write(output.encode(self.encoding))
