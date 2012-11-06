@@ -220,7 +220,9 @@ class TestBulkMessageApplication(AppWorkerTestCase):
                 user_account_key=self.user_account.key)
 
             [err] = logger.errors
-            [msg] = logger.messages()
+            [msg1, msg2] = [msg for msg in logger.messages()
+                            if 'twisted.web.client' not in msg]
             self.assertTrue('Conversation does not exist: bogus key'
                                 in err['message'][0])
-            self.assertEqual('Reconciling cache for %s' % (conv.key,), msg)
+            self.assertEqual('Reconciling cache for %s' % (conv.key,), msg1)
+            self.assertEqual('Cache reconciled for %s' % (conv.key,), msg2)
