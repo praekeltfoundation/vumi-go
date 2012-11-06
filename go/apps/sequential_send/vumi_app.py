@@ -123,28 +123,29 @@ class SequentialSendApplication(GoApplicationWorker):
     def send_scheduled_messages(self, conv):
         messages = conv.get_metadata()['messages']
         batch_id = conv.get_batch_keys()[0]
-        contacts = yield conv.get_opted_in_contacts()
         tag = (conv.c.delivery_tag_pool, conv.c.delivery_tag)
         message_options = yield conv.make_message_options(tag)
 
-        for contact in contacts:
-            index_key = 'scheduled_message_index_%s' % (conv.key,)
-            message_index = int(contact.extra[index_key] or '0')
-            if message_index >= len(messages):
-                # We have nothing more to send to this person.
-                continue
+        for contacts in (yield conv.get_opted_in_contact_bunches()):
+            for contact in (yield contacts):
+                index_key = 'scheduled_message_index_%s' % (conv.key,)
+                message_index = int(contact.extra[index_key] or '0')
+                if message_index >= len(messages):
+                    # We have nothing more to send to this person.
+                    continue
 
-            to_addr = contact.addr_for(conv.delivery_class)
-            if not to_addr:
-                log.info("No suitable address found for contact %s %r" % (
-                    contact.key, contact,))
-                continue
+                to_addr = contact.addr_for(conv.delivery_class)
+                if not to_addr:
+                    log.info("No suitable address found for contact %s %r" % (
+                        contact.key, contact,))
+                    continue
 
-            yield self.send_message(
-                batch_id, to_addr, messages[message_index], message_options)
+                yield self.send_message(
+                    batch_id, to_addr, messages[message_index],
+                    message_options)
 
-            contact.extra[index_key] = u'%s' % (message_index + 1)
-            yield contact.save()
+                contact.extra[index_key] = u'%s' % (message_index + 1)
+                yield contact.save()
 
     @inlineCallbacks
     def send_message(self, batch_id, to_addr, content, msg_options):

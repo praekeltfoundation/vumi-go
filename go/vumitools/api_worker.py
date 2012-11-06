@@ -203,10 +203,9 @@ class GoMessageMetadata(object):
             # Without a batch, we can't get a conversation.
             return
 
-        conv_keys = yield batch.backlinks.conversations(conv_store.manager)
-        all_convs = yield conv_store.load_all_from_keys(
-            conv_store.conversations, conv_keys)
-        conversations = [c for c in all_convs if not c.ended()]
+        # We must have one of these already or we would bailed out earlier.
+        user_api = self.vumi_api.get_user_api((yield self.get_account_key()))
+        conversations = yield user_api.active_conversations()
         if not conversations:
             # No open conversations for this batch.
             return

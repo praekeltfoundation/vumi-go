@@ -55,14 +55,15 @@ class Command(BaseCommand):
 
             user = User.objects.get(username=email_address)
             account = user.get_profile().get_user_account()
-            existing_applications = [permission.application for permission in
-                                        account.applications.get_all()]
+            all_permissions = []
+            for permissions in account.applications.load_all_bunches():
+                all_permissions.extend(permissions)
+            existing_applications = [p.application for p in all_permissions]
 
             if disable:
                 if application_module in existing_applications:
-                    permission = [permission for permission in
-                        account.applications.get_all()
-                        if permission.application == application_module][0]
+                    [permission] = [p for p in all_permissions
+                                    if p.application == application_module]
                     self.disable_application(permission, account)
                 else:
                     raise CommandError('User does not have this permission')

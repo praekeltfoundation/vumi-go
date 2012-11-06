@@ -75,12 +75,3 @@ class PerAccountStore(object):
 
     def setup_proxies(self):
         pass
-
-    @Manager.calls_manager
-    def load_all_from_keys(self, model, keys):
-        objs = []
-        while keys:
-            batch = keys[:100]
-            keys = keys[100:]
-            objs.extend((yield model.load_from_keys(batch)))
-        returnValue(objs)

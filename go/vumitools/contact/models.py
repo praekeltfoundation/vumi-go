@@ -136,15 +136,12 @@ class ContactStore(PerAccountStore):
         Collect all contacts relating to a conversation from static &
         dynamic groups.
         """
-        known_groups = yield conversation.groups.get_all()
-        # Making sure to skip Nones, possibly not necessary
-        all_groups = [group for group in known_groups if group]
-
         # Grab all contacts we can find
         contacts = set([])
-        for group in all_groups:
-            group_contacts = yield self.get_contacts_for_group(group)
-            contacts.update(group_contacts)
+        for groups in conversation.groups.load_all_bunches():
+            for group in (yield groups):
+                group_contacts = yield self.get_contacts_for_group(group)
+                contacts.update(group_contacts)
 
         returnValue(list(contacts))
 
@@ -208,7 +205,10 @@ class ContactStore(PerAccountStore):
         # Not stale, because we're using backlinks.
         user_account = yield self.get_user_account()
         group_keys = yield user_account.backlinks.contactgroups(self.manager)
-        groups = yield self.load_all_from_keys(self.groups, group_keys)
+        # NOTE: This assumes that we don't have very large numbers of groups.
+        groups = []
+        for groups_bunch in self.groups.load_all_bunches(group_keys):
+            groups.extend((yield groups_bunch))
         returnValue(sorted(groups, key=lambda group: group.name))
 
     @Manager.calls_manager

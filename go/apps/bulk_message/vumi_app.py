@@ -88,7 +88,10 @@ class BulkMessageApplication(GoApplicationWorker):
                 'and conversation_key: %s' % (batch_id, conversation_key))
             return
 
-        to_addresses = yield conv.get_opted_in_addresses()
+        to_addresses = []
+        for contacts_batch in (yield conv.get_opted_in_contact_bunches()):
+            for contact in (yield contacts_batch):
+                to_addresses.append(contact.addr_for(conv.delivery_class))
         if extra_params.get('dedupe'):
             to_addresses = set(to_addresses)
 

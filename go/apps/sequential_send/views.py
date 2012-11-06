@@ -61,13 +61,11 @@ class UsedTagConversationForm(VumiModelForm):
 
     def __init__(self, user_api, *args, **kw):
         self.user_api = user_api
-        kw.pop('tagpool_filter', None)  # We need to get rid of this.
+        kw.pop('tagpool_filter', None)  # We need to filter this out.
         super(UsedTagConversationForm, self).__init__(*args, **kw)
 
         convs = sorted(
-            user_api.conversation_store.load_all_from_keys(
-                user_api.conversation_store.conversations,
-                user_api.conversation_store.list_conversations()),
+            user_api.active_conversations(),
             key=lambda c: c.created_at, reverse=True)
         self.conversations = [c for c in convs if not c.ended()]
 
