@@ -64,6 +64,8 @@ class Contact(Model):
             return self.msisdn
         elif delivery_class == 'gtalk':
             return self.gtalk_id
+        elif delivery_class == 'twitter':
+            return self.twitter_handle
         else:
             return None
 
@@ -84,7 +86,9 @@ class Contact(Model):
         if self.name and self.surname:
             return u' '.join([self.name, self.surname])
         else:
-            return self.surname or self.name or u'Unknown User'
+            return (self.surname or self.name or
+                self.gtalk_id or self.twitter_handle or self.msisdn
+                or 'Unknown User')
 
 
 class ContactStore(PerAccountStore):
@@ -259,6 +263,15 @@ class ContactStore(PerAccountStore):
             contact = self.contacts(contact_id,
                                     user_account=self.user_account_key,
                                     gtalk_id=addr, msisdn=u'unknown')
+            returnValue(contact)
+        elif delivery_class == 'twitter':
+            contacts = yield self.contacts.search(twitter_handle=addr)
+            if contacts:
+                returnValue(contacts[0])
+            contact_id = uuid4().get_hex()
+            contact = self.contacts(contact_id,
+                                    user_account=self.user_account_key,
+                                    twitter_handle=addr, msisdn=u'unknown')
             returnValue(contact)
         else:
             raise RuntimeError("Unsupported transport_type %r"
