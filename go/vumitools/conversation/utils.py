@@ -392,3 +392,25 @@ class ConversationWrapper(object):
         opted_in_addrs = [addr for addr in all_addrs
                             if addr not in optout_addrs]
         returnValue(opted_in_addrs)
+
+    @Manager.calls_manager
+    def get_inbound_throughput(self, batch_key=None, sample_time=300):
+        """
+        Calculate how many inbound messages per minute we've been
+        doing on average.
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        count = yield self.mdb.cache.count_inbound_throughput(batch_key,
+            sample_time)
+        returnValue(count / (sample_time / 60.0))
+
+    @Manager.calls_manager
+    def get_outbound_throughput(self, batch_key=None, sample_time=300):
+        """
+        Calculate how many outbound messages per minute we've been
+        doing on average.
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        count = yield self.mdb.cache.count_outbound_throughput(batch_key,
+            sample_time)
+        returnValue(count / (sample_time / 60.0))
