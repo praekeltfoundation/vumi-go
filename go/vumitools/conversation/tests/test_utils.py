@@ -230,3 +230,27 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
     def test_get_opted_in_addresses(self):
         raise SkipTest("Waiting for API to stabilize")
+
+    @inlineCallbacks
+    def test_get_inbound_throughput(self):
+        yield self.conv.start()
+        batch_key = self.conv.get_latest_batch_key()
+        yield self.store_inbound(batch_key, count=20)
+        # 20 messages in 5 minutes = 4 messages per minute
+        self.assertEqual(
+            (yield self.conv.get_inbound_throughput()), 4)
+        # 20 messages in 20 seconds = 60 messages per minute
+        self.assertEqual(
+            (yield self.conv.get_inbound_throughput(sample_time=20)), 60)
+
+    @inlineCallbacks
+    def test_get_outbound_throughput(self):
+        yield self.conv.start()
+        batch_key = self.conv.get_latest_batch_key()
+        yield self.store_outbound(batch_key, count=20)
+        # 20 messages in 5 minutes = 4 messages per minute
+        self.assertEqual(
+            (yield self.conv.get_outbound_throughput()), 4)
+        # 20 messages in 20 seconds = 60 messages per minute
+        self.assertEqual(
+            (yield self.conv.get_outbound_throughput(sample_time=20)), 60)
