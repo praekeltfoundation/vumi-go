@@ -6,6 +6,10 @@
 <div class="row">
     <div class="span12">
         <h3>Messages from {{inbound_uniques_count}} unique people.</h3>
+        <p>
+            Averaging {{conversation.get_inbound_throughput}} messages
+            per minute inbound and {{conversation.get_outbound_throughput}} messages
+            per minute outbound.
     </div>
 </div>
 <div class="tabbable padtop">
