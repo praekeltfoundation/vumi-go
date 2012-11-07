@@ -255,8 +255,11 @@ class ConversationWrapper(object):
         replies = []
         for key in keys:
             message = yield self.mdb.inbound_messages.load(key)
-            replies.append((
-                yield self._handle_message(message.msg, 'from_addr')))
+            # sometimes a message can be None because of Riak's eventual
+            # consistency model
+            if message is not None:
+                replies.append((
+                    yield self._handle_message(message.msg, 'from_addr')))
 
         returnValue(replies)
 
@@ -298,8 +301,11 @@ class ConversationWrapper(object):
         sent_messages = []
         for key in keys:
             message = yield (self.mdb.outbound_messages.load(key))
-            sent_messages.append((
-                yield self._handle_message(message.msg, 'to_addr')))
+            # sometimes a message can be None because of Riak's eventual
+            # consistency model
+            if message is not None:
+                sent_messages.append((
+                    yield self._handle_message(message.msg, 'to_addr')))
 
         returnValue(sent_messages)
 
