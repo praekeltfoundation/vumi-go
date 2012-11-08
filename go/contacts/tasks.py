@@ -24,7 +24,11 @@ def delete_group(account_key, group_key):
     api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
-    for contact in group.backlinks.contacts():
+    # We do this one at a time because we're already saving them one at a time
+    # and the boilerplate for fetching batches without having them all sit in
+    # memory is ugly.
+    for contact_key in group.backlinks.contacts():
+        contact = contact_store.get_contact_by_key(contact_key)
         contact.groups.remove(group)
         contact.save()
     group.delete()
@@ -36,8 +40,11 @@ def delete_group_contacts(account_key, group_key):
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
     contacts = contact_store.get_contacts_for_group(group)
-    for contact in contacts:
-        contact.delete()
+    # We do this one at a time because we're already saving them one at a time
+    # and the boilerplate for fetching batches without having them all sit in
+    # memory is ugly.
+    for contact_key in contacts:
+        contact_store.get_contact_by_key(contact_key).delete()
 
 
 @task(ignore_result=True)

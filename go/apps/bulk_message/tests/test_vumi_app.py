@@ -60,6 +60,13 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         returnValue(conversation)
 
     @inlineCallbacks
+    def get_opted_in_contacts(self, conversation):
+        contacts = []
+        for bunch in (yield conversation.get_opted_in_contact_bunches()):
+            contacts.extend((yield bunch))
+        returnValue(sorted(contacts, key=lambda c: c.msisdn))
+
+    @inlineCallbacks
     def test_start(self):
 
         conversation = yield self.setup_conversation()
@@ -79,9 +86,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
         # check that the right to_addr & from_addr are set and that the content
         # of the message equals conversation.message
-        [contact1, contact2] = sorted(
-            (yield conversation.get_opted_in_contacts()),
-            key=lambda contact: contact.msisdn)
+        [contact1, contact2] = yield self.get_opted_in_contacts(conversation)
         self.assertEqual(msg1['to_addr'], contact1.msisdn)
         self.assertEqual(msg2['to_addr'], contact2.msisdn)
 
@@ -108,7 +113,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
         # check that the right to_addr & from_addr are set and that the content
         # of the message equals conversation.message
-        [contact1, contact2] = yield conversation.get_opted_in_contacts()
+        [contact1, contact2] = yield self.get_opted_in_contacts(conversation)
         self.assertEqual(msg['to_addr'], contact1.msisdn)
         self.assertEqual(msg['to_addr'], contact2.msisdn)
 
@@ -220,7 +225,9 @@ class TestBulkMessageApplication(AppWorkerTestCase):
                 user_account_key=self.user_account.key)
 
             [err] = logger.errors
-            [msg] = logger.messages()
+            [msg1, msg2] = [msg for msg in logger.messages()
+                            if 'twisted.web.client' not in msg]
             self.assertTrue('Conversation does not exist: bogus key'
                                 in err['message'][0])
-            self.assertEqual('Reconciling cache for %s' % (conv.key,), msg)
+            self.assertEqual('Reconciling cache for %s' % (conv.key,), msg1)
+            self.assertEqual('Cache reconciled for %s' % (conv.key,), msg2)

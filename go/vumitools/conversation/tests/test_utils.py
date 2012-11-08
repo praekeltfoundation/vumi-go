@@ -123,22 +123,22 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.assertEqual((yield self.conv.count_outbound_uniques()), 6)
 
     @inlineCallbacks
-    def test_replies(self):
+    def test_received_messages(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
         yield self.store_inbound(batch_key, count=20)
-        replies = yield self.conv.replies()
-        self.assertEqual(len(replies), 20)
-        self.assertEqual(len((yield self.conv.replies(0, 5))), 5)
-        self.assertEqual(len((yield self.conv.replies(5, 10))), 5)
-        self.assertEqual(len((yield self.conv.replies(20, 25))), 0)
+        received_messages = yield self.conv.received_messages()
+        self.assertEqual(len(received_messages), 20)
+        self.assertEqual(len((yield self.conv.received_messages(0, 5))), 5)
+        self.assertEqual(len((yield self.conv.received_messages(5, 10))), 5)
+        self.assertEqual(len((yield self.conv.received_messages(20, 25))), 0)
 
     @inlineCallbacks
-    def test_replies_dictionary(self):
+    def test_received_messages_dictionary(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
         [msg] = yield self.store_inbound(batch_key, count=1)
-        [reply] = yield self.conv.replies()
+        [reply] = yield self.conv.received_messages()
         self.assertEqual(reply['type'], self.conv.delivery_class),
         self.assertEqual(reply['source'],
             (yield self.conv.delivery_class_description()))

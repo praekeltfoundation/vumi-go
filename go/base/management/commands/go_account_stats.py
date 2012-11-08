@@ -98,7 +98,7 @@ class Command(BaseCommand):
 
         Appending 'active' limits the list to only active conversations.
         """
-        conversations = sorted(map(api.wrap_conversation,
+        conversations = sorted(map(api.get_wrapped_conversation,
                             api.conversation_store.list_conversations()),
                             key=lambda c: c.created_at)
         if 'active' in options:
@@ -134,11 +134,11 @@ class Command(BaseCommand):
             batch_key, message_store.batch_outbound_count(batch_key),))
 
     def do_batch_key_breakdown(self, message_store, batch_key):
-        inbound_keys = message_store.inbound_messages.by_index(
-            return_keys=True, batch=batch_key)
+        inbound_keys = message_store.inbound_messages.index_lookup(
+            'batch', batch_key).get_keys()
 
-        outbound_keys = message_store.outbound_messages.by_index(
-            return_keys=True, batch=batch_key)
+        outbound_keys = message_store.outbound_messages.index_lookup(
+            'batch', batch_key).get_keys()
 
         inbound = list(get_inbound(message_store, inbound_keys))
         outbound = list(get_outbound(message_store, outbound_keys))

@@ -64,8 +64,13 @@ class ConversationWrapper(object):
         user_account = unicode(self.c.user_account.key)
         return self.mdb.batch_start(tags, user_account=user_account)
 
+    @Manager.calls_manager
     def get_batches(self):
-        return self.c.batches.get_all(self.base_manager)
+        # NOTE: This assumes that we don't have very large numbers of batches.
+        batches = []
+        for bunch in self.c.batches.load_all_bunches(self.base_manager):
+            batches.extend((yield bunch))
+        returnValue(batches)
 
     def get_batch_keys(self):
         return self.c.batches.keys()
@@ -182,6 +187,7 @@ class ConversationWrapper(object):
                 using Redis' zunionstore to provide a temporary cached
                 view on all keys for a set of batch_ids)
         """
+        # TODO: Use the message cache for this?
         batch_keys = self.get_batch_keys()
         if batch_keys:
             return batch_keys[0]
@@ -231,7 +237,7 @@ class ConversationWrapper(object):
         return self.mdb.cache.count_to_addrs(batch_key)
 
     @Manager.calls_manager
-    def replies(self, start=0, limit=100, batch_key=None):
+    def received_messages(self, start=0, limit=100, batch_key=None):
         """
         Get a list of replies from the message store. The keys come from
         the message store's cache.
@@ -365,33 +371,12 @@ class ConversationWrapper(object):
     def get_absolute_url(self):
         return u'/app/%s/%s/' % (self.conversation_type, self.key)
 
-    @Manager.calls_manager
-    def get_opted_in_contacts(self):
+    def get_contact_keys(self):
         """
-        Get all the contacts that are both assigned to this group and opted in.
+        Get all contact keys for this conversation.
         """
         contact_store = self.user_api.contact_store
-        contacts = yield contact_store.get_contacts_for_conversation(self.c)
-        returnValue(contacts)
-
-    @Manager.calls_manager
-    def get_opted_in_addresses(self):
-        """
-        Get the contacts assigned to this group with an address attribute
-        that is appropriate for the conversation's delivery_class and
-        that are opted in.
-        """
-        # TODO: Unhacky this.
-        opt_out_store = OptOutStore(
-            self.api.manager, self.user_api.user_account_key)
-        optouts = yield opt_out_store.list_opt_outs()
-        optout_addrs = [optout.key.split(':', 1)[1] for optout in optouts
-                            if optout.key.startswith('msisdn:')]
-        contacts = yield self.get_opted_in_contacts()
-        all_addrs = yield self.get_contacts_addresses(contacts)
-        opted_in_addrs = [addr for addr in all_addrs
-                            if addr not in optout_addrs]
-        returnValue(opted_in_addrs)
+        return contact_store.get_contacts_for_conversation(self.c)
 
     @Manager.calls_manager
     def get_inbound_throughput(self, batch_key=None, sample_time=300):
@@ -414,3 +399,43 @@ class ConversationWrapper(object):
         count = yield self.mdb.cache.count_outbound_throughput(batch_key,
             sample_time)
         returnValue(count / (sample_time / 60.0))
+
+    @Manager.calls_manager
+    def _filter_opted_out_contacts(self, contacts):
+        # TODO: Less hacky address type handling.
+        address_type = 'gtalk' if self.delivery_class == 'gtalk' else 'msisdn'
+        contacts = yield contacts
+        opt_out_store = OptOutStore(
+            self.api.manager, self.user_api.user_account_key)
+
+        addresses = self.get_contacts_addresses(contacts)
+        opt_out_keys = yield opt_out_store.opt_outs_for_addresses(
+            address_type, addresses)
+        opted_out_addrs = set(key.split(':')[1] for key in opt_out_keys)
+
+        filtered_contacts = []
+        for contact in contacts:
+            contact_addr = contact.addr_for(self.delivery_class)
+            if contact_addr and contact_addr not in opted_out_addrs:
+                filtered_contacts.append(contact)
+        returnValue(filtered_contacts)
+
+    @Manager.calls_manager
+    def get_opted_in_contact_bunches(self):
+        """
+        Get a generator that produces batches the contacts with
+        an address attribute that is appropriate for the conversation's
+        delivery_class and that are opted in.
+        """
+        contact_store = self.user_api.contact_store
+        contact_keys = yield self.get_contact_keys()
+        contacts_iter = contact_store.contacts.load_all_bunches(contact_keys)
+
+        # We return a generator here. It's important that this is iterated over
+        # slowly, otherwise we risk hammering our Riak servers to death.
+        def opted_in_contacts_generator():
+            # NOTE: This is a generator, *not* an async flattener.
+            for contacts_bunch in contacts_iter:
+                yield self._filter_opted_out_contacts(contacts_bunch)
+
+        returnValue(opted_in_contacts_generator())
