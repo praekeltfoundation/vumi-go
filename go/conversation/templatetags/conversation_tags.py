@@ -16,8 +16,8 @@ def show_conversation_messages(conversation, direction=None, page=None,
     page = page or 1
     inbound_message_paginator = Paginator(
         PagedMessageCache(conversation.count_replies(),
-            lambda start, stop: conversation.replies(start, stop, batch_id)),
-            20)
+            lambda start, stop: conversation.received_messages(
+                start, stop, batch_id)), 20)
     outbound_message_paginator = Paginator(
         PagedMessageCache(conversation.count_sent_messages(),
             lambda start, stop: conversation.sent_messages(start, stop,

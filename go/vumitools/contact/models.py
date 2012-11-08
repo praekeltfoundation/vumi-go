@@ -69,19 +69,6 @@ class Contact(Model):
         else:
             return None
 
-    @classmethod
-    def search_group(cls, manager, group, return_keys=False, **kw):
-        mr = manager.riak_map_reduce()
-
-        # TODO: populate map/reduce
-
-        if return_keys:
-            mapper = lambda manager, result: result.get_key()
-        else:
-            mapper = lambda manager, result: cls.load(manager,
-                                                      result.get_key())
-        return manager.run(mr, mapper)
-
     def __unicode__(self):
         if self.name and self.surname:
             return u' '.join([self.name, self.surname])
@@ -136,19 +123,16 @@ class ContactStore(PerAccountStore):
     def get_group(self, name):
         return self.groups.load(name)
 
-    def search_group(self, group, return_keys=False, **kw):
-        return self.contacts.search_group(self.manager, group,
-                                          return_keys=return_keys, **kw)
-
     @Manager.calls_manager
     def get_contacts_for_group(self, group):
+        """Return contact keys for this group."""
         contacts = set([])
         static_contacts = yield self.get_static_contacts_for_group(group)
         contacts.update(static_contacts)
         if group.is_smart_group():
             dynamic_contacts = yield self.get_dynamic_contacts_for_group(group)
             contacts.update(dynamic_contacts)
-        returnValue(contacts)
+        returnValue(list(contacts))
 
     @Manager.calls_manager
     def get_contacts_for_conversation(self, conversation):
@@ -156,36 +140,31 @@ class ContactStore(PerAccountStore):
         Collect all contacts relating to a conversation from static &
         dynamic groups.
         """
-        known_groups = yield conversation.groups.get_all()
-        # Making sure to skip Nones, possibly not necessary
-        all_groups = [group for group in known_groups if group]
-
         # Grab all contacts we can find
         contacts = set([])
-        for group in all_groups:
-            group_contacts = yield self.get_contacts_for_group(group)
-            contacts.update(group_contacts)
+        for groups in conversation.groups.load_all_bunches():
+            for group in (yield groups):
+                group_contacts = yield self.get_contacts_for_group(group)
+                contacts.update(group_contacts)
 
-        returnValue(contacts)
+        returnValue(list(contacts))
 
-    @Manager.calls_manager
     def get_static_contacts_for_group(self, group):
         """
         Look up contacts through Riak 2i
         """
-        contacts = yield group.backlinks.contacts()
-        returnValue(contacts)
+        return group.backlinks.contacts()
 
-    @Manager.calls_manager
     def get_dynamic_contacts_for_group(self, group):
         """
         Use Riak search to find matching contacts.
         """
-        contacts = yield self.contacts.riak_search(group.query)
-        returnValue(contacts)
+        return self.contacts.raw_search(group.query).get_keys()
 
     @Manager.calls_manager
     def filter_contacts_on_surname(self, letter, group=None):
+        # FIXME: This does a mapreduce over a bucket, which means hitting every
+        #        key in riak.
         # TODO: vumi.persist needs to have better ways of supporting
         #       generic map reduce functions. There's a bunch of boilerplate
         #       around getting bucket names and indexes that I'm doing
@@ -229,7 +208,11 @@ class ContactStore(PerAccountStore):
     def list_groups(self):
         # Not stale, because we're using backlinks.
         user_account = yield self.get_user_account()
-        groups = user_account.backlinks.contactgroups(self.manager)
+        group_keys = yield user_account.backlinks.contactgroups(self.manager)
+        # NOTE: This assumes that we don't have very large numbers of groups.
+        groups = []
+        for groups_bunch in self.groups.load_all_bunches(group_keys):
+            groups.extend((yield groups_bunch))
         returnValue(sorted(groups, key=lambda group: group.name))
 
     @Manager.calls_manager
@@ -247,18 +230,20 @@ class ContactStore(PerAccountStore):
     def contact_for_addr(self, delivery_class, addr):
         if delivery_class in ('sms', 'ussd'):
             addr = '+' + addr.lstrip('+')
-            contacts = yield self.contacts.search(msisdn=addr)
-            if contacts:
-                returnValue(contacts[0])
+            keys = yield self.contacts.search(msisdn=addr).get_keys()
+            if keys:
+                contact = yield self.contacts.load(keys[0])
+                returnValue(contact)
             contact_id = uuid4().get_hex()
             returnValue(self.contacts(contact_id,
                                       user_account=self.user_account_key,
                                       msisdn=addr))
         elif delivery_class == 'gtalk':
             addr = addr.partition('/')[0]
-            contacts = yield self.contacts.search(gtalk_id=addr)
-            if contacts:
-                returnValue(contacts[0])
+            keys = yield self.contacts.search(gtalk_id=addr).get_keys()
+            if keys:
+                contact = yield self.contacts.load(keys[0])
+                returnValue(contact)
             contact_id = uuid4().get_hex()
             contact = self.contacts(contact_id,
                                     user_account=self.user_account_key,

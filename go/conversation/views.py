@@ -12,7 +12,7 @@ CONVERSATIONS_PER_PAGE = 6
 @login_required
 def index(request):
     conv_store = request.user_api.conversation_store
-    conversations = [request.user_api.wrap_conversation(conversation)
+    conversations = [request.user_api.get_wrapped_conversation(conversation)
                      for conversation in conv_store.list_conversations()]
     conversations = sorted(conversations, key=lambda c: c.created_at,
                             reverse=True)

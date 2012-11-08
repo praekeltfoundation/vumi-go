@@ -29,7 +29,9 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
         self.set_permissions(self.user, enabled=True,
             application='go.apps.test')
         riak_account = self.get_riak_account()
-        permissions = riak_account.applications.get_all()
+        permissions = []
+        for perms in riak_account.applications.load_all_bunches():
+            permissions.extend(perms)
         apps = [p.application for p in permissions]
         self.assertTrue('go.apps.test' in apps)
 
@@ -45,7 +47,9 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
         self.set_permissions(self.user, enabled=False,
             application='go.apps.test')
         riak_account = self.get_riak_account()
-        permissions = riak_account.applications.get_all()
+        permissions = []
+        for perms in riak_account.applications.load_all_bunches():
+            permissions.extend(perms)
         apps = [p.application for p in permissions]
         self.assertFalse('go.apps.test' in apps)
 

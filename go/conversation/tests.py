@@ -78,15 +78,18 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         self.assertNotContains(search('running'), conversation.message)
         self.assertContains(search('finished'), conversation.message)
 
-    def test_replies(self):
+    def test_received_messages(self):
         """
-        Test replies helper function
+        Test received_messages helper function
         """
         conversation = self.get_wrapped_conv()
         conversation.start()
-        [contact] = conversation.get_opted_in_contacts()
+        contacts = []
+        for bunch in conversation.get_opted_in_contact_bunches():
+            contacts.extend(bunch)
+        [contact] = contacts
         [batch] = conversation.get_batches()
-        self.assertEqual(conversation.replies(), [])
+        self.assertEqual(conversation.received_messages(), [])
         [tag] = self.api.batch_tags(batch.key)
         to_addr = "+123" + tag[1][-5:]
 
@@ -102,7 +105,7 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         msg = self.mkmsg_in('hello', to_addr=to_addr,
                             from_addr=contact.msisdn.lstrip('+'))
         self.api.mdb.add_inbound_message(msg, tag=tag)
-        [reply] = conversation.replies()
+        [reply] = conversation.received_messages()
         self.assertTrue(isinstance(reply.pop('time'), datetime))
         self.assertEqual(reply.pop('contact').key, contact.key)
         self.assertEqual(reply, {
@@ -134,13 +137,8 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(tag_batch(msg_tag), None)
 
     def test_pagination(self):
-        # start with a clean state
-        for conv in self.conv_store.list_conversations():
-            # TODO: Better way to delete these.
-            conv._riak_object.delete()
-
-        # Create 10
-        for i in range(10):
+        # Create 9, we already have 1 from setUp()
+        for i in range(9):
             self.conv_store.new_conversation(
                 conversation_type=u'bulk_message', subject=self.TEST_SUBJECT,
                 message=u"", delivery_class=u"sms",
