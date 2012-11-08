@@ -354,8 +354,6 @@ class GoApplicationRouter(BaseDispatchRouter):
         self.conversation_mappings = self.config['conversation_mappings']
         self.upstream_transport = self.config['upstream_transport']
         self.optout_transport = self.config['optout_transport']
-
-        # TODO: Fix this madness.
         self.vumi_api = yield VumiApi.from_config_async(self.config)
 
     @inlineCallbacks
@@ -381,6 +379,7 @@ class GoApplicationRouter(BaseDispatchRouter):
         message = yield self.vumi_api.mdb.get_outbound_message(user_message_id)
         if message is None:
             log.error('Unable to find message for event: %s' % (event,))
+            return
 
         application = yield self.find_application_for_msg(message)
         returnValue(application)
@@ -397,7 +396,10 @@ class GoApplicationRouter(BaseDispatchRouter):
                 publisher = self.dispatcher.exposed_publisher[application]
                 yield publisher.publish_message(msg)
             else:
-                log.error('No application setup for inbound message '
+                # This often happens when we have a USSD code like *123*4#
+                # and some random person dials *123*4*1# when that isn't
+                # actually configured to route somewhere.
+                log.warning('No application setup for inbound message '
                             'type: %s' % (msg,))
 
     @inlineCallbacks
