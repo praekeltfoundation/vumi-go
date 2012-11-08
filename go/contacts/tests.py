@@ -385,6 +385,26 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
             'q': 'name:%s' % (self.contact.name,)
         })
 
+    def test_contact_for_addr(self):
+        sms_contact = self.mkcontact(msisdn=u'+270000000')
+        twitter_contact = self.mkcontact(twitter_handle=u'@someone')
+        gtalk_contact = self.mkcontact(gtalk_id=u'gtalk@host.com')
+
+        self.assertEqual(
+            self.contact_store.contact_for_addr('sms', '+270000000').key,
+            sms_contact.key)
+        self.assertEqual(
+            self.contact_store.contact_for_addr('ussd', '+270000000').key,
+            sms_contact.key)
+        self.assertEqual(
+            self.contact_store.contact_for_addr('twitter', '@someone').key,
+            twitter_contact.key)
+        self.assertEqual(
+            self.contact_store.contact_for_addr('gtalk', 'gtalk@host.com').key,
+            gtalk_contact.key)
+        self.assertRaisesRegexp(RuntimeError, 'Unsupported transport_type',
+            self.contact_store.contact_for_addr, 'unknown', 'unknown')
+
 
 class GroupsTestCase(DjangoGoApplicationTestCase):
 
