@@ -203,16 +203,18 @@ class GoMessageMetadata(object):
             # Without a batch, we can't get a conversation.
             return
 
-        # We must have one of these already or we would bailed out earlier.
-        user_api = self.vumi_api.get_user_api((yield self.get_account_key()))
-        conversations = yield user_api.active_conversations()
+        conv_keys = yield batch.backlinks.conversations(conv_store.manager)
+        conv_model = conv_store.conversations
+        bunches = yield conv_model.load_all_bunches(conv_keys)
+        conversations = []
+        for bunch in bunches:
+            conversations.extend((yield bunch))
         if not conversations:
             # No open conversations for this batch.
             return
 
         # We may have more than one conversation here.
         if len(conversations) > 1:
-            conv_keys = [c.key for c in conversations]
             log.warning('Multiple conversations found '
                         'going with most recent: %r' % (conv_keys,))
         conversation = sorted(conversations, reverse=True,
