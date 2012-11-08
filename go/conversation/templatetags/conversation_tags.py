@@ -36,6 +36,7 @@ def show_conversation_messages(conversation, direction=None, page=None,
         message_page = message_paginator.page(message_paginator.num_pages)
 
     return {
+        'conversation': conversation,
         'inbound_message_paginator': inbound_message_paginator,
         'outbound_message_paginator': outbound_message_paginator,
         'inbound_uniques_count': conversation.count_inbound_uniques(),
