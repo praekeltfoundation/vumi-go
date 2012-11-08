@@ -167,9 +167,11 @@ class VumiUserApi(object):
         user_account = yield account_store.get_user(self.user_account_key)
         # NOTE: This assumes that we don't have very large numbers of
         #       applications.
-        applications = []
+        app_permissions = []
         for permissions in user_account.applications.load_all_bunches():
-            applications.extend((yield permissions))
+            app_permissions.extend((yield permissions))
+        applications = [permission.application for permission
+                            in app_permissions]
         app_settings = settings.VUMI_INSTALLED_APPS
         returnValue(SortedDict([(application,
                         app_settings[application])

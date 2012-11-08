@@ -1,6 +1,7 @@
 from django.core.management.base import CommandError
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_manage_application
+from go.base.utils import vumi_api_for_user
 
 
 class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
@@ -11,6 +12,7 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
         super(GoManageApplicationCommandTestCase, self).setUp()
         self.setup_api()
         self.user = self.mk_django_user()
+        self.user_api = vumi_api_for_user(self.user)
         self.profile = self.user.get_profile()
 
     def get_riak_account(self):
@@ -26,14 +28,15 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
         })
 
     def test_enable_permissions(self):
+        self.patch_settings(VUMI_INSTALLED_APPS={
+            'go.apps.test': {
+                'namespace': 'test',
+                'display_name': 'test'
+            }
+        })
         self.set_permissions(self.user, enabled=True,
             application='go.apps.test')
-        riak_account = self.get_riak_account()
-        permissions = []
-        for perms in riak_account.applications.load_all_bunches():
-            permissions.extend(perms)
-        apps = [p.application for p in permissions]
-        self.assertTrue('go.apps.test' in apps)
+        self.assertTrue('go.apps.test' in self.user_api.applications())
 
     def test_double_permission_error(self):
         self.set_permissions(self.user, enabled=True,
@@ -46,12 +49,7 @@ class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
             application='go.apps.test')
         self.set_permissions(self.user, enabled=False,
             application='go.apps.test')
-        riak_account = self.get_riak_account()
-        permissions = []
-        for perms in riak_account.applications.load_all_bunches():
-            permissions.extend(perms)
-        apps = [p.application for p in permissions]
-        self.assertFalse('go.apps.test' in apps)
+        self.assertFalse('go.apps.test' in self.user_api.applications())
 
     def test_disable_permissions_for_non_enabled_app(self):
         self.assertRaises(CommandError, self.set_permissions,
