@@ -250,9 +250,10 @@ class ContactStore(PerAccountStore):
                                     gtalk_id=addr, msisdn=u'unknown')
             returnValue(contact)
         elif delivery_class == 'twitter':
-            contacts = yield self.contacts.search(twitter_handle=addr)
-            if contacts:
-                returnValue(contacts[0])
+            keys = yield self.contacts.search(twitter_handle=addr).get_keys()
+            if keys:
+                contact = yield self.contacts.load(keys[0])
+                returnValue(contact)
             contact_id = uuid4().get_hex()
             contact = self.contacts(contact_id,
                                     user_account=self.user_account_key,
