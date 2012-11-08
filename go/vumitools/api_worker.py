@@ -354,8 +354,6 @@ class GoApplicationRouter(BaseDispatchRouter):
         self.conversation_mappings = self.config['conversation_mappings']
         self.upstream_transport = self.config['upstream_transport']
         self.optout_transport = self.config['optout_transport']
-
-        # TODO: Fix this madness.
         self.vumi_api = yield VumiApi.from_config_async(self.config)
 
     @inlineCallbacks
