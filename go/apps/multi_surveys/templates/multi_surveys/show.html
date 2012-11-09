@@ -1,5 +1,6 @@
 {% extends "app.html" %}
 {% load conversation_tags %}
+{% load url from future %}
 
 {% block extra_header %}
     <link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
@@ -10,7 +11,7 @@
     <div class="row">
         <div class="span12">
             <div id="welcome">
-                <h1><a href="{% url conversations:index %}">Multi Surveys</a> &raquo; {{conversation.subject}}</h1>
+                <h1><a href="{% url "conversations:index" %}">Multi Surveys</a> &raquo; {{conversation.subject}}</h1>
             </div>
         </div>
     </div>
