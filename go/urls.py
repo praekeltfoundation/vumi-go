@@ -1,7 +1,7 @@
 from django.conf.urls.defaults import patterns, include, url
 from django.contrib import admin
 from django.http import HttpResponse
-from django.views.generic.base import RedirectView
+from django.views.generic import RedirectView
 
 from registration.views import register
 from go.account.forms import RegistrationForm
