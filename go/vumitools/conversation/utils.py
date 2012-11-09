@@ -6,6 +6,7 @@ from datetime import datetime
 from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Manager
+from vumi.components.message_store import InboundMessage
 
 from vumi.middleware.tagger import TaggingMiddleware
 
@@ -327,8 +328,10 @@ class ConversationWrapper(object):
             The batch to search over.
         """
         batch_key = batch_key or self.get_latest_batch_key()
-        batch = yield self.mdb.get_batch(batch_key)
-        print batch.backlinks.inboundmessages()
+        mr = yield self.mdb.mr_from_field(InboundMessage, 'batch', batch_key)
+        print mr.search
+
+        print batch.backlinks.inboundmessages
 
     @Manager.calls_manager
     def acquire_existing_tag(self):
