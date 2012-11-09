@@ -5,6 +5,11 @@
             Averaging {{conversation.get_inbound_throughput}} messages
             per minute inbound and {{conversation.get_outbound_throughput}} messages
             per minute outbound.
+        </p>
+        <form class="form-search">
+            <input type="text" name="q" size="40" placeholder="Search ..." value="{{query|default:""}}" class="input-medium search-query">
+            <button type="submit" class="btn">Search</button>
+        </form>
     </div>
 </div>
 <div class="tabbable padtop">

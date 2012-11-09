@@ -183,3 +183,12 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertContains(response,
             '10 accepted for delivery by the networks.')
         self.assertContains(response, '10 delivered.')
+
+    def test_message_search(self):
+        self.put_sample_messages_in_conversation(self.user_api,
+                                            self.conv_key, 10)
+        response = self.client.get('%s?q=%s' % (
+            reverse('bulk_message:show', kwargs={
+                'conversation_key': self.conv_key,
+            }), 'foo'))
+        # print response.content

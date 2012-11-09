@@ -316,6 +316,21 @@ class ConversationWrapper(object):
         returnValue(sent_messages)
 
     @Manager.calls_manager
+    def search_inbound_messages(self, query, batch_key=None):
+        """
+        Use Riak Search to search over the inbound messages and return
+        matching messages.
+
+        :param str query:
+            The query to search on
+        :param str batch_key:
+            The batch to search over.
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        batch = yield self.mdb.get_batch(batch_key)
+        print batch.backlinks.inboundmessages()
+
+    @Manager.calls_manager
     def acquire_existing_tag(self):
         # TODO: Remove this once we have proper routing stuff.
         tag = (self.c.delivery_tag_pool, self.c.delivery_tag)
