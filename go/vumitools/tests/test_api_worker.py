@@ -451,7 +451,8 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, ('this', 'does not exist'))
         with LogCatcher() as log:
             yield self.dispatch(msg, self.transport_name)
-            [warning] = log.messages()
+            [warning] = [msg for msg in log.messages()
+                         if 'twisted.web.client' not in msg]
             self.assertTrue('No application setup' in warning)
 
     @inlineCallbacks
