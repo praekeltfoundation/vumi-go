@@ -1,4 +1,5 @@
 {% extends "app.html" %}
+{% load url from future %}
 
 {% block extra_header %}
 <link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
@@ -46,7 +47,7 @@
                     {% for friendly_name, poll_id in polls.items %}
                         <tr>
                             <td>
-                                <a href="{% url multi_survey:survey conversation_key=conversation.key,poll_name=friendly_name %}">
+                                <a href="{% url 'multi_survey:survey' conversation_key=conversation.key poll_name=friendly_name %}">
                                     {{conversation.subject}}, survey: {{friendly_name}}
                                 </a>
                             </td>
@@ -55,7 +56,7 @@
                         <tr>
                             <td>
                                 You don't have any polls defined yet. <br/>
-                                <a href="{% url multi_survey:new_survey conversation_key=conversation.key %}">Create your first here.</a>
+                                <a href="{% url 'multi_survey:new_survey' conversation_key=conversation.key %}">Create your first here.</a>
                             </td>
                         </tr>
                     {% endfor %}
@@ -63,8 +64,8 @@
                     </table>
                     {% if polls %}
                         <div class="btn-toolbar">
-                            <a class="btn btn-primary" href="{% url multi_survey:new_survey conversation_key=conversation.key %}">Add Another Survey</a>
-                            <a class="btn" href="{% url multi_survey:people conversation_key=conversation.key %}">
+                            <a class="btn btn-primary" href="{% url 'multi_survey:new_survey' conversation_key=conversation.key %}">Add Another Survey</a>
+                            <a class="btn" href="{% url 'multi_survey:people' conversation_key=conversation.key %}">
                                 Add Recipients &rarr;
                             </a>
                         </div>
