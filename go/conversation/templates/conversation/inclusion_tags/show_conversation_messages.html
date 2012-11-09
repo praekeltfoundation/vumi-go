@@ -40,7 +40,7 @@
                     <tr>
                         <td><i class="icon-repeat"></i> {{reply.type}}</td>
                         <td>
-                            <h6><a href="{% url "contacts:person" person_key=reply.contact.key %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}}</h6>
+                            <h6><a href="{% url 'contacts:person' person_key=reply.contact.key %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}}</h6>
                             <p>{{reply.content}}</p></td>
                         <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
                     </tr>
