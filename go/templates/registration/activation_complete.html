@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load url from future %}
 
 {% block content %}
     <div class="row">
@@ -7,7 +8,7 @@
                 <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go">
                 <p> 
                     Thanks for confirming your email-address!
-                    You can now log in to your <a href="{% url home %}">Go account</a>.
+                    You can now log in to your <a href="{% url 'home' %}">Go account</a>.
                 </p>
                 <p>&copy; 2012 <a href="http://praekelt.com">Praekelt Group</a>. <a href="mailto:hello@vumi.org">Contact</a>. <a href="https://github.com/praekelt/vumi">Github</a></p>
             </div>
