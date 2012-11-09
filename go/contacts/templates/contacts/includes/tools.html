@@ -1,3 +1,4 @@
+{% load url from future %}
 
 <div class="modal hide fade" id="uplContacts">
     <div class="modal-header">
@@ -61,7 +62,7 @@
         <a class="close" data-dismiss="modal">×</a>
         <h3>Please match the sample to the fields provided</h3>
     </div>
-    <form class="form-horizontal" action="{% url contacts:group group_key=group.key %}" method="POST">
+    <form class="form-horizontal" action="{% url 'contacts:group' group_key=group.key %}" method="POST">
         <div class="modal-body">
             <fieldset>
               <table class="table table-bordered table-striped">
@@ -104,7 +105,7 @@
         <a class="close" data-dismiss="modal">×</a>
         <h3>New Group</h3>
     </div>
-    <form name="frm-new-group" id="frm-new-group" method="post" action="{% url contacts:groups %}" class="form-horizontal">
+    <form name="frm-new-group" id="frm-new-group" method="post" action="{% url 'contacts:groups' %}" class="form-horizontal">
     {% csrf_token %}
     <div class="modal-body">
 	    <fieldset>
@@ -145,7 +146,7 @@
 	  <a class="close" data-dismiss="modal">×</a>
 	  <h3>Remove Group</h3>
 	</div>
-	<form class="form-horizontal" method="POST" action="{% url contacts:group group_key=group.key %}">
+	<form class="form-horizontal" method="POST" action="{% url 'contacts:group' group_key=group.key %}">
 	<div class="modal-body">
 	      <fieldset>
 	        <p><strong>Are you sure you want to remove this group?</strong>
@@ -165,7 +166,7 @@
 	  <a class="close" data-dismiss="modal">×</a>
 	  <h3>Delete Group's Contacts</h3>
 	</div>
-    <form class="form-horizontal" method="POST" action="{% url contacts:group group_key=group.key %}">
+    <form class="form-horizontal" method="POST" action="{% url 'contacts:group' group_key=group.key %}">
       {% csrf_token %}
     <div class="modal-body">
         <div class="alert alert-error">
@@ -196,7 +197,7 @@
       <pre>{{smart_group_form.query.value}}</pre>
     </p>
   </div>
-  <form class="form-horizontal" method="POST" action="{% url contacts:groups %}">
+  <form class="form-horizontal" method="POST" action="{% url 'contacts:groups' %}">
     {% csrf_token %}
     {{smart_group_form}}
     <div class="modal-footer">
