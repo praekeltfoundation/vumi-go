@@ -186,9 +186,10 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
     def test_message_search(self):
         self.put_sample_messages_in_conversation(self.user_api,
-                                            self.conv_key, 10)
+            self.conv_key, 10,
+            content_generator=('hello world %s' % (i,) for i in range(10)))
         response = self.client.get('%s?q=%s' % (
             reverse('bulk_message:show', kwargs={
                 'conversation_key': self.conv_key,
-            }), 'foo'))
+            }), 'hello world 1'))
         # print response.content

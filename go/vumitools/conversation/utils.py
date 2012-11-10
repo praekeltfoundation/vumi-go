@@ -323,15 +323,20 @@ class ConversationWrapper(object):
         matching messages.
 
         :param str query:
-            The query to search on
+            The query regex to search on
         :param str batch_key:
             The batch to search over.
         """
         batch_key = batch_key or self.get_latest_batch_key()
-        mr = yield self.mdb.mr_from_field(InboundMessage, 'batch', batch_key)
-        print mr.search
+        mr = yield self.mdb.manager.mr_from_index_match(InboundMessage,
+            [("msg.content", query)], 'batch_bin', batch_key)
+        keys = mr.get_keys()
 
-        print batch.backlinks.inboundmessages
+        messages = []
+        for bunch in self.mdb.inbound_messages.load_all_bunches(keys):
+            messages.extend((yield bunch))
+
+        returnValue(messages)
 
     @Manager.calls_manager
     def acquire_existing_tag(self):
@@ -447,7 +452,8 @@ class ConversationWrapper(object):
         """
         contact_store = self.user_api.contact_store
         contact_keys = yield self.get_contact_keys()
-        contacts_iter = contact_store.contacts.load_all_bunches(contact_keys)
+        contacts_iter = yield contact_store.contacts.load_all_bunches(
+                                                            contact_keys)
 
         # We return a generator here. It's important that this is iterated over
         # slowly, otherwise we risk hammering our Riak servers to death.
