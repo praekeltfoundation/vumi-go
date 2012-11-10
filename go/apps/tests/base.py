@@ -204,14 +204,17 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         return self.fetch_cmds(consumer)
 
     def put_sample_messages_in_conversation(self, user_api, conversation_key,
-                                                message_count):
+                                                message_count,
+                                                content_generator=None):
         conversation = user_api.get_wrapped_conversation(conversation_key)
         conversation.start()
         batch_key = conversation.get_latest_batch_key()
 
         for i in range(message_count):
             msg_in = self.mkmsg_in(from_addr='from-%s' % (i,),
-                message_id=TransportUserMessage.generate_id())
+                message_id=TransportUserMessage.generate_id(),
+                content=(content_generator.next() if content_generator
+                            else 'hello'))
             msg_out = msg_in.reply('thank you')
             ack = self.mkmsg_ack(user_message_id=msg_out['message_id'])
             dr = self.mkmsg_delivery(user_message_id=msg_out['message_id'])
