@@ -272,6 +272,16 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.assertEqual(len(matching), 1)
 
     @inlineCallbacks
+    def test_flags_search_inbound_messages(self):
+        yield self.conv.start()
+        batch_key = self.conv.get_latest_batch_key()
+        yield self.store_inbound(batch_key, count=20)
+        matching = yield self.conv.search_inbound_messages('HELLO', flags="i")
+        self.assertEqual(len(matching), 20)
+        matching = yield self.conv.search_inbound_messages('HELLO', flags="")
+        self.assertEqual(len(matching), 0)
+
+    @inlineCallbacks
     def test_search_outbound_messages(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
@@ -282,3 +292,13 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.assertEqual(len(matching), 11)
         matching = yield self.conv.search_outbound_messages('hello world 1$')
         self.assertEqual(len(matching), 1)
+
+    @inlineCallbacks
+    def test_flags_search_outbound_messages(self):
+        yield self.conv.start()
+        batch_key = self.conv.get_latest_batch_key()
+        yield self.store_outbound(batch_key, count=20)
+        matching = yield self.conv.search_outbound_messages('HELLO', flags="i")
+        self.assertEqual(len(matching), 20)
+        matching = yield self.conv.search_outbound_messages('HELLO', flags="")
+        self.assertEqual(len(matching), 0)
