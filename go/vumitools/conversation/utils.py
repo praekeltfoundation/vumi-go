@@ -6,7 +6,7 @@ from datetime import datetime
 from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Manager
-from vumi.components.message_store import InboundMessage
+from vumi.components.message_store import InboundMessage, OutboundMessage
 
 from vumi.middleware.tagger import TaggingMiddleware
 
@@ -317,25 +317,59 @@ class ConversationWrapper(object):
         returnValue(sent_messages)
 
     @Manager.calls_manager
+    def search_messages(self, model, query, batch_key=None):
+        """
+        Search over `Model` instances index in the batch_key 2i matching
+        the query regex. Returns the keys of matching objects.
+
+        :param Model model:
+            The Model to search over, can be InboundMessage or OutboundMessage
+        :param dictionary query:
+            A list with (key, pattern) tuples to search on. The field should
+            match a key in the model's JSON payload dictionary.
+        :param batch_key:
+            The batch 2i to look up, defaults to `self.get_latest_batch_key()`
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        mr = yield self.mdb.manager.mr_from_index_match(model, query,
+            'batch_bin', batch_key)
+        keys = yield mr.get_keys()
+        returnValue(keys)
+
+    @Manager.calls_manager
     def search_inbound_messages(self, query, batch_key=None):
         """
         Use Riak Search to search over the inbound messages and return
-        matching messages.
+        matching messages. Returns the matching messages.
 
         :param str query:
             The query regex to search on
         :param str batch_key:
             The batch to search over.
         """
-        batch_key = batch_key or self.get_latest_batch_key()
-        mr = yield self.mdb.manager.mr_from_index_match(InboundMessage,
-            [("msg.content", query)], 'batch_bin', batch_key)
-        keys = mr.get_keys()
-
+        keys = yield self.search_messages(InboundMessage,
+            [('msg.content', query)], batch_key)
         messages = []
         for bunch in self.mdb.inbound_messages.load_all_bunches(keys):
             messages.extend((yield bunch))
+        returnValue(messages)
 
+    @Manager.calls_manager
+    def search_outbound_messages(self, query, batch_key=None):
+        """
+        Use Riak Search to search over the outbound messages and return
+        matching messages. Returns the matching messages.
+
+        :param str query:
+            The query regex to search on
+        :param str batch_key:
+            The batch to search over.
+        """
+        keys = yield self.search_messages(OutboundMessage,
+            [('msg.content', query)], batch_key)
+        messages = []
+        for bunch in self.mdb.outbound_messages.load_all_bunches(keys):
+            messages.extend((yield bunch))
         returnValue(messages)
 
     @Manager.calls_manager

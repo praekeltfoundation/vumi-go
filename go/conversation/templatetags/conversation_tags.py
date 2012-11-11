@@ -28,7 +28,8 @@ def show_conversation_messages(conversation, direction=None, page=None,
     """
 
     if query:
-        return show_conversation_message_search(conversation, batch_id, query)
+        return show_conversation_message_search(conversation, direction,
+            batch_id, query)
 
     direction = direction or 'inbound'
     # Paginator starts counting at 1 so 0 would also be invalid
@@ -67,7 +68,7 @@ def show_conversation_messages(conversation, direction=None, page=None,
     }
 
 
-def show_conversation_message_search(conversation, batch_id, query):
+def show_conversation_message_search(conversation, direction, batch_id, query):
     """
     Use Riak search to find messages with content matching the given query.
 
