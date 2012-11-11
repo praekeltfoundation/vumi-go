@@ -317,7 +317,7 @@ class ConversationWrapper(object):
         returnValue(sent_messages)
 
     @Manager.calls_manager
-    def search_messages(self, model, query, batch_key=None):
+    def match_messages(self, model, query, batch_key=None):
         """
         Does an OR search over `Model` instances indexed in the batch_key 2i
         matching the query regex. Returns the keys of matching objects.
@@ -338,7 +338,8 @@ class ConversationWrapper(object):
         returnValue(keys)
 
     @Manager.calls_manager
-    def search_inbound_messages(self, pattern, flags="i", batch_key=None):
+    def match_inbound_messages(self, pattern, flags="i", batch_key=None,
+                                key="msg.content"):
         """
         Use Riak Search to search over the inbound messages and return
         matching messages. Returns the matching messages.
@@ -349,9 +350,11 @@ class ConversationWrapper(object):
             The flags to set for the RegExp object.
         :param str batch_key:
             The batch to search over.
+        :param str key:
+            The key on the message to match. Defaults to `msg.content`.
         """
-        keys = yield self.search_messages(InboundMessage, [{
-            "key": "msg.content",
+        keys = yield self.match_messages(InboundMessage, [{
+            "key": key,
             "pattern": pattern,
             "flags": flags,
             }], batch_key)
@@ -361,7 +364,8 @@ class ConversationWrapper(object):
         returnValue(messages)
 
     @Manager.calls_manager
-    def search_outbound_messages(self, pattern, flags="i", batch_key=None):
+    def match_outbound_messages(self, pattern, flags="i", batch_key=None,
+                                key="msg.content"):
         """
         Use Riak Search to search over the outbound messages and return
         matching messages. Returns the matching messages.
@@ -372,9 +376,11 @@ class ConversationWrapper(object):
             The flags to set for the RegExp object.
         :param str batch_key:
             The batch to search over.
+        :param str key:
+            The key on the message to match. Defaults to `msg.content`.
         """
-        keys = yield self.search_messages(OutboundMessage, [{
-            "key": "msg.content",
+        keys = yield self.match_messages(OutboundMessage, [{
+            "key": key,
             "pattern": pattern,
             "flags": flags,
             }], batch_key)

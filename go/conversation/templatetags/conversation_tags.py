@@ -79,7 +79,7 @@ def show_conversation_message_search(conversation, direction, batch_id, query):
     :param str query:
         The search term.
     """
-    matching_messages = conversation.search_inbound_messages(query)
+    matching_messages = conversation.match_inbound_messages(query)
     print matching_messages
     return {
         'query': query,

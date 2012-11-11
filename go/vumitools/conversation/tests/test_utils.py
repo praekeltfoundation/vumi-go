@@ -260,45 +260,69 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             (yield self.conv.get_outbound_throughput(sample_time=20)), 60)
 
     @inlineCallbacks
-    def test_search_inbound_messages(self):
+    def test_match_inbound_messages(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
         yield self.store_inbound(batch_key, count=20)
-        matching = yield self.conv.search_inbound_messages('hello')
+        matching = yield self.conv.match_inbound_messages('hello')
         self.assertEqual(len(matching), 20)
-        matching = yield self.conv.search_inbound_messages('hello world 1')
+        matching = yield self.conv.match_inbound_messages('hello world 1')
         self.assertEqual(len(matching), 11)
-        matching = yield self.conv.search_inbound_messages('hello world 1$')
+        matching = yield self.conv.match_inbound_messages('hello world 1$')
         self.assertEqual(len(matching), 1)
 
     @inlineCallbacks
-    def test_flags_search_inbound_messages(self):
+    def test_match_inbound_messages_flags(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
         yield self.store_inbound(batch_key, count=20)
-        matching = yield self.conv.search_inbound_messages('HELLO', flags="i")
+        matching = yield self.conv.match_inbound_messages('HELLO', flags="i")
         self.assertEqual(len(matching), 20)
-        matching = yield self.conv.search_inbound_messages('HELLO', flags="")
+        matching = yield self.conv.match_inbound_messages('HELLO', flags="")
         self.assertEqual(len(matching), 0)
 
     @inlineCallbacks
-    def test_search_outbound_messages(self):
+    def test_match_inbound_messages_flags_custom_key(self):
+        yield self.conv.start()
+        batch_key = self.conv.get_latest_batch_key()
+        yield self.store_inbound(batch_key, count=20)
+        matching = yield self.conv.match_inbound_messages('FROM', flags="i",
+            key='msg.from_addr')
+        self.assertEqual(len(matching), 20)
+        matching = yield self.conv.match_inbound_messages('FROM', flags="",
+            key='msg.from_addr')
+        self.assertEqual(len(matching), 0)
+
+    @inlineCallbacks
+    def test_match_outbound_messages(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
         yield self.store_outbound(batch_key, count=20)
-        matching = yield self.conv.search_outbound_messages('hello')
+        matching = yield self.conv.match_outbound_messages('hello')
         self.assertEqual(len(matching), 20)
-        matching = yield self.conv.search_outbound_messages('hello world 1')
+        matching = yield self.conv.match_outbound_messages('hello world 1')
         self.assertEqual(len(matching), 11)
-        matching = yield self.conv.search_outbound_messages('hello world 1$')
+        matching = yield self.conv.match_outbound_messages('hello world 1$')
         self.assertEqual(len(matching), 1)
 
     @inlineCallbacks
-    def test_flags_search_outbound_messages(self):
+    def test_match_outbound_messages_flags(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
         yield self.store_outbound(batch_key, count=20)
-        matching = yield self.conv.search_outbound_messages('HELLO', flags="i")
+        matching = yield self.conv.match_outbound_messages('HELLO', flags="i")
         self.assertEqual(len(matching), 20)
-        matching = yield self.conv.search_outbound_messages('HELLO', flags="")
+        matching = yield self.conv.match_outbound_messages('HELLO', flags="")
+        self.assertEqual(len(matching), 0)
+
+    @inlineCallbacks
+    def test_match_outbound_messages_flags_custom_key(self):
+        yield self.conv.start()
+        batch_key = self.conv.get_latest_batch_key()
+        yield self.store_outbound(batch_key, count=20)
+        matching = yield self.conv.match_outbound_messages('TO', flags="i",
+            key='msg.to_addr')
+        self.assertEqual(len(matching), 20)
+        matching = yield self.conv.match_outbound_messages('TO', flags="",
+            key='msg.to_addr')
         self.assertEqual(len(matching), 0)
