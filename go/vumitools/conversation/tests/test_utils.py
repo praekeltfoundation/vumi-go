@@ -50,21 +50,25 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         yield self.api.set_pool_metadata(name, defaults)
 
     @inlineCallbacks
-    def store_inbound(self, batch_key, count=10, addr_template='from-{0}'):
+    def store_inbound(self, batch_key, count=10, addr_template='from-{0}',
+                        content_template='hello world {0}'):
         inbound = []
         for i in range(count):
             msg_in = self.mkmsg_in(from_addr=addr_template.format(i),
-                message_id=TransportMessage.generate_id())
+                message_id=TransportMessage.generate_id(),
+                content=content_template.format(i))
             yield self.mdb.add_inbound_message(msg_in, batch_id=batch_key)
             inbound.append(msg_in)
         returnValue(inbound)
 
     @inlineCallbacks
-    def store_outbound(self, batch_key, count=10, addr_template='to-{0}'):
+    def store_outbound(self, batch_key, count=10, addr_template='to-{0}',
+                        content_template='hello world {0}'):
         outbound = []
         for i in range(count):
             msg_out = self.mkmsg_out(to_addr=addr_template.format(i),
-                message_id=TransportMessage.generate_id())
+                message_id=TransportMessage.generate_id(),
+                content=content_template.format(i))
             yield self.mdb.add_outbound_message(msg_out, batch_id=batch_key)
             outbound.append(msg_out)
         returnValue(outbound)
@@ -254,3 +258,27 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         # 20 messages in 20 seconds = 60 messages per minute
         self.assertEqual(
             (yield self.conv.get_outbound_throughput(sample_time=20)), 60)
+
+    @inlineCallbacks
+    def test_search_inbound_messages(self):
+        yield self.conv.start()
+        batch_key = self.conv.get_latest_batch_key()
+        yield self.store_inbound(batch_key, count=20)
+        matching = yield self.conv.search_inbound_messages('hello')
+        self.assertEqual(len(matching), 20)
+        matching = yield self.conv.search_inbound_messages('hello world 1')
+        self.assertEqual(len(matching), 11)
+        matching = yield self.conv.search_inbound_messages('hello world 1$')
+        self.assertEqual(len(matching), 1)
+
+    @inlineCallbacks
+    def test_search_outbound_messages(self):
+        yield self.conv.start()
+        batch_key = self.conv.get_latest_batch_key()
+        yield self.store_outbound(batch_key, count=20)
+        matching = yield self.conv.search_outbound_messages('hello')
+        self.assertEqual(len(matching), 20)
+        matching = yield self.conv.search_outbound_messages('hello world 1')
+        self.assertEqual(len(matching), 11)
+        matching = yield self.conv.search_outbound_messages('hello world 1$')
+        self.assertEqual(len(matching), 1)
