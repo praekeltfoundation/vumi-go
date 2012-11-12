@@ -317,32 +317,11 @@ class ConversationWrapper(object):
         returnValue(sent_messages)
 
     @Manager.calls_manager
-    def match_messages(self, model, query, batch_key=None):
-        """
-        Does an OR search over `Model` instances indexed in the batch_key 2i
-        matching the query regex. Returns the keys of matching objects.
-
-        :param Model model:
-            The Model to search over, can be InboundMessage or OutboundMessage
-        :param dictionary query:
-            A list with {"key": "", "pattern": "", "flags": ""} dictionaries
-            to search on. The field should match a key in the model's
-            JSON payload dictionary.
-        :param batch_key:
-            The batch 2i to look up, defaults to `self.get_latest_batch_key()`
-        """
-        batch_key = batch_key or self.get_latest_batch_key()
-        mr = yield self.mdb.manager.mr_from_index_match(model, query,
-            'batch_bin', batch_key)
-        keys = yield mr.get_keys()
-        returnValue(keys)
-
-    @Manager.calls_manager
     def match_inbound_messages(self, pattern, flags="i", batch_key=None,
                                 key="msg.content"):
         """
-        Use Riak Search to search over the inbound messages and return
-        matching messages. Returns the matching messages.
+        Does a regex OR search over the inbound messages and returns
+        matching messages.
 
         :param str pattern:
             The pattern to search on
@@ -353,11 +332,12 @@ class ConversationWrapper(object):
         :param str key:
             The key on the message to match. Defaults to `msg.content`.
         """
-        keys = yield self.match_messages(InboundMessage, [{
+        batch_key = batch_key or self.get_latest_batch_key()
+        keys = yield self.mdb.batch_inbound_keys_matching(batch_key, [{
             "key": key,
             "pattern": pattern,
             "flags": flags,
-            }], batch_key)
+            }])
         messages = []
         for bunch in self.mdb.inbound_messages.load_all_bunches(keys):
             messages.extend((yield bunch))
@@ -367,8 +347,8 @@ class ConversationWrapper(object):
     def match_outbound_messages(self, pattern, flags="i", batch_key=None,
                                 key="msg.content"):
         """
-        Use Riak Search to search over the outbound messages and return
-        matching messages. Returns the matching messages.
+        Does a regex OR search over the outbound messages and returns
+        matching messages.
 
         :param str pattern:
             The pattern to search on
@@ -379,11 +359,12 @@ class ConversationWrapper(object):
         :param str key:
             The key on the message to match. Defaults to `msg.content`.
         """
-        keys = yield self.match_messages(OutboundMessage, [{
+        batch_key = batch_key or self.get_latest_batch_key()
+        keys = yield self.mdb.batch_outbound_keys_matching(batch_key, [{
             "key": key,
             "pattern": pattern,
             "flags": flags,
-            }], batch_key)
+            }])
         messages = []
         for bunch in self.mdb.outbound_messages.load_all_bunches(keys):
             messages.extend((yield bunch))
