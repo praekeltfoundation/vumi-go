@@ -27,11 +27,12 @@ def show_conversation_messages(conversation, direction=None, page=None,
         messages.
     """
 
+    direction = direction or 'inbound'
+
     if query:
         return show_conversation_message_search(conversation, direction,
             batch_id, query)
 
-    direction = direction or 'inbound'
     # Paginator starts counting at 1 so 0 would also be invalid
     page = page or 1
     inbound_message_paginator = Paginator(
