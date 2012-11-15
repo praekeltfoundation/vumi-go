@@ -25,7 +25,7 @@ def index(request):
 
     if query:
         conversations = [c for c in conversations
-                         if query.lower() in c.subject.lower()]
+                         if query.lower() in c.name.lower()]
 
     if conversation_type:
         conversations = [c for c in conversations

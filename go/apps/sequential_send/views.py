@@ -73,7 +73,7 @@ class UsedTagConversationForm(VumiModelForm):
         self.fields['delivery_tag_pool'].widget.choices = list(
             itertools.chain(self.tag_options.itervalues()))
         self.fields['delivery_class'].widget.choices = [
-            (conv.key, conv.subject) for conv in self.conversations]
+            (conv.key, conv.name) for conv in self.conversations]
 
     def _load_tag_options(self):
         tag_options = {}
@@ -93,7 +93,7 @@ class UsedTagConversationForm(VumiModelForm):
     def tagpools_by_delivery_class(self):
         delivery_classes = []
         for conv in self.conversations:
-            display_name = conv.subject
+            display_name = conv.name
             delivery_classes.append((conv.key, [
                         (display_name, self.tag_options[conv.key])]))
             return delivery_classes

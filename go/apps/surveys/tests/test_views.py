@@ -163,7 +163,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(reverse('survey:show', kwargs={
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.subject, 'Test Conversation')
+        self.assertEqual(conversation.name, 'Test Conversation')
 
     def test_edit(self):
         survey_url = reverse('survey:edit', kwargs={

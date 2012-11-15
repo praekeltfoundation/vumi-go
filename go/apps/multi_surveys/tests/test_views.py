@@ -156,4 +156,4 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(reverse('multi_survey:show', kwargs={
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.subject, 'Test Conversation')
+        self.assertEqual(conversation.name, 'Test Conversation')

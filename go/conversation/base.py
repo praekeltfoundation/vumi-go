@@ -85,13 +85,12 @@ class NewConversationView(ConversationView):
         if not form.is_valid():
             return self.render_to_response({'form': form})
 
-        copy_keys = [
-            'subject',
-            'message',
-            'delivery_class',
-            'delivery_tag_pool',
-            ]
-        conversation_data = dict((k, form.cleaned_data[k]) for k in copy_keys)
+        conversation_data = {
+            'name': form.cleaned_data['subject'],
+            'delivery_class': form.cleaned_data['delivery_class'],
+            'delivery_tag_pool': form.cleaned_data['delivery_tag_pool'],
+            'config': {u'content': form.cleaned_data['message']},
+            }
 
         tag_info = form.cleaned_data['delivery_tag_pool'].partition(':')
         conversation_data['delivery_tag_pool'] = tag_info[0]

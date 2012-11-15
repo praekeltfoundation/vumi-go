@@ -13,7 +13,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
     TEST_GROUP_NAME = u"Test Group"
     TEST_CONTACT_NAME = u"Name"
     TEST_CONTACT_SURNAME = u"Surname"
-    TEST_SUBJECT = u"Test Conversation"
+    TEST_CONVERSATION_NAME = u"Test Conversation"
     TEST_CONVERSATION_TYPE = u'bulk_message'
     TEST_CONVERSATION_PARAMS = None
     TEST_START_PARAMS = None
@@ -52,11 +52,11 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         # And a conversation
         params = {
             'conversation_type': self.TEST_CONVERSATION_TYPE,
-            'subject': self.TEST_SUBJECT,
-            'message': u"Test message",
+            'name': self.TEST_CONVERSATION_NAME,
             'delivery_class': u"sms",
             'delivery_tag_pool': u"longcode",
             'groups': [self.group_key],
+            'config': {'content': u"Test message"},
             }
         if self.TEST_CONVERSATION_PARAMS:
             params.update(self.TEST_CONVERSATION_PARAMS)
@@ -66,8 +66,8 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
     def mkconversation(self, **kwargs):
         defaults = {
             'conversation_type': u'bulk_message',
-            'subject': u'subject',
-            'message': u'hello world'
+            'name': u'subject',
+            'config': {'content': u'hello world'},
         }
         defaults.update(kwargs)
         return self.conv_store.new_conversation(**defaults)

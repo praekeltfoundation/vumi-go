@@ -39,15 +39,11 @@ def new(request):
     if request.POST:
         form = ConversationForm(request.user_api, request.POST)
         if form.is_valid():
-            conversation_data = {}
-            copy_keys = [
-                'subject',
-                'message',
-                'delivery_class',
-            ]
-
-            for key in copy_keys:
-                conversation_data[key] = form.cleaned_data[key]
+            conversation_data = {
+                'name': form.cleaned_data['subject'],
+                'delivery_class': form.cleaned_data['delivery_class'],
+                'config': {u'content': form.cleaned_data['message']},
+                }
 
             tag_info = form.cleaned_data['delivery_tag_pool'].partition(':')
             conversation_data['delivery_tag_pool'] = tag_info[0]

@@ -256,10 +256,10 @@ class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
     @inlineCallbacks
     def create_conversation(self, **kw):
         conv_type = kw.pop('conversation_type', self._conversation_type())
-        subject = kw.pop('subject', u'Subject')
-        message = kw.pop('message', u'Message')
+        name = kw.pop('name', u'Subject')
+        config = kw.pop('config', {})
         conversation = yield self.user_api.new_conversation(
-            conv_type, subject, message, **kw)
+            conv_type, name, config, **kw)
         returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks

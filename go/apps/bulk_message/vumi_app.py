@@ -98,7 +98,7 @@ class BulkMessageApplication(GoApplicationWorker):
         window_id = self.get_window_id(conversation_key, batch_id)
         for to_addr in to_addresses:
             yield self.send_message_via_window(window_id, batch_id, to_addr,
-                                    conv.message, msg_options)
+                                    conv.config['content'], msg_options)
 
     def consume_ack(self, event):
         return self.handle_event(event)
