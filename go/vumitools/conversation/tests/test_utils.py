@@ -260,69 +260,93 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             (yield self.conv.get_outbound_throughput(sample_time=20)), 60)
 
     @inlineCallbacks
-    def test_match_inbound_messages(self):
+    def do_search(self, conv, direction, *args,
+                                    **kwargs):
+        batch_key = kwargs.get('batch_key', self.conv.get_latest_batch_key())
+        search_callback = {
+            'inbound': conv.find_inbound_messages_matching,
+            'outbound': conv.find_outbound_messages_matching,
+        }[direction]
+
+        results_callback = {
+            'inbound': conv.get_inbound_messages_for_token,
+            'outbound': conv.get_outbound_messages_for_token,
+        }[direction]
+
+        kwargs.update({'wait': True})
+        token = yield search_callback(*args, **kwargs)
+        messages = yield results_callback(token, batch_key=batch_key)
+        returnValue(messages)
+
+    @inlineCallbacks
+    def test_find_inbound_messages_matching(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
         yield self.store_inbound(batch_key, count=20)
-        matching = yield self.conv.match_inbound_messages('hello')
+        matching = yield self.do_search(self.conv, 'inbound', 'hello')
         self.assertEqual(len(matching), 20)
-        matching = yield self.conv.match_inbound_messages('hello world 1')
+        matching = yield self.do_search(self.conv, 'inbound', 'hello world 1')
         self.assertEqual(len(matching), 11)
-        matching = yield self.conv.match_inbound_messages('hello world 1$')
+        matching = yield self.do_search(self.conv, 'inbound', 'hello world 1$')
         self.assertEqual(len(matching), 1)
 
     @inlineCallbacks
-    def test_match_inbound_messages_flags(self):
+    def test_find_inbound_messages_matching_flags(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
         yield self.store_inbound(batch_key, count=20)
-        matching = yield self.conv.match_inbound_messages('HELLO', flags="i")
+        matching = yield self.do_search(self.conv, 'inbound', 'HELLO',
+                                        flags="i")
         self.assertEqual(len(matching), 20)
-        matching = yield self.conv.match_inbound_messages('HELLO', flags="")
+        matching = yield self.do_search(self.conv, 'inbound', 'HELLO',
+                                        flags="")
         self.assertEqual(len(matching), 0)
 
     @inlineCallbacks
-    def test_match_inbound_messages_flags_custom_key(self):
+    def test_find_inbound_messages_matching_flags_custom_key(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
         yield self.store_inbound(batch_key, count=20)
-        matching = yield self.conv.match_inbound_messages('FROM', flags="i",
-            key='msg.from_addr')
+        matching = yield self.do_search(self.conv, 'inbound', 'FROM',
+                                        flags='i', key='msg.from_addr')
         self.assertEqual(len(matching), 20)
-        matching = yield self.conv.match_inbound_messages('FROM', flags="",
-            key='msg.from_addr')
+        matching = yield self.do_search(self.conv, 'inbound', 'FROM', flags='',
+                                        key='msg.from_addr')
         self.assertEqual(len(matching), 0)
 
     @inlineCallbacks
-    def test_match_outbound_messages(self):
+    def test_find_outbound_messages_matching(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
         yield self.store_outbound(batch_key, count=20)
-        matching = yield self.conv.match_outbound_messages('hello')
+        matching = yield self.do_search(self.conv, 'outbound', 'hello')
         self.assertEqual(len(matching), 20)
-        matching = yield self.conv.match_outbound_messages('hello world 1')
+        matching = yield self.do_search(self.conv, 'outbound', 'hello world 1')
         self.assertEqual(len(matching), 11)
-        matching = yield self.conv.match_outbound_messages('hello world 1$')
+        matching = yield self.do_search(self.conv, 'outbound',
+                                        'hello world 1$')
         self.assertEqual(len(matching), 1)
 
     @inlineCallbacks
-    def test_match_outbound_messages_flags(self):
+    def test_find_outbound_messages_matching_flags(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
         yield self.store_outbound(batch_key, count=20)
-        matching = yield self.conv.match_outbound_messages('HELLO', flags="i")
+        matching = yield self.do_search(self.conv, 'outbound', 'HELLO',
+                                        flags='i')
         self.assertEqual(len(matching), 20)
-        matching = yield self.conv.match_outbound_messages('HELLO', flags="")
+        matching = yield self.do_search(self.conv, 'outbound', 'HELLO',
+                                        flags='')
         self.assertEqual(len(matching), 0)
 
     @inlineCallbacks
-    def test_match_outbound_messages_flags_custom_key(self):
+    def test_find_outbound_messages_matching_flags_custom_key(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
         yield self.store_outbound(batch_key, count=20)
-        matching = yield self.conv.match_outbound_messages('TO', flags="i",
-            key='msg.to_addr')
+        matching = yield self.do_search(self.conv, 'outbound', 'TO', flags='i',
+                                        key='msg.to_addr')
         self.assertEqual(len(matching), 20)
-        matching = yield self.conv.match_outbound_messages('TO', flags="",
-            key='msg.to_addr')
+        matching = yield self.do_search(self.conv, 'outbound', 'TO', flags='',
+                                        key='msg.to_addr')
         self.assertEqual(len(matching), 0)
