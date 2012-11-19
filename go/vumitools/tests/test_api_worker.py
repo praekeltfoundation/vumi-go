@@ -441,8 +441,8 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
                                 transport_name='xmpp_transport')
         with LogCatcher() as log:
             yield self.dispatch(msg, self.transport_name)
-            [error] = log.errors
-            self.assertTrue('No application setup' in error['message'][0])
+            [warning] = log.messages()
+            self.assertTrue('No application setup' in warning)
 
     @inlineCallbacks
     def test_unknown_tag(self):
@@ -451,8 +451,9 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, ('this', 'does not exist'))
         with LogCatcher() as log:
             yield self.dispatch(msg, self.transport_name)
-            [error] = log.errors
-            self.assertTrue('No application setup' in error['message'][0])
+            [warning] = [msg for msg in log.messages()
+                         if 'twisted.web.client' not in msg]
+            self.assertTrue('No application setup' in warning)
 
     @inlineCallbacks
     def test_optout_message(self):

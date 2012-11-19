@@ -1,3 +1,4 @@
+{% load url from future %}
 <fieldset>
     <label class="control-label" for="input01">Select which contact(s) you'd like to message:</label>
     <table class="table table-condensed">
@@ -16,7 +17,7 @@
     {% empty %}
         <tr>
         <td>
-            You don't have any groups defined yet. <a href="{% url contacts:people %}">Upload a set of contacts</a> to create your first group.
+            You don't have any groups defined yet. <a href="{% url 'contacts:people' %}">Upload a set of contacts</a> to create your first group.
         </td>
         </tr>
     {% endfor %}

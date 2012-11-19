@@ -49,9 +49,10 @@ class Command(BaseCommand):
 
             user = User.objects.get(username=email_address)
             account = user.get_profile().get_user_account()
-            existing_tagpools = [permission for permission
-                                    in account.tagpools.get_all()
-                                    if permission.tagpool == tagpool]
+            existing_tagpools = []
+            for permissions in account.tagpools.load_all_bunches():
+                existing_tagpools.extend([
+                    p for p in permissions if p.tagpool == tagpool])
 
             if existing_tagpools:
                 if options['update']:

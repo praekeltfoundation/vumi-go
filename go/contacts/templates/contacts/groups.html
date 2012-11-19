@@ -1,5 +1,6 @@
 {% extends "app.html" %}
 {% load go_tags %}
+{% load url from future %}
 
 {% block main %}
     <div class="row">
@@ -18,8 +19,8 @@
     <div class="row">
         <div class="span12">
       			<ul class="nav nav-tabs">
-      			    <li><a href="{% url contacts:people %}">People</a></li>
-      			    <li class="active"><a href="{% url contacts:groups %}"><strong>Groups</strong></a></li>
+      			    <li><a href="{% url 'contacts:people' %}">People</a></li>
+      			    <li class="active"><a href="{% url 'contacts:groups' %}"><strong>Groups</strong></a></li>
       			</ul>
       			<form id="search-filter" name="search-filter" action="" method="get" class="well form-search">
                 <input type="text" id="search-filter-input" name="q" value="{{query|default:''}}" placeholder="Find Groups..." class="input-large search-query">
@@ -35,7 +36,7 @@
             {% for group in page.object_list %}
                <tr>
                      <td>
-                        <a href="{% url contacts:group group_key=group.key %}">{{group.name}}</a>
+                        <a href="{% url 'contacts:group' group_key=group.key %}">{{group.name}}</a>
                         {% if group.is_smart_group %}
                             <span class="label label-info">Smart Group</span>
                         {% endif %}
