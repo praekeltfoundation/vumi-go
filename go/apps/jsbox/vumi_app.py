@@ -9,7 +9,6 @@ from vumi.application.sandbox import Sandbox, SandboxResource, SandboxCommand
 from vumi.persist.txredis_manager import TxRedisManager
 from vumi import log
 
-from go.vumitools.api import VumiApiCommand
 from go.vumitools.app_worker import GoApplicationMixin
 from go.vumitools.middleware import DebitAccountMiddleware
 
