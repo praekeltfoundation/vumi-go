@@ -65,18 +65,17 @@ class TestTxVumiApi(AppWorkerTestCase, CeleryTestMixIn):
         self.assertEqual(batch_status['sent'], 0)
 
     @inlineCallbacks
-    def test_batch_messages(self):
+    def test_batch_outbound_keys(self):
         batch_id = yield self.api.batch_start([("poolA", "default10001")])
         msgs = [self.mkmsg_out(content=msg, message_id=str(i)) for
                 i, msg in enumerate(("msg1", "msg2"))]
         for msg in msgs:
             yield self.api.mdb.add_outbound_message(msg, batch_id=batch_id)
-        api_msgs = yield self.api.batch_messages(batch_id)
-        api_msgs.sort(key=lambda msg: msg['message_id'])
-        self.assertEqual(api_msgs, msgs)
+        api_msgs = yield self.api.batch_outbound_keys(batch_id)
+        self.assertEqual(sorted(api_msgs), ['0', '1'])
 
     @inlineCallbacks
-    def test_batch_replies(self):
+    def test_batch_inbound_keys(self):
         tag = ("ambient", "default10001")
         to_addr = "+12310001"
         batch_id = yield self.api.batch_start([tag])
@@ -85,9 +84,8 @@ class TestTxVumiApi(AppWorkerTestCase, CeleryTestMixIn):
                 for i, msg in enumerate(("msg1", "msg2"))]
         for msg in msgs:
             yield self.api.mdb.add_inbound_message(msg, batch_id=batch_id)
-        api_msgs = yield self.api.batch_replies(batch_id)
-        api_msgs.sort(key=lambda msg: msg['message_id'])
-        self.assertEqual(api_msgs, msgs)
+        api_msgs = yield self.api.batch_inbound_keys(batch_id)
+        self.assertEqual(sorted(api_msgs), ['0', '1'])
 
     @inlineCallbacks
     def test_batch_tags(self):
@@ -155,8 +153,6 @@ class TestVumiApi(TestTxVumiApi):
 
 
 class TestTxVumiUserApi(AppWorkerTestCase):
-    override_dummy_consumer = False
-
     @inlineCallbacks
     def setUp(self):
         yield super(TestTxVumiUserApi, self).setUp()
@@ -189,10 +185,16 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         yield optout_store.new_opt_out(u'msisdn', u'+27761234567', {
             'message_id': u'the-message-id'
         })
-        contacts = yield contact_store.get_contacts_for_conversation(conv)
-        all_addrs = yield conv.get_contacts_addresses(contacts)
+        contact_keys = yield contact_store.get_contacts_for_conversation(conv)
+        all_addrs = []
+        for contacts in contact_store.contacts.load_all_bunches(contact_keys):
+            for contact in (yield contacts):
+                all_addrs.append(contact.addr_for(conv.delivery_class))
         self.assertEqual(set(all_addrs), set(['+27760000000', '+27761234567']))
-        optedin_addrs = yield conv.get_opted_in_addresses()
+        optedin_addrs = []
+        for contacts in (yield conv.get_opted_in_contact_bunches()):
+            for contact in (yield contacts):
+                optedin_addrs.append(contact.addr_for(conv.delivery_class))
         self.assertEqual(optedin_addrs, ['+27760000000'])
 
 

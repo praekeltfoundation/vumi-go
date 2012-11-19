@@ -118,11 +118,20 @@ class VumiUserApi(object):
     def get_wrapped_conversation(self, conversation_key):
         conversation = yield self.conversation_store.get_conversation_by_key(
             conversation_key)
-        returnValue(self.wrap_conversation(conversation))
+        if conversation:
+            returnValue(self.wrap_conversation(conversation))
 
+    @Manager.calls_manager
     def active_conversations(self):
         conversations = self.conversation_store.conversations
-        return conversations.by_index(end_timestamp=None)
+        keys = yield conversations.index_lookup(
+            'end_timestamp', None).get_keys()
+        # NOTE: This assumes that we don't have very large numbers of active
+        #       conversations.
+        convs = []
+        for convs_bunch in conversations.load_all_bunches(keys):
+            convs.extend((yield convs_bunch))
+        returnValue(convs)
 
     @Manager.calls_manager
     def running_conversations(self):
@@ -133,16 +142,18 @@ class VumiUserApi(object):
     def tagpools(self):
         account_store = self.api.account_store
         user_account = yield account_store.get_user(self.user_account_key)
-        user_tagpools = yield user_account.tagpools.get_all()
         active_conversations = yield self.active_conversations()
 
         tp_usage = defaultdict(int)
         for conv in active_conversations:
             tp_usage[conv.delivery_tag_pool] += 1
 
-        allowed_set = set(tp.tagpool for tp in user_tagpools
-                          if (tp.max_keys is None
-                              or tp.max_keys > tp_usage[tp.tagpool]))
+        allowed_set = set()
+        for tp_bunch in user_account.tagpools.load_all_bunches():
+            for tp in (yield tp_bunch):
+                if (tp.max_keys is None
+                        or tp.max_keys > tp_usage[tp.tagpool]):
+                    allowed_set.add(tp.tagpool)
 
         available_set = yield self.api.tpm.list_pools()
         pool_names = list(allowed_set & available_set)
@@ -154,8 +165,13 @@ class VumiUserApi(object):
     def applications(self):
         account_store = self.api.account_store
         user_account = yield account_store.get_user(self.user_account_key)
-        permissions = yield user_account.applications.get_all()
-        applications = [p.application for p in permissions]
+        # NOTE: This assumes that we don't have very large numbers of
+        #       applications.
+        app_permissions = []
+        for permissions in user_account.applications.load_all_bunches():
+            app_permissions.extend((yield permissions))
+        applications = [permission.application for permission
+                            in app_permissions]
         app_settings = settings.VUMI_INSTALLED_APPS
         returnValue(SortedDict([(application,
                         app_settings[application])
@@ -265,33 +281,25 @@ class VumiApi(object):
         """
         return self.mdb.batch_status(batch_id)
 
-    def batch_messages(self, batch_id):
-        """Return a list of batch message dictionaries.
+    def batch_outbound_keys(self, batch_id):
+        """Return a list of outbound message keys.
 
-        Should only be used on batches that are expected
-        to have a small set of messages.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to get messages for
-        :rtype:
-            list of message dictionaries.
+        :param str batch_id:
+            batch to get outbound message keys for
+        :returns:
+            list of message keys.
         """
-        return self.mdb.batch_messages(batch_id)
+        return self.mdb.batch_outbound_keys(batch_id)
 
-    def batch_replies(self, batch_id):
-        """Return a list of reply message dictionaries.
+    def batch_inbound_keys(self, batch_id):
+        """Return a list of inbound message keys.
 
-        Should only be used on batches that are expected
-        to have a small set of replies.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to get replies for
-        :rtype:
-            list of message dictionaries.
+        :param str batch_id:
+            batch to get inbound message keys for
+        :returns:
+            list of message keys.
         """
-        return self.mdb.batch_replies(batch_id)
+        return self.mdb.batch_inbound_keys(batch_id)
 
     @Manager.calls_manager
     def batch_tags(self, batch_id):

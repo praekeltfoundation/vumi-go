@@ -48,3 +48,9 @@ class OptOutStore(PerAccountStore):
         user_account = yield self.get_user_account()
         opt_outs = yield user_account.backlinks.optouts(self.manager)
         returnValue(opt_outs)
+
+    def opt_outs_for_addresses(self, addr_type, addresses):
+        keys = ["%s:%s" % (addr_type, address) for address in addresses]
+        mr = self.manager.mr_from_keys(self.opt_outs, keys)
+        mr.filter_not_found()
+        return mr.get_keys()

@@ -111,11 +111,8 @@ class TestContactStore(GoPersistenceMixin, TestCase):
         group1 = yield self.store.get_group(group1.key)
         group2 = yield self.store.get_group(group2.key)
 
-        self.assertEqual([contact.key],
-                         [c.key for c in (yield group1.backlinks.contacts())])
-
-        self.assertEqual([contact.key],
-                         [c.key for c in (yield group2.backlinks.contacts())])
+        self.assertEqual([contact.key], (yield group1.backlinks.contacts()))
+        self.assertEqual([contact.key], (yield group2.backlinks.contacts()))
 
     @inlineCallbacks
     def test_check_for_opted_out_contact(self):
