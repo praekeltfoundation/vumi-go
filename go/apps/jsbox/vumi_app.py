@@ -73,7 +73,6 @@ class JsBoxApplication(GoApplicationMixin, Sandbox):
         """Return the account  as the sandbox id."""
         return self._account_for_message(event)
 
-    @inlineCallbacks
     def process_command_start(self, batch_id, conversation_type,
                               conversation_key, msg_options,
                               is_client_initiated, **extra_params):
