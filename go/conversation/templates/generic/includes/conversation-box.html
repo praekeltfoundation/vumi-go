@@ -1,16 +1,17 @@
+{% load url from future %}
 {% if conversation %}
 	<div class="span4">
 	    <div class="convos shadow">
-	        <span class="label label-info">{{conversation.start_date}} {{conversation.start_time}}</span> 
+	        <span class="label label-info">{{conversation.start_date}} {{conversation.start_time}}</span>
 	        {% if conversation.ended %}
 	        	<span class="label label-important"><i class="icon-ok-circle icon-white"></i> Finished</span>
 	        {% else %}
 	        	<span class="label label-success"><i class="icon-ok-circle icon-white"></i> {{conversation.get_status|title}}</span>
 	        {% endif %}
-	        <h3><a href="{% url conversations:show conversation_key=conversation.key %}">{{conversation.name}}</a></h3>
+	        <h3><a href="{% url 'conversations:show' conversation_key=conversation.key %}">{{conversation.name}}</a></h3>
 	        <p>{{conversation.config.content}}</p>
-	        <div><span class="label">{{conversation.delivery_class_description}}</span>  
-	        <span class="label"><i class="icon-user icon-white"></i> {{conversation.people.count}}</span> 
+	        <div><span class="label">{{conversation.delivery_class_description}}</span>
+	        <span class="label"><i class="icon-user icon-white"></i> {{conversation.people.count}}</span>
 	        <span class="label"><i class="icon-repeat icon-white"></i> {{conversation.replies.count|default:"0"}}</span></div>
 	    </div>
 	</div>
