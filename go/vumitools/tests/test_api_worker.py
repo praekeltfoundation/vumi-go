@@ -74,9 +74,9 @@ class GoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
         return self._persist_tearDown()
 
     def create_conversation(self, conversation_type=u'bulk_message',
-                            subject=u'subject', message=u'message'):
+                            name=u'subject', config={u'content': u'message'}):
         return self.user_api.conversation_store.new_conversation(
-            conversation_type, subject, message)
+            conversation_type, name, config)
 
     @inlineCallbacks
     def tag_conversation(self, conversation, tag):
@@ -299,19 +299,17 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
         user_account = yield self.mk_user(self.ed.vumi_api, u'dbacct')
         yield user_account.save()
 
-        user_api = self.ed.vumi_api.get_user_api(user_account.key)
-        yield user_api.api.declare_tags([("pool", "tag1")])
-        yield user_api.api.set_pool_metadata("pool", {
+        self.user_api = self.ed.vumi_api.get_user_api(user_account.key)
+        yield self.user_api.api.declare_tags([("pool", "tag1")])
+        yield self.user_api.api.set_pool_metadata("pool", {
             "transport_type": "other",
             "msg_options": {"transport_name": "other_transport"},
             })
 
-        conversation = yield user_api.new_conversation(
-                                    u'bulk_message', u'subject', u'message',
-                                    delivery_tag_pool=u'pool',
-                                    delivery_class=u'sms')
+        conversation = yield self.create_conversation(
+            conversation_type=u'bulk_message', config={u'content': u'message'},
+            delivery_tag_pool=u'pool', delivery_class=u'sms')
 
-        conversation = user_api.wrap_conversation(conversation)
         yield conversation.start()
 
         user_account.event_handler_config = [
@@ -382,7 +380,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         self.user_api = self.vumi_api.get_user_api(self.account.key)
         self.conversation = (
             yield self.user_api.conversation_store.new_conversation(
-                u'bulk_message', u'subject', u'message'))
+                u'bulk_message', u'subject', {u'content': u'message'}))
 
     @inlineCallbacks
     def test_tag_retrieval_and_message_dispatching(self):

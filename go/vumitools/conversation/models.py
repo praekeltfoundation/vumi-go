@@ -21,9 +21,9 @@ CONVERSATION_TYPES = [
     ('multi_survey', 'Multi-stage Interactive Survey'),
 ]
 
-CONVERSATION_DRAFT = 'draft'
-CONVERSATION_RUNNING = 'running'
-CONVERSATION_FINISHED = 'finished'
+CONVERSATION_DRAFT = u'draft'
+CONVERSATION_RUNNING = u'running'
+CONVERSATION_FINISHED = u'finished'
 
 
 class ConversationV1Migrator(ModelMigrator):
@@ -33,69 +33,77 @@ class ConversationV1Migrator(ModelMigrator):
         assert self.model_class.VERSION == 1
 
         # Data assertions
-        assert mdata.data['VERSION'] is None
-        assert set(mdata.data.keys()) == set([
+        assert mdata.old_data['VERSION'] is None
+        assert set(mdata.old_data.keys()) == set([
             'VERSION',
             'end_timestamp', 'conversation_type', 'start_timestamp',
             'created_at', 'subject', 'metadata', 'message',
             'delivery_class', 'delivery_tag', 'delivery_tag_pool',
             ])
-        assert set(mdata.index.keys()) == set([
-            'user_account_bin', 'end_timestamp_bin'])
 
-        # Actual migration
-        new_data = {}
-        for k, v in mdata.data.iteritems():
-            if k in set(['VERSION', 'subject', 'message', 'metadata']):
-                # These are different in the new version.
-                continue
-            new_data[k] = v
-        new_data.update({
-            'VERSION': 1,
-            'config': mdata.data['metadata'] or {},
-            'name': mdata.data['subject'],
-            })
-        new_data['config']['content'] = mdata.data['message']
-        mdata.data = new_data
+        # Copy stuff that hasn't changed between versions
+        mdata.copy_values(
+            'conversation_type',
+            'start_timestamp', 'end_timestamp', 'created_at',
+            'delivery_class', 'delivery_tag_pool', 'delivery_tag')
+        mdata.copy_indexes('user_account_bin', 'groups_bin', 'batches_bin')
+
+        # Add stuff that's new in this version
+        mdata.set_value('VERSION', 1)
+        mdata.set_value('name', mdata.old_data['subject'])
+
+        config = (mdata.old_data['metadata'] or {}).copy()
+        config['content'] = mdata.old_data['message']
+        mdata.set_value('config', config)
+
+        status = CONVERSATION_DRAFT
+        if mdata.new_index['batches_bin']:
+            # ^^^ This kind of hackery is part of the reason for the migration.
+            status = CONVERSATION_RUNNING
+        if mdata.new_data['end_timestamp'] is not None:
+            status = CONVERSATION_FINISHED
+        mdata.set_value('status', status, index='status_bin')
+
+        # Add indexes for fields with new (or updated) indexes
+        mdata.add_index('end_timestamp_bin', mdata.new_data['end_timestamp'])
+        mdata.add_index(
+            'start_timestamp_bin', mdata.new_data['start_timestamp'])
+        mdata.add_index('created_at_bin', mdata.new_data['created_at'])
+
         return mdata
 
 
 class Conversation(Model):
     """A conversation with an audience"""
 
-    # TODO:
-    #
-    #  * Indexed status field: "started", "draft", "ended", etc.
-    #  * Index created_at, start_timestamp
-    #  * Index conversation_type
-
     VERSION = 1
     MIGRATOR = ConversationV1Migrator
 
     user_account = ForeignKey(UserAccount)
     name = Unicode(max_length=255)
+    conversation_type = Unicode(index=True)
     config = Json(default=dict)
-    start_timestamp = Timestamp()
+
+    created_at = Timestamp(default=datetime.utcnow, index=True)
+    start_timestamp = Timestamp(index=True)
     end_timestamp = Timestamp(null=True, index=True)
-    created_at = Timestamp(default=datetime.utcnow)
+    status = Unicode(default=CONVERSATION_DRAFT, index=True)
 
     groups = ManyToMany(ContactGroup)
-    conversation_type = Unicode()
+    batches = ManyToMany(Batch)
+
     delivery_class = Unicode(null=True)
     delivery_tag_pool = Unicode(null=True)
     delivery_tag = Unicode(null=True)
 
-    batches = ManyToMany(Batch)
-
     def started(self):
-        # TODO: Better way to tell if we've started than looking for batches.
-        return bool(self.batches.keys())
+        return self.running() or self.ended()
 
     def ended(self):
-        return self.end_timestamp is not None
+        return self.status == CONVERSATION_FINISHED
 
     def running(self):
-        return self.started() and not self.ended()
+        return self.status == CONVERSATION_RUNNING
 
     def get_status(self):
         """
@@ -105,12 +113,15 @@ class Conversation(Model):
             CONVERSATION_DRAFT)
 
         """
-        if self.ended():
-            return CONVERSATION_FINISHED
-        elif self.running():
-            return CONVERSATION_RUNNING
-        else:
-            return CONVERSATION_DRAFT
+        return self.status
+
+    # The following are to keep the implementation of this stuff in the model
+    # rather than potentially multiple external places.
+    def set_status_started(self):
+        self.status = CONVERSATION_RUNNING
+
+    def set_status_finished(self):
+        self.status = CONVERSATION_FINISHED
 
     def add_group(self, group):
         if isinstance(group, ContactGroup):
@@ -163,3 +174,43 @@ class ConversationStore(PerAccountStore):
 
         conversation = yield conversation.save()
         returnValue(conversation)
+
+    @Manager.calls_manager
+    def list_running_conversations(self):
+        # We need to list things by both the old-style 'end_timestamp' index
+        # and the new-style 'status' index, at least until we've migrated all
+        # old-style conversations to v1.
+        keys = yield self.conversations.index_lookup(
+            'status', CONVERSATION_RUNNING).get_keys()
+        keys.extend((yield self._list_oldstyle_running_conversations()))
+        returnValue(keys)
+
+    @Manager.calls_manager
+    def _list_oldstyle_running_conversations(self):
+        keys = yield self.conversations.index_lookup(
+            'end_timestamp', None).get_keys()
+        # NOTE: This assumes that we don't have very large numbers of active
+        #       conversations.
+        filtered_keys = []
+        for convs_bunch in self.load_all_bunches(keys):
+            for conv in (yield convs_bunch):
+                if conv.running:
+                    filtered_keys = conv.key
+        returnValue(filtered_keys)
+
+    @Manager.calls_manager
+    def list_active_conversations(self):
+        # We need to list things by both the old-style 'end_timestamp' index
+        # and the new-style 'status' index, at least until we've migrated all
+        # old-style conversations to v1.
+        keys = yield self.conversations.index_lookup(
+            'status', CONVERSATION_RUNNING).get_keys()
+        keys.extend((yield self.conversations.index_lookup(
+            'status', CONVERSATION_DRAFT).get_keys()))
+        keys.extend((yield self.conversations.index_lookup(
+            'end_timestamp', None).get_keys()))
+        returnValue(keys)
+
+    def load_all_bunches(self, keys):
+        # Convenience to avoid the extra attribute lookup everywhere.
+        return self.conversations.load_all_bunches(keys)

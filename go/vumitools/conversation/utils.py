@@ -38,6 +38,7 @@ class ConversationWrapper(object):
     @Manager.calls_manager
     def end_conversation(self):
         self.c.end_timestamp = datetime.utcnow()
+        self.c.set_status_finished()
         yield self.c.save()
         yield self._release_batches()
 
@@ -57,8 +58,8 @@ class ConversationWrapper(object):
     def get_config(self):
         return self.c.config
 
-    def set_config(self, metadata):
-        self.c.config = metadata
+    def set_config(self, config):
+        self.c.config = config
 
     def start_batch(self, *tags):
         user_account = unicode(self.c.user_account.key)
@@ -175,6 +176,7 @@ class ConversationWrapper(object):
             is_client_initiated=is_client_initiated,
             **extra_params)
         self.c.batches.add_key(batch_id)
+        self.c.set_status_started()
         yield self.c.save()
 
     def get_latest_batch_key(self):

@@ -123,20 +123,23 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def active_conversations(self):
-        conversations = self.conversation_store.conversations
-        keys = yield conversations.index_lookup(
-            'end_timestamp', None).get_keys()
+        keys = yield self.conversation_store.list_active_conversations()
         # NOTE: This assumes that we don't have very large numbers of active
         #       conversations.
         convs = []
-        for convs_bunch in conversations.load_all_bunches(keys):
+        for convs_bunch in self.conversation_store.load_all_bunches(keys):
             convs.extend((yield convs_bunch))
         returnValue(convs)
 
     @Manager.calls_manager
     def running_conversations(self):
-        conversations = yield self.active_conversations()
-        returnValue([c for c in conversations if c.running()])
+        keys = yield self.conversation_store.list_running_conversations()
+        # NOTE: This assumes that we don't have very large numbers of active
+        #       conversations.
+        convs = []
+        for convs_bunch in self.conversation_store.load_all_bunches(keys):
+            convs.extend((yield convs_bunch))
+        returnValue(convs)
 
     @Manager.calls_manager
     def tagpools(self):

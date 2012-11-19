@@ -33,24 +33,17 @@ def index(request):
 
     if conversation_status:
         if conversation_status == 'running':
-            conversations = [c for c in conversations
-                             if c.end_timestamp is None
-                             and len(c.batches.keys()) > 0]
+            conversations = [c for c in conversations if c.running()]
         elif conversation_status == 'finished':
-            conversations = [c for c in conversations
-                             if c.end_timestamp is not None]
+            conversations = [c for c in conversations if c.ended()]
         elif conversation_status == 'draft':
-            conversations = [c for c in conversations
-                             if c.end_timestamp is None
-                             and len(c.batches.keys()) == 0]
+            conversations = [c for c in conversations if not c.started()]
         else:
             raise ValueError(
                 "Unknown conversation status: %s" % (conversation_status,))
 
     if not (conversation_type or conversation_status or query):
-        active_conversations = request.user_api.active_conversations()
-        conversations = [request.user_api.wrap_conversation(conversation) for
-                    conversation in active_conversations]
+        active_conversations = [c for c in conversations if not c.ended()]
 
         has_active_sms_conversation = any([c.delivery_class == 'sms'
                                            for c in active_conversations])
