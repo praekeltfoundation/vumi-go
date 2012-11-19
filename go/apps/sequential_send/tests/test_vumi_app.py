@@ -120,7 +120,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         redis manager for the same reason.
         """
 
-        conv = yield self.create_conversation(metadata={
+        conv = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
         yield self.start_conversation(conv)
 
@@ -154,11 +154,11 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         stub it out. It gets tested in other test methods.
         """
 
-        conv1 = yield self.create_conversation(metadata={
+        conv1 = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
         yield self.start_conversation(conv1)
 
-        conv2 = yield self.create_conversation(metadata={
+        conv2 = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
         yield self.start_conversation(conv2)
 
@@ -188,17 +188,17 @@ class TestSequentialSendApplication(AppWorkerTestCase):
     def test_get_conversations(self):
         """Test get_conversation, because we stub it out elsewhere.
         """
-        conv1 = yield self.create_conversation(metadata={
+        conv1 = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
         yield self.start_conversation(conv1)
         batch_id1 = conv1.get_batch_keys()[0]
 
-        conv2 = yield self.create_conversation(metadata={
+        conv2 = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
         yield self.start_conversation(conv2)
         batch_id2 = conv2.get_batch_keys()[0]
 
-        yield self.create_conversation(metadata={
+        yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
 
         [c1, c2] = yield self.app.get_conversations(
@@ -218,7 +218,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         contact2 = yield self.create_contact(name=u'Second',
             surname=u'Contact', msisdn=u'27831234568', groups=[group])
 
-        conv = yield self.create_conversation(metadata={
+        conv = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'},
                 'messages': ['foo', 'bar'],
                 })

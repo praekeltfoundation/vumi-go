@@ -46,7 +46,7 @@ class TestSubscriptionApplication(AppWorkerTestCase):
             }
         self.conv = yield self.create_conversation(
             delivery_tag_pool=u'pool', delivery_class=self.transport_type,
-            metadata={
+            config={
                 'handlers': [
                     mkhandler('foo', 'foo', 'subscribe', 'Subscribed to foo.'),
                     mkhandler('bar', 'bar', 'subscribe', 'Subscribed to bar.'),

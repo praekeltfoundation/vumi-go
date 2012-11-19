@@ -115,13 +115,13 @@ class SequentialSendApplication(GoApplicationWorker):
 
     @inlineCallbacks
     def process_conversation_schedule(self, then, now, conv):
-        schedule = conv.get_metadata()['schedule']
+        schedule = conv.get_config()['schedule']
         if ScheduleManager(schedule).is_scheduled(then, now):
             yield self.send_scheduled_messages(conv)
 
     @inlineCallbacks
     def send_scheduled_messages(self, conv):
-        messages = conv.get_metadata()['messages']
+        messages = conv.get_config()['messages']
         batch_id = conv.get_batch_keys()[0]
         tag = (conv.c.delivery_tag_pool, conv.c.delivery_tag)
         message_options = yield conv.make_message_options(tag)

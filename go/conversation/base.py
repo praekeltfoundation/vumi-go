@@ -243,8 +243,8 @@ class EditConversationView(ConversationView):
         return form(prefix=key, initial=data)
 
     def make_forms(self, conversation):
-        metadata = conversation.get_metadata(default={})
-        return [self.make_form(key, edit_form, metadata)
+        config = conversation.get_config()
+        return [self.make_form(key, edit_form, config)
                 for key, edit_form in self.edit_conversation_forms]
 
     def process_form(self, form):
@@ -253,14 +253,14 @@ class EditConversationView(ConversationView):
         return form.cleaned_data
 
     def process_forms(self, request, conversation):
-        metadata = conversation.get_metadata(default={})
+        config = conversation.get_config()
         for key, edit_form in self.edit_conversation_forms:
             form = edit_form(request.POST, prefix=key)
             # Is this a good idea?
             if not form.is_valid():
                 return self.get(request, conversation)
-            metadata[key] = self.process_form(form)
-        conversation.set_metadata(metadata)
+            config[key] = self.process_form(form)
+        conversation.set_config(config)
         conversation.save()
 
 

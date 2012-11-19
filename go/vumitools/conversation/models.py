@@ -60,15 +60,21 @@ class ConversationV1Migrator(ModelMigrator):
         return mdata
 
 
-class ConversationV1(Model):
+class Conversation(Model):
     """A conversation with an audience"""
+
+    # TODO:
+    #
+    #  * Indexed status field: "started", "draft", "ended", etc.
+    #  * Index created_at, start_timestamp
+    #  * Index conversation_type
 
     VERSION = 1
     MIGRATOR = ConversationV1Migrator
 
     user_account = ForeignKey(UserAccount)
     name = Unicode(max_length=255)
-    config = Json(null=True)
+    config = Json(default=dict)
     start_timestamp = Timestamp()
     end_timestamp = Timestamp(null=True, index=True)
     created_at = Timestamp(default=datetime.utcnow)
@@ -80,7 +86,6 @@ class ConversationV1(Model):
     delivery_tag = Unicode(null=True)
 
     batches = ManyToMany(Batch)
-    metadata = Json(null=True)
 
     def started(self):
         # TODO: Better way to tell if we've started than looking for batches.
@@ -123,10 +128,6 @@ class ConversationV1(Model):
         """
         addrs = [contact.addr_for(self.delivery_class) for contact in contacts]
         return [addr for addr in addrs if addr]
-
-
-class Conversation(ConversationV1):
-    pass
 
 
 class ConversationStore(PerAccountStore):

@@ -22,27 +22,27 @@ redis = RedisManager.from_config(settings.VXPOLLS_REDIS_CONFIG)
 
 
 def link_poll_to_conversation(poll_name, poll_id, conversation):
-    metadata = conversation.get_metadata(default={})
-    vxpolls_metadata = metadata.setdefault('vxpolls', {})
-    polls = vxpolls_metadata.setdefault('polls', {})
+    config = conversation.get_config()
+    vxpolls_config = config.setdefault('vxpolls', {})
+    polls = vxpolls_config.setdefault('polls', {})
     polls.update({
         poll_name: poll_id,
     })
-    conversation.set_metadata(metadata)
+    conversation.set_config(config)
     conversation.save()
 
 
 def unlink_poll_from_conversation(poll_name, conversation):
-    metadata = conversation.get_metadata(default={})
-    vxpolls_metadata = metadata.setdefault('vxpolls', {})
-    polls = vxpolls_metadata.setdefault('polls', {})
+    config = conversation.get_config()
+    vxpolls_config = config.setdefault('vxpolls', {})
+    polls = vxpolls_config.setdefault('polls', {})
     del polls[poll_name]
-    conversation.set_metadata(metadata)
+    conversation.set_config(config)
     conversation.save()
 
 
 def get_polls_for_conversation(conversation):
-    metadata = conversation.get_metadata(default={})
+    metadata = conversation.get_config()
     vxpolls_metadata = metadata.setdefault('vxpolls', {})
     return vxpolls_metadata.get('polls', {})
 

@@ -54,11 +54,11 @@ class ConversationWrapper(object):
 
     # TODO: Something about setattr?
 
-    def get_metadata(self, default=None):
-        return self.c.metadata or default
+    def get_config(self):
+        return self.c.config
 
-    def set_metadata(self, metadata):
-        self.c.metadata = metadata
+    def set_config(self, metadata):
+        self.c.config = metadata
 
     def start_batch(self, *tags):
         user_account = unicode(self.c.user_account.key)
