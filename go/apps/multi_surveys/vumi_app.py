@@ -8,6 +8,7 @@ from vumi.message import TransportUserMessage
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationMixin
+from go.vumitools.opt_out import OptOutStore
 
 
 def hacky_hack_hack(config):
@@ -55,6 +56,26 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
         go = helper_metadata.get('go')
         helper_metadata['poll_id'] = 'poll-%s' % (
             go.get('conversation_key'),)
+
+        # It is possible the user is opted-out
+        # For the current use case (USSD sign-ups) we can
+        # now assume that if someone is dialing back in they
+        # want to register, therefore we can delete the opt-out
+        gmt = self.get_go_metadata(message)
+        account_key = yield gmt.get_account_key()
+        if account_key is not None:
+            # check if user is opted out
+            opt_out_store = OptOutStore(self.manager, account_key)
+            from_addr = message.get("from_addr")
+            opt_out = yield opt_out_store.delete_opt_out("msisdn", from_addr)
+            if opt_out:
+                # delete the opt-out
+                yield opt_out_store.delete_opt_out("msisdn", from_addr)
+                # archive the user record so they can start from scratch
+                scope_id = message['helper_metadata'].get('poll_id', '')
+                participant = yield self.pm.get_participant(scope_id, message.user())
+                yield self.pm.archive(participant.scope_id, participant)
+
         super(MultiSurveyApplication, self).consume_user_message(message)
 
     def start_survey(self, to_addr, conversation, **msg_options):
