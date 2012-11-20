@@ -1,7 +1,7 @@
 # -*- test-case-name: go.apps.sequential_send.tests.test_vumi_app -*-
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from twisted.internet.defer import inlineCallbacks, returnValue, gatherResults
 from twisted.internet.task import LoopingCall
@@ -16,23 +16,47 @@ class ScheduleManager(object):
         self.schedule_definition = schedule_definition
 
     def is_scheduled(self, then, now):
+        now_dt = datetime.utcfromtimestamp(now)
+        then_dt = datetime.utcfromtimestamp(then)
+
+        next_dt = self.get_next(then_dt)
+
+        if next_dt is None:
+            # We have an invalid schedule definition.
+            return False
+
+        return (next_dt <= now_dt)
+
+    def get_next(self, since_dt):
         recurring_type = self.schedule_definition['recurring']
         if recurring_type == 'daily':
-            return self.is_scheduled_daily(then, now)
+            return self.get_next_daily(since_dt)
+        elif recurring_type == 'day_of_month':
+            return self.get_next_day_of_month(since_dt)
         else:
             log.warn("Invalid value for 'recurring': %r" % (recurring_type,))
 
-    def is_scheduled_daily(self, then, now):
-        now_dt = datetime.utcfromtimestamp(now)
-        then_dt = datetime.utcfromtimestamp(then)
-        tick = datetime.strptime(
+    def get_next_daily(self, since_dt):
+        timeofday = datetime.strptime(
             self.schedule_definition['time'], '%H:%M:%S').time()
 
-        tick_dt = datetime.combine(then_dt.date(), tick)
-        if tick_dt < then_dt:
-            tick_dt = datetime.combine(then_dt.date(), tick)
+        next_dt = datetime.combine(since_dt.date(), timeofday)
+        while next_dt <= since_dt:
+            next_dt += timedelta(days=1)
 
-        return (then_dt < tick_dt <= now_dt)
+        return next_dt
+
+    def get_next_day_of_month(self, since_dt):
+        timeofday = datetime.strptime(
+            self.schedule_definition['time'], '%H:%M:%S').time()
+        days_str = self.schedule_definition['days'].replace(',', ' ')
+        days_of_month = set([int(day) for day in days_str.split()])
+
+        next_dt = datetime.combine(since_dt.date(), timeofday)
+        while (next_dt.day not in days_of_month) or (next_dt <= since_dt):
+            next_dt += timedelta(days=1)
+
+        return next_dt
 
 
 class SequentialSendApplication(GoApplicationWorker):
