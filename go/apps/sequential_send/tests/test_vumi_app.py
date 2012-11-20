@@ -111,9 +111,20 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         self.app._set_last_poll_time = lambda t: poll_times.append(str(t))
         self.app._get_scheduled_conversations = lambda: scheduled_conversations
 
+        self.message_convs = []
+
+        # Fake the message send by adding the convs to a list.
+        def send_scheduled_messages(sched_conv):
+            self.message_convs.append(sched_conv)
+        self.app.send_scheduled_messages = send_scheduled_messages
+
+    def check_message_convs_and_advance(self, convs, seconds):
+        self.assertEqual(self.message_convs, convs)
+        return self.clock.advance(seconds)
+
     @inlineCallbacks
-    def test_schedule_conv(self):
-        """Test conversation scheduling.
+    def test_schedule_daily_conv(self):
+        """Set up a conversation scheduling worker.
 
         NOTE: Riak stuff takes a while and messes up fake clock timing, so we
         stub it out. It gets tested in other test methods. Also, we replace the
@@ -125,26 +136,14 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         yield self.start_conversation(conv)
 
         yield self._stub_out_async(conv)
-        message_convs = []
 
-        # Fake the message send by adding the convs to a list.
-        def send_scheduled_messages(conv):
-            message_convs.append(conv)
-        self.app.send_scheduled_messages = send_scheduled_messages
-
-        self.assertEqual(message_convs, [])
-        yield self.clock.advance(70)
-        self.assertEqual(message_convs, [])
-        yield self.clock.advance(70)
-        self.assertEqual(message_convs, [conv])
-        yield self.clock.advance(70)
-        self.assertEqual(message_convs, [conv])
-        yield self.clock.advance(3600 * 24 - 140)
-        self.assertEqual(message_convs, [conv])
-        yield self.clock.advance(70)
-        self.assertEqual(message_convs, [conv, conv])
-        yield self.clock.advance(70)
-        self.assertEqual(message_convs, [conv, conv])
+        yield self.check_message_convs_and_advance([], 70)
+        yield self.check_message_convs_and_advance([], 70)
+        yield self.check_message_convs_and_advance([conv], 70)
+        yield self.check_message_convs_and_advance([conv], 3600 * 24 - 140)
+        yield self.check_message_convs_and_advance([conv], 70)
+        yield self.check_message_convs_and_advance([conv, conv], 70)
+        self.assertEqual(self.message_convs, [conv, conv])
 
     @inlineCallbacks
     def test_schedule_convs(self):
@@ -163,26 +162,15 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         yield self.start_conversation(conv2)
 
         yield self._stub_out_async(conv1, conv2)
-        message_convs = []
 
-        # Fake the message send by adding the convs to a list.
-        def send_scheduled_messages(conv):
-            message_convs.append(conv)
-        self.app.send_scheduled_messages = send_scheduled_messages
-
-        self.assertEqual(message_convs, [])
-        yield self.clock.advance(70)
-        self.assertEqual(message_convs, [])
-        yield self.clock.advance(70)
-        self.assertEqual(message_convs, [conv1])
-        yield self.clock.advance(70)
-        self.assertEqual(message_convs, [conv1, conv2])
-        yield self.clock.advance(3600 * 24 - 140)
-        self.assertEqual(message_convs, [conv1, conv2])
-        yield self.clock.advance(70)
-        self.assertEqual(message_convs, [conv1, conv2, conv1])
-        yield self.clock.advance(70)
-        self.assertEqual(message_convs, [conv1, conv2, conv1, conv2])
+        yield self.check_message_convs_and_advance([], 70)
+        yield self.check_message_convs_and_advance([], 70)
+        yield self.check_message_convs_and_advance([conv1], 70)
+        yield self.check_message_convs_and_advance(
+            [conv1, conv2], 3600 * 24 - 140)
+        yield self.check_message_convs_and_advance([conv1, conv2], 70)
+        yield self.check_message_convs_and_advance([conv1, conv2, conv1], 70)
+        self.assertEqual(self.message_convs, [conv1, conv2, conv1, conv2])
 
     @inlineCallbacks
     def test_get_conversations(self):

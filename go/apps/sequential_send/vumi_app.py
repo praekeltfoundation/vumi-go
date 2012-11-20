@@ -16,7 +16,13 @@ class ScheduleManager(object):
         self.schedule_definition = schedule_definition
 
     def is_scheduled(self, then, now):
-        assert self.schedule_definition['recurring'] == 'daily'
+        recurring_type = self.schedule_definition['recurring']
+        if recurring_type == 'daily':
+            return self.is_scheduled_daily(then, now)
+        else:
+            log.warn("Invalid value for 'recurring': %r" % (recurring_type,))
+
+    def is_scheduled_daily(self, then, now):
         now_dt = datetime.utcfromtimestamp(now)
         then_dt = datetime.utcfromtimestamp(then)
         tick = datetime.strptime(
