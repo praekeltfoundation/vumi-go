@@ -27,7 +27,7 @@ CONVERSATION_FINISHED = u'finished'
 
 
 class ConversationV1Migrator(ModelMigrator):
-    def migrate_from_None(self, mdata):
+    def migrate_from_unversioned(self, mdata):
         # Migrator assertions
         assert self.data_version is None
         assert self.model_class.VERSION == 1
