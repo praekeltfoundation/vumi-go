@@ -9,8 +9,11 @@ from go.conversation.forms import VumiModelForm
 
 
 class ScheduleForm(BootstrapForm):
-    recurring = forms.CharField()
-    time = forms.CharField()
+    recurring = forms.CharField(
+        help_text="Currently supports 'daily' or 'day_of_month'.")
+    days = forms.CharField(required=False,
+        help_text="Required for 'day_of_month', comma-separated numbers.")
+    time = forms.CharField(help_text="Time in 'HH:MM:SS' format.")
 
 
 class MessageForm(BootstrapForm):
