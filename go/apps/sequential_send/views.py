@@ -10,7 +10,7 @@ from go.conversation.forms import VumiModelForm
 
 class ScheduleForm(BootstrapForm):
     recurring = forms.CharField()
-    days = forms.CharField()
+    days = forms.CharField(required=False)
     time = forms.CharField()
 
 
