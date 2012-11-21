@@ -3,7 +3,7 @@
 from uuid import uuid4
 from datetime import datetime
 
-from vumi.persist.model import Model, Manager, ModelMigrator
+from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (
     Unicode, ManyToMany, ForeignKey, Timestamp, Json)
 from vumi.components.message_store import Batch
@@ -12,7 +12,7 @@ from twisted.internet.defer import returnValue
 
 from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.contact import ContactGroup
-# from go.vumitools.conversation.old_models import ConversationVNone
+from go.vumitools.conversation.migrators import ConversationV1Migrator
 
 
 CONVERSATION_TYPES = [
@@ -24,53 +24,6 @@ CONVERSATION_TYPES = [
 CONVERSATION_DRAFT = u'draft'
 CONVERSATION_RUNNING = u'running'
 CONVERSATION_FINISHED = u'finished'
-
-
-class ConversationV1Migrator(ModelMigrator):
-    def migrate_from_unversioned(self, mdata):
-        # Migrator assertions
-        assert self.data_version is None
-        assert self.model_class.VERSION == 1
-
-        # Data assertions
-        assert mdata.old_data['VERSION'] is None
-        assert set(mdata.old_data.keys()) == set([
-            'VERSION',
-            'end_timestamp', 'conversation_type', 'start_timestamp',
-            'created_at', 'subject', 'metadata', 'message',
-            'delivery_class', 'delivery_tag', 'delivery_tag_pool',
-            ])
-
-        # Copy stuff that hasn't changed between versions
-        mdata.copy_values(
-            'conversation_type',
-            'start_timestamp', 'end_timestamp', 'created_at',
-            'delivery_class', 'delivery_tag_pool', 'delivery_tag')
-        mdata.copy_indexes('user_account_bin', 'groups_bin', 'batches_bin')
-
-        # Add stuff that's new in this version
-        mdata.set_value('VERSION', 1)
-        mdata.set_value('name', mdata.old_data['subject'])
-
-        config = (mdata.old_data['metadata'] or {}).copy()
-        config['content'] = mdata.old_data['message']
-        mdata.set_value('config', config)
-
-        status = CONVERSATION_DRAFT
-        if mdata.new_index['batches_bin']:
-            # ^^^ This kind of hackery is part of the reason for the migration.
-            status = CONVERSATION_RUNNING
-        if mdata.new_data['end_timestamp'] is not None:
-            status = CONVERSATION_FINISHED
-        mdata.set_value('status', status, index='status_bin')
-
-        # Add indexes for fields with new (or updated) indexes
-        mdata.add_index('end_timestamp_bin', mdata.new_data['end_timestamp'])
-        mdata.add_index(
-            'start_timestamp_bin', mdata.new_data['start_timestamp'])
-        mdata.add_index('created_at_bin', mdata.new_data['created_at'])
-
-        return mdata
 
 
 class Conversation(Model):
