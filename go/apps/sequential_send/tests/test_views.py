@@ -75,6 +75,31 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
             response, reverse('sequential_send:start', kwargs={
                     'conversation_key': conversation.key}))
 
+    def test_edit_conversation_schedule_config(self):
+        conversation = self.get_wrapped_conv()
+        self.assertEqual(conversation.metadata, None)
+        response = self.client.post(reverse('sequential_send:edit',
+            kwargs={'conversation_key': conversation.key}), {
+                'schedule-recurring': ['daily'],
+                'schedule-days': [''],
+                'schedule-time': ['12:00:00'],
+                'messages-TOTAL_FORMS': ['1'],
+                'messages-INITIAL_FORMS': ['0'],
+                'messages-MAX_NUM_FORMS': [''],
+                'messages-0-message': [''],
+                'messages-0-DELETE': [''],
+            })
+        self.assertRedirects(
+            response, reverse('sequential_send:people', kwargs={
+                    'conversation_key': conversation.key}))
+        conversation = self.get_wrapped_conv()
+        self.assertEqual(conversation.metadata, {
+            u'messages': [],
+            u'schedule': {
+                u'recurring': u'daily',
+                u'days': u'',
+                u'time': u'12:00:00'}})
+
     def test_start(self):
         consumer = self.get_cmd_consumer()
         # Acquire the tag here to fake the parent conv already having it.
