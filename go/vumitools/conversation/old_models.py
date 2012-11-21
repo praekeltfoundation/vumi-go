@@ -1,5 +1,3 @@
-# -*- test-case-name: go.vumitools.tests.test_conversation -*-
-
 from datetime import datetime
 
 from vumi.persist.model import Model

@@ -12,7 +12,7 @@ from twisted.internet.defer import returnValue
 
 from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.contact import ContactGroup
-from go.vumitools.conversation.migrators import ConversationV1Migrator
+from go.vumitools.conversation.migrators import ConversationMigrator
 
 
 CONVERSATION_TYPES = [
@@ -30,7 +30,7 @@ class Conversation(Model):
     """A conversation with an audience"""
 
     VERSION = 1
-    MIGRATOR = ConversationV1Migrator
+    MIGRATOR = ConversationMigrator
 
     user_account = ForeignKey(UserAccount)
     name = Unicode(max_length=255)
@@ -109,9 +109,10 @@ class ConversationStore(PerAccountStore):
         return self.conversations.load(key)
 
     @Manager.calls_manager
-    def new_conversation(self, conversation_type, name, config, **fields):
+    def new_conversation(self, conversation_type, name, config,
+                         start_timestamp=None, **fields):
         conversation_id = uuid4().get_hex()
-        start_timestamp = fields.pop('start_timestamp', datetime.utcnow())
+        start_timestamp = start_timestamp or datetime.utcnow()
 
         # These are foreign keys.
         groups = fields.pop('groups', [])

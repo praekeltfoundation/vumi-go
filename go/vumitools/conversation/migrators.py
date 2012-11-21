@@ -1,7 +1,8 @@
 from vumi.persist.model import ModelMigrator
 
 
-class ConversationV1Migrator(ModelMigrator):
+class ConversationMigrator(ModelMigrator):
+
     def migrate_from_unversioned(self, mdata):
         # Copy stuff that hasn't changed between versions
         mdata.copy_values(
