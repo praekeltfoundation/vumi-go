@@ -209,7 +209,7 @@ BROKER_VHOST = "/develop"
 
 # If we're running in DEBUG mode then skip RabbitMQ and execute tasks
 # immediate instead of deferring them to the queue / workers.
-CELERY_ALWAYS_EAGER = DEBUG
+CELERY_ALWAYS_EAGER = False
 CELERY_IMPORTS = ("go.vumitools.api_celery",)
 CELERY_RESULT_BACKEND = "amqp"
 EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
@@ -284,3 +284,4 @@ DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 # from django.core.urlresolvers import reverse
 
 # LOGIN_REDIRECT_URL = reverse('home')
+MESSAGE_STORE_API_URL = 'http://localhost:8080/api/v1/'

@@ -24,3 +24,4 @@ xlrd==0.8.0
 raven==2.0.7
 -e git+git://github.com/earle/django-bootstrap.git@9ec5697#egg=bootstrap
 -e git+git://github.com/praekelt/vumi-wikipedia@develop#egg=vumi-wikipedia
+requests==0.14.2

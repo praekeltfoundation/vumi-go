@@ -1,19 +1,24 @@
 from datetime import datetime
 
 from django.views.generic import TemplateView
+from django.core.paginator import PageNotAnInteger, EmptyPage
 
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.core.urlresolvers import reverse
+from django.core.paginator import Paginator
 from django.contrib import messages
 from django.conf.urls.defaults import url, patterns
+from django.conf import settings
 
 from go.vumitools.conversation.models import (
     CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
-from go.base.utils import make_read_only_form, conversation_or_404
+from go.conversation.utils import MessageStoreClient
+from go.base.utils import (make_read_only_form, conversation_or_404,
+                            page_range_window)
 
 
 class ConversationView(TemplateView):
@@ -274,6 +279,49 @@ class EndConversationView(ConversationView):
         return self.redirect_to('show', conversation_key=conversation.key)
 
 
+class QueryResultsConversationView(ConversationView):
+
+    def get(self, request, conversation):
+        msc = MessageStoreClient(settings.MESSAGE_STORE_API_URL)
+        query = request.GET['query']
+        batch_id = request.GET['batch_id']
+        direction = request.GET['direction']
+        token = request.GET['token']
+        delay = float(request.GET.get('delay', 100))
+        page = int(request.GET.get('p', 1))
+        match_results = msc.get_match_results(batch_id, direction, token,
+                                                page=page, page_size=20)
+        context = {
+            'conversation': conversation,
+            'query': query,
+            'token': token,
+            'batch_id': batch_id,
+            'message_direction': direction,
+        }
+        if match_results.is_in_progress():
+            context.update({
+                'delay': delay * 1.1,
+            })
+            return render(request,
+                'generic/includes/message-load-results.html', context)
+
+        message_paginator = match_results.paginator
+
+        try:
+            message_page = message_paginator.page(page)
+        except PageNotAnInteger:
+            message_page = message_paginator.page(1)
+        except EmptyPage:
+            message_page = message_paginator.page(message_paginator.num_pages)
+
+        context.update({
+            'message_page': message_page,
+            'message_page_range': page_range_window(message_page, 5),
+            })
+        return render(request,
+            'generic/includes/message-list.html', context)
+
+
 def tf_server_initiated(pool, metadata):
     return metadata.get('server_initiated', False)
 
@@ -339,6 +387,7 @@ class ConversationViews(object):
     show_conversation_view = ShowConversationView
     edit_conversation_view = EditConversationView
     end_conversation_view = EndConversationView
+    results_conversation_view = QueryResultsConversationView
 
     # These attributes get passed through to the individual view objects.
     conversation_type = None
@@ -379,6 +428,7 @@ class ConversationViews(object):
             self.mkurl('start'),
             self.mkurl('end'),
             self.mkurl('show', r'^(?P<conversation_key>\w+)/$'),
+            self.mkurl('results'),
             ] + self.extra_urls()
         if self.conversation_initiator != 'client':
             urls.append(self.mkurl('people'))
