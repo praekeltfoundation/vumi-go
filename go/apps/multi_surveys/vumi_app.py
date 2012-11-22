@@ -62,19 +62,21 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
         # now assume that if someone is dialing back in they
         # want to register, therefore we can delete the opt-out
         gmt = self.get_go_metadata(message)
-        account_key = yield gmt.get_account_key()
+        account_key = gmt.get_account_key()
         if account_key is not None:
             # check if user is opted out
+            print "SELF.MANAGER", self.manager
+            print "ACCOUNT_KEY", account_key
             opt_out_store = OptOutStore(self.manager, account_key)
-            from_addr = message.get("from_addr")
-            opt_out = yield opt_out_store.delete_opt_out("msisdn", from_addr)
-            if opt_out:
-                # delete the opt-out
-                yield opt_out_store.delete_opt_out("msisdn", from_addr)
-                # archive the user record so they can start from scratch
-                scope_id = message['helper_metadata'].get('poll_id', '')
-                participant = yield self.pm.get_participant(scope_id, message.user())
-                yield self.pm.archive(participant.scope_id, participant)
+            #from_addr = message.get("from_addr")
+            #opt_out = yield opt_out_store.delete_opt_out("msisdn", from_addr)
+            #if opt_out:
+                ## delete the opt-out
+                #yield opt_out_store.delete_opt_out("msisdn", from_addr)
+                ## archive the user record so they can start from scratch
+                #scope_id = message['helper_metadata'].get('poll_id', '')
+                #participant = yield self.pm.get_participant(scope_id, message.user())
+                #yield self.pm.archive(participant.scope_id, participant)
 
         super(MultiSurveyApplication, self).consume_user_message(message)
 
