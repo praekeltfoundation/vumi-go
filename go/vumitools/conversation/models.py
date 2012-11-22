@@ -137,7 +137,7 @@ class ConversationStore(PerAccountStore):
         keys = yield self.conversations.index_lookup(
             'status', CONVERSATION_RUNNING).get_keys()
         keys.extend((yield self._list_oldstyle_running_conversations()))
-        returnValue(keys)
+        returnValue(list(set(keys)))  # Dedupe
 
     @Manager.calls_manager
     def _list_oldstyle_running_conversations(self):
@@ -163,7 +163,7 @@ class ConversationStore(PerAccountStore):
             'status', CONVERSATION_DRAFT).get_keys()))
         keys.extend((yield self.conversations.index_lookup(
             'end_timestamp', None).get_keys()))
-        returnValue(keys)
+        returnValue(list(set(keys)))  # Dedupe.
 
     def load_all_bunches(self, keys):
         # Convenience to avoid the extra attribute lookup everywhere.
