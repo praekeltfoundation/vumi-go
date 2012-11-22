@@ -25,7 +25,7 @@
 
     {# {% include "conversation/includes/dashboard.html" %} #}
 
-    {% show_conversation_messages conversation direction=request.GET.direction page=request.GET.p query=request.GET.q %}
+    {% show_conversation_messages conversation direction=request.GET.direction page=request.GET.p query=request.GET.q token=request.GET.token %}
 
 {% endblock %}
 

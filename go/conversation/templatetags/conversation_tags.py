@@ -1,6 +1,10 @@
+import re
+
+from django.conf import settings
 from django import template
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from go.conversation.utils import PagedMessageCache
+
+from go.conversation.utils import PagedMessageCache, MessageStoreClient
 from go.base.utils import page_range_window
 
 
@@ -10,7 +14,7 @@ register = template.Library()
 @register.inclusion_tag(
     'conversation/inclusion_tags/show_conversation_messages.html')
 def show_conversation_messages(conversation, direction=None, page=None,
-                                batch_id=None, query=None):
+                                batch_id=None, query=None, token=None):
     """
     Render the messages sent & received for this conversation.
 
@@ -27,11 +31,8 @@ def show_conversation_messages(conversation, direction=None, page=None,
         messages.
     """
 
-    direction = direction or 'inbound'
-
-    if query:
-        return show_conversation_message_search(conversation, direction,
-            batch_id, query)
+    batch_id = batch_id or conversation.get_latest_batch_key()
+    direction = 'outbound' if direction == 'outbound' else 'inbound'
 
     # Paginator starts counting at 1 so 0 would also be invalid
     page = page or 1
@@ -44,7 +45,41 @@ def show_conversation_messages(conversation, direction=None, page=None,
             lambda start, stop: conversation.sent_messages(start, stop,
                 batch_id)), 20)
 
-    if direction == 'inbound':
+    context = {
+        'batch_id': batch_id,
+        'conversation': conversation,
+        'inbound_message_paginator': inbound_message_paginator,
+        'outbound_message_paginator': outbound_message_paginator,
+        'inbound_uniques_count': conversation.count_inbound_uniques(),
+        'outbound_uniques_count': conversation.count_outbound_uniques(),
+        'message_direction': direction,
+    }
+
+    # If we're doing a query we can shortcut the results as we don't
+    # need all the message paginator stuff since we're loading the results
+    # asynchronously with JavaScript.
+    msc = MessageStoreClient(settings.MESSAGE_STORE_API_URL)
+    if query and not token:
+        token = msc.match(batch_id, direction, [{
+            'key': 'msg.content',
+            'pattern': re.escape(query),
+            'flags': 'i',
+            }])
+        context.update({
+            'query': query,
+            'token': token,
+        })
+        return context
+    elif query and token:
+        match_result = msc.get_match_results(batch_id, direction, token,
+            page=int(page), page_size=20)
+        message_paginator = match_result.paginator
+        context.update({
+            'token': token,
+            'query': query,
+            })
+
+    elif direction == 'inbound':
         message_paginator = inbound_message_paginator
     else:
         message_paginator = outbound_message_paginator
@@ -56,33 +91,8 @@ def show_conversation_messages(conversation, direction=None, page=None,
     except EmptyPage:
         message_page = message_paginator.page(message_paginator.num_pages)
 
-    return {
-        'query': query,
-        'conversation': conversation,
-        'inbound_message_paginator': inbound_message_paginator,
-        'outbound_message_paginator': outbound_message_paginator,
-        'inbound_uniques_count': conversation.count_inbound_uniques(),
-        'outbound_uniques_count': conversation.count_outbound_uniques(),
-        'message_direction': direction,
+    context.update({
         'message_page': message_page,
         'message_page_range': page_range_window(message_page, 5),
-    }
-
-
-def show_conversation_message_search(conversation, direction, batch_id, query):
-    """
-    Use Riak search to find messages with content matching the given query.
-
-    :param ConversationWrapper conversation:
-        The conversation who's inbound messages are to be searched.
-    :param str batch_id:
-        The batch_id used to find messages with for this conversation.
-    :param str query:
-        The search term.
-    """
-    matching_messages = conversation.match_inbound_messages(query)
-    print matching_messages
-    return {
-        'query': query,
-        'conversation': conversation,
-    }
+    })
+    return context

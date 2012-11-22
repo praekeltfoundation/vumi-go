@@ -1,14 +1,11 @@
 # -*- test-case-name: go.vumitools.conversation.tests.test_utils -*-
 # -*- coding: utf-8 -*-
 
-import hashlib
-import json
 from datetime import datetime
 
 from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Manager
-from vumi.components.message_store import InboundMessage, OutboundMessage
 
 from vumi.middleware.tagger import TaggingMiddleware
 
@@ -267,8 +264,7 @@ class ConversationWrapper(object):
             # sometimes a message can be None because of Riak's eventual
             # consistency model
             if message is not None:
-                replies.append((
-                    yield self._handle_message(message.msg, 'from_addr')))
+                replies.append(message.msg)
 
         returnValue(replies)
 
@@ -313,8 +309,7 @@ class ConversationWrapper(object):
             # sometimes a message can be None because of Riak's eventual
             # consistency model
             if message is not None:
-                sent_messages.append((
-                    yield self._handle_message(message.msg, 'to_addr')))
+                sent_messages.append(message.msg)
 
         returnValue(sent_messages)
 
@@ -368,6 +363,13 @@ class ConversationWrapper(object):
         for bunch in self.mdb.inbound_messages.load_all_bunches(keys):
             messages.extend((yield bunch))
         returnValue(messages)
+
+    def count_inbound_messages_for_token(self, token, batch_key=None):
+        """
+        Return the total number of keys in the results for the token.
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        return self.mdb.count_keys_for_token(batch_key, token)
 
     def find_outbound_messages_matching(self, pattern, flags="i",
                                         batch_key=None, key="msg.content",

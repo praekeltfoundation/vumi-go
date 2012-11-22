@@ -30,65 +30,11 @@
             </a>
         </li>
     </ul>
-    <div class="tab-content">
-        <div class="tab-pane active">
-            <table class="table table-bordered table-striped">
-                <thead>
-                    <tr>
-                        <th width="32">Type</th>
-                        <th>Response</th>
-                        <th width="70">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for reply in message_page.object_list %}
-                    <tr>
-                        <td><i class="icon-repeat"></i> {{reply.type}}</td>
-                        <td>
-                            <h6><a href="{% url 'contacts:person' person_key=reply.contact.key %}">{{reply.contact}}</a> via {{reply.source}} - {{reply.time}}</h6>
-                            <p>{{reply.content}}</p></td>
-                        <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="3">No one has replied yet</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% if message_page.paginator.count %}
-            <div class="pagination pagination-centered">
-                <ul>
-                    {% if message_page.has_previous %}
-                    <li>
-                        <a href="?direction={{message_direction}}&amp;p={{message_page.previous_page_number}}">
-                            Prev
-                        </a>
-                    </li>
-                    {% else %}
-                    <li class="disabled">
-                        <a href="#">Prev</a>
-                    </li>
-                    {% endif %}
-                    {% for page_number in message_page_range %}
-                        <li class="{% if page_number == message_page.number %}active{% endif %}">
-                            <a href="?direction={{message_direction}}&amp;p={{page_number}}">{{page_number}}</a>
-                        </li>
-                    {% endfor %}
-                    {% if message_page.has_next %}
-                    <li>
-                        <a href="?direction={{message_direction}}&amp;p={{message_page.next_page_number}}">
-                            Next
-                        </a>
-                    </li>
-                    {% else %}
-                    <li class="disabled">
-                        <a href="#">Next</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </div>
-            {% endif %}
-        </div>
+    <div class="tab-content" id="message-page">
+        {% if token %}
+            {% include "generic/includes/message-load-results.html" %}
+        {% else %}
+            {% include "generic/includes/message-list.html" %}
+        {% endif %}
     </div>
   </div>
