@@ -14,13 +14,10 @@ class JsboxForm(BootstrapForm):
     javascript = JavascriptField()
 
 
-JsboxFormSet = forms.formsets.formset_factory(
-    JsboxForm, can_delete=True, extra=1)
-
-
 class JsboxConversationViews(ConversationViews):
     conversation_type = u'jsbox'
-    conversation_initiator = u'client'
+    conversation_display_name = u'Javascript App'
+    conversation_initiator = None
     edit_conversation_forms = (
-        ('handlers', JsboxFormSet),
+        ('handlers', JsboxForm),
         )
