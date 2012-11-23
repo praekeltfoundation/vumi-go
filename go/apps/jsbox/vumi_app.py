@@ -7,6 +7,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application.sandbox import (Sandbox, JsSandboxResource,
                                       SandboxResources)
+from vumi.message import TransportEvent
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationMixin
@@ -51,7 +52,12 @@ class JsBoxApplication(GoApplicationMixin, Sandbox):
 
         Overrides method from :class:`Sandbox`.
         """
-        metadata = self.get_go_metadata(msg_or_event)
+        if isinstance(msg_or_event, TransportEvent):
+            msg = yield self.find_message_for_event(msg_or_event)
+        else:
+            msg = msg_or_event
+
+        metadata = self.get_go_metadata(msg)
         sandbox_id = metadata.get_account_key()
         conversation = yield metadata.get_conversation()
         config = conversation.metadata['jsbox']
