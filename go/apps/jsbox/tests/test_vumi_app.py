@@ -72,11 +72,23 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, tag)
         return msg
 
-    def set_conversation_batch(self, msg, conversation):
-        # TOOD: Move into AppWorkerTestCase once it's working
-        tag = (conversation.delivery_tag_pool, conversation.delivery_tag)
-        TaggingMiddleware.add_tag_to_msg(msg, tag)
-        return msg
+    def mk_metadata(self, method):
+        app_js = """
+            api.%(method)s = function(command) {
+                this.log_info("From command: inbound-message",
+                    function (reply) {
+                        this.log_info("Log successful: " + reply.success);
+                        this.done();
+                    }
+                );
+            }
+        """ % {'method': method}
+        metadata = {
+            'jsbox': {
+                'javascript': app_js,
+            },
+        }
+        return metadata
 
     @inlineCallbacks
     def test_start(self):
@@ -88,29 +100,19 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_user_message(self):
-        app_js = """
-            api.on_inbound_message = function(command) {
-                this.log_info("From command: inbound-message",
-                    function (reply) {
-                        this.log_info("Log successful: " + reply.success);
-                        this.done();
-                    }
-                );
-            }
-        """
-        conversation = yield self.setup_conversation(metadata={
-            'jsbox': {
-                'javascript': app_js,
-            },
-        })
+        conversation = yield self.setup_conversation(
+            metadata=self.mk_metadata('on_inbound_message'))
         yield self.start_conversation(conversation)
         msg = self.set_conversation_tag(self.mkmsg_in(), conversation)
         yield self.dispatch_inbound(msg)
 
     @inlineCallbacks
     def test_event(self):
-        conversation = yield self.setup_conversation()
+        conversation = yield self.setup_conversation(
+            metadata=self.mk_metadata('on_inbound_event'))
         yield self.start_conversation(conversation)
-        # TODO: correct dispatch events
-        # event = self.set_conversation_batch(self.mkmsg_ack(), conversation)
-        # yield self.dispatch_event(event)
+        msg = self.set_conversation_tag(self.mkmsg_in(), conversation)
+        tag = (conversation.delivery_tag_pool, conversation.delivery_tag)
+        yield self.vumi_api.mdb.add_outbound_message(msg, tag=tag)
+        event = self.mkmsg_ack(user_message_id=msg['message_id'])
+        yield self.dispatch_event(event)
