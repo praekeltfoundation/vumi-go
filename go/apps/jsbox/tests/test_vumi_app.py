@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+import pkg_resources
+
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 
 from go.apps.jsbox.vumi_app import JsBoxApplication
+
+from vumi.middleware.tagger import TaggingMiddleware
 
 
 class JsBoxApplicationTestCase(AppWorkerTestCase):
@@ -14,7 +18,19 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(JsBoxApplicationTestCase, self).setUp()
-        self.config = self.mk_config({})
+        node_js = '/usr/bin/nodejs'
+        sandboxer_js = pkg_resources.resource_filename('vumi.application',
+                                                       'sandboxer.js')
+        self.config = self.mk_config({
+            'executable': node_js,
+            'args': [sandboxer_js],
+            'timeout': 10,
+            'sandbox': {
+                'log': {
+                    'cls': 'vumi.application.sandbox.LoggingResource',
+                },
+            },
+        })
         self.app = yield self.get_application(self.config)
 
         # Steal app's vumi_api
@@ -33,7 +49,8 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,
-                            from_addr=u'+27831234567{0}'):
+                           from_addr=u'+27831234567{0}',
+                           metadata=None):
         user_api = self.user_api
         group = yield user_api.contact_store.new_group(u'test group')
 
@@ -43,10 +60,23 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
                 msisdn=from_addr.format(i), groups=[group])
 
         conversation = yield self.create_conversation(
-            delivery_tag_pool=u'pool', delivery_class=u'sms')
+            delivery_tag_pool=u'pool', delivery_class=u'sms',
+            delivery_tag=u'tag1', metadata=metadata)
         conversation.add_group(group)
         yield conversation.save()
         returnValue(conversation)
+
+    def set_conversation_tag(self, msg, conversation):
+        # TOOD: Move into AppWorkerTestCase once it's working
+        tag = (conversation.delivery_tag_pool, conversation.delivery_tag)
+        TaggingMiddleware.add_tag_to_msg(msg, tag)
+        return msg
+
+    def set_conversation_batch(self, msg, conversation):
+        # TOOD: Move into AppWorkerTestCase once it's working
+        tag = (conversation.delivery_tag_pool, conversation.delivery_tag)
+        TaggingMiddleware.add_tag_to_msg(msg, tag)
+        return msg
 
     @inlineCallbacks
     def test_start(self):
@@ -55,3 +85,32 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
 
         # Force processing of messages
         yield self._amqp.kick_delivery()
+
+    @inlineCallbacks
+    def test_user_message(self):
+        app_js = """
+            api.on_inbound_message = function(command) {
+                this.log_info("From command: inbound-message",
+                    function (reply) {
+                        this.log_info("Log successful: " + reply.success);
+                        this.done();
+                    }
+                );
+            }
+        """
+        conversation = yield self.setup_conversation(metadata={
+            'jsbox': {
+                'javascript': app_js,
+            },
+        })
+        yield self.start_conversation(conversation)
+        msg = self.set_conversation_tag(self.mkmsg_in(), conversation)
+        yield self.dispatch_inbound(msg)
+
+    @inlineCallbacks
+    def test_event(self):
+        conversation = yield self.setup_conversation()
+        yield self.start_conversation(conversation)
+        # TODO: correct dispatch events
+        # event = self.set_conversation_batch(self.mkmsg_ack(), conversation)
+        # yield self.dispatch_event(event)

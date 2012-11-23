@@ -5,11 +5,11 @@
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.sandbox import Sandbox, JsSandboxResource
+from vumi.application.sandbox import (Sandbox, JsSandboxResource,
+                                      SandboxResources)
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationMixin
-from go.vumitools.middleware import DebitAccountMiddleware
 
 
 class JsBoxApplication(GoApplicationMixin, Sandbox):
@@ -57,7 +57,9 @@ class JsBoxApplication(GoApplicationMixin, Sandbox):
         config = conversation.metadata['jsbox']
         javascript = JsSandboxResource(
             self.worker_name, self, {'javascript': config['javascript']})
-        resources = self.resources.copy()
+        javascript.setup()
+        resources = SandboxResources(self, {})
+        resources.resources = self.resources.resources.copy()
         resources.add_resource("_js", javascript)
         api = self.create_sandbox_api(resources)
         protocol = self.create_sandbox_protocol(sandbox_id, api)
