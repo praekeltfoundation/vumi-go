@@ -3,21 +3,13 @@
 
 """Vumi application worker for the vumitools API."""
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.sandbox import Sandbox, SandboxResource, SandboxCommand
-from vumi.persist.txredis_manager import TxRedisManager
+from vumi.application.sandbox import Sandbox, JsSandboxResource
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationMixin
 from go.vumitools.middleware import DebitAccountMiddleware
-
-
-class JsSandboxResource(SandboxResource):
-    def sandbox_init(self, api):
-        javascript = self.app_worker.javascript_for_sandbox(api.sandbox_id)
-        api.sandbox_send(SandboxCommand(cmd="initialize",
-                                        javascript=javascript))
 
 
 class JsBoxApplication(GoApplicationMixin, Sandbox):
@@ -42,8 +34,6 @@ class JsBoxApplication(GoApplicationMixin, Sandbox):
     def validate_config(self):
         super(JsBoxApplication, self).validate_config()
         self._go_validate_config()
-        self.resources.add_resource("_js", JsSandboxResource(self.worker_name,
-            self, self.config))
 
     @inlineCallbacks
     def setup_application(self):
@@ -55,28 +45,26 @@ class JsBoxApplication(GoApplicationMixin, Sandbox):
         yield super(JsBoxApplication, self).teardown_application()
         yield self._go_teardown_application()
 
-    def javascript_for_sandbox(self, sandbox_id):
-        return self.redis.get("#".join([self.r_prefix, sandbox_id]))
+    @inlineCallbacks
+    def sandbox_protocol_for_message(self, msg_or_event):
+        """Return a sandbox protocol for a message or event.
 
-    # override selecting a sandbox id to retrieve id based on account name
-
-    def _account_for_message(self, msg):
-        metadata = self.get_go_metadata(msg)
-        return metadata.get_account_key()
-
-    def sandbox_id_for_message(self, msg):
-        """Return the account  as the sandbox id."""
-        return self._account_for_message(msg)
-
-    def sandbox_id_for_event(self, event):
-        """Return the account  as the sandbox id."""
-        return self._account_for_message(event)
+        Overrides method from :class:`Sandbox`.
+        """
+        metadata = self.get_go_metadata(msg_or_event)
+        sandbox_id = metadata.get_account_key()
+        conversation = yield metadata.get_conversation()
+        config = conversation.metadata['jsbox']
+        javascript = JsSandboxResource(
+            self.worker_name, self, {'javascript': config['javascript']})
+        resources = self.resources.copy()
+        resources.add_resource("_js", javascript)
+        api = self.create_sandbox_api(resources)
+        protocol = self.create_sandbox_protocol(sandbox_id, api)
+        returnValue(protocol)
 
     def process_command_start(self, batch_id, conversation_type,
                               conversation_key, msg_options,
                               is_client_initiated, **extra_params):
-        # TODO: this should use LookupAccountMiddleware as soon as that
-        #       gets a map_payload_to_user function.
-        account_key = DebitAccountMiddleware.map_payload_to_user(msg_options)
-        log.info("Starting JsBox conversation for account %r (batch: %r)." %
-                 (account_key, batch_id))
+        log.info("Starting javascript sandbox conversation (key: %r)." %
+                 (conversation_key,))
