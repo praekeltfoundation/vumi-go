@@ -3,6 +3,10 @@ from django.core.urlresolvers import reverse
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.base import message_store_client
+from go.base.tests.utils import FakeMessageStoreClient
+
+from vumi.tests.utils import mocking
 
 
 class BulkMessageTestCase(DjangoGoApplicationTestCase):
@@ -162,7 +166,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         # Check pagination
         # We should have 20 links to contacts which by default display
         # the from_addr if a contact cannot be found.
-        self.assertContains(response, 'from-', 20)
+        self.assertContains(response, '/contacts/people/from-', 20)
         # We should have 2 links to page to, one for the actual page link
         # and one for the 'Next' page link
         self.assertContains(response, '&amp;p=2', 2)
@@ -185,11 +189,48 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertContains(response, '10 delivered.')
 
     def test_message_search(self):
-        self.put_sample_messages_in_conversation(self.user_api,
-            self.conv_key, 10,
-            content_generator=('hello world %s' % (i,) for i in range(10)))
-        response = self.client.get('%s?q=%s' % (
-            reverse('bulk_message:show', kwargs={
+        fake_msc = FakeMessageStoreClient()
+
+        with mocking(message_store_client.Client).to_return(fake_msc):
+            response = self.client.get(reverse('bulk_message:show', kwargs={
+                    'conversation_key': self.conv_key,
+                }), {
+                    'q': 'hello world 1',
+                })
+
+        template_names = [t.name for t in response.templates]
+        self.assertTrue('generic/includes/message-load-results.html' in
+                        template_names)
+        self.assertEqual(response.context['token'], fake_msc.token)
+
+    def test_message_results(self):
+        fake_msc = FakeMessageStoreClient(
+            results=[self.mkmsg_out() for i in range(10)], tries=2)
+
+        fetch_results_url = reverse('bulk_message:results', kwargs={
                 'conversation_key': self.conv_key,
-            }), 'hello world 1'))
-        # print response.content
+            })
+        fetch_results_params = {
+            'q': 'hello world 1',
+            'batch_id': 'batch-id',
+            'direction': 'inbound',
+            'token': fake_msc.token,
+        }
+
+        with mocking(message_store_client.Client).to_return(fake_msc):
+            response1 = self.client.get(fetch_results_url,
+                                        fetch_results_params)
+            response2 = self.client.get(fetch_results_url,
+                                        fetch_results_params)
+
+        # First time it should still show the loading page
+        self.assertTrue('generic/includes/message-load-results.html' in
+                            [t.name for t in response1.templates])
+        # Second time it should still render the messages
+        self.assertTrue('generic/includes/message-list.html' in
+                            [t.name for t in response2.templates])
+        self.assertEqual(response1.context['token'], fake_msc.token)
+        # Second time we should list the matching messages
+        self.assertEqual(response2.context['token'], fake_msc.token)
+        self.assertEqual(len(response2.context['message_page'].object_list),
+            10)

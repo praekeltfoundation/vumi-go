@@ -211,10 +211,11 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         batch_key = conversation.get_latest_batch_key()
 
         for i in range(message_count):
+            content = (content_generator.next()
+                        if content_generator else 'hello')
             msg_in = self.mkmsg_in(from_addr='from-%s' % (i,),
                 message_id=TransportUserMessage.generate_id(),
-                content=(content_generator.next() if content_generator
-                            else 'hello'))
+                content=content)
             msg_out = msg_in.reply('thank you')
             ack = self.mkmsg_ack(user_message_id=msg_out['message_id'])
             dr = self.mkmsg_delivery(user_message_id=msg_out['message_id'])
