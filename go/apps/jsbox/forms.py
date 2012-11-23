@@ -1,3 +1,5 @@
+import requests
+
 from django import forms
 from django.forms import widgets
 
@@ -9,18 +11,17 @@ class JavascriptField(forms.CharField):
 
 
 class JsboxForm(BootstrapForm):
-    javascript = JavascriptField()
-    source_url = forms.CharField(required=False)
+    javascript = JavascriptField(required=False)
+    source_url = forms.URLField(required=False)
     update_from_source = forms.BooleanField(required=False)
 
-    def _load_from_url(self, url):
-        # TODO: implement
-        return "TODO: source from url (%s)" % url
+    def _update_from_source(self, url):
+        return requests.get(url)
 
     def to_metadata(self):
         metadata = self.cleaned_data.copy()
         if metadata['update_from_source']:
-            metadata['javascript'] = self._load_from_url(
+            metadata['javascript'] = self._update_from_source(
                 metadata['source_url'])
         del metadata['update_from_source']
         return metadata
