@@ -14,16 +14,20 @@ class Command(BaseCommand):
 
     Usage:
 
-    ./go-admin.sh go_migrate_conversations:
+    ./go-admin.sh go_migrate_conversations
+
+        List all known accounts with the number conversations to be migrated.
+
+    ./go-admin.sh go_migrate_conversations --migrate
 
         Migrate conversations for all known accounts.
 
-    ./go-admin.sh go_migrate_conversations <optional regex>:
+    ./go-admin.sh go_migrate_conversations [optional username regex]
+    ./go-admin.sh go_migrate_conversations --migrate [optional username regex]
 
-        Migrate conversations for all known accounts matching the given regular
-        expression.
-
+        As above, but only operate on accounts matching the given regex.
     """
+
     args = "[optional username regex]"
     encoding = 'utf-8'
     option_list = BaseCommand.option_list + (
