@@ -33,5 +33,5 @@ class JsboxConversationViews(ConversationViews):
     conversation_display_name = u'Javascript App'
     conversation_initiator = None
     edit_conversation_forms = (
-        ('handlers', JsboxForm),
+        ('jsbox', JsboxForm),
         )
