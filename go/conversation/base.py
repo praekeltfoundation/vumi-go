@@ -7,7 +7,6 @@ from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.core.urlresolvers import reverse
-from django.core.paginator import Paginator
 from django.contrib import messages
 from django.conf.urls.defaults import url, patterns
 from django.conf import settings
@@ -16,7 +15,7 @@ from go.vumitools.conversation.models import (
     CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
-from go.conversation.utils import MessageStoreClient
+from go.base import message_store_client
 from go.base.utils import (make_read_only_form, conversation_or_404,
                             page_range_window)
 
@@ -282,8 +281,8 @@ class EndConversationView(ConversationView):
 class QueryResultsConversationView(ConversationView):
 
     def get(self, request, conversation):
-        msc = MessageStoreClient(settings.MESSAGE_STORE_API_URL)
-        query = request.GET['query']
+        msc = message_store_client.Client(settings.MESSAGE_STORE_API_URL)
+        query = request.GET['q']
         batch_id = request.GET['batch_id']
         direction = request.GET['direction']
         token = request.GET['token']

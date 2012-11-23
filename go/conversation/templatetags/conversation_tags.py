@@ -4,7 +4,8 @@ from django.conf import settings
 from django import template
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
-from go.conversation.utils import PagedMessageCache, MessageStoreClient
+from go.conversation.utils import PagedMessageCache
+from go.base import message_store_client
 from go.base.utils import page_range_window
 
 
@@ -58,7 +59,7 @@ def show_conversation_messages(conversation, direction=None, page=None,
     # If we're doing a query we can shortcut the results as we don't
     # need all the message paginator stuff since we're loading the results
     # asynchronously with JavaScript.
-    msc = MessageStoreClient(settings.MESSAGE_STORE_API_URL)
+    msc = message_store_client.Client(settings.MESSAGE_STORE_API_URL)
     if query and not token:
         token = msc.match(batch_id, direction, [{
             'key': 'msg.content',
