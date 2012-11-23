@@ -232,7 +232,9 @@ class EditConversationView(ConversationView):
                 })
 
     def post(self, request, conversation):
-        self.process_forms(request, conversation)
+        response = self.process_forms(request, conversation)
+        if response is not None:
+            return response
 
         return self.redirect_to(self.get_next_view(conversation),
                                 conversation_key=conversation.key)
