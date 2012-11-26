@@ -166,7 +166,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         # Check pagination
         # We should have 20 links to contacts which by default display
         # the from_addr if a contact cannot be found.
-        self.assertContains(response, '/contacts/people/from-', 20)
+        self.assertContains(response, 'from-', 20)
         # We should have 2 links to page to, one for the actual page link
         # and one for the 'Next' page link
         self.assertContains(response, '&amp;p=2', 2)
@@ -215,6 +215,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             'batch_id': 'batch-id',
             'direction': 'inbound',
             'token': fake_msc.token,
+            'delay': 100,
         }
 
         with mocking(message_store_client.Client).to_return(fake_msc):
@@ -226,6 +227,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         # First time it should still show the loading page
         self.assertTrue('generic/includes/message-load-results.html' in
                             [t.name for t in response1.templates])
+        self.assertEqual(response1.context['delay'], 1.1 * 100)
         # Second time it should still render the messages
         self.assertTrue('generic/includes/message-list.html' in
                             [t.name for t in response2.templates])

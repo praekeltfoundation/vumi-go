@@ -12,8 +12,6 @@
                 <span class="icon-time">
                     Searching for <strong>{{query}}</strong>.
                     One moment please ...
-                    DO something with {{token}} and {{batch_id}} and
-                    {{message_direction}}
                 </span>
             </td>
         </tr>
@@ -31,9 +29,7 @@
                 "delay": {{delay|default:100}},
             },
             success: function(data) {
-                // console.log(data);
                 $('#message-page').html(data);
-                // alert('Load was performed');
             }
         });
     };

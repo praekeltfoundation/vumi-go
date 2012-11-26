@@ -1,4 +1,5 @@
 {% load url from future %}
+{% load conversation_tags %}
 <table class="table table-bordered table-striped">
     <thead>
         <tr>
@@ -10,9 +11,10 @@
     <tbody>
         {% for message in message_page.object_list %}
         <tr>
+            {% get_contact_for_message user_api message as contact %}
             <td><i class="icon-repeat"></i> {{conversation.delivery_class}}</td>
             <td>
-                <h6><a href="{% url 'contacts:person' person_key=message.user %}">{{message.user}}</a> via {{message.transport_type}} - {{message.timestamp}}</h6>
+                <h6><a href="{% url 'contacts:person' person_key=contact.key %}">{{contact}}</a> via {{message.transport_type}} - {{message.timestamp}}</h6>
                 <p>{{message.content}}</p></td>
             <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
         </tr>
