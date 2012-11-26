@@ -237,7 +237,8 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_survey_for_opted_out_user(self):
-        opt_out_addr = '27831234560'
+        opt_out_addr = '27831234562'
+        opt_out_store = OptOutStore(self.app.manager, self.user_account.key)
         opt_out_store = OptOutStore(self.app.manager, self.user_account.key)
         yield opt_out_store.new_opt_out('msisdn', opt_out_addr,
                                         {'message_id': u'test_message_id'})
