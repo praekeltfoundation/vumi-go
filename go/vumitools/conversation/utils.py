@@ -269,22 +269,6 @@ class ConversationWrapper(object):
         returnValue(replies)
 
     @Manager.calls_manager
-    def _handle_message(self, message, addr_attribute):
-        """
-        FIXME:  The conversation view expects a bunch of other stuff alongside
-                a message. This is horribly complex and needs to be fixed.
-        """
-        contact = yield self.user_api.contact_store.contact_for_addr(
-                            self.delivery_class, message[addr_attribute])
-        returnValue({
-            'type': self.delivery_class,
-            'source': (yield self.delivery_class_description()),
-            'contact': contact,
-            'time': message['timestamp'],
-            'content': message['content'],
-            })
-
-    @Manager.calls_manager
     def sent_messages(self, start=0, limit=100, batch_key=None):
         """
         Get a list of sent_messages from the message store. The keys come from
