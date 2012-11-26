@@ -16,12 +16,15 @@ class JsboxForm(BootstrapForm):
     update_from_source = forms.BooleanField(required=False)
 
     def _update_from_source(self, url):
-        return requests.get(url)
+        response = requests.get(url)
+        if response.ok:
+            return response.text
 
     def to_metadata(self):
         metadata = self.cleaned_data.copy()
         if metadata['update_from_source']:
-            metadata['javascript'] = self._update_from_source(
-                metadata['source_url'])
+            source = self._update_from_source(metadata['source_url'])
+            if source is not None:
+                metadata['javascript'] = source
         del metadata['update_from_source']
         return metadata
