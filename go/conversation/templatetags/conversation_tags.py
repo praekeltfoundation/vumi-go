@@ -51,6 +51,10 @@ def show_conversation_messages(context, conversation, direction=None,
             lambda start, stop: conversation.sent_messages(start, stop,
                 batch_id)), 20)
 
+    # We have to copy the original context here so we have full access
+    # to all variables that were originally made available in the Template
+    # with RequestContext and friends. If we do not do this then the `user_api`
+    # is not available for the tags inside this inclusion tag.
     tag_context = copy(context)
     tag_context.update({
         'batch_id': batch_id,
