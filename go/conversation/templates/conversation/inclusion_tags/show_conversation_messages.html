@@ -31,10 +31,10 @@
         </li>
     </ul>
     <div class="tab-content" id="message-page">
-        {% if token %}
-            {% include "generic/includes/message-load-results.html" %}
-        {% else %}
+        {% if message_page %}
             {% include "generic/includes/message-list.html" %}
+        {% else %}
+            {% include "generic/includes/message-load-results.html" %}
         {% endif %}
     </div>
   </div>
