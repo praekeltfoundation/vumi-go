@@ -8,6 +8,8 @@ from go.base.tests.utils import FakeMessageStoreClient
 
 from vumi.tests.utils import mocking
 
+from mock import patch
+
 
 class BulkMessageTestCase(DjangoGoApplicationTestCase):
     TEST_CONVERSATION_TYPE = u'bulk_message'
@@ -188,24 +190,27 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             '10 accepted for delivery by the networks.')
         self.assertContains(response, '10 delivered.')
 
-    def test_message_search(self):
+    @patch('go.base.message_store_client.Client')
+    def test_message_search(self, Client):
         fake_msc = FakeMessageStoreClient()
+        Client.return_value = fake_msc
 
-        with mocking(message_store_client.Client).to_return(fake_msc):
-            response = self.client.get(reverse('bulk_message:show', kwargs={
-                    'conversation_key': self.conv_key,
-                }), {
-                    'q': 'hello world 1',
-                })
+        response = self.client.get(reverse('bulk_message:show', kwargs={
+                'conversation_key': self.conv_key,
+            }), {
+                'q': 'hello world 1',
+            })
 
         template_names = [t.name for t in response.templates]
         self.assertTrue('generic/includes/message-load-results.html' in
                         template_names)
         self.assertEqual(response.context['token'], fake_msc.token)
 
-    def test_message_results(self):
+    @patch('go.base.message_store_client.Client')
+    def test_message_results(self, Client):
         fake_msc = FakeMessageStoreClient(
             results=[self.mkmsg_out() for i in range(10)], tries=2)
+        Client.return_value = fake_msc
 
         fetch_results_url = reverse('bulk_message:results', kwargs={
                 'conversation_key': self.conv_key,
@@ -218,11 +223,10 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             'delay': 100,
         }
 
-        with mocking(message_store_client.Client).to_return(fake_msc):
-            response1 = self.client.get(fetch_results_url,
-                                        fetch_results_params)
-            response2 = self.client.get(fetch_results_url,
-                                        fetch_results_params)
+        response1 = self.client.get(fetch_results_url,
+                                    fetch_results_params)
+        response2 = self.client.get(fetch_results_url,
+                                    fetch_results_params)
 
         # First time it should still show the loading page
         self.assertTrue('generic/includes/message-load-results.html' in
