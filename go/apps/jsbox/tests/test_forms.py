@@ -17,9 +17,16 @@ class JsboxFormTestCase(TestCase):
             'source_url': '',
         })
 
+    def mock_response(self, status_code, text):
+        r = mock.Mock()
+        r.status_code = status_code
+        r.text = text
+        return r
+
     @mock.patch('requests.get')
     def test_update_from_source(self, requests_get):
-        requests_get.return_value = "custom javascript"
+        requests_get.return_value = self.mock_response(
+            "200", "custom javascript")
         source_url = 'http://www.example.com/'
         form = JsboxForm(data={
             'javascript': '',
@@ -30,6 +37,6 @@ class JsboxFormTestCase(TestCase):
         metadata = form.to_metadata()
         requests_get.assert_called_once_with(source_url)
         self.assertEqual(metadata, {
-            'javascript': requests_get.return_value,
+            'javascript': requests_get.return_value.text,
             'source_url': source_url,
         })
