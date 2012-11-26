@@ -25,11 +25,6 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
             'executable': node_js,
             'args': [sandboxer_js],
             'timeout': 10,
-            'sandbox': {
-                'log': {
-                    'cls': 'vumi.application.sandbox.LoggingResource',
-                },
-            },
         })
         self.app = yield self.get_application(self.config)
 
