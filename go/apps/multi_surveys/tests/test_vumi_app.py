@@ -11,6 +11,7 @@ from vumi.tests.utils import LogCatcher
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.multi_surveys.vumi_app import MultiSurveyApplication
+from go.vumitools.opt_out import OptOutStore
 
 
 class TestMultiSurveyApplication(AppWorkerTestCase):
@@ -51,6 +52,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
+        print "%%%%%%%%%%%%%%%%%%%", self.user_account.key
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         # Add tags
@@ -233,3 +235,20 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             start_at += len(msgs)
             # any input will restart the survey
             yield self.reply_to(msgs[-1], 'hi')
+
+    @inlineCallbacks
+    def test_survey_for_opted_out_user(self):
+        opt_out_store = OptOutStore(self.app.manager, self.user_account.key)
+        msg = TransportUserMessage(
+            message_id = u'test_id',
+            to_addr='',
+            from_addr='27831234569',
+            content='STOP',
+            session_event=None,
+            transport_name='',
+            transport_type=None,
+            helper_metadata=None,
+            )
+        print "@@@@@@@@@", opt_out_store
+        yield opt_out_store.new_opt_out("msisdn", msg.get('from_addr'), msg)
+        yield None
