@@ -5,15 +5,14 @@
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.sandbox import (Sandbox, JsSandboxResource,
-                                      SandboxResources)
+from vumi.application.sandbox import (JsSandbox, SandboxResources)
 from vumi.message import TransportEvent
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationMixin
 
 
-class JsBoxApplication(GoApplicationMixin, Sandbox):
+class JsBoxApplication(GoApplicationMixin, JsSandbox):
     """
     Application that processes message in a Node.js Javascript Sandbox.
 
@@ -27,6 +26,8 @@ class JsBoxApplication(GoApplicationMixin, Sandbox):
         Message store configuration.
     :param dict api_routing:
         Vumi API command routing information (optional).
+
+    And those from :class:`vumi.application.sandbox.JsSandbox`.
     """
 
     SEND_TO_TAGS = frozenset(['default'])
@@ -46,6 +47,9 @@ class JsBoxApplication(GoApplicationMixin, Sandbox):
         yield super(JsBoxApplication, self).teardown_application()
         yield self._go_teardown_application()
 
+    def javascript_for_api(self, api):
+        return api.javascript
+
     @inlineCallbacks
     def sandbox_protocol_for_message(self, msg_or_event):
         """Return a sandbox protocol for a message or event.
@@ -61,13 +65,9 @@ class JsBoxApplication(GoApplicationMixin, Sandbox):
         sandbox_id = metadata.get_account_key()
         conversation = yield metadata.get_conversation()
         config = conversation.metadata['jsbox']
-        javascript = JsSandboxResource(
-            self.worker_name, self, {'javascript': config['javascript']})
-        javascript.setup()
-        resources = SandboxResources(self, {})
-        resources.resources = self.resources.resources.copy()
-        resources.add_resource("_js", javascript)
-        api = self.create_sandbox_api(resources)
+        javascript = config['javascript']
+        api = self.create_sandbox_api(self.resources)
+        api.javascript = javascript
         protocol = self.create_sandbox_protocol(sandbox_id, api)
         returnValue(protocol)
 
