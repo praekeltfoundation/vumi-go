@@ -1,4 +1,5 @@
 import re
+from copy import copy
 
 from django.conf import settings
 from django import template
@@ -8,14 +9,18 @@ from go.conversation.utils import PagedMessageCache
 from go.base import message_store_client
 from go.base.utils import page_range_window
 
+from vumi.message import TransportUserMessage
+
 
 register = template.Library()
 
 
 @register.inclusion_tag(
-    'conversation/inclusion_tags/show_conversation_messages.html')
-def show_conversation_messages(conversation, direction=None, page=None,
-                                batch_id=None, query=None, token=None):
+    'conversation/inclusion_tags/show_conversation_messages.html',
+    takes_context=True)
+def show_conversation_messages(context, conversation, direction=None,
+                                page=None, batch_id=None, query=None,
+                                token=None):
     """
     Render the messages sent & received for this conversation.
 
@@ -46,7 +51,8 @@ def show_conversation_messages(conversation, direction=None, page=None,
             lambda start, stop: conversation.sent_messages(start, stop,
                 batch_id)), 20)
 
-    context = {
+    tag_context = copy(context)
+    tag_context.update({
         'batch_id': batch_id,
         'conversation': conversation,
         'inbound_message_paginator': inbound_message_paginator,
@@ -54,7 +60,7 @@ def show_conversation_messages(conversation, direction=None, page=None,
         'inbound_uniques_count': conversation.count_inbound_uniques(),
         'outbound_uniques_count': conversation.count_outbound_uniques(),
         'message_direction': direction,
-    }
+    })
 
     # If we're doing a query we can shortcut the results as we don't
     # need all the message paginator stuff since we're loading the results
@@ -66,16 +72,16 @@ def show_conversation_messages(conversation, direction=None, page=None,
             'pattern': re.escape(query),
             'flags': 'i',
             }])
-        context.update({
+        tag_context.update({
             'query': query,
             'token': token,
         })
-        return context
+        return tag_context
     elif query and token:
         match_result = msc.get_match_results(batch_id, direction, token,
             page=int(page), page_size=20)
         message_paginator = match_result.paginator
-        context.update({
+        tag_context.update({
             'token': token,
             'query': query,
             })
@@ -92,8 +98,23 @@ def show_conversation_messages(conversation, direction=None, page=None,
     except EmptyPage:
         message_page = message_paginator.page(message_paginator.num_pages)
 
-    context.update({
+    tag_context.update({
         'message_page': message_page,
         'message_page_range': page_range_window(message_page, 5),
     })
-    return context
+    return tag_context
+
+
+@register.assignment_tag
+def get_contact_for_message(user_api, message):
+    # This is a temporary work around to deal with the hackiness that
+    # lives in `contact_for_addr()`. It used to expect to be passed a
+    # `conversation.delivery_class` and this emulates that.
+    delivery_class = {
+        TransportUserMessage.TT_SMS: 'sms',
+        TransportUserMessage.TT_USSD: 'ussd',
+        TransportUserMessage.TT_XMPP: 'gtalk',
+        TransportUserMessage.TT_TWITTER: 'twitter',
+    }.get(message['transport_type'], 'unkown')
+    return user_api.contact_store.contact_for_addr(
+        delivery_class, unicode(message.user()))
