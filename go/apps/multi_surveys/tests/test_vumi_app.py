@@ -52,7 +52,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
-        print "%%%%%%%%%%%%%%%%%%%", self.user_account.key
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         # Add tags
@@ -238,17 +237,25 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_survey_for_opted_out_user(self):
+        opt_out_addr = '27831234560'
         opt_out_store = OptOutStore(self.app.manager, self.user_account.key)
-        msg = TransportUserMessage(
-            message_id = u'test_id',
-            to_addr='',
-            from_addr='27831234569',
-            content='STOP',
-            session_event=None,
-            transport_name='',
-            transport_type=None,
-            helper_metadata=None,
-            )
-        print "@@@@@@@@@", opt_out_store
-        yield opt_out_store.new_opt_out("msisdn", msg.get('from_addr'), msg)
-        yield None
+        yield opt_out_store.new_opt_out('msisdn', opt_out_addr,
+                                        {'message_id': u'test_message_id'})
+        opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
+        print ">>>>>>>>>>>>>>>>>>>>", opt_out
+        opt_out = yield opt_out_store.delete_opt_out('msisdn', opt_out_addr)
+        opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
+        print ">>>>>>>>>>>>>>>>>>>>", opt_out
+
+        self.contact1 = yield self.create_contact(name=u'First',
+            surname=u'Contact', msisdn=u'27831234561', groups=[self.group])
+        self.contact2 = yield self.create_contact(name=u'Second',
+            surname=u'Contact', msisdn=u'27831234562', groups=[self.group])
+        self.create_survey(self.conversation)
+        with LogCatcher() as log:
+            yield self.start_conversation(self.conversation)
+            self.assertEqual(log.errors, [])
+
+        [msg1, msg2] = (yield self.wait_for_dispatched_messages(2))
+        self.assertEqual(msg1['content'], self.default_polls[0][0]['copy'])
+        self.assertEqual(msg2['content'], self.default_polls[0][0]['copy'])
