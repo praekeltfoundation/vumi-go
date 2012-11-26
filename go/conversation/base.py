@@ -4,7 +4,6 @@ from django.views.generic import TemplateView
 from django.core.paginator import PageNotAnInteger, EmptyPage
 
 from django.utils.decorators import method_decorator
-from django.template import RequestContext
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.core.urlresolvers import reverse
@@ -210,7 +209,7 @@ class ShowConversationView(ConversationView):
             params['next_url'] = self.get_view_url(
                 self.get_next_view(conversation),
                 conversation_key=conversation.key)
-        return self.render_to_response(RequestContext(request, params))
+        return self.render_to_response(params)
 
 
 class EditConversationView(ConversationView):
