@@ -237,16 +237,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_survey_for_opted_out_user(self):
-        opt_out_addr = '27831234562'
-        opt_out_store = OptOutStore(self.app.manager, self.user_account.key)
-        opt_out_store = OptOutStore(self.app.manager, self.user_account.key)
-        yield opt_out_store.new_opt_out('msisdn', opt_out_addr,
-                                        {'message_id': u'test_message_id'})
-        opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
-        print ">>>>>>>>>>>>>>>>>>>>", opt_out
-        opt_out = yield opt_out_store.delete_opt_out('msisdn', opt_out_addr)
-        opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
-        print ">>>>>>>>>>>>>>>>>>>>", opt_out
 
         self.contact1 = yield self.create_contact(name=u'First',
             surname=u'Contact', msisdn=u'27831234561', groups=[self.group])
@@ -257,6 +247,20 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             yield self.start_conversation(self.conversation)
             self.assertEqual(log.errors, [])
 
+        opt_out_addr = '27831234562'
+        opt_out_store = OptOutStore(self.app.manager, self.user_account.key)
+        opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
+        print "\n>>>>>>>>>>>>>>>>>>>>", opt_out
+        yield opt_out_store.new_opt_out('msisdn', opt_out_addr,
+                                        {'message_id': u'test_message_id'})
+        opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
+        print "\n>>>>>>>>>>>>>>>>>>>>", opt_out
+        #opt_out = yield opt_out_store.delete_opt_out('msisdn', opt_out_addr)
+        #opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
+        #print "\n>>>>>>>>>>>>>>>>>>>>", opt_out
+
         [msg1, msg2] = (yield self.wait_for_dispatched_messages(2))
         self.assertEqual(msg1['content'], self.default_polls[0][0]['copy'])
         self.assertEqual(msg2['content'], self.default_polls[0][0]['copy'])
+        yield self.reply_to(msg1, "1")
+        yield self.reply_to(msg2, "1")

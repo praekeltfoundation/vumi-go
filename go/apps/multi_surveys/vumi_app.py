@@ -69,7 +69,7 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
             opt_out_store = OptOutStore(self.manager, account_key)
             from_addr = message.get("from_addr")
             opt_out = yield opt_out_store.get_opt_out("msisdn", from_addr)
-            print "#################"
+            print "\n#################"
             print repr(from_addr)
             print repr(account_key)
             print repr(opt_out)
