@@ -3,10 +3,7 @@ from django.core.urlresolvers import reverse
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.base import message_store_client
 from go.base.tests.utils import FakeMessageStoreClient
-
-from vumi.tests.utils import mocking
 
 from mock import patch
 
