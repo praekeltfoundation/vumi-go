@@ -240,32 +240,30 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
 
         self.contact1 = yield self.create_contact(name=u'First',
             surname=u'Contact', msisdn=u'27831234561', groups=[self.group])
-        self.contact2 = yield self.create_contact(name=u'Second',
-            surname=u'Contact', msisdn=u'27831234562', groups=[self.group])
         self.create_survey(self.conversation)
         with LogCatcher() as log:
             yield self.start_conversation(self.conversation)
             self.assertEqual(log.errors, [])
 
-        opt_out_addr = '27831234562'
+        # First run through to the second poll
+        [msg1] = (yield self.wait_for_dispatched_messages(1))
+        self.assertEqual(msg1['content'], self.default_polls[0][0]['copy'])
+        yield self.reply_to(msg1, "1")
+        [msg1, msg2] = (yield self.wait_for_dispatched_messages(2))
+        self.assertEqual(msg2['content'], self.end_of_survey_copy[0])
+        yield self.reply_to(msg2, "1")
+        [msg1, msg2, msg3] = (yield self.wait_for_dispatched_messages(3))
+        self.assertEqual(msg3['content'], self.default_polls[1][0]['copy'])
+
+        # Now opt the msisdn out
+        opt_out_addr = '27831234561'
         opt_out_store = OptOutStore(self.app.manager, self.user_account.key)
         opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
-        print "\n>>>>>>>>>>>>>>>>>>>>", opt_out
         yield opt_out_store.new_opt_out('msisdn', opt_out_addr,
-                                        {'message_id': u'test_message_id'})
-        opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
-        print "\n>>>>>>>>>>>>>>>>>>>>", opt_out
-        #opt_out = yield opt_out_store.delete_opt_out('msisdn', opt_out_addr)
-        #opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
-        #print "\n>>>>>>>>>>>>>>>>>>>>", opt_out
+                                        #{'message_id': u'test_message_id'})
 
-        [msg1, msg2] = (yield self.wait_for_dispatched_messages(2))
-        self.assertEqual(msg1['content'], self.default_polls[0][0]['copy'])
-        self.assertEqual(msg2['content'], self.default_polls[0][0]['copy'])
-        yield self.reply_to(msg1, "1")
-        yield self.reply_to(msg2, "1")
+        # Check that on re-entry the survey is reset and the
+        # opening copy is delivered
+        yield self.reply_to(msg3, "1")
         [msg1, msg2, msg3, msg4] = (yield self.wait_for_dispatched_messages(4))
-        print ">>>>", msg1.payload['to_addr'], msg1.payload['content']
-        print ">>>>", msg2.payload['to_addr'], msg2.payload['content']
-        print ">>>>", msg3.payload['to_addr'], msg3.payload['content']
-        print ">>>>", msg4.payload['to_addr'], msg4.payload['content']
+        self.assertEqual(msg4['content'], self.default_polls[0][0]['copy'])

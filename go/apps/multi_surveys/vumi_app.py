@@ -69,17 +69,13 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
             opt_out_store = OptOutStore(self.manager, account_key)
             from_addr = message.get("from_addr")
             opt_out = yield opt_out_store.get_opt_out("msisdn", from_addr)
-            print "\n#################"
-            print repr(from_addr)
-            print repr(account_key)
-            print repr(opt_out)
-            print "#################"
             if opt_out:
                 # delete the opt-out
                 yield opt_out_store.delete_opt_out("msisdn", from_addr)
                 # archive the user record so they can start from scratch
                 scope_id = message['helper_metadata'].get('poll_id', '')
-                participant = yield self.pm.get_participant(scope_id, message.user())
+                participant = yield self.pm.get_participant(scope_id,
+                                                            message.user())
                 yield self.pm.archive(scope_id, participant)
 
         super(MultiSurveyApplication, self).consume_user_message(message)
