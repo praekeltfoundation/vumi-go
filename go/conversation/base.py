@@ -225,14 +225,20 @@ class EditConversationView(ConversationView):
     template_name = 'edit'
     edit_conversation_forms = ()
 
-    def get(self, request, conversation):
+    def _render_forms(self, request, conversation, edit_forms):
         return self.render_to_response({
                 'conversation': conversation,
-                'edit_forms': self.make_forms(conversation),
+                'edit_forms': edit_forms,
                 })
 
+    def get(self, request, conversation):
+        edit_forms = self.make_forms(conversation)
+        return self._render_forms(request, conversation, edit_forms)
+
     def post(self, request, conversation):
-        self.process_forms(request, conversation)
+        response = self.process_forms(request, conversation)
+        if response is not None:
+            return response
 
         return self.redirect_to(self.get_next_view(conversation),
                                 conversation_key=conversation.key)
@@ -255,12 +261,16 @@ class EditConversationView(ConversationView):
 
     def process_forms(self, request, conversation):
         metadata = conversation.get_metadata(default={})
-        for key, edit_form in self.edit_conversation_forms:
-            form = edit_form(request.POST, prefix=key)
+        edit_forms_with_keys = [
+            (key, edit_form_cls(request.POST, prefix=key))
+            for key, edit_form_cls in self.edit_conversation_forms]
+        edit_forms = [edit_form for _key, edit_form in edit_forms_with_keys]
+
+        for key, edit_form in edit_forms_with_keys:
             # Is this a good idea?
-            if not form.is_valid():
-                return self.get(request, conversation)
-            metadata[key] = self.process_form(form)
+            if not edit_form.is_valid():
+                return self._render_forms(request, conversation, edit_forms)
+            metadata[key] = self.process_form(edit_form)
         conversation.set_metadata(metadata)
         conversation.save()
 
