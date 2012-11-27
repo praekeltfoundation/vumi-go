@@ -20,7 +20,7 @@
 <script>
     function load_results() {
         $.ajax({
-            url: "{{conversation.get_absolute_url}}results/",
+            url: "{{conversation.get_absolute_url}}message_search_result/",
             data: {
                 "q": "{{query}}",
                 "token": "{{token}}",
