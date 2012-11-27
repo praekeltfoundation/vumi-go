@@ -1,5 +1,6 @@
 from go.contacts import forms
 from go.base.utils import vumi_api_for_user
+from django.conf import settings
 
 
 def user_profile(request):
@@ -31,3 +32,9 @@ def credit(request):
             'account_credits': api.cm.get_credit(profile.user_account) or 0,
         }
     return {}
+
+
+def google_analytics(request):
+    return {
+        'google_analytics_ua': getattr(settings, "GOOGLE_ANALYTICS_UA", None),
+    }
