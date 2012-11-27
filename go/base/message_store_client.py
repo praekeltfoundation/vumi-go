@@ -15,20 +15,29 @@ class Client(object):
     def __init__(self, base_url):
         self.base_url = base_url
 
+    def do_get(self, path, params):
+        url = '%s%s' % (self.base_url, path)
+        return requests.get(url, params=params)
+
+    def do_post(self, path, data):
+        url = '%s%s' % (self.base_url, path)
+        return requests.post(url, data=data)
+
     def match(self, batch_id, direction, query):
-        url = '%sbatch/%s/%s/match/' % (self.base_url, batch_id, direction)
-        response = requests.post(url, data=json.dumps(query))
+        path = 'batch/%s/%s/match/' % (batch_id, direction)
+        response = self.do_post(path, data=json.dumps(query))
         return response.headers['x-vms-result-token']
 
     def get_match_results(self, batch_id, direction, token, page=None,
                             page_size=None):
-        return MatchResult(self.base_url, batch_id, direction, token, page,
+        return MatchResult(self, batch_id, direction, token, page,
                             page_size)
 
 
 class MatchResult(object):
-    def __init__(self, base_url, batch_id, direction, token, page=1,
+    def __init__(self, client, base_url, batch_id, direction, token, page=1,
         page_size=20):
+        self.client = client
         self.base_url = base_url
         self.batch_id = batch_id
         self.direction = direction
@@ -36,8 +45,7 @@ class MatchResult(object):
         self.page = page
         self.page_size = page_size
         self.paginator = None
-        self.url = '%sbatch/%s/%s/match/' % (self.base_url, batch_id,
-                                                direction)
+        self.path = 'batch/%s/%s/match/' % (batch_id, direction)
         self._total_count = None
         self._in_progress = None
         self._cache = {}
@@ -74,7 +82,7 @@ class MatchResult(object):
         if cache_hit is not None:
             return cache_hit
 
-        response = requests.get(self.url, params={
+        response = self.client.do_get(self.path, params={
             'token': self.token,
             'start': start,
             'stop': stop,
