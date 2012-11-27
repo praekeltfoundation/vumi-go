@@ -209,7 +209,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             results=[self.mkmsg_out() for i in range(10)], tries=2)
         Client.return_value = fake_msc
 
-        fetch_results_url = reverse('bulk_message:results', kwargs={
+        fetch_results_url = reverse('bulk_message:message_search_result',
+            kwargs={
                 'conversation_key': self.conv_key,
             })
         fetch_results_params = {

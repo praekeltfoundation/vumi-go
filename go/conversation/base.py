@@ -277,7 +277,7 @@ class EndConversationView(ConversationView):
         return self.redirect_to('show', conversation_key=conversation.key)
 
 
-class QueryResultsConversationView(ConversationView):
+class MessageSearchResultConversationView(ConversationView):
 
     def get(self, request, conversation):
         msc = message_store_client.Client(settings.MESSAGE_STORE_API_URL)
@@ -385,7 +385,8 @@ class ConversationViews(object):
     show_conversation_view = ShowConversationView
     edit_conversation_view = EditConversationView
     end_conversation_view = EndConversationView
-    results_conversation_view = QueryResultsConversationView
+    message_search_result_conversation_view = \
+        MessageSearchResultConversationView
 
     # These attributes get passed through to the individual view objects.
     conversation_type = None
@@ -426,7 +427,7 @@ class ConversationViews(object):
             self.mkurl('start'),
             self.mkurl('end'),
             self.mkurl('show', r'^(?P<conversation_key>\w+)/$'),
-            self.mkurl('results'),
+            self.mkurl('message_search_result'),
             ] + self.extra_urls()
         if self.conversation_initiator != 'client':
             urls.append(self.mkurl('people'))
