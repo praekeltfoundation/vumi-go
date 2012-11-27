@@ -8,6 +8,7 @@ from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.jsbox.vumi_app import JsBoxApplication
 
 from vumi.middleware.tagger import TaggingMiddleware
+from vumi.tests.utils import LogCatcher
 
 
 class JsBoxApplicationTestCase(AppWorkerTestCase):
@@ -88,10 +89,11 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_start(self):
         conversation = yield self.setup_conversation()
-        yield self.start_conversation(conversation)
-
-        # Force processing of messages
-        yield self._amqp.kick_delivery()
+        with LogCatcher() as lc:
+            yield self.start_conversation(conversation)
+            self.assertTrue("Starting javascript sandbox conversation "
+                            "(key: u'%s')." % conversation.key
+                            in lc.messages())
 
     @inlineCallbacks
     def test_user_message(self):
