@@ -28,17 +28,14 @@ class Client(object):
         response = self.do_post(path, data=json.dumps(query))
         return response.headers['x-vms-result-token']
 
-    def get_match_results(self, batch_id, direction, token, page=None,
-                            page_size=None):
-        return MatchResult(self, batch_id, direction, token, page,
-                            page_size)
+    def get_match_results(self, batch_id, direction, token, page,
+                            page_size=20):
+        return MatchResult(self, batch_id, direction, token, page, page_size)
 
 
 class MatchResult(object):
-    def __init__(self, client, base_url, batch_id, direction, token, page=1,
-        page_size=20):
+    def __init__(self, client, batch_id, direction, token, page, page_size=20):
         self.client = client
-        self.base_url = base_url
         self.batch_id = batch_id
         self.direction = direction
         self.token = token
@@ -49,18 +46,7 @@ class MatchResult(object):
         self._total_count = None
         self._in_progress = None
         self._cache = {}
-        if self.page and self.page_size:
-            # NOTE:
-            # We do this here because we need to first load a page
-            # to see what the total result count is before we can paginate.
-            # The results are cached so if one provides the correct page
-            # number up front there is no performance penalty
-            start = (self.page - 1) * self.page_size
-            stop = start + self.page_size
-            self.get_slice(start, stop)
-            # Make a paginator with the right page size set available for
-            # convenience.
-            self.paginator = Paginator(self, self.page_size)
+        self.paginator = Paginator(self, self.page_size)
 
     def _cache_key(self, start, stop):
         return '%s-%s' % (start, stop)
@@ -72,6 +58,13 @@ class MatchResult(object):
                 return self.get_slice(value.start, value.stop)
         raise ClientException(
             'Only `[start:stop]` slices accepted.')
+
+    def load_page(self, page):
+        # Grab the page and cache the results, the value of `_total_count`
+        # is set by `get_slice()` when a page is requested.
+        start = (page - 1) * self.page_size
+        stop = start + self.page_size
+        self.get_slice(start, stop)
 
     def get_slice(self, start, stop):
         # We're doing very simple caching here since we need to get at least
@@ -104,14 +97,12 @@ class MatchResult(object):
     def count(self):
         # Django Paginator calls this.
         if self._total_count is None:
-            raise ClientException(
-                'count() called before page load.')
+            self.load_page(self.page)
         return self._total_count
 
     def is_in_progress(self):
         if self._in_progress is None:
-            raise ClientException(
-                'is_in_progress() called before page load.')
+            self.load_page(self.page)
         return self._in_progress
 
     def __repr__(self):
