@@ -80,7 +80,7 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
                 # archive the user record so they can start from scratch
                 scope_id = message['helper_metadata'].get('poll_id', '')
                 participant = yield self.pm.get_participant(scope_id, message.user())
-                yield self.pm.archive(participant.scope_id, participant)
+                yield self.pm.archive(scope_id, participant)
 
         super(MultiSurveyApplication, self).consume_user_message(message)
 
