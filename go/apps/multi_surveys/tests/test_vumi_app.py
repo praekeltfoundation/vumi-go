@@ -260,7 +260,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         opt_out_store = OptOutStore(self.app.manager, self.user_account.key)
         opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
         yield opt_out_store.new_opt_out('msisdn', opt_out_addr,
-                                        #{'message_id': u'test_message_id'})
+                                        {'message_id': u'test_message_id'})
 
         # Check that on re-entry the survey is reset and the
         # opening copy is delivered
