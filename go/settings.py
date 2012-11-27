@@ -1,3 +1,4 @@
+
 # Django settings for go project.
 import os
 import djcelery
@@ -128,6 +129,7 @@ TEMPLATE_DIRS = (
     abspath("apps", "opt_out", "templates"),
     abspath("apps", "sequential_send", "templates"),
     abspath("apps", "wikipedia", "ussd", "templates"),
+    abspath("apps", "jsbox", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -256,6 +258,10 @@ VUMI_INSTALLED_APPS = {
     'go.apps.wikipedia.sms': {
         'namespace': 'wikipedia_sms',
         'display_name': 'Wikipedia SMS Connection',
+    },
+    'go.apps.jsbox': {
+        'namespace': 'jsbox',
+        'display_name': 'Javascript App',
     },
 }
 
