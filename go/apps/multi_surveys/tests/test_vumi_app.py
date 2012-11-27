@@ -264,3 +264,8 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         self.assertEqual(msg2['content'], self.default_polls[0][0]['copy'])
         yield self.reply_to(msg1, "1")
         yield self.reply_to(msg2, "1")
+        [msg1, msg2, msg3, msg4] = (yield self.wait_for_dispatched_messages(4))
+        print ">>>>", msg1.payload['to_addr'], msg1.payload['content']
+        print ">>>>", msg2.payload['to_addr'], msg2.payload['content']
+        print ">>>>", msg3.payload['to_addr'], msg3.payload['content']
+        print ">>>>", msg4.payload['to_addr'], msg4.payload['content']
