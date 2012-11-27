@@ -171,6 +171,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "go.base.context_processors.user_profile",
     "go.base.context_processors.standard_forms",
     "go.base.context_processors.credit",
+    "go.base.context_processors.google_analytics",
 )
 
 # A sample logging configuration. The only tangible logging
