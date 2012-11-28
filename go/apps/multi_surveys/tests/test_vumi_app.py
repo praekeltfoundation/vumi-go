@@ -258,7 +258,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         # Now opt the msisdn out
         opt_out_addr = '27831234561'
         opt_out_store = OptOutStore(self.app.manager, self.user_account.key)
-        opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
         yield opt_out_store.new_opt_out('msisdn', opt_out_addr,
                                         {'message_id': u'test_message_id'})
 
@@ -267,3 +266,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         yield self.reply_to(msg3, "1")
         [msg1, msg2, msg3, msg4] = (yield self.wait_for_dispatched_messages(4))
         self.assertEqual(msg4['content'], self.default_polls[0][0]['copy'])
+
+        opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
+        self.assertEqual(opt_out, None)
