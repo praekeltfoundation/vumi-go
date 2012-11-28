@@ -264,26 +264,9 @@ class ConversationWrapper(object):
             # sometimes a message can be None because of Riak's eventual
             # consistency model
             if message is not None:
-                replies.append((
-                    yield self._handle_message(message.msg, 'from_addr')))
+                replies.append(message.msg)
 
         returnValue(replies)
-
-    @Manager.calls_manager
-    def _handle_message(self, message, addr_attribute):
-        """
-        FIXME:  The conversation view expects a bunch of other stuff alongside
-                a message. This is horribly complex and needs to be fixed.
-        """
-        contact = yield self.user_api.contact_store.contact_for_addr(
-                            self.delivery_class, message[addr_attribute])
-        returnValue({
-            'type': self.delivery_class,
-            'source': (yield self.delivery_class_description()),
-            'contact': contact,
-            'time': message['timestamp'],
-            'content': message['content'],
-            })
 
     @Manager.calls_manager
     def sent_messages(self, start=0, limit=100, batch_key=None):
@@ -291,10 +274,10 @@ class ConversationWrapper(object):
         Get a list of sent_messages from the message store. The keys come from
         the message store's cache.
 
-        :param int page:
-            Which page to get
+        :param int start:
+            Where to start
         :param int limit:
-            How many sent messages to get per page
+            How many sent messages to fetch starting from start
         :param str batch_key:
             The batch to get sent messages for. Defaults to whatever
             `get_latest_batch_key()` returns.
@@ -310,10 +293,110 @@ class ConversationWrapper(object):
             # sometimes a message can be None because of Riak's eventual
             # consistency model
             if message is not None:
-                sent_messages.append((
-                    yield self._handle_message(message.msg, 'to_addr')))
+                sent_messages.append(message.msg)
 
         returnValue(sent_messages)
+
+    def find_inbound_messages_matching(self, pattern, flags="i",
+                                        batch_key=None, key="msg.content",
+                                        ttl=None, wait=False):
+        """
+        Does a regex OR search over the inbound messages and returns
+        matching messages.
+
+        :param str pattern:
+            The pattern to search on
+        :param str flags:
+            The flags to set for the RegExp object.
+        :param str batch_key:
+            The batch to search over.
+        :param str key:
+            The key on the message to match. Defaults to `msg.content`.
+        :param int start:
+            Where to start fetching results from.
+        :param int limit:
+            How many results to get.
+        :param int ttl:
+            How long to cache the results for.
+            Defaults to the MessageStore default.
+        :param bool wait:
+            Wait with returning keys until the results are actually available.
+
+        NOTE:   This should only be called from inside twisted as
+                MessageStore.find_inbound_keys_matching() relies
+                on Deferreds being fired.
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        query = [{
+            "key": key,
+            "pattern": pattern,
+            "flags": flags,
+            }]
+        return self.mdb.find_inbound_keys_matching(batch_key, query, ttl=ttl,
+                                                    wait=wait)
+
+    @Manager.calls_manager
+    def get_inbound_messages_for_token(self, token, start=0, stop=-1,
+                                        batch_key=None):
+        """
+        Fetch the results for a search token
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        keys = yield self.mdb.get_keys_for_token(batch_key, token, start, stop)
+        messages = []
+        for bunch in self.mdb.inbound_messages.load_all_bunches(keys):
+            messages.extend((yield bunch))
+        returnValue(messages)
+
+    def count_inbound_messages_for_token(self, token, batch_key=None):
+        """
+        Return the total number of keys in the results for the token.
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        return self.mdb.count_keys_for_token(batch_key, token)
+
+    def find_outbound_messages_matching(self, pattern, flags="i",
+                                        batch_key=None, key="msg.content",
+                                        ttl=None, wait=False):
+        """
+        Does a regex OR search over the outbound messages and returns
+        matching messages.
+
+        :param str pattern:
+            The pattern to search on
+        :param str flags:
+            The flags to set for the RegExp object.
+        :param str batch_key:
+            The batch to search over.
+        :param str key:
+            The key on the message to match. Defaults to `msg.content`.
+        :param int ttl:
+            How long to store the results for in seconds.
+            Defaults to the MessageStore default.
+        :param bool wait:
+            Wait with returning keys until the results are actually available.
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        query = [{
+            "key": key,
+            "pattern": pattern,
+            "flags": flags,
+            }]
+        return self.mdb.find_outbound_keys_matching(batch_key, query, ttl=ttl,
+                                                    wait=wait)
+
+    @Manager.calls_manager
+    def get_outbound_messages_for_token(self, token, start=0, stop=-1,
+                                        batch_key=None):
+        """
+        Fetch the results for a search token
+        """
+        batch_key = batch_key or self.get_latest_batch_key()
+        keys = yield self.mdb.get_keys_for_token(batch_key, token, start, stop)
+        messages = []
+        for bunch in self.mdb.outbound_messages.load_all_bunches(keys):
+            messages.extend((yield bunch))
+        returnValue(messages)
 
     @Manager.calls_manager
     def acquire_existing_tag(self):
@@ -429,7 +512,8 @@ class ConversationWrapper(object):
         """
         contact_store = self.user_api.contact_store
         contact_keys = yield self.get_contact_keys()
-        contacts_iter = contact_store.contacts.load_all_bunches(contact_keys)
+        contacts_iter = yield contact_store.contacts.load_all_bunches(
+                                                            contact_keys)
 
         # We return a generator here. It's important that this is iterated over
         # slowly, otherwise we risk hammering our Riak servers to death.
