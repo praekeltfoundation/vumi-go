@@ -120,8 +120,7 @@ def declare_longcode_tags(api):
 
 class FakeMessageStoreClient(object):
 
-    def __init__(self, results=[], token=None, tries=2):
-        self.results = results
+    def __init__(self, token=None, tries=2):
         self.token = token or uuid.uuid4().hex
         self.tries = tries
         self._times_called = 0
@@ -129,17 +128,14 @@ class FakeMessageStoreClient(object):
     def match(self, batch_id, direction, query):
         return self.token
 
-    def get_match_results(self, batch_id, direction, token, page=None,
-                            page_size=20):
-        self._times_called += 1
-        if self._times_called >= self.tries:
-            return FakeMatchResult(False, self.results, page_size)
-        return FakeMatchResult(True, self.results, page_size)
+    def match_results(self, batch_id, direction, token, start, stop):
+        return self.results[start:stop]
 
 
 class FakeMatchResult(object):
-    def __init__(self, in_progress, results, page_size):
-        self.in_progress = in_progress
+    def __init__(self, tries=1, results=[], page_size=20):
+        self._times_called = 0
+        self._tries = tries
         self.results = results
         self.paginator = Paginator(self, page_size)
 
@@ -150,4 +146,5 @@ class FakeMatchResult(object):
         return len(self.results)
 
     def is_in_progress(self):
-        return self.in_progress
+        self._times_called += 1
+        return self._tries > self._times_called
