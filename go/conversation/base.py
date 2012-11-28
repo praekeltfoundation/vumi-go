@@ -15,7 +15,7 @@ from go.vumitools.conversation.models import (
     CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
-from go.base import message_store_client
+from go.base import message_store_client as ms_client
 from go.base.utils import (make_read_only_form, conversation_or_404,
                             page_range_window)
 
@@ -290,15 +290,16 @@ class EndConversationView(ConversationView):
 class MessageSearchResultConversationView(ConversationView):
 
     def get(self, request, conversation):
-        msc = message_store_client.Client(settings.MESSAGE_STORE_API_URL)
+        client = ms_client.Client(settings.MESSAGE_STORE_API_URL)
         query = request.GET['q']
         batch_id = request.GET['batch_id']
         direction = request.GET['direction']
         token = request.GET['token']
         delay = float(request.GET.get('delay', 100))
         page = int(request.GET.get('p', 1))
-        match_results = msc.get_match_results(batch_id, direction, token,
-                                                page=page, page_size=20)
+        match_results = ms_client.MatchResult(client, batch_id, direction,
+                                                token, page)
+
         context = {
             'conversation': conversation,
             'query': query,

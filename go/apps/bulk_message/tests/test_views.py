@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.base.tests.utils import FakeMessageStoreClient
+from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
 
 from mock import patch
 
@@ -187,10 +187,13 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             '10 accepted for delivery by the networks.')
         self.assertContains(response, '10 delivered.')
 
+    @patch('go.base.message_store_client.MatchResult')
     @patch('go.base.message_store_client.Client')
-    def test_message_search(self, Client):
-        fake_msc = FakeMessageStoreClient()
-        Client.return_value = fake_msc
+    def test_message_search(self, Client, MatchResult):
+        fake_client = FakeMessageStoreClient()
+        fake_result = FakeMatchResult()
+        Client.return_value = fake_client
+        MatchResult.return_value = fake_result
 
         response = self.client.get(reverse('bulk_message:show', kwargs={
                 'conversation_key': self.conv_key,
@@ -201,13 +204,16 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         template_names = [t.name for t in response.templates]
         self.assertTrue('generic/includes/message-load-results.html' in
                         template_names)
-        self.assertEqual(response.context['token'], fake_msc.token)
+        self.assertEqual(response.context['token'], fake_client.token)
 
+    @patch('go.base.message_store_client.MatchResult')
     @patch('go.base.message_store_client.Client')
-    def test_message_results(self, Client):
-        fake_msc = FakeMessageStoreClient(
-            results=[self.mkmsg_out() for i in range(10)], tries=2)
-        Client.return_value = fake_msc
+    def test_message_results(self, Client, MatchResult):
+        fake_client = FakeMessageStoreClient()
+        fake_result = FakeMatchResult(tries=2,
+            results=[self.mkmsg_out() for i in range(10)])
+        Client.return_value = fake_client
+        MatchResult.return_value = fake_result
 
         fetch_results_url = reverse('bulk_message:message_search_result',
             kwargs={
@@ -217,7 +223,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             'q': 'hello world 1',
             'batch_id': 'batch-id',
             'direction': 'inbound',
-            'token': fake_msc.token,
+            'token': fake_client.token,
             'delay': 100,
         }
 
@@ -233,8 +239,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         # Second time it should still render the messages
         self.assertTrue('generic/includes/message-list.html' in
                             [t.name for t in response2.templates])
-        self.assertEqual(response1.context['token'], fake_msc.token)
+        self.assertEqual(response1.context['token'], fake_client.token)
         # Second time we should list the matching messages
-        self.assertEqual(response2.context['token'], fake_msc.token)
+        self.assertEqual(response2.context['token'], fake_client.token)
         self.assertEqual(len(response2.context['message_page'].object_list),
             10)
