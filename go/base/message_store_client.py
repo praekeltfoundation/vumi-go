@@ -30,7 +30,7 @@ class Client(object):
 
     def match_results(self, batch_id, direction, token, start, stop):
         path = 'batch/%s/%s/match/' % (batch_id, direction)
-        response = self.client.do_get(path, params={
+        response = self.do_get(path, params={
             'token': self.token,
             'start': start,
             'stop': stop,
