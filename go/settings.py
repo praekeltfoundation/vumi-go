@@ -294,3 +294,4 @@ DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 # from django.core.urlresolvers import reverse
 
 # LOGIN_REDIRECT_URL = reverse('home')
+MESSAGE_STORE_API_URL = 'http://localhost:8080/api/v1/'
