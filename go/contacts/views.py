@@ -31,7 +31,7 @@ def _group_url(group_key):
 def index(request):
     return redirect(reverse('contacts:groups'))
 
-
+@login_required
 def groups(request):
     contact_store = request.user_api.contact_store
     if request.POST:
