@@ -401,8 +401,10 @@ class GoApplicationRouter(BaseDispatchRouter):
                 # This often happens when we have a USSD code like *123*4#
                 # and some random person dials *123*4*1# when that isn't
                 # actually configured to route somewhere.
-                log.warning('No application setup for inbound message '
-                            'type: %s' % (msg,))
+                log.warning(
+                    'No application setup for inbound message: %s from %s' % (
+                        msg['to_addr'], msg['transport_name']),
+                    message=msg)
 
     @inlineCallbacks
     def dispatch_inbound_event(self, event):
@@ -411,8 +413,10 @@ class GoApplicationRouter(BaseDispatchRouter):
             publisher = self.dispatcher.exposed_event_publisher[application]
             yield publisher.publish_message(event)
         else:
-            log.error('No application setup for inbount event type: %s' % (
-                        event,))
+            log.warning(
+                'No application setup for inbount event type %s from %s' % (
+                        event['event_type'], event['transport_name']),
+                event=event)
 
     @inlineCallbacks
     def dispatch_outbound_message(self, msg):
