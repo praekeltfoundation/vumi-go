@@ -64,6 +64,7 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
         # want to register, therefore we can delete the opt-out
         gmt = self.get_go_metadata(message)
         account_key = yield gmt.get_account_key()
+
         if account_key is not None:
             # check if user is opted out
             opt_out_store = OptOutStore(self.manager, account_key)
@@ -77,6 +78,8 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
                 participant = yield self.pm.get_participant(scope_id,
                                                             message.user())
                 yield self.pm.archive(scope_id, participant)
+        else:
+            log.error("Could not find account_key for: %s" % (message))
 
         super(MultiSurveyApplication, self).consume_user_message(message)
 
