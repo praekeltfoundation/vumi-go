@@ -148,7 +148,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             yield self.start_conversation(self.conversation)
             self.assertEqual(log.errors, [])
 
-        [msg1, msg2] = (yield self.wait_for_dispatched_messages(2))
+        [msg1, msg2] = yield self.wait_for_dispatched_messages(2)
         self.assertEqual(msg1['content'], self.default_polls[0][0]['copy'])
         self.assertEqual(msg2['content'], self.default_polls[0][0]['copy'])
 
@@ -246,13 +246,16 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             self.assertEqual(log.errors, [])
 
         # First run through to the second poll
-        [msg1] = (yield self.wait_for_dispatched_messages(1))
+        [msg1] = yield self.wait_for_dispatched_messages(1)
+        self.clear_dispatched_messages()
         self.assertEqual(msg1['content'], self.default_polls[0][0]['copy'])
         yield self.reply_to(msg1, "1")
-        [msg1, msg2] = (yield self.wait_for_dispatched_messages(2))
+        [msg2] = yield self.wait_for_dispatched_messages(1)
+        self.clear_dispatched_messages()
         self.assertEqual(msg2['content'], self.end_of_survey_copy[0])
         yield self.reply_to(msg2, "1")
-        [msg1, msg2, msg3] = (yield self.wait_for_dispatched_messages(3))
+        [msg3] = yield self.wait_for_dispatched_messages(1)
+        self.clear_dispatched_messages()
         self.assertEqual(msg3['content'], self.default_polls[1][0]['copy'])
 
         # Now opt the msisdn out
@@ -264,7 +267,8 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         # Check that on re-entry the survey is reset and the
         # opening copy is delivered
         yield self.reply_to(msg3, "1")
-        [msg1, msg2, msg3, msg4] = (yield self.wait_for_dispatched_messages(4))
+        [msg4] = yield self.wait_for_dispatched_messages(1)
+        self.clear_dispatched_messages()
         self.assertEqual(msg4['content'], self.default_polls[0][0]['copy'])
 
         opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
