@@ -20,6 +20,38 @@
     <script src="{{ STATIC_URL }}js/libs/less-1.2.1.min.js"></script>
     <script src="{{ STATIC_URL }}js/libs/modernizr-2.5.2-respond-1.1.0.min.js"></script>
     {% block extra_header %}{% endblock %}
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script>window.jQuery || document.write('<script src="{{ STATIC_URL }}js/libs/jquery-1.7.1.min.js"><\/script>')</script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/tooltip.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/transition.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/collapse.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-dropdown.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-modal.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-popover.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-alert.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-typeahead.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-tab.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-button.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/jquery.timePicker.min.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/jquery-ui-1.8.17.custom.min.js"></script>
+    <script src="{{ STATIC_URL }}js/libs/jquery.validate.js"></script>
+    <script src="{{ STATIC_URL }}js/script.js"></script>
+    {% if google_analytics_ua  %}
+    <script>
+    var _gaq=[['_setAccount','{{ google_analytics_ua }}'],['_trackPageview']];
+    (function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+    g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
+    s.parentNode.insertBefore(g,s)}(document,'script'));
+    </script>
+    {% endif %}
+    <script>
+    $(document).ready(function(){
+        $("#newConversationType").validate();
+    });
+    </script>
+    {% block extra_js %}{% endblock %}
+
 </head>
 <body>
 
@@ -57,37 +89,6 @@
             </div>
         </form>
     </div><!--/newConversation-->
-
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-    <script>window.jQuery || document.write('<script src="{{ STATIC_URL }}js/libs/jquery-1.7.1.min.js"><\/script>')</script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/tooltip.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/transition.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/collapse.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-dropdown.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-modal.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-popover.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-alert.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-typeahead.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-tab.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-button.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/jquery.timePicker.min.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/jquery-ui-1.8.17.custom.min.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/jquery.validate.js"></script>
-    <script src="{{ STATIC_URL }}js/script.js"></script>
-    {% if google_analytics_ua  %}
-    <script>
-    var _gaq=[['_setAccount','{{ google_analytics_ua }}'],['_trackPageview']];
-    (function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
-    g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
-    s.parentNode.insertBefore(g,s)}(document,'script'));
-    </script>
-    {% endif %}
-    <script>
-    $(document).ready(function(){
-        $("#newConversationType").validate();
-    });
-    </script>
-    {% block extra_js %}{% endblock %}
 
 </body>
 </html>
