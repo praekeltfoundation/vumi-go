@@ -11,6 +11,7 @@ from vumi.tests.utils import LogCatcher
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.multi_surveys.vumi_app import MultiSurveyApplication
+from go.vumitools.opt_out import OptOutStore
 
 
 class TestMultiSurveyApplication(AppWorkerTestCase):
@@ -147,7 +148,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             yield self.start_conversation(self.conversation)
             self.assertEqual(log.errors, [])
 
-        [msg1, msg2] = (yield self.wait_for_dispatched_messages(2))
+        [msg1, msg2] = yield self.wait_for_dispatched_messages(2)
         self.assertEqual(msg1['content'], self.default_polls[0][0]['copy'])
         self.assertEqual(msg2['content'], self.default_polls[0][0]['copy'])
 
@@ -233,3 +234,42 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             start_at += len(msgs)
             # any input will restart the survey
             yield self.reply_to(msgs[-1], 'hi')
+
+    @inlineCallbacks
+    def test_survey_for_opted_out_user(self):
+
+        self.contact1 = yield self.create_contact(name=u'First',
+            surname=u'Contact', msisdn=u'27831234561', groups=[self.group])
+        self.create_survey(self.conversation)
+        with LogCatcher() as log:
+            yield self.start_conversation(self.conversation)
+            self.assertEqual(log.errors, [])
+
+        # First run through to the second poll
+        [msg1] = yield self.wait_for_dispatched_messages(1)
+        self.clear_dispatched_messages()
+        self.assertEqual(msg1['content'], self.default_polls[0][0]['copy'])
+        yield self.reply_to(msg1, "1")
+        [msg2] = yield self.wait_for_dispatched_messages(1)
+        self.clear_dispatched_messages()
+        self.assertEqual(msg2['content'], self.end_of_survey_copy[0])
+        yield self.reply_to(msg2, "1")
+        [msg3] = yield self.wait_for_dispatched_messages(1)
+        self.clear_dispatched_messages()
+        self.assertEqual(msg3['content'], self.default_polls[1][0]['copy'])
+
+        # Now opt the msisdn out
+        opt_out_addr = '27831234561'
+        opt_out_store = OptOutStore(self.app.manager, self.user_account.key)
+        yield opt_out_store.new_opt_out('msisdn', opt_out_addr,
+                                        {'message_id': u'test_message_id'})
+
+        # Check that on re-entry the survey is reset and the
+        # opening copy is delivered
+        yield self.reply_to(msg3, "1")
+        [msg4] = yield self.wait_for_dispatched_messages(1)
+        self.clear_dispatched_messages()
+        self.assertEqual(msg4['content'], self.default_polls[0][0]['copy'])
+
+        opt_out = yield opt_out_store.get_opt_out('msisdn', opt_out_addr)
+        self.assertEqual(opt_out, None)
