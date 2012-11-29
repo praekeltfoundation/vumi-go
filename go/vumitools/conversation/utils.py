@@ -399,6 +399,12 @@ class ConversationWrapper(object):
         returnValue(messages)
 
     @Manager.calls_manager
+    def get_daily_inbound_aggregate(self, batch_key=None):
+        batch_key = batch_key or self.get_latest_batch_key()
+        keys = yield self.mdb.get_inbound_message_keys(batch_key,
+                                                        withscores=True)
+
+    @Manager.calls_manager
     def acquire_existing_tag(self):
         # TODO: Remove this once we have proper routing stuff.
         tag = (self.c.delivery_tag_pool, self.c.delivery_tag)
