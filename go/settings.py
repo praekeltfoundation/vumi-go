@@ -272,6 +272,8 @@ VXPOLLS_PREFIX = 'vumigo'
 # Set this to enable Google Analytics
 GOOGLE_ANALYTICS_UA = None
 
+MESSAGE_STORE_API_URL = 'http://localhost:8080/api/v1/'
+
 try:
     from production_settings import *
 except ImportError:
@@ -294,3 +296,4 @@ DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 # from django.core.urlresolvers import reverse
 
 # LOGIN_REDIRECT_URL = reverse('home')
+

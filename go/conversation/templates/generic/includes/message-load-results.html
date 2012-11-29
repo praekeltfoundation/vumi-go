@@ -1,0 +1,40 @@
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th width="32">Type</th>
+            <th>Response</th>
+            <th width="70">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="3">
+                <span class="icon-time">
+                    Searching for <strong>{{query}}</strong>.
+                    One moment please ...
+                </span>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<script>
+    function load_results() {
+        $.ajax({
+            url: "{{conversation.get_absolute_url}}message_search_result/",
+            data: {
+                "q": "{{query}}",
+                "token": "{{token}}",
+                "batch_id": "{{batch_id}}",
+                "direction": "{{message_direction}}",
+                "delay": {{delay|default:100}},
+            },
+            success: function(data) {
+                $('#message-page').html(data);
+            }
+        });
+    };
+
+    $(function () {
+        setTimeout(load_results, {{delay|default:100}});
+    });
+</script>
