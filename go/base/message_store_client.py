@@ -30,17 +30,18 @@ class Client(object):
 
     def match_results(self, batch_id, direction, token, start, stop):
         path = 'batch/%s/%s/match/' % (batch_id, direction)
-        response = self.client.do_get(path, params={
-            'token': self.token,
+        response = self.do_get(path, params={
+            'token': token,
             'start': start,
             'stop': stop,
         })
-        self._in_progress = bool(int(
+
+        in_progress = bool(int(
                                 response.headers['x-vms-match-in-progress']))
-        self._total_count = int(response.headers['x-vms-result-count'])
+        total_count = int(response.headers['x-vms-result-count'])
         results = [TransportUserMessage(_process_fields=False, **payload)
                     for payload in response.json]
-        return results
+        return in_progress, total_count, results
 
 
 class MatchResult(object):
@@ -84,8 +85,9 @@ class MatchResult(object):
         if cache_hit is not None:
             return cache_hit
 
-        results = self.client.match_results(self.batch_id, self.direction,
-            self.token, self.page, self.page_size)
+        match_results = self.client.match_results(self.batch_id,
+                    self.direction, self.token, self.page, self.page_size)
+        self._in_progress, self._total_count, results = match_results
         # If we get less results back that the page_size then rewrite
         # the cache key to prevent a cache miss.
         if len(results) < (stop - start):
