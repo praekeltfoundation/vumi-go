@@ -1,7 +1,10 @@
+import uuid
+
 from django.conf import settings, UserSettingsHolder
 from django.utils.functional import wraps
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.core.paginator import Paginator
 
 from go.vumitools.tests.utils import GoPersistenceMixin
 from go.vumitools.api import VumiApi
@@ -113,3 +116,35 @@ def declare_longcode_tags(api):
         "transport_type": "sms",
         "server_initiated": True,
         })
+
+
+class FakeMessageStoreClient(object):
+
+    def __init__(self, token=None, tries=2):
+        self.token = token or uuid.uuid4().hex
+        self.tries = tries
+        self._times_called = 0
+
+    def match(self, batch_id, direction, query):
+        return self.token
+
+    def match_results(self, batch_id, direction, token, start, stop):
+        return self.results[start:stop]
+
+
+class FakeMatchResult(object):
+    def __init__(self, tries=1, results=[], page_size=20):
+        self._times_called = 0
+        self._tries = tries
+        self.results = results
+        self.paginator = Paginator(self, page_size)
+
+    def __getitem__(self, value):
+        return self.results.__getitem__(value)
+
+    def count(self):
+        return len(self.results)
+
+    def is_in_progress(self):
+        self._times_called += 1
+        return self._tries > self._times_called

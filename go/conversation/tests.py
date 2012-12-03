@@ -110,14 +110,8 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         msg = self.mkmsg_in('hello', to_addr=to_addr,
                             from_addr=contact.msisdn.lstrip('+'))
         self.api.mdb.add_inbound_message(msg, tag=tag)
-        [reply] = conversation.received_messages()
-        self.assertTrue(isinstance(reply.pop('time'), datetime))
-        self.assertEqual(reply.pop('contact').key, contact.key)
-        self.assertEqual(reply, {
-            'content': u'hello',
-            'source': 'Long code',
-            'type': u'sms',
-            })
+        [reply_msg] = conversation.received_messages()
+        self.assertTrue(reply_msg, msg)
 
     def test_end_conversation(self):
         """

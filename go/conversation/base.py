@@ -1,19 +1,23 @@
 from datetime import datetime
 
 from django.views.generic import TemplateView
+from django.core.paginator import PageNotAnInteger, EmptyPage
 
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.conf.urls.defaults import url, patterns
+from django.conf import settings
 
 from go.vumitools.conversation.models import (
     CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
-from go.base.utils import make_read_only_form, conversation_or_404
+from go.base import message_store_client as ms_client
+from go.base.utils import (make_read_only_form, conversation_or_404,
+                            page_range_window)
 
 
 class ConversationView(TemplateView):
@@ -204,7 +208,6 @@ class ShowConversationView(ConversationView):
             params['next_url'] = self.get_view_url(
                 self.get_next_view(conversation),
                 conversation_key=conversation.key)
-
         return self.render_to_response(params)
 
 
@@ -224,14 +227,20 @@ class EditConversationView(ConversationView):
     template_name = 'edit'
     edit_conversation_forms = ()
 
-    def get(self, request, conversation):
+    def _render_forms(self, request, conversation, edit_forms):
         return self.render_to_response({
                 'conversation': conversation,
-                'edit_forms': self.make_forms(conversation),
+                'edit_forms': edit_forms,
                 })
 
+    def get(self, request, conversation):
+        edit_forms = self.make_forms(conversation)
+        return self._render_forms(request, conversation, edit_forms)
+
     def post(self, request, conversation):
-        self.process_forms(request, conversation)
+        response = self.process_forms(request, conversation)
+        if response is not None:
+            return response
 
         return self.redirect_to(self.get_next_view(conversation),
                                 conversation_key=conversation.key)
@@ -254,12 +263,16 @@ class EditConversationView(ConversationView):
 
     def process_forms(self, request, conversation):
         config = conversation.get_config()
-        for key, edit_form in self.edit_conversation_forms:
-            form = edit_form(request.POST, prefix=key)
+        edit_forms_with_keys = [
+            (key, edit_form_cls(request.POST, prefix=key))
+            for key, edit_form_cls in self.edit_conversation_forms]
+        edit_forms = [edit_form for _key, edit_form in edit_forms_with_keys]
+
+        for key, edit_form in edit_forms_with_keys:
             # Is this a good idea?
-            if not form.is_valid():
-                return self.get(request, conversation)
-            config[key] = self.process_form(form)
+            if not edit_form.is_valid():
+                return self._render_forms(request, conversation, edit_forms)
+            config[key] = self.process_form(edit_form)
         conversation.set_config(config)
         conversation.save()
 
@@ -271,6 +284,50 @@ class EndConversationView(ConversationView):
             request, messages.INFO,
             '%s ended' % (self.conversation_display_name,))
         return self.redirect_to('show', conversation_key=conversation.key)
+
+
+class MessageSearchResultConversationView(ConversationView):
+
+    def get(self, request, conversation):
+        client = ms_client.Client(settings.MESSAGE_STORE_API_URL)
+        query = request.GET['q']
+        batch_id = request.GET['batch_id']
+        direction = request.GET['direction']
+        token = request.GET['token']
+        delay = float(request.GET.get('delay', 100))
+        page = int(request.GET.get('p', 1))
+        match_results = ms_client.MatchResult(client, batch_id, direction,
+                                                token, page)
+
+        context = {
+            'conversation': conversation,
+            'query': query,
+            'token': token,
+            'batch_id': batch_id,
+            'message_direction': direction,
+        }
+        if match_results.is_in_progress():
+            context.update({
+                'delay': delay * 1.1,
+            })
+            return render(request,
+                'generic/includes/message-load-results.html', context)
+
+        message_paginator = match_results.paginator
+
+        try:
+            message_page = message_paginator.page(page)
+        except PageNotAnInteger:
+            message_page = message_paginator.page(1)
+        except EmptyPage:
+            message_page = message_paginator.page(message_paginator.num_pages)
+
+        context.update({
+            'message_page': message_page,
+            'message_page_range': page_range_window(message_page, 5),
+            })
+        return render(request,
+            'generic/includes/message-list.html', context)
 
 
 def tf_server_initiated(pool, metadata):
@@ -338,6 +395,8 @@ class ConversationViews(object):
     show_conversation_view = ShowConversationView
     edit_conversation_view = EditConversationView
     end_conversation_view = EndConversationView
+    message_search_result_conversation_view = \
+        MessageSearchResultConversationView
 
     # These attributes get passed through to the individual view objects.
     conversation_type = None
@@ -378,6 +437,7 @@ class ConversationViews(object):
             self.mkurl('start'),
             self.mkurl('end'),
             self.mkurl('show', r'^(?P<conversation_key>\w+)/$'),
+            self.mkurl('message_search_result'),
             ] + self.extra_urls()
         if self.conversation_initiator != 'client':
             urls.append(self.mkurl('people'))
