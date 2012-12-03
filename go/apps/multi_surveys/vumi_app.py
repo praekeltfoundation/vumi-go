@@ -11,12 +11,6 @@ from go.vumitools.app_worker import GoApplicationMixin
 from go.vumitools.opt_out import OptOutStore
 
 
-def hacky_hack_hack(config):
-    from vumi.persist.redis_manager import RedisManager
-    hacked_config = config.copy()
-    return RedisManager.from_config(dict(hacked_config))
-
-
 class MamaPollApplication(MultiPollApplication):
     registration_partial_response = "Please dial back in to " \
                                     "complete registration."
@@ -42,14 +36,13 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
 
     @inlineCallbacks
     def setup_application(self):
-        r_server = hacky_hack_hack(self.config.get('redis_manager'))
-        self.pm = PollManager(r_server, self.poll_prefix)
         yield self._go_setup_application()
+        self.pm = PollManager(self.redis, self.poll_prefix)
 
     @inlineCallbacks
     def teardown_application(self):
+        yield self.pm.stop()
         yield self._go_teardown_application()
-        self.pm.stop()
 
     @inlineCallbacks
     def consume_user_message(self, message):
