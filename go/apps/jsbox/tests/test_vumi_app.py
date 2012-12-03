@@ -19,11 +19,9 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(JsBoxApplicationTestCase, self).setUp()
-        node_js = '/usr/bin/nodejs'
         sandboxer_js = pkg_resources.resource_filename('vumi.application',
                                                        'sandboxer.js')
         self.config = self.mk_config({
-            'executable': node_js,
             'args': [sandboxer_js],
             'timeout': 10,
         })
