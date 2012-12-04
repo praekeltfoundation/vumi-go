@@ -6,7 +6,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet.task import Clock
 
 from vumi.message import TransportUserMessage
-from vumi.application.window_manager import WindowManager
+from vumi.components.window_manager import WindowManager
 from vumi.tests.utils import LogCatcher
 
 from go.vumitools.tests.utils import AppWorkerTestCase
