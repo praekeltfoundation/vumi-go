@@ -5,7 +5,7 @@
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.sandbox import (JsSandbox, SandboxResources)
+from vumi.application.sandbox import JsSandbox
 from vumi.message import TransportEvent
 from vumi import log
 

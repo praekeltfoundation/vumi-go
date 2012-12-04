@@ -110,13 +110,14 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             **kw)
         yield self.dispatch(reply)
 
+    @inlineCallbacks
     def create_survey(self, conversation, polls=None, end_response=None):
         # Create a sample survey
         polls = polls or self.default_polls
         poll_id_prefix = 'poll-%s' % (conversation.key,)
         for poll_number, questions in polls.iteritems():
             poll_id = "%s_%d" % (poll_id_prefix, poll_number)
-            config = self.pm.get_config(poll_id)
+            config = yield self.pm.get_config(poll_id)
             config.update({
                 'poll_id': poll_id,
                 'transport_name': self.transport_name,
@@ -143,7 +144,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             surname=u'Contact', msisdn=u'27831234567', groups=[self.group])
         self.contact2 = yield self.create_contact(name=u'Second',
             surname=u'Contact', msisdn=u'27831234568', groups=[self.group])
-        self.create_survey(self.conversation)
+        yield self.create_survey(self.conversation)
         with LogCatcher() as log:
             yield self.start_conversation(self.conversation)
             self.assertEqual(log.errors, [])
@@ -195,7 +196,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
     def test_survey_completion(self):
         yield self.create_contact(u'First', u'Contact',
             msisdn=u'27831234567', groups=[self.group])
-        self.create_survey(self.conversation)
+        yield self.create_survey(self.conversation)
         yield self.start_conversation(self.conversation)
         yield self.complete_survey(self.default_polls)
 
@@ -203,7 +204,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
     def test_surveys_in_succession(self):
         yield self.create_contact(u'First', u'Contact',
             msisdn=u'27831234567', groups=[self.group])
-        self.create_survey(self.conversation)
+        yield self.create_survey(self.conversation)
         yield self.start_conversation(self.conversation)
         start_at = 0
         for i in range(1):
@@ -225,7 +226,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         self.app.is_demo = True
         yield self.create_contact(u'First', u'Contact',
             msisdn=u'27831234567', groups=[self.group])
-        self.create_survey(self.conversation)
+        yield self.create_survey(self.conversation)
         yield self.start_conversation(self.conversation)
         start_at = 0
         for i in range(3):
@@ -240,7 +241,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
 
         self.contact1 = yield self.create_contact(name=u'First',
             surname=u'Contact', msisdn=u'27831234561', groups=[self.group])
-        self.create_survey(self.conversation)
+        yield self.create_survey(self.conversation)
         with LogCatcher() as log:
             yield self.start_conversation(self.conversation)
             self.assertEqual(log.errors, [])
