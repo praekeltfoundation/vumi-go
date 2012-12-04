@@ -61,11 +61,11 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
     def test_migrate(self):
         self.command.handle(migrate=True)
         output = self.command.stdout.getvalue().strip().split('\n')
-        self.assertEqual(len(output), 5)
+        self.assertEqual(len(output), 8)
         self.assertTrue(self.user.username in output[0])
         self.assertTrue('Conversations: 3' in output[1])
-        extracted_keys = set(line.split('[')[1].split(']')[0]
-                             for line in output[2:])
+        extracted_keys = set(line.split(': ')[1]
+                             for line in output[2:] if 'migrated' not in line)
         self.assertEqual(extracted_keys, set(c.key for c in self.convs))
         for conv in self.convs:
             # If the data has been migrated, we can't load the old model.

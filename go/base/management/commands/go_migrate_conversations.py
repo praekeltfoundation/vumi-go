@@ -35,6 +35,9 @@ class Command(BaseCommand):
                     default=False, help='Actually perform migrations.'),
         )
 
+    def outln(self, msg):
+        self.stdout.write(msg.encode(self.encoding) + '\n')
+
     def find_accounts(self, *usernames):
         users = User.objects.all().order_by('date_joined')
         if usernames:
@@ -48,15 +51,15 @@ class Command(BaseCommand):
     def handle_user(self, user, migrate):
         user_api = vumi_api_for_user(user)
         conversations = user_api.conversation_store.list_conversations()
-        output = u'%s %s <%s> [%s]\n    Conversations: %s\n' % (
+        self.outln(
+            u'%s %s <%s> [%s]\n    Conversations: %s' % (
             user.first_name, user.last_name, user.username,
-            user_api.user_account_key, len(conversations))
-        self.stdout.write(output.encode(self.encoding))
+            user_api.user_account_key, len(conversations)))
         if migrate:
             for conv_key in conversations:
+                self.outln(u'  Migrating conversation: %s' % (conv_key,))
                 conv = user_api.get_wrapped_conversation(conv_key)
-                self.stdout.write(u'  Migrating conversation: %s [%s]\n' %
-                    (conv.name, conv_key))
+                self.outln(u'    - [%s] migrated' % (conv.name,))
                 conv.save()
 
     def handle(self, *usernames, **options):
