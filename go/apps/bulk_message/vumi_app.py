@@ -4,7 +4,7 @@
 """Vumi application worker for the vumitools API."""
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.window_manager import WindowManager
+from vumi.components.window_manager import WindowManager
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationWorker
