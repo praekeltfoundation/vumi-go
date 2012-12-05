@@ -5,11 +5,25 @@
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.sandbox import JsSandbox
+from vumi.application.sandbox import JsSandbox, SandboxResource
 from vumi.message import TransportEvent
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationMixin
+
+
+class ConversationConfigResource(SandboxResource):
+    """Resource that provides access to conversation config."""
+
+    @inlineCallbacks
+    def handle_get(self, api, command):
+        key = command.get("key")
+        if key is None:
+            return self.reply(command, success=False)
+        conversation = self.app_worker.conversation_for_api(api)
+        jsbox_config = conversation.metadata.get("jsbox_config", {})
+        value = jsbox_config.get(key)
+        return self.reply(command, value=value, success=True)
 
 
 class JsBoxApplication(GoApplicationMixin, JsSandbox):
@@ -50,6 +64,9 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
     def javascript_for_api(self, api):
         return api.javascript
 
+    def conversation_for_api(self, api):
+        return api.conversation
+
     @inlineCallbacks
     def sandbox_protocol_for_message(self, msg_or_event):
         """Return a sandbox protocol for a message or event.
@@ -68,6 +85,7 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
         javascript = config['javascript']
         api = self.create_sandbox_api(self.resources)
         api.javascript = javascript
+        api.conversation = conversation
         protocol = self.create_sandbox_protocol(sandbox_id, api)
         returnValue(protocol)
 
