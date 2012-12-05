@@ -408,7 +408,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
                          self.conversation.key)
 
     @inlineCallbacks
-    def test_tag_retrieval_and_event_dispatching(self):
+    def test_batch_id_retrieval_and_event_dispatching(self):
         # first create an outbound message and then publish an inbound
         # event for it.
         msg = self.mkmsg_out(transport_type='xmpp',
