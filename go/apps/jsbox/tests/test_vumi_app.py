@@ -2,11 +2,13 @@
 import pkg_resources
 
 from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.trial.unittest import SkipTest
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 
 from go.apps.jsbox.vumi_app import JsBoxApplication
 
+from vumi.application.sandbox import JsSandbox
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.utils import LogCatcher
 
@@ -19,11 +21,12 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(JsBoxApplicationTestCase, self).setUp()
-        node_js = '/usr/bin/nodejs'
+        if JsSandbox.find_nodejs() is None:
+            raise SkipTest("No node.js executable found.")
+
         sandboxer_js = pkg_resources.resource_filename('vumi.application',
                                                        'sandboxer.js')
         self.config = self.mk_config({
-            'executable': node_js,
             'args': [sandboxer_js],
             'timeout': 10,
         })

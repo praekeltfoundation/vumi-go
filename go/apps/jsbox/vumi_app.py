@@ -5,7 +5,7 @@
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.application.sandbox import (JsSandbox, SandboxResources)
+from vumi.application.sandbox import JsSandbox
 from vumi.message import TransportEvent
 from vumi import log
 
@@ -62,7 +62,7 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
             msg = msg_or_event
 
         metadata = self.get_go_metadata(msg)
-        sandbox_id = metadata.get_account_key()
+        sandbox_id = yield metadata.get_account_key()
         conversation = yield metadata.get_conversation()
         config = conversation.metadata['jsbox']
         javascript = config['javascript']
