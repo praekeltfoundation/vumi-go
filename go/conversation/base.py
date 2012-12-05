@@ -1,4 +1,6 @@
+import csv
 from datetime import datetime
+from StringIO import StringIO
 
 from django.views.generic import TemplateView
 from django.core.paginator import PageNotAnInteger, EmptyPage
@@ -10,6 +12,7 @@ from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.conf.urls.defaults import url, patterns
 from django.conf import settings
+from django.http import HttpResponse
 
 from go.vumitools.conversation.models import (
     CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
@@ -212,6 +215,17 @@ class ShowConversationView(ConversationView):
         return self.render_to_response(params)
 
 
+class AggregatesConversationView(ConversationView):
+
+    def get(self, request, conversation):
+        sio = StringIO()
+        writer = csv.writer(sio)
+        direction = request.GET.get('direction', 'inbound')
+        writer.writerows(conversation.get_aggregate_count(direction))
+        return HttpResponse(sio.getvalue(),
+            content_type='text/csv; charset=utf-8')
+
+
 class EditConversationView(ConversationView):
     """View for editing conversation data.
 
@@ -398,6 +412,7 @@ class ConversationViews(object):
     end_conversation_view = EndConversationView
     message_search_result_conversation_view = \
         MessageSearchResultConversationView
+    aggregates_conversation_view = AggregatesConversationView
 
     # These attributes get passed through to the individual view objects.
     conversation_type = None
@@ -439,6 +454,8 @@ class ConversationViews(object):
             self.mkurl('end'),
             self.mkurl('show', r'^(?P<conversation_key>\w+)/$'),
             self.mkurl('message_search_result'),
+            self.mkurl('aggregates',
+                r'^(?P<conversation_key>\w+)/aggregates\.csv$'),
             ] + self.extra_urls()
         if self.conversation_initiator != 'client':
             urls.append(self.mkurl('people'))

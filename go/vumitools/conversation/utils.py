@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
+from collections import defaultdict
 
 from twisted.internet.defer import returnValue
 
@@ -397,6 +398,38 @@ class ConversationWrapper(object):
         for bunch in self.mdb.outbound_messages.load_all_bunches(keys):
             messages.extend((yield bunch))
         returnValue(messages)
+
+    @Manager.calls_manager
+    def get_aggregate_count(self, direction, batch_key=None, bucket_func=None):
+        aggregate_keys = yield self.get_aggregate_keys(direction,
+                                                        batch_key, bucket_func)
+        returnValue([(bucket, len(keys)) for bucket, keys in aggregate_keys])
+
+    @Manager.calls_manager
+    def get_aggregate_keys(self, direction, batch_key=None, bucket_func=None):
+        """
+        Get aggregated total count of messages handled bucketed per day.
+        :param str batch_key:
+            The batch to get aggregates for. Defaults to whatever
+            `get_latest_batch_key()` returns.
+        :param callable bucket_func:
+            A function that when given a timestamp returns an appropriate
+            value that will be used as the bucket key.
+        """
+        message_callback = {
+            'inbound': self.mdb.get_inbound_message_keys,
+            'outbound': self.mdb.get_outbound_message_keys,
+        }.get(direction, self.mdb.get_inbound_message_keys)
+
+        batch_key = batch_key or self.get_latest_batch_key()
+        bucket_func = bucket_func or (lambda dt: dt.date())
+        results = yield message_callback(batch_key, with_timestamp=True)
+        aggregates = defaultdict(list)
+        for key, timestamp in results:
+            bucket = bucket_func(datetime.fromtimestamp(timestamp))
+            aggregates[bucket].append(key)
+
+        returnValue(sorted(aggregates.items()))
 
     @Manager.calls_manager
     def acquire_existing_tag(self):
