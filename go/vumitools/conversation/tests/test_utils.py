@@ -56,7 +56,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
                         content_template='hello world {0}',
                         start_timestamp=None, time_multiplier=10):
         inbound = []
-        now = start_timestamp or datetime.now().date()
+        now = start_timestamp or datetime.now().replace(hour=23, minute=59,
+                                                    second=59, microsecond=999)
         for i in range(count):
             msg_in = self.mkmsg_in(from_addr=addr_template.format(i),
                 message_id=TransportMessage.generate_id(),
@@ -71,7 +72,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
                         content_template='hello world {0}',
                         start_timestamp=None, time_multiplier=10):
         outbound = []
-        now = start_timestamp or datetime.now().date()
+        now = start_timestamp or datetime.now().replace(hour=23, minute=59,
+                                                    second=59, microsecond=999)
         for i in range(count):
             msg_out = self.mkmsg_out(to_addr=addr_template.format(i),
                 message_id=TransportMessage.generate_id(),
@@ -241,7 +243,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     def test_get_inbound_throughput(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
-        yield self.store_inbound(batch_key, count=20)
+        yield self.store_inbound(batch_key, count=20, time_multiplier=0)
         # 20 messages in 5 minutes = 4 messages per minute
         self.assertEqual(
             (yield self.conv.get_inbound_throughput()), 4)
@@ -253,7 +255,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     def test_get_outbound_throughput(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
-        yield self.store_outbound(batch_key, count=20)
+        yield self.store_outbound(batch_key, count=20, time_multiplier=0)
         # 20 messages in 5 minutes = 4 messages per minute
         self.assertEqual(
             (yield self.conv.get_outbound_throughput()), 4)
