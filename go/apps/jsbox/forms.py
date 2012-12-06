@@ -72,8 +72,6 @@ class JsboxAppConfigFormset(BaseFormSet):
             metadata[submeta['key']] = submeta
             del submeta['key']
             del submeta['DELETE']  # remove formset deletion marker
-
-        print metadata
         return metadata
 
     @staticmethod
