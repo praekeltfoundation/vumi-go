@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 import pkg_resources
 
+import mock
+
 from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.trial.unittest import SkipTest
+from twisted.trial.unittest import SkipTest, TestCase
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 
-from go.apps.jsbox.vumi_app import JsBoxApplication
+from go.apps.jsbox.vumi_app import JsBoxApplication, ConversationConfigResource
 
-from vumi.application.sandbox import JsSandbox
+from vumi.application.sandbox import JsSandbox, SandboxCommand
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.utils import LogCatcher
 
@@ -116,3 +118,43 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         yield self.vumi_api.mdb.add_outbound_message(msg, tag=tag)
         event = self.mkmsg_ack(user_message_id=msg['message_id'])
         yield self.dispatch_event(event)
+
+
+class TestConversationConfigResource(TestCase):
+    def setUp(self):
+        self.conversation = mock.Mock()
+        self.app_worker = mock.Mock()
+        self.dummy_api = object()
+        self.resource = ConversationConfigResource("test", self.app_worker, {})
+        self.app_worker.conversation_for_api = mock.Mock(
+            return_value=self.conversation)
+
+    def set_app_config(self, app_config):
+        self.conversation.metadata = {
+            "jsbox": {
+                "app_config": app_config,
+            },
+        }
+
+    def check_reply(self, reply, cmd, value):
+        self.assertEqual(reply['reply'], True)
+        self.assertEqual(reply['cmd_id'], cmd['cmd_id'])
+        self.assertEqual(reply['value'], value)
+
+    def test_present_key(self):
+        cmd = SandboxCommand(key="foo")
+        self.set_app_config({"foo": "foo value"})
+        reply = self.resource.handle_get(self.dummy_api, cmd)
+        self.check_reply(reply, cmd, "foo value")
+
+    def test_missing_key(self):
+        cmd = SandboxCommand(key="foo")
+        self.set_app_config({})
+        reply = self.resource.handle_get(self.dummy_api, cmd)
+        self.check_reply(reply, cmd, None)
+
+    def test_with_app_config_absent(self):
+        cmd = SandboxCommand(key="foo")
+        self.conversation.metadata = {"jsbox": {}}
+        reply = self.resource.handle_get(self.dummy_api, cmd)
+        self.check_reply(reply, cmd, None)

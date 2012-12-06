@@ -15,14 +15,14 @@ from go.vumitools.app_worker import GoApplicationMixin
 class ConversationConfigResource(SandboxResource):
     """Resource that provides access to conversation config."""
 
-    @inlineCallbacks
     def handle_get(self, api, command):
         key = command.get("key")
         if key is None:
             return self.reply(command, success=False)
         conversation = self.app_worker.conversation_for_api(api)
-        jsbox_config = conversation.metadata.get("jsbox_config", {})
-        value = jsbox_config.get(key)
+        jsbox = conversation.metadata.get("jsbox", {})
+        app_config = jsbox.get("app_config", {})
+        value = app_config.get(key)
         return self.reply(command, value=value, success=True)
 
 
