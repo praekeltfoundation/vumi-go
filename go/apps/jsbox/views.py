@@ -1,5 +1,5 @@
 from go.conversation.base import ConversationViews
-from go.apps.jsbox.forms import JsboxForm
+from go.apps.jsbox.forms import JsboxForm, JsboxAppConfigFormset
 
 
 class JsboxConversationViews(ConversationViews):
@@ -8,4 +8,5 @@ class JsboxConversationViews(ConversationViews):
     conversation_initiator = None
     edit_conversation_forms = (
         ('jsbox', JsboxForm),
+        ('jsbox_app_config', JsboxAppConfigFormset),
         )
