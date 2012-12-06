@@ -20,9 +20,9 @@ class ConversationConfigResource(SandboxResource):
         if key is None:
             return self.reply(command, success=False)
         conversation = self.app_worker.conversation_for_api(api)
-        jsbox = conversation.metadata.get("jsbox", {})
-        app_config = jsbox.get("app_config", {})
-        value = app_config.get(key)
+        app_config = conversation.metadata.get("jsbox_app_config", {})
+        key_config = app_config.get(key, {})
+        value = key_config.get('value')
         return self.reply(command, value=value, success=True)
 
 
