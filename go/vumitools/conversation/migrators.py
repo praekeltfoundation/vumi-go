@@ -12,7 +12,7 @@ class ConversationMigrator(ModelMigrator):
         mdata.copy_indexes('user_account_bin', 'groups_bin', 'batches_bin')
 
         # Add stuff that's new in this version
-        mdata.set_value('VERSION', 1)
+        mdata.set_value('$VERSION', 1)
         mdata.set_value('name', mdata.old_data['subject'])
 
         config = (mdata.old_data['metadata'] or {}).copy()
