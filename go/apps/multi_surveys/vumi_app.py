@@ -106,3 +106,22 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
             for contact in (yield contacts):
                 to_addr = contact.addr_for(conv.delivery_class)
                 yield self.start_survey(to_addr, conv, **msg_options)
+
+    @inlineCallbacks
+    def collect_metrics(self, user_api, conversation_key):
+        conv = yield user_api.get_wrapped_conversation(conversation_key)
+        yield self.collect_message_metrics(conv)
+
+    @inlineCallbacks
+    def collect_message_metrics(self, conversation):
+        sent = 0
+        received = 0
+        regispered = 0
+        for batch_id in conversation.batches.keys():
+            sent += yield self.vumi_api.mdb.batch_outbound_count(batch_id)
+            received += yield self.vumi_api.mdb.batch_inbound_count(batch_id)
+
+        self.publish_conversation_metric(
+            conversation, 'messages_sent', sent)
+        self.publish_conversation_metric(
+            conversation, 'messages_received', received)
