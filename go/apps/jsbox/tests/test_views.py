@@ -47,6 +47,9 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
             'jsbox-javascript': 'x = 1;',
             'jsbox-source_url': '',
             'jsbox-update_from_source': '0',
+            'jsbox_app_config-TOTAL_FORMS': '1',
+            'jsbox_app_config-INITIAL_FORMS': '0',
+            'jsbox_app_config-MAX_NUM_FORMS': u''
         })
         self.assertRedirects(response, reverse('jsbox:people', kwargs=kwargs))
         conversation = self.get_latest_conversation()
@@ -56,4 +59,5 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
                     'javascript': 'x = 1;',
                     'source_url': '',
             },
+            'jsbox_app_config': {},
         })
