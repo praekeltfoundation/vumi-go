@@ -129,11 +129,11 @@ class TestConversationConfigResource(TestCase):
         self.app_worker.conversation_for_api = mock.Mock(
             return_value=self.conversation)
 
-    def set_app_config(self, app_config):
+    def set_app_config(self, key_values):
+        app_config = dict((k, {"value": v}) for k, v
+                          in key_values.iteritems())
         self.conversation.metadata = {
-            "jsbox": {
-                "app_config": app_config,
-            },
+            "jsbox_app_config": app_config,
         }
 
     def check_reply(self, reply, cmd, value):
