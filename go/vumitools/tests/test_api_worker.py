@@ -406,7 +406,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
                          self.conversation.key)
 
     @inlineCallbacks
-    def test_tag_retrieval_and_event_dispatching(self):
+    def test_batch_id_retrieval_and_event_dispatching(self):
         # first create an outbound message and then publish an inbound
         # event for it.
         msg = self.mkmsg_out(transport_type='xmpp',
@@ -423,6 +423,37 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         # Fake that it has been sent by storing it as a sent message
         yield self.vumi_api.mdb.add_outbound_message(msg, tag=tag,
             batch_id=batch_id)
+
+        ack = self.mkmsg_ack(
+            user_message_id=msg['message_id'],
+            transport_name=self.transport_name)
+
+        yield self.dispatch(ack, self.transport_name, 'event')
+
+        [event] = self.get_dispatched_messages('app_1', direction='event')
+        self.assertEqual(event['user_message_id'], msg['message_id'])
+
+    @inlineCallbacks
+    def test_batch_id_retrieval_and_event_dispatching_after_conv_close(self):
+        # first create an outbound message and then publish an inbound
+        # event for it.
+        msg = self.mkmsg_out(transport_type='xmpp',
+                                transport_name=self.transport_name)
+
+        # Make sure stuff is tagged properly so it can be routed.
+        tag = ('xmpp', 'test1@xmpp.org')
+        batch_id = yield self.vumi_api.mdb.batch_start([tag],
+            user_account=unicode(self.account.key))
+        self.conversation.batches.add_key(batch_id)
+        yield self.conversation.save()
+        TaggingMiddleware.add_tag_to_msg(msg, tag)
+
+        # Fake that it has been sent by storing it as a sent message
+        yield self.vumi_api.mdb.add_outbound_message(msg, tag=tag,
+            batch_id=batch_id)
+        # mark the batch as done which is what happens when a conversation
+        # is closed
+        yield self.vumi_api.mdb.batch_done(batch_id)
 
         ack = self.mkmsg_ack(
             user_message_id=msg['message_id'],

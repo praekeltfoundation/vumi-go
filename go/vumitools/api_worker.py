@@ -370,21 +370,31 @@ class GoApplicationRouter(BaseDispatchRouter):
     def find_application_for_event(self, event):
         """
         Look up the application for a given event by first looking up the
-        message that the event is for and then using
-        `find_application_for_msg()` to look up the application.
+        outbound message that the event is for and then using that messages'
+        batch to find which conversation it is associated with.
         """
         user_message_id = event.get('user_message_id')
         if user_message_id is None:
             log.error('Received event without user_message_id: %s' % (event,))
             return
 
-        message = yield self.vumi_api.mdb.get_outbound_message(user_message_id)
-        if message is None:
-            log.error('Unable to find message for event: %s' % (event,))
+        mdb = self.vumi_api.mdb
+        outbound_message = yield mdb.outbound_messages.load(user_message_id)
+        if outbound_message is None:
+            log.error('Unable to find outbound message for event: %s' % (
+                        event,))
             return
 
-        application = yield self.find_application_for_msg(message)
-        returnValue(application)
+        batch = yield outbound_message.batch.get()
+        account_key = batch.metadata['user_account']
+        user_api = self.vumi_api.get_user_api(account_key)
+        conversations = user_api.conversation_store.conversations
+        mr = conversations.index_lookup('batches', batch.key)
+        [conv_key] = yield mr.get_keys()
+
+        conv = yield user_api.get_wrapped_conversation(conv_key)
+        if conv:
+            returnValue(self.conversation_mappings[conv.conversation_type])
 
     @inlineCallbacks
     def dispatch_inbound_message(self, msg):
