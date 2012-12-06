@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from twisted.trial.unittest import SkipTest
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -49,24 +51,32 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def store_inbound(self, batch_key, count=10, addr_template='from-{0}',
-                        content_template='hello world {0}'):
+                        content_template='hello world {0}',
+                        start_timestamp=None, time_multiplier=10):
         inbound = []
+        now = start_timestamp or datetime.now().replace(hour=23, minute=59,
+                                                    second=59, microsecond=999)
         for i in range(count):
             msg_in = self.mkmsg_in(from_addr=addr_template.format(i),
                 message_id=TransportMessage.generate_id(),
                 content=content_template.format(i))
+            msg_in['timestamp'] = now - timedelta(hours=i * time_multiplier)
             yield self.mdb.add_inbound_message(msg_in, batch_id=batch_key)
             inbound.append(msg_in)
         returnValue(inbound)
 
     @inlineCallbacks
     def store_outbound(self, batch_key, count=10, addr_template='to-{0}',
-                        content_template='hello world {0}'):
+                        content_template='hello world {0}',
+                        start_timestamp=None, time_multiplier=10):
         outbound = []
+        now = start_timestamp or datetime.now().replace(hour=23, minute=59,
+                                                    second=59, microsecond=999)
         for i in range(count):
             msg_out = self.mkmsg_out(to_addr=addr_template.format(i),
                 message_id=TransportMessage.generate_id(),
                 content=content_template.format(i))
+            msg_out['timestamp'] = now - timedelta(hours=i * time_multiplier)
             yield self.mdb.add_outbound_message(msg_out, batch_id=batch_key)
             outbound.append(msg_out)
         returnValue(outbound)
@@ -231,7 +241,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     def test_get_inbound_throughput(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
-        yield self.store_inbound(batch_key, count=20)
+        yield self.store_inbound(batch_key, count=20, time_multiplier=0)
         # 20 messages in 5 minutes = 4 messages per minute
         self.assertEqual(
             (yield self.conv.get_inbound_throughput()), 4)
@@ -243,7 +253,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     def test_get_outbound_throughput(self):
         yield self.conv.start()
         batch_key = self.conv.get_latest_batch_key()
-        yield self.store_outbound(batch_key, count=20)
+        yield self.store_outbound(batch_key, count=20, time_multiplier=0)
         # 20 messages in 5 minutes = 4 messages per minute
         self.assertEqual(
             (yield self.conv.get_outbound_throughput()), 4)
@@ -342,3 +352,35 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         matching = yield self.do_search(self.conv, 'outbound', 'TO', flags='',
                                         key='msg.to_addr')
         self.assertEqual(len(matching), 0)
+
+    @inlineCallbacks
+    def test_get_aggregate_keys(self):
+        yield self.conv.start()
+        batch_key = self.conv.get_latest_batch_key()
+        yield self.store_outbound(batch_key, count=20, time_multiplier=12)
+        inbound_aggregate = yield self.conv.get_aggregate_keys('inbound')
+        self.assertEqual(inbound_aggregate, [])
+        outbound_aggregate = yield self.conv.get_aggregate_keys('outbound')
+        bucket_keys = [bucket for bucket, _ in outbound_aggregate]
+        buckets = [keys for _, keys in outbound_aggregate]
+        self.assertEqual(bucket_keys,
+            [datetime.now().date() - timedelta(days=i)
+                for i in range(9, -1, -1)])
+        for bucket in buckets:
+            self.assertEqual(len(bucket), 2)
+
+    @inlineCallbacks
+    def test_get_aggregate_count(self):
+        yield self.conv.start()
+        batch_key = self.conv.get_latest_batch_key()
+        yield self.store_outbound(batch_key, count=20, time_multiplier=12)
+        inbound_aggregate = yield self.conv.get_aggregate_count('inbound')
+        self.assertEqual(inbound_aggregate, [])
+        outbound_aggregate = yield self.conv.get_aggregate_count('outbound')
+        bucket_keys = [bucket for bucket, _ in outbound_aggregate]
+        buckets = [keys for _, keys in outbound_aggregate]
+        self.assertEqual(bucket_keys,
+            [datetime.now().date() - timedelta(days=i)
+                for i in range(9, -1, -1)])
+        for bucket in buckets:
+            self.assertEqual(bucket, 2)

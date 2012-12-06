@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from go.base.tests.utils import VumiGoDjangoTestCase, declare_longcode_tags
 from go.vumitools.tests.utils import CeleryTestMixIn
@@ -205,7 +205,10 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
 
     def put_sample_messages_in_conversation(self, user_api, conversation_key,
                                                 message_count,
-                                                content_generator=None):
+                                                content_generator=None,
+                                                start_timestamp=None,
+                                                time_multiplier=10):
+        now = start_timestamp or datetime.now().date()
         conversation = user_api.get_wrapped_conversation(conversation_key)
         conversation.start()
         batch_key = conversation.get_latest_batch_key()
@@ -216,7 +219,10 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
             msg_in = self.mkmsg_in(from_addr='from-%s' % (i,),
                 message_id=TransportUserMessage.generate_id(),
                 content=content)
+            ts = now - timedelta(hours=i * time_multiplier)
+            msg_in['timestamp'] = ts
             msg_out = msg_in.reply('thank you')
+            msg_out['timestamp'] = ts
             ack = self.mkmsg_ack(user_message_id=msg_out['message_id'])
             dr = self.mkmsg_delivery(user_message_id=msg_out['message_id'])
             self.api.mdb.add_inbound_message(msg_in, batch_id=batch_key)

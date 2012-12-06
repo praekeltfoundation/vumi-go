@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 
@@ -244,3 +246,19 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(response2.context['token'], fake_client.token)
         self.assertEqual(len(response2.context['message_page'].object_list),
             10)
+
+    def test_aggregates(self):
+        self.put_sample_messages_in_conversation(self.user_api,
+            self.conv_key, 10, start_timestamp=date(2012, 1, 1),
+            time_multiplier=12)
+        response = self.client.get(reverse('bulk_message:aggregates', kwargs={
+            'conversation_key': self.conv_key
+            }), {'direction': 'inbound'})
+        self.assertEqual(response.content, '\r\n'.join([
+            '2011-12-28,2',
+            '2011-12-29,2',
+            '2011-12-30,2',
+            '2011-12-31,2',
+            '2012-01-01,2',
+            '',  # csv ends with a blank line
+            ]))

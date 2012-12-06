@@ -1,4 +1,6 @@
+import csv
 from datetime import datetime
+from StringIO import StringIO
 
 from django.conf import settings
 from django.http import HttpResponse
@@ -292,3 +294,13 @@ def download_user_data(request, conversation_key):
     poll = pm.get(poll_id)
     csv_data = pm.export_user_data_as_csv(poll)
     return HttpResponse(csv_data, content_type='application/csv')
+
+
+@login_required
+def download_aggregates(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
+    direction = request.GET.get('direction', 'inbound')
+    sio = StringIO()
+    writer = csv.writer(sio)
+    writer.writerows(conversation.get_aggregate_count(direction))
+    return HttpResponse(sio.getvalue(), content_type='text/csv; charset=utf-8')
