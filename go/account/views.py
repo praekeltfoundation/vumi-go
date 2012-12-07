@@ -9,7 +9,7 @@ from go.account.forms import EmailForm, AccountForm
 
 @login_required
 def index(request):
-    account_form = AccountForm(initial={
+    account_form = AccountForm(request.user, initial={
         'name': request.user.first_name,
         'surname': request.user.last_name,
         'email_address': request.user.username,
@@ -18,10 +18,10 @@ def index(request):
 
     if request.method == 'POST':
         if '_account' in request.POST:
-            account_form = AccountForm(request.POST)
+            account_form = AccountForm(request.user, request.POST)
             if account_form.is_valid():
                 user = request.user
-                new_password = account_form.cleaned_data['password']
+                new_password = account_form.cleaned_data['new_password']
                 if new_password:
                     user.set_password(new_password)
                 user.first_name = account_form.cleaned_data['name']
@@ -31,6 +31,8 @@ def index(request):
                 user.save()
 
                 messages.info(request, 'Account Details updated.')
+                return redirect('account:index')
+
         elif '_email' in request.POST:
             email_form = EmailForm(request.POST)
             if email_form.is_valid():
