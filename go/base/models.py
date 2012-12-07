@@ -36,7 +36,7 @@ class UserProfile(models.Model):
     #       I don't have enough of an overview yet to design that.
     #       I *think* we could use Django's permissions machinery and then
     #       use that to also start working with feature flags.
-    confirm_bulk_sends = models.BooleanField(default=False)
+    confirm_start_conversation = models.BooleanField(default=False)
 
     def __unicode__(self):
         return u' '.join([self.user.first_name, self.user.last_name])
