@@ -14,6 +14,7 @@ class AccountForm(BootstrapForm):
     surname = forms.CharField(required=True)
     email_address = forms.EmailField(required=True, widget=forms.TextInput(
         attrs={'autocomplete': 'off'}))
+    msisdn = forms.CharField(label='Your mobile phone number', required=False)
     existing_password = forms.CharField(
         label='Your existing password',
         widget=forms.PasswordInput(attrs={
@@ -37,6 +38,19 @@ class AccountForm(BootstrapForm):
         if not self.user.check_password(password):
             raise forms.ValidationError('Invalid password provided')
         return password
+
+    def clean_msisdn(self):
+        """
+        Make a best effort guess at determining whether this msisdn
+        is a valid msisdn
+        """
+        msisdn = self.cleaned_data['msisdn'].lstrip('+')
+        if not msisdn:
+            return ''
+        if not (len(msisdn) > 5 and
+                all(c.isdigit() for c in msisdn)):
+            raise forms.ValidationError('Please provide a valid phone number.')
+        return '+%s' % (msisdn,)
 
 
 class RegistrationForm(BootstrapMixin, RegistrationFormUniqueEmail):
