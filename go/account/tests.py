@@ -96,7 +96,7 @@ class AccountTestCase(DjangoGoApplicationTestCase):
             profile = User.objects.get(pk=self.user.pk).get_profile()
             self.assertEqual(profile.msisdn, None)
 
-    def test_confirm_bulk_sends(self):
+    def test_confirm_start_conversation(self):
         self.client.post(reverse('account:index'), {
             'name': 'foo',
             'surname': 'bar',
@@ -105,29 +105,29 @@ class AccountTestCase(DjangoGoApplicationTestCase):
             '_account': True,
             })
         profile = User.objects.get(pk=self.user.pk).get_profile()
-        self.assertFalse(profile.confirm_bulk_sends)
+        self.assertFalse(profile.confirm_start_conversation)
 
         self.client.post(reverse('account:index'), {
             'name': 'foo',
             'surname': 'bar',
             'email_address': 'user@domain.com',
             'existing_password': 'password',
-            'confirm_bulk_sends': False,
+            'confirm_start_conversation': False,
             '_account': True,
             })
         profile = User.objects.get(pk=self.user.pk).get_profile()
-        self.assertFalse(profile.confirm_bulk_sends)
+        self.assertFalse(profile.confirm_start_conversation)
 
         self.client.post(reverse('account:index'), {
             'name': 'foo',
             'surname': 'bar',
             'email_address': 'user@domain.com',
             'existing_password': 'password',
-            'confirm_bulk_sends': True,
+            'confirm_start_conversation': True,
             '_account': True,
             })
         profile = User.objects.get(pk=self.user.pk).get_profile()
-        self.assertTrue(profile.confirm_bulk_sends)
+        self.assertTrue(profile.confirm_start_conversation)
 
 
 class EmailTestCase(DjangoGoApplicationTestCase):
