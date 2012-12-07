@@ -3,6 +3,8 @@ from registration.forms import RegistrationFormUniqueEmail
 
 from bootstrap.forms import BootstrapMixin, BootstrapForm
 
+from vumi.utils import normalize_msisdn
+
 
 class AccountForm(BootstrapForm):
 
@@ -50,7 +52,7 @@ class AccountForm(BootstrapForm):
         if not (len(msisdn) > 5 and
                 all(c.isdigit() for c in msisdn)):
             raise forms.ValidationError('Please provide a valid phone number.')
-        return '+%s' % (msisdn,)
+        return normalize_msisdn(msisdn,)
 
 
 class RegistrationForm(BootstrapMixin, RegistrationFormUniqueEmail):
