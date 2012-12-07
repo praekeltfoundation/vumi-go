@@ -13,6 +13,7 @@ def index(request):
         'name': request.user.first_name,
         'surname': request.user.last_name,
         'email_address': request.user.username,
+        'msisdn': request.user.get_profile().msisdn,
     })
     email_form = EmailForm()
 
@@ -29,6 +30,10 @@ def index(request):
                 email_address = account_form.cleaned_data['email_address']
                 user.email = user.username = email_address
                 user.save()
+
+                profile = user.get_profile()
+                profile.msisdn = account_form.cleaned_data['msisdn']
+                profile.save()
 
                 messages.info(request, 'Account Details updated.')
                 return redirect('account:index')
