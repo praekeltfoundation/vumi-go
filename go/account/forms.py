@@ -1,7 +1,7 @@
 from django import forms
 from registration.forms import RegistrationFormUniqueEmail
 
-from bootstrap.forms import BootstrapMixin, BootstrapForm
+from bootstrap.forms import BootstrapMixin, BootstrapForm, Fieldset
 
 from vumi.utils import normalize_msisdn
 
@@ -17,8 +17,8 @@ class AccountForm(BootstrapForm):
     email_address = forms.EmailField(required=True, widget=forms.TextInput(
         attrs={'autocomplete': 'off'}))
     msisdn = forms.CharField(label='Your mobile phone number', required=False)
-    confirm_bulk_sends = forms.BooleanField(
-        label='SMS to confirm sending of group messages', required=False)
+    confirm_start_conversation = forms.BooleanField(
+        label='SMS to confirm starting of a conversation', required=False)
     existing_password = forms.CharField(
         label='Your existing password',
         widget=forms.PasswordInput(attrs={
@@ -31,6 +31,18 @@ class AccountForm(BootstrapForm):
             'autocomplete': 'off',
         }),
         required=False)
+
+    class Meta:
+        layout = (
+            Fieldset('Account Information',
+                "name",
+                "surname",
+                "email_address",
+                "msisdn",
+                "confirm_start_conversation",
+                "new_password",),
+            Fieldset('Verify your password',
+                'existing_password'))
 
     def clean_existing_password(self):
         """

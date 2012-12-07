@@ -9,11 +9,13 @@ from go.account.forms import EmailForm, AccountForm
 
 @login_required
 def index(request):
+    profile = request.user.get_profile()
     account_form = AccountForm(request.user, initial={
         'name': request.user.first_name,
         'surname': request.user.last_name,
         'email_address': request.user.username,
-        'msisdn': request.user.get_profile().msisdn,
+        'msisdn': profile.msisdn,
+        'confirm_start_conversation': profile.confirm_start_conversation,
     })
     email_form = EmailForm()
 
@@ -34,8 +36,8 @@ def index(request):
                 profile = user.get_profile()
 
                 profile.msisdn = account_form.cleaned_data['msisdn']
-                profile.confirm_bulk_sends = account_form.cleaned_data[
-                                                'confirm_bulk_sends']
+                profile.confirm_start_conversation = account_form.cleaned_data[
+                                                'confirm_start_conversation']
                 profile.save()
 
                 messages.info(request, 'Account Details updated.')
