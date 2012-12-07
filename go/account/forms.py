@@ -5,16 +5,38 @@ from bootstrap.forms import BootstrapMixin, BootstrapForm
 
 
 class AccountForm(BootstrapForm):
+
+    def __init__(self, user, *args, **kwargs):
+        super(AccountForm, self).__init__(*args, **kwargs)
+        self.user = user
+
     name = forms.CharField(required=True)
     surname = forms.CharField(required=True)
     email_address = forms.EmailField(required=True, widget=forms.TextInput(
         attrs={'autocomplete': 'off'}))
-    password = forms.CharField(
+    existing_password = forms.CharField(
+        label='Your existing password',
+        widget=forms.PasswordInput(attrs={
+            'autocomplete': 'off',
+            }),
+        required=True)
+    new_password = forms.CharField(
         label='Type in a password if you want a new one.',
         widget=forms.PasswordInput(attrs={
             'autocomplete': 'off',
         }),
         required=False)
+
+    def clean_existing_password(self):
+        """
+        Checks whether the existing password matches the known password
+        for this user because we only want to update these details
+        if the user can actually supply their original password.
+        """
+        password = self.cleaned_data['existing_password']
+        if not self.user.check_password(password):
+            raise forms.ValidationError('Invalid password provided')
+        return password
 
 
 class RegistrationForm(BootstrapMixin, RegistrationFormUniqueEmail):
