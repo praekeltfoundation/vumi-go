@@ -1,6 +1,7 @@
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
+from django.core import mail
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 
@@ -94,3 +95,27 @@ class AccountTestCase(DjangoGoApplicationTestCase):
                 'Please provide a valid phone number.')
             profile = User.objects.get(pk=self.user.pk).get_profile()
             self.assertEqual(profile.msisdn, None)
+
+
+class EmailTestCase(DjangoGoApplicationTestCase):
+
+    def setUp(self):
+        super(EmailTestCase, self).setUp()
+        self.setup_riak_fixtures()
+        self.client = Client()
+        self.client.login(username='username', password='password')
+
+    def tearDown(self):
+        pass
+
+    def test_email_sending(self):
+        response = self.client.post(reverse('account:index'), {
+            '_email': True,
+            'subject': 'foo',
+            'message': 'bar',
+            })
+        self.assertRedirects(response, reverse('account:index'))
+        [email] = mail.outbox
+        self.assertEqual(email.subject, 'foo')
+        self.assertEqual(email.from_email, self.user.email)
+        self.assertTrue('bar' in email.body)
