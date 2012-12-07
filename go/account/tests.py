@@ -63,3 +63,34 @@ class AccountTestCase(DjangoGoApplicationTestCase):
         # reload from db
         user = User.objects.get(pk=self.user.pk)
         self.assertTrue(user.check_password('new_password'))
+
+    def test_update_msisdn_valid(self):
+        valid = ['+27761234567', '27761234567']
+        for msisdn in valid:
+            response = self.client.post(reverse('account:index'), {
+                'name': 'foo',
+                'surname': 'bar',
+                'email_address': 'user@domain.com',
+                'msisdn': msisdn,
+                'existing_password': 'password',
+                '_account': True,
+                })
+            self.assertRedirects(response, reverse('account:index'))
+            profile = User.objects.get(pk=self.user.pk).get_profile()
+            self.assertEqual(profile.msisdn, '+27761234567')
+
+    def test_update_msisdn_invalid(self):
+        invalid = ['+123', '123', 'abc']
+        for msisdn in invalid:
+            response = self.client.post(reverse('account:index'), {
+                'name': 'foo',
+                'surname': 'bar',
+                'email_address': 'user@domain.com',
+                'msisdn': msisdn,
+                'existing_password': 'password',
+                '_account': True,
+                })
+            self.assertFormError(response, 'account_form', 'msisdn',
+                'Please provide a valid phone number.')
+            profile = User.objects.get(pk=self.user.pk).get_profile()
+            self.assertEqual(profile.msisdn, None)

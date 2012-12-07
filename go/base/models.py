@@ -31,6 +31,7 @@ class UserProfile(models.Model):
     """A profile for a user"""
     user = models.OneToOneField('auth.User')
     user_account = models.CharField(max_length=100)
+    msisdn = models.CharField(max_length=100, null=True)
 
     def __unicode__(self):
         return u' '.join([self.user.first_name, self.user.last_name])
