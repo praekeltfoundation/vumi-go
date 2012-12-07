@@ -17,6 +17,8 @@ class AccountForm(BootstrapForm):
     email_address = forms.EmailField(required=True, widget=forms.TextInput(
         attrs={'autocomplete': 'off'}))
     msisdn = forms.CharField(label='Your mobile phone number', required=False)
+    confirm_bulk_sends = forms.BooleanField(
+        label='SMS to confirm sending of group messages', required=False)
     existing_password = forms.CharField(
         label='Your existing password',
         widget=forms.PasswordInput(attrs={
