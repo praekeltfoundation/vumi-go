@@ -96,6 +96,39 @@ class AccountTestCase(DjangoGoApplicationTestCase):
             profile = User.objects.get(pk=self.user.pk).get_profile()
             self.assertEqual(profile.msisdn, None)
 
+    def test_confirm_bulk_sends(self):
+        self.client.post(reverse('account:index'), {
+            'name': 'foo',
+            'surname': 'bar',
+            'email_address': 'user@domain.com',
+            'existing_password': 'password',
+            '_account': True,
+            })
+        profile = User.objects.get(pk=self.user.pk).get_profile()
+        self.assertFalse(profile.confirm_bulk_sends)
+
+        self.client.post(reverse('account:index'), {
+            'name': 'foo',
+            'surname': 'bar',
+            'email_address': 'user@domain.com',
+            'existing_password': 'password',
+            'confirm_bulk_sends': False,
+            '_account': True,
+            })
+        profile = User.objects.get(pk=self.user.pk).get_profile()
+        self.assertFalse(profile.confirm_bulk_sends)
+
+        self.client.post(reverse('account:index'), {
+            'name': 'foo',
+            'surname': 'bar',
+            'email_address': 'user@domain.com',
+            'existing_password': 'password',
+            'confirm_bulk_sends': True,
+            '_account': True,
+            })
+        profile = User.objects.get(pk=self.user.pk).get_profile()
+        self.assertTrue(profile.confirm_bulk_sends)
+
 
 class EmailTestCase(DjangoGoApplicationTestCase):
 
