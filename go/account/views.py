@@ -32,7 +32,10 @@ def index(request):
                 user.save()
 
                 profile = user.get_profile()
+
                 profile.msisdn = account_form.cleaned_data['msisdn']
+                profile.confirm_bulk_sends = account_form.cleaned_data[
+                                                'confirm_bulk_sends']
                 profile.save()
 
                 messages.info(request, 'Account Details updated.')
