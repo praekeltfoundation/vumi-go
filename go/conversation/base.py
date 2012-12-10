@@ -153,6 +153,8 @@ class StartConversationView(ConversationView):
     template_name = 'start'
 
     def get(self, request, conversation):
+        profile = request.user.get_profile()
+
         conversation_form = make_read_only_form(self.make_conversation_form(
                 request.user_api, instance=conversation, initial={}))
         groups = request.user_api.list_groups()
@@ -161,25 +163,32 @@ class StartConversationView(ConversationView):
 
         if self.conversation_initiator == 'client':
             return self.render_to_response({
+                    'user_profile': profile,
                     'send_messages': False,
+                    'confirm_start_conversation':
+                        profile.confirm_start_conversation,
                     'conversation': conversation,
                     })
+        else:
+            conv_groups = []
+            for bunch in conversation.groups.load_all_bunches():
+                conv_groups.extend(bunch)
 
-        conv_groups = []
-        for bunch in conversation.groups.load_all_bunches():
-            conv_groups.extend(bunch)
+            return self.render_to_response({
+                    'user_profile': profile,
+                    'send_messages': True,
+                    'confirm_start_conversation':
+                        profile.confirm_start_conversation,
+                    'conversation': conversation,
+                    'conversation_form': conversation_form,
+                    'group_form': group_form,
+                    'groups': conv_groups,
+                    })
 
-        return self.render_to_response({
-                'send_messages': True,
-                'conversation': conversation,
-                'conversation_form': conversation_form,
-                'group_form': group_form,
-                'groups': conv_groups,
-                })
-
-    def post(self, request, conversation):
+    def _start_conversation(self, request, profile, conversation):
         params = {}
         params.update(self.conversation_start_params or {})
+
         if self.conversation_initiator != 'client':
             params['dedupe'] = request.POST.get('dedupe') == '1'
         try:
@@ -190,6 +199,18 @@ class StartConversationView(ConversationView):
         messages.add_message(request, messages.INFO,
                              '%s started' % (self.conversation_display_name,))
         return self.redirect_to('show', conversation_key=conversation.key)
+
+    def _start_via_confirmation(self, request, profile, conversation):
+        conversation.send_confirmation_link(profile.msisdn)
+        messages.info(request, 'Confirmation request sent.')
+        return self.redirect_to('show', conversation_key=conversation.key)
+
+    def post(self, request, conversation):
+        profile = request.user.get_profile()
+        if profile.confirm_start_conversation:
+            return self._start_via_confirmation(request, profile, conversation)
+        else:
+            return self._start_conversation(request, profile, conversation)
 
 
 class ShowConversationView(ConversationView):

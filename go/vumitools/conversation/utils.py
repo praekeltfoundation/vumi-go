@@ -178,6 +178,21 @@ class ConversationWrapper(object):
         self.c.batches.add_key(batch_id)
         yield self.c.save()
 
+    @Manager.calls_manager
+    def send_confirmation_link(self, msisdn, **extra_params):
+        tag = yield self.acquire_tag()
+        batch_id = yield self.start_batch(tag)
+        msg_options = yield self.make_message_options(tag)
+        yield self.dispatch_command('send_confirmation_link',
+            batch_id=batch_id,
+            conversation_type=self.c.conversation_type,
+            conversation_key=self.c.key,
+            msg_options=msg_options,
+            msisdn=msisdn,
+            **extra_params)
+        self.c.batches.add_key(batch_id)
+        yield self.c.save()
+
     def get_latest_batch_key(self):
         """
         We're not storing timestamps on our batches and so we have no

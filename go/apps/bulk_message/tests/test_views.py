@@ -262,3 +262,71 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             '2012-01-01,2',
             '',  # csv ends with a blank line
             ]))
+
+    def test_confirm_start_conversation_get(self):
+        """
+        Test the start conversation view with the confirm_start_conversation
+        enabled for the account's profile.
+        """
+        profile = self.user.get_profile()
+        profile.confirm_start_conversation = True
+        profile.save()
+
+        conversation = self.get_wrapped_conv()
+
+        response = self.client.get(reverse('bulk_message:start', kwargs={
+            'conversation_key': conversation.key
+            }))
+
+        self.assertEqual(response.context['confirm_start_conversation'], True)
+        template_names = [t.name for t in response.templates]
+        self.assertTrue('generic/includes/conversation_start_confirmation.html'
+                            in template_names)
+
+    def test_confirm_start_conversation_post(self):
+        """
+        Test the start conversation view with the confirm_start_conversation
+        enabled for the account's profile.
+
+        A POST to this should send out the confirmation message, not the full
+        bulk send.
+        """
+        profile = self.user.get_profile()
+        profile.msisdn = '+27761234567'
+        profile.confirm_start_conversation = True
+        profile.save()
+
+        conversation = self.get_wrapped_conv()
+
+        response = self.client.post(reverse('bulk_message:start', kwargs={
+            'conversation_key': conversation.key,
+            }))
+
+        self.assertRedirects(response, reverse('bulk_message:show', kwargs={
+            'conversation_key': conversation.key,
+            }))
+
+        conversation = self.get_wrapped_conv()
+        [batch] = conversation.get_batches()
+        [tag] = list(batch.tags)
+        [contact] = self.get_contacts_for_conversation(conversation)
+        msg_options = {
+            "transport_type": "sms",
+            "from_addr": "default10001",
+            "helper_metadata": {
+                "tag": {"tag": list(tag)},
+                "go": {"user_account": conversation.user_account.key},
+                },
+            }
+
+        [cmd] = self.get_api_commands_sent()
+        expected_cmd = VumiApiCommand.command(
+            '%s_application' % (conversation.conversation_type,),
+            'send_confirmation_link',
+            batch_id=batch.key,
+            msg_options=msg_options,
+            conversation_type=conversation.conversation_type,
+            conversation_key=conversation.key,
+            msisdn=profile.msisdn,
+        )
+        self.assertEqual(cmd, expected_cmd)

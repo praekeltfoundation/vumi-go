@@ -123,11 +123,24 @@ class AccountTestCase(DjangoGoApplicationTestCase):
             'surname': 'bar',
             'email_address': 'user@domain.com',
             'existing_password': 'password',
+            'msisdn': '+27761234567',
             'confirm_start_conversation': True,
             '_account': True,
             })
         profile = User.objects.get(pk=self.user.pk).get_profile()
         self.assertTrue(profile.confirm_start_conversation)
+
+    def test_require_msisdn_if_confirm_start_conversation(self):
+        response = self.client.post(reverse('account:index'), {
+            'name': 'foo',
+            'surname': 'bar',
+            'email_address': 'user@domain.com',
+            'confirm_start_conversation': True,
+            'existing_password': 'password',
+            '_account': True,
+            })
+        self.assertFormError(response, 'account_form', 'msisdn',
+            'Please provide a valid phone number.')
 
 
 class EmailTestCase(DjangoGoApplicationTestCase):
@@ -137,9 +150,6 @@ class EmailTestCase(DjangoGoApplicationTestCase):
         self.setup_riak_fixtures()
         self.client = Client()
         self.client.login(username='username', password='password')
-
-    def tearDown(self):
-        pass
 
     def test_email_sending(self):
         response = self.client.post(reverse('account:index'), {

@@ -1,0 +1,15 @@
+<div class="span4">
+    <div class="box shadow conv-disabled">
+        <h3>2. Message Recipients</h3>
+        <br>
+        {% include "conversation/includes/groups-selected.html" with groups=groups %}
+    </div>
+</div>
+<div class="span4">
+    <div class="box shadow">
+        <h3>3. Send Message</h3>
+        <p>You are about to start <strong>{{conversation.subject}}</strong>. This needs to be confirmed before it will actually go live.</p>
+        <p><input type="submit" value="Send confirmation SMS" class="btn btn-success btn-large" /></p>
+        The confirmation request will be sent via SMS to {{user_profile.msisdn}}.
+    </div>
+</div>
