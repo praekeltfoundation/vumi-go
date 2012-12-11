@@ -141,8 +141,8 @@ class ConversationWrapper(object):
         Convenience method for loading all groups linked to this conversation.
         """
         groups = []
-        for bunch in (yield self.groups.load_all_bunches()):
-            groups.extend(bunch)
+        for bunch in self.groups.load_all_bunches():
+            groups.extend((yield bunch))
         returnValue(groups)
 
     @Manager.calls_manager
