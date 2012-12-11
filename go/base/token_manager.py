@@ -1,4 +1,5 @@
 from uuid import uuid4
+import json
 
 
 class TokenManager(object):
@@ -27,7 +28,8 @@ class TokenManager(object):
             token_taken = self.redis.exists(user_token)
         return (user_token, system_token)
 
-    def generate(self, redirect_to, user_id=None, lifetime=None, token=None):
+    def generate(self, redirect_to, user_id=None, lifetime=None, token=None,
+                    extra_params=None):
         """
         Generate a token that redirects to `redirect_to` for exactly
         `lifetime` amount of seconds.
@@ -42,13 +44,20 @@ class TokenManager(object):
             (user_token, system_token). The user token is submitted in the SMS
             the system_token is used internally to ensure that only users
             arriving at the `redirect_to` URL via the token url gain access.
+        :param dict extra_params:
+            A dictionary that should be stored with the token to store custom
+            data in that may be needed when the token is retrieved. Must be
+            data that can be encoded as JSON.
         """
         lifetime = lifetime or self.DEFAULT_LIFETIME
-        user_token, system_token = token or self.generate_token()
+        a = token or self.generate_token()
+        user_token, system_token = a
+        extra_params = extra_params or {}
         self.redis.hmset(user_token, {
             'redirect_to': redirect_to,
             'user_id': user_id or '',
             'system_token': system_token,
+            'extra_params': json.dumps(extra_params),
             })
         self.redis.expire(user_token, lifetime)
         return user_token
@@ -62,9 +71,14 @@ class TokenManager(object):
             Provide the system_token if matching needs to occur. If there
             is no match then an empty dictionary will be returned.
         """
+        if not self.redis.exists(token):
+            return None
+
         token_data = self.redis.hgetall(token)
-        if verify is not None and verify != token_data['system_token']:
-            return {}
+        if verify is not None and verify != token_data.get('system_token'):
+            return None
+
+        token_data['extra_params'] = json.loads(token_data['extra_params'])
         return token_data
 
     def verify_get(self, full_token):
