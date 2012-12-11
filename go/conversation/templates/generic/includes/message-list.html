@@ -15,7 +15,7 @@
             <td><i class="icon-repeat"></i> {{conversation.delivery_class}}</td>
             <td>
                 <h6><a href="{% url 'contacts:person' person_key=contact.key %}">{{contact}}</a> via {{message.transport_type}} - {{message.timestamp}}</h6>
-                <p>{{message.content}}</p></td>
+                <p>{{message.content|scrub_tokens}}</p></td>
             <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
         </tr>
         {% empty %}
