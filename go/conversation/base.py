@@ -6,6 +6,7 @@ from django.views.generic import TemplateView
 from django.core.paginator import PageNotAnInteger, EmptyPage
 
 from django.utils.decorators import method_decorator
+from django.contrib.sites.models import Site
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.core.urlresolvers import reverse
@@ -14,6 +15,8 @@ from django.conf.urls.defaults import url, patterns
 from django.conf import settings
 from django.http import HttpResponse
 
+from vumi.persist.redis_manager import RedisManager
+
 from go.vumitools.conversation.models import (
     CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
@@ -21,6 +24,7 @@ from go.conversation.forms import ConversationForm, ConversationGroupForm
 from go.base import message_store_client as ms_client
 from go.base.utils import (make_read_only_form, conversation_or_404,
                             page_range_window)
+from go.base.token_manager import TokenManager
 
 
 class ConversationView(TemplateView):
@@ -201,7 +205,18 @@ class StartConversationView(ConversationView):
         return self.redirect_to('show', conversation_key=conversation.key)
 
     def _start_via_confirmation(self, request, profile, conversation):
-        conversation.send_confirmation_link(profile.msisdn)
+        redis = RedisManager.from_config(
+                                    settings.VUMI_API_CONFIG['redis_manager'])
+        token_manager = TokenManager(redis.sub_manager('token_manager'))
+        # The URL the user will be redirected to post-confirmation
+        redirect_to = self.get_view_url('confirm',
+                            conversation_key=conversation.key)
+        # The token to be sent.
+        site = Site.objects.get_current()
+        token = token_manager.generate(redirect_to, user_id=request.user.id)
+        token_url = 'http://%s%s' % (site.domain,
+                                reverse('token', kwargs={'token': token}))
+        conversation.send_token_url(token_url, profile.msisdn)
         messages.info(request, 'Confirmation request sent.')
         return self.redirect_to('show', conversation_key=conversation.key)
 
@@ -211,6 +226,13 @@ class StartConversationView(ConversationView):
             return self._start_via_confirmation(request, profile, conversation)
         else:
             return self._start_conversation(request, profile, conversation)
+
+
+class ConfirmConversationView(ConversationView):
+    template_name = 'confirm'
+
+    def get(self, request, conversation):
+        pass
 
 
 class ShowConversationView(ConversationView):
@@ -434,6 +456,7 @@ class ConversationViews(object):
     message_search_result_conversation_view = \
         MessageSearchResultConversationView
     aggregates_conversation_view = AggregatesConversationView
+    confirm_conversation_view = ConfirmConversationView
 
     # These attributes get passed through to the individual view objects.
     conversation_type = None
@@ -477,6 +500,7 @@ class ConversationViews(object):
             self.mkurl('message_search_result'),
             self.mkurl('aggregates',
                 r'^(?P<conversation_key>\w+)/aggregates\.csv$'),
+            self.mkurl('confirm'),
             ] + self.extra_urls()
         if self.conversation_initiator != 'client':
             urls.append(self.mkurl('people'))
