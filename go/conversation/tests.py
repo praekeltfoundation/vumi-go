@@ -6,6 +6,7 @@ from django.core.urlresolvers import reverse
 from django.conf import settings
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.conversation.templatetags.conversation_tags import scrub_tokens
 
 
 def newest(models):
@@ -142,3 +143,11 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         self.assertContains(response, self.TEST_SUBJECT, count=6)
         response = self.client.get(reverse('conversations:index'), {'p': 2})
         self.assertContains(response, self.TEST_SUBJECT, count=4)
+
+    def test_scrub_tokens(self):
+        content = 'Please visit http://example.com/t/6be226/ ' \
+                    'to start your conversation.'
+        expected = 'Please visit http://example.com/t/******/ ' \
+                    'to start your conversation.'
+        self.assertEqual(scrub_tokens(content), expected)
+        self.assertEqual(scrub_tokens(content * 2), expected * 2)
