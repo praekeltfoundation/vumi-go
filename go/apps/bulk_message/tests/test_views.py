@@ -329,14 +329,11 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         site = Site.objects.get_current()
         expected_cmd = VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
-            'send_token_url',
+            'send_message',
             batch_id=batch.key,
             msg_options=msg_options,
-            conversation_type=conversation.conversation_type,
-            conversation_key=conversation.key,
-            token_url='http://%s%s' % (site.domain, reverse('token', kwargs={
-                'token': 'abcdef',
-                })),
-            msisdn=profile.msisdn,
+            content='Please visit http://%s%s to start your conversation.' % (
+                site.domain, reverse('token', kwargs={'token': 'abcdef'})),
+            to_addr=profile.msisdn,
         )
         self.assertEqual(cmd, expected_cmd)
