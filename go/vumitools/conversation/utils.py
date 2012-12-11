@@ -136,6 +136,16 @@ class ConversationWrapper(object):
         returnValue(int(status['ack'] / float(status['sent']) * 100))
 
     @Manager.calls_manager
+    def get_groups(self):
+        """
+        Convenience method for loading all groups linked to this conversation.
+        """
+        groups = []
+        for bunch in (yield self.groups.load_all_bunches()):
+            groups.extend(bunch)
+        returnValue(groups)
+
+    @Manager.calls_manager
     def make_message_options(self, tag):
         msg_options = {}
         # TODO: transport_type is probably irrelevant
@@ -192,13 +202,13 @@ class ConversationWrapper(object):
         tag = yield self.acquire_tag()
         batch_id = yield self.start_batch(tag)
         msg_options = yield self.make_message_options(tag)
-        yield self.dispatch_command('send_message',
-            batch_id=batch_id,
-            to_addr=msisdn,
-            msg_options=msg_options,
-            content='Please visit %s to start your conversation.' % (
+        yield self.dispatch_command('send_message', command_data={
+            "batch_id": batch_id,
+            "to_addr": msisdn,
+            "msg_options": msg_options,
+            "content": "Please visit %s to start your conversation." % (
                         token_url,),
-            )
+            })
         self.c.batches.add_key(batch_id)
         yield self.c.save()
 
