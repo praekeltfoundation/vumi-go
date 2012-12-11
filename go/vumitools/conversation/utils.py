@@ -179,7 +179,7 @@ class ConversationWrapper(object):
         yield self.c.save()
 
     @Manager.calls_manager
-    def send_token(self, token, msisdn, **extra_params):
+    def send_token_url(self, token_url, msisdn, **extra_params):
         """
         I was tempted to make this a generic 'send_message' function but
         that gets messy with acquiring tags, it becomes unclear whether an
@@ -192,13 +192,13 @@ class ConversationWrapper(object):
         tag = yield self.acquire_tag()
         batch_id = yield self.start_batch(tag)
         msg_options = yield self.make_message_options(tag)
-        yield self.dispatch_command('send_confirmation_link',
+        yield self.dispatch_command('send_token_url',
             batch_id=batch_id,
             conversation_type=self.c.conversation_type,
             conversation_key=self.c.key,
             msg_options=msg_options,
             msisdn=msisdn,
-            token=token,
+            token_url=token_url,
             **extra_params)
         self.c.batches.add_key(batch_id)
         yield self.c.save()

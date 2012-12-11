@@ -2,10 +2,12 @@ from datetime import date
 
 from django.test.client import Client
 from django.core.urlresolvers import reverse
+from django.contrib.sites.models import Site
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
+from go.base.token_manager import TokenManager
 
 from mock import patch
 
@@ -291,6 +293,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         A POST to this should send out the confirmation message, not the full
         bulk send.
         """
+
         profile = self.user.get_profile()
         profile.msisdn = '+27761234567'
         profile.confirm_start_conversation = True
@@ -298,9 +301,12 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
         conversation = self.get_wrapped_conv()
 
-        response = self.client.post(reverse('bulk_message:start', kwargs={
-            'conversation_key': conversation.key,
-            }))
+        # mock the token generation
+        with patch.object(TokenManager, 'generate_token') as mock_method:
+            mock_method.return_value = 'abcdef'
+            response = self.client.post(reverse('bulk_message:start', kwargs={
+                'conversation_key': conversation.key,
+                }))
 
         self.assertRedirects(response, reverse('bulk_message:show', kwargs={
             'conversation_key': conversation.key,
@@ -320,13 +326,17 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             }
 
         [cmd] = self.get_api_commands_sent()
+        site = Site.objects.get_current()
         expected_cmd = VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
-            'send_confirmation_link',
+            'send_token_url',
             batch_id=batch.key,
             msg_options=msg_options,
             conversation_type=conversation.conversation_type,
             conversation_key=conversation.key,
+            token_url='http://%s%s' % (site.domain, reverse('token', kwargs={
+                'token': 'abcdef',
+                })),
             msisdn=profile.msisdn,
         )
         self.assertEqual(cmd, expected_cmd)
