@@ -52,6 +52,13 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         yield self.api.set_pool_metadata(name, defaults)
 
     @inlineCallbacks
+    def get_batch_id(self, conv, tag):
+        batch_id = yield conv.start_batch(tag)
+        self.conv.batches.add_key(batch_id)
+        yield conv.save()
+        returnValue(batch_id)
+
+    @inlineCallbacks
     def store_inbound(self, batch_key, count=10, addr_template='from-{0}',
                         content_template='hello world {0}',
                         start_timestamp=None, time_multiplier=10):
@@ -96,50 +103,61 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             events.append(event)
         returnValue(events)
 
+    @inlineCallbacks
     def test_get_latest_batch_key(self):
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         self.assertEqual(batch_key, None)
         self.assertEqual(self.conv.batches.keys(), [])
 
-        yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
-        self.assertNotEqual(batch_key, None)
-        self.assertLen(self.conv.batches.keys(), 1)
+        tag = yield self.conv.acquire_tag()
+        batch1 = yield self.get_batch_id(self.conv, tag)
+        batch2 = yield self.get_batch_id(self.conv, tag)
+
+        now = datetime.now()
+        yield self.store_outbound(batch1,
+                                    start_timestamp=now - timedelta(days=1))
+        yield self.store_outbound(batch2, start_timestamp=now)
+
+        batch_key = yield self.conv.get_latest_batch_key()
+        self.assertEqual(batch_key, batch2)
+        self.assertEqual(len(self.conv.batches.keys()), 2)
 
     @inlineCallbacks
     def test_count_replies(self):
         yield self.conv.start()
-        yield self.store_inbound(self.conv.get_latest_batch_key())
+        yield self.store_inbound((yield self.conv.get_latest_batch_key()))
         self.assertEqual((yield self.conv.count_replies()), 10)
 
     @inlineCallbacks
     def test_count_sent_messages(self):
         yield self.conv.start()
-        yield self.store_outbound(self.conv.get_latest_batch_key())
+        yield self.store_outbound((yield self.conv.get_latest_batch_key()))
         self.assertEqual((yield self.conv.count_sent_messages()), 10)
 
     @inlineCallbacks
     def test_count_inbound_uniques(self):
         yield self.conv.start()
-        yield self.store_inbound(self.conv.get_latest_batch_key(), count=5)
+        yield self.store_inbound((yield self.conv.get_latest_batch_key()),
+                                    count=5)
         self.assertEqual((yield self.conv.count_inbound_uniques()), 5)
-        yield self.store_inbound(self.conv.get_latest_batch_key(), count=5,
-            addr_template='from')
+        yield self.store_inbound((yield self.conv.get_latest_batch_key()),
+                                    count=5, addr_template='from')
         self.assertEqual((yield self.conv.count_inbound_uniques()), 6)
 
     @inlineCallbacks
     def test_count_outbound_uniques(self):
         yield self.conv.start()
-        yield self.store_outbound(self.conv.get_latest_batch_key(), count=5)
+        yield self.store_outbound((yield self.conv.get_latest_batch_key()),
+                                    count=5)
         self.assertEqual((yield self.conv.count_outbound_uniques()), 5)
-        yield self.store_outbound(self.conv.get_latest_batch_key(), count=5,
-            addr_template='from')
+        yield self.store_outbound((yield self.conv.get_latest_batch_key()),
+                                    count=5, addr_template='from')
         self.assertEqual((yield self.conv.count_outbound_uniques()), 6)
 
     @inlineCallbacks
     def test_received_messages(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         yield self.store_inbound(batch_key, count=20)
         received_messages = yield self.conv.received_messages()
         self.assertEqual(len(received_messages), 20)
@@ -150,7 +168,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_received_messages_dictionary(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         [msg] = yield self.store_inbound(batch_key, count=1)
         [reply] = yield self.conv.received_messages()
         self.assertEqual(msg, reply)
@@ -158,7 +176,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_sent_messages(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         yield self.store_outbound(batch_key, count=20)
         sent_messages = yield self.conv.sent_messages()
         self.assertEqual(len(sent_messages), 20)
@@ -169,7 +187,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_sent_messages_dictionary(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         [msg] = yield self.store_outbound(batch_key, count=1)
         [sent_message] = yield self.conv.sent_messages()
         self.assertEqual(msg, sent_message)
@@ -183,7 +201,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_get_progress_status(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         outbound = yield self.store_outbound(batch_key, count=10)
         yield self.store_event(outbound, 'ack', count=8)
         yield self.store_event(outbound, 'nack', count=2)
@@ -207,7 +225,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     def test_get_progress_percentage(self):
         yield self.conv.start()
         self.assertEqual((yield self.conv.get_progress_percentage()), 0)
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         outbound = yield self.store_outbound(batch_key, count=10)
         yield self.store_event(outbound, 'ack', count=8)
         self.assertEqual((yield self.conv.get_progress_percentage()), 80)
@@ -242,7 +260,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_get_inbound_throughput(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         yield self.store_inbound(batch_key, count=20, time_multiplier=0)
         # 20 messages in 5 minutes = 4 messages per minute
         self.assertEqual(
@@ -254,7 +272,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_get_outbound_throughput(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         yield self.store_outbound(batch_key, count=20, time_multiplier=0)
         # 20 messages in 5 minutes = 4 messages per minute
         self.assertEqual(
@@ -266,7 +284,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def do_search(self, conv, direction, *args,
                                     **kwargs):
-        batch_key = kwargs.get('batch_key', self.conv.get_latest_batch_key())
+        batch_key = kwargs.get('batch_key',
+                            (yield self.conv.get_latest_batch_key()))
         search_callback = {
             'inbound': conv.find_inbound_messages_matching,
             'outbound': conv.find_outbound_messages_matching,
@@ -285,7 +304,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_find_inbound_messages_matching(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         yield self.store_inbound(batch_key, count=20)
         matching = yield self.do_search(self.conv, 'inbound', 'hello')
         self.assertEqual(len(matching), 20)
@@ -297,7 +316,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_find_inbound_messages_matching_flags(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         yield self.store_inbound(batch_key, count=20)
         matching = yield self.do_search(self.conv, 'inbound', 'HELLO',
                                         flags="i")
@@ -309,7 +328,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_find_inbound_messages_matching_flags_custom_key(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         yield self.store_inbound(batch_key, count=20)
         matching = yield self.do_search(self.conv, 'inbound', 'FROM',
                                         flags='i', key='msg.from_addr')
@@ -321,7 +340,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_find_outbound_messages_matching(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         yield self.store_outbound(batch_key, count=20)
         matching = yield self.do_search(self.conv, 'outbound', 'hello')
         self.assertEqual(len(matching), 20)
@@ -334,7 +353,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_find_outbound_messages_matching_flags(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         yield self.store_outbound(batch_key, count=20)
         matching = yield self.do_search(self.conv, 'outbound', 'HELLO',
                                         flags='i')
@@ -346,7 +365,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_find_outbound_messages_matching_flags_custom_key(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         yield self.store_outbound(batch_key, count=20)
         matching = yield self.do_search(self.conv, 'outbound', 'TO', flags='i',
                                         key='msg.to_addr')
@@ -358,7 +377,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_get_aggregate_keys(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         yield self.store_outbound(batch_key, count=20, time_multiplier=12)
         inbound_aggregate = yield self.conv.get_aggregate_keys('inbound')
         self.assertEqual(inbound_aggregate, [])
@@ -374,7 +393,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_get_aggregate_count(self):
         yield self.conv.start()
-        batch_key = self.conv.get_latest_batch_key()
+        batch_key = yield self.conv.get_latest_batch_key()
         yield self.store_outbound(batch_key, count=20, time_multiplier=12)
         inbound_aggregate = yield self.conv.get_aggregate_count('inbound')
         self.assertEqual(inbound_aggregate, [])

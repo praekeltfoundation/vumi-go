@@ -178,21 +178,51 @@ class ConversationWrapper(object):
         self.c.batches.add_key(batch_id)
         yield self.c.save()
 
+    @Manager.calls_manager
     def get_latest_batch_key(self):
         """
-        We're not storing timestamps on our batches and so we have no
-        way of telling which batch was the most recent for this conversation.
+        Here be dragons.
 
-        FIXME:  add timestamps to batches or remove the need for only allowing
-                access to the cache one batch_id at the time (possibly by
-                using Redis' zunionstore to provide a temporary cached
-                view on all keys for a set of batch_ids)
+        FIXME:  We're not storing timestamps on our batches and so we have no
+                accurate way of telling which batch was most recenty acquired
+                for this conversation.
+
+                Our current work around is looking at the cache to find out
+                which batch_key had the last outbound message sent and return
+                that batch_key
         """
-        # TODO: Use the message cache for this?
         batch_keys = self.get_batch_keys()
-        if batch_keys:
-            return batch_keys[0]
 
+        if not batch_keys:
+            return
+
+        # Cache this for however long this conversation object lives
+        if hasattr(self, '_latest_batch_key'):
+            returnValue(self._latest_batch_key)
+
+        # Loop over the batch_keys and find out which one was most recently
+        # used to send out a message.
+        batch_key_timestamps = []
+        for batch_key in batch_keys:
+            if (yield self.mdb.cache.count_outbound_message_keys(batch_key)):
+                [(_, timestamp)] = (yield self.mdb.get_outbound_message_keys(
+                                        batch_key, 0, 0, with_timestamp=True))
+                batch_key_timestamps.append((batch_key, timestamp))
+
+        # We might not have anything to work with here since we might only have
+        # batch_keys that haven't seen any outbound traffic
+        if batch_key_timestamps:
+            sorted_keys = sorted(batch_key_timestamps,
+                                    key=lambda (key, ts): ts, reverse=True)
+            latest = sorted_keys[0]
+            self._latest_batch_key = latest[0]  # return only the key
+
+        # If there hasn't been any outbound traffic then just return the first
+        # that Riak returned and hope for the best.
+        self._latest_batch_key = batch_keys[0]
+        returnValue(self._latest_batch_key)
+
+    @Manager.calls_manager
     def count_replies(self, batch_key=None):
         """
         Count the total number of replies received.
@@ -201,9 +231,11 @@ class ConversationWrapper(object):
         :param str batch_key:
             The batch to count, defaults to `get_latest_batch_key()`
         """
-        batch_key = batch_key or self.get_latest_batch_key()
-        return self.mdb.cache.count_inbound_message_keys(batch_key)
+        batch_key = batch_key or (yield self.get_latest_batch_key())
+        count = yield self.mdb.cache.count_inbound_message_keys(batch_key)
+        returnValue(count)
 
+    @Manager.calls_manager
     def count_sent_messages(self, batch_key=None):
         """
         Count the total number of messages sent.
@@ -212,9 +244,11 @@ class ConversationWrapper(object):
         :param str batch_key:
             The batch to count, defaults to `get_latest_batch_key()`
         """
-        batch_key = batch_key or self.get_latest_batch_key()
-        return self.mdb.cache.count_outbound_message_keys(batch_key)
+        batch_key = batch_key or (yield self.get_latest_batch_key())
+        count = yield self.mdb.cache.count_outbound_message_keys(batch_key)
+        returnValue(count)
 
+    @Manager.calls_manager
     def count_inbound_uniques(self, batch_key=None):
         """
         Count the total unique `from_addr` values seen for the batch_key.
@@ -223,9 +257,11 @@ class ConversationWrapper(object):
         :param str batch_key:
             The batch to count, defaults to `get_latest_batch_key()`
         """
-        batch_key = batch_key or self.get_latest_batch_key()
-        return self.mdb.cache.count_from_addrs(batch_key)
+        batch_key = batch_key or (yield self.get_latest_batch_key())
+        count = yield self.mdb.cache.count_from_addrs(batch_key)
+        returnValue(count)
 
+    @Manager.calls_manager
     def count_outbound_uniques(self, batch_key=None):
         """
         Count the total unique `to_addr` values seen for the batch_key.
@@ -234,8 +270,9 @@ class ConversationWrapper(object):
         :param str batch_key:
             The batch to count, defaults to `get_latest_batch_key()`
         """
-        batch_key = batch_key or self.get_latest_batch_key()
-        return self.mdb.cache.count_to_addrs(batch_key)
+        batch_key = batch_key or (yield self.get_latest_batch_key())
+        count = yield self.mdb.cache.count_to_addrs(batch_key)
+        returnValue(count)
 
     @Manager.calls_manager
     def received_messages(self, start=0, limit=100, batch_key=None):
@@ -251,7 +288,7 @@ class ConversationWrapper(object):
             The batch to get replies for. Defaults to whatever
             `get_latest_batch_key()` returns.
         """
-        batch_key = batch_key or self.get_latest_batch_key()
+        batch_key = batch_key or (yield self.get_latest_batch_key())
         if batch_key is None:
             returnValue([])
 
@@ -283,7 +320,7 @@ class ConversationWrapper(object):
             The batch to get sent messages for. Defaults to whatever
             `get_latest_batch_key()` returns.
         """
-        batch_key = batch_key or self.get_latest_batch_key()
+        batch_key = batch_key or (yield self.get_latest_batch_key())
 
         keys = yield self.mdb.cache.get_outbound_message_keys(batch_key, start,
                                                                 limit - 1)
@@ -298,6 +335,7 @@ class ConversationWrapper(object):
 
         returnValue(sent_messages)
 
+    @Manager.calls_manager
     def find_inbound_messages_matching(self, pattern, flags="i",
                                         batch_key=None, key="msg.content",
                                         ttl=None, wait=False):
@@ -327,14 +365,15 @@ class ConversationWrapper(object):
                 MessageStore.find_inbound_keys_matching() relies
                 on Deferreds being fired.
         """
-        batch_key = batch_key or self.get_latest_batch_key()
+        batch_key = batch_key or (yield self.get_latest_batch_key())
         query = [{
             "key": key,
             "pattern": pattern,
             "flags": flags,
             }]
-        return self.mdb.find_inbound_keys_matching(batch_key, query, ttl=ttl,
-                                                    wait=wait)
+        resp = yield self.mdb.find_inbound_keys_matching(batch_key, query,
+                                                            ttl=ttl, wait=wait)
+        returnValue(resp)
 
     @Manager.calls_manager
     def get_inbound_messages_for_token(self, token, start=0, stop=-1,
@@ -342,20 +381,23 @@ class ConversationWrapper(object):
         """
         Fetch the results for a search token
         """
-        batch_key = batch_key or self.get_latest_batch_key()
+        batch_key = batch_key or (yield self.get_latest_batch_key())
         keys = yield self.mdb.get_keys_for_token(batch_key, token, start, stop)
         messages = []
         for bunch in self.mdb.inbound_messages.load_all_bunches(keys):
             messages.extend((yield bunch))
         returnValue(messages)
 
+    @Manager.calls_manager
     def count_inbound_messages_for_token(self, token, batch_key=None):
         """
         Return the total number of keys in the results for the token.
         """
-        batch_key = batch_key or self.get_latest_batch_key()
-        return self.mdb.count_keys_for_token(batch_key, token)
+        batch_key = batch_key or (yield self.get_latest_batch_key())
+        count = yield self.mdb.count_keys_for_token(batch_key, token)
+        returnValue(count)
 
+    @Manager.calls_manager
     def find_outbound_messages_matching(self, pattern, flags="i",
                                         batch_key=None, key="msg.content",
                                         ttl=None, wait=False):
@@ -377,14 +419,15 @@ class ConversationWrapper(object):
         :param bool wait:
             Wait with returning keys until the results are actually available.
         """
-        batch_key = batch_key or self.get_latest_batch_key()
+        batch_key = batch_key or (yield self.get_latest_batch_key())
         query = [{
             "key": key,
             "pattern": pattern,
             "flags": flags,
             }]
-        return self.mdb.find_outbound_keys_matching(batch_key, query, ttl=ttl,
-                                                    wait=wait)
+        resp = yield self.mdb.find_outbound_keys_matching(batch_key, query,
+                                                            ttl=ttl, wait=wait)
+        returnValue(resp)
 
     @Manager.calls_manager
     def get_outbound_messages_for_token(self, token, start=0, stop=-1,
@@ -392,7 +435,7 @@ class ConversationWrapper(object):
         """
         Fetch the results for a search token
         """
-        batch_key = batch_key or self.get_latest_batch_key()
+        batch_key = batch_key or (yield self.get_latest_batch_key())
         keys = yield self.mdb.get_keys_for_token(batch_key, token, start, stop)
         messages = []
         for bunch in self.mdb.outbound_messages.load_all_bunches(keys):
@@ -421,7 +464,7 @@ class ConversationWrapper(object):
             'outbound': self.mdb.get_outbound_message_keys,
         }.get(direction, self.mdb.get_inbound_message_keys)
 
-        batch_key = batch_key or self.get_latest_batch_key()
+        batch_key = batch_key or (yield self.get_latest_batch_key())
         bucket_func = bucket_func or (lambda dt: dt.date())
         results = yield message_callback(batch_key, with_timestamp=True)
         aggregates = defaultdict(list)
@@ -500,7 +543,7 @@ class ConversationWrapper(object):
         Calculate how many inbound messages per minute we've been
         doing on average.
         """
-        batch_key = batch_key or self.get_latest_batch_key()
+        batch_key = batch_key or (yield self.get_latest_batch_key())
         count = yield self.mdb.cache.count_inbound_throughput(batch_key,
             sample_time)
         returnValue(count / (sample_time / 60.0))
@@ -511,7 +554,7 @@ class ConversationWrapper(object):
         Calculate how many outbound messages per minute we've been
         doing on average.
         """
-        batch_key = batch_key or self.get_latest_batch_key()
+        batch_key = batch_key or (yield self.get_latest_batch_key())
         count = yield self.mdb.cache.count_outbound_throughput(batch_key,
             sample_time)
         returnValue(count / (sample_time / 60.0))
