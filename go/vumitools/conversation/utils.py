@@ -179,7 +179,16 @@ class ConversationWrapper(object):
         yield self.c.save()
 
     @Manager.calls_manager
-    def send_confirmation_link(self, msisdn, **extra_params):
+    def send_token(self, token, msisdn, **extra_params):
+        """
+        I was tempted to make this a generic 'send_message' function but
+        that gets messy with acquiring tags, it becomes unclear whether an
+        existing tag should be re-used or a new tag needs to be acquired.
+
+        In the case of sending a confirmation link it is clear that a new
+        tag needs to be acquired and when the conversation start is actually
+        confirmed that tag can be re-used.
+        """
         tag = yield self.acquire_tag()
         batch_id = yield self.start_batch(tag)
         msg_options = yield self.make_message_options(tag)
@@ -189,6 +198,7 @@ class ConversationWrapper(object):
             conversation_key=self.c.key,
             msg_options=msg_options,
             msisdn=msisdn,
+            token=token,
             **extra_params)
         self.c.batches.add_key(batch_id)
         yield self.c.save()
