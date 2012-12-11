@@ -1,4 +1,5 @@
 import urllib
+import urlparse
 
 from django.conf import settings
 from django.shortcuts import render, Http404, redirect
@@ -24,11 +25,18 @@ def token(request, token):
         raise Http404
     user_id = int(token_data['user_id'])
     redirect_to = token_data['redirect_to']
+    system_token = token_data['system_token']
 
     # If we're authorized and we're the same user_id then redirect to
     # where we need to be
     if not user_id or request.user.id == user_id:
-        return redirect(redirect_to)
+        path, _, qs = redirect_to.partition('?')
+        params = urlparse.parse_qs(qs)
+        # since the token can be custom we prepend the size of the user_token
+        # to the token being forwarded so the view handling the `redirect_to`
+        # can lookup the token and verify the system token.
+        params.update({'token': '%s-%s%s' % (len(token), token, system_token)})
+        return redirect('%s?%s' % (path, urllib.urlencode(params)))
 
     # If we got here then we need authentication and the user's either not
     # logged in or is logged in with a wrong account.
