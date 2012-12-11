@@ -44,16 +44,17 @@ class AccountForm(BootstrapForm):
             Fieldset('Verify your password',
                 'existing_password'))
 
-    def clean_existing_password(self):
+    def clean(self):
         """
         Checks whether the existing password matches the known password
         for this user because we only want to update these details
         if the user can actually supply their original password.
         """
-        password = self.cleaned_data['existing_password']
+        cleaned_data = self.cleaned_data
+        password = cleaned_data.get('existing_password')
         if not self.user.check_password(password):
-            raise forms.ValidationError('Invalid password provided')
-        return password
+            self._errors['existing_password'] = ['Invalid password provided']
+        return cleaned_data
 
     def clean_msisdn(self):
         """
@@ -63,10 +64,19 @@ class AccountForm(BootstrapForm):
         msisdn = self.cleaned_data['msisdn'].lstrip('+')
         if not msisdn:
             return ''
+
         if not (len(msisdn) > 5 and
                 all(c.isdigit() for c in msisdn)):
             raise forms.ValidationError('Please provide a valid phone number.')
-        return normalize_msisdn(msisdn,)
+        return normalize_msisdn(msisdn)
+
+    def clean_confirm_start_conversation(self):
+        confirm_start_conversation = self.cleaned_data[
+                                                'confirm_start_conversation']
+        msisdn = self.cleaned_data.get('msisdn')
+        if confirm_start_conversation and not msisdn:
+            self._errors['msisdn'] = ['Please provide a valid phone number.']
+        return confirm_start_conversation
 
 
 class RegistrationForm(BootstrapMixin, RegistrationFormUniqueEmail):
