@@ -192,14 +192,13 @@ class ConversationWrapper(object):
         tag = yield self.acquire_tag()
         batch_id = yield self.start_batch(tag)
         msg_options = yield self.make_message_options(tag)
-        yield self.dispatch_command('send_token_url',
+        yield self.dispatch_command('send_message',
             batch_id=batch_id,
-            conversation_type=self.c.conversation_type,
-            conversation_key=self.c.key,
+            to_addr=msisdn,
             msg_options=msg_options,
-            msisdn=msisdn,
-            token_url=token_url,
-            **extra_params)
+            content='Please visit %s to start your conversation.' % (
+                        token_url,),
+            )
         self.c.batches.add_key(batch_id)
         yield self.c.save()
 
