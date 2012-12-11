@@ -8,7 +8,7 @@ from django.core.paginator import PageNotAnInteger, EmptyPage
 from django.utils.decorators import method_decorator
 from django.contrib.sites.models import Site
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, Http404
 from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.conf.urls.defaults import url, patterns
@@ -20,11 +20,16 @@ from vumi.persist.redis_manager import RedisManager
 from go.vumitools.conversation.models import (
     CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
-from go.conversation.forms import ConversationForm, ConversationGroupForm
+from go.conversation.forms import (ConversationForm, ConversationGroupForm,
+                                    ConfirmConversationForm)
 from go.base import message_store_client as ms_client
 from go.base.utils import (make_read_only_form, conversation_or_404,
                             page_range_window)
 from go.base.token_manager import TokenManager
+
+
+redis = RedisManager.from_config(settings.VUMI_API_CONFIG['redis_manager'])
+token_manager = TokenManager(redis.sub_manager('token_manager'))
 
 
 class ConversationView(TemplateView):
@@ -205,9 +210,6 @@ class StartConversationView(ConversationView):
         return self.redirect_to('show', conversation_key=conversation.key)
 
     def _start_via_confirmation(self, request, profile, conversation):
-        redis = RedisManager.from_config(
-                                    settings.VUMI_API_CONFIG['redis_manager'])
-        token_manager = TokenManager(redis.sub_manager('token_manager'))
         # The URL the user will be redirected to post-confirmation
         redirect_to = self.get_view_url('confirm',
                             conversation_key=conversation.key)
@@ -232,7 +234,14 @@ class ConfirmConversationView(ConversationView):
     template_name = 'confirm'
 
     def get(self, request, conversation):
-        pass
+        token = request.GET.get('token')
+        token_data = token_manager.verify_get(token)
+        if not token_data:
+            raise Http404
+        return self.render_to_response({
+            'form': ConfirmConversationForm(initial={'token': token}),
+            'conversation': conversation,
+            })
 
 
 class ShowConversationView(ConversationView):
