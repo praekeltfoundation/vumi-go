@@ -24,6 +24,7 @@ class TokenManagerTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(token_data['user_id'], '')
         self.assertEqual(token_data['redirect_to'], '/some/path/')
         self.assertTrue(token_data['system_token'])
+        self.assertEqual(token_data['extra_params'], {})
 
     def test_token_provided(self):
         token = self.tm.generate('/some/path/', lifetime=10,
@@ -33,7 +34,7 @@ class TokenManagerTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(token_data['system_token'], 'ken')
 
     def test_unknown_token(self):
-        self.assertEqual(self.tm.get('foo'), {})
+        self.assertEqual(self.tm.get('foo'), None)
 
     def test_token_require_login(self):
         token = self.tm.generate('/path/', user_id=self.user.pk)
@@ -51,7 +52,7 @@ class TokenManagerTestCase(DjangoGoApplicationTestCase):
         self.client.login(username='username', password='password')
         response = self.client.get(token_url)
         self.assertTrue(
-            response['Location'].endswith('/path/?token=%s%s%s' % (
+            response['Location'].endswith('/path/?token=%s-%s%s' % (
                 len(token), token, token_data['system_token'])))
 
     def test_token_with_invalid_login(self):
@@ -72,11 +73,12 @@ class TokenManagerTestCase(DjangoGoApplicationTestCase):
 
     def test_token_verify(self):
         token = self.tm.generate('/foo/', token=('to', 'ken'))
-        self.assertEqual(self.tm.get(token, verify='bar'), {})
+        self.assertEqual(self.tm.get(token, verify='bar'), None)
         self.assertEqual(self.tm.get(token, verify='ken'), {
             'user_id': '',
             'system_token': 'ken',
             'redirect_to': '/foo/',
+            'extra_params': {},
             })
 
     def test_token_delete(self):
@@ -84,3 +86,9 @@ class TokenManagerTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(self.tm.get(token))
         self.assertTrue(self.tm.delete(token))
         self.assertFalse(self.tm.get(token))
+
+    def test_token_extra_params(self):
+        extra_params = {'one': 'two', 'three': 4}
+        token = self.tm.generate('/foo/', extra_params=extra_params)
+        token_data = self.tm.get(token)
+        self.assertEqual(token_data['extra_params'], extra_params)

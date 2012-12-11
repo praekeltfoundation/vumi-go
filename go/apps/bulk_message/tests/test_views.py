@@ -1,4 +1,5 @@
 from datetime import date
+import urllib
 
 from django.test.client import Client
 from django.core.urlresolvers import reverse
@@ -265,6 +266,19 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             '',  # csv ends with a blank line
             ]))
 
+
+class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
+
+    TEST_CONVERSATION_TYPE = u'bulk_message'
+
+    def setUp(self):
+        super(ConfirmBulkMessageTestCase, self).setUp()
+        self.setup_riak_fixtures()
+        self.client = Client()
+        self.client.login(username='username', password='password')
+        self.redis = self.get_redis_manager()
+        self.tm = TokenManager(self.redis.sub_manager('token_manager'))
+
     def test_confirm_start_conversation_get(self):
         """
         Test the start conversation view with the confirm_start_conversation
@@ -274,7 +288,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         profile.confirm_start_conversation = True
         profile.save()
 
-        conversation = self.get_wrapped_conv()
+        conversation = self.user_api.get_wrapped_conversation(self.conv_key)
 
         response = self.client.get(reverse('bulk_message:start', kwargs={
             'conversation_key': conversation.key
@@ -299,11 +313,11 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         profile.confirm_start_conversation = True
         profile.save()
 
-        conversation = self.get_wrapped_conv()
+        conversation = self.user_api.get_wrapped_conversation(self.conv_key)
 
         # mock the token generation
         with patch.object(TokenManager, 'generate_token') as mock_method:
-            mock_method.return_value = 'abcdef'
+            mock_method.return_value = ('abcdef', '123456')
             response = self.client.post(reverse('bulk_message:start', kwargs={
                 'conversation_key': conversation.key,
                 }))
@@ -312,7 +326,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             'conversation_key': conversation.key,
             }))
 
-        conversation = self.get_wrapped_conv()
+        conversation = self.user_api.get_wrapped_conversation(self.conv_key)
         [batch] = conversation.get_batches()
         [tag] = list(batch.tags)
         [contact] = self.get_contacts_for_conversation(conversation)
@@ -330,10 +344,90 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         expected_cmd = VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
             'send_message',
-            batch_id=batch.key,
-            msg_options=msg_options,
-            content='Please visit http://%s%s to start your conversation.' % (
-                site.domain, reverse('token', kwargs={'token': 'abcdef'})),
-            to_addr=profile.msisdn,
+            command_data={
+                'batch_id': batch.key,
+                'msg_options': msg_options,
+                'content':
+                    'Please visit http://%s%s to start your conversation.' % (
+                    site.domain, reverse('token', kwargs={'token': 'abcdef'})),
+                'to_addr': profile.msisdn,
+            }
         )
+        self.assertEqual(cmd, expected_cmd)
+
+    def test_confirmation_get(self):
+        conversation = self.user_api.get_wrapped_conversation(self.conv_key)
+        token = self.tm.generate('/foo/', user_id=self.user.pk)
+        token_data = self.tm.get(token)
+        full_token = '%s-%s%s' % (len(token), token,
+                                    token_data['system_token'])
+
+        response = self.client.get('%s?token=%s' % (
+            reverse('bulk_message:confirm', kwargs={
+                'conversation_key': conversation.key,
+            }), full_token))
+
+        self.assertContains(response, conversation.subject)
+        self.assertContains(response, conversation.message)
+
+    def test_confirmation_post(self):
+        conversation = self.user_api.get_wrapped_conversation(self.conv_key)
+
+        # we're faking this here, this would normally have happened when
+        # the confirmation SMS was sent out.
+        tag = conversation.acquire_tag()
+        # store manually so that when we acquire_existing_tag() later we get
+        # the one already used, not another random one from the same pool.
+        conversation.c.delivery_tag = unicode(tag[1])
+        batch_key = conversation.start_batch(tag)
+        conversation.batches.add_key(batch_key)
+        conversation.save()
+
+        token = self.tm.generate('/foo/', user_id=self.user.pk, extra_params={
+            'dedupe': True,
+            })
+        token_data = self.tm.get(token)
+        full_token = '%s-%s%s' % (len(token), token,
+                                    token_data['system_token'])
+
+        response = self.client.post(reverse('bulk_message:confirm', kwargs={
+            'conversation_key': conversation.key,
+            }), {
+                'token': full_token,
+            })
+
+        self.assertRedirects(response, '%s?%s' % (
+            reverse('bulk_message:confirm', kwargs={
+                'conversation_key': conversation.key,
+            }), urllib.urlencode({
+                'token': full_token,
+                'success': 1
+            })))
+
+        # reload the conversation because batches are cached.
+        conversation = self.user_api.get_wrapped_conversation(conversation.key)
+        batch_key = conversation.get_latest_batch_key()
+        batch = conversation.mdb.get_batch(batch_key)
+        [tag] = list(batch.tags)
+        [cmd] = self.get_api_commands_sent()
+
+        msg_options = {
+            "transport_type": "sms",
+            "from_addr": "default10001",
+            "helper_metadata": {
+                "tag": {"tag": list(tag)},
+                "go": {"user_account": conversation.user_account.key},
+                },
+            }
+
+        expected_cmd = VumiApiCommand.command(
+            '%s_application' % (conversation.conversation_type,), 'start',
+            batch_id=batch.key,
+            dedupe=True,
+            msg_options=msg_options,
+            conversation_type=conversation.conversation_type,
+            conversation_key=conversation.key,
+            is_client_initiated=conversation.is_client_initiated(),
+            )
+
         self.assertEqual(cmd, expected_cmd)

@@ -3,10 +3,12 @@
 
 {% block content %}
 <div>
+    <img src="{{STATIC_URL}}pics/header/logo.png"/>
     <h2>Please Confirm</h2>
+    {% include "base/includes/messages.html" %}
     <p>
         You are about to start a conversation. Please review the details below
-        and click on "Confirm" if everything is in order.
+        and click confirm if everything is in order.
     </p>
     <table class="table table-bordered">
         <thead>
@@ -30,11 +32,13 @@
         </tbody>
     </table>
 </div>
-<form>
+{% if not success %}
+<form method="post">
     {{form}}
     <div class="form-actions">
         <input type="submit" class="btn btn-primary" data-loading-text="saving..." value="Confirm">
     </div>
     {% csrf_token %}
 </form>
+{% endif %}
 {% endblock %}

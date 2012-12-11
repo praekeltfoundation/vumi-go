@@ -1,4 +1,5 @@
 import csv
+import urllib
 from datetime import datetime
 from StringIO import StringIO
 
@@ -26,10 +27,6 @@ from go.base import message_store_client as ms_client
 from go.base.utils import (make_read_only_form, conversation_or_404,
                             page_range_window)
 from go.base.token_manager import TokenManager
-
-
-redis = RedisManager.from_config(settings.VUMI_API_CONFIG['redis_manager'])
-token_manager = TokenManager(redis.sub_manager('token_manager'))
 
 
 class ConversationView(TemplateView):
@@ -210,12 +207,23 @@ class StartConversationView(ConversationView):
         return self.redirect_to('show', conversation_key=conversation.key)
 
     def _start_via_confirmation(self, request, profile, conversation):
+
+        params = {}
+        params.update(self.conversation_start_params or {})
+
+        if self.conversation_initiator != 'client':
+            params['dedupe'] = request.POST.get('dedupe') == '1'
+
         # The URL the user will be redirected to post-confirmation
         redirect_to = self.get_view_url('confirm',
                             conversation_key=conversation.key)
         # The token to be sent.
         site = Site.objects.get_current()
-        token = token_manager.generate(redirect_to, user_id=request.user.id)
+        redis = RedisManager.from_config(
+                                    settings.VUMI_API_CONFIG['redis_manager'])
+        token_manager = TokenManager(redis.sub_manager('token_manager'))
+        token = token_manager.generate(redirect_to, user_id=request.user.id,
+                                        extra_params=params)
         token_url = 'http://%s%s' % (site.domain,
                                 reverse('token', kwargs={'token': token}))
         conversation.send_token_url(token_url, profile.msisdn)
@@ -234,12 +242,56 @@ class ConfirmConversationView(ConversationView):
     template_name = 'confirm'
 
     def get(self, request, conversation):
+        """
+        NOTE:   we need the hack involving `success` in the query string here
+                because we don't have a good way to telling whether a
+                conversation has started yet or not. The current implementation
+                does a guess based on whether or not the conversation has any
+                batch keys assigned, which in the current scenario breaks since
+                sending a conversation confirmation SMS will assign a batch key
+                while not actually starting the conversation.
+        """
+        redis = RedisManager.from_config(
+                                    settings.VUMI_API_CONFIG['redis_manager'])
+        token_manager = TokenManager(redis.sub_manager('token_manager'))
         token = request.GET.get('token')
         token_data = token_manager.verify_get(token)
         if not token_data:
             raise Http404
         return self.render_to_response({
             'form': ConfirmConversationForm(initial={'token': token}),
+            'conversation': conversation,
+            'success': request.GET.get('success'),  # FIXME
+            })
+
+    def post(self, request, conversation):
+        token = request.POST.get('token')
+        redis = RedisManager.from_config(
+                                    settings.VUMI_API_CONFIG['redis_manager'])
+        token_manager = TokenManager(redis.sub_manager('token_manager'))
+        token_data = token_manager.verify_get(token)
+        if not token_data:
+            raise Http404
+
+        params = token_data.get('extra_params', {})
+        confirmation_form = ConfirmConversationForm(request.POST)
+        if confirmation_form.is_valid():
+            try:
+                conversation.start(acquire_tag=False, **params)
+                messages.info(request, '%s started succesfully!' % (
+                                            self.conversation_display_name,))
+                return redirect('%s?%s' % (
+                    self.get_view_url('confirm',
+                        conversation_key=conversation.key),
+                    urllib.urlencode({
+                        'token': token,
+                        'success': 1,
+                        })))
+            except ConversationSendError as error:
+                messages.error(request, str(error))
+
+        return self.render_to_response({
+            'form': confirmation_form,
             'conversation': conversation,
             })
 
