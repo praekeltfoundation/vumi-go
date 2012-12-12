@@ -123,8 +123,11 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
             sent += yield self.vumi_api.mdb.batch_outbound_count(batch_id)
             received += yield self.vumi_api.mdb.batch_inbound_count(batch_id)
 
-        " get registered cout from multipoll application method "
+        poll_id_prefix = "poll-%" % conversation.key
+        registered = yield self.get_registered_count(poll_id_prefix)
 
+        self.publish_conversation_metric(
+            conversation, 'registered_users', registered)
         self.publish_conversation_metric(
             conversation, 'messages_sent', sent)
         self.publish_conversation_metric(
