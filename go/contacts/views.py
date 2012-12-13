@@ -31,6 +31,7 @@ def _group_url(group_key):
 def index(request):
     return redirect(reverse('contacts:groups'))
 
+
 @login_required
 def groups(request):
     contact_store = request.user_api.contact_store
@@ -250,6 +251,7 @@ def _smart_group(request, contact_store, group):
         'group': group,
         'selected_contacts': selected_contacts,
         'group_form': smart_group_form,
+        'member_count': len(keys),
     })
 
 
