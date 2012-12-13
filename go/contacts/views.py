@@ -210,6 +210,7 @@ def _static_group(request, contact_store, group):
         'query': request.GET.get('q'),
         'selected_letter': selected_letter,
         'selected_contacts': selected_contacts,
+        'member_count': contact_store.count_contacts_for_group(group),
         })
 
     return render(request, 'contacts/group.html', context)
