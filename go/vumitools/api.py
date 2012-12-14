@@ -181,9 +181,10 @@ class VumiUserApi(object):
                         for application in sorted(applications)
                         if application in app_settings]))
 
+    @Manager.calls_manager
     def list_groups(self):
-        return sorted(self.contact_store.list_groups(),
-            key=lambda group: group.name)
+        returnValue(sorted((yield self.contact_store.list_groups()),
+            key=lambda group: group.name))
 
     def new_conversation(self, *args, **kw):
         return self.conversation_store.new_conversation(*args, **kw)

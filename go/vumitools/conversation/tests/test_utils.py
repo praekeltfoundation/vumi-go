@@ -384,3 +384,12 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
                 for i in range(9, -1, -1)])
         for bucket in buckets:
             self.assertEqual(bucket, 2)
+
+    @inlineCallbacks
+    def test_get_groups(self):
+        groups = yield self.user_api.list_groups()
+        self.assertEqual([], groups)
+        group = yield self.user_api.contact_store.new_group(u'test group')
+        self.conv.groups.add_key(group.key)
+        [found_group] = yield self.conv.get_groups()
+        self.assertEqual(found_group.key, group.key)

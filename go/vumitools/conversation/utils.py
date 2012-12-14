@@ -137,6 +137,16 @@ class ConversationWrapper(object):
         returnValue(int(status['ack'] / float(status['sent']) * 100))
 
     @Manager.calls_manager
+    def get_groups(self):
+        """
+        Convenience method for loading all groups linked to this conversation.
+        """
+        groups = []
+        for bunch in self.groups.load_all_bunches():
+            groups.extend((yield bunch))
+        returnValue(groups)
+
+    @Manager.calls_manager
     def make_message_options(self, tag):
         msg_options = {}
         # TODO: transport_type is probably irrelevant
