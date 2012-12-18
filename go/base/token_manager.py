@@ -76,12 +76,11 @@ class TokenManager(object):
 
     def get(self, token, verify=None):
         """
-        Retrieve the data for the given token, it it doesn't exist it'll
-        return an empty dictionary.
+        Retrieve the data for the given token. If there is no match then `None`
+        will be returned.
 
         :param str verify:
-            Provide the system_token if matching needs to occur. If there
-            is no match then an empty dictionary will be returned.
+            Provide the system_token if matching needs to occur.
         """
         if not self.redis.exists(token):
             return None
