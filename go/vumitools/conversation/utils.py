@@ -206,6 +206,10 @@ class ConversationWrapper(object):
         if not batch_keys:
             return
 
+        # If there's only one then it's easy.
+        if len(batch_keys) == 1:
+            returnValue(batch_keys[0])
+
         # Cache this for however long this conversation object lives
         if hasattr(self, '_latest_batch_key'):
             returnValue(self._latest_batch_key)
@@ -226,6 +230,7 @@ class ConversationWrapper(object):
                                     key=lambda (key, ts): ts, reverse=True)
             latest = sorted_keys[0]
             self._latest_batch_key = latest[0]  # return only the key
+            returnValue(self._latest_batch_key)
 
         # If there hasn't been any outbound traffic then just return the first
         # that Riak returned and hope for the best.
