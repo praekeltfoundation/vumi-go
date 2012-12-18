@@ -4,7 +4,7 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.base.token_manager import TokenManager
+from go.base.token_manager import TokenManager, InvalidToken, MalformedToken
 
 
 class TokenManagerTestCase(DjangoGoApplicationTestCase):
@@ -71,9 +71,13 @@ class TokenManagerTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(token_url)
         self.assertTrue(response.status_code, 404)
 
+    def test_malformed_token(self):
+        self.assertRaises(MalformedToken, self.tm.verify_get,
+                            'A-token-starting-with-a-digit')
+
     def test_token_verify(self):
         token = self.tm.generate('/foo/', token=('to', 'ken'))
-        self.assertEqual(self.tm.get(token, verify='bar'), None)
+        self.assertRaises(InvalidToken, self.tm.get, token, verify='bar')
         self.assertEqual(self.tm.get(token, verify='ken'), {
             'user_id': '',
             'system_token': 'ken',
