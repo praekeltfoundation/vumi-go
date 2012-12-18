@@ -2,6 +2,18 @@ from uuid import uuid4
 import json
 
 
+class TokenManagerException(Exception):
+    pass
+
+
+class InvalidToken(TokenManagerException):
+    pass
+
+
+class MalformedToken(TokenManagerException):
+    pass
+
+
 class TokenManager(object):
     """
     A system for managing 1-time tokens that can expire.
@@ -76,7 +88,7 @@ class TokenManager(object):
 
         token_data = self.redis.hgetall(token)
         if verify is not None and verify != token_data.get('system_token'):
-            return None
+            raise InvalidToken()
 
         token_data['extra_params'] = json.loads(token_data['extra_params'])
         return token_data
@@ -87,6 +99,8 @@ class TokenManager(object):
         URL.
         """
         user_token_length, _, token = full_token.partition('-')
+        if not user_token_length.isdigit():
+            raise MalformedToken()
         user_token = token[0:int(user_token_length)]
         system_token = token[int(user_token_length):]
         return self.get(user_token, verify=system_token)
