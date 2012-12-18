@@ -118,9 +118,10 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
                                     start_timestamp=now - timedelta(days=1))
         yield self.store_outbound(batch2, start_timestamp=now)
 
-        batch_key = yield self.conv.get_latest_batch_key()
+        conv = yield self.user_api.get_wrapped_conversation(self.conv.key)
+        batch_key = yield conv.get_latest_batch_key()
         self.assertEqual(batch_key, batch2)
-        self.assertEqual(len(self.conv.batches.keys()), 2)
+        self.assertEqual(len(conv.batches.keys()), 2)
 
     @inlineCallbacks
     def test_count_replies(self):
