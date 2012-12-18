@@ -193,9 +193,16 @@ class ConversationWrapper(object):
         """
         Here be dragons.
 
-        FIXME:  We're not storing timestamps on our batches and so we have no
+        FIXME:  The existince of `get_latest_batch_key()` is a symptom of other
+                things being wrong. We need to revisit how batches are stored
+                on a conversation and whether we even need multiple batches
+                per conversation.
+
+                We're not storing timestamps on our batches and so we have no
                 accurate way of telling which batch was most recenty acquired
-                for this conversation.
+                for this conversation. On top of this, our existing migration
+                tools aren't mature enough to be able to describe the migration
+                needed.
 
                 Our current work around is looking at the cache to find out
                 which batch_key had the last outbound message sent and return
@@ -204,7 +211,7 @@ class ConversationWrapper(object):
         batch_keys = self.get_batch_keys()
 
         if not batch_keys:
-            return
+            returnValue(None)
 
         # If there's only one then it's easy.
         if len(batch_keys) == 1:
