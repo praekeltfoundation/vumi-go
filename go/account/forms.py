@@ -61,12 +61,12 @@ class AccountForm(BootstrapForm):
         Make a best effort guess at determining whether this msisdn
         is a valid msisdn
         """
-        msisdn = self.cleaned_data['msisdn'].lstrip('+')
-        if not msisdn:
+        if not self.cleaned_data['msisdn']:
             return ''
 
-        if not (len(msisdn) > 5 and
-                all(c.isdigit() for c in msisdn)):
+        msisdn = ''.join([char for char in self.cleaned_data['msisdn']
+                            if char.isdigit()])
+        if len(msisdn) <= 5:
             raise forms.ValidationError('Please provide a valid phone number.')
         return normalize_msisdn(msisdn)
 

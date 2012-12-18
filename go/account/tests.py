@@ -14,9 +14,6 @@ class AccountTestCase(DjangoGoApplicationTestCase):
         self.client = Client()
         self.client.login(username='username', password='password')
 
-    def tearDown(self):
-        pass
-
     def test_password_check(self):
         response = self.client.post(reverse('account:index'), {
             'name': 'foo',
