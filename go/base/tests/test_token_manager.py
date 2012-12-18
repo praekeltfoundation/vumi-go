@@ -4,7 +4,10 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.base.token_manager import TokenManager
+from go.base.token_manager import (TokenManager, InvalidToken, MalformedToken,
+                                    TokenManagerException)
+
+from mock import patch
 
 
 class TokenManagerTestCase(DjangoGoApplicationTestCase):
@@ -71,9 +74,13 @@ class TokenManagerTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(token_url)
         self.assertTrue(response.status_code, 404)
 
+    def test_malformed_token(self):
+        self.assertRaises(MalformedToken, self.tm.verify_get,
+                            'A-token-starting-with-a-digit')
+
     def test_token_verify(self):
         token = self.tm.generate('/foo/', token=('to', 'ken'))
-        self.assertEqual(self.tm.get(token, verify='bar'), None)
+        self.assertRaises(InvalidToken, self.tm.get, token, verify='bar')
         self.assertEqual(self.tm.get(token, verify='ken'), {
             'user_id': '',
             'system_token': 'ken',
@@ -92,3 +99,20 @@ class TokenManagerTestCase(DjangoGoApplicationTestCase):
         token = self.tm.generate('/foo/', extra_params=extra_params)
         token_data = self.tm.get(token)
         self.assertEqual(token_data['extra_params'], extra_params)
+
+    def test_reuse_existing_token(self):
+        token = ('to', 'ken')
+        self.tm.generate('/foo/', token=token)
+        self.assertRaises(TokenManagerException, self.tm.generate, '/foo/',
+                            token=token)
+
+    def test_race_condition(self):
+        # claim these
+        self.tm.generate('/foo/', token=('to1', 'ken'))
+        self.tm.generate('/foo/', token=('to2', 'ken'))
+        # patch the generate command to first return the ones that already
+        # exist it should, continue trying until an un-used token is found
+        with patch.object(TokenManager, 'generate_token') as mock:
+            mock.side_effect = [('to1', 'ken'), ('to2', 'ken'), ('to3', 'ken')]
+            user_token = self.tm.generate('/foo/')
+        self.assertEqual(user_token, 'to3')

@@ -2,6 +2,18 @@ from uuid import uuid4
 import json
 
 
+class TokenManagerException(Exception):
+    pass
+
+
+class InvalidToken(TokenManagerException):
+    pass
+
+
+class MalformedToken(TokenManagerException):
+    pass
+
+
 class TokenManager(object):
     """
     A system for managing 1-time tokens that can expire.
@@ -50,33 +62,45 @@ class TokenManager(object):
             data that can be encoded as JSON.
         """
         lifetime = lifetime or self.DEFAULT_LIFETIME
-        a = token or self.generate_token()
-        user_token, system_token = a
+        user_token, system_token = token or self.generate_token()
         extra_params = extra_params or {}
-        self.redis.hmset(user_token, {
-            'redirect_to': redirect_to,
-            'user_id': user_id or '',
-            'system_token': system_token,
-            'extra_params': json.dumps(extra_params),
-            })
-        self.redis.expire(user_token, lifetime)
-        return user_token
+
+        # This is to avoid a possible race condition which could occur in
+        # `generate_token()` if two identical user_tokens are generated before
+        # either is stored.
+        if self.redis.hsetnx(user_token, 'system_token', system_token):
+            self.redis.hmset(user_token, {
+                'redirect_to': redirect_to,
+                'user_id': user_id or '',
+                'extra_params': json.dumps(extra_params),
+                })
+            self.redis.expire(user_token, lifetime)
+            return user_token
+
+        # If we've been given a token then we need to raise an exception as
+        # that's not something we can recover from.
+        if token:
+            raise TokenManagerException('This token has already been issued.')
+
+        # If we end up here then we've hit the race condition and we need to
+        # retry.
+        return self.generate(redirect_to, user_id=user_id, lifetime=lifetime,
+            token=token, extra_params=extra_params)
 
     def get(self, token, verify=None):
         """
-        Retrieve the data for the given token, it it doesn't exist it'll
-        return an empty dictionary.
+        Retrieve the data for the given token. If there is no match then `None`
+        will be returned.
 
         :param str verify:
-            Provide the system_token if matching needs to occur. If there
-            is no match then an empty dictionary will be returned.
+            Provide the system_token if matching needs to occur.
         """
         if not self.redis.exists(token):
             return None
 
         token_data = self.redis.hgetall(token)
         if verify is not None and verify != token_data.get('system_token'):
-            return None
+            raise InvalidToken()
 
         token_data['extra_params'] = json.loads(token_data['extra_params'])
         return token_data
@@ -87,6 +111,8 @@ class TokenManager(object):
         URL.
         """
         user_token_length, _, token = full_token.partition('-')
+        if not user_token_length.isdigit():
+            raise MalformedToken()
         user_token = token[0:int(user_token_length)]
         system_token = token[int(user_token_length):]
         return self.get(user_token, verify=system_token)
