@@ -121,7 +121,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     def test_consume_events(self):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
-        batch_id = conversation.get_latest_batch_key()
+        batch_id = yield conversation.get_latest_batch_key()
         window_id = self.app.get_window_id(conversation.key, batch_id)
         yield self._amqp.kick_delivery()
         self.clock.advance(self.app.monitor_interval + 1)
