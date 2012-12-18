@@ -62,17 +62,30 @@ class TokenManager(object):
             data that can be encoded as JSON.
         """
         lifetime = lifetime or self.DEFAULT_LIFETIME
-        a = token or self.generate_token()
-        user_token, system_token = a
+        user_token, system_token = token or self.generate_token()
         extra_params = extra_params or {}
-        self.redis.hmset(user_token, {
-            'redirect_to': redirect_to,
-            'user_id': user_id or '',
-            'system_token': system_token,
-            'extra_params': json.dumps(extra_params),
-            })
-        self.redis.expire(user_token, lifetime)
-        return user_token
+
+        # This is to avoid a possible race condition which could occur in
+        # `generate_token()` if two identical user_tokens are generated before
+        # either is stored.
+        if self.redis.hsetnx(user_token, 'system_token', system_token):
+            self.redis.hmset(user_token, {
+                'redirect_to': redirect_to,
+                'user_id': user_id or '',
+                'extra_params': json.dumps(extra_params),
+                })
+            self.redis.expire(user_token, lifetime)
+            return user_token
+
+        # If we've been given a token then we need to raise an exception as
+        # that's not something we can recover from.
+        if token:
+            raise TokenManagerException('This token has already been issued.')
+
+        # If we end up here then we've hit the race condition and we need to
+        # retry.
+        return self.generate(redirect_to, user_id=user_id, lifetime=lifetime,
+            token=token, extra_params=extra_params)
 
     def get(self, token, verify=None):
         """
