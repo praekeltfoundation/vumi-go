@@ -40,42 +40,12 @@
   </ul>
    <div class="tab-content">
     <div class="tab-pane active" id="info">
-        <h3>Account Information</h3><br>
-        <form class="form-horizontal" action="" method="post" id="accountinfo">
-          <fieldset>
-            {% for field in account_form.visible_fields %}
-                <div class="control-group {% if field.errors %}error{% endif %}">
-                  <label class="control-label" for="input01">{{field.label}}</label>
-                  <div class="controls {% if field.name == 'email_address' or field.name == 'password' %}input-prepend{% endif %}">
-                    {% if field.name == 'email_address' %}<span class="add-on"><i class="icon-envelope"></i></span>{% endif %}
-                    {% if field.name == 'password' %}<span class="add-on"><i class="icon-key"></i></span>{% endif %}
-                    {{field}}
-                    {% if field.errors %}
-                        {% for error in field.errors %}
-                            <span class="help-inline">{{error}}</span>
-                        {% endfor %}
-                    {% endif %}
-                  </div>
-                </div>
-            {% endfor %}
-
-            <div class="control-group">
-                <label class="control-label">
-                    Credits Available
-                </label>
-                <div class="controls">
-                    <input class="input-xlarge" readonly="readonly" value="{{account_credits}}">
-                    <span class="help-inline">
-                        Use the 'Contact Us' form to email us if you want to
-                        buy more credits.
-                    </span>
-                </div>
-            </div>
+        <form class="form-horizontal" action="" method="post">
+            {{account_form}}
             <div class="form-actions">
                 <input type="submit" class="btn btn-primary" data-loading-text="saving..." name="_account" value="Save changes">
             </div>
-          </fieldset>
-          {% csrf_token %}
+            {% csrf_token %}
         </form>
     </div>
 
