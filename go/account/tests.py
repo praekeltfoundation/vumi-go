@@ -75,7 +75,8 @@ class AccountTestCase(DjangoGoApplicationTestCase):
                 })
             self.assertRedirects(response, reverse('account:index'))
             profile = User.objects.get(pk=self.user.pk).get_profile()
-            self.assertEqual(profile.msisdn, '+27761234567')
+            user_account = profile.get_user_account()
+            self.assertEqual(user_account.msisdn, '+27761234567')
 
     def test_update_msisdn_invalid(self):
         invalid = ['+123', '123', 'abc']
@@ -91,7 +92,8 @@ class AccountTestCase(DjangoGoApplicationTestCase):
             self.assertFormError(response, 'account_form', 'msisdn',
                 'Please provide a valid phone number.')
             profile = User.objects.get(pk=self.user.pk).get_profile()
-            self.assertEqual(profile.msisdn, None)
+            user_account = profile.get_user_account()
+            self.assertEqual(user_account.msisdn, None)
 
     def test_confirm_start_conversation(self):
         self.client.post(reverse('account:index'), {
@@ -102,7 +104,8 @@ class AccountTestCase(DjangoGoApplicationTestCase):
             '_account': True,
             })
         profile = User.objects.get(pk=self.user.pk).get_profile()
-        self.assertFalse(profile.confirm_start_conversation)
+        user_account = profile.get_user_account()
+        self.assertFalse(user_account.confirm_start_conversation)
 
         self.client.post(reverse('account:index'), {
             'name': 'foo',
@@ -113,7 +116,8 @@ class AccountTestCase(DjangoGoApplicationTestCase):
             '_account': True,
             })
         profile = User.objects.get(pk=self.user.pk).get_profile()
-        self.assertFalse(profile.confirm_start_conversation)
+        user_account = profile.get_user_account()
+        self.assertFalse(user_account.confirm_start_conversation)
 
         self.client.post(reverse('account:index'), {
             'name': 'foo',
@@ -125,7 +129,8 @@ class AccountTestCase(DjangoGoApplicationTestCase):
             '_account': True,
             })
         profile = User.objects.get(pk=self.user.pk).get_profile()
-        self.assertTrue(profile.confirm_start_conversation)
+        user_account = profile.get_user_account()
+        self.assertTrue(user_account.confirm_start_conversation)
 
     def test_require_msisdn_if_confirm_start_conversation(self):
         response = self.client.post(reverse('account:index'), {
