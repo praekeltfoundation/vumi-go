@@ -128,10 +128,10 @@ class BulkMessageApplication(GoApplicationWorker):
         command_data = kwargs['command_data']
         log.info('Processing send_message: %s' % kwargs)
         yield self.send_message(
-            command_data['batch_id'],
-            command_data['to_addr'],
-            command_data['content'],
-            command_data['msg_options'])
+                command_data['batch_id'],
+                command_data['to_addr'],
+                command_data['content'],
+                command_data['msg_options'])
 
     @inlineCallbacks
     def collect_metrics(self, user_api, conversation_key):
