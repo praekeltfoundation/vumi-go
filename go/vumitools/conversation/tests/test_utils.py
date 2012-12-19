@@ -172,7 +172,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         batch_key = yield self.conv.get_latest_batch_key()
         [msg] = yield self.store_inbound(batch_key, count=1)
         [reply] = yield self.conv.received_messages()
-        self.assertEqual(msg, reply)
+        self.assertEqual(msg['message_id'], reply['message_id'])
 
     @inlineCallbacks
     def test_sent_messages(self):
@@ -191,7 +191,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         batch_key = yield self.conv.get_latest_batch_key()
         [msg] = yield self.store_outbound(batch_key, count=1)
         [sent_message] = yield self.conv.sent_messages()
-        self.assertEqual(msg, sent_message)
+        self.assertEqual(msg['message_id'], sent_message['message_id'])
 
     @inlineCallbacks
     def test_get_tags(self):

@@ -3,6 +3,7 @@
 from django import forms
 from django.http import Http404
 from django.conf import settings
+
 from go.vumitools.api import VumiUserApi
 
 
@@ -68,3 +69,4 @@ def page_range_window(page, padding):
             page.paginator.num_pages + 1)
     else:
         return range(current_page - padding + 1, current_page + padding)
+
