@@ -31,12 +31,6 @@ class UserProfile(models.Model):
     """A profile for a user"""
     user = models.OneToOneField('auth.User')
     user_account = models.CharField(max_length=100)
-    # msisdn = models.CharField(max_length=100, null=True)
-    # TODO: this needs to grow into a more elaborate permission system but
-    #       I don't have enough of an overview yet to design that.
-    #       I *think* we could use Django's permissions machinery and then
-    #       use that to also start working with feature flags.
-    # confirm_start_conversation = models.BooleanField(default=False)
 
     def __unicode__(self):
         return u' '.join([self.user.first_name, self.user.last_name])
