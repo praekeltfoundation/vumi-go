@@ -11,7 +11,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue, maybeDeferred
 from twisted.internet.task import LoopingCall
 
 from vumi.application.sandbox import SandboxResource
-from vumi.persist.fields import Unicode, ForeignKey, JsonField
+from vumi.persist.fields import Unicode, ForeignKey, Json
 from vumi.persist.model import Model
 from vumi import log
 from go.vumitools.account import UserAccount, PerAccountStore
@@ -26,7 +26,7 @@ class MetricsResource(SandboxResource):
     def setup_resource(self):
         metric_interval = self.config.get('metric_interval',
                                           self.DEFAULT_METRIC_INTERVAL)
-        self.metrics_manager = MetricsStoreManager(
+        self.metrics_manager = MetricStoreManager(
             self.app_worker.vumi_api, metric_interval,
             update_callback=self._update_holodeck)
 
@@ -63,7 +63,7 @@ class MetricsBundle(Model):
     """A metric store attached to an account"""
     user_account = ForeignKey(UserAccount)
     name = Unicode(max_length=255, index=True)
-    metrics = JsonField()
+    metrics = Json()
 
 
 class MetricsBundleStore(PerAccountStore):
@@ -84,6 +84,13 @@ class MetricEvent(object):
             timestamp = time.time()
         self.timestamp = timestamp
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return all((self.event == other.event, self.store == other.store,
+                    self.metric == other.metric, self.value == other.value,
+                    self.timestamp == other.timestamp))
+
     def to_json(self):
         return json.dumps({'event': self.event, 'store': self.store,
                            'metric': self.metric, 'value': self.value,
@@ -94,7 +101,9 @@ class MetricEvent(object):
         return cls(**json.loads(data))
 
 
-class MetricsStoreManager(object):
+class MetricStoreManager(object):
+
+    looping_call = LoopingCall
 
     def __init__(self, api, metric_interval, polling_interval=None,
                  update_callback=None):
@@ -106,11 +115,11 @@ class MetricsStoreManager(object):
                                  else metric_interval)
         self.update_callback = update_callback
 
-        self.update_loop = LoopingCall(self.process_updated_stores)
+        self.update_loop = self.looping_call(self.process_updated_stores)
         self.update_loop_done = self.update_loop.start(self.polling_interval)
 
     @inlineCallbacks
-    def stop(self, stop_redis=True):
+    def stop(self):
         if self.update_loop.running:
             self.update_loop.stop()
             yield self.update_loop_done
@@ -172,8 +181,8 @@ class MetricsStoreManager(object):
         events_key = self.events_key(store_id)
         events = yield self.redis.zrange(events_key, 0, 1)
         if not events:
-            return None
-        return json.loads(events[0])
+            returnValue(None)
+        returnValue(json.loads(events[0]))
 
     @inlineCallbacks
     def add_event(self, user_account_id, event):
@@ -184,7 +193,7 @@ class MetricsStoreManager(object):
     @inlineCallbacks
     def process_updated_stores(self):
         while True:
-            store_id = yield self.pop_updated_store()
+            store_id = yield self.pop_updated()
             if store_id is None:
                 break
             # most recently completed metric interval
