@@ -285,8 +285,9 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         enabled for the account's profile.
         """
         profile = self.user.get_profile()
-        profile.confirm_start_conversation = True
-        profile.save()
+        account = profile.get_user_account()
+        account.confirm_start_conversation = True
+        account.save()
 
         conversation = self.user_api.get_wrapped_conversation(self.conv_key)
 
@@ -309,9 +310,10 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         """
 
         profile = self.user.get_profile()
-        profile.msisdn = '+27761234567'
-        profile.confirm_start_conversation = True
-        profile.save()
+        account = profile.get_user_account()
+        account.msisdn = u'+27761234567'
+        account.confirm_start_conversation = True
+        account.save()
 
         conversation = self.user_api.get_wrapped_conversation(self.conv_key)
 
@@ -334,10 +336,15 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
             "transport_type": "sms",
             "from_addr": "default10001",
             "helper_metadata": {
-                "tag": {"tag": list(tag)},
-                "go": {"user_account": conversation.user_account.key},
+                "tag": {
+                    "tag": list(tag)
                 },
-            }
+                "go": {
+                    "user_account": conversation.user_account.key,
+                    "sensitive": True,
+                },
+            },
+        }
 
         [cmd] = self.get_api_commands_sent()
         site = Site.objects.get_current()
@@ -350,7 +357,7 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
                 'content':
                     'Please visit http://%s%s to start your conversation.' % (
                     site.domain, reverse('token', kwargs={'token': 'abcdef'})),
-                'to_addr': profile.msisdn,
+                'to_addr': account.msisdn,
             }
         )
         self.assertEqual(cmd, expected_cmd)
@@ -406,8 +413,14 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
 
         # reload the conversation because batches are cached.
         conversation = self.user_api.get_wrapped_conversation(conversation.key)
-        batch_key = conversation.get_latest_batch_key()
-        batch = conversation.mdb.get_batch(batch_key)
+        # ugly hack because grabbing the latest batch key here is tricky
+        # because we `get_latest_batch_key()` depends on the cache being
+        # populated which at this point it isn't yet.
+        batch_keys = conversation.get_batch_keys()
+        self.assertEqual(len(batch_keys), 2)
+        [latest_batch_key] = [bk for bk in batch_keys if bk != batch_key]
+
+        batch = conversation.mdb.get_batch(latest_batch_key)
         [tag] = list(batch.tags)
         [cmd] = self.get_api_commands_sent()
 

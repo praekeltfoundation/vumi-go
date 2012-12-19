@@ -160,6 +160,7 @@ class StartConversationView(ConversationView):
 
     def get(self, request, conversation):
         profile = request.user.get_profile()
+        account = profile.get_user_account()
 
         conversation_form = make_read_only_form(self.make_conversation_form(
                 request.user_api, instance=conversation, initial={}))
@@ -172,7 +173,7 @@ class StartConversationView(ConversationView):
                     'user_profile': profile,
                     'send_messages': False,
                     'confirm_start_conversation':
-                        profile.confirm_start_conversation,
+                        account.confirm_start_conversation,
                     'conversation': conversation,
                     })
         else:
@@ -184,14 +185,14 @@ class StartConversationView(ConversationView):
                     'user_profile': profile,
                     'send_messages': True,
                     'confirm_start_conversation':
-                        profile.confirm_start_conversation,
+                        account.confirm_start_conversation,
                     'conversation': conversation,
                     'conversation_form': conversation_form,
                     'group_form': group_form,
                     'groups': conv_groups,
                     })
 
-    def _start_conversation(self, request, profile, conversation):
+    def _start_conversation(self, request, conversation):
         params = {}
         params.update(self.conversation_start_params or {})
 
@@ -206,7 +207,7 @@ class StartConversationView(ConversationView):
                              '%s started' % (self.conversation_display_name,))
         return self.redirect_to('show', conversation_key=conversation.key)
 
-    def _start_via_confirmation(self, request, profile, conversation):
+    def _start_via_confirmation(self, request, account, conversation):
 
         params = {}
         params.update(self.conversation_start_params or {})
@@ -226,16 +227,17 @@ class StartConversationView(ConversationView):
                                         extra_params=params)
         token_url = 'http://%s%s' % (site.domain,
                                 reverse('token', kwargs={'token': token}))
-        conversation.send_token_url(token_url, profile.msisdn)
+        conversation.send_token_url(token_url, account.msisdn)
         messages.info(request, 'Confirmation request sent.')
         return self.redirect_to('show', conversation_key=conversation.key)
 
     def post(self, request, conversation):
         profile = request.user.get_profile()
-        if profile.confirm_start_conversation:
-            return self._start_via_confirmation(request, profile, conversation)
+        account = profile.get_user_account()
+        if account.confirm_start_conversation:
+            return self._start_via_confirmation(request, account, conversation)
         else:
-            return self._start_conversation(request, profile, conversation)
+            return self._start_conversation(request, conversation)
 
 
 class ConfirmConversationView(ConversationView):
