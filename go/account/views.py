@@ -10,12 +10,13 @@ from go.account.forms import EmailForm, AccountForm
 @login_required
 def index(request):
     profile = request.user.get_profile()
+    account = profile.get_user_account()
     account_form = AccountForm(request.user, initial={
         'name': request.user.first_name,
         'surname': request.user.last_name,
         'email_address': request.user.username,
-        'msisdn': profile.msisdn,
-        'confirm_start_conversation': profile.confirm_start_conversation,
+        'msisdn': account.msisdn,
+        'confirm_start_conversation': account.confirm_start_conversation,
     })
     email_form = EmailForm()
 
@@ -33,12 +34,10 @@ def index(request):
                 user.email = user.username = email_address
                 user.save()
 
-                profile = user.get_profile()
-
-                profile.msisdn = account_form.cleaned_data['msisdn']
-                profile.confirm_start_conversation = account_form.cleaned_data[
-                                                'confirm_start_conversation']
-                profile.save()
+                account.msisdn = unicode(account_form.cleaned_data['msisdn'])
+                account.confirm_start_conversation = \
+                        account_form.cleaned_data['confirm_start_conversation']
+                account.save()
 
                 messages.info(request, 'Account Details updated.')
                 return redirect('account:index')
