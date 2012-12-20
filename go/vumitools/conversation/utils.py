@@ -13,6 +13,7 @@ from vumi.middleware.tagger import TaggingMiddleware
 from go.vumitools.exceptions import ConversationSendError
 from go.vumitools.middleware import DebitAccountMiddleware
 from go.vumitools.opt_out import OptOutStore
+from go.vumitools.utils import GoMessageMetadata
 
 
 class ConversationWrapper(object):
@@ -189,6 +190,35 @@ class ConversationWrapper(object):
         yield self.c.save()
 
     @Manager.calls_manager
+    def send_token_url(self, token_url, msisdn, **extra_params):
+        """
+        I was tempted to make this a generic 'send_message' function but
+        that gets messy with acquiring tags, it becomes unclear whether an
+        existing tag should be re-used or a new tag needs to be acquired.
+
+        In the case of sending a confirmation link it is clear that a new
+        tag needs to be acquired and when the conversation start is actually
+        confirmed that tag can be re-used.
+        """
+        tag = yield self.acquire_tag()
+        batch_id = yield self.start_batch(tag)
+        msg_options = yield self.make_message_options(tag)
+        # specify this message as being sensitive
+        helper_metadata = msg_options.setdefault('helper_metadata', {})
+        go_metadata = helper_metadata.setdefault('go', {})
+        go_metadata['sensitive'] = True
+
+        yield self.dispatch_command('send_message', command_data={
+            "batch_id": batch_id,
+            "to_addr": msisdn,
+            "msg_options": msg_options,
+            "content": "Please visit %s to start your conversation." % (
+                        token_url,),
+            })
+        self.c.batches.add_key(batch_id)
+        yield self.c.save()
+
+    @Manager.calls_manager
     def get_latest_batch_key(self):
         """
         Here be dragons.
@@ -297,7 +327,41 @@ class ConversationWrapper(object):
         returnValue(count)
 
     @Manager.calls_manager
-    def received_messages(self, start=0, limit=100, batch_key=None):
+    def collect_messages(self, keys, proxy, include_sensitive, scrubber):
+        """
+        Collect the messages using the given keys by using the given callback.
+
+        :param list keys:
+            The list of keys to retrieve.
+        :param callable callback:
+            The callback to use to load the object, this is given the key.
+        :param bool include_sensitive:
+            Whether or not to include hidden messages.
+        :param callable scrubber:
+            The scrubber to use on hidden messages. Should return a message
+            object or None.
+        """
+        messages = []
+        bunches = yield proxy.load_all_bunches(keys)
+        for bunch in bunches:
+            messages.extend((yield bunch))
+
+        collection = []
+        for message in messages:
+            # vumi message is an attribute on the inbound message object
+            msg = message.msg
+            msg_metadata = GoMessageMetadata(self.api, msg)
+            if not msg_metadata.is_sensitive():
+                collection.append(msg)
+            elif include_sensitive:
+                scrubbed_msg = scrubber(msg)
+                if scrubbed_msg:
+                    collection.append(scrubbed_msg)
+        returnValue(collection)
+
+    @Manager.calls_manager
+    def received_messages(self, start=0, limit=100, batch_key=None,
+                            include_sensitive=False, scrubber=None):
         """
         Get a list of replies from the message store. The keys come from
         the message store's cache.
@@ -309,27 +373,33 @@ class ConversationWrapper(object):
         :param str batch_key:
             The batch to get replies for. Defaults to whatever
             `get_latest_batch_key()` returns.
+        :param bool include_sensitive:
+            Whether or not to include hidden messages. Defaults to False.
+            Hidden messages are messages with potentially sensitive information
+            from a security point of view that should not be displayed in the
+            UI by default.
+        :param callable scrubber:
+            If `include_sensitive` is True then the scrubber is called with the
+            content of the message to be scrubbed. By default it is a noop
+            which leaves the content unchanged.
         """
         batch_key = batch_key or (yield self.get_latest_batch_key())
         if batch_key is None:
             returnValue([])
+        scrubber = scrubber or (lambda msg: msg)
 
         # Redis counts from zero, so we - 1 on the limit.
         keys = yield self.mdb.cache.get_inbound_message_keys(batch_key, start,
                                                                 limit - 1)
 
-        replies = []
-        for key in keys:
-            message = yield self.mdb.inbound_messages.load(key)
-            # sometimes a message can be None because of Riak's eventual
-            # consistency model
-            if message is not None:
-                replies.append(message.msg)
+        replies = yield self.collect_messages(keys,
+            self.mdb.inbound_messages, include_sensitive, scrubber)
 
         returnValue(replies)
 
     @Manager.calls_manager
-    def sent_messages(self, start=0, limit=100, batch_key=None):
+    def sent_messages(self, start=0, limit=100, batch_key=None,
+                        include_sensitive=False, scrubber=None):
         """
         Get a list of sent_messages from the message store. The keys come from
         the message store's cache.
@@ -341,19 +411,26 @@ class ConversationWrapper(object):
         :param str batch_key:
             The batch to get sent messages for. Defaults to whatever
             `get_latest_batch_key()` returns.
+        :param bool include_sensitive:
+            Whether or not to include hidden messages. Defaults to False.
+            Hidden messages are messages with potentially sensitive information
+            from a security point of view that should not be displayed in the
+            UI by default.
+        :param callable scrubber:
+            If `include_sensitive` is True then the scrubber is called with the
+            content of the message to be scrubbed. By default it is a noop
+            which leaves the content unchanged.
         """
         batch_key = batch_key or (yield self.get_latest_batch_key())
+        if batch_key is None:
+            returnValue([])
+        scrubber = scrubber or (lambda msg: msg)
 
         keys = yield self.mdb.cache.get_outbound_message_keys(batch_key, start,
                                                                 limit - 1)
 
-        sent_messages = []
-        for key in keys:
-            message = yield (self.mdb.outbound_messages.load(key))
-            # sometimes a message can be None because of Riak's eventual
-            # consistency model
-            if message is not None:
-                sent_messages.append(message.msg)
+        sent_messages = yield self.collect_messages(keys,
+            self.mdb.outbound_messages, include_sensitive, scrubber)
 
         returnValue(sent_messages)
 
