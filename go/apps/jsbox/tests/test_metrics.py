@@ -100,12 +100,20 @@ class TestMetricsResource(TestCase):
         self.check_reply(reply, cmd, True)
         self.check_publish('default', 'foo', 1.5, self.SUM)
 
-    def test_handle_fire_error(self):
-        cmd = SandboxCommand(metric="foo bar", value=1.5, agg='sum')
-        expected_error = "Invalid metric name: 'foo bar'."
+    def _test_error(self, cmd, expected_error):
         with LogCatcher() as lc:
             reply = self.resource.handle_fire(self.dummy_api, cmd)
             self.assertEqual(lc.messages(), [expected_error])
         self.check_reply(reply, cmd, False)
         self.assertEqual(reply['reason'], expected_error)
         self.check_not_published()
+
+    def test_handle_fire_error(self):
+        cmd = SandboxCommand(metric="foo bar", value=1.5, agg='sum')
+        expected_error = "Invalid metric name: 'foo bar'."
+        self._test_error(cmd, expected_error)
+
+    def test_non_ascii_metric_name_error(self):
+        cmd = SandboxCommand(metric=u"b\xe6r", value=1.5, agg='sum')
+        expected_error = "Invalid metric name: u'b\\xe6r'."
+        self._test_error(cmd, expected_error)
