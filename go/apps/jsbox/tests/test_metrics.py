@@ -4,6 +4,9 @@ import mock
 
 from twisted.trial.unittest import TestCase
 
+from vumi.application.sandbox import SandboxCommand
+from vumi.tests.utils import LogCatcher
+
 from go.apps.jsbox.metrics import (
     MetricEvent, MetricEventError, MetricsResource)
 
@@ -69,6 +72,8 @@ class TestMetricEvent(TestCase):
 
 class TestMetricsResource(TestCase):
 
+    SUM = MetricEvent.AGGREGATORS['sum']
+
     def setUp(self):
         self.conversation = mock.Mock()
         self.app_worker = mock.Mock()
@@ -77,5 +82,30 @@ class TestMetricsResource(TestCase):
         self.app_worker.conversation_for_api = mock.Mock(
             return_value=self.conversation)
 
+    def check_reply(self, reply, cmd, success):
+        self.assertEqual(reply['reply'], True)
+        self.assertEqual(reply['cmd_id'], cmd['cmd_id'])
+        self.assertEqual(reply['success'], success)
+
+    def check_publish(self, store, metric, value, agg):
+        self.app_worker.publish_account_metric.assert_called_once_with(
+            self.conversation.user_account, store, metric, value, agg)
+
+    def check_not_published(self):
+        self.assertFalse(self.app_worker.publish_account_metric.called)
+
     def test_handle_fire(self):
-        self.fail("Not implemented")
+        cmd = SandboxCommand(metric="foo", value=1.5, agg='sum')
+        reply = self.resource.handle_fire(self.dummy_api, cmd)
+        self.check_reply(reply, cmd, True)
+        self.check_publish('default', 'foo', 1.5, self.SUM)
+
+    def test_handle_fire_error(self):
+        cmd = SandboxCommand(metric="foo bar", value=1.5, agg='sum')
+        expected_error = "Invalid metric name: 'foo bar'."
+        with LogCatcher() as lc:
+            reply = self.resource.handle_fire(self.dummy_api, cmd)
+            self.assertEqual(lc.messages(), [expected_error])
+        self.check_reply(reply, cmd, False)
+        self.assertEqual(reply['reason'], expected_error)
+        self.check_not_published()
