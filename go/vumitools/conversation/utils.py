@@ -163,18 +163,55 @@ class ConversationWrapper(object):
         returnValue(msg_options)
 
     @Manager.calls_manager
-    def start(self, no_batch_tag=False, acquire_tag=True, **extra_params):
+    def start(self, no_batch_tag=False, batch_id=None, acquire_tag=True,
+                **extra_params):
         """
         Send the start command to this conversations application worker.
+
+        :param bool no_batch_tag:
+            Used only by the sequential send app for Pepsodent. It allows
+            you to start a batch and get a batch id without providing a tag.
+            Defaults to `False`
+        :param str batch_id:
+            If you've already claimed a tag and want to use an existing
+            batch_id then provide it here. This almost has the same effect as
+            `acquire_tag=False`, the difference being that it doesn't re-use
+            the existing tag. Useful if the tag acquired is still being held on
+            to and the batch_id can be re-used.
+        :param bool acquire_tag:
+            If False then an existing tag is attempted to be re-used. This will
+            only work if `conversation.delivery_tag` is actually set. If the
+            the delivery_tag isn't explicity chosen but left for the tagpool
+            manager to choose, the `delivery_tag` will be `None` and this
+            will fail
+        :param kwargs extra_params:
+            Extra parameters to pass along with the VumiApiCommand to the
+            application worker receiving the command.
         """
-        # TODO: Move some of this stuff out to a place where it makes more
-        #       sense to have it.
-        if acquire_tag:
-            tag = yield self.acquire_tag()
+        if batch_id:
+            batches = yield self.get_batches()
+            for batch in batches:
+                if batch.key == batch_id:
+                    # NOTE: In theory there could be multiple tags per batch,
+                    #       but the way stuff works now this won't happen.
+                    #       If for some reason this does happen then at least
+                    #       this will blow up.
+                    [tag] = batch.tags
+                    break
+            else:
+                raise ConversationSendError('Unable to find batch for %s' % (
+                                                batch_id,))
         else:
-            tag = yield self.acquire_existing_tag()
-        batch_tags = [] if no_batch_tag else [tag]
-        batch_id = yield self.start_batch(*batch_tags)
+            # FIXME:    This is left over mess from Pepsodent having to share
+            #           a tag between two conversations. We should move some of
+            #           this stuff out to a place where it makes more sense
+            #           to have it.
+            if acquire_tag:
+                tag = yield self.acquire_tag()
+            else:
+                tag = yield self.acquire_existing_tag()
+            batch_tags = [] if no_batch_tag else [tag]
+            batch_id = yield self.start_batch(*batch_tags)
 
         msg_options = yield self.make_message_options(tag)
 
@@ -186,7 +223,9 @@ class ConversationWrapper(object):
             msg_options=msg_options,
             is_client_initiated=is_client_initiated,
             **extra_params)
-        self.c.batches.add_key(batch_id)
+
+        if batch_id not in self.get_batch_keys():
+            self.c.batches.add_key(batch_id)
         yield self.c.save()
 
     @Manager.calls_manager
