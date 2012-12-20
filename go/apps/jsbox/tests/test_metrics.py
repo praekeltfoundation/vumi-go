@@ -66,6 +66,11 @@ class TestMetricEvent(TestCase):
                 'store': 'mystore', 'metric': 'foo', 'value': 'abc',
                 'agg': 'sum'})
 
+    def test_bad_type_value(self):
+        self.assertRaises(MetricEventError, MetricEvent.from_command, {
+                'store': 'mystore', 'metric': 'foo', 'value': {},
+                'agg': 'sum'})
+
     def test_missing_value(self):
         self.assertRaises(MetricEventError, MetricEvent.from_command, {
                 'store': 'mystore', 'metric': 'foo', 'agg': 'sum'})
@@ -74,6 +79,11 @@ class TestMetricEvent(TestCase):
         self.assertRaises(MetricEventError, MetricEvent.from_command, {
                 'store': 'mystore', 'metric': 'foo', 'value': 1.5,
                 'agg': 'foo'})
+
+    def test_bad_type_agg(self):
+        self.assertRaises(MetricEventError, MetricEvent.from_command, {
+                'store': 'mystore', 'metric': 'foo', 'value': 1.5,
+                'agg': {}})
 
     def test_missing_agg(self):
         self.assertRaises(MetricEventError, MetricEvent.from_command, {
