@@ -42,6 +42,9 @@ class MetricEvent(object):
     def _parse_name(cls, name, kind):
         if name is None:
             raise MetricEventError("Missing %s name." % (kind,))
+        if not isinstance(name, basestring):
+            raise MetricEventError("Invalid type for %s name: %r"
+                                   % (kind, name))
         if not cls.NAME_REGEX.match(name):
             raise MetricEventError("Invalid %s name: %r." % (kind, name))
         return name

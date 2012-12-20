@@ -42,9 +42,19 @@ class TestMetricEvent(TestCase):
                 'store': 'foo bar', 'metric': 'foo', 'value': 1.5,
                 'agg': 'sum'})
 
+    def test_bad_type_store(self):
+        self.assertRaises(MetricEventError, MetricEvent.from_command, {
+                'store': {}, 'metric': 'foo', 'value': 1.5,
+                'agg': 'sum'})
+
     def test_bad_metric(self):
         self.assertRaises(MetricEventError, MetricEvent.from_command, {
                 'store': 'mystore', 'metric': 'foo bar', 'value': 1.5,
+                'agg': 'sum'})
+
+    def test_bad_type_metric(self):
+        self.assertRaises(MetricEventError, MetricEvent.from_command, {
+                'store': 'mystore', 'metric': {}, 'value': 1.5,
                 'agg': 'sum'})
 
     def test_missing_metric(self):
