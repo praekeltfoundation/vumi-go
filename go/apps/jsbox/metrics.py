@@ -83,7 +83,7 @@ class MetricsResource(SandboxResource):
         try:
             ev = MetricEvent.from_command(command)
         except MetricEventError, e:
-            log.warn(str(e))
+            log.warning(str(e))
             return self.reply(command, success=False, reason=str(e))
         self._publish_event(api, ev)
         return self.reply(command, success=True)
