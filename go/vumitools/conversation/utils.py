@@ -422,6 +422,9 @@ class ConversationWrapper(object):
             which leaves the content unchanged.
         """
         batch_key = batch_key or (yield self.get_latest_batch_key())
+        if batch_key is None:
+            returnValue([])
+        scrubber = scrubber or (lambda msg: msg)
 
         keys = yield self.mdb.cache.get_outbound_message_keys(batch_key, start,
                                                                 limit - 1)

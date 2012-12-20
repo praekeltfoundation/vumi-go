@@ -221,6 +221,37 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.assertEqual(len((yield self.conv.sent_messages(20, 25))), 0)
 
     @inlineCallbacks
+    def test_sent_messages_include_sensitive(self):
+        yield self.conv.start()
+        batch_key = yield self.conv.get_latest_batch_key()
+        yield self.store_outbound(batch_key, count=20, helper_metadata={
+            'go': {
+                'sensitive': True,
+            }})
+        self.assertEqual([], (yield self.conv.sent_messages()))
+        self.assertEqual(20, len((yield self.conv.sent_messages(
+                                        include_sensitive=True))))
+
+    @inlineCallbacks
+    def test_sent_messages_include_sensitive_and_scrub(self):
+        yield self.conv.start()
+        batch_key = yield self.conv.get_latest_batch_key()
+        yield self.store_outbound(batch_key, count=20, helper_metadata={
+            'go': {
+                'sensitive': True,
+            }})
+
+        def scrubber(msg):
+            msg['content'] = 'scrubbed'
+            return msg
+
+        scrubbed_messages = yield self.conv.sent_messages(
+            include_sensitive=True, scrubber=scrubber)
+        self.assertEqual(len(scrubbed_messages), 20)
+        for message in scrubbed_messages:
+            self.assertEqual(message['content'], 'scrubbed')
+
+    @inlineCallbacks
     def test_sent_messages_dictionary(self):
         yield self.conv.start()
         batch_key = yield self.conv.get_latest_batch_key()
