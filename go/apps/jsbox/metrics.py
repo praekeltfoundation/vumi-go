@@ -79,7 +79,7 @@ class MetricsResource(SandboxResource):
 
     def _publish_event(self, api, ev):
         conversation = self.app_worker.conversation_for_api(api)
-        self.app_worker.publish_account_metric(conversation.user_account,
+        self.app_worker.publish_account_metric(conversation.user_account.key,
                                                ev.store, ev.metric, ev.value,
                                                ev.agg)
 
