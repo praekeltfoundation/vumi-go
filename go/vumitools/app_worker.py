@@ -230,6 +230,16 @@ class GoApplicationMixin(object):
             conversation.user_account.key, conversation.key, name)
         self.publish_metric(name, value, agg)
 
+    def publish_account_metric(self, user_account, store, name, value,
+                               agg=None):
+        if isinstance(user_account, basestring):
+            user_account_key = user_account
+        else:
+            user_account_key = user_account.key
+        name = "%s.%s.%s" % (
+            user_account_key, store, name)
+        self.publish_metric(name, value, agg)
+
     @inlineCallbacks
     def collect_message_metrics(self, conversation):
         """Collect message count metrics.
