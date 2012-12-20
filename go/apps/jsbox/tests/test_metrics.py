@@ -109,7 +109,7 @@ class TestMetricsResource(TestCase):
 
     def check_publish(self, store, metric, value, agg):
         self.app_worker.publish_account_metric.assert_called_once_with(
-            self.conversation.user_account, store, metric, value, agg)
+            self.conversation.user_account.key, store, metric, value, agg)
 
     def check_not_published(self):
         self.assertFalse(self.app_worker.publish_account_metric.called)
