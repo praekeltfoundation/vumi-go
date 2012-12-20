@@ -417,10 +417,10 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         # because we `get_latest_batch_key()` depends on the cache being
         # populated which at this point it isn't yet.
         batch_keys = conversation.get_batch_keys()
-        self.assertEqual(len(batch_keys), 2)
-        [latest_batch_key] = [bk for bk in batch_keys if bk != batch_key]
+        self.assertEqual(len(batch_keys), 1)
+        self.assertEqual([batch_key], batch_keys)
 
-        batch = conversation.mdb.get_batch(latest_batch_key)
+        batch = conversation.mdb.get_batch(batch_key)
         [tag] = list(batch.tags)
         [cmd] = self.get_api_commands_sent()
 

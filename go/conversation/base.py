@@ -279,7 +279,8 @@ class ConfirmConversationView(ConversationView):
         confirmation_form = ConfirmConversationForm(request.POST)
         if confirmation_form.is_valid():
             try:
-                conversation.start(acquire_tag=False, **params)
+                batch_id = conversation.get_latest_batch_key()
+                conversation.start(batch_id=batch_id, **params)
                 messages.info(request, '%s started succesfully!' % (
                                             self.conversation_display_name,))
                 return redirect('%s?%s' % (
