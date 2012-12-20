@@ -4,6 +4,8 @@ from copy import copy
 from django.conf import settings
 from django import template
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.contrib.sites.models import Site
+from django.template.defaultfilters import stringfilter
 
 from go.conversation.utils import PagedMessageCache
 from go.base import message_store_client as ms_client
@@ -123,3 +125,12 @@ def get_contact_for_message(user_api, message):
     }.get(message['transport_type'], 'unkown')
     return user_api.contact_store.contact_for_addr(
         delivery_class, unicode(message.user()))
+
+
+@register.filter
+@stringfilter
+def scrub_tokens(value):
+    site = Site.objects.get_current()
+    pattern = r'://%s/t/(\w+)/?' % (re.escape(site.domain),)
+    replacement = '://%s/t/******/' % (site.domain,)
+    return re.sub(pattern, replacement, value)

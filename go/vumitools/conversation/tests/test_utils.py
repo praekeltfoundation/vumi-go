@@ -61,14 +61,16 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def store_inbound(self, batch_key, count=10, addr_template='from-{0}',
                         content_template='hello world {0}',
-                        start_timestamp=None, time_multiplier=10):
+                        start_timestamp=None, time_multiplier=10,
+                        helper_metadata=None):
         inbound = []
         now = start_timestamp or datetime.now().replace(hour=23, minute=59,
                                                     second=59, microsecond=999)
         for i in range(count):
             msg_in = self.mkmsg_in(from_addr=addr_template.format(i),
                 message_id=TransportMessage.generate_id(),
-                content=content_template.format(i))
+                content=content_template.format(i),
+                helper_metadata=helper_metadata)
             msg_in['timestamp'] = now - timedelta(hours=i * time_multiplier)
             yield self.mdb.add_inbound_message(msg_in, batch_id=batch_key)
             inbound.append(msg_in)
@@ -77,14 +79,16 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def store_outbound(self, batch_key, count=10, addr_template='to-{0}',
                         content_template='hello world {0}',
-                        start_timestamp=None, time_multiplier=10):
+                        start_timestamp=None, time_multiplier=10,
+                        helper_metadata=None):
         outbound = []
         now = start_timestamp or datetime.now().replace(hour=23, minute=59,
                                                     second=59, microsecond=999)
         for i in range(count):
             msg_out = self.mkmsg_out(to_addr=addr_template.format(i),
                 message_id=TransportMessage.generate_id(),
-                content=content_template.format(i))
+                content=content_template.format(i),
+                helper_metadata=helper_metadata)
             msg_out['timestamp'] = now - timedelta(hours=i * time_multiplier)
             yield self.mdb.add_outbound_message(msg_out, batch_id=batch_key)
             outbound.append(msg_out)
@@ -167,12 +171,43 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.assertEqual(len((yield self.conv.received_messages(20, 25))), 0)
 
     @inlineCallbacks
+    def test_received_messages_include_sensitive(self):
+        yield self.conv.start()
+        batch_key = yield self.conv.get_latest_batch_key()
+        yield self.store_inbound(batch_key, count=20, helper_metadata={
+            'go': {
+                'sensitive': True,
+            }})
+        self.assertEqual([], (yield self.conv.received_messages()))
+        self.assertEqual(20, len((yield self.conv.received_messages(
+                                        include_sensitive=True))))
+
+    @inlineCallbacks
+    def test_received_messages_include_sensitive_and_scrub(self):
+        yield self.conv.start()
+        batch_key = yield self.conv.get_latest_batch_key()
+        yield self.store_inbound(batch_key, count=20, helper_metadata={
+            'go': {
+                'sensitive': True,
+            }})
+
+        def scrubber(msg):
+            msg['content'] = 'scrubbed'
+            return msg
+
+        scrubbed_messages = yield self.conv.received_messages(
+            include_sensitive=True, scrubber=scrubber)
+        self.assertEqual(len(scrubbed_messages), 20)
+        for message in scrubbed_messages:
+            self.assertEqual(message['content'], 'scrubbed')
+
+    @inlineCallbacks
     def test_received_messages_dictionary(self):
         yield self.conv.start()
         batch_key = yield self.conv.get_latest_batch_key()
         [msg] = yield self.store_inbound(batch_key, count=1)
         [reply] = yield self.conv.received_messages()
-        self.assertEqual(msg, reply)
+        self.assertEqual(msg['message_id'], reply['message_id'])
 
     @inlineCallbacks
     def test_sent_messages(self):
@@ -186,12 +221,43 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.assertEqual(len((yield self.conv.sent_messages(20, 25))), 0)
 
     @inlineCallbacks
+    def test_sent_messages_include_sensitive(self):
+        yield self.conv.start()
+        batch_key = yield self.conv.get_latest_batch_key()
+        yield self.store_outbound(batch_key, count=20, helper_metadata={
+            'go': {
+                'sensitive': True,
+            }})
+        self.assertEqual([], (yield self.conv.sent_messages()))
+        self.assertEqual(20, len((yield self.conv.sent_messages(
+                                        include_sensitive=True))))
+
+    @inlineCallbacks
+    def test_sent_messages_include_sensitive_and_scrub(self):
+        yield self.conv.start()
+        batch_key = yield self.conv.get_latest_batch_key()
+        yield self.store_outbound(batch_key, count=20, helper_metadata={
+            'go': {
+                'sensitive': True,
+            }})
+
+        def scrubber(msg):
+            msg['content'] = 'scrubbed'
+            return msg
+
+        scrubbed_messages = yield self.conv.sent_messages(
+            include_sensitive=True, scrubber=scrubber)
+        self.assertEqual(len(scrubbed_messages), 20)
+        for message in scrubbed_messages:
+            self.assertEqual(message['content'], 'scrubbed')
+
+    @inlineCallbacks
     def test_sent_messages_dictionary(self):
         yield self.conv.start()
         batch_key = yield self.conv.get_latest_batch_key()
         [msg] = yield self.store_outbound(batch_key, count=1)
         [sent_message] = yield self.conv.sent_messages()
-        self.assertEqual(msg, sent_message)
+        self.assertEqual(msg['message_id'], sent_message['message_id'])
 
     @inlineCallbacks
     def test_get_tags(self):
