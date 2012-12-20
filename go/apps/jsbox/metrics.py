@@ -59,6 +59,8 @@ class MetricEvent(object):
 
     @classmethod
     def _parse_agg(cls, agg):
+        if not isinstance(agg, basestring):
+            raise MetricEventError("Invalid metric aggregator %r" % (agg,))
         if agg not in cls.AGGREGATORS:
             raise MetricEventError("Invalid metric aggregator %r." % (agg,))
         return cls.AGGREGATORS[agg]
