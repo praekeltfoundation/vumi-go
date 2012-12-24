@@ -93,6 +93,9 @@ class VumiUserApi(object):
         self.contact_store = ContactStore(self.api.manager,
                                           self.user_account_key)
 
+    def exists(self):
+        return self.api.user_exists(self.user_account_key)
+
     @classmethod
     def from_config_sync(cls, user_account_key, config):
         return cls(VumiApi.from_config_sync(config), user_account_key)
@@ -223,6 +226,18 @@ class VumiApi(object):
         if amqp_client is not None:
             sender = AsyncMessageSender(amqp_client)
         returnValue(cls(manager, redis, sender))
+
+    @Manager.calls_manager
+    def user_exists(self, user_account_key):
+        """
+        Check whether or not a user exists. Useful to check before creating
+        a VumiUserApi since that does not do any type of checking itself.
+
+        :param str user_account_key:
+            The user account key to check.
+        """
+        user_data = yield self.account_store.get_user(user_account_key)
+        returnValue(user_data is not None)
 
     def get_user_api(self, user_account_key):
         return VumiUserApi(self, user_account_key)
