@@ -33,6 +33,7 @@ class GroupsApiTestCase(VumiWorkerTestCase, PersistenceMixin):
         self.account_store = AccountStore(self.riak)
         self.user = yield self.account_store.new_user(username=u'username')
         self.user_api = self.api.get_user_api(self.user.key)
+        self.contact_store = self.user_api.contact_store
 
         self.url = 'http://%s:%s' % (self.addr.host, self.addr.port)
 
@@ -54,8 +55,8 @@ class GroupsApiTestCase(VumiWorkerTestCase, PersistenceMixin):
     def test_account_key(self):
         resp = yield http_request_full(self.mkurl(self.user.key), method='GET')
         self.assertEqual(resp.code, http.OK)
-        self.assertEqual(resp.headers.getRawHeaders('content-type'), [
-            'application/json; charset=utf-8'])
+        self.assertEqual(resp.headers.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
         self.assertEqual(json.loads(resp.delivered_body), [])
 
     @inlineCallbacks
@@ -64,10 +65,9 @@ class GroupsApiTestCase(VumiWorkerTestCase, PersistenceMixin):
         self.assertEqual(resp.code, http.NOT_FOUND)
 
     @inlineCallbacks
-    def test_groups(self):
-        contact_store = self.user_api.contact_store
-        yield contact_store.new_group(u'group1')
-        yield contact_store.new_smart_group(u'group2', u'foo:bar')
+    def test_group_listings(self):
+        yield self.contact_store.new_group(u'group1')
+        yield self.contact_store.new_smart_group(u'group2', u'foo:bar')
 
         resp = yield http_request_full(self.mkurl(self.user.key), method='GET')
         data = json.loads(resp.delivered_body)
@@ -77,3 +77,19 @@ class GroupsApiTestCase(VumiWorkerTestCase, PersistenceMixin):
 
         self.assertEqual(group2['name'], 'group2')
         self.assertEqual(group2['query'], 'foo:bar')
+
+    @inlineCallbacks
+    def test_group(self):
+        group = yield self.contact_store.new_group(u'group1')
+        # FIXME: For some reason msisdn is not allowed to be null.
+        contact = yield self.contact_store.new_contact(name=u'foo', msisdn=u'',
+                                                groups=[group])
+        resp = yield http_request_full(self.mkurl(self.user.key, group.key),
+                                        method='GET')
+        self.assertEqual(resp.code, http.OK)
+        self.assertEqual(resp.headers.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
+        data = json.loads(resp.delivered_body)
+        self.assertEqual(len(data), 1)
+        [found_contact] = data
+        self.assertEqual(found_contact['key'], contact.key)
