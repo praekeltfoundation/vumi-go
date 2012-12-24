@@ -101,7 +101,13 @@ class GroupApi(BaseResource):
     @inlineCallbacks
     def render_results(self, request, ordering):
         result_key = self.get_results_key(ordering)
-        contact_keys = yield self.redis.lrange(result_key, 0, -1)
+        start = (int(request.args['start'])
+                    if 'start' in request.args
+                    else 0)
+        stop = (int(request.args['stop'])
+                    if 'stop' in request.args
+                    else -1)
+        contact_keys = yield self.redis.lrange(result_key, start, stop)
         contacts = yield self.load_bunches(self.store.contacts, contact_keys)
         request.write(self.to_json([dict(c) for c in contacts]))
         request.responseHeaders.setRawHeaders('content-type',
