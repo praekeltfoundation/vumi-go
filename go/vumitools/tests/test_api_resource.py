@@ -197,6 +197,48 @@ class GroupsApiTestCase(VumiWorkerTestCase, PersistenceMixin):
         self.assertEqual(rc2['key'], contact2.key)
         self.assertEqual(rc3['key'], contact3.key)
 
+    @inlineCallbacks
+    def test_pagination(self):
+        group, contacts = yield self.create_sample_group(
+            [{'name': letter, 'msisdn': u''} for letter in u'abcd'])
+        [c1, c2, c3, c4] = contacts
+
+        url = yield self.mkurl(self.user.key, group.key)
+        page1_resp = yield self.wait_for_results(
+            '%s?ordering=name&start=0&stop=1' % (url,))
+
+        [rc1, rc2] = json.loads(page1_resp.delivered_body)
+        self.assertEqual(rc1['key'], c1.key)
+        self.assertEqual(rc2['key'], c2.key)
+
+        page2_resp = yield self.wait_for_results(
+            '%s?ordering=name&start=2&stop=3' % (url,))
+
+        [rc3, rc4] = json.loads(page2_resp.delivered_body)
+        self.assertEqual(rc3['key'], c3.key)
+        self.assertEqual(rc4['key'], c4.key)
+
+    @inlineCallbacks
+    def test_pagination_reverse(self):
+        group, contacts = yield self.create_sample_group(
+            [{'name': letter, 'msisdn': u''} for letter in u'abcd'])
+        [c1, c2, c3, c4] = contacts
+
+        url = yield self.mkurl(self.user.key, group.key)
+        page1_resp = yield self.wait_for_results(
+            '%s?ordering=-name&start=0&stop=1' % (url,))
+
+        [rc1, rc2] = json.loads(page1_resp.delivered_body)
+        self.assertEqual(rc1['key'], c4.key)
+        self.assertEqual(rc2['key'], c3.key)
+
+        page2_resp = yield self.wait_for_results(
+            '%s?ordering=-name&start=2&stop=3' % (url,))
+
+        [rc3, rc4] = json.loads(page2_resp.delivered_body)
+        self.assertEqual(rc3['key'], c2.key)
+        self.assertEqual(rc4['key'], c1.key)
+
     def wait_for_results(self, url):
         """
         Keep hitting the URL until it returns an HTTP 200 / OK
