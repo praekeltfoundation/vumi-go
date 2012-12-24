@@ -16,7 +16,7 @@ from go.vumitools.account.models import AccountStore
 class GroupsApiTestCase(VumiWorkerTestCase, PersistenceMixin):
 
     use_riak = True
-    timeout = 5
+    timeout = 1
 
     @inlineCallbacks
     def setUp(self):
@@ -62,3 +62,12 @@ class GroupsApiTestCase(VumiWorkerTestCase, PersistenceMixin):
     def test_invalid_account_key(self):
         resp = yield http_request_full(self.mkurl('foo'), method='GET')
         self.assertEqual(resp.code, http.NOT_FOUND)
+
+    @inlineCallbacks
+    def test_groups(self):
+        contact_store = self.user_api.contact_store
+        static_group = yield contact_store.new_group(u'static')
+        smart_group = yield contact_store.new_smart_group(u'smart')
+
+        resp = yield http_request_full(self.mkurl(self.user.key), method='GET')
+        self.assertEqual(resp.delivered_body, [])
