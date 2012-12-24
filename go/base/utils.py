@@ -1,5 +1,7 @@
 """Utilities for the Django parts of Vumi Go."""
 
+from operator import itemgetter
+
 from django import forms
 from django.http import Http404
 from django.conf import settings
@@ -69,3 +71,21 @@ def page_range_window(page, padding):
             page.paginator.num_pages + 1)
     else:
         return range(current_page - padding + 1, current_page + padding)
+
+
+# As explained at
+# http://stackoverflow.com/questions/1143671/
+# python-sorting-list-of-dictionaries-by-multiple-keys
+def multikeysort(items, columns):
+    comparers = [((itemgetter(col[1:].strip()), -1)
+                    if col.startswith('-')
+                    else (itemgetter(col.strip()), 1)) for col in columns]
+
+    def comparer(left, right):
+        for fn, mult in comparers:
+            result = cmp(fn(left), fn(right))
+            if result:
+                return mult * result
+        else:
+            return 0
+    return sorted(items, cmp=comparer)

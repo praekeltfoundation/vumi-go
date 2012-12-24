@@ -7,6 +7,8 @@ from twisted.web import resource, http
 from twisted.web.server import NOT_DONE_YET
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from go.base.utils import multikeysort
+
 
 class ResourceJSONEncoder(json.JSONEncoder):
 
@@ -29,44 +31,118 @@ class BaseResource(resource.Resource):
 
     @inlineCallbacks
     def load_bunches(self, proxy, keys):
+        """
+        Load bunches while preserving the order of the keys.
+        """
         collection = []
         bunches = proxy.load_all_bunches(keys)
         for bunch in bunches:
             collection.extend((yield bunch))
-        returnValue(collection)
+        returnValue(sorted(collection, key=lambda c: keys.index(c.key)))
 
 
 class GroupApi(BaseResource):
     """
     Return the members of a specific group
     """
+
+    DEFAULT_ORDERING = 'msisdn'
+
+    # This means noting's known, i.e. probably hasn't started yet. A bit
+    # too ambiguous but I don't have anything better at the moment.
+    STATUS_UNKNOWN = None
+    STATUS_IN_PROGRESS = 'in_progress'
+    STATUS_DONE = 'done'
+
     def __init__(self, redis, user_api, group_key):
         BaseResource.__init__(self)
         self.redis = redis
         self.user_api = user_api
-        self.contact_store = self.user_api.contact_store
+        self.store = self.user_api.contact_store
         self.group_key = group_key
 
+    def get_progress_key(self, ordering):
+        # Joining on '+' because '-' can be part of the ordering key.
+        order_key = '+'.join(ordering)
+        return 'in_progress:%s-%s' % (self.group_key, order_key)
+
+    def set_in_progress(self, ordering, in_progress):
+        progress_key = self.get_progress_key(ordering)
+        if in_progress:
+            return self.redis.set(progress_key, 1)
+        return self.redis.set(progress_key, 0)
+
     @inlineCallbacks
-    def _render_group(self, request):
-        group = yield self.contact_store.get_group(self.group_key)
-        if group is None:
+    def is_in_progress(self, ordering):
+        status = yield self.redis.get(self.get_progress_key(ordering))
+        if status is None:
+            returnValue(False)
+        returnValue(bool(int(status)))
+
+    def get_results_key(self, ordering):
+        # Joining on '+' because '-' can be part of the ordering key.
+        order_key = '+'.join(ordering)
+        return 'results_key:%s-%s' % (self.group_key, order_key)
+
+    def has_results(self, ordering):
+        return self.redis.exists(self.get_results_key(ordering))
+
+    @inlineCallbacks
+    def cache_contacts(self, ordering):
+        yield self.set_in_progress(ordering, True)
+        contact_keys = yield self.store.get_contacts_for_group(self.group)
+        contacts = yield self.load_bunches(self.store.contacts, contact_keys)
+        sorted_contacts = multikeysort([dict(c) for c in contacts], ordering)
+        results_key = self.get_results_key(ordering)
+        for contact in sorted_contacts:
+            yield self.redis.rpush(results_key, contact['key'])
+        yield self.set_in_progress(ordering, False)
+
+    @inlineCallbacks
+    def render_results(self, request, ordering):
+        result_key = self.get_results_key(ordering)
+        contact_keys = yield self.redis.lrange(result_key, 0, -1)
+        contacts = yield self.load_bunches(self.store.contacts, contact_keys)
+        request.write(self.to_json([dict(c) for c in contacts]))
+        request.responseHeaders.setRawHeaders('content-type',
+                                                [self.CONTENT_TYPE])
+        request.finish()
+
+    @inlineCallbacks
+    def get_status(self, ordering):
+        """
+        Check whether or not we have results available for a specific order.
+        """
+        if (yield self.is_in_progress(ordering)):
+            returnValue(self.STATUS_IN_PROGRESS)
+        if (yield self.has_results(ordering)):
+            returnValue(self.STATUS_DONE)
+
+    @inlineCallbacks
+    def render_group(self, request):
+        self.group = yield self.store.get_group(self.group_key)
+        if self.group is None:
             request.code = http.NOT_FOUND
             request.finish()
             return
 
-        contact_keys = yield self.contact_store.get_contacts_for_group(group)
-        contacts = yield self.load_bunches(self.contact_store.contacts,
-                                            contact_keys)
+        ordering = (request.args['ordering']
+                        if 'ordering' in request.args
+                        else [self.DEFAULT_ORDERING])
 
-        request.responseHeaders.setRawHeaders('content-type',
-                                                [self.CONTENT_TYPE])
+        status = yield self.get_status(ordering)
+        if status == self.STATUS_DONE:
+            self.render_results(request, ordering)
+            return
 
-        request.write(self.to_json([dict(c) for c in contacts]))
+        if status != self.STATUS_IN_PROGRESS:
+            self.cache_contacts(ordering)
+
+        request.code = http.ACCEPTED
         request.finish()
 
     def render_GET(self, request):
-        self._render_group(request)
+        self.render_group(request)
         return NOT_DONE_YET
 
 
