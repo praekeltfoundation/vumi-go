@@ -40,8 +40,9 @@ class GroupApi(BaseResource):
     """
     Return the members of a specific group
     """
-    def __init__(self, user_api, group_key):
+    def __init__(self, redis, user_api, group_key):
         BaseResource.__init__(self)
+        self.redis = redis
         self.user_api = user_api
         self.contact_store = self.user_api.contact_store
         self.group_key = group_key
@@ -71,7 +72,7 @@ class GroupApi(BaseResource):
 
 class AccountGroupsApi(BaseResource):
 
-    def __init__(self, user_api):
+    def __init__(self, redis, user_api):
         """
         An HTTP API to provide access to groups for a specific account stored
         in Riak.
@@ -80,6 +81,7 @@ class AccountGroupsApi(BaseResource):
             The account api to fetch groups from.
         """
         BaseResource.__init__(self)
+        self.redis = redis
         self.user_api = user_api
 
     @inlineCallbacks
@@ -101,7 +103,7 @@ class AccountGroupsApi(BaseResource):
 
     def getChild(self, group_key, request):
         if group_key:
-            return GroupApi(self.user_api, group_key)
+            return GroupApi(self.redis, self.user_api, group_key)
         return self
 
 
@@ -115,8 +117,10 @@ class GroupsApi(BaseResource):
         """
         BaseResource.__init__(self)
         self.api = api
+        self.redis = api.redis.sub_manager('group_api')
 
     def getChild(self, account_key, request):
         if account_key:
-            return AccountGroupsApi(self.api.get_user_api(account_key))
+            return AccountGroupsApi(self.redis,
+                                    self.api.get_user_api(account_key))
         return resource.NoResource()

@@ -16,7 +16,7 @@ from go.vumitools.account.models import AccountStore
 class GroupsApiTestCase(VumiWorkerTestCase, PersistenceMixin):
 
     use_riak = True
-    timeout = 2
+    timeout = 5
 
     @inlineCallbacks
     def setUp(self):
