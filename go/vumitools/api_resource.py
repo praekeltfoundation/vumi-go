@@ -1,15 +1,34 @@
 # -*- test-case-name: go.vumitools.tests.test_api_resource -*-
 
 import json
+from datetime import datetime
 
 from twisted.web import resource, http
 from twisted.web.server import NOT_DONE_YET
 from twisted.internet.defer import inlineCallbacks
 
 
-class AccountGroupsApi(resource.Resource):
+class ResourceJSONEncoder(json.JSONEncoder):
+
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super(ResourceJSONEncoder, self).default(obj)
+
+
+class BaseResource(resource.Resource):
 
     CONTENT_TYPE = 'application/json; charset=utf-8'
+    JSON_ENCODER = ResourceJSONEncoder
+
+    def to_json(self, models):
+        """
+        Turn stuff vumi.persist.Model gives us into JSON
+        """
+        return json.dumps(models, cls=self.JSON_ENCODER)
+
+
+class AccountGroupsApi(BaseResource):
 
     def __init__(self, user_api):
         """
@@ -32,7 +51,7 @@ class AccountGroupsApi(resource.Resource):
         groups = yield self.user_api.list_groups()
         request.responseHeaders.setRawHeaders('content-type',
                                                 [self.CONTENT_TYPE])
-        request.write(json.dumps(groups))
+        request.write(self.to_json([dict(gr) for gr in groups]))
         request.finish()
 
     def render_GET(self, request):
@@ -40,7 +59,7 @@ class AccountGroupsApi(resource.Resource):
         return NOT_DONE_YET
 
 
-class GroupsApi(resource.Resource):
+class GroupsApi(BaseResource):
     def __init__(self, api):
         """
         An HTTP API to provide access to groups for accounts stored in Riak
