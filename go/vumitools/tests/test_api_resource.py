@@ -1,4 +1,5 @@
 import json
+import string
 
 from twisted.internet import reactor
 from twisted.web import http
@@ -9,7 +10,7 @@ from vumi.tests.utils import PersistenceMixin, VumiWorkerTestCase
 from vumi.utils import http_request_full
 
 from go.vumitools.api import VumiApi
-from go.vumitools.api_resource import GroupsApi
+from go.vumitools.api_resource import GroupsApi, GroupApi
 from go.vumitools.account.models import AccountStore
 
 
@@ -45,6 +46,23 @@ class GroupsApiTestCase(VumiWorkerTestCase, PersistenceMixin):
 
     def mkurl(self, *parts):
         return '%s/%s' % (self.url, '/'.join(parts))
+
+    def wait_for_results(self, url):
+        """
+        Keep hitting the URL until it returns an HTTP 200 / OK
+        """
+
+        @inlineCallbacks
+        def check(d):
+            response = yield http_request_full(url, method='GET')
+            if response.code == http.OK:
+                d.callback(response)
+            else:
+                reactor.callLater(0, check, d)
+
+        done = Deferred()
+        reactor.callLater(0, check, done)
+        return done
 
     @inlineCallbacks
     def test_root(self):
@@ -239,19 +257,13 @@ class GroupsApiTestCase(VumiWorkerTestCase, PersistenceMixin):
         self.assertEqual(rc3['key'], c2.key)
         self.assertEqual(rc4['key'], c1.key)
 
-    def wait_for_results(self, url):
-        """
-        Keep hitting the URL until it returns an HTTP 200 / OK
-        """
-
-        @inlineCallbacks
-        def check(d):
-            response = yield http_request_full(url, method='GET')
-            if response.code == http.OK:
-                d.callback(response)
-            else:
-                reactor.callLater(0, check, d)
-
-        done = Deferred()
-        reactor.callLater(0, check, done)
-        return done
+    @inlineCallbacks
+    def test_counts(self):
+        group, contacts = yield self.create_sample_group(
+            [{'name': letter, 'msisdn': u''}
+                for letter in unicode(string.lowercase)])
+        url = yield self.mkurl(self.user.key, group.key)
+        resp = yield self.wait_for_results(url)
+        self.assertEqual(resp.headers.getRawHeaders(
+            GroupApi.RESP_COUNT_HEADER), ['26'])
+        self.assertEqual(len(json.loads(resp.delivered_body)), 26)

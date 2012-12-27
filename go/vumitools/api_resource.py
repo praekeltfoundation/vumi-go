@@ -48,11 +48,10 @@ class GroupApi(BaseResource):
 
     DEFAULT_ORDERING = 'msisdn'
 
-    # This means noting's known, i.e. probably hasn't started yet. A bit
-    # too ambiguous but I don't have anything better at the moment.
-    STATUS_UNKNOWN = None
     STATUS_IN_PROGRESS = 'in_progress'
     STATUS_DONE = 'done'
+
+    RESP_COUNT_HEADER = 'X-VGo-Group-Count'
 
     def __init__(self, redis, user_api, group_key):
         BaseResource.__init__(self)
@@ -107,9 +106,11 @@ class GroupApi(BaseResource):
                 if 'stop' in request.args else -1)
         contact_keys = yield self.redis.lrange(result_key, start, stop)
         contacts = yield self.load_bunches(self.store.contacts, contact_keys)
-        request.write(self.to_json([dict(c) for c in contacts]))
+        request.responseHeaders.setRawHeaders(self.RESP_COUNT_HEADER,
+            [(yield self.redis.llen(result_key))])
         request.responseHeaders.setRawHeaders('content-type',
                                                 [self.CONTENT_TYPE])
+        request.write(self.to_json([dict(c) for c in contacts]))
         request.finish()
 
     @inlineCallbacks
