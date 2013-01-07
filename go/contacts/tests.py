@@ -470,6 +470,22 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         })
         self.assertContains(response, person_url(self.contact_key))
 
+    def test_group_contact_query_limits(self):
+        default_limit = self.client.get(group_url(self.group_key), {
+            'q': TEST_CONTACT_NAME,
+        })
+        custom_limit = self.client.get(group_url(self.group_key), {
+            'q': TEST_CONTACT_NAME,
+            'limit': 10,
+        })
+        no_limit = self.client.get(group_url(self.group_key), {
+            'q': TEST_CONTACT_NAME,
+            'limit': 0,
+        })
+        self.assertContains(default_limit, 'Showing 100 random contacts')
+        self.assertContains(custom_limit, 'Showing 10 random contacts')
+        self.assertNotContains(no_limit, 'Showing 100 random contacts')
+
     def test_group_contact_filter_by_letter(self):
         first_letter = TEST_CONTACT_SURNAME[0]
 
@@ -686,6 +702,30 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(
             set(self.contact_store.get_contacts_for_conversation(conv)),
             set([contact1.key, contact2.key, contact3.key]))
+
+    def test_smart_group_limit(self):
+        self.client.post(reverse('contacts:groups'), {
+            'name': 'a smart group',
+            'query': 'name:foo OR surname:bar',
+            '_new_smart_group': '1',
+            })
+        group = newest(self.contact_store.list_groups())
+        default_limit = self.client.get('%s?query=foo:bar' % (
+            reverse('contacts:group', kwargs={
+            'group_key': group.key,
+            }),))
+        custom_limit = self.client.get('%s?query=foo:bar&limit=10' % (
+            reverse('contacts:group', kwargs={
+            'group_key': group.key,
+            }),))
+        no_limit = self.client.get('%s?query=foo:bar&limit=0' % (
+            reverse('contacts:group', kwargs={
+            'group_key': group.key,
+            }),))
+
+        self.assertContains(default_limit, 'Showing 100 random contacts')
+        self.assertContains(custom_limit, 'Showing 10 random contacts')
+        self.assertNotContains(no_limit, 'Showing 0 random contacts')
 
 
 class TestFieldNormalizer(TestCase):
