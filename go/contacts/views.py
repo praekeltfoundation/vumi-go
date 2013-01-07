@@ -204,7 +204,8 @@ def _static_group(request, contact_store, group):
         keys = contact_store.contacts.search(**query_kwargs).get_keys()
         if limit:
             messages.info(request,
-                'Showing %s random contacts matching your query' % (limit,))
+                'Showing up to %s random contacts matching your query' % (
+                    limit,))
             keys = keys[:limit]
 
         selected_contacts = []
@@ -254,7 +255,8 @@ def _smart_group(request, contact_store, group):
     limit = int(request.GET.get('limit', 100))
     if limit:
         messages.info(request,
-            'Showing %s random contacts matching your query' % (limit,))
+                'Showing up to %s random contacts matching your query' % (
+                    limit,))
         keys = keys[:limit]
     selected_contacts = []
     for contacts in contact_store.contacts.load_all_bunches(keys):
@@ -331,7 +333,8 @@ def _people(request):
         keys = contact_store.contacts.raw_search(query).get_keys()
         if limit:
             messages.info(request,
-                'Showing %s random contacts matching your query' % (limit,))
+                'Showing up to %s random contacts matching your query' % (
+                    limit,))
             keys = keys[:limit]
         selected_contacts = []
         for contact_bunch in contact_store.contacts.load_all_bunches(keys):

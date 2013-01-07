@@ -482,9 +482,15 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
             'q': TEST_CONTACT_NAME,
             'limit': 0,
         })
-        self.assertContains(default_limit, 'Showing 100 random contacts')
-        self.assertContains(custom_limit, 'Showing 10 random contacts')
-        self.assertNotContains(no_limit, 'Showing 100 random contacts')
+        self.assertContains(default_limit, 'alert-success')
+        self.assertContains(default_limit, 'Showing up to 100 random contacts')
+        self.assertContains(custom_limit, 'alert-success')
+        self.assertContains(custom_limit, 'Showing up to 10 random contacts')
+        # Testing for CSS class not existing (since that's used to display
+        # notification messages). We cannot check the context for messages
+        # since that uses Django's internal messages framework which cleared
+        # during rendering.
+        self.assertNotContains(no_limit, 'alert-success')
 
     def test_group_contact_filter_by_letter(self):
         first_letter = TEST_CONTACT_SURNAME[0]
@@ -723,9 +729,15 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
             'group_key': group.key,
             }),))
 
-        self.assertContains(default_limit, 'Showing 100 random contacts')
-        self.assertContains(custom_limit, 'Showing 10 random contacts')
-        self.assertNotContains(no_limit, 'Showing 0 random contacts')
+        self.assertContains(default_limit, 'alert-success')
+        self.assertContains(default_limit, 'Showing up to 100 random contacts')
+        self.assertContains(custom_limit, 'alert-success')
+        self.assertContains(custom_limit, 'Showing up to 10 random contacts')
+        # Testing for CSS class not existing (since that's used to display
+        # notification messages). We cannot check the context for messages
+        # since that uses Django's internal messages framework which cleared
+        # during rendering.
+        self.assertNotContains(no_limit, 'alert-success')
 
 
 class TestFieldNormalizer(TestCase):
