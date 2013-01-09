@@ -75,9 +75,7 @@ class MessageStream(Stream):
 
 
 class ConversationResource(resource.Resource):
-    """
-    Streams messages as they arrive on a consumer.
-    """
+
     def __init__(self, worker, conversation_key):
         resource.Resource.__init__(self)
         self.worker = worker
@@ -114,6 +112,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
         The path the resource should receive health checks on.
         Defaults to '/health/'
     """
+    worker_name = 'http_api_worker'
 
     def validate_config(self):
         super(StreamingHTTPWorker, self).validate_config()
@@ -140,11 +139,11 @@ class StreamingHTTPWorker(GoApplicationWorker):
 
     def stream(self, stream_class, conversation_key, message):
         # Publish the message by manually specifying the routing key
-        return self.stream_publisher.publish(message,
-            routing_key=stream_class.routing_key % {
+        rk = stream_class.routing_key % {
             'transport_name': self.transport_name,
             'conversation_key': conversation_key,
-            })
+            }
+        return self.stream_publisher.publish_message(message, routing_key=rk)
 
     @inlineCallbacks
     def consume_user_message(self, message):
