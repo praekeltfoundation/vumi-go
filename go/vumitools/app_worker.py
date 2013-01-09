@@ -223,6 +223,8 @@ class GoApplicationMixin(object):
         if name not in self.metrics:
             metric = Metric(name, [agg])
             self.metrics.register(metric)
+        else:
+            metric = self.metrics[name]
         metric.set(value)
 
     def publish_conversation_metric(self, conversation, name, value, agg=None):
