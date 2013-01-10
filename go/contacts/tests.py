@@ -586,6 +586,7 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         [email] = mail.outbox
         [(file_name, contents, mime_type)] = email.attachments
 
+        self.assertEqual(email.recipients(), [self.user.email])
         self.assertTrue(
             '%s contacts export' % (self.group.name,) in email.subject)
         self.assertTrue(
@@ -800,6 +801,7 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
         [email] = mail.outbox
         [(file_name, contents, mime_type)] = email.attachments
 
+        self.assertEqual(email.recipients(), [self.user.email])
         self.assertTrue(
             '%s contacts export' % (group.name,) in email.subject)
         self.assertTrue(
