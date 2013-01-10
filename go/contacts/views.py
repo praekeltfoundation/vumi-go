@@ -113,6 +113,12 @@ def _static_group(request, contact_store, group):
                 group.save()
             messages.info(request, 'The group name has been updated')
             return redirect(_group_url(group.key))
+        elif '_export_group_contacts' in request.POST:
+            tasks.export_group_contacts.delay(
+                request.user_api.user_account_key, group.key, True)
+            messages.info(request, 'The export is scheduled and should '
+                                    'complete within a few minutes.')
+            return redirect(_group_url(group.key))
         elif '_delete_group_contacts' in request.POST:
             tasks.delete_group_contacts.delay(
                 request.user_api.user_account_key, group.key)
@@ -235,6 +241,12 @@ def _smart_group(request, contact_store, group):
             group.query = smart_group_form.cleaned_data['query']
             group.save()
             return redirect(_group_url(group.key))
+    elif '_export_group_contacts' in request.POST:
+        tasks.export_group_contacts.delay(
+            request.user_api.user_account_key, group.key, True)
+        messages.info(request, 'The export is scheduled and should '
+                                'complete within a few minutes.')
+        return redirect(_group_url(group.key))
     elif '_delete_group_contacts' in request.POST:
         tasks.delete_group_contacts.delay(request.user_api.user_account_key,
             group.key)

@@ -1,15 +1,17 @@
 import sys
 import traceback
+from StringIO import StringIO
 
 from celery.task import task
 
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMessage
 from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
 
 from go.vumitools.api import VumiUserApi
 from go.base.models import UserProfile
+from go.base.utils import UnicodeCSVWriter
 from go.contacts.parsers import ContactFileParser
 
 
@@ -45,6 +47,75 @@ def delete_group_contacts(account_key, group_key):
     # memory is ugly.
     for contact_key in contacts:
         contact_store.get_contact_by_key(contact_key).delete()
+
+
+@task(ignore_result=True)
+def export_group_contacts(account_key, group_key, include_extra):
+    """
+    Export the a groups' contacts as a CSV file and email to the account
+    holders' email address.
+
+    :param str account_key:
+        The account holder's account key
+    :param str group_key:
+        The group to export contacts for (can be either static or smart groups)
+    :param bool include_extra:
+        Whether or not to include the extra data stored in the dynamic field.
+    """
+
+    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
+    contact_store = api.contact_store
+    group = contact_store.get_group(group_key)
+    contact_keys = contact_store.get_contacts_for_group(group)
+
+    # Get the profile for this user so we can email them when the import
+    # has been completed.
+    user_profile = UserProfile.objects.get(user_account=account_key)
+
+    io = StringIO()
+    writer = UnicodeCSVWriter(io)
+    contacts = sorted([contact_store.contacts.load(contact_key)
+                        for contact_key in contact_keys],
+                        key=lambda c: c.created_at)
+
+    # collect all names that we can export
+    fields = ['name', 'surname', 'email_address', 'msisdn', 'dob',
+                    'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                    'created_at']
+
+    # Collect the possible field names for this set of contacts, depending
+    # the number of contacts found this could be potentially expensive.
+    extra_fields = set()
+    if include_extra:
+        for contact in contacts:
+            extra_fields.update(['extra-%s' (key,)
+                                    for key in contact.extra.keys()])
+
+    # sort the set and turn into a list to maintain ordering
+    extra_fields = sorted(extra_fields)
+
+    # write the CSV header
+    writer.writerow(fields + extra_fields)
+
+    # loop over the contacts and create the row populated with
+    # the values of the selected fields.
+    for contact in contacts:
+        row = [unicode(getattr(contact, field, None) or '')
+                for field in fields]
+
+        if include_extra:
+            row.extend([unicode(contact.extra[extra_field] or '')
+                        for extra_field in extra_fields])
+
+        writer.writerow(row)
+
+    email = EmailMessage('%s contacts export' % (group.name,),
+            'Please find the CSV data for %s contact(s) from '
+            'group "%s" attached.\n\n' % (
+            len(contact_keys), group.name),
+        settings.DEFAULT_FROM_EMAIL, [user_profile.user.email])
+    email.attach('contacts-export.csv', io.getvalue(), 'text/csv')
+    email.send()
 
 
 @task(ignore_result=True)
