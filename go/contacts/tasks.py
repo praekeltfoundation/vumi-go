@@ -85,25 +85,28 @@ def export_group_contacts(account_key, group_key, include_extra):
 
     # Collect the possible field names for this set of contacts, depending
     # the number of contacts found this could be potentially expensive.
-    extra_fields = []
+    extra_fields = set()
     if include_extra:
         for contact in contacts:
-            for key in contact.extra.keys():
-                if key not in extra_fields:
-                    extra_fields.append('extra-%s' % (key,))
+            extra_fields.update(['extra-%s' (key,)
+                                    for key in contact.extra.keys()])
 
-    # write the header
+    # sort the set and turn into a list to maintain ordering
+    extra_fields = sorted(extra_fields)
+
+    # write the CSV header
     writer.writerow(fields + extra_fields)
 
     # loop over the contacts and create the row populated with
     # the values of the selected fields.
     for contact in contacts:
-        row = []
-        for field in fields:
-            row.append(unicode(getattr(contact, field, None) or ''))
+        row = [unicode(getattr(contact, field, None) or '')
+                for field in fields]
+
         if include_extra:
-            for extra_field in extra_fields:
-                row.append(unicode(contact.extra[extra_field] or ''))
+            row.extend([unicode(contact.extra[extra_field] or '')
+                        for extra_field in extra_fields])
+
         writer.writerow(row)
 
     email = EmailMessage('%s contacts export' % (group.name,),
