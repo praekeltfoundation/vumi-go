@@ -284,7 +284,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(self.conversation.subject in email.body)
         [(file_name, content, mime_type)] = email.attachments
         self.assertEqual(file_name, 'messages-export.csv')
-        self.assertTrue(content)
+        # 1 header, 10 sent, 10 received, 1 trailing newline == 22
+        self.assertEqual(22, len(content.split('\n')))
         self.assertEqual(mime_type, 'text/csv')
 
 
