@@ -562,6 +562,39 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
             self.contact_store.get_contacts_for_group(self.group), [])
         self.assertFalse(contact in self.contact_store.list_contacts())
 
+    def test_group_contact_export(self):
+        # Create a contact in the group
+        self.client.post(reverse('contacts:new_person'), {
+            'name': 'New',
+            'surname': 'Person',
+            'msisdn': '27761234567',
+            'groups': [self.group_key],
+            })
+
+        # Clear the group
+        group_url = reverse('contacts:group', kwargs={
+            'group_key': self.group.key,
+        })
+        response = self.client.post(group_url, {
+                '_export_group_contacts': True,
+            })
+
+        contacts = self.contact_store.get_contacts_for_group(self.group)
+
+        self.assertRedirects(response, group_url)
+        self.assertEqual(len(mail.outbox), 1)
+        [email] = mail.outbox
+        [(file_name, contents, mime_type)] = email.attachments
+
+        self.assertTrue(
+            '%s contacts export' % (self.group.name,) in email.subject)
+        self.assertTrue(
+            '%s contact(s) from group "%s" attached' % (
+                len(contacts), self.group.name) in email.body)
+        self.assertEqual(file_name, 'contacts-export.csv')
+        self.assertTrue(contents)
+        self.assertEqual(mime_type, 'text/csv')
+
 
 class SmartGroupsTestCase(DjangoGoApplicationTestCase):
 
