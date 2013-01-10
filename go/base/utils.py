@@ -75,6 +75,7 @@ def page_range_window(page, padding):
         return range(current_page - padding + 1, current_page + padding)
 
 
+# Copied from http://docs.python.org/2/library/csv.html#examples
 class UnicodeCSVWriter(object):
     """
     A CSV writer which will write rows to CSV file "f",
