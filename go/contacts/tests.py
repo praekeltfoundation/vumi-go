@@ -570,6 +570,7 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
 
         # add some extra info to ensure it gets exported properly
         self.contact.extra['foo'] = u'bar'
+        self.contact.extra['bar'] = u'baz'
         self.contact.save()
 
         response = self.client.post(group_url, {
@@ -589,8 +590,13 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
             in email.body)
         self.assertEqual(file_name, 'contacts-export.csv')
         [header, contact, _] = contents.split('\r\n')
-        self.assertTrue(header.endswith('foo'))
-        self.assertTrue(contact.endswith('bar'))
+
+        self.assertEqual(header,
+            ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
+                'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                'created_at', 'extras-bar', 'extras-foo']))
+
+        self.assertTrue(contact.endswith('baz,bar'))
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'text/csv')
 
