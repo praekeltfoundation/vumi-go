@@ -196,6 +196,14 @@ class TestTxVumiUserApi(AppWorkerTestCase):
                 optedin_addrs.append(contact.addr_for(conv.delivery_class))
         self.assertEqual(optedin_addrs, ['+27760000000'])
 
+    @inlineCallbacks
+    def test_exists(self):
+        self.assertTrue((yield self.api.user_exists(self.user_account.key)))
+        self.assertTrue((yield self.user_api.exists()))
+
+        self.assertFalse((yield self.api.user_exists('foo')))
+        self.assertFalse((yield VumiUserApi(self.api, 'foo').exists()))
+
 
 class TestVumiUserApi(TestTxVumiUserApi):
     sync_persistence = True

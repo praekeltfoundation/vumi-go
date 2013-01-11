@@ -32,12 +32,10 @@ def index(request):
                          if c.conversation_type == conversation_type]
 
     if conversation_status:
-        if conversation_status == 'running':
-            conversations = [c for c in conversations if c.running()]
-        elif conversation_status == 'finished':
-            conversations = [c for c in conversations if c.ended()]
-        elif conversation_status == 'draft':
-            conversations = [c for c in conversations if not c.started()]
+        # TODO: Use constants here?
+        if conversation_status in ('draft', 'running', 'finished'):
+            conversations = [c for c in conversations
+                             if c.get_status() == conversation_status]
         else:
             raise ValueError(
                 "Unknown conversation status: %s" % (conversation_status,))

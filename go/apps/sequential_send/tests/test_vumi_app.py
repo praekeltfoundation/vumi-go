@@ -146,6 +146,24 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         self.assertEqual(self.message_convs, [conv, conv])
 
     @inlineCallbacks
+    def test_schedule_daily_with_ended_conv(self):
+        conv = yield self.create_conversation(config={
+                'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
+        yield self.start_conversation(conv)
+        yield conv.end_conversation()
+
+        yield self._stub_out_async(conv)
+
+        yield self.check_message_convs_and_advance([], 70)
+        yield self.check_message_convs_and_advance([], 70)
+        # had it been scheduled it should show up after from here on onwards
+        yield self.check_message_convs_and_advance([], 70)
+        yield self.check_message_convs_and_advance([], 3600 * 24 - 140)
+        yield self.check_message_convs_and_advance([], 70)
+        yield self.check_message_convs_and_advance([], 70)
+        self.assertEqual(self.message_convs, [])
+
+    @inlineCallbacks
     def test_schedule_day_of_month_conv(self):
         conv = yield self.create_conversation(config={'schedule': {
             'recurring': 'day_of_month', 'time': '12:00:00', 'days': '1, 5'}})
