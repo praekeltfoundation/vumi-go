@@ -23,6 +23,7 @@ from go.vumitools.conversation.models import (
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import (ConversationForm, ConversationGroupForm,
                                     ConfirmConversationForm)
+from go.conversation.tasks import export_conversation_messages
 from go.base import message_store_client as ms_client
 from go.base.utils import (make_read_only_form, conversation_or_404,
                             page_range_window)
@@ -320,6 +321,15 @@ class ShowConversationView(ConversationView):
                 self.get_next_view(conversation),
                 conversation_key=conversation.key)
         return self.render_to_response(params)
+
+    def post(self, request, conversation):
+        if '_export_conversation_messages' in request.POST:
+            export_conversation_messages.delay(
+                request.user_api.user_account_key, conversation.key)
+            messages.info(request, 'Conversation messages CSV file export '
+                                    'scheduled. CSV file should arrive in '
+                                    'your mailbox shortly.')
+        return self.redirect_to('show', conversation_key=conversation.key)
 
 
 class AggregatesConversationView(ConversationView):
