@@ -94,8 +94,9 @@ def export_group_contacts(account_key, group_key, include_extra):
             extra_fields.update(contact.extra.keys())
 
     # write the CSV header
-    writer.writerow(fields + ['extra-%s' % (key,)
-                                    for key in sorted(extra_fields)])
+    extra_fields = sorted(extra_fields)
+    writer.writerow(fields + ['extras-%s' % (key,)
+                                    for key in extra_fields])
 
     # loop over the contacts and create the row populated with
     # the values of the selected fields.
