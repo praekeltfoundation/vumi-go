@@ -88,14 +88,11 @@ def export_group_contacts(account_key, group_key, include_extra):
     extra_fields = set()
     if include_extra:
         for contact in contacts:
-            extra_fields.update(['extra-%s' (key,)
-                                    for key in contact.extra.keys()])
-
-    # sort the set and turn into a list to maintain ordering
-    extra_fields = sorted(extra_fields)
+            extra_fields.update(contact.extra.keys())
 
     # write the CSV header
-    writer.writerow(fields + extra_fields)
+    writer.writerow(fields + ['extra-%s' % (key,)
+                                    for key in sorted(extra_fields)])
 
     # loop over the contacts and create the row populated with
     # the values of the selected fields.
