@@ -74,9 +74,12 @@ def export_group_contacts(account_key, group_key, include_extra):
 
     io = StringIO()
     writer = UnicodeCSVWriter(io)
-    contacts = sorted([contact_store.contacts.load(contact_key)
-                        for contact_key in contact_keys],
-                        key=lambda c: c.created_at)
+
+    contacts = []
+    for bunch in contact_store.contacts.load_all_bunches(contact_keys):
+        contacts.extend(bunch)
+
+    contacts = sorted(contacts, key=lambda c: c.created_at)
 
     # collect all names that we can export
     fields = ['name', 'surname', 'email_address', 'msisdn', 'dob',
