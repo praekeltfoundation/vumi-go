@@ -91,6 +91,11 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         }
         return metadata
 
+    def mk_dummy_api(self, conversation):
+        dummy_api = mock.Mock()
+        dummy_api.conversation = conversation
+        return dummy_api
+
     @inlineCallbacks
     def test_start(self):
         conversation = yield self.setup_conversation()
@@ -118,6 +123,21 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         yield self.vumi_api.mdb.add_outbound_message(msg, tag=tag)
         event = self.mkmsg_ack(user_message_id=msg['message_id'])
         yield self.dispatch_event(event)
+
+    @inlineCallbacks
+    def test_conversation_for_api(self):
+        conversation = yield self.setup_conversation()
+        dummy_api = self.mk_dummy_api(conversation)
+        self.assertEqual(self.app.conversation_for_api(dummy_api),
+                         conversation)
+
+    @inlineCallbacks
+    def test_user_api_for_api(self):
+        conversation = yield self.setup_conversation()
+        dummy_api = self.mk_dummy_api(conversation)
+        user_api = self.app.user_api_for_api(dummy_api)
+        self.assertEqual(user_api.user_account_key,
+                         conversation.user_account.key)
 
 
 class TestConversationConfigResource(TestCase):
