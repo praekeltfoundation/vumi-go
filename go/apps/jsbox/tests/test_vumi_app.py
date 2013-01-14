@@ -46,7 +46,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
                                               ("pool", "tag2")])
         yield self.user_api.api.set_pool_metadata("pool", {
             "transport_type": "sphex",
-            })
+        })
 
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,
