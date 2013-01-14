@@ -21,7 +21,7 @@ class CSVFileParser(ContactFileParser):
                 if any([column for column in row]):
                     # Our Riak client requires unicode for all keys & values
                     # stored.
-                    unicoded_row = dict([(key, unicode(value, 'utf-8'))
+                    unicoded_row = dict([(key, unicode(value or '', 'utf-8'))
                                             for key, value in row.items()])
                     yield unicoded_row
         except (csv.Error,), e:
