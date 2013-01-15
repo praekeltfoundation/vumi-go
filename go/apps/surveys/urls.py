@@ -18,5 +18,6 @@ urlpatterns = patterns('',
     url(r'^(?P<conversation_key>\w+)/aggregates\.csv$',
         views.download_aggregates, name='aggregates'),
     url(r'^(?P<conversation_key>\w+)/message_search_result/$',
-        MessageSearchResultConversationView.as_view()),
+        MessageSearchResultConversationView.as_view(),
+        name='message_search_result'),
 )
