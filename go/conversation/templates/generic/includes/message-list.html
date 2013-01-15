@@ -19,9 +19,15 @@
             <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
         </tr>
         {% empty %}
-        <tr>
-            <td colspan="3">No one has replied yet</td>
-        </tr>
+            {% if query %}
+                <tr>
+                    <td colspan="3">No messages match <strong>{{query}}</strong></td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="3">No one has replied yet</td>
+                </tr>
+            {% endif %}
         {% endfor %}
     </tbody>
 </table>
