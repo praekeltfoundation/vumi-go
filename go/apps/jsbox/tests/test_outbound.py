@@ -51,6 +51,8 @@ class TestGoOutboundResource(TestCase):
         self.assertEqual(reply['reason'], reason)
 
     def test_send_to_fails(self):
+        # check that send_to is overridden to return the expected
+        # failure message by calling send_to without arguments
         return self.assert_fails("Generic sending not supported in Vumi Go",
                                  handler=self.resource.handle_send_to)
 
