@@ -17,12 +17,14 @@ from vumi.persist.riak_manager import RiakManager
 from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.txredis_manager import TxRedisManager
+from vumi.middleware.tagger import TaggingMiddleware
 
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
+from go.vumitools.middleware import DebitAccountMiddleware
 
 from django.conf import settings
 from django.utils.datastructures import SortedDict
@@ -188,6 +190,39 @@ class VumiUserApi(object):
 
     def new_conversation(self, *args, **kw):
         return self.conversation_store.new_conversation(*args, **kw)
+
+    @Manager.calls_manager
+    def list_endpoints(self):
+        """Returns a set of end points owned by an account.
+
+        Currently this returns the list of tags in use by active
+        conversations.
+        """
+        tags = set()
+        convs = yield self.active_conversations()
+        for conv in convs:
+            tag = (conv.delivery_tag_pool, conv.delivery_tag)
+            tags.add(tag)
+        returnValue(tags)
+
+    @Manager.calls_manager
+    def msg_options(self, tag, tagpool_metadata=None):
+        """Return a dictionary of message options needed to send a message
+        from this user to the given tag.
+        """
+        if tagpool_metadata is None:
+            tagpool_metadata = yield self.api.tpm.get_metadata(tag[0])
+        msg_options = {}
+        # TODO: transport_type is probably irrelevant
+        msg_options['transport_type'] = tagpool_metadata.get('transport_type')
+        # TODO: not sure whether to declare that tag names must always be
+        #       valid from_addr values or whether to put in a mapping somewhere
+        msg_options['from_addr'] = tag[1]
+        msg_options.update(tagpool_metadata.get('msg_options', {}))
+        TaggingMiddleware.add_tag_to_payload(msg_options, tag)
+        DebitAccountMiddleware.add_user_to_payload(msg_options,
+                                                   self.user_account_key)
+        returnValue(msg_options)
 
 
 class VumiApi(object):
