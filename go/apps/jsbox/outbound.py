@@ -17,8 +17,7 @@ class GoOutboundResource(OutboundResource):
         tag = (command.get('tagpool'), command.get('tag'))
         content = command.get('content')
         to_addr = command.get('to_addr')
-        if (tag[0] is None or tag[1] is None or content is None or
-                to_addr is None):
+        if None in (tag[0], tag[1], content, to_addr):
             returnValue(self.reply(
                 command, success=False,
                 reason="Tag, content or to_addr not specified"))
