@@ -205,6 +205,54 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         self.assertFalse((yield self.api.user_exists('foo')))
         self.assertFalse((yield VumiUserApi(self.api, 'foo').exists()))
 
+    @inlineCallbacks
+    def test_list_endpoints(self):
+        tag1 = (u'pool1', u'1234')
+        tag2 = (u'pool1', u'5678')
+        yield self.api.declare_tags([tag1, tag2])
+        conv = yield self.user_api.new_conversation(
+            u'bulk_message', u'subject', u'message', delivery_class=u'sms',
+            delivery_tag_pool=tag1[0], delivery_tag=tag1[1])
+        endpoints = yield self.user_api.list_endpoints()
+        self.assertEqual(endpoints, set([tag1]))
+
+    @inlineCallbacks
+    def test_msg_options(self):
+        tag = ('pool1', '1234')
+        yield self.api.declare_tags([tag])
+        yield self.api.tpm.set_metadata(tag[0], {
+            'transport_type': 'dummy_transport',
+            'msg_options': {'opt1': 'bar'},
+        })
+        msg_options = yield self.user_api.msg_options(tag)
+        self.assertEqual(msg_options, {
+            'from_addr': '1234',
+            'helper_metadata': {
+                'go': {'user_account': 'test-0-user'},
+                'tag': {'tag': ['pool1', '1234']},
+            },
+            'transport_type': 'dummy_transport',
+            'opt1': 'bar',
+        })
+
+    @inlineCallbacks
+    def test_msg_options_with_tagpool_metadata(self):
+        tag = ('pool1', '1234')
+        tagpool_metadata = {
+            'transport_type': 'dummy_transport',
+            'msg_options': {'opt1': 'bar'},
+        }
+        msg_options = yield self.user_api.msg_options(tag, tagpool_metadata)
+        self.assertEqual(msg_options, {
+            'from_addr': '1234',
+            'helper_metadata': {
+                'go': {'user_account': 'test-0-user'},
+                'tag': {'tag': ['pool1', '1234']},
+            },
+            'transport_type': 'dummy_transport',
+            'opt1': 'bar',
+        })
+
 
 class TestVumiUserApi(TestTxVumiUserApi):
     sync_persistence = True

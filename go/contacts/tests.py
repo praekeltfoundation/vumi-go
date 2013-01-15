@@ -562,6 +562,44 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
             self.contact_store.get_contacts_for_group(self.group), [])
         self.assertFalse(contact in self.contact_store.list_contacts())
 
+    def test_group_contact_export(self):
+        # Clear the group
+        group_url = reverse('contacts:group', kwargs={
+            'group_key': self.group.key,
+        })
+
+        # add some extra info to ensure it gets exported properly
+        self.contact.extra['foo'] = u'bar'
+        self.contact.extra['bar'] = u'baz'
+        self.contact.save()
+
+        response = self.client.post(group_url, {
+                '_export_group_contacts': True,
+            })
+
+        self.assertRedirects(response, group_url)
+        self.assertEqual(len(mail.outbox), 1)
+        [email] = mail.outbox
+        [(file_name, contents, mime_type)] = email.attachments
+
+        self.assertEqual(email.recipients(), [self.user.email])
+        self.assertTrue(
+            '%s contacts export' % (self.group.name,) in email.subject)
+        self.assertTrue(
+            '1 contact(s) from group "%s" attached' % (self.group.name,)
+            in email.body)
+        self.assertEqual(file_name, 'contacts-export.csv')
+        [header, contact, _] = contents.split('\r\n')
+
+        self.assertEqual(header,
+            ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
+                'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                'created_at', 'extras-bar', 'extras-foo']))
+
+        self.assertTrue(contact.endswith('baz,bar'))
+        self.assertTrue(contents)
+        self.assertEqual(mime_type, 'text/csv')
+
 
 class SmartGroupsTestCase(DjangoGoApplicationTestCase):
 
@@ -738,6 +776,44 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
         # since that uses Django's internal messages framework which cleared
         # during rendering.
         self.assertNotContains(no_limit, 'alert-success')
+
+    def test_smartgroup_contact_export(self):
+        self.client.post(reverse('contacts:groups'), {
+            'name': 'a smart group',
+            'query': 'name:foo OR surname:bar',
+            '_new_smart_group': '1',
+            })
+
+        self.mkcontact(surname='bar')
+        self.mkcontact(name='foo')
+        self.mkcontact(name='foo', surname='bar')
+
+        group = newest(self.contact_store.list_groups())
+        group_url = reverse('contacts:group', kwargs={
+            'group_key': group.key,
+        })
+        self.assertEqual(group.name, 'a smart group')
+        response = self.client.post(group_url, {
+                '_export_group_contacts': True,
+            })
+
+        contacts = self.contact_store.get_contacts_for_group(group)
+        self.assertEqual(len(contacts), 3)
+
+        self.assertRedirects(response, group_url)
+        self.assertEqual(len(mail.outbox), 1)
+        [email] = mail.outbox
+        [(file_name, contents, mime_type)] = email.attachments
+
+        self.assertEqual(email.recipients(), [self.user.email])
+        self.assertTrue(
+            '%s contacts export' % (group.name,) in email.subject)
+        self.assertTrue(
+            '%s contact(s) from group "%s" attached' % (
+                len(contacts), group.name) in email.body)
+        self.assertEqual(file_name, 'contacts-export.csv')
+        self.assertTrue(contents)
+        self.assertEqual(mime_type, 'text/csv')
 
 
 class TestFieldNormalizer(TestCase):
