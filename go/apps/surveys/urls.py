@@ -1,5 +1,8 @@
 from django.conf.urls.defaults import patterns, url
+
 from go.apps.surveys import views
+from go.conversation.base import MessageSearchResultConversationView
+
 
 urlpatterns = patterns('',
     url(r'^new/$', views.new, name='new'),
@@ -14,4 +17,6 @@ urlpatterns = patterns('',
         name='user_data'),
     url(r'^(?P<conversation_key>\w+)/aggregates\.csv$',
         views.download_aggregates, name='aggregates'),
+    url(r'^(?P<conversation_key>\w+)/message_search_result/$',
+        MessageSearchResultConversationView.as_view()),
 )
