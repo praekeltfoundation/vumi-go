@@ -20,6 +20,7 @@
         </div>
         <form class="form-search">
             <input type="text" name="q" size="40" placeholder="Search ..." value="{{query|default:""}}" class="input-medium search-query">
+            <input type="hidden" name="direction" value="{{message_direction}}"/>
             <button type="submit" class="btn">Search</button>
         </form>
     </div>
@@ -42,7 +43,7 @@
         </li>
     </ul>
     <div class="tab-content" id="message-page">
-        {% if message_page %}
+        {% if message_page.paginator.num_pages %}
             {% include "generic/includes/message-list.html" %}
         {% else %}
             {% include "generic/includes/message-load-results.html" %}
