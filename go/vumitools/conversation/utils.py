@@ -148,18 +148,9 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def make_message_options(self, tag):
-        msg_options = {}
-        # TODO: transport_type is probably irrelevant
-        msg_options['transport_type'] = yield self.get_tagpool_metadata(
-            'transport_type')
-        # TODO: not sure whether to declare that tag names must always be
-        #       valid from_addr values or whether to put in a mapping somewhere
-        msg_options['from_addr'] = tag[1]
-        msg_options.update(
-            (yield self.get_tagpool_metadata('msg_options', {})))
-        TaggingMiddleware.add_tag_to_payload(msg_options, tag)
-        DebitAccountMiddleware.add_user_to_payload(msg_options,
-                                                   self.c.user_account.key)
+        yield self.get_tagpool_metadata('msg_options')  # force cache update
+        msg_options = yield self.user_api.msg_options(
+            tag, self._tagpool_metadata)
         returnValue(msg_options)
 
     @Manager.calls_manager
