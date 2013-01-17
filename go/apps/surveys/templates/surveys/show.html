@@ -27,7 +27,7 @@
 
     {% include "surveys/includes/download.html" %}
 
-    {% show_conversation_messages conversation direction=request.GET.direction page=request.GET.p %}
+    {% show_conversation_messages conversation direction=request.GET.direction query=request.GET.q page=request.GET.p %}
 
 {% endblock %}
 
