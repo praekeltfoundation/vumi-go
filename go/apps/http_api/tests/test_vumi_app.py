@@ -146,8 +146,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         receiver = self.client.stream(TransportUserMessage, queue.put,
                                                 queue.put, url)
         response = yield receiver.get_response()
-        headers = response.headers
-        self.assertEqual(headers.getRawHeaders('www-authenticate'), [
+        self.assertEqual(response.code, http.UNAUTHORIZED)
+        self.assertEqual(response.headers.getRawHeaders('www-authenticate'), [
             'basic realm="Conversation Stream"'])
 
     @inlineCallbacks
@@ -164,3 +164,5 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                                                 queue.put, url, headers)
         response = yield receiver.get_response()
         self.assertEqual(response.code, http.UNAUTHORIZED)
+        self.assertEqual(response.headers.getRawHeaders('www-authenticate'), [
+            'basic realm="Conversation Stream"'])
