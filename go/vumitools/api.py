@@ -145,8 +145,7 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def tagpools(self):
-        account_store = self.api.account_store
-        user_account = yield account_store.get_user(self.user_account_key)
+        user_account = yield self.api.get_user_account(self.user_account_key)
         active_conversations = yield self.active_conversations()
 
         tp_usage = defaultdict(int)
@@ -168,8 +167,7 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def applications(self):
-        account_store = self.api.account_store
-        user_account = yield account_store.get_user(self.user_account_key)
+        user_account = yield self.api.get_user_account(self.user_account_key)
         # NOTE: This assumes that we don't have very large numbers of
         #       applications.
         app_permissions = []
@@ -271,8 +269,11 @@ class VumiApi(object):
         :param str user_account_key:
             The user account key to check.
         """
-        user_data = yield self.account_store.get_user(user_account_key)
+        user_data = yield self.get_user_account(user_account_key)
         returnValue(user_data is not None)
+
+    def get_user_account(self, user_account_key):
+        return self.account_store.get_user(user_account_key)
 
     def get_user_api(self, user_account_key):
         return VumiUserApi(self, user_account_key)
