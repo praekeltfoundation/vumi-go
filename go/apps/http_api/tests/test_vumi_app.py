@@ -61,7 +61,21 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                                     user_account=unicode(self.account.key))
         self.conversation = yield self.create_conversation()
         self.conversation.batches.add_key(self.batch_id)
+        self.conversation.set_metadata({
+            'http_api': {
+                'api_tokens': [
+                    'token-1',
+                    'token-2',
+                    'token-3',
+                ]
+            }
+        })
         yield self.conversation.save()
+
+        self.auth_headers = Headers({
+            'Authorization': ['Basic ' + base64.b64encode('%s:%s' % (
+                self.account.key, 'token-1'))],
+            })
 
         self.client = StreamingClient()
 
@@ -76,18 +90,19 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         messages = DeferredQueue()
         errors = DeferredQueue()
-        receiver = yield self.client.stream(TransportUserMessage, messages.put,
-                                            errors.put, url)
 
+        receiver = self.client.stream(TransportUserMessage, messages.put,
+                                            errors.put, url, self.auth_headers)
         msg1 = self.mkmsg_in(content='in 1', message_id='1')
         yield self.dispatch_with_tag(msg1, self.tag)
 
         msg2 = self.mkmsg_in(content='in 2', message_id='2')
         yield self.dispatch_with_tag(msg2, self.tag)
 
-        receiver.disconnect()
         rm1 = yield messages.get()
         rm2 = yield messages.get()
+
+        receiver.disconnect()
 
         self.assertEqual(msg1['message_id'], rm1['message_id'])
         self.assertEqual(msg2['message_id'], rm2['message_id'])
@@ -100,7 +115,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         events = DeferredQueue()
         errors = DeferredQueue()
         receiver = yield self.client.stream(TransportEvent, events.put,
-                                            events.put, url)
+                                            events.put, url, self.auth_headers)
 
         msg1 = self.mkmsg_in(content='in 1', message_id='1')
         yield self.vumi_api.mdb.add_outbound_message(msg1,
@@ -116,6 +131,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         ra1 = yield events.get()
         ra2 = yield events.get()
+
         receiver.disconnect()
 
         self.assertEqual(ack1['event_id'], ra1['event_id'])
@@ -127,9 +143,10 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
 
         queue = DeferredQueue()
-        receiver = yield self.client.stream(TransportUserMessage, queue.put,
+        receiver = self.client.stream(TransportUserMessage, queue.put,
                                                 queue.put, url)
-        headers = receiver.response.headers
+        response = yield receiver.get_response()
+        headers = response.headers
         self.assertEqual(headers.getRawHeaders('www-authenticate'), [
             'basic realm="Conversation Stream"'])
 
@@ -143,6 +160,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             'Authorization': ['Basic %s' % (base64.b64encode('foo:bar'),)],
             })
 
-        receiver = yield self.client.stream(TransportUserMessage, queue.put,
+        receiver = self.client.stream(TransportUserMessage, queue.put,
                                                 queue.put, url, headers)
-        self.assertEqual(receiver.response.code, http.UNAUTHORIZED)
+        response = yield receiver.get_response()
+        self.assertEqual(response.code, http.UNAUTHORIZED)

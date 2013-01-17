@@ -123,14 +123,14 @@ class ConversationAccessChecker(object):
         user_exists = yield self.vumi_api.user_exists(username)
         if user_exists:
             user_api = self.vumi_api.get_user_api(username)
-            conversation = user_api.get_wrapped_conversation(
-                self.conversation_key)
+            conversation = yield user_api.get_wrapped_conversation(
+                                                        self.conversation_key)
             if conversation is not None:
                 metadata = conversation.get_metadata(default={})
                 http_api_metadata = metadata.get('http_api', {})
                 tokens = http_api_metadata.get('api_tokens', [])
                 if token in tokens:
-                    returnValue(defer.succeed(username))
+                    returnValue(username)
         raise error.UnauthorizedLogin()
 
 
