@@ -1,4 +1,8 @@
+import base64
+
 from twisted.internet.defer import inlineCallbacks, DeferredQueue
+from twisted.web.http_headers import Headers
+from twisted.web import http
 
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.message import TransportUserMessage, TransportEvent
@@ -12,7 +16,8 @@ from go.apps.http_api.client import StreamingClient, VumiMessageReceiver
 class TestMessageReceiver(VumiMessageReceiver):
     message_class = TransportUserMessage
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        VumiMessageReceiver.__init__(self, *args, **kwargs)
         self.inbox = DeferredQueue()
         self.errors = DeferredQueue()
 
@@ -67,10 +72,12 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_messages_stream(self):
-        url = '%s/%s/messages.js' % (self.url, self.conversation.key)
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
 
-        receiver = TestMessageReceiver()
-        self.client.stream(receiver, url)
+        messages = DeferredQueue()
+        errors = DeferredQueue()
+        receiver = yield self.client.stream(TransportUserMessage, messages.put,
+                                            errors.put, url)
 
         msg1 = self.mkmsg_in(content='in 1', message_id='1')
         yield self.dispatch_with_tag(msg1, self.tag)
@@ -78,20 +85,22 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         msg2 = self.mkmsg_in(content='in 2', message_id='2')
         yield self.dispatch_with_tag(msg2, self.tag)
 
-        rm1 = yield receiver.inbox.get()
-        rm2 = yield receiver.inbox.get()
         receiver.disconnect()
+        rm1 = yield messages.get()
+        rm2 = yield messages.get()
 
         self.assertEqual(msg1['message_id'], rm1['message_id'])
         self.assertEqual(msg2['message_id'], rm2['message_id'])
-        self.assertEqual(receiver.errors.size, None)
+        self.assertEqual(errors.size, None)
 
     @inlineCallbacks
     def test_events_stream(self):
-        url = '%s/%s/events.js' % (self.url, self.conversation.key)
+        url = '%s/%s/events.json' % (self.url, self.conversation.key)
 
-        receiver = TestEventReceiver()
-        self.client.stream(receiver, url)
+        events = DeferredQueue()
+        errors = DeferredQueue()
+        receiver = yield self.client.stream(TransportEvent, events.put,
+                                            events.put, url)
 
         msg1 = self.mkmsg_in(content='in 1', message_id='1')
         yield self.vumi_api.mdb.add_outbound_message(msg1,
@@ -105,10 +114,35 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         ack2 = self.mkmsg_ack(user_message_id=msg2['message_id'])
         yield self.dispatch_event(ack2)
 
-        ra1 = yield receiver.inbox.get()
-        ra2 = yield receiver.inbox.get()
+        ra1 = yield events.get()
+        ra2 = yield events.get()
         receiver.disconnect()
 
         self.assertEqual(ack1['event_id'], ra1['event_id'])
         self.assertEqual(ack2['event_id'], ra2['event_id'])
-        self.assertEqual(receiver.errors.size, None)
+        self.assertEqual(errors.size, None)
+
+    @inlineCallbacks
+    def test_missing_auth(self):
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+
+        queue = DeferredQueue()
+        receiver = yield self.client.stream(TransportUserMessage, queue.put,
+                                                queue.put, url)
+        headers = receiver.response.headers
+        self.assertEqual(headers.getRawHeaders('www-authenticate'), [
+            'basic realm="Conversation Stream"'])
+
+    @inlineCallbacks
+    def test_invalid_auth(self):
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+
+        queue = DeferredQueue()
+
+        headers = Headers({
+            'Authorization': ['Basic %s' % (base64.b64encode('foo:bar'),)],
+            })
+
+        receiver = yield self.client.stream(TransportUserMessage, queue.put,
+                                                queue.put, url, headers)
+        self.assertEqual(receiver.response.code, http.UNAUTHORIZED)
