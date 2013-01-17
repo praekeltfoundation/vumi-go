@@ -9,7 +9,6 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.web.guard import HTTPAuthSessionWrapper
 from twisted.web.guard import BasicCredentialFactory
 from twisted.internet.error import ConnectionDone
-from twisted.internet import defer
 from twisted.internet.defer import (Deferred, DeferredList, inlineCallbacks,
                                     returnValue)
 
