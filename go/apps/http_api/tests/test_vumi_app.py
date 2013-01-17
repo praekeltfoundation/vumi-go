@@ -1,12 +1,30 @@
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, DeferredQueue
 
 from vumi.middleware.tagger import TaggingMiddleware
+from vumi.message import TransportUserMessage, TransportEvent
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApi
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
-from go.apps.http_api.client import (StreamingClient,
-    TransportUserMessageReceiver, TransportEventReceiver)
+from go.apps.http_api.client import StreamingClient, VumiMessageReceiver
+
+
+class TestMessageReceiver(VumiMessageReceiver):
+    message_class = TransportUserMessage
+
+    def __init__(self):
+        self.inbox = DeferredQueue()
+        self.errors = DeferredQueue()
+
+    def onMessage(self, message):
+        self.inbox.put(message)
+
+    def onError(self, failure):
+        self.errors.put(failure)
+
+
+class TestEventReceiver(TestMessageReceiver):
+    message_class = TransportEvent
 
 
 class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
@@ -51,7 +69,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     def test_messages_stream(self):
         url = '%s/%s/messages.js' % (self.url, self.conversation.key)
 
-        receiver = TransportUserMessageReceiver()
+        receiver = TestMessageReceiver()
         self.client.stream(receiver, url)
 
         msg1 = self.mkmsg_in(content='in 1', message_id='1')
@@ -72,7 +90,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     def test_events_stream(self):
         url = '%s/%s/events.js' % (self.url, self.conversation.key)
 
-        receiver = TransportEventReceiver()
+        receiver = TestEventReceiver()
         self.client.stream(receiver, url)
 
         msg1 = self.mkmsg_in(content='in 1', message_id='1')
