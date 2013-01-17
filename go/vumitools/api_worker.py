@@ -216,7 +216,8 @@ class GoApplicationRouter(BaseDispatchRouter):
 
         batch = yield outbound_message.batch.get()
         if batch is None:
-            log.error('Outbound message without a batch id. Result of bad routing')
+            log.error(
+                'Outbound message without a batch id. Result of bad routing')
             return
 
         account_key = batch.metadata['user_account']

@@ -8,10 +8,7 @@ from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Manager
 
-from vumi.middleware.tagger import TaggingMiddleware
-
 from go.vumitools.exceptions import ConversationSendError
-from go.vumitools.middleware import DebitAccountMiddleware
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.utils import GoMessageMetadata
 
