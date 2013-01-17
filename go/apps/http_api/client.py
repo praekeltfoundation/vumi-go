@@ -1,13 +1,13 @@
 import json
 
-from twisted.internet.defer import Deferred, DeferredQueue
+from twisted.internet.defer import Deferred
 from twisted.internet import reactor
 from twisted.web.client import Agent
 from twisted.web.http_headers import Headers
 from twisted.protocols import basic
 from twisted.python.failure import DefaultException
 
-from vumi.message import Message, TransportUserMessage, TransportEvent
+from vumi.message import Message
 from vumi import log
 
 
@@ -41,24 +41,6 @@ class VumiMessageReceiver(basic.LineReceiver):
     def disconnect(self):
         self.transport._producer.loseConnection()
         self.transport._stopProxying()
-
-
-class TransportUserMessageReceiver(VumiMessageReceiver):
-    message_class = TransportUserMessage
-
-    def __init__(self):
-        self.inbox = DeferredQueue()
-        self.errors = DeferredQueue()
-
-    def onMessage(self, message):
-        self.inbox.put(message)
-
-    def onError(self, failure):
-        self.errors.put(failure)
-
-
-class TransportEventReceiver(TransportUserMessageReceiver):
-    message_class = TransportEvent
 
 
 class StreamingClient(object):
