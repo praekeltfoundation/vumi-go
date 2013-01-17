@@ -1,9 +1,15 @@
 # -*- test-case-name: go.apps.http_api.tests.test_vumi_app -*-
 from functools import partial
 
+from zope.interface import implements
+
+from twisted.cred import portal, checkers, credentials, error
 from twisted.web import resource
 from twisted.web.server import NOT_DONE_YET
+from twisted.web.guard import HTTPAuthSessionWrapper
+from twisted.web.guard import BasicCredentialFactory
 from twisted.internet.error import ConnectionDone
+from twisted.internet import defer
 from twisted.internet.defer import (Deferred, DeferredList, inlineCallbacks,
                                     returnValue)
 
@@ -83,11 +89,49 @@ class ConversationResource(resource.Resource):
 
     def getChild(self, path, request):
         class_map = {
-            'events.js': EventStream,
-            'messages.js': MessageStream,
+            'events.json': EventStream,
+            'messages.json': MessageStream,
         }
         stream_class = class_map.get(path, lambda *a: resource.NoResource())
         return stream_class(self.worker, self.conversation_key)
+
+
+class ConversationRealm(object):
+    implements(portal.IRealm)
+
+    def __init__(self, resource):
+        self.resource = resource
+
+    def requestAvatar(self, user, mind, *interfaces):
+        if resource.IResource in interfaces:
+            return (resource.IResource, self.resource, lambda: None)
+        raise NotImplementedError()
+
+
+class ConversationAccessChecker(object):
+    implements(checkers.ICredentialsChecker)
+    credentialInterfaces = (credentials.IUsernamePassword,)
+
+    def __init__(self, vumi_api, conversation_key):
+        self.vumi_api = vumi_api
+        self.conversation_key = conversation_key
+
+    @inlineCallbacks
+    def requestAvatarId(self, credentials):
+        username = credentials.username
+        token = credentials.password
+        user_exists = yield self.vumi_api.user_exists(username)
+        if user_exists:
+            user_api = self.vumi_api.get_user_api(username)
+            conversation = user_api.get_wrapped_conversation(
+                self.conversation_key)
+            if conversation is not None:
+                metadata = conversation.get_metadata(default={})
+                http_api_metadata = metadata.get('http_api', {})
+                tokens = http_api_metadata.get('api_tokens', [])
+                if token in tokens:
+                    returnValue(defer.succeed(username))
+        raise error.UnauthorizedLogin()
 
 
 class StreamingResource(resource.Resource):
@@ -98,7 +142,18 @@ class StreamingResource(resource.Resource):
 
     def getChild(self, conversation_key, request):
         if conversation_key:
-            return ConversationResource(self.worker, conversation_key)
+
+            resource = ConversationResource(self.worker, conversation_key)
+
+            checker = ConversationAccessChecker(self.worker.vumi_api,
+                                                conversation_key)
+            realm = ConversationRealm(resource)
+            p = portal.Portal(realm, [checker])
+
+            factory = BasicCredentialFactory("Conversation Stream")
+            protected_resource = HTTPAuthSessionWrapper(p, [factory])
+
+            return protected_resource
 
 
 class StreamingHTTPWorker(GoApplicationWorker):
