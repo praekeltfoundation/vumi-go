@@ -158,6 +158,9 @@ class StreamingHTTPWorker(GoApplicationWorker):
                 back to the conversation the original message was part of.
         """
         outbound_message = yield self.find_outboundmessage_for_event(event)
+        if outbound_message is None:
+            log.warning('Unable to find message %s for event %s.' % (
+                event['user_message_id'], event['event_id']))
         batch = yield outbound_message.batch.get()
         account_key = batch.metadata['user_account']
         user_api = self.get_user_api(account_key)
