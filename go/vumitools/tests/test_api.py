@@ -210,7 +210,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         tag1 = (u'pool1', u'1234')
         tag2 = (u'pool1', u'5678')
         yield self.api.declare_tags([tag1, tag2])
-        conv = yield self.user_api.new_conversation(
+        yield self.user_api.new_conversation(
             u'bulk_message', u'subject', u'message', delivery_class=u'sms',
             delivery_tag_pool=tag1[0], delivery_tag=tag1[1])
         endpoints = yield self.user_api.list_endpoints()
