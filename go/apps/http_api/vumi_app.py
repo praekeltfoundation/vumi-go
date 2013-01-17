@@ -157,9 +157,9 @@ class StreamingHTTPWorker(GoApplicationWorker):
         FIXME:  We're forced to do too much hoopla when trying to link events
                 back to the conversation the original message was part of.
         """
-        outbound_message = yield self.find_message_for_event(event)
+        outbound_message = yield self.find_outboundmessage_for_event(event)
         batch = yield outbound_message.batch.get()
-        account_key = batch.metadata['account_key']
+        account_key = batch.metadata['user_account']
         user_api = self.get_user_api(account_key)
         conversations = user_api.conversation_store.conversations
         mr = conversations.index_lookup('batches', batch.key)
