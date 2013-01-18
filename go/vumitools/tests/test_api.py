@@ -98,14 +98,14 @@ class TestTxVumiApi(AppWorkerTestCase, CeleryTestMixIn):
     @inlineCallbacks
     def test_declare_tags_from_different_pools(self):
         tag1, tag2 = ("poolA", "tag1"), ("poolB", "tag2")
-        yield self.declare_tags(self.api, [tag1, tag2])
+        yield self.api.tpm.declare_tags([tag1, tag2])
         self.assertEqual((yield self.api.tpm.acquire_tag("poolA")), tag1)
         self.assertEqual((yield self.api.tpm.acquire_tag("poolB")), tag2)
 
     @inlineCallbacks
     def test_start_batch_and_batch_done(self):
         tag = ("pool", "tag")
-        yield self.declare_tags(self.api, [tag])
+        yield self.api.tpm.declare_tags([tag])
 
         @inlineCallbacks
         def tag_batch(t):
@@ -197,7 +197,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         tag1 = (u'pool1', u'1234')
         tag2 = (u'pool1', u'5678')
         tag3 = (u'pool1', u'9012')
-        yield self.declare_tags(self.api, [tag1, tag2, tag3])
+        yield self.api.tpm.declare_tags([tag1, tag2, tag3])
         yield self.user_api.acquire_specific_tag(tag2)
         yield self.user_api.new_conversation(
             u'bulk_message', u'subject', u'message', delivery_class=u'sms',
@@ -209,7 +209,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     def test_list_endpoints(self):
         tag1 = (u'pool1', u'1234')
         tag2 = (u'pool1', u'5678')
-        yield self.declare_tags(self.api, [tag1, tag2])
+        yield self.api.tpm.declare_tags([tag1, tag2])
         yield self.user_api.acquire_specific_tag(tag1)
         endpoints = yield self.user_api.list_endpoints()
         self.assertEqual(endpoints, set([tag1]))
@@ -217,8 +217,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     @inlineCallbacks
     def test_msg_options(self):
         tag = ('pool1', '1234')
-        yield self.declare_tags(self.api, [tag])
-        yield self.set_pool_metadata(self.api, tag[0], {
+        yield self.api.tpm.declare_tags([tag])
+        yield self.api.tpm.set_metadata(tag[0], {
             'transport_type': 'dummy_transport',
             'msg_options': {'opt1': 'bar'},
         })
@@ -254,7 +254,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     @inlineCallbacks
     def test_declare_acquire_and_release_tags(self):
         tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
-        yield self.declare_tags(self.api, [tag1, tag2])
+        yield self.api.tpm.declare_tags([tag1, tag2])
         self.assertEqual((yield self.user_api.acquire_tag("poolA")), tag1)
         self.assertEqual((yield self.user_api.acquire_tag("poolA")), tag2)
         self.assertEqual((yield self.user_api.acquire_tag("poolA")), None)

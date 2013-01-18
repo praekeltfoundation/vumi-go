@@ -159,13 +159,13 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
         user_account = yield self.mk_user(self.ed.vumi_api, u'dbacct')
         yield user_account.save()
 
-        user_api = self.ed.vumi_api.get_user_api(user_account.key)
-        yield self.declare_tags(user_api.api, [(u"pool", u"tag1")])
-        yield self.set_pool_metadata(user_api.api, u"pool", {
+        yield self.ed.vumi_api.tpm.declare_tags([(u"pool", u"tag1")])
+        yield self.ed.vumi_api.tpm.set_metadata(u"pool", {
             "transport_type": "other",
             "msg_options": {"transport_name": "other_transport"},
             })
 
+        user_api = self.ed.vumi_api.get_user_api(user_account.key)
         conversation = yield user_api.new_conversation(
                                     u'bulk_message', u'subject', u'message',
                                     delivery_tag_pool=u'pool',
