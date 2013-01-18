@@ -96,24 +96,11 @@ class TestTxVumiApi(AppWorkerTestCase, CeleryTestMixIn):
         self.assertEqual((yield self.api.batch_tags(batch_id)), [tag1, tag2])
 
     @inlineCallbacks
-    def test_declare_acquire_and_release_tags(self):
-        tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
-        yield self.declare_tags(self.api, [tag1, tag2])
-        self.assertEqual((yield self.api.acquire_tag("poolA")), tag1)
-        self.assertEqual((yield self.api.acquire_tag("poolA")), tag2)
-        self.assertEqual((yield self.api.acquire_tag("poolA")), None)
-        self.assertEqual((yield self.api.acquire_tag("poolB")), None)
-
-        yield self.api.release_tag(tag2)
-        self.assertEqual((yield self.api.acquire_tag("poolA")), tag2)
-        self.assertEqual((yield self.api.acquire_tag("poolA")), None)
-
-    @inlineCallbacks
     def test_declare_tags_from_different_pools(self):
         tag1, tag2 = ("poolA", "tag1"), ("poolB", "tag2")
         yield self.declare_tags(self.api, [tag1, tag2])
-        self.assertEqual((yield self.api.acquire_tag("poolA")), tag1)
-        self.assertEqual((yield self.api.acquire_tag("poolB")), tag2)
+        self.assertEqual((yield self.api.tpm.acquire_tag("poolA")), tag1)
+        self.assertEqual((yield self.api.tpm.acquire_tag("poolB")), tag2)
 
     @inlineCallbacks
     def test_start_batch_and_batch_done(self):
@@ -252,6 +239,19 @@ class TestTxVumiUserApi(AppWorkerTestCase):
             'transport_type': 'dummy_transport',
             'opt1': 'bar',
         })
+
+    @inlineCallbacks
+    def test_declare_acquire_and_release_tags(self):
+        tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
+        yield self.declare_tags(self.api, [tag1, tag2])
+        self.assertEqual((yield self.user_api.acquire_tag("poolA")), tag1)
+        self.assertEqual((yield self.user_api.acquire_tag("poolA")), tag2)
+        self.assertEqual((yield self.user_api.acquire_tag("poolA")), None)
+        self.assertEqual((yield self.user_api.acquire_tag("poolB")), None)
+
+        yield self.user_api.release_tag(tag2)
+        self.assertEqual((yield self.user_api.acquire_tag("poolA")), tag2)
+        self.assertEqual((yield self.user_api.acquire_tag("poolA")), None)
 
 
 class TestVumiUserApi(TestTxVumiUserApi):

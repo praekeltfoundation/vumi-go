@@ -224,6 +224,17 @@ class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
     def _command_rkey(self):
         return "%s.control" % (self._worker_name(),)
 
+    @inlineCallbacks
+    def setup_tagpools(self):
+        yield self.declare_tags(self.vumi_api,
+                                [(u"pool", u"tag1"), (u"pool", u"tag2")])
+        yield self.set_pool_metadata(self.vumi_api, u"pool", {
+            "transport_type": self.transport_type,
+            "msg_options": {
+                "transport_name": self.transport_name,
+                },
+            })
+
     def declare_tags(self, api, tags):
         """Populate a pool with tags.
 

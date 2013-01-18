@@ -37,14 +37,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         # Add tags
-        yield self.declare_tags(self.vumi_api,
-                                [("pool", "tag1"), ("pool", "tag2")])
-        yield self.set_pool_metadata(self.vumi_api, "pool", {
-            "transport_type": self.transport_type,
-            "msg_options": {
-                "transport_name": self.transport_name,
-                },
-            })
+        yield self.setup_tagpools()
 
         # Give a user access to a tagpool
         self.user_api.api.account_store.tag_permissions(uuid.uuid4().hex,

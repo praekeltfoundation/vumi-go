@@ -18,6 +18,7 @@ from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.txredis_manager import TxRedisManager
 from vumi.middleware.tagger import TaggingMiddleware
+from vumi import log
 
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
@@ -107,6 +108,9 @@ class VumiUserApi(object):
         d = VumiApi.from_config_async(config)
         return d.addCallback(cls, user_account_key)
 
+    def get_user_account(self):
+        return self.api.get_user_account(self.user_account_key)
+
     def wrap_conversation(self, conversation):
         """Wrap a conversation with a ConversationWrapper.
 
@@ -145,7 +149,7 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def tagpools(self):
-        user_account = yield self.api.get_user_account(self.user_account_key)
+        user_account = yield self.get_user_account()
         active_conversations = yield self.active_conversations()
 
         tp_usage = defaultdict(int)
@@ -167,7 +171,7 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def applications(self):
-        user_account = yield self.api.get_user_account(self.user_account_key)
+        user_account = yield self.get_user_account()
         # NOTE: This assumes that we don't have very large numbers of
         #       applications.
         app_permissions = []
@@ -221,6 +225,68 @@ class VumiUserApi(object):
         DebitAccountMiddleware.add_user_to_payload(msg_options,
                                                    self.user_account_key)
         returnValue(msg_options)
+
+    @Manager.calls_manager
+    def acquire_tag(self, pool):
+        """Acquire a tag from a given tag pool.
+
+        Tags should be held for the duration of a conversation.
+
+        :type pool: str
+        :param pool:
+            name of the pool to retrieve tags from.
+        :rtype:
+            The tag acquired or None if no tag was available.
+        """
+        user_account = yield self.get_user_account()
+        # TODO: Check that account has access to pool.
+        tag = yield self.api.tpm.acquire_tag(pool)
+        if tag is not None:
+            user_account.tags.append(tag)
+            yield user_account.save()
+        returnValue(tag)
+
+    @Manager.calls_manager
+    def acquire_specific_tag(self, tag):
+        """Acquire a specific tag.
+
+        Tags should be held for the duration of a conversation.
+
+        :type tag: tag tuple
+        :param tag:
+            The tag to acquire.
+        :rtype:
+            The tag acquired or None if the tag was not available.
+        """
+        user_account = yield self.get_user_account()
+        # TODO: Check that account has access to pool.
+        tag = yield self.api.tpm.acquire_specific_tag(tag)
+        if tag is not None:
+            user_account.tags.append(tag)
+            yield user_account.save()
+        returnValue(tag)
+
+    @Manager.calls_manager
+    def release_tag(self, tag):
+        """Release a tag back to the pool it came from.
+
+        Tags should be released only once a conversation is finished.
+
+        :type pool: str
+        :param pool:
+            name of the pool to return the tag too (must be the same as
+            the name of the pool the tag came from).
+        :rtype:
+            None.
+        """
+        user_account = yield self.get_user_account()
+        # TODO: Check that account holds tag
+        try:
+            user_account.tags.remove(list(tag))
+        except ValueError, e:
+            log.error("Tag not allocated to account: %s" % (tag,), e)
+        yield user_account.save()
+        yield self.api.tpm.release_tag(tag)
 
 
 class VumiApi(object):
@@ -365,46 +431,6 @@ class VumiApi(object):
         """
         batch = yield self.mdb.get_batch(batch_id)
         returnValue(list(batch.tags))
-
-    def acquire_tag(self, pool):
-        """Acquire a tag from a given tag pool.
-
-        Tags should be held for the duration of a conversation.
-
-        :type pool: str
-        :param pool:
-            name of the pool to retrieve tags from.
-        :rtype:
-            The tag acquired or None if no tag was available.
-        """
-        return self.tpm.acquire_tag(pool)
-
-    def acquire_specific_tag(self, tag):
-        """Acquire a specific tag.
-
-        Tags should be held for the duration of a conversation.
-
-        :type tag: tag tuple
-        :param tag:
-            The tag to acquire.
-        :rtype:
-            The tag acquired or None if the tag was not available.
-        """
-        return self.tpm.acquire_specific_tag(tag)
-
-    def release_tag(self, tag):
-        """Release a tag back to the pool it came from.
-
-        Tags should be released only once a conversation is finished.
-
-        :type pool: str
-        :param pool:
-            name of the pool to return the tag too (must be the same as
-            the name of the pool the tag came from).
-        :rtype:
-            None.
-        """
-        return self.tpm.release_tag(tag)
 
 
 class SyncMessageSender(object):
