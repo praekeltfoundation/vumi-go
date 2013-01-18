@@ -40,8 +40,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def _declare_tags(self, name=u'longcode', count=4, metadata=None):
         """Declare a set of long codes to the tag pool."""
-        yield self.declare_tags(self.api, [
-            (name, "%s%s" % (name, i)) for i in range(10001, 10001 + count)])
+        yield self.api.tpm.declare_tags(
+            [(name, "%s%s" % (name, i)) for i in range(10001, 10001 + count)])
         defaults = {
             "display_name": name,
             "delivery_class": "sms",
@@ -49,7 +49,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             "server_initiated": True,
             }
         defaults.update(metadata or {})
-        yield self.set_pool_metadata(self.api, name, defaults)
+        yield self.api.tpm.set_metadata(name, defaults)
 
     @inlineCallbacks
     def get_batch_id(self, conv, tag):
