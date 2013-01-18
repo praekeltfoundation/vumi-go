@@ -193,13 +193,24 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         self.assertFalse((yield VumiUserApi(self.api, 'foo').exists()))
 
     @inlineCallbacks
+    def test_list_conversation_endpoints(self):
+        tag1 = (u'pool1', u'1234')
+        tag2 = (u'pool1', u'5678')
+        tag3 = (u'pool1', u'9012')
+        yield self.declare_tags(self.api, [tag1, tag2, tag3])
+        yield self.user_api.acquire_specific_tag(tag2)
+        yield self.user_api.new_conversation(
+            u'bulk_message', u'subject', u'message', delivery_class=u'sms',
+            delivery_tag_pool=tag1[0], delivery_tag=tag1[1])
+        endpoints = yield self.user_api.list_conversation_endpoints()
+        self.assertEqual(endpoints, set([tag1]))
+
+    @inlineCallbacks
     def test_list_endpoints(self):
         tag1 = (u'pool1', u'1234')
         tag2 = (u'pool1', u'5678')
         yield self.declare_tags(self.api, [tag1, tag2])
-        yield self.user_api.new_conversation(
-            u'bulk_message', u'subject', u'message', delivery_class=u'sms',
-            delivery_tag_pool=tag1[0], delivery_tag=tag1[1])
+        yield self.user_api.acquire_specific_tag(tag1)
         endpoints = yield self.user_api.list_endpoints()
         self.assertEqual(endpoints, set([tag1]))
 
