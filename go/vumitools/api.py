@@ -194,11 +194,8 @@ class VumiUserApi(object):
         return self.conversation_store.new_conversation(*args, **kw)
 
     @Manager.calls_manager
-    def list_endpoints(self):
-        """Returns a set of end points owned by an account.
-
-        Currently this returns the list of tags in use by active
-        conversations.
+    def list_conversation_endpoints(self):
+        """Returns a set of endpoints owned by conversations in an account.
         """
         tags = set()
         convs = yield self.active_conversations()
@@ -206,6 +203,13 @@ class VumiUserApi(object):
             tag = (conv.delivery_tag_pool, conv.delivery_tag)
             tags.add(tag)
         returnValue(tags)
+
+    @Manager.calls_manager
+    def list_endpoints(self):
+        """Returns a set of endpoints owned by an account.
+        """
+        user_account = yield self.get_user_account()
+        returnValue(set(tuple(tag) for tag in user_account.tags))
 
     @Manager.calls_manager
     def msg_options(self, tag, tagpool_metadata=None):
