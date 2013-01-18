@@ -108,9 +108,9 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
 
 def declare_longcode_tags(api):
     """Declare a set of long codes to the tag pool."""
-    api.declare_tags([("longcode", "default%s" % i) for i
+    api.tpm.declare_tags([("longcode", "default%s" % i) for i
                       in range(10001, 10001 + 4)])
-    api.set_pool_metadata("longcode", {
+    api.tpm.set_metadata("longcode", {
         "display_name": "Long code",
         "delivery_class": "sms",
         "transport_type": "sms",

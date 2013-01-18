@@ -42,11 +42,14 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
-        yield self.user_api.api.declare_tags([("pool", "tag1"),
-                                              ("pool", "tag2")])
-        yield self.user_api.api.set_pool_metadata("pool", {
-            "transport_type": "sphex",
-        })
+        yield self.declare_tags(self.vumi_api,
+                                [("pool", "tag1"), ("pool", "tag2")])
+        yield self.set_pool_metadata(self.vumi_api, "pool", {
+            "transport_type": self.transport_type,
+            "msg_options": {
+                "transport_name": self.transport_name,
+                },
+            })
 
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,

@@ -89,8 +89,8 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
         self.mw = yield self.create_middleware(OptOutMiddleware,
             config=self.config)
         self._persist_redis_managers.append(self.mw.vumi_api.redis)
-        yield self.mw.vumi_api.declare_tags([("pool", "tag1")])
-        yield self.mw.vumi_api.set_pool_metadata("pool", {
+        yield self.declare_tags(self.mw.vumi_api, [("pool", "tag1")])
+        yield self.set_pool_metadata(self.mw.vumi_api, "pool", {
                 "transport_type": "other",
                 "msg_options": {"transport_name": "other_transport"},
                 })
@@ -126,7 +126,7 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
 
     @inlineCallbacks
     def test_disabled_by_tagpool(self):
-        yield self.mw.vumi_api.set_pool_metadata("pool", {
+        yield self.set_pool_metadata(self.mw.vumi_api, "pool", {
                 "transport_type": "other",
                 "msg_options": {"transport_name": "other_transport"},
                 "disable_global_opt_out": True,
@@ -147,8 +147,8 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
         # This is a bit ugly. We get a new fakeredis here.
         mw = yield self.create_middleware(OptOutMiddleware, config=config)
         self._persist_redis_managers.append(mw.vumi_api.redis)
-        yield mw.vumi_api.declare_tags([("pool", "tag1")])
-        yield mw.vumi_api.set_pool_metadata("pool", {
+        yield self.declare_tags(mw.vumi_api, [("pool", "tag1")])
+        yield self.set_pool_metadata(mw.vumi_api, "pool", {
                 "transport_type": "other",
                 "msg_options": {"transport_name": "other_transport"},
                 })

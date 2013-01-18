@@ -98,7 +98,7 @@ class TestTxVumiApi(AppWorkerTestCase, CeleryTestMixIn):
     @inlineCallbacks
     def test_declare_acquire_and_release_tags(self):
         tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
-        yield self.api.declare_tags([tag1, tag2])
+        yield self.declare_tags(self.api, [tag1, tag2])
         self.assertEqual((yield self.api.acquire_tag("poolA")), tag1)
         self.assertEqual((yield self.api.acquire_tag("poolA")), tag2)
         self.assertEqual((yield self.api.acquire_tag("poolA")), None)
@@ -111,14 +111,14 @@ class TestTxVumiApi(AppWorkerTestCase, CeleryTestMixIn):
     @inlineCallbacks
     def test_declare_tags_from_different_pools(self):
         tag1, tag2 = ("poolA", "tag1"), ("poolB", "tag2")
-        yield self.api.declare_tags([tag1, tag2])
+        yield self.declare_tags(self.api, [tag1, tag2])
         self.assertEqual((yield self.api.acquire_tag("poolA")), tag1)
         self.assertEqual((yield self.api.acquire_tag("poolB")), tag2)
 
     @inlineCallbacks
     def test_start_batch_and_batch_done(self):
         tag = ("pool", "tag")
-        yield self.api.declare_tags([tag])
+        yield self.declare_tags(self.api, [tag])
 
         @inlineCallbacks
         def tag_batch(t):
@@ -209,7 +209,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     def test_list_endpoints(self):
         tag1 = (u'pool1', u'1234')
         tag2 = (u'pool1', u'5678')
-        yield self.api.declare_tags([tag1, tag2])
+        yield self.declare_tags(self.api, [tag1, tag2])
         yield self.user_api.new_conversation(
             u'bulk_message', u'subject', u'message', delivery_class=u'sms',
             delivery_tag_pool=tag1[0], delivery_tag=tag1[1])
@@ -219,8 +219,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     @inlineCallbacks
     def test_msg_options(self):
         tag = ('pool1', '1234')
-        yield self.api.declare_tags([tag])
-        yield self.api.tpm.set_metadata(tag[0], {
+        yield self.declare_tags(self.api, [tag])
+        yield self.set_pool_metadata(self.api, tag[0], {
             'transport_type': 'dummy_transport',
             'msg_options': {'opt1': 'bar'},
         })

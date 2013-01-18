@@ -406,45 +406,6 @@ class VumiApi(object):
         """
         return self.tpm.release_tag(tag)
 
-    def declare_tags(self, tags):
-        """Populate a pool with tags.
-
-        Tags already in the pool are not duplicated.
-
-        :type pool: str
-        :type tags: list of (pool, local_tag) tuples
-        :param tags:
-            list of tags to add to the pool.
-        :rtype:
-            None
-        """
-        return self.tpm.declare_tags(tags)
-
-    def set_pool_metadata(self, pool, metadata):
-        """Set the metadata for a tag pool.
-
-        :param str pool:
-            Name of the pool set metadata form.
-        :param dict metadata:
-            Metadata to set.
-        :rtype:
-            None
-        """
-        return self.tpm.set_metadata(pool, metadata)
-
-    def purge_pool(self, pool):
-        """Completely remove a pool with all its contents.
-
-        If tags in the pool are still in use it will throw an error.
-
-        :type pool: str
-        :param pool:
-            name of the pool to purge.
-        :rtype:
-            None.
-        """
-        return self.tpm.purge_pool(pool)
-
 
 class SyncMessageSender(object):
     def __init__(self):

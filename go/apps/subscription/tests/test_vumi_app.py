@@ -30,10 +30,14 @@ class TestSubscriptionApplication(AppWorkerTestCase):
         # Enable search for the contact store
         yield self.user_api.contact_store.contacts.enable_search()
 
-        yield self.user_api.api.declare_tags(
-            [("pool", "tag1"), ("pool", "tag2")])
-        yield self.user_api.api.set_pool_metadata(
-            "pool", {"transport_type": "sms"})
+        yield self.declare_tags(self.vumi_api,
+                                [("pool", "tag1"), ("pool", "tag2")])
+        yield self.set_pool_metadata(self.vumi_api, "pool", {
+            "transport_type": self.transport_type,
+            "msg_options": {
+                "transport_name": self.transport_name,
+                },
+            })
 
         self.contact = yield self.user_api.contact_store.new_contact(
             name=u'First', surname=u'Contact', msisdn=u'+27831234567')

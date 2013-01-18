@@ -224,6 +224,32 @@ class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
     def _command_rkey(self):
         return "%s.control" % (self._worker_name(),)
 
+    def declare_tags(self, api, tags):
+        """Populate a pool with tags.
+
+        Tags already in the pool are not duplicated.
+
+        :type pool: str
+        :type tags: list of (pool, local_tag) tuples
+        :param tags:
+            list of tags to add to the pool.
+        :rtype:
+            None
+        """
+        return api.tpm.declare_tags(tags)
+
+    def set_pool_metadata(self, api, pool, metadata):
+        """Set the metadata for a tag pool.
+
+        :param str pool:
+            Name of the pool set metadata form.
+        :param dict metadata:
+            Metadata to set.
+        :rtype:
+            None
+        """
+        return api.tpm.set_metadata(pool, metadata)
+
     def dispatch_command(self, command, *args, **kw):
         cmd = VumiApiCommand.command(
             self._worker_name(), command, *args, **kw)
