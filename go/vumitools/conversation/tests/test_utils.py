@@ -38,7 +38,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.conv = ConversationWrapper(raw_conv, self.user_api)
 
     @inlineCallbacks
-    def _declare_tags(self, name='longcode', count=4, metadata=None):
+    def _declare_tags(self, name=u'longcode', count=4, metadata=None):
         """Declare a set of long codes to the tag pool."""
         yield self.declare_tags(self.api, [
             (name, "%s%s" % (name, i)) for i in range(10001, 10001 + count)])
@@ -304,7 +304,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_acquire_tag_if_none_available(self):
-        yield self._declare_tags("shortcode", count=0)
+        yield self._declare_tags(u"shortcode", count=0)
         self.conv.c.delivery_tag_pool = u"shortcode"
         yield self.conv.save()
         yield self.assertFailure(self.conv.acquire_tag(),

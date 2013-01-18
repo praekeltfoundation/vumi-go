@@ -22,7 +22,6 @@ class ConversationWrapper(object):
         self.user_api = user_api
         self.api = user_api.api
         self.mdb = self.api.mdb
-        self.tpm = self.api.tpm
         self.manager = self.c.manager
         self.base_manager = self.api.manager
         self._tagpool_metadata = None
@@ -45,7 +44,7 @@ class ConversationWrapper(object):
         for batch in (yield self.get_batches()):
             yield self.mdb.batch_done(batch.key)  # TODO: why key?
             for tag in batch.tags:
-                yield self.tpm.release_tag(tag)
+                yield self.user_api.release_tag(tag)
 
     def __getattr__(self, name):
         # Proxy anything we don't have back to the wrapped conversation.
@@ -613,12 +612,13 @@ class ConversationWrapper(object):
     def acquire_tag(self):
         # TODO: Remove this once we have proper routing stuff.
         if self.c.delivery_tag is None:
-            tag = yield self.api.acquire_tag(self.c.delivery_tag_pool)
+            tag = yield self.user_api.acquire_tag(self.c.delivery_tag_pool)
             if tag is None:
                 raise ConversationSendError("No spare messaging tags.")
+            self.c.delivery_tag = tag[1]
         else:
             tag = (self.c.delivery_tag_pool, self.c.delivery_tag)
-            tag = yield self.api.acquire_specific_tag(tag)
+            tag = yield self.user_api.acquire_specific_tag(tag)
             if tag is None:
                 raise ConversationSendError("Requested tag not available.")
         returnValue(tag)
