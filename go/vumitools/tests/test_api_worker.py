@@ -160,8 +160,8 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
         yield user_account.save()
 
         user_api = self.ed.vumi_api.get_user_api(user_account.key)
-        yield user_api.api.declare_tags([("pool", "tag1")])
-        yield user_api.api.set_pool_metadata("pool", {
+        yield self.declare_tags(user_api.api, [("pool", "tag1")])
+        yield self.set_pool_metadata(user_api.api, "pool", {
             "transport_type": "other",
             "msg_options": {"transport_name": "other_transport"},
             })
