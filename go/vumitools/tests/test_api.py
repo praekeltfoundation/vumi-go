@@ -252,17 +252,27 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         })
 
     @inlineCallbacks
+    def assert_account_tags(self, expected):
+        user_account = yield self.user_api.get_user_account()
+        self.assertEqual(expected, user_account.tags)
+
+    @inlineCallbacks
     def test_declare_acquire_and_release_tags(self):
         tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
         yield self.api.tpm.declare_tags([tag1, tag2])
+
+        yield self.assert_account_tags([])
         self.assertEqual((yield self.user_api.acquire_tag("poolA")), tag1)
         self.assertEqual((yield self.user_api.acquire_tag("poolA")), tag2)
         self.assertEqual((yield self.user_api.acquire_tag("poolA")), None)
         self.assertEqual((yield self.user_api.acquire_tag("poolB")), None)
+        yield self.assert_account_tags([list(tag1), list(tag2)])
 
         yield self.user_api.release_tag(tag2)
+        yield self.assert_account_tags([list(tag1)])
         self.assertEqual((yield self.user_api.acquire_tag("poolA")), tag2)
         self.assertEqual((yield self.user_api.acquire_tag("poolA")), None)
+        yield self.assert_account_tags([list(tag1), list(tag2)])
 
 
 class TestVumiUserApi(TestTxVumiUserApi):
