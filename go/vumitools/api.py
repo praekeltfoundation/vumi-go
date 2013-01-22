@@ -197,6 +197,7 @@ class VumiUserApi(object):
     def list_conversation_endpoints(self):
         """Returns a set of endpoints owned by conversations in an account.
         """
+        # XXX: Do we need both this method and the following method?
         tags = set()
         convs = yield self.active_conversations()
         for conv in convs:
@@ -205,10 +206,30 @@ class VumiUserApi(object):
         returnValue(tags)
 
     @Manager.calls_manager
+    def list_conversation_batch_tags(self):
+        """Returns a set of tags owned by conversation batches in an account.
+        """
+        # XXX: Do we need both this method and the previous method?
+        tags = set()
+        convs = yield self.active_conversations()
+        for conv in convs:
+            conv_tags = yield self.wrap_conversation(conv).get_tags()
+            tags.update(conv_tags)
+        returnValue(tags)
+
+    @Manager.calls_manager
+    def _populate_tags(self, user_account):
+        if user_account.tags is None:
+            # We need to populate this from conversations
+            conv_tags = yield self.list_conversation_batch_tags()
+            user_account.tags = [list(tag) for tag in conv_tags]
+
+    @Manager.calls_manager
     def list_endpoints(self):
         """Returns a set of endpoints owned by an account.
         """
         user_account = yield self.get_user_account()
+        yield self._populate_tags(user_account)
         returnValue(set(tuple(tag) for tag in user_account.tags))
 
     @Manager.calls_manager
@@ -243,6 +264,7 @@ class VumiUserApi(object):
             The tag acquired or None if no tag was available.
         """
         user_account = yield self.get_user_account()
+        yield self._populate_tags(user_account)
         # TODO: Check that account has access to pool.
         tag = yield self.api.tpm.acquire_tag(pool)
         if tag is not None:
@@ -263,6 +285,7 @@ class VumiUserApi(object):
             The tag acquired or None if the tag was not available.
         """
         user_account = yield self.get_user_account()
+        yield self._populate_tags(user_account)
         # TODO: Check that account has access to pool.
         tag = yield self.api.tpm.acquire_specific_tag(tag)
         if tag is not None:
@@ -284,6 +307,7 @@ class VumiUserApi(object):
             None.
         """
         user_account = yield self.get_user_account()
+        yield self._populate_tags(user_account)
         # TODO: Check that account holds tag
         try:
             user_account.tags.remove(list(tag))
