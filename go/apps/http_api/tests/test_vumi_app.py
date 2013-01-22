@@ -4,6 +4,7 @@ from twisted.internet.defer import inlineCallbacks, DeferredQueue
 from twisted.web.http_headers import Headers
 from twisted.web import http
 
+from vumi.utils import http_request_full
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.message import TransportUserMessage, TransportEvent
 
@@ -72,10 +73,10 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         })
         yield self.conversation.save()
 
-        self.auth_headers = Headers({
+        self.auth_headers = {
             'Authorization': ['Basic ' + base64.b64encode('%s:%s' % (
                 self.account.key, 'token-1'))],
-            })
+            }
 
         self.client = StreamingClient()
 
@@ -92,7 +93,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         errors = DeferredQueue()
 
         receiver = self.client.stream(TransportUserMessage, messages.put,
-                                            errors.put, url, self.auth_headers)
+                                            errors.put, url,
+                                            Headers(self.auth_headers))
         msg1 = self.mkmsg_in(content='in 1', message_id='1')
         yield self.dispatch_with_tag(msg1, self.tag)
 
@@ -115,7 +117,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         events = DeferredQueue()
         errors = DeferredQueue()
         receiver = yield self.client.stream(TransportEvent, events.put,
-                                            events.put, url, self.auth_headers)
+                                            events.put, url,
+                                            Headers(self.auth_headers))
 
         msg1 = self.mkmsg_in(content='in 1', message_id='1')
         yield self.vumi_api.mdb.add_outbound_message(msg1,
@@ -161,8 +164,21 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             })
 
         receiver = self.client.stream(TransportUserMessage, queue.put,
-                                                queue.put, url, headers)
+                                                queue.put, url,
+                                                Headers(headers))
         response = yield receiver.get_response()
         self.assertEqual(response.code, http.UNAUTHORIZED)
         self.assertEqual(response.headers.getRawHeaders('www-authenticate'), [
             'basic realm="Conversation Stream"'])
+
+    @inlineCallbacks
+    def test_send_to(self):
+        msg = self.mkmsg_out()
+        TaggingMiddleware.add_tag_to_msg(msg, self.tag)
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        response = yield http_request_full(url, msg.to_json(),
+                                            self.auth_headers, method='PUT')
+        print response
+        print response.delivered_body
+        [msg] = self.get_dispatched_messages()
+        print msg

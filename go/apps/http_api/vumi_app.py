@@ -1,10 +1,13 @@
 # -*- test-case-name: go.apps.http_api.tests.test_vumi_app -*-
+import json
+import copy
+
 from functools import partial
 
 from zope.interface import implements
 
 from twisted.cred import portal, checkers, credentials, error
-from twisted.web import resource
+from twisted.web import resource, http
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.guard import HTTPAuthSessionWrapper
 from twisted.web.guard import BasicCredentialFactory
@@ -13,6 +16,7 @@ from twisted.internet.defer import (Deferred, DeferredList, inlineCallbacks,
                                     returnValue)
 
 from vumi.message import TransportUserMessage, TransportEvent
+from vumi.errors import InvalidMessage
 from vumi.transports.httprpc import httprpc
 from vumi import log
 
@@ -25,6 +29,7 @@ class Stream(resource.Resource):
     def __init__(self, worker, conversation_key):
         resource.Resource.__init__(self)
         self.worker = worker
+        self.vumi_api = self.worker.vumi_api
         self.conversation_key = conversation_key
         self.stream_ready = Deferred()
         self.stream_ready.addCallback(self.start_publishing)
@@ -35,6 +40,64 @@ class Stream(resource.Resource):
         done.addBoth(self.teardown_stream)
         self.stream_ready.callback(request)
         return NOT_DONE_YET
+
+    def render_PUT(self, request):
+        d = Deferred()
+        d.addCallback(self.handle_PUT)
+        d.callback(request)
+        return NOT_DONE_YET
+
+    @inlineCallbacks
+    def handle_PUT(self, request):
+        data = json.loads(request.content.read())
+
+        user_account = request.getUser()
+        user_api = self.vumi_api.get_user_api(user_account)
+        conversation = yield user_api.get_wrapped_conversation(
+                                self.conversation_key)
+
+        try:
+            tum = TransportUserMessage(_process_fields=True, **data)
+        except InvalidMessage:
+            request.setResponseCode(http.BAD_REQUEST, 'Invalid Message')
+            request.finish()
+            return
+
+        in_reply_to = tum['in_reply_to']
+        if in_reply_to:
+            # Using the proxy's load() directly instead of
+            # `mdb.get_inbound_message(msg_id)` because that gives us the
+            # actual message, not the OutboundMessage. We need the
+            # OutboundMessage to get the batch and verify the `user_account`
+            msg = yield self.vumi_api.mdb.inbound_messages.load(in_reply_to)
+            if msg is None:
+                request.setResponseCode(http.BAD_REQUEST,
+                                            'Invalid in_reply_to value')
+                request.finish()
+                return
+
+            batch = yield msg.batch.get()
+            if batch is None or (batch.metadata['user_account']
+                                                    != user_account):
+                request.setResponseCode(http.BAD_REQUEST,
+                                        'Invalid in_reply_to value')
+                request.finish()
+                return
+
+        # FIXME:    At some point this needs to be done better as it makes some
+        #           assumption about how messages are routed which won't be
+        #           true for very much longer.
+        tag = (conversation.delivery_tag_pool, conversation.delivery_tag)
+        msg_options = yield conversation.make_message_options(tag)
+
+        payload = copy.deepcopy(tum.payload.copy())
+        payload.update(msg_options)
+
+        to_addr = payload.pop('payload')
+        content = payload.pop('content')
+        yield self.send_to(to_addr, content, **payload)
+        request.setResponseCode(http.OK)
+        request.finish()
 
     @inlineCallbacks
     def setup_stream(self, request):
