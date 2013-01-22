@@ -265,7 +265,10 @@ class VumiUserApi(object):
         """
         user_account = yield self.get_user_account()
         yield self._populate_tags(user_account)
-        # TODO: Check that account has access to pool.
+        if not (yield user_account.has_tagpool_permission(pool)):
+            log.warning("Account '%s' trying to access forbidden pool '%s'" % (
+                user_account.key, pool))
+            returnValue(None)
         tag = yield self.api.tpm.acquire_tag(pool)
         if tag is not None:
             user_account.tags.append(tag)
@@ -286,7 +289,10 @@ class VumiUserApi(object):
         """
         user_account = yield self.get_user_account()
         yield self._populate_tags(user_account)
-        # TODO: Check that account has access to pool.
+        if not (yield user_account.has_tagpool_permission(tag[0])):
+            log.warning("Account '%s' trying to access forbidden pool '%s'" % (
+                user_account.key, tag[0]))
+            returnValue(None)
         tag = yield self.api.tpm.acquire_specific_tag(tag)
         if tag is not None:
             user_account.tags.append(tag)

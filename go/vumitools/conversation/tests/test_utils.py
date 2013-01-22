@@ -50,6 +50,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             }
         defaults.update(metadata or {})
         yield self.api.tpm.set_metadata(name, defaults)
+        yield self.add_tagpool_permission(name)
 
     @inlineCallbacks
     def get_batch_id(self, conv, tag):
