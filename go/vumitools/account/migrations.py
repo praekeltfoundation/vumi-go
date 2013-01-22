@@ -11,7 +11,7 @@ class UserAccountMigrator(ModelMigrator):
 
         # Add stuff that's new in this version
         mdata.set_value('$VERSION', 1)
-        mdata.set_value('tags', [])
+        mdata.set_value('tags', None)  # We populate this later
         old_ehconfig = mdata.old_data.get('event_handler_config')
         mdata.set_value('event_handler_config', old_ehconfig or [])
 
