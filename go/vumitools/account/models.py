@@ -46,6 +46,14 @@ class UserAccount(Model):
     # skip the tag collection.
     tags = Json(default=[], null=True)
 
+    @Manager.calls_manager
+    def has_tagpool_permission(self, tagpool):
+        for tp_bunch in self.tagpools.load_all_bunches():
+            for tp in (yield tp_bunch):
+                if tp.tagpool == tagpool:
+                    returnValue(True)
+        returnValue(False)
+
 
 class AccountStore(object):
     def __init__(self, manager):
