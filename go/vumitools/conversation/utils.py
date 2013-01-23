@@ -618,6 +618,9 @@ class ConversationWrapper(object):
             tag = yield self.user_api.acquire_tag(self.c.delivery_tag_pool)
             if tag is None:
                 raise ConversationSendError("No spare messaging tags.")
+            if not isinstance(tag[1], unicode):
+                # XXX: I'm pretty sure this is a valid assumption.
+                tag = (tag[0].decode('utf-8'), tag[1].decode('utf-8'))
             self.c.delivery_tag = tag[1]
         else:
             tag = (self.c.delivery_tag_pool, self.c.delivery_tag)
