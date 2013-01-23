@@ -15,6 +15,7 @@ class GoAccountStatsCommandTestCase(DjangoGoApplicationTestCase):
         self.user = self.mk_django_user()
 
         self.user_api = vumi_api_for_user(self.user)
+        self.add_tagpool_permission(u"longcode")
         self.message_store = self.api.mdb
 
         def mkconv(*args, **kwargs):

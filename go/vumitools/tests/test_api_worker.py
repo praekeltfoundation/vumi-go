@@ -165,13 +165,14 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
             "msg_options": {"transport_name": "other_transport"},
             })
 
-        user_api = self.ed.vumi_api.get_user_api(user_account.key)
-        conversation = yield user_api.new_conversation(
+        self.user_api = self.ed.vumi_api.get_user_api(user_account.key)
+        yield self.add_tagpool_permission(u"pool")
+        conversation = yield self.user_api.new_conversation(
                                     u'bulk_message', u'subject', u'message',
                                     delivery_tag_pool=u'pool',
                                     delivery_class=u'sms')
 
-        conversation = user_api.wrap_conversation(conversation)
+        conversation = self.user_api.wrap_conversation(conversation)
         yield conversation.start()
 
         user_account.event_handler_config = [

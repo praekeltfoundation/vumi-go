@@ -40,7 +40,19 @@ class UserAccount(Model):
     event_handler_config = Json(default=list)
     msisdn = Unicode(max_length=255, null=True)
     confirm_start_conversation = Boolean(default=False)
-    tags = Json(default=list)
+    # `tags` is allowed to be null so that we can detect freshly-migrated
+    # accounts and populate the tags from active conversations. A new account
+    # has no legacy tags or conversations, so we start with an empty list and
+    # skip the tag collection.
+    tags = Json(default=[], null=True)
+
+    @Manager.calls_manager
+    def has_tagpool_permission(self, tagpool):
+        for tp_bunch in self.tagpools.load_all_bunches():
+            for tp in (yield tp_bunch):
+                if tp.tagpool == tagpool:
+                    returnValue(True)
+        returnValue(False)
 
 
 class AccountStore(object):
