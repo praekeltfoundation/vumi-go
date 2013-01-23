@@ -57,10 +57,14 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.account = yield self.mk_user(self.vumi_api, u'user')
         self.user_api = self.vumi_api.get_user_api(self.account.key)
 
-        self.tag = ("pool", "tag")
+        yield self.setup_tagpools()
+
+        self.conversation = yield self.create_conversation()
+        self.conversation.c.delivery_tag_pool = u'pool'
+        self.tag = yield self.conversation.acquire_tag()
+
         self.batch_id = yield self.vumi_api.mdb.batch_start([self.tag],
                                     user_account=unicode(self.account.key))
-        self.conversation = yield self.create_conversation()
         self.conversation.batches.add_key(self.batch_id)
         self.conversation.set_metadata({
             'http_api': {
