@@ -3,6 +3,7 @@
 """Utilities for go.vumitools tests."""
 
 import os
+import uuid
 from contextlib import contextmanager
 
 from twisted.python.monkey import MonkeyPatcher
@@ -234,6 +235,16 @@ class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
                 "transport_name": self.transport_name,
                 },
             })
+        yield self.add_tagpool_permission(u"pool")
+
+    @inlineCallbacks
+    def add_tagpool_permission(self, tagpool, max_keys=None):
+        permission = yield self.user_api.api.account_store.tag_permissions(
+           uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
+        yield permission.save()
+        account = yield self.user_api.get_user_account()
+        account.tagpools.add(permission)
+        yield account.save()
 
     def dispatch_command(self, command, *args, **kw):
         cmd = VumiApiCommand.command(
