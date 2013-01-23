@@ -314,7 +314,6 @@ class VumiUserApi(object):
         """
         user_account = yield self.get_user_account()
         yield self._populate_tags(user_account)
-        # TODO: Check that account holds tag
         try:
             user_account.tags.remove(list(tag))
         except ValueError, e:
