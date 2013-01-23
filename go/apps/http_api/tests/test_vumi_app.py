@@ -165,7 +165,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         receiver = self.client.stream(TransportUserMessage, queue.put,
                                                 queue.put, url,
-                                                Headers(headers))
+                                                headers)
         response = yield receiver.get_response()
         self.assertEqual(response.code, http.UNAUTHORIZED)
         self.assertEqual(response.headers.getRawHeaders('www-authenticate'), [
