@@ -60,13 +60,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         # Add tags
-        self.vumi_api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
-        self.vumi_api.set_pool_metadata("pool", {
-            "transport_type": self.transport_type,
-            "msg_options": {
-                "transport_name": self.transport_name,
-            },
-        })
+        yield self.setup_tagpools()
 
         # Setup the poll manager
         self.pm = self.app.pm
