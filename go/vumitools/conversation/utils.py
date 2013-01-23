@@ -606,6 +606,9 @@ class ConversationWrapper(object):
         inuse_tags = yield self.api.tpm.inuse_tags(tag[0])
         if tag not in inuse_tags:
             raise ConversationSendError("Requested tag not pre-acquired.")
+        if not isinstance(tag[1], unicode):
+            # XXX: I'm pretty sure this is a valid assumption.
+            tag = (tag[0].decode('utf-8'), tag[1].decode('utf-8'))
         returnValue(tag)
 
     @Manager.calls_manager
@@ -615,12 +618,18 @@ class ConversationWrapper(object):
             tag = yield self.user_api.acquire_tag(self.c.delivery_tag_pool)
             if tag is None:
                 raise ConversationSendError("No spare messaging tags.")
+            if not isinstance(tag[1], unicode):
+                # XXX: I'm pretty sure this is a valid assumption.
+                tag = (tag[0].decode('utf-8'), tag[1].decode('utf-8'))
             self.c.delivery_tag = tag[1]
         else:
             tag = (self.c.delivery_tag_pool, self.c.delivery_tag)
             tag = yield self.user_api.acquire_specific_tag(tag)
             if tag is None:
                 raise ConversationSendError("Requested tag not available.")
+        if not isinstance(tag[1], unicode):
+            # XXX: I'm pretty sure this is a valid assumption.
+            tag = (tag[0].decode('utf-8'), tag[1].decode('utf-8'))
         returnValue(tag)
 
     def dispatch_command(self, command, *args, **kwargs):
