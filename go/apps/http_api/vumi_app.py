@@ -93,11 +93,15 @@ class Stream(resource.Resource):
         payload = copy.deepcopy(tum.payload.copy())
         payload.update(msg_options)
 
-        to_addr = payload.pop('payload')
+        to_addr = payload.pop('to_addr')
         content = payload.pop('content')
         yield self.send_to(to_addr, content, **payload)
         request.setResponseCode(http.OK)
         request.finish()
+
+    def send_to(self, to_addr, content, **payload):
+        msg = TransportUserMessage.send(to_addr, content, **payload)
+        return self.worker._publish_message(msg)
 
     @inlineCallbacks
     def setup_stream(self, request):
