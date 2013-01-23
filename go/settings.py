@@ -158,7 +158,7 @@ INSTALLED_APPS = (
     'vxpolls.djdashboard',
     'registration',
     'bootstrap',
-    'raven.contrib.django.raven_compat',
+    'raven.contrib.django',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -274,6 +274,9 @@ VXPOLLS_PREFIX = 'vumigo'
 GOOGLE_ANALYTICS_UA = None
 
 MESSAGE_STORE_API_URL = 'http://localhost:8080/api/v1/'
+
+SENTRY_KEY = ''
+SENTRY_SERVERS = []
 
 try:
     from production_settings import *
