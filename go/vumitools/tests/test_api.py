@@ -96,29 +96,16 @@ class TestTxVumiApi(AppWorkerTestCase, CeleryTestMixIn):
         self.assertEqual((yield self.api.batch_tags(batch_id)), [tag1, tag2])
 
     @inlineCallbacks
-    def test_declare_acquire_and_release_tags(self):
-        tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
-        yield self.api.declare_tags([tag1, tag2])
-        self.assertEqual((yield self.api.acquire_tag("poolA")), tag1)
-        self.assertEqual((yield self.api.acquire_tag("poolA")), tag2)
-        self.assertEqual((yield self.api.acquire_tag("poolA")), None)
-        self.assertEqual((yield self.api.acquire_tag("poolB")), None)
-
-        yield self.api.release_tag(tag2)
-        self.assertEqual((yield self.api.acquire_tag("poolA")), tag2)
-        self.assertEqual((yield self.api.acquire_tag("poolA")), None)
-
-    @inlineCallbacks
     def test_declare_tags_from_different_pools(self):
         tag1, tag2 = ("poolA", "tag1"), ("poolB", "tag2")
-        yield self.api.declare_tags([tag1, tag2])
-        self.assertEqual((yield self.api.acquire_tag("poolA")), tag1)
-        self.assertEqual((yield self.api.acquire_tag("poolB")), tag2)
+        yield self.api.tpm.declare_tags([tag1, tag2])
+        self.assertEqual((yield self.api.tpm.acquire_tag("poolA")), tag1)
+        self.assertEqual((yield self.api.tpm.acquire_tag("poolB")), tag2)
 
     @inlineCallbacks
     def test_start_batch_and_batch_done(self):
         tag = ("pool", "tag")
-        yield self.api.declare_tags([tag])
+        yield self.api.tpm.declare_tags([tag])
 
         @inlineCallbacks
         def tag_batch(t):
@@ -206,20 +193,32 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         self.assertFalse((yield VumiUserApi(self.api, 'foo').exists()))
 
     @inlineCallbacks
-    def test_list_endpoints(self):
+    def test_list_conversation_endpoints(self):
         tag1 = (u'pool1', u'1234')
         tag2 = (u'pool1', u'5678')
-        yield self.api.declare_tags([tag1, tag2])
+        tag3 = (u'pool1', u'9012')
+        yield self.api.tpm.declare_tags([tag1, tag2, tag3])
+        yield self.user_api.acquire_specific_tag(tag2)
         yield self.user_api.new_conversation(
             u'bulk_message', u'subject', u'message', delivery_class=u'sms',
             delivery_tag_pool=tag1[0], delivery_tag=tag1[1])
+        endpoints = yield self.user_api.list_conversation_endpoints()
+        self.assertEqual(endpoints, set([tag1]))
+
+    @inlineCallbacks
+    def test_list_endpoints(self):
+        tag1 = (u'pool1', u'1234')
+        tag2 = (u'pool1', u'5678')
+        yield self.api.tpm.declare_tags([tag1, tag2])
+        yield self.add_tagpool_permission(u'pool1')
+        yield self.user_api.acquire_specific_tag(tag1)
         endpoints = yield self.user_api.list_endpoints()
         self.assertEqual(endpoints, set([tag1]))
 
     @inlineCallbacks
     def test_msg_options(self):
         tag = ('pool1', '1234')
-        yield self.api.declare_tags([tag])
+        yield self.api.tpm.declare_tags([tag])
         yield self.api.tpm.set_metadata(tag[0], {
             'transport_type': 'dummy_transport',
             'msg_options': {'opt1': 'bar'},
@@ -252,6 +251,31 @@ class TestTxVumiUserApi(AppWorkerTestCase):
             'transport_type': 'dummy_transport',
             'opt1': 'bar',
         })
+
+    @inlineCallbacks
+    def assert_account_tags(self, expected):
+        user_account = yield self.user_api.get_user_account()
+        self.assertEqual(expected, user_account.tags)
+
+    @inlineCallbacks
+    def test_declare_acquire_and_release_tags(self):
+        tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
+        yield self.api.tpm.declare_tags([tag1, tag2])
+        yield self.add_tagpool_permission(u"poolA")
+        yield self.add_tagpool_permission(u"poolB")
+
+        yield self.assert_account_tags([])
+        self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag1)
+        self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag2)
+        self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), None)
+        self.assertEqual((yield self.user_api.acquire_tag(u"poolB")), None)
+        yield self.assert_account_tags([list(tag1), list(tag2)])
+
+        yield self.user_api.release_tag(tag2)
+        yield self.assert_account_tags([list(tag1)])
+        self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag2)
+        self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), None)
+        yield self.assert_account_tags([list(tag1), list(tag2)])
 
 
 class TestVumiUserApi(TestTxVumiUserApi):
