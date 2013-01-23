@@ -178,11 +178,28 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_send_to(self):
         msg = self.mkmsg_out()
+
+        self.assertEqual(msg['helper_metadata'], {})
+        self.assertNotEqual(msg['from_addr'], self.tag[1])
+
         TaggingMiddleware.add_tag_to_msg(msg, self.tag)
+
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         response = yield http_request_full(url, msg.to_json(),
                                             self.auth_headers, method='PUT')
-        print response
-        print response.delivered_body
-        [msg] = self.get_dispatched_messages()
-        print msg
+
+        self.assertEqual(response.code, http.OK)
+
+        [sent_msg] = self.get_dispatched_messages()
+        self.assertEqual(sent_msg['to_addr'], sent_msg['to_addr'])
+        self.assertEqual(sent_msg['helper_metadata'], {
+            'go': {
+                'user_account': self.account.key,
+            },
+            'tag': {
+                'tag': list(self.tag),
+            }
+        })
+        self.assertEqual(sent_msg['message_id'], msg['message_id'])
+        self.assertEqual(sent_msg['to_addr'], msg['to_addr'])
+        self.assertEqual(sent_msg['from_addr'], self.tag[1])
