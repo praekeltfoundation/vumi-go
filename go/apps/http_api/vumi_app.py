@@ -1,6 +1,7 @@
 # -*- test-case-name: go.apps.http_api.tests.test_vumi_app -*-
 import json
 import copy
+from datetime import datetime
 
 from functools import partial
 
@@ -40,6 +41,48 @@ class Stream(resource.Resource):
         done.addBoth(self.teardown_stream)
         self.stream_ready.callback(request)
         return NOT_DONE_YET
+
+    @inlineCallbacks
+    def setup_stream(self, request):
+        self._consumers.extend((yield self.setup_consumers(request)))
+
+    @inlineCallbacks
+    def setup_consumers(self, request):
+        rk = self.routing_key % {
+            'transport_name': self.worker.transport_name,
+            'conversation_key': self.conversation_key,
+            }
+        consumer = yield self.worker.consume(rk,
+                            partial(self.publish, request),
+                            message_class=self.message_class, paused=True)
+        returnValue([consumer])
+
+    def teardown_stream(self, err):
+        if not (err is None or err.trap(ConnectionDone)):
+            log.error(err)
+        return DeferredList([cons.stop() for cons in self._consumers])
+
+    @inlineCallbacks
+    def start_publishing(self, request):
+        yield self.setup_stream(request)
+        for consumer in self._consumers:
+            yield consumer.unpause()
+
+    def publish(self, request, message):
+        line = u'%s\n' % (message.to_json(),)
+        request.write(line.encode('utf-8'))
+
+
+class EventStream(Stream):
+
+    message_class = TransportEvent
+    routing_key = '%(transport_name)s.stream.event.%(conversation_key)s'
+
+
+class MessageStream(Stream):
+
+    message_class = TransportUserMessage
+    routing_key = '%(transport_name)s.stream.message.%(conversation_key)s'
 
     def render_PUT(self, request):
         d = Deferred()
@@ -84,66 +127,32 @@ class Stream(resource.Resource):
                 request.finish()
                 return
 
+        payload = copy.deepcopy(tum.payload.copy())
+        to_addr = payload.pop('to_addr')
+        content = payload.pop('content')
+        yield self.send_to(conversation, to_addr, content, **payload)
+        request.setResponseCode(http.OK)
+        request.finish()
+
+    @inlineCallbacks
+    def send_to(self, conversation, to_addr, content, **payload):
+
         # FIXME:    At some point this needs to be done better as it makes some
         #           assumption about how messages are routed which won't be
         #           true for very much longer.
         tag = (conversation.delivery_tag_pool, conversation.delivery_tag)
         msg_options = yield conversation.make_message_options(tag)
 
-        payload = copy.deepcopy(tum.payload.copy())
         payload.update(msg_options)
-
-        to_addr = payload.pop('to_addr')
-        content = payload.pop('content')
-        yield self.send_to(to_addr, content, **payload)
-        request.setResponseCode(http.OK)
-        request.finish()
-
-    def send_to(self, to_addr, content, **payload):
-        msg = TransportUserMessage.send(to_addr, content, **payload)
-        return self.worker._publish_message(msg)
-
-    @inlineCallbacks
-    def setup_stream(self, request):
-        self._consumers.extend((yield self.setup_consumers(request)))
-
-    @inlineCallbacks
-    def setup_consumers(self, request):
-        rk = self.routing_key % {
+        payload.update({
             'transport_name': self.worker.transport_name,
-            'conversation_key': self.conversation_key,
-            }
-        consumer = yield self.worker.consume(rk,
-                            partial(self.publish, request),
-                            message_class=self.message_class, paused=True)
-        returnValue([consumer])
+            'timestamp': datetime.utcnow(),
+            'message_version': TransportUserMessage.MESSAGE_VERSION,
+        })
 
-    def teardown_stream(self, err):
-        if not (err is None or err.trap(ConnectionDone)):
-            log.error(err)
-        return DeferredList([cons.stop() for cons in self._consumers])
-
-    @inlineCallbacks
-    def start_publishing(self, request):
-        yield self.setup_stream(request)
-        for consumer in self._consumers:
-            yield consumer.unpause()
-
-    def publish(self, request, message):
-        line = u'%s\n' % (message.to_json(),)
-        request.write(line.encode('utf-8'))
-
-
-class EventStream(Stream):
-
-    message_class = TransportEvent
-    routing_key = '%(transport_name)s.stream.event.%(conversation_key)s'
-
-
-class MessageStream(Stream):
-
-    message_class = TransportUserMessage
-    routing_key = '%(transport_name)s.stream.message.%(conversation_key)s'
+        msg = TransportUserMessage(to_addr=to_addr, content=content, **payload)
+        resp = yield self.worker._publish_message(msg)
+        returnValue(resp)
 
 
 class ConversationResource(resource.Resource):
