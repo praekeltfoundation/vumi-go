@@ -158,6 +158,7 @@ INSTALLED_APPS = (
     'vxpolls.djdashboard',
     'registration',
     'bootstrap',
+    'raven.contrib.django.raven_compat',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
