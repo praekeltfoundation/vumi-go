@@ -224,6 +224,17 @@ class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
     def _command_rkey(self):
         return "%s.control" % (self._worker_name(),)
 
+    @inlineCallbacks
+    def setup_tagpools(self):
+        yield self.vumi_api.tpm.declare_tags(
+           [(u"pool", u"tag1"), (u"pool", u"tag2")])
+        yield self.vumi_api.tpm.set_metadata(u"pool", {
+            "transport_type": self.transport_type,
+            "msg_options": {
+                "transport_name": self.transport_name,
+                },
+            })
+
     def dispatch_command(self, command, *args, **kw):
         cmd = VumiApiCommand.command(
             self._worker_name(), command, *args, **kw)

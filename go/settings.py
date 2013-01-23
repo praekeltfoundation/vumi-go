@@ -296,4 +296,3 @@ DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 # from django.core.urlresolvers import reverse
 
 # LOGIN_REDIRECT_URL = reverse('home')
-

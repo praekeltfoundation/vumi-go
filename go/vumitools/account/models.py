@@ -6,8 +6,10 @@ from datetime import datetime
 from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager
-from vumi.persist.fields import (Integer, Unicode, Timestamp, ManyToMany, Json,
-                                    Boolean)
+from vumi.persist.fields import (
+   Integer, Unicode, Timestamp, ManyToMany, Json, Boolean)
+
+from go.vumitools.account.migrations import UserAccountMigrator
 
 
 class UserTagPermission(Model):
@@ -24,6 +26,10 @@ class UserAppPermission(Model):
 
 class UserAccount(Model):
     """A user account."""
+
+    VERSION = 1
+    MIGRATOR = UserAccountMigrator
+
     # key is uuid
     username = Unicode(max_length=255)
     # TODO: tagpools can be made OneToMany once vumi.persist.fields
@@ -31,9 +37,10 @@ class UserAccount(Model):
     tagpools = ManyToMany(UserTagPermission)
     applications = ManyToMany(UserAppPermission)
     created_at = Timestamp(default=datetime.utcnow)
-    event_handler_config = Json(null=True)
+    event_handler_config = Json(default=list)
     msisdn = Unicode(max_length=255, null=True)
     confirm_start_conversation = Boolean(default=False)
+    tags = Json(default=list)
 
 
 class AccountStore(object):
