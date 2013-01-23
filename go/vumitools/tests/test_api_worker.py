@@ -159,13 +159,13 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
         user_account = yield self.mk_user(self.ed.vumi_api, u'dbacct')
         yield user_account.save()
 
-        user_api = self.ed.vumi_api.get_user_api(user_account.key)
-        yield user_api.api.declare_tags([("pool", "tag1")])
-        yield user_api.api.set_pool_metadata("pool", {
+        yield self.ed.vumi_api.tpm.declare_tags([(u"pool", u"tag1")])
+        yield self.ed.vumi_api.tpm.set_metadata(u"pool", {
             "transport_type": "other",
             "msg_options": {"transport_name": "other_transport"},
             })
 
+        user_api = self.ed.vumi_api.get_user_api(user_account.key)
         conversation = yield user_api.new_conversation(
                                     u'bulk_message', u'subject', u'message',
                                     delivery_tag_pool=u'pool',
@@ -249,7 +249,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         msg = self.mkmsg_in(transport_type='xmpp',
                                 transport_name=self.transport_name)
 
-        tag = ('xmpp', 'test1@xmpp.org')
+        tag = (u'xmpp', u'test1@xmpp.org')
         batch_id = yield self.vumi_api.mdb.batch_start([tag],
             user_account=unicode(self.account.key))
         self.conversation.batches.add_key(batch_id)
@@ -275,7 +275,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
                                 transport_name=self.transport_name)
 
         # Make sure stuff is tagged properly so it can be routed.
-        tag = ('xmpp', 'test1@xmpp.org')
+        tag = (u'xmpp', u'test1@xmpp.org')
         batch_id = yield self.vumi_api.mdb.batch_start([tag],
             user_account=unicode(self.account.key))
         self.conversation.batches.add_key(batch_id)
@@ -303,7 +303,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
                                 transport_name=self.transport_name)
 
         # Make sure stuff is tagged properly so it can be routed.
-        tag = ('xmpp', 'test1@xmpp.org')
+        tag = (u'xmpp', u'test1@xmpp.org')
         batch_id = yield self.vumi_api.mdb.batch_start([tag],
             user_account=unicode(self.account.key))
         self.conversation.batches.add_key(batch_id)
@@ -351,7 +351,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         msg = self.mkmsg_in(transport_type='xmpp',
                             transport_name='xmpp_transport')
         msg['content'] = 'stop'
-        tag = ('xmpp', 'test1@xmpp.org')
+        tag = (u'xmpp', u'test1@xmpp.org')
         batch_id = yield self.vumi_api.mdb.batch_start([tag],
             user_account=unicode(self.account.key))
         self.conversation.batches.add_key(batch_id)

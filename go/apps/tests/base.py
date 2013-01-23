@@ -197,7 +197,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
 
     def acquire_all_longcode_tags(self):
         for _i in range(4):
-            self.api.acquire_tag("longcode")
+            self.user_api.acquire_tag(u"longcode")
 
     def get_api_commands_sent(self):
         consumer = self.get_cmd_consumer()

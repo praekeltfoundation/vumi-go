@@ -1,5 +1,4 @@
 from os import path
-from datetime import datetime
 
 from django.test.client import Client
 from django.core.urlresolvers import reverse

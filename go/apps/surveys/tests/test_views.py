@@ -82,12 +82,12 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         """A survey should not ask for recipients if the transport
         used only supports client initiated sessions (i.e. USSD)"""
 
-        self.api.set_pool_metadata("pool1", {
+        self.api.tpm.set_metadata("pool1", {
             "delivery_class": "sms",
             "server_initiated": True,
             })
 
-        self.api.set_pool_metadata("pool2", {
+        self.api.tpm.set_metadata("pool2", {
             "delivery_class": "ussd",
             "client_initiated": True,
             })
