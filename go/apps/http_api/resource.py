@@ -4,7 +4,7 @@ from datetime import datetime
 
 from functools import partial
 
-from twisted.web import resource, http
+from twisted.web import resource, http, util
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.guard import HTTPAuthSessionWrapper
 from twisted.web.guard import BasicCredentialFactory
@@ -152,15 +152,34 @@ class MessageStream(Stream):
 
 class ConversationResource(resource.Resource):
 
+    CONCURRENCY_LIMIT = 10
+
     def __init__(self, worker, conversation_key):
         resource.Resource.__init__(self)
         self.worker = worker
+        self.redis = worker.redis
         self.conversation_key = conversation_key
 
-    def is_allowed(self, request):
-        return True
+    def key(self, *args):
+        return ':'.join(['concurrency'] + map(unicode, args))
+
+    def is_allowed(self, user_id):
+        d = self.redis.get(self.key(user_id))
+        d.addCallback(lambda resp: int(resp or 0) < self.CONCURRENCY_LIMIT)
+        d.addErrback(log.error)
+        return d
+
+    def track_request(self, user_id):
+        return self.redis.incr(self.key(user_id))
+
+    def release_request(self, err, user_id):
+        return self.redis.decr(self.key(user_id))
 
     def getChild(self, path, request):
+        return util.DeferredResource(self.getDeferredChild(path, request))
+
+    @inlineCallbacks
+    def getDeferredChild(self, path, request):
 
         class_map = {
             'events.json': EventStream,
@@ -169,13 +188,20 @@ class ConversationResource(resource.Resource):
         stream_class = class_map.get(path)
 
         if stream_class is None:
-            return resource.NoResource()
+            returnValue(resource.NoResource())
 
-        if self.is_allowed(request):
-            return stream_class(self.worker, self.conversation_key)
+        user_id = request.getUser()
+        if (yield self.is_allowed(user_id)):
 
-        return resource.ErrorPage(http.FORBIDDEN, 'Forbidden',
-            'Too many concurrent connections')
+            # remove track when request is closed
+            finished = request.notifyFinish()
+            finished.addCallback(self.release_request, user_id)
+
+            yield self.track_request(user_id)
+            returnValue(stream_class(self.worker, self.conversation_key))
+
+        returnValue(resource.ErrorPage(http.FORBIDDEN, 'Forbidden',
+                                        'Too many concurrent connections'))
 
 
 class StreamingResource(resource.Resource):
