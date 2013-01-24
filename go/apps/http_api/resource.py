@@ -157,13 +157,25 @@ class ConversationResource(resource.Resource):
         self.worker = worker
         self.conversation_key = conversation_key
 
+    def is_allowed(self, request):
+        return True
+
     def getChild(self, path, request):
+
         class_map = {
             'events.json': EventStream,
             'messages.json': MessageStream,
         }
-        stream_class = class_map.get(path, lambda *a: resource.NoResource())
-        return stream_class(self.worker, self.conversation_key)
+        stream_class = class_map.get(path)
+
+        if stream_class is None:
+            return resource.NoResource()
+
+        if self.is_allowed(request):
+            return stream_class(self.worker, self.conversation_key)
+
+        return resource.ErrorPage(http.FORBIDDEN, 'Forbidden',
+            'Too many concurrent connections')
 
 
 class StreamingResource(resource.Resource):
