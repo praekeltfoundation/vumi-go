@@ -195,7 +195,7 @@ class ConversationResource(resource.Resource):
 
             # remove track when request is closed
             finished = request.notifyFinish()
-            finished.addCallback(self.release_request, user_id)
+            finished.addBoth(self.release_request, user_id)
 
             yield self.track_request(user_id)
             returnValue(stream_class(self.worker, self.conversation_key))

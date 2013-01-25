@@ -2,10 +2,9 @@ import json
 
 from twisted.internet.defer import Deferred
 from twisted.internet import reactor
-from twisted.web.client import Agent, ResponseDone
+from twisted.web.client import Agent, ResponseDone, ResponseFailed
 from twisted.web import http
 from twisted.protocols import basic
-from twisted.python.failure import DefaultException
 
 from vumi.message import Message
 from vumi import log
@@ -47,17 +46,15 @@ class VumiMessageReceiver(basic.LineReceiver):
     def connectionLost(self, reason):
         # the PotentialDataLoss here is because Twisted didn't receive a
         # content length header, which is normal because we're streaming.
-        if (reason.check(ResponseDone, http.PotentialDataLoss)
+        if (reason.check(ResponseDone, ResponseFailed, http.PotentialDataLoss)
             and self._response is not None
             and not self._wait_for_response.called):
             self._wait_for_response.callback(self._response)
         else:
-            d = Deferred()
-            d.addErrback(self.errback)
-            d.errback(DefaultException(reason.getErrorMessage()))
+            self.errback(reason)
 
     def disconnect(self):
-        if self.transport._producer is not None:
+        if self.transport and self.transport._producer is not None:
             self.transport._producer.loseConnection()
             self.transport._stopProxying()
 
