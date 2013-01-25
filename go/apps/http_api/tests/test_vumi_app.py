@@ -95,10 +95,10 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         messages = DeferredQueue()
         errors = DeferredQueue()
-
         receiver = self.client.stream(TransportUserMessage, messages.put,
                                             errors.put, url,
                                             Headers(self.auth_headers))
+
         msg1 = self.mkmsg_in(content='in 1', message_id='1')
         yield self.dispatch_with_tag(msg1, self.tag)
 

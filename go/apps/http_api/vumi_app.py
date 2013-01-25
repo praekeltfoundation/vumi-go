@@ -83,4 +83,4 @@ class StreamingHTTPWorker(GoApplicationWorker):
     @inlineCallbacks
     def teardown_application(self):
         yield super(StreamingHTTPWorker, self).teardown_application()
-        self.webserver.loseConnection()
+        yield self.webserver.loseConnection()
