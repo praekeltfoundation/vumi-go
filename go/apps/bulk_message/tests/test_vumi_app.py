@@ -35,12 +35,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
-
-        yield self.user_api.api.declare_tags([("pool", "tag1"),
-                                              ("pool", "tag2")])
-        yield self.user_api.api.set_pool_metadata("pool", {
-            "transport_type": "sphex",
-            })
+        yield self.setup_tagpools()
 
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,

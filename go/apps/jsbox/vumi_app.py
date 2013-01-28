@@ -67,6 +67,9 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
     def conversation_for_api(self, api):
         return api.conversation
 
+    def user_api_for_api(self, api):
+        return self.get_user_api(api.conversation.user_account.key)
+
     @inlineCallbacks
     def sandbox_protocol_for_message(self, msg_or_event):
         """Return a sandbox protocol for a message or event.

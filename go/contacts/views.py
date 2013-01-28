@@ -264,6 +264,7 @@ def _smart_group(request, contact_store, group):
             })
 
     keys = contact_store.contacts.raw_search(group.query).get_keys()
+    member_count = len(keys)
     limit = int(request.GET.get('limit', 100))
     if limit:
         messages.info(request,
@@ -277,7 +278,7 @@ def _smart_group(request, contact_store, group):
         'group': group,
         'selected_contacts': selected_contacts,
         'group_form': smart_group_form,
-        'member_count': len(keys),
+        'member_count': member_count,
     })
 
 

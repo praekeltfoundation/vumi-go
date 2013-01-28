@@ -55,9 +55,9 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
     def test_new_conversation_with_user_selected_tags(self):
         tp_meta = self.api.tpm.get_metadata('longcode')
         tp_meta['user_selects_tag'] = True
-        self.api.tpm.set_metadata('longcode', tp_meta)
-        self.run_new_conversation('longcode:default10001', 'longcode',
-                                  'default10001')
+        self.api.tpm.set_metadata(u'longcode', tp_meta)
+        self.run_new_conversation(u'longcode:default10001', u'longcode',
+                                  u'default10001')
 
     def test_end(self):
         """

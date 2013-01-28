@@ -29,17 +29,17 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.mdb = self.api.mdb
         self.user = yield self.mk_user(self.api, u'username')
         self.user_api = self.api.get_user_api(self.user.key)
-        yield self.declare_tags()
+        yield self.setup_tags()
 
         self.conv = yield self.create_conversation(
             conversation_type=u'dummy',
             delivery_tag_pool=u'longcode', delivery_class=u'sms')
 
     @inlineCallbacks
-    def declare_tags(self, name='longcode', count=4, metadata=None):
+    def setup_tags(self, name=u'longcode', count=4, metadata=None):
         """Declare a set of long codes to the tag pool."""
-        yield self.api.declare_tags([(name, "%s%s" % (name, i)) for i
-                          in range(10001, 10001 + count)])
+        yield self.api.tpm.declare_tags(
+            [(name, "%s%s" % (name, i)) for i in range(10001, 10001 + count)])
         defaults = {
             "display_name": name,
             "delivery_class": "sms",
@@ -47,7 +47,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             "server_initiated": True,
             }
         defaults.update(metadata or {})
-        yield self.api.set_pool_metadata(name, defaults)
+        yield self.api.tpm.set_metadata(name, defaults)
+        yield self.add_tagpool_permission(name)
 
     @inlineCallbacks
     def get_batch_id(self, conv, tag):
@@ -302,7 +303,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_acquire_tag_if_none_available(self):
-        yield self.declare_tags("shortcode", count=0)
+        yield self.setup_tags(u"shortcode", count=0)
         self.conv.c.delivery_tag_pool = u"shortcode"
         yield self.conv.save()
         yield self.assertFailure(self.conv.acquire_tag(),
