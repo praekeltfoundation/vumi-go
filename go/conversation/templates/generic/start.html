@@ -30,7 +30,9 @@
                 {% include "generic/includes/new.html" with form=conversation_form %}
             </div>
         </div>
-        {% if send_messages %}
+        {% if confirm_start_conversation %}
+            {% include "generic/includes/conversation_start_confirmation.html" %}
+        {% elif send_messages %}
             {% include "generic/includes/send.html" %}
         {% else %}
             {% include "generic/includes/nosend.html" %}

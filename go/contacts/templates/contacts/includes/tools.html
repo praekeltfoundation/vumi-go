@@ -56,6 +56,26 @@
     </form>
 </div><!--/uplContactFrm-->
 
+<div class="modal hide fade" id="expContactFrm">
+    <div class="modal-header">
+        <a class="close" data-dismiss="modal">×</a>
+        <h3>Schedule CSV Export of Contacts</h3>
+    </div>
+    <form method="post" action="" class="form-horizontal">
+        {% csrf_token %}
+        <div class="modal-body">
+            <p><span class="help-block">
+              The file is potentially quite large and as a result the export 
+              will be done in the background. When completed the results will 
+              be sent to you as a CSV file attached to an email.
+            </span><br/></p>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" name="_export_group_contacts" class="btn btn-primary" data-loading-text="uploading...">Schedule Export</button>
+        </div>
+    </form>
+</div><!--/expContactFrm-->
+
 {% if contact_data_headers and contact_data_row %}
 <div class="modal hide fade" id="recMatchFrm" style="display: block; width: auto;">
     <div class="modal-header">

@@ -129,3 +129,24 @@ class TestContactStore(GoPersistenceMixin, TestCase):
 
         self.assertTrue((yield self.store.contact_has_opted_out(contact1)))
         self.assertFalse((yield self.store.contact_has_opted_out(contact2)))
+
+    @inlineCallbacks
+    def test_count_contacts_for_static_group(self):
+        group = yield self.store.new_group(u'test group')
+        for i in range(2):
+            yield self.store.new_contact(
+                name=u'Contact', surname=u'%d' % i, msisdn=u'12345',
+                groups=[group])
+        count = yield self.store.count_contacts_for_group(group)
+        self.assertEqual(count, 2)
+
+    @inlineCallbacks
+    def test_count_contacts_for_smart_group(self):
+        yield self.store.contacts.enable_search()
+        group = yield self.store.new_smart_group(u'test group',
+                                                 u'surname:"Foo 1"')
+        for i in range(2):
+            yield self.store.new_contact(
+                name=u'Contact', surname=u'Foo %d' % i, msisdn=u'12345')
+        count = yield self.store.count_contacts_for_group(group)
+        self.assertEqual(count, 1)

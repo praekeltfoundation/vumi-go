@@ -35,12 +35,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
-
-        yield self.user_api.api.declare_tags([("pool", "tag1"),
-                                              ("pool", "tag2")])
-        yield self.user_api.api.set_pool_metadata("pool", {
-            "transport_type": "sphex",
-            })
+        yield self.setup_tagpools()
 
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,
@@ -121,7 +116,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     def test_consume_events(self):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
-        batch_id = conversation.get_latest_batch_key()
+        batch_id = yield conversation.get_latest_batch_key()
         window_id = self.app.get_window_id(conversation.key, batch_id)
         yield self._amqp.kick_delivery()
         self.clock.advance(self.app.monitor_interval + 1)

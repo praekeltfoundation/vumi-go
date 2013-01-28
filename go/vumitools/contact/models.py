@@ -161,6 +161,12 @@ class ContactStore(PerAccountStore):
         """
         return self.contacts.raw_search(group.query).get_keys()
 
+    def count_contacts_for_group(self, group):
+        if group.is_smart_group():
+            return self.contacts.raw_search(group.query).get_count()
+        else:
+            return self.contacts.index_lookup('groups', group.key).get_count()
+
     @Manager.calls_manager
     def filter_contacts_on_surname(self, letter, group=None):
         # FIXME: This does a mapreduce over a bucket, which means hitting every

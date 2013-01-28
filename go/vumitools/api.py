@@ -17,12 +17,15 @@ from vumi.persist.riak_manager import RiakManager
 from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.txredis_manager import TxRedisManager
+from vumi.middleware.tagger import TaggingMiddleware
+from vumi import log
 
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
+from go.vumitools.middleware import DebitAccountMiddleware
 
 from django.conf import settings
 from django.utils.datastructures import SortedDict
@@ -93,6 +96,9 @@ class VumiUserApi(object):
         self.contact_store = ContactStore(self.api.manager,
                                           self.user_account_key)
 
+    def exists(self):
+        return self.api.user_exists(self.user_account_key)
+
     @classmethod
     def from_config_sync(cls, user_account_key, config):
         return cls(VumiApi.from_config_sync(config), user_account_key)
@@ -101,6 +107,9 @@ class VumiUserApi(object):
     def from_config_async(cls, user_account_key, config):
         d = VumiApi.from_config_async(config)
         return d.addCallback(cls, user_account_key)
+
+    def get_user_account(self):
+        return self.api.get_user_account(self.user_account_key)
 
     def wrap_conversation(self, conversation):
         """Wrap a conversation with a ConversationWrapper.
@@ -140,8 +149,7 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def tagpools(self):
-        account_store = self.api.account_store
-        user_account = yield account_store.get_user(self.user_account_key)
+        user_account = yield self.get_user_account()
         active_conversations = yield self.active_conversations()
 
         tp_usage = defaultdict(int)
@@ -163,8 +171,7 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def applications(self):
-        account_store = self.api.account_store
-        user_account = yield account_store.get_user(self.user_account_key)
+        user_account = yield self.get_user_account()
         # NOTE: This assumes that we don't have very large numbers of
         #       applications.
         app_permissions = []
@@ -178,12 +185,141 @@ class VumiUserApi(object):
                         for application in sorted(applications)
                         if application in app_settings]))
 
+    @Manager.calls_manager
     def list_groups(self):
-        return sorted(self.contact_store.list_groups(),
-            key=lambda group: group.name)
+        returnValue(sorted((yield self.contact_store.list_groups()),
+            key=lambda group: group.name))
 
     def new_conversation(self, *args, **kw):
         return self.conversation_store.new_conversation(*args, **kw)
+
+    @Manager.calls_manager
+    def list_conversation_endpoints(self):
+        """Returns a set of endpoints owned by conversations in an account.
+        """
+        # XXX: Do we need both this method and the following method?
+        tags = set()
+        convs = yield self.active_conversations()
+        for conv in convs:
+            tag = (conv.delivery_tag_pool, conv.delivery_tag)
+            tags.add(tag)
+        returnValue(tags)
+
+    @Manager.calls_manager
+    def list_conversation_batch_tags(self):
+        """Returns a set of tags owned by conversation batches in an account.
+        """
+        # XXX: Do we need both this method and the previous method?
+        tags = set()
+        convs = yield self.active_conversations()
+        for conv in convs:
+            conv_tags = yield self.wrap_conversation(conv).get_tags()
+            tags.update(conv_tags)
+        returnValue(tags)
+
+    @Manager.calls_manager
+    def _populate_tags(self, user_account):
+        if user_account.tags is None:
+            # We need to populate this from conversations
+            conv_tags = yield self.list_conversation_batch_tags()
+            user_account.tags = [list(tag) for tag in conv_tags]
+
+    @Manager.calls_manager
+    def list_endpoints(self):
+        """Returns a set of endpoints owned by an account.
+        """
+        user_account = yield self.get_user_account()
+        yield self._populate_tags(user_account)
+        returnValue(set(tuple(tag) for tag in user_account.tags))
+
+    @Manager.calls_manager
+    def msg_options(self, tag, tagpool_metadata=None):
+        """Return a dictionary of message options needed to send a message
+        from this user to the given tag.
+        """
+        if tagpool_metadata is None:
+            tagpool_metadata = yield self.api.tpm.get_metadata(tag[0])
+        msg_options = {}
+        # TODO: transport_type is probably irrelevant
+        msg_options['transport_type'] = tagpool_metadata.get('transport_type')
+        # TODO: not sure whether to declare that tag names must always be
+        #       valid from_addr values or whether to put in a mapping somewhere
+        msg_options['from_addr'] = tag[1]
+        msg_options.update(tagpool_metadata.get('msg_options', {}))
+        TaggingMiddleware.add_tag_to_payload(msg_options, tag)
+        DebitAccountMiddleware.add_user_to_payload(msg_options,
+                                                   self.user_account_key)
+        returnValue(msg_options)
+
+    @Manager.calls_manager
+    def acquire_tag(self, pool):
+        """Acquire a tag from a given tag pool.
+
+        Tags should be held for the duration of a conversation.
+
+        :type pool: str
+        :param pool:
+            name of the pool to retrieve tags from.
+        :rtype:
+            The tag acquired or None if no tag was available.
+        """
+        user_account = yield self.get_user_account()
+        yield self._populate_tags(user_account)
+        if not (yield user_account.has_tagpool_permission(pool)):
+            log.warning("Account '%s' trying to access forbidden pool '%s'" % (
+                user_account.key, pool))
+            returnValue(None)
+        tag = yield self.api.tpm.acquire_tag(pool)
+        if tag is not None:
+            user_account.tags.append(tag)
+            yield user_account.save()
+        returnValue(tag)
+
+    @Manager.calls_manager
+    def acquire_specific_tag(self, tag):
+        """Acquire a specific tag.
+
+        Tags should be held for the duration of a conversation.
+
+        :type tag: tag tuple
+        :param tag:
+            The tag to acquire.
+        :rtype:
+            The tag acquired or None if the tag was not available.
+        """
+        user_account = yield self.get_user_account()
+        yield self._populate_tags(user_account)
+        if not (yield user_account.has_tagpool_permission(tag[0])):
+            log.warning("Account '%s' trying to access forbidden pool '%s'" % (
+                user_account.key, tag[0]))
+            returnValue(None)
+        tag = yield self.api.tpm.acquire_specific_tag(tag)
+        if tag is not None:
+            user_account.tags.append(tag)
+            yield user_account.save()
+        returnValue(tag)
+
+    @Manager.calls_manager
+    def release_tag(self, tag):
+        """Release a tag back to the pool it came from.
+
+        Tags should be released only once a conversation is finished.
+
+        :type pool: str
+        :param pool:
+            name of the pool to return the tag too (must be the same as
+            the name of the pool the tag came from).
+        :rtype:
+            None.
+        """
+        user_account = yield self.get_user_account()
+        yield self._populate_tags(user_account)
+        try:
+            user_account.tags.remove(list(tag))
+        except ValueError, e:
+            log.error("Tag not allocated to account: %s" % (tag,), e)
+        yield user_account.save()
+        yield self.api.tpm.release_tag(tag)
 
 
 class VumiApi(object):
@@ -222,6 +358,21 @@ class VumiApi(object):
         if amqp_client is not None:
             sender = AsyncMessageSender(amqp_client)
         returnValue(cls(manager, redis, sender))
+
+    @Manager.calls_manager
+    def user_exists(self, user_account_key):
+        """
+        Check whether or not a user exists. Useful to check before creating
+        a VumiUserApi since that does not do any type of checking itself.
+
+        :param str user_account_key:
+            The user account key to check.
+        """
+        user_data = yield self.get_user_account(user_account_key)
+        returnValue(user_data is not None)
+
+    def get_user_account(self, user_account_key):
+        return self.account_store.get_user(user_account_key)
 
     def get_user_api(self, user_account_key):
         return VumiUserApi(self, user_account_key)
@@ -313,85 +464,6 @@ class VumiApi(object):
         """
         batch = yield self.mdb.get_batch(batch_id)
         returnValue(list(batch.tags))
-
-    def acquire_tag(self, pool):
-        """Acquire a tag from a given tag pool.
-
-        Tags should be held for the duration of a conversation.
-
-        :type pool: str
-        :param pool:
-            name of the pool to retrieve tags from.
-        :rtype:
-            The tag acquired or None if no tag was available.
-        """
-        return self.tpm.acquire_tag(pool)
-
-    def acquire_specific_tag(self, tag):
-        """Acquire a specific tag.
-
-        Tags should be held for the duration of a conversation.
-
-        :type tag: tag tuple
-        :param tag:
-            The tag to acquire.
-        :rtype:
-            The tag acquired or None if the tag was not available.
-        """
-        return self.tpm.acquire_specific_tag(tag)
-
-    def release_tag(self, tag):
-        """Release a tag back to the pool it came from.
-
-        Tags should be released only once a conversation is finished.
-
-        :type pool: str
-        :param pool:
-            name of the pool to return the tag too (must be the same as
-            the name of the pool the tag came from).
-        :rtype:
-            None.
-        """
-        return self.tpm.release_tag(tag)
-
-    def declare_tags(self, tags):
-        """Populate a pool with tags.
-
-        Tags already in the pool are not duplicated.
-
-        :type pool: str
-        :type tags: list of (pool, local_tag) tuples
-        :param tags:
-            list of tags to add to the pool.
-        :rtype:
-            None
-        """
-        return self.tpm.declare_tags(tags)
-
-    def set_pool_metadata(self, pool, metadata):
-        """Set the metadata for a tag pool.
-
-        :param str pool:
-            Name of the pool set metadata form.
-        :param dict metadata:
-            Metadata to set.
-        :rtype:
-            None
-        """
-        return self.tpm.set_metadata(pool, metadata)
-
-    def purge_pool(self, pool):
-        """Completely remove a pool with all its contents.
-
-        If tags in the pool are still in use it will throw an error.
-
-        :type pool: str
-        :param pool:
-            name of the pool to purge.
-        :rtype:
-            None.
-        """
-        return self.tpm.purge_pool(pool)
 
 
 class SyncMessageSender(object):

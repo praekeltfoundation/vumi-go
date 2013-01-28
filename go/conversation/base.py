@@ -1,4 +1,5 @@
 import csv
+import urllib
 from datetime import datetime
 from StringIO import StringIO
 
@@ -6,21 +7,27 @@ from django.views.generic import TemplateView
 from django.core.paginator import PageNotAnInteger, EmptyPage
 
 from django.utils.decorators import method_decorator
+from django.contrib.sites.models import Site
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, Http404
 from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.conf.urls.defaults import url, patterns
 from django.conf import settings
 from django.http import HttpResponse
 
+from vumi.persist.redis_manager import RedisManager
+
 from go.vumitools.conversation.models import (
     CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
-from go.conversation.forms import ConversationForm, ConversationGroupForm
+from go.conversation.forms import (ConversationForm, ConversationGroupForm,
+                                    ConfirmConversationForm)
+from go.conversation.tasks import export_conversation_messages
 from go.base import message_store_client as ms_client
 from go.base.utils import (make_read_only_form, conversation_or_404,
                             page_range_window)
+from go.base.token_manager import TokenManager
 
 
 class ConversationView(TemplateView):
@@ -153,6 +160,9 @@ class StartConversationView(ConversationView):
     template_name = 'start'
 
     def get(self, request, conversation):
+        profile = request.user.get_profile()
+        account = profile.get_user_account()
+
         conversation_form = make_read_only_form(self.make_conversation_form(
                 request.user_api, instance=conversation, initial={}))
         groups = request.user_api.list_groups()
@@ -161,25 +171,32 @@ class StartConversationView(ConversationView):
 
         if self.conversation_initiator == 'client':
             return self.render_to_response({
+                    'user_profile': profile,
                     'send_messages': False,
+                    'confirm_start_conversation':
+                        account.confirm_start_conversation,
                     'conversation': conversation,
                     })
+        else:
+            conv_groups = []
+            for bunch in conversation.groups.load_all_bunches():
+                conv_groups.extend(bunch)
 
-        conv_groups = []
-        for bunch in conversation.groups.load_all_bunches():
-            conv_groups.extend(bunch)
+            return self.render_to_response({
+                    'user_profile': profile,
+                    'send_messages': True,
+                    'confirm_start_conversation':
+                        account.confirm_start_conversation,
+                    'conversation': conversation,
+                    'conversation_form': conversation_form,
+                    'group_form': group_form,
+                    'groups': conv_groups,
+                    })
 
-        return self.render_to_response({
-                'send_messages': True,
-                'conversation': conversation,
-                'conversation_form': conversation_form,
-                'group_form': group_form,
-                'groups': conv_groups,
-                })
-
-    def post(self, request, conversation):
+    def _start_conversation(self, request, conversation):
         params = {}
         params.update(self.conversation_start_params or {})
+
         if self.conversation_initiator != 'client':
             params['dedupe'] = request.POST.get('dedupe') == '1'
         try:
@@ -190,6 +207,97 @@ class StartConversationView(ConversationView):
         messages.add_message(request, messages.INFO,
                              '%s started' % (self.conversation_display_name,))
         return self.redirect_to('show', conversation_key=conversation.key)
+
+    def _start_via_confirmation(self, request, account, conversation):
+
+        params = {}
+        params.update(self.conversation_start_params or {})
+
+        if self.conversation_initiator != 'client':
+            params['dedupe'] = request.POST.get('dedupe') == '1'
+
+        # The URL the user will be redirected to post-confirmation
+        redirect_to = self.get_view_url('confirm',
+                            conversation_key=conversation.key)
+        # The token to be sent.
+        site = Site.objects.get_current()
+        redis = RedisManager.from_config(
+                                    settings.VUMI_API_CONFIG['redis_manager'])
+        token_manager = TokenManager(redis.sub_manager('token_manager'))
+        token = token_manager.generate(redirect_to, user_id=request.user.id,
+                                        extra_params=params)
+        token_url = 'http://%s%s' % (site.domain,
+                                reverse('token', kwargs={'token': token}))
+        conversation.send_token_url(token_url, account.msisdn)
+        messages.info(request, 'Confirmation request sent.')
+        return self.redirect_to('show', conversation_key=conversation.key)
+
+    def post(self, request, conversation):
+        profile = request.user.get_profile()
+        account = profile.get_user_account()
+        if account.confirm_start_conversation:
+            return self._start_via_confirmation(request, account, conversation)
+        else:
+            return self._start_conversation(request, conversation)
+
+
+class ConfirmConversationView(ConversationView):
+    template_name = 'confirm'
+
+    def get(self, request, conversation):
+        """
+        NOTE:   we need the hack involving `success` in the query string here
+                because we don't have a good way to telling whether a
+                conversation has started yet or not. The current implementation
+                does a guess based on whether or not the conversation has any
+                batch keys assigned, which in the current scenario breaks since
+                sending a conversation confirmation SMS will assign a batch key
+                while not actually starting the conversation.
+        """
+        redis = RedisManager.from_config(
+                                    settings.VUMI_API_CONFIG['redis_manager'])
+        token_manager = TokenManager(redis.sub_manager('token_manager'))
+        token = request.GET.get('token')
+        token_data = token_manager.verify_get(token)
+        if not token_data:
+            raise Http404
+        return self.render_to_response({
+            'form': ConfirmConversationForm(initial={'token': token}),
+            'conversation': conversation,
+            'success': request.GET.get('success'),  # FIXME
+            })
+
+    def post(self, request, conversation):
+        token = request.POST.get('token')
+        redis = RedisManager.from_config(
+                                    settings.VUMI_API_CONFIG['redis_manager'])
+        token_manager = TokenManager(redis.sub_manager('token_manager'))
+        token_data = token_manager.verify_get(token)
+        if not token_data:
+            raise Http404
+
+        params = token_data.get('extra_params', {})
+        confirmation_form = ConfirmConversationForm(request.POST)
+        if confirmation_form.is_valid():
+            try:
+                batch_id = conversation.get_latest_batch_key()
+                conversation.start(batch_id=batch_id, **params)
+                messages.info(request, '%s started succesfully!' % (
+                                            self.conversation_display_name,))
+                return redirect('%s?%s' % (
+                    self.get_view_url('confirm',
+                        conversation_key=conversation.key),
+                    urllib.urlencode({
+                        'token': token,
+                        'success': 1,
+                        })))
+            except ConversationSendError as error:
+                messages.error(request, str(error))
+
+        return self.render_to_response({
+            'form': confirmation_form,
+            'conversation': conversation,
+            })
 
 
 class ShowConversationView(ConversationView):
@@ -213,6 +321,15 @@ class ShowConversationView(ConversationView):
                 self.get_next_view(conversation),
                 conversation_key=conversation.key)
         return self.render_to_response(params)
+
+    def post(self, request, conversation):
+        if '_export_conversation_messages' in request.POST:
+            export_conversation_messages.delay(
+                request.user_api.user_account_key, conversation.key)
+            messages.info(request, 'Conversation messages CSV file export '
+                                    'scheduled. CSV file should arrive in '
+                                    'your mailbox shortly.')
+        return self.redirect_to('show', conversation_key=conversation.key)
 
 
 class AggregatesConversationView(ConversationView):
@@ -413,6 +530,7 @@ class ConversationViews(object):
     message_search_result_conversation_view = \
         MessageSearchResultConversationView
     aggregates_conversation_view = AggregatesConversationView
+    confirm_conversation_view = ConfirmConversationView
 
     # These attributes get passed through to the individual view objects.
     conversation_type = None
@@ -456,6 +574,7 @@ class ConversationViews(object):
             self.mkurl('message_search_result'),
             self.mkurl('aggregates',
                 r'^(?P<conversation_key>\w+)/aggregates\.csv$'),
+            self.mkurl('confirm'),
             ] + self.extra_urls()
         if self.conversation_initiator != 'client':
             urls.append(self.mkurl('people'))
