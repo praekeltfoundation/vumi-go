@@ -106,6 +106,10 @@ class ConversationForm(VumiModelForm):
             yield widget
 
 
+class ConfirmConversationForm(BootstrapForm):
+    token = forms.CharField(required=True, widget=forms.HiddenInput)
+
+
 class ConversationGroupForm(BootstrapForm):
     def __init__(self, *args, **kw):
         groups = kw.pop('groups')

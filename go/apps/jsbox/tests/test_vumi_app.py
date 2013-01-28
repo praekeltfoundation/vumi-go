@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 import pkg_resources
 
+import mock
+
 from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.trial.unittest import SkipTest
+from twisted.trial.unittest import SkipTest, TestCase
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 
-from go.apps.jsbox.vumi_app import JsBoxApplication
+from go.apps.jsbox.vumi_app import JsBoxApplication, ConversationConfigResource
 
-from vumi.application.sandbox import JsSandbox
+from vumi.application.sandbox import JsSandbox, SandboxCommand
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.utils import LogCatcher
 
@@ -40,11 +42,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
-        yield self.user_api.api.declare_tags([("pool", "tag1"),
-                                              ("pool", "tag2")])
-        yield self.user_api.api.set_pool_metadata("pool", {
-            "transport_type": "sphex",
-            })
+        yield self.setup_tagpools()
 
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,
@@ -89,6 +87,11 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         }
         return metadata
 
+    def mk_dummy_api(self, conversation):
+        dummy_api = mock.Mock()
+        dummy_api.conversation = conversation
+        return dummy_api
+
     @inlineCallbacks
     def test_start(self):
         conversation = yield self.setup_conversation()
@@ -116,3 +119,58 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         yield self.vumi_api.mdb.add_outbound_message(msg, tag=tag)
         event = self.mkmsg_ack(user_message_id=msg['message_id'])
         yield self.dispatch_event(event)
+
+    @inlineCallbacks
+    def test_conversation_for_api(self):
+        conversation = yield self.setup_conversation()
+        dummy_api = self.mk_dummy_api(conversation)
+        self.assertEqual(self.app.conversation_for_api(dummy_api),
+                         conversation)
+
+    @inlineCallbacks
+    def test_user_api_for_api(self):
+        conversation = yield self.setup_conversation()
+        dummy_api = self.mk_dummy_api(conversation)
+        user_api = self.app.user_api_for_api(dummy_api)
+        self.assertEqual(user_api.user_account_key,
+                         conversation.user_account.key)
+
+
+class TestConversationConfigResource(TestCase):
+    def setUp(self):
+        self.conversation = mock.Mock()
+        self.app_worker = mock.Mock()
+        self.dummy_api = object()
+        self.resource = ConversationConfigResource("test", self.app_worker, {})
+        self.app_worker.conversation_for_api = mock.Mock(
+            return_value=self.conversation)
+
+    def set_app_config(self, key_values):
+        app_config = dict((k, {"value": v}) for k, v
+                          in key_values.iteritems())
+        self.conversation.metadata = {
+            "jsbox_app_config": app_config,
+        }
+
+    def check_reply(self, reply, cmd, value):
+        self.assertEqual(reply['reply'], True)
+        self.assertEqual(reply['cmd_id'], cmd['cmd_id'])
+        self.assertEqual(reply['value'], value)
+
+    def test_present_key(self):
+        cmd = SandboxCommand(key="foo")
+        self.set_app_config({"foo": "foo value"})
+        reply = self.resource.handle_get(self.dummy_api, cmd)
+        self.check_reply(reply, cmd, "foo value")
+
+    def test_missing_key(self):
+        cmd = SandboxCommand(key="foo")
+        self.set_app_config({})
+        reply = self.resource.handle_get(self.dummy_api, cmd)
+        self.check_reply(reply, cmd, None)
+
+    def test_with_app_config_absent(self):
+        cmd = SandboxCommand(key="foo")
+        self.conversation.metadata = {"jsbox": {}}
+        reply = self.resource.handle_get(self.dummy_api, cmd)
+        self.check_reply(reply, cmd, None)

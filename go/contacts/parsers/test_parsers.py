@@ -63,6 +63,25 @@ class CSVParserTestCase(ParserTestCase):
                 'name': 'Name 3'},
             ])
 
+    def test_contacts_with_none_entries(self):
+        csv_file = self.fixture('sample-contacts-with-headers-and-none.csv')
+        fp = default_storage.open(csv_file, 'rU')
+        contacts = list(self.parser.parse_file(fp, zip(
+            ['name', 'surname', 'msisdn'],
+            ['string', 'string', 'msisdn_za']), has_header=True))
+        self.assertEqual(contacts, [
+            {
+                'msisdn': '+27761234561',
+                'name': 'Name 1'},
+            {
+                'msisdn': '+27761234562',
+                'name': 'Name 2'},
+            {
+                'msisdn': '+27761234563',
+                'surname': 'Surname 3',
+                'name': 'Name 3'},
+            ])
+
 
 class XLSParserTestCase(ParserTestCase):
 

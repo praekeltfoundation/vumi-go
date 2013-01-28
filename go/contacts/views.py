@@ -31,6 +31,7 @@ def _group_url(group_key):
 def index(request):
     return redirect(reverse('contacts:groups'))
 
+
 @login_required
 def groups(request):
     contact_store = request.user_api.contact_store
@@ -111,6 +112,12 @@ def _static_group(request, contact_store, group):
                 group.name = group_form.cleaned_data['name']
                 group.save()
             messages.info(request, 'The group name has been updated')
+            return redirect(_group_url(group.key))
+        elif '_export_group_contacts' in request.POST:
+            tasks.export_group_contacts.delay(
+                request.user_api.user_account_key, group.key, True)
+            messages.info(request, 'The export is scheduled and should '
+                                    'complete within a few minutes.')
             return redirect(_group_url(group.key))
         elif '_delete_group_contacts' in request.POST:
             tasks.delete_group_contacts.delay(
@@ -198,7 +205,15 @@ def _static_group(request, contact_store, group):
             query_kwargs = _query_to_kwargs(request.GET.get('q'))
         else:
             query_kwargs = _query_to_kwargs('name:%s' % query)
+
+        limit = int(request.GET.get('limit', 100))
         keys = contact_store.contacts.search(**query_kwargs).get_keys()
+        if limit:
+            messages.info(request,
+                'Showing up to %s random contacts matching your query' % (
+                    limit,))
+            keys = keys[:limit]
+
         selected_contacts = []
         for contact_bunch in contact_store.contacts.load_all_bunches(keys):
             selected_contacts.extend(contact_bunch)
@@ -210,6 +225,7 @@ def _static_group(request, contact_store, group):
         'query': request.GET.get('q'),
         'selected_letter': selected_letter,
         'selected_contacts': selected_contacts,
+        'member_count': contact_store.count_contacts_for_group(group),
         })
 
     return render(request, 'contacts/group.html', context)
@@ -225,6 +241,12 @@ def _smart_group(request, contact_store, group):
             group.query = smart_group_form.cleaned_data['query']
             group.save()
             return redirect(_group_url(group.key))
+    elif '_export_group_contacts' in request.POST:
+        tasks.export_group_contacts.delay(
+            request.user_api.user_account_key, group.key, True)
+        messages.info(request, 'The export is scheduled and should '
+                                'complete within a few minutes.')
+        return redirect(_group_url(group.key))
     elif '_delete_group_contacts' in request.POST:
         tasks.delete_group_contacts.delay(request.user_api.user_account_key,
             group.key)
@@ -242,13 +264,21 @@ def _smart_group(request, contact_store, group):
             })
 
     keys = contact_store.contacts.raw_search(group.query).get_keys()
+    member_count = len(keys)
+    limit = int(request.GET.get('limit', 100))
+    if limit:
+        messages.info(request,
+                'Showing up to %s random contacts matching your query' % (
+                    limit,))
+        keys = keys[:limit]
     selected_contacts = []
-    for contacts in contact_store.contacts.load_all_bunches(keys[:100]):
+    for contacts in contact_store.contacts.load_all_bunches(keys):
         selected_contacts.extend(contacts)
     return render(request, 'contacts/smart_group.html', {
         'group': group,
         'selected_contacts': selected_contacts,
         'group_form': smart_group_form,
+        'member_count': member_count,
     })
 
 
@@ -312,7 +342,13 @@ def _people(request):
     if query:
         if not ':' in query:
             query = 'name:%s' % (query,)
+        limit = int(request.GET.get('limit', 100))
         keys = contact_store.contacts.raw_search(query).get_keys()
+        if limit:
+            messages.info(request,
+                'Showing up to %s random contacts matching your query' % (
+                    limit,))
+            keys = keys[:limit]
         selected_contacts = []
         for contact_bunch in contact_store.contacts.load_all_bunches(keys):
             selected_contacts.extend(contact_bunch)

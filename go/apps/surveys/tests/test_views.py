@@ -2,10 +2,14 @@ from datetime import date
 
 from django.test.client import Client
 from django.core.urlresolvers import reverse
+from django.core import mail
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.apps.surveys.views import get_poll_config
+from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
+
+from mock import patch
 
 
 class SurveyTestCase(DjangoGoApplicationTestCase):
@@ -78,12 +82,12 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         """A survey should not ask for recipients if the transport
         used only supports client initiated sessions (i.e. USSD)"""
 
-        self.api.set_pool_metadata("pool1", {
+        self.api.tpm.set_metadata("pool1", {
             "delivery_class": "sms",
             "server_initiated": True,
             })
 
-        self.api.set_pool_metadata("pool2", {
+        self.api.tpm.set_metadata("pool2", {
             "delivery_class": "ussd",
             "client_initiated": True,
             })
@@ -260,3 +264,82 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             '2012-01-01,2',
             '',  # csv ends with a blank line
             ]))
+
+    def test_export_messages(self):
+        self.put_sample_messages_in_conversation(self.user_api,
+            self.conv_key, 10, start_timestamp=date(2012, 1, 1),
+            time_multiplier=12)
+        conv_url = reverse('survey:show', kwargs={
+            'conversation_key': self.conv_key,
+            })
+        response = self.client.post(conv_url, {
+            '_export_conversation_messages': True,
+            })
+        self.assertRedirects(response, conv_url)
+        [email] = mail.outbox
+        self.assertEqual(email.recipients(), [self.user.email])
+        self.assertTrue(self.conversation.subject in email.subject)
+        self.assertTrue(self.conversation.subject in email.body)
+        [(file_name, content, mime_type)] = email.attachments
+        self.assertEqual(file_name, 'messages-export.csv')
+        # 1 header, 10 sent, 10 received, 1 trailing newline == 22
+        self.assertEqual(22, len(content.split('\n')))
+        self.assertEqual(mime_type, 'text/csv')
+
+    @patch('go.base.message_store_client.MatchResult')
+    @patch('go.base.message_store_client.Client')
+    def test_message_search(self, Client, MatchResult):
+        fake_client = FakeMessageStoreClient()
+        fake_result = FakeMatchResult()
+        Client.return_value = fake_client
+        MatchResult.return_value = fake_result
+
+        response = self.client.get(reverse('survey:show', kwargs={
+                'conversation_key': self.conv_key,
+            }), {
+                'q': 'hello world 1',
+            })
+
+        template_names = [t.name for t in response.templates]
+        self.assertTrue('generic/includes/message-load-results.html' in
+                        template_names)
+        self.assertEqual(response.context['token'], fake_client.token)
+
+    @patch('go.base.message_store_client.MatchResult')
+    @patch('go.base.message_store_client.Client')
+    def test_message_results(self, Client, MatchResult):
+        fake_client = FakeMessageStoreClient()
+        fake_result = FakeMatchResult(tries=2,
+            results=[self.mkmsg_out() for i in range(10)])
+        Client.return_value = fake_client
+        MatchResult.return_value = fake_result
+
+        fetch_results_url = reverse('survey:message_search_result',
+            kwargs={
+                'conversation_key': self.conv_key,
+            })
+        fetch_results_params = {
+            'q': 'hello world 1',
+            'batch_id': 'batch-id',
+            'direction': 'inbound',
+            'token': fake_client.token,
+            'delay': 100,
+        }
+
+        response1 = self.client.get(fetch_results_url,
+                                    fetch_results_params)
+        response2 = self.client.get(fetch_results_url,
+                                    fetch_results_params)
+
+        # First time it should still show the loading page
+        self.assertTrue('generic/includes/message-load-results.html' in
+                            [t.name for t in response1.templates])
+        self.assertEqual(response1.context['delay'], 1.1 * 100)
+        # Second time it should still render the messages
+        self.assertTrue('generic/includes/message-list.html' in
+                            [t.name for t in response2.templates])
+        self.assertEqual(response1.context['token'], fake_client.token)
+        # Second time we should list the matching messages
+        self.assertEqual(response2.context['token'], fake_client.token)
+        self.assertEqual(len(response2.context['message_page'].object_list),
+            10)

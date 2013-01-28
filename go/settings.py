@@ -158,6 +158,7 @@ INSTALLED_APPS = (
     'vxpolls.djdashboard',
     'registration',
     'bootstrap',
+    'raven.contrib.django',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -296,4 +297,3 @@ DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 # from django.core.urlresolvers import reverse
 
 # LOGIN_REDIRECT_URL = reverse('home')
-
