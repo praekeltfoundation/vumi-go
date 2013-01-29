@@ -191,6 +191,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         response = yield http_request_full(url, msg.to_json(),
                                             self.auth_headers, method='PUT')
 
+        put_msg = json.loads(response.delivered_body)
         self.assertEqual(response.code, http.OK)
 
         [sent_msg] = self.get_dispatched_messages()
@@ -203,7 +204,53 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                 'tag': list(self.tag),
             }
         })
-        self.assertEqual(sent_msg['message_id'], msg['message_id'])
+        # We do not respect the message_id that's been given.
+        self.assertNotEqual(sent_msg['message_id'], msg['message_id'])
+        self.assertEqual(sent_msg['message_id'], put_msg['message_id'])
+        self.assertEqual(sent_msg['to_addr'], msg['to_addr'])
+        self.assertEqual(sent_msg['from_addr'], self.tag[1])
+
+    @inlineCallbacks
+    def test_invalid_in_reply_to(self):
+        msg = self.mkmsg_out()
+        msg['in_reply_to'] = '1'  # this doesn't exist
+
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        response = yield http_request_full(url, msg.to_json(),
+                                            self.auth_headers, method='PUT')
+        self.assertEqual(response.code, http.BAD_REQUEST)
+
+    @inlineCallbacks
+    def test_in_reply_to(self):
+        inbound_msg = self.mkmsg_in(content='in 1', message_id='1')
+        yield self.vumi_api.mdb.add_inbound_message(inbound_msg,
+                                                        batch_id=self.batch_id)
+
+        msg = self.mkmsg_out()
+        msg['in_reply_to'] = inbound_msg['message_id']
+
+        TaggingMiddleware.add_tag_to_msg(msg, self.tag)
+
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        response = yield http_request_full(url, msg.to_json(),
+                                            self.auth_headers, method='PUT')
+
+        put_msg = json.loads(response.delivered_body)
+        self.assertEqual(response.code, http.OK)
+
+        [sent_msg] = self.get_dispatched_messages()
+        self.assertEqual(sent_msg['to_addr'], sent_msg['to_addr'])
+        self.assertEqual(sent_msg['helper_metadata'], {
+            'go': {
+                'user_account': self.account.key,
+            },
+            'tag': {
+                'tag': list(self.tag),
+            }
+        })
+        # We do not respect the message_id that's been given.
+        self.assertNotEqual(sent_msg['message_id'], msg['message_id'])
+        self.assertEqual(sent_msg['message_id'], put_msg['message_id'])
         self.assertEqual(sent_msg['to_addr'], msg['to_addr'])
         self.assertEqual(sent_msg['from_addr'], self.tag[1])
 

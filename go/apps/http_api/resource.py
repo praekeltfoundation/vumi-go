@@ -29,14 +29,23 @@ class Stream(resource.Resource):
         resource.Resource.__init__(self)
         self.worker = worker
         self.vumi_api = self.worker.vumi_api
+        self.user_apis = {}
         self.conversation_key = conversation_key
         self.stream_ready = Deferred()
         self.stream_ready.addCallback(self.start_publishing)
         self._consumers = []
 
+    def get_user_api(self, user_account):
+        if user_account in self.user_apis:
+            return self.user_apis[user_account]
+
+        user_api = self.vumi_api.get_user_api(user_account)
+        self.user_apis[user_account] = user_api
+        return user_api
+
     def get_conversation(self, user_account, conversation_key=None):
         conversation_key = conversation_key or self.conversation_key
-        user_api = self.vumi_api.get_user_api(user_account)
+        user_api = self.get_user_api(user_account)
         return user_api.get_wrapped_conversation(conversation_key)
 
     def render_GET(self, request):
@@ -104,11 +113,19 @@ class MessageStream(Stream):
         d.callback(request)
         return NOT_DONE_YET
 
+    def get_msg_options(self, msg, white_list=[]):
+        raw_payload = copy.deepcopy(msg.payload.copy())
+        msg_options = dict((key, value)
+                            for key, value in raw_payload.items()
+                            if key in white_list)
+        return msg_options
+
+    def get_conversation_tag(self, conversation):
+        return (conversation.delivery_tag_pool, conversation.delivery_tag)
+
     @inlineCallbacks
     def handle_PUT(self, request):
         data = json.loads(request.content.read())
-        user_account = request.getUser()
-        conversation = yield self.get_conversation(user_account)
 
         try:
             tum = TransportUserMessage(_process_fields=True, **data)
@@ -119,51 +136,88 @@ class MessageStream(Stream):
 
         in_reply_to = tum['in_reply_to']
         if in_reply_to:
-            # Using the proxy's load() directly instead of
-            # `mdb.get_inbound_message(msg_id)` because that gives us the
-            # actual message, not the OutboundMessage. We need the
-            # OutboundMessage to get the batch and verify the `user_account`
-            msg = yield self.vumi_api.mdb.inbound_messages.load(in_reply_to)
-            if msg is None:
-                request.setResponseCode(http.BAD_REQUEST,
-                                            'Invalid in_reply_to value')
-                request.finish()
-                return
-
-            batch = yield msg.batch.get()
-            if batch is None or (batch.metadata['user_account']
-                                                    != user_account):
-                request.setResponseCode(http.BAD_REQUEST,
-                                        'Invalid in_reply_to value')
-                request.finish()
-                return
-
-        payload = copy.deepcopy(tum.payload.copy())
-        to_addr = payload.pop('to_addr')
-        content = payload.pop('content')
-        yield self.send_to(conversation, to_addr, content, **payload)
-        request.setResponseCode(http.OK)
-        request.finish()
+            yield self.handle_PUT_in_reply_to(request, tum, in_reply_to)
+        else:
+            yield self.handle_PUT_send_to(request, tum)
 
     @inlineCallbacks
-    def send_to(self, conversation, to_addr, content, **payload):
+    def handle_PUT_in_reply_to(self, request, tum, in_reply_to):
+        user_account = request.getUser()
+        user_api = yield self.get_user_api(user_account)
+        conversation = yield self.get_conversation(user_account)
+
+        # Using the proxy's load() directly instead of
+        # `mdb.get_inbound_message(msg_id)` because that gives us the
+        # actual message, not the OutboundMessage. We need the
+        # OutboundMessage to get the batch and verify the `user_account`
+        reply_to = yield self.vumi_api.mdb.inbound_messages.load(in_reply_to)
+        if reply_to is None:
+            request.setResponseCode(http.BAD_REQUEST)
+            request.write('Invalid in_reply_to value')
+            request.finish()
+            return
+
+        batch = yield reply_to.batch.get()
+        if batch is None or (batch.metadata['user_account']
+                                                != user_account):
+            request.setResponseCode(http.BAD_REQUEST)
+            request.write('Invalid in_reply_to value')
+            request.finish()
+            return
+
+        msg_options = self.get_msg_options(tum, ['session_event', 'content'])
 
         # FIXME:    At some point this needs to be done better as it makes some
         #           assumption about how messages are routed which won't be
         #           true for very much longer.
-        tag = (conversation.delivery_tag_pool, conversation.delivery_tag)
-        msg_options = yield conversation.make_message_options(tag)
+        tag = self.get_conversation_tag(conversation)
+        msg_options.update((yield user_api.msg_options(tag)))
 
-        payload.update(msg_options)
-        payload.update({
-            'transport_name': self.worker.transport_name,
-            'timestamp': datetime.utcnow(),
-            'message_version': TransportUserMessage.MESSAGE_VERSION,
-        })
+        content = msg_options.pop('content')
+        continue_session = (msg_options['session_event']
+                                != TransportUserMessage.SESSION_CLOSE)
+        helper_metadata = msg_options.pop('helper_metadata')
+        transport_type = msg_options.pop('transport_type')
+        session_event = msg_options.pop('session_event')
+        from_addr = msg_options.pop('from_addr')
 
-        msg = TransportUserMessage(to_addr=to_addr, content=content, **payload)
-        resp = yield self.worker._publish_message(msg)
-        returnValue(resp)
+        # NOTE:
+        #
+        # Not able to use `worker.reply_to()` because TransportUserMessage's
+        # reply() method sets the `helper_metadata` which it isn't really
+        # supposed to do. Because of this we're doing the manual call
+        # to `worker._publish_message()` instead.
+        msg = reply_to.msg.reply(content, continue_session, **msg_options)
+
+        # These need to be set manually to ensure that stuff cannot be forged.
+        msg['helper_metadata'].update(helper_metadata)
+        msg['from_addr'] = from_addr
+        msg['transport_type'] = transport_type
+        msg['session_event'] = session_event
+
+        yield self.worker._publish_message(msg)
+
+        request.setResponseCode(http.OK)
+        request.write(msg.to_json())
+        request.finish()
+
+    @inlineCallbacks
+    def handle_PUT_send_to(self, request, tum):
+        user_account = request.getUser()
+        user_api = yield self.get_user_api(user_account)
+        conversation = yield self.get_conversation(user_account)
+
+        msg_options = self.get_msg_options(tum, ['content', 'to_addr'])
+        tag = self.get_conversation_tag(conversation)
+        msg_options.update((yield user_api.msg_options(tag)))
+        to_addr = msg_options.pop('to_addr')
+        content = msg_options.pop('content')
+
+        msg = yield self.worker.send_to(to_addr, content, **msg_options)
+
+        request.setResponseCode(http.OK)
+        request.write(msg.to_json())
+        request.finish()
 
 
 class MetricResource(resource.Resource):
