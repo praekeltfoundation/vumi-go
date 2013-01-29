@@ -155,8 +155,7 @@ class EventDispatcher(ApplicationWorker):
         Hence the juggling of eggs below.
         """
         if account_key not in self.account_config:
-            user_account = yield self.vumi_api.account_store.get_user(
-                account_key)
+            user_account = yield self.vumi_api.get_user_account(account_key)
             event_handler_config = {}
             for k, v in (user_account.event_handler_config or
                          self.account_handler_configs.get(account_key) or []):
@@ -215,6 +214,11 @@ class GoApplicationRouter(BaseDispatchRouter):
             return
 
         batch = yield outbound_message.batch.get()
+        if batch is None:
+            log.error(
+                'Outbound message without a batch id. Result of bad routing')
+            return
+
         account_key = batch.metadata['user_account']
         user_api = self.vumi_api.get_user_api(account_key)
         conversations = user_api.conversation_store.conversations

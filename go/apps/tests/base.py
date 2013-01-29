@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import uuid
 
 from go.base.tests.utils import VumiGoDjangoTestCase, declare_longcode_tags
 from go.vumitools.tests.utils import CeleryTestMixIn
@@ -187,6 +188,9 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
 
     def setup_user_api(self, django_user):
         self.user_api = vumi_api_for_user(django_user)
+        # XXX: We assume the tagpool already exists here. We need to rewrite
+        #      a lot of this test infrastructure.
+        self.add_tagpool_permission(u"longcode")
         self.contact_store = self.user_api.contact_store
         self.contact_store.contacts.enable_search()
         self.contact_store.groups.enable_search()
@@ -195,9 +199,17 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
     def declare_longcode_tags(self):
         declare_longcode_tags(self.api)
 
+    def add_tagpool_permission(self, tagpool, max_keys=None):
+        permission = self.user_api.api.account_store.tag_permissions(
+           uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
+        permission.save()
+        account = self.user_api.get_user_account()
+        account.tagpools.add(permission)
+        account.save()
+
     def acquire_all_longcode_tags(self):
         for _i in range(4):
-            self.api.acquire_tag("longcode")
+            self.user_api.acquire_tag(u"longcode")
 
     def get_api_commands_sent(self):
         consumer = self.get_cmd_consumer()

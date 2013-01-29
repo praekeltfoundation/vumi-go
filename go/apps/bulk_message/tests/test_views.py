@@ -2,6 +2,7 @@ from datetime import date
 import urllib
 
 from django.test.client import Client
+from django.core import mail
 from django.core.urlresolvers import reverse
 from django.contrib.sites.models import Site
 
@@ -54,9 +55,9 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
     def test_new_conversation_with_user_selected_tags(self):
         tp_meta = self.api.tpm.get_metadata('longcode')
         tp_meta['user_selects_tag'] = True
-        self.api.tpm.set_metadata('longcode', tp_meta)
-        self.run_new_conversation('longcode:default10001', 'longcode',
-                                  'default10001')
+        self.api.tpm.set_metadata(u'longcode', tp_meta)
+        self.run_new_conversation(u'longcode:default10001', u'longcode',
+                                  u'default10001')
 
     def test_end(self):
         """
@@ -265,6 +266,27 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             '2012-01-01,2',
             '',  # csv ends with a blank line
             ]))
+
+    def test_export_messages(self):
+        self.put_sample_messages_in_conversation(self.user_api,
+            self.conv_key, 10, start_timestamp=date(2012, 1, 1),
+            time_multiplier=12)
+        conv_url = reverse('bulk_message:show', kwargs={
+            'conversation_key': self.conv_key,
+            })
+        response = self.client.post(conv_url, {
+            '_export_conversation_messages': True,
+            })
+        self.assertRedirects(response, conv_url)
+        [email] = mail.outbox
+        self.assertEqual(email.recipients(), [self.user.email])
+        self.assertTrue(self.conversation.subject in email.subject)
+        self.assertTrue(self.conversation.subject in email.body)
+        [(file_name, content, mime_type)] = email.attachments
+        self.assertEqual(file_name, 'messages-export.csv')
+        # 1 header, 10 sent, 10 received, 1 trailing newline == 22
+        self.assertEqual(22, len(content.split('\n')))
+        self.assertEqual(mime_type, 'text/csv')
 
 
 class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):

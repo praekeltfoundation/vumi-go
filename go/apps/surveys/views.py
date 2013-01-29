@@ -15,6 +15,7 @@ from go.base.utils import (make_read_only_form, make_read_only_formset,
     conversation_or_404)
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ConversationForm, ConversationGroupForm
+from go.conversation.tasks import export_conversation_messages
 from go.apps.surveys import forms
 
 from vxpolls.manager import PollManager
@@ -234,6 +235,17 @@ def end(request, conversation_key):
 def show(request, conversation_key):
     conversation = conversation_or_404(request.user_api, conversation_key)
     poll_id = 'poll-%s' % (conversation.key,)
+
+    if '_export_conversation_messages' in request.POST:
+        export_conversation_messages.delay(
+            request.user_api.user_account_key, conversation_key)
+        messages.info(request, 'Conversation messages CSV file export '
+                                'scheduled. CSV file should arrive in your '
+                                'mailbox shortly.')
+        return redirect(reverse('survey:show', kwargs={
+            'conversation_key': conversation.key,
+            }))
+
     return render(request, 'surveys/show.html', {
         'conversation': conversation,
         'poll_id': poll_id,
