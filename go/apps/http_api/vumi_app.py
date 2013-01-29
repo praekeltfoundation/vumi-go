@@ -4,6 +4,7 @@ from twisted.internet.defer import inlineCallbacks
 
 
 from vumi.transports.httprpc import httprpc
+from vumi.blinkenlights.metrics import MetricManager
 from vumi import log
 
 from go.vumitools.api import VumiApi
@@ -42,6 +43,8 @@ class StreamingHTTPWorker(GoApplicationWorker):
         # We do give the publisher a key but won't actually use it
         self.stream_publisher = yield self.publish_to(
             '%s.stream.lost_and_found' % (self.transport_name,))
+        self.metric_publisher = yield self.start_publisher(MetricManager,
+            self.transport_name)
 
         self.webserver = self.start_web_resources([
             (StreamingResource(self), self.web_path),
@@ -84,3 +87,4 @@ class StreamingHTTPWorker(GoApplicationWorker):
     def teardown_application(self):
         yield super(StreamingHTTPWorker, self).teardown_application()
         yield self.webserver.loseConnection()
+        self.metric_publisher.stop()

@@ -13,6 +13,9 @@ from twisted.internet.error import ConnectionDone
 from twisted.internet.defer import (Deferred, DeferredList, inlineCallbacks,
                                     returnValue)
 
+from vumi import errors
+from vumi.blinkenlights import metrics
+from vumi.blinkenlights.metrics import MetricMessage
 from vumi.message import TransportUserMessage, TransportEvent
 from vumi.errors import InvalidMessage
 from vumi import log
@@ -80,24 +83,14 @@ class Stream(resource.Resource):
         request.write(line.encode('utf-8'))
 
 
+class InvalidAggregate(errors.VumiError):
+    pass
+
+
 class EventStream(Stream):
 
     message_class = TransportEvent
     routing_key = '%(transport_name)s.stream.event.%(conversation_key)s'
-
-    def render_PUT(self, request):
-        d = Deferred()
-        d.addCallback(self.handle_PUT)
-        d.callback(request)
-        return NOT_DONE_YET
-
-    @inlineCallbacks
-    def handle_PUT(self, request):
-        # data = json.loads(request.content.read())
-        user_account = request.getUser()
-        conversation = yield self.get_conversation(user_account)
-        request.write(conversation.key.encode('utf-8'))
-        request.finish()
 
 
 class MessageStream(Stream):
@@ -173,6 +166,51 @@ class MessageStream(Stream):
         returnValue(resp)
 
 
+class MetricResource(resource.Resource):
+
+    def __init__(self, worker, conversation_key):
+        resource.Resource.__init__(self)
+        self.worker = worker
+        self.conversation_key = conversation_key
+
+    def render_PUT(self, request):
+        d = Deferred()
+        d.addCallback(self.handle_PUT)
+        d.callback(request)
+        return NOT_DONE_YET
+
+    def find_aggregate(self, name):
+        agg_class = getattr(metrics, name, None)
+        if agg_class is None:
+            raise InvalidAggregate('%s is not a valid aggregate.' % (name,))
+        return agg_class
+
+    def parse_metrics(self, data):
+        metrics = []
+        for name, value, aggregate in data:
+            value = float(value)
+            agg_class = self.find_aggregate(aggregate)
+            metrics.append((name, value, agg_class))
+        return metrics
+
+    def handle_PUT(self, request):
+        data = json.loads(request.content.read())
+        user_account = request.getUser()
+
+        try:
+            metrics = self.parse_metrics(data)
+        except (ValueError, InvalidAggregate, InvalidMessage):
+            request.setResponseCode(http.BAD_REQUEST, 'Invalid Message')
+            request.finish()
+            return
+
+        for name, value, agg_class in metrics:
+            self.worker.publish_account_metric(user_account,
+                self.worker.worker_name, name, value, agg_class)
+
+        request.finish()
+
+
 class ConversationResource(resource.Resource):
 
     CONCURRENCY_LIMIT = 10
@@ -206,6 +244,7 @@ class ConversationResource(resource.Resource):
         class_map = {
             'events.json': EventStream,
             'messages.json': MessageStream,
+            'metrics.json': MetricResource,
         }
         stream_class = class_map.get(path)
 
