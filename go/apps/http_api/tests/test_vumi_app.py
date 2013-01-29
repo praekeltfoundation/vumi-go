@@ -127,13 +127,13 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                                             events.put, url,
                                             Headers(self.auth_headers))
 
-        msg1 = self.mkmsg_in(content='in 1', message_id='1')
+        msg1 = self.mkmsg_out(content='in 1', message_id='1')
         yield self.vumi_api.mdb.add_outbound_message(msg1,
                                                         batch_id=self.batch_id)
         ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
         yield self.dispatch_event(ack1)
 
-        msg2 = self.mkmsg_in(content='in 1', message_id='2')
+        msg2 = self.mkmsg_out(content='in 1', message_id='2')
         yield self.vumi_api.mdb.add_outbound_message(msg2,
                                                         batch_id=self.batch_id)
         ack2 = self.mkmsg_ack(user_message_id=msg2['message_id'])
