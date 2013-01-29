@@ -10,8 +10,10 @@ from vumi.message import TransportUserMessage, TransportEvent
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApi
+
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
 from go.apps.http_api.client import StreamingClient, VumiMessageReceiver
+from go.apps.http_api.resource import ConversationResource
 
 
 class TestMessageReceiver(VumiMessageReceiver):
@@ -203,3 +205,28 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(sent_msg['message_id'], msg['message_id'])
         self.assertEqual(sent_msg['to_addr'], msg['to_addr'])
         self.assertEqual(sent_msg['from_addr'], self.tag[1])
+
+    @inlineCallbacks
+    def test_concurrency_limits(self):
+        concurrency = ConversationResource.CONCURRENCY_LIMIT
+        queue = DeferredQueue()
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        max_receivers = [self.client.stream(TransportUserMessage, queue.put,
+                                            queue.put, url,
+                                            Headers(self.auth_headers))
+                            for _ in range(concurrency)]
+
+        for i in range(concurrency):
+            msg = self.mkmsg_in(content='in %s' % (i,), message_id='%s' % (i,))
+            yield self.dispatch_with_tag(msg, self.tag)
+            received = yield queue.get()
+            self.assertEqual(msg['message_id'], received['message_id'])
+
+        maxed_out_resp = yield http_request_full(url, method='GET',
+                                                headers=self.auth_headers)
+
+        self.assertEqual(maxed_out_resp.code, 403)
+        self.assertTrue('Too many concurrent connections'
+                            in maxed_out_resp.delivered_body)
+
+        [r.disconnect() for r in max_receivers]
