@@ -3,7 +3,6 @@
 import csv
 import codecs
 from StringIO import StringIO
-
 from operator import itemgetter
 
 from django import forms

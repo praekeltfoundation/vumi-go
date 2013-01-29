@@ -52,6 +52,7 @@ class GroupApi(BaseResource):
     STATUS_DONE = 'done'
 
     RESP_COUNT_HEADER = 'X-VGo-Group-Count'
+    REQ_WAIT_HEADER = 'X-VGo-Group-Wait-Results'
 
     def __init__(self, redis, user_api, group_key):
         BaseResource.__init__(self)
@@ -141,7 +142,18 @@ class GroupApi(BaseResource):
             return
 
         if status != self.STATUS_IN_PROGRESS:
-            self.cache_contacts(ordering)
+            wait_for_completion = self.cache_contacts(ordering)
+            headers = request.requestHeaders
+            if headers.hasHeader(self.REQ_WAIT_HEADER):
+                wait = bool(int(
+                            headers.getRawHeaders(self.REQ_WAIT_HEADER)[0]))
+            else:
+                wait = False
+
+            if wait:
+                yield wait_for_completion
+                yield self.render_results(request, ordering)
+                return
 
         request.code = http.ACCEPTED
         request.finish()
