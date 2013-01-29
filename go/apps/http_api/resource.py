@@ -193,6 +193,7 @@ class MessageStream(Stream):
         msg['helper_metadata'].update(helper_metadata)
         msg['from_addr'] = from_addr
         msg['transport_type'] = transport_type
+        msg['transport_name'] = self.worker.transport_name
         msg['session_event'] = session_event
 
         yield self.worker._publish_message(msg)
