@@ -45,19 +45,19 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(StreamingHTTPWorkerTestCase, self).setUp()
-        config = self.mk_config({
-            'worker_name': 'foo',
+        self.config = self.mk_config({
+            'worker_name': 'worker_name',
             'web_path': '/foo',
             'web_port': 0,
-            'metrics_prefix': 'foo',
+            'metrics_prefix': 'metrics_prefix.',
             })
-        self.app = yield self.get_application(config)
+        self.app = yield self.get_application(self.config)
         self.addr = self.app.webserver.getHost()
         self.url = 'http://%s:%s%s' % (self.addr.host, self.addr.port,
-                                        config['web_path'])
+                                        self.config['web_path'])
 
         # get the router to test
-        self.vumi_api = yield VumiApi.from_config_async(config)
+        self.vumi_api = yield VumiApi.from_config_async(self.config)
         self.account = yield self.mk_user(self.vumi_api, u'user')
         self.user_api = self.vumi_api.get_user_api(self.account.key)
 
@@ -222,7 +222,15 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         self.assertEqual(response.code, http.OK)
 
-        [event] = self._amqp.get_dispatched('vumi.metrics', 'vumi.metrics')
+        [metric1, metric2] = self.app.metrics._metrics
+        self.assertEqual(metric1.name, '%s%s.%s.vumi.test.v1' % (
+            self.config['metrics_prefix'], self.account.key,
+            self.config['worker_name']))
+        self.assertEqual(metric1.aggs, ('sum',))
+        # print metric1.name, metric1.aggs
+        # print metric2.name, metric2.aggs
+
+        # [event] = self._amqp.get_dispatched('vumi.metrics', 'vumi.metrics')
 
     @inlineCallbacks
     def test_concurrency_limits(self):
