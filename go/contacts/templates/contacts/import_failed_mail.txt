@@ -12,9 +12,9 @@ Vumi Go.
 
 Account Key: {{account_key}}
 Group Key: {{group_key}}
-File Type: {{file_type}}
+File Name: {{file_name}}
 File Path: {{file_path}}
-Field Names: {{field_names}}
+Fields: {{fields}}
 Has Header: {{has_header}}
 Exception Type: {{exception_type}}
 Exception Value: {{exception_value}}

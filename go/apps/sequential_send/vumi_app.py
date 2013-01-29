@@ -93,7 +93,8 @@ class SequentialSendApplication(GoApplicationWorker):
         log.debug("Processing %s to %s: %s" % (
             then, now, [c.key for c in conversations]))
         for conv in conversations:
-            yield self.process_conversation_schedule(then, now, conv)
+            if not conv.ended():
+                yield self.process_conversation_schedule(then, now, conv)
 
     @inlineCallbacks
     def process_conversation_schedule(self, then, now, conv):

@@ -37,13 +37,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
 
         # Add tags
-        self.user_api.api.declare_tags([("pool", "tag1"), ("pool", "tag2")])
-        self.user_api.api.set_pool_metadata("pool", {
-            "transport_type": self.transport_type,
-            "msg_options": {
-                "transport_name": self.transport_name,
-            },
-        })
+        yield self.setup_tagpools()
 
         # Give a user access to a tagpool
         self.user_api.api.account_store.tag_permissions(uuid.uuid4().hex,
@@ -144,6 +138,24 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         yield self.check_message_convs_and_advance([conv], 70)
         yield self.check_message_convs_and_advance([conv, conv], 70)
         self.assertEqual(self.message_convs, [conv, conv])
+
+    @inlineCallbacks
+    def test_schedule_daily_with_ended_conv(self):
+        conv = yield self.create_conversation(metadata={
+                'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
+        yield self.start_conversation(conv)
+        yield conv.end_conversation()
+
+        yield self._stub_out_async(conv)
+
+        yield self.check_message_convs_and_advance([], 70)
+        yield self.check_message_convs_and_advance([], 70)
+        # had it been scheduled it should show up after from here on onwards
+        yield self.check_message_convs_and_advance([], 70)
+        yield self.check_message_convs_and_advance([], 3600 * 24 - 140)
+        yield self.check_message_convs_and_advance([], 70)
+        yield self.check_message_convs_and_advance([], 70)
+        self.assertEqual(self.message_convs, [])
 
     @inlineCallbacks
     def test_schedule_day_of_month_conv(self):

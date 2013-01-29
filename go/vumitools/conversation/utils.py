@@ -8,10 +8,7 @@ from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Manager
 
-from vumi.middleware.tagger import TaggingMiddleware
-
 from go.vumitools.exceptions import ConversationSendError
-from go.vumitools.middleware import DebitAccountMiddleware
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.utils import GoMessageMetadata
 
@@ -25,7 +22,6 @@ class ConversationWrapper(object):
         self.user_api = user_api
         self.api = user_api.api
         self.mdb = self.api.mdb
-        self.tpm = self.api.tpm
         self.manager = self.c.manager
         self.base_manager = self.api.manager
         self._tagpool_metadata = None
@@ -48,7 +44,7 @@ class ConversationWrapper(object):
         for batch in (yield self.get_batches()):
             yield self.mdb.batch_done(batch.key)  # TODO: why key?
             for tag in batch.tags:
-                yield self.tpm.release_tag(tag)
+                yield self.user_api.release_tag(tag)
 
     def __getattr__(self, name):
         # Proxy anything we don't have back to the wrapped conversation.
@@ -148,18 +144,9 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def make_message_options(self, tag):
-        msg_options = {}
-        # TODO: transport_type is probably irrelevant
-        msg_options['transport_type'] = yield self.get_tagpool_metadata(
-            'transport_type')
-        # TODO: not sure whether to declare that tag names must always be
-        #       valid from_addr values or whether to put in a mapping somewhere
-        msg_options['from_addr'] = tag[1]
-        msg_options.update(
-            (yield self.get_tagpool_metadata('msg_options', {})))
-        TaggingMiddleware.add_tag_to_payload(msg_options, tag)
-        DebitAccountMiddleware.add_user_to_payload(msg_options,
-                                                   self.c.user_account.key)
+        yield self.get_tagpool_metadata('msg_options')  # force cache update
+        msg_options = yield self.user_api.msg_options(
+            tag, self._tagpool_metadata)
         returnValue(msg_options)
 
     @Manager.calls_manager
@@ -619,20 +606,30 @@ class ConversationWrapper(object):
         inuse_tags = yield self.api.tpm.inuse_tags(tag[0])
         if tag not in inuse_tags:
             raise ConversationSendError("Requested tag not pre-acquired.")
+        if not isinstance(tag[1], unicode):
+            # XXX: I'm pretty sure this is a valid assumption.
+            tag = (tag[0].decode('utf-8'), tag[1].decode('utf-8'))
         returnValue(tag)
 
     @Manager.calls_manager
     def acquire_tag(self):
         # TODO: Remove this once we have proper routing stuff.
         if self.c.delivery_tag is None:
-            tag = yield self.api.acquire_tag(self.c.delivery_tag_pool)
+            tag = yield self.user_api.acquire_tag(self.c.delivery_tag_pool)
             if tag is None:
                 raise ConversationSendError("No spare messaging tags.")
+            if not isinstance(tag[1], unicode):
+                # XXX: I'm pretty sure this is a valid assumption.
+                tag = (tag[0].decode('utf-8'), tag[1].decode('utf-8'))
+            self.c.delivery_tag = tag[1]
         else:
             tag = (self.c.delivery_tag_pool, self.c.delivery_tag)
-            tag = yield self.api.acquire_specific_tag(tag)
+            tag = yield self.user_api.acquire_specific_tag(tag)
             if tag is None:
                 raise ConversationSendError("Requested tag not available.")
+        if not isinstance(tag[1], unicode):
+            # XXX: I'm pretty sure this is a valid assumption.
+            tag = (tag[0].decode('utf-8'), tag[1].decode('utf-8'))
         returnValue(tag)
 
     def dispatch_command(self, command, *args, **kwargs):
