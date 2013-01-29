@@ -15,7 +15,6 @@ from twisted.internet.defer import (Deferred, DeferredList, inlineCallbacks,
 
 from vumi import errors
 from vumi.blinkenlights import metrics
-from vumi.blinkenlights.metrics import MetricMessage
 from vumi.message import TransportUserMessage, TransportEvent
 from vumi.errors import InvalidMessage
 from vumi import log
@@ -23,17 +22,14 @@ from vumi import log
 from go.apps.http_api.auth import ConversationRealm, ConversationAccessChecker
 
 
-class Stream(resource.Resource):
+class BaseResource(resource.Resource):
 
     def __init__(self, worker, conversation_key):
         resource.Resource.__init__(self)
         self.worker = worker
+        self.conversation_key = conversation_key
         self.vumi_api = self.worker.vumi_api
         self.user_apis = {}
-        self.conversation_key = conversation_key
-        self.stream_ready = Deferred()
-        self.stream_ready.addCallback(self.start_publishing)
-        self._consumers = []
 
     def get_user_api(self, user_account):
         if user_account in self.user_apis:
@@ -47,6 +43,15 @@ class Stream(resource.Resource):
         conversation_key = conversation_key or self.conversation_key
         user_api = self.get_user_api(user_account)
         return user_api.get_wrapped_conversation(conversation_key)
+
+
+class StreamResource(BaseResource):
+
+    def __init__(self, worker, conversation_key):
+        BaseResource.__init__(self, worker, conversation_key)
+        self.stream_ready = Deferred()
+        self.stream_ready.addCallback(self.start_publishing)
+        self._consumers = []
 
     def render_GET(self, request):
         # Twisted's Agent has trouble closing a connection when the server has
@@ -96,13 +101,13 @@ class InvalidAggregate(errors.VumiError):
     pass
 
 
-class EventStream(Stream):
+class EventStream(StreamResource):
 
     message_class = TransportEvent
     routing_key = '%(transport_name)s.stream.event.%(conversation_key)s'
 
 
-class MessageStream(Stream):
+class MessageStream(StreamResource):
 
     message_class = TransportUserMessage
     routing_key = '%(transport_name)s.stream.message.%(conversation_key)s'
@@ -221,12 +226,9 @@ class MessageStream(Stream):
         request.finish()
 
 
-class MetricResource(resource.Resource):
+class MetricResource(BaseResource):
 
-    def __init__(self, worker, conversation_key):
-        resource.Resource.__init__(self)
-        self.worker = worker
-        self.conversation_key = conversation_key
+    DEFAULT_STORE_NAME = 'default'
 
     def render_PUT(self, request):
         d = Deferred()
@@ -248,6 +250,7 @@ class MetricResource(resource.Resource):
             metrics.append((name, value, agg_class))
         return metrics
 
+    @inlineCallbacks
     def handle_PUT(self, request):
         data = json.loads(request.content.read())
         user_account = request.getUser()
@@ -259,9 +262,13 @@ class MetricResource(resource.Resource):
             request.finish()
             return
 
+        conversation = yield self.get_conversation(user_account)
+        metadata = conversation.get_metadata(default={})
+        http_api_metadata = metadata.get('http_api', {})
+        store = http_api_metadata.get('metrics_store', self.DEFAULT_STORE_NAME)
         for name, value, agg_class in metrics:
-            self.worker.publish_account_metric(user_account,
-                self.conversation_key, name, value, agg_class)
+            self.worker.publish_account_metric(user_account, store, name,
+                                                value, agg_class)
 
         request.finish()
 

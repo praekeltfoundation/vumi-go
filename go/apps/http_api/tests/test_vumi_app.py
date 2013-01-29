@@ -75,7 +75,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                     'token-1',
                     'token-2',
                     'token-3',
-                ]
+                ],
+                'metrics_store': 'metrics_store'
             }
         })
         yield self.conversation.save()
@@ -271,7 +272,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         [metric1, metric2] = self.app.metrics._metrics
         self.assertEqual(metric1.name, '%s%s.%s.vumi.test.v1' % (
             self.config['metrics_prefix'], self.account.key,
-            self.conversation.key))
+            'metrics_store'))
         self.assertEqual(metric1.aggs, ('sum',))
 
     @inlineCallbacks
