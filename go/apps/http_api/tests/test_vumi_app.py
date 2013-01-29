@@ -8,7 +8,6 @@ from twisted.web import http
 from vumi.utils import http_request_full
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.message import TransportUserMessage, TransportEvent
-from vumi.blinkenlights.metrics import MetricMessage
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApi
@@ -227,10 +226,6 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             self.config['metrics_prefix'], self.account.key,
             self.config['worker_name']))
         self.assertEqual(metric1.aggs, ('sum',))
-        # print metric1.name, metric1.aggs
-        # print metric2.name, metric2.aggs
-
-        # [event] = self._amqp.get_dispatched('vumi.metrics', 'vumi.metrics')
 
     @inlineCallbacks
     def test_concurrency_limits(self):
