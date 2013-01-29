@@ -1,4 +1,5 @@
 import base64
+import json
 
 from twisted.internet.defer import inlineCallbacks, DeferredQueue
 from twisted.web.http_headers import Headers
@@ -7,6 +8,7 @@ from twisted.web import http
 from vumi.utils import http_request_full
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.message import TransportUserMessage, TransportEvent
+from vumi.blinkenlights.metrics import MetricMessage
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApi
@@ -205,6 +207,22 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(sent_msg['message_id'], msg['message_id'])
         self.assertEqual(sent_msg['to_addr'], msg['to_addr'])
         self.assertEqual(sent_msg['from_addr'], self.tag[1])
+
+    @inlineCallbacks
+    def test_metric_publishing(self):
+
+        metric_data = [
+            ("vumi.test.v1", 1234, 'SUM'),
+            ("vumi.test.v2", 3456, 'AVG'),
+            ]
+
+        url = '%s/%s/metrics.json' % (self.url, self.conversation.key)
+        response = yield http_request_full(url, json.dumps(metric_data),
+                                            self.auth_headers, method='PUT')
+
+        self.assertEqual(response.code, http.OK)
+
+        [event] = self._amqp.get_dispatched('vumi.metrics', 'vumi.metrics')
 
     @inlineCallbacks
     def test_concurrency_limits(self):
