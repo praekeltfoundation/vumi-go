@@ -31,7 +31,19 @@ class Stream(resource.Resource):
         self.stream_ready.addCallback(self.start_publishing)
         self._consumers = []
 
+    def get_conversation(self, user_account, conversation_key=None):
+        conversation_key = conversation_key or self.conversation_key
+        user_api = self.vumi_api.get_user_api(user_account)
+        return user_api.get_wrapped_conversation(conversation_key)
+
     def render_GET(self, request):
+        # Twisted's Agent has trouble closing a connection when the server has
+        # sent the HTTP headers but not the body, but sometimes we need to
+        # close a connection when only the headers have been received.
+        # Sending an empty string as a workaround gets the body consumer
+        # stuff started anyway and then we have the ability to close the
+        # connection.
+        request.write('')
         done = request.notifyFinish()
         done.addBoth(self.teardown_stream)
         self.stream_ready.callback(request)
@@ -73,6 +85,20 @@ class EventStream(Stream):
     message_class = TransportEvent
     routing_key = '%(transport_name)s.stream.event.%(conversation_key)s'
 
+    def render_PUT(self, request):
+        d = Deferred()
+        d.addCallback(self.handle_PUT)
+        d.callback(request)
+        return NOT_DONE_YET
+
+    @inlineCallbacks
+    def handle_PUT(self, request):
+        # data = json.loads(request.content.read())
+        user_account = request.getUser()
+        conversation = yield self.get_conversation(user_account)
+        request.write(conversation.key.encode('utf-8'))
+        request.finish()
+
 
 class MessageStream(Stream):
 
@@ -88,11 +114,8 @@ class MessageStream(Stream):
     @inlineCallbacks
     def handle_PUT(self, request):
         data = json.loads(request.content.read())
-
         user_account = request.getUser()
-        user_api = self.vumi_api.get_user_api(user_account)
-        conversation = yield user_api.get_wrapped_conversation(
-                                self.conversation_key)
+        conversation = yield self.get_conversation(user_account)
 
         try:
             tum = TransportUserMessage(_process_fields=True, **data)
@@ -163,11 +186,10 @@ class ConversationResource(resource.Resource):
     def key(self, *args):
         return ':'.join(['concurrency'] + map(unicode, args))
 
+    @inlineCallbacks
     def is_allowed(self, user_id):
-        d = self.redis.get(self.key(user_id))
-        d.addCallback(lambda resp: int(resp or 0) < self.CONCURRENCY_LIMIT)
-        d.addErrback(log.error)
-        return d
+        count = int((yield self.redis.get(self.key(user_id))) or 0)
+        returnValue(count < self.CONCURRENCY_LIMIT)
 
     def track_request(self, user_id):
         return self.redis.incr(self.key(user_id))
@@ -199,7 +221,6 @@ class ConversationResource(resource.Resource):
 
             yield self.track_request(user_id)
             returnValue(stream_class(self.worker, self.conversation_key))
-
         returnValue(resource.ErrorPage(http.FORBIDDEN, 'Forbidden',
                                         'Too many concurrent connections'))
 
