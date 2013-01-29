@@ -206,7 +206,7 @@ class MetricResource(resource.Resource):
 
         for name, value, agg_class in metrics:
             self.worker.publish_account_metric(user_account,
-                self.worker.worker_name, name, value, agg_class)
+                self.conversation_key, name, value, agg_class)
 
         request.finish()
 
