@@ -5,6 +5,7 @@ from django.forms import widgets
 from django.forms.formsets import BaseFormSet
 
 from bootstrap.forms import BootstrapForm
+from codemirror.widgets import CodeMirrorTextarea
 
 
 def possibly_load_from_url(url, default_value, update):
@@ -21,12 +22,9 @@ def possibly_load_from_url(url, default_value, update):
     return default_value
 
 
-class JavascriptField(forms.CharField):
-    widget = widgets.Textarea
-
-
 class JsboxForm(BootstrapForm):
-    javascript = JavascriptField(required=False)
+    codemirror = CodeMirrorTextarea()
+    javascript = forms.CharField(widget=codemirror, required=False)
     source_url = forms.URLField(required=False)
     update_from_source = forms.BooleanField(required=False)
 

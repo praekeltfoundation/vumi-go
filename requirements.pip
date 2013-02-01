@@ -12,7 +12,6 @@ coverage==3.4
 django-appconf==0.6
 django-celery==2.4.2
 django-celery-email==1.0.3
-django-codemirror-widget==0.2.0
 -e git://github.com/jezdez/django_compressor@236e0d711add31d948462a29648b4147b450bda4#egg=django_compressor-dev
 django-nose==1.0
 django-picklefield==0.3.0
@@ -56,3 +55,4 @@ wokkel==0.7.1
 wsgiref==0.1.2
 xlrd==0.8.0
 zope.interface==4.0.3
+-e git://github.com/lambdalisue/django-codemirror-widget@8eb620d43c181985246e1ac543adda0474240fc0#egg=django_codemirror_widget

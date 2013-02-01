@@ -294,6 +294,12 @@ if DEBUG:
 # Password resets are sent from this address
 DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 
+CODEMIRROR_PATH = STATIC_URL + '/codemirror'
+CODEMIRROR_MODE = 'javascript'
+CODEMIRROR_THEME = 'default'
+CODEMIRROR_CONFIG = {'lineNumbers': True}
+
+
 # # Redirect to this URL after a successful login.
 # from django.core.urlresolvers import reverse
 
