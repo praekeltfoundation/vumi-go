@@ -1,58 +1,30 @@
 Django==1.4.2
-Fabric==1.2.2
-Markdown==2.1.1
-PyYAML==3.10
-South==0.7.3
-Twisted==12.3.0
-amqp==1.0.6
-anyjson==0.3.3
--e git://github.com/earle/django-bootstrap.git@9ec5697aee8fed5b612ac8a0a40bb1921e9390e8#egg=bootstrap-dev
-celery==2.5.3
-coverage==3.4
-django-appconf==0.6
-django-celery==2.4.2
-django-celery-email==1.0.3
--e git://github.com/jezdez/django_compressor@236e0d711add31d948462a29648b4147b450bda4#egg=django_compressor-dev
 django-nose==1.0
-django-picklefield==0.3.0
-django-registration==0.8
-gunicorn==0.15.0
-iso8601==0.1.4
-kombu==2.5.4
-lesscpy==0.9h
-meld3==0.6.10
-mock==1.0.1
 nose==1.1.2
-oauth==1.0.1
-paramiko==1.9.0
+gunicorn==0.15.0
 pep8==0.6.1
-ply==3.4
-protobuf==2.4.1
-psycopg2==2.4
-pyOpenSSL==0.13
-pycrypto==2.6
 pyflakes==0.4.0
-python-dateutil==1.5
-python-smpp==0.1
-python-ssmi==0.0.5
-pytz==2012j
-raven==2.0.12.2
-redis==2.7.2
-requests==0.14.2
-riak==1.5.1
-riak-pb==1.2.1
-riakasaurus==1.0.9
-simplejson==3.0.7
-six==1.2.0
 supervisor==3.0a10
-twittytwister==0.1.1
-txAMQP==0.6.1
-txredis==2.2
--e git://github.com/praekelt/vumi@76bbf63eded7b7ad7c7bb439eeb495ca781b627c#egg=vumi-dev
--e git://github.com/praekelt/vumi-wikipedia@66ca4b0b828d7d06dc28b6ebd3e27a01e43bacb6#egg=vumi_wikipedia-dev
--e git://github.com/praekelt/vxpolls.git@9e76cadee866fd4bf46e2a922317d44f5a4cdd51#egg=vxpolls-dev
-wokkel==0.7.1
-wsgiref==0.1.2
+coverage==3.4
+South==0.7.3
+psycopg2==2.4
+Fabric==1.2.2
+celery==2.5.3
+django-celery==2.4.2
+django-celery-email
+-e git+git://github.com/praekelt/vumi@develop#egg=vumi
+-e git+git://github.com/praekelt/vxpolls.git@develop#egg=vxpolls
+Markdown==2.1.1
+django-registration==0.8
+# django_compressor==1.1.2 on Pypi has a bug, install from GitHub
+# until a new version has been published to pypi
+-e git+git://github.com/jezdez/django_compressor@236e0d711#egg=compressor
+lesscpy==0.9h
 xlrd==0.8.0
-zope.interface==4.0.3
+raven==2.0.7
+-e git+git://github.com/earle/django-bootstrap.git@9ec5697#egg=bootstrap
+-e git+git://github.com/praekelt/vumi-wikipedia@develop#egg=vumi-wikipedia
+requests==0.14.2
+mock==1.0.1
+raven>=2.0,<3.0
 -e git://github.com/lambdalisue/django-codemirror-widget@8eb620d43c181985246e1ac543adda0474240fc0#egg=django_codemirror_widget
