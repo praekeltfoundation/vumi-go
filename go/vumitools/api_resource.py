@@ -92,7 +92,8 @@ class GroupApi(BaseResource):
         yield self.set_in_progress(ordering, True)
         contact_keys = yield self.store.get_contacts_for_group(self.group)
         contacts = yield self.load_bunches(self.store.contacts, contact_keys)
-        sorted_contacts = multikeysort([dict(c) for c in contacts], ordering)
+        sorted_contacts = multikeysort([c.get_data() for c in contacts],
+                                        ordering)
         results_key = self.get_results_key(ordering)
         for contact in sorted_contacts:
             yield self.redis.rpush(results_key, contact['key'])
@@ -111,7 +112,7 @@ class GroupApi(BaseResource):
             [(yield self.redis.llen(result_key))])
         request.responseHeaders.setRawHeaders('content-type',
                                                 [self.CONTENT_TYPE])
-        request.write(self.to_json([dict(c) for c in contacts]))
+        request.write(self.to_json([c.get_data() for c in contacts]))
         request.finish()
 
     @inlineCallbacks
@@ -187,7 +188,7 @@ class AccountGroupsApi(BaseResource):
         groups = yield self.user_api.list_groups()
         request.responseHeaders.setRawHeaders('content-type',
                                                 [self.CONTENT_TYPE])
-        request.write(self.to_json([dict(gr) for gr in groups]))
+        request.write(self.to_json([gr.get_data() for gr in groups]))
         request.finish()
 
     def render_GET(self, request):
