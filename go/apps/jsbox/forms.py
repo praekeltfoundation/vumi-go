@@ -23,8 +23,7 @@ def possibly_load_from_url(url, default_value, update):
 
 
 class JsboxForm(BootstrapForm):
-    codemirror = CodeMirrorTextarea()
-    javascript = forms.CharField(widget=codemirror, required=False)
+    javascript = forms.CharField(widget=CodeMirrorTextarea(), required=False)
     source_url = forms.URLField(required=False)
     update_from_source = forms.BooleanField(required=False)
 
