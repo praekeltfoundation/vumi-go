@@ -159,6 +159,7 @@ INSTALLED_APPS = (
     'registration',
     'bootstrap',
     'raven.contrib.django',
+    'codemirror'
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
