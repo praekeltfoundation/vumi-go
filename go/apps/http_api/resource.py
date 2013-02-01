@@ -118,11 +118,11 @@ class MessageStream(StreamResource):
         d.callback(request)
         return NOT_DONE_YET
 
-    def get_msg_options(self, msg, white_list=[]):
-        raw_payload = copy.deepcopy(msg.payload.copy())
+    def get_msg_options(self, payload, white_list=[]):
+        raw_payload = copy.deepcopy(payload.copy())
         msg_options = dict((key, value)
-                            for key, value in raw_payload.items()
-                            if key in white_list)
+                           for key, value in raw_payload.items()
+                           if key in white_list)
         return msg_options
 
     def get_conversation_tag(self, conversation):
@@ -130,23 +130,21 @@ class MessageStream(StreamResource):
 
     @inlineCallbacks
     def handle_PUT(self, request):
-        data = json.loads(request.content.read())
-
         try:
-            tum = TransportUserMessage(_process_fields=True, **data)
-        except InvalidMessage:
+            payload = json.loads(request.content.read())
+        except ValueError:
             request.setResponseCode(http.BAD_REQUEST, 'Invalid Message')
             request.finish()
             return
 
-        in_reply_to = tum['in_reply_to']
+        in_reply_to = payload.get('in_reply_to')
         if in_reply_to:
-            yield self.handle_PUT_in_reply_to(request, tum, in_reply_to)
+            yield self.handle_PUT_in_reply_to(request, payload, in_reply_to)
         else:
-            yield self.handle_PUT_send_to(request, tum)
+            yield self.handle_PUT_send_to(request, payload)
 
     @inlineCallbacks
-    def handle_PUT_in_reply_to(self, request, tum, in_reply_to):
+    def handle_PUT_in_reply_to(self, request, payload, in_reply_to):
         user_account = request.getUser()
         user_api = yield self.get_user_api(user_account)
         conversation = yield self.get_conversation(user_account)
@@ -164,13 +162,14 @@ class MessageStream(StreamResource):
 
         batch = yield reply_to.batch.get()
         if batch is None or (batch.metadata['user_account']
-                                                != user_account):
+                             != user_account):
             request.setResponseCode(http.BAD_REQUEST)
             request.write('Invalid in_reply_to value')
             request.finish()
             return
 
-        msg_options = self.get_msg_options(tum, ['session_event', 'content'])
+        msg_options = self.get_msg_options(payload,
+                                           ['session_event', 'content'])
 
         # FIXME:    At some point this needs to be done better as it makes some
         #           assumption about how messages are routed which won't be
@@ -179,11 +178,10 @@ class MessageStream(StreamResource):
         msg_options.update((yield user_api.msg_options(tag)))
 
         content = msg_options.pop('content')
-        continue_session = (msg_options['session_event']
-                                != TransportUserMessage.SESSION_CLOSE)
+        continue_session = (msg_options.pop('session_event', None)
+                            != TransportUserMessage.SESSION_CLOSE)
         helper_metadata = msg_options.pop('helper_metadata')
         transport_type = msg_options.pop('transport_type')
-        session_event = msg_options.pop('session_event')
         from_addr = msg_options.pop('from_addr')
 
         # NOTE:
@@ -199,7 +197,6 @@ class MessageStream(StreamResource):
         msg['from_addr'] = from_addr
         msg['transport_type'] = transport_type
         msg['transport_name'] = self.worker.transport_name
-        msg['session_event'] = session_event
 
         yield self.worker._publish_message(msg)
 
@@ -208,12 +205,12 @@ class MessageStream(StreamResource):
         request.finish()
 
     @inlineCallbacks
-    def handle_PUT_send_to(self, request, tum):
+    def handle_PUT_send_to(self, request, payload):
         user_account = request.getUser()
         user_api = yield self.get_user_api(user_account)
         conversation = yield self.get_conversation(user_account)
 
-        msg_options = self.get_msg_options(tum, ['content', 'to_addr'])
+        msg_options = self.get_msg_options(payload, ['content', 'to_addr'])
         tag = self.get_conversation_tag(conversation)
         msg_options.update((yield user_api.msg_options(tag)))
         to_addr = msg_options.pop('to_addr')
