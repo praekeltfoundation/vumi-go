@@ -3,10 +3,10 @@
 
 """Vumi application worker for the vumitools API."""
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
+from vumi.config import ConfigField
 from vumi.application.sandbox import JsSandbox, SandboxResource
-from vumi.message import TransportEvent
 from vumi import log
 
 from go.vumitools.app_worker import GoApplicationMixin
@@ -24,6 +24,11 @@ class ConversationConfigResource(SandboxResource):
         key_config = app_config.get(key, {})
         value = key_config.get('value')
         return self.reply(command, value=value, success=True)
+
+
+class JsBoxConfig(JsSandbox.CONFIG_CLASS):
+    conversation = ConfigField("Conversation object from message.")
+    javascript = ConfigField("Javascript from message.")
 
 
 class JsBoxApplication(GoApplicationMixin, JsSandbox):
@@ -44,6 +49,7 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
     And those from :class:`vumi.application.sandbox.JsSandbox`.
     """
 
+    CONFIG_CLASS = JsBoxConfig
     SEND_TO_TAGS = frozenset(['default'])
     worker_name = 'jsbox_application'
 
@@ -70,27 +76,24 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
     def user_api_for_api(self, api):
         return self.get_user_api(api.conversation.user_account.key)
 
-    @inlineCallbacks
-    def sandbox_protocol_for_message(self, msg_or_event):
+    def get_conversation_config(self, conversation):
+        config = conversation.metadata['jsbox'].copy()
+        config['sandbox_id'] = conversation.user_account.key
+        return config
+
+    def get_config(self, msg):
+        return self.get_message_config(msg)
+
+    def sandbox_protocol_for_message(self, msg, config):
         """Return a sandbox protocol for a message or event.
 
         Overrides method from :class:`Sandbox`.
         """
-        if isinstance(msg_or_event, TransportEvent):
-            msg = yield self.find_message_for_event(msg_or_event)
-        else:
-            msg = msg_or_event
-
-        metadata = self.get_go_metadata(msg)
-        sandbox_id = yield metadata.get_account_key()
-        conversation = yield metadata.get_conversation()
-        config = conversation.metadata['jsbox']
-        javascript = config['javascript']
         api = self.create_sandbox_api(self.resources)
-        api.javascript = javascript
-        api.conversation = conversation
-        protocol = self.create_sandbox_protocol(sandbox_id, api)
-        returnValue(protocol)
+        api.javascript = config.javascript
+        api.conversation = config.conversation
+        protocol = self.create_sandbox_protocol(api, config)
+        return protocol
 
     def process_command_start(self, batch_id, conversation_type,
                               conversation_key, msg_options,
