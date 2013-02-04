@@ -3,6 +3,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi import log
 from vumi.application import ApplicationWorker
 from vumi.blinkenlights.metrics import MetricManager, Metric, MAX
+from vumi.message import TransportEvent
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.api_worker import GoMessageMetadata
@@ -71,6 +72,21 @@ class GoApplicationMixin(object):
 
     def get_user_api(self, user_account_key):
         return self.vumi_api.get_user_api(user_account_key)
+
+    def get_conversation_config(self, conversation):
+        raise NotImplementedError()
+
+    @inlineCallbacks
+    def get_message_config(self, msg):
+        if isinstance(msg, TransportEvent):
+            msg = yield self.find_message_for_event(msg)
+
+        metadata = self.get_go_metadata(msg)
+        conversation = yield metadata.get_conversation()
+
+        config = self.config.copy()
+        config.update(self.get_conversation_config(conversation))
+        returnValue(self.CONFIG_CLASS(config))
 
     def consume_control_command(self, command_message):
         """
