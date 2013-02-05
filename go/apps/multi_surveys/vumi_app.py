@@ -41,8 +41,6 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
         yield self._go_setup_application()
         self.pm = PollManager(self.redis, self.poll_prefix)
 
-        print dir(self.redis)
-
         @inlineCallbacks
         def event_handler(event):
             go = event.message['helper_metadata']['go']
@@ -51,8 +49,8 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
                     go['conversation_key'],
                     event.event_type)
             value = yield self.redis.incr(event_name)
-            #print ">>>>>>>>", event_name, "=", value
             self.publish_metric(event_name, value)
+
         self.event_publisher.subscribe('new_user', event_handler)
         self.event_publisher.subscribe('new_registrant', event_handler)
         self.event_publisher.subscribe('new_poll', event_handler)
