@@ -43,14 +43,16 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
 
         print dir(self.redis)
 
+        @inlineCallbacks
         def event_handler(event):
             go = event.message['helper_metadata']['go']
-            event_name = "%s.%s.%s" % (
+            event_name = "%s.%s.%s_count" % (
                     go['user_account'],
                     go['conversation_key'],
                     event.event_type)
-            print ">>>>>>>>", event_name, event.data
-            self.publish_metric(event_name, 1)
+            value = yield self.redis.incr(event_name)
+            #print ">>>>>>>>", event_name, "=", value
+            self.publish_metric(event_name, value)
         self.event_publisher.subscribe('new_user', event_handler)
         self.event_publisher.subscribe('new_registrant', event_handler)
         self.event_publisher.subscribe('new_poll', event_handler)
