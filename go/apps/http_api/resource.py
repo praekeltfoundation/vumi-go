@@ -50,8 +50,12 @@ class StreamResource(BaseResource):
     def __init__(self, worker, conversation_key):
         BaseResource.__init__(self, worker, conversation_key)
         self.stream_ready = Deferred()
-        self.stream_ready.addCallback(self.start_publishing)
-        self._consumers = []
+        self.stream_ready.addCallback(self.setup_stream)
+        self._callback = None
+        self._rk = self.routing_key % {
+            'transport_name': self.worker.transport_name,
+            'conversation_key': self.conversation_key,
+            }
 
     def render_GET(self, request):
         # Twisted's Agent has trouble closing a connection when the server has
@@ -63,34 +67,17 @@ class StreamResource(BaseResource):
         request.write('')
         done = request.notifyFinish()
         done.addBoth(self.teardown_stream)
+        self._callback = partial(self.publish, request)
         self.stream_ready.callback(request)
         return NOT_DONE_YET
 
-    @inlineCallbacks
     def setup_stream(self, request):
-        self._consumers.extend((yield self.setup_consumers(request)))
-
-    @inlineCallbacks
-    def setup_consumers(self, request):
-        rk = self.routing_key % {
-            'transport_name': self.worker.transport_name,
-            'conversation_key': self.conversation_key,
-            }
-        consumer = yield self.worker.consume(rk,
-                            partial(self.publish, request),
-                            message_class=self.message_class, paused=True)
-        returnValue([consumer])
+        return self.worker.register_client(self._rk, self._callback)
 
     def teardown_stream(self, err):
         if not (err is None or err.trap(ConnectionDone)):
             log.error(err)
-        return DeferredList([cons.stop() for cons in self._consumers])
-
-    @inlineCallbacks
-    def start_publishing(self, request):
-        yield self.setup_stream(request)
-        for consumer in self._consumers:
-            yield consumer.unpause()
+        return self.worker.unregister_client(self._rk, self._callback)
 
     def publish(self, request, message):
         line = u'%s\n' % (message.to_json(),)
