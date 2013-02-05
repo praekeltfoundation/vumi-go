@@ -305,3 +305,20 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                             in maxed_out_resp.delivered_body)
 
         [r.disconnect() for r in max_receivers]
+
+    @inlineCallbacks
+    def test_backlog_on_connect(self):
+        for i in range(10):
+            msg = self.mkmsg_in(content='in %s' % (i,), message_id=str(i))
+            yield self.dispatch_with_tag(msg, self.tag)
+
+        queue = DeferredQueue()
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        receiver = self.client.stream(TransportUserMessage, queue.put,
+            queue.put, url, Headers(self.auth_headers))
+
+        for i in range(10):
+            received = yield queue.get()
+            self.assertEqual(received['message_id'], str(i))
+
+        receiver.disconnect()
