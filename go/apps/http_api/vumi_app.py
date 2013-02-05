@@ -1,10 +1,8 @@
 # -*- test-case-name: go.apps.http_api.tests.test_vumi_app -*-
 from collections import defaultdict
-import time
 import random
 
-from twisted.internet.defer import (inlineCallbacks, DeferredList, returnValue,
-                                    maybeDeferred)
+from twisted.internet.defer import inlineCallbacks, maybeDeferred
 
 
 from vumi.transports.httprpc import httprpc

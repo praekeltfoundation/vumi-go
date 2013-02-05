@@ -1,6 +1,5 @@
 import json
 import copy
-from datetime import datetime
 
 from functools import partial
 
@@ -10,8 +9,7 @@ from twisted.web.guard import HTTPAuthSessionWrapper
 from twisted.web.guard import BasicCredentialFactory
 from twisted.cred import portal
 from twisted.internet.error import ConnectionDone
-from twisted.internet.defer import (Deferred, DeferredList, inlineCallbacks,
-                                    returnValue)
+from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
 
 from vumi import errors
 from vumi.blinkenlights import metrics
