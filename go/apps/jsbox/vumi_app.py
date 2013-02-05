@@ -3,13 +3,14 @@
 
 """Vumi application worker for the vumitools API."""
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import maybeDeferred
 
-from vumi.config import ConfigField
+from vumi.config import ConfigDict
 from vumi.application.sandbox import JsSandbox, SandboxResource
 from vumi import log
 
-from go.vumitools.app_worker import GoApplicationMixin
+from go.vumitools.app_worker import (
+    GoApplicationMixin, GoApplicationConfigMixin)
 
 
 class ConversationConfigResource(SandboxResource):
@@ -26,9 +27,15 @@ class ConversationConfigResource(SandboxResource):
         return self.reply(command, value=value, success=True)
 
 
-class JsBoxConfig(JsSandbox.CONFIG_CLASS):
-    conversation = ConfigField("Conversation object from message.")
-    javascript = ConfigField("Javascript from message.")
+class JsBoxConfig(JsSandbox.CONFIG_CLASS, GoApplicationConfigMixin):
+    jsbox_app_config = ConfigDict(
+        "Custom configuration passed to the javascript code.", default={})
+    jsbox = ConfigDict(
+        "Must have 'javascript' field containing JavaScript code to run.")
+
+    @property
+    def javascript(self):
+        return self.jsbox['javascript']
 
 
 class JsBoxApplication(GoApplicationMixin, JsSandbox):
@@ -57,43 +64,23 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
         super(JsBoxApplication, self).validate_config()
         self._go_validate_config()
 
-    @inlineCallbacks
     def setup_application(self):
-        yield super(JsBoxApplication, self).setup_application()
-        yield self._go_setup_application()
+        d = maybeDeferred(super(JsBoxApplication, self).setup_application)
+        return d.addCallback(lambda r: self._go_setup_application())
 
-    @inlineCallbacks
     def teardown_application(self):
-        yield super(JsBoxApplication, self).teardown_application()
-        yield self._go_teardown_application()
-
-    def javascript_for_api(self, api):
-        return api.javascript
+        d = maybeDeferred(super(JsBoxApplication, self).teardown_application)
+        return d.addCallback(lambda r: self._go_teardown_application())
 
     def conversation_for_api(self, api):
-        return api.conversation
+        return api.config.get_conversation()
 
     def user_api_for_api(self, api):
-        return self.get_user_api(api.conversation.user_account.key)
-
-    def get_conversation_config(self, conversation):
-        config = conversation.metadata['jsbox'].copy()
-        config['sandbox_id'] = conversation.user_account.key
-        return config
+        conv = self.conversation_for_api(api)
+        return self.get_user_api(conv.user_account.key)
 
     def get_config(self, msg):
         return self.get_message_config(msg)
-
-    def sandbox_protocol_for_message(self, msg, config):
-        """Return a sandbox protocol for a message or event.
-
-        Overrides method from :class:`Sandbox`.
-        """
-        api = self.create_sandbox_api(self.resources)
-        api.javascript = config.javascript
-        api.conversation = config.conversation
-        protocol = self.create_sandbox_protocol(api, config)
-        return protocol
 
     def process_command_start(self, batch_id, conversation_type,
                               conversation_key, msg_options,
