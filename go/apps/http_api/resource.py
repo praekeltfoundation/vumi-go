@@ -47,6 +47,8 @@ class BaseResource(resource.Resource):
 
 class StreamResource(BaseResource):
 
+    message_class = None
+
     def __init__(self, worker, conversation_key):
         BaseResource.__init__(self, worker, conversation_key)
         self.stream_ready = Deferred()
@@ -72,7 +74,8 @@ class StreamResource(BaseResource):
         return NOT_DONE_YET
 
     def setup_stream(self, request):
-        return self.worker.register_client(self._rk, self._callback)
+        return self.worker.register_client(self._rk, self.message_class,
+            self._callback)
 
     def teardown_stream(self, err):
         if not (err is None or err.trap(ConnectionDone)):
