@@ -33,22 +33,16 @@ class StreamingClientManager(object):
         return self.client_key('backlog', key)
 
     @inlineCallbacks
-    def flush_backlog(self, key, message_class):
+    def flush_backlog(self, key, message_class, callback):
         backlog_key = self.backlog_key(key)
-        messages = []
         while True:
             obj = yield self.redis.rpop(backlog_key)
             if obj is None:
                 break
-            messages.append(message_class.from_json(obj))
-        returnValue(messages)
+            yield maybeDeferred(callback, message_class.from_json(obj))
 
-    @inlineCallbacks
     def start(self, key, message_class, callback):
         self.clients[key].append(callback)
-        backlog = yield self.flush_backlog(key, message_class)
-        for message in backlog:
-            yield maybeDeferred(callback, message)
 
     def stop(self, key, callback):
         self.clients[key].remove(callback)
@@ -117,8 +111,9 @@ class StreamingHTTPWorker(GoApplicationWorker):
             }
         return self.client_manager.publish(rk, message)
 
-    def register_client(self, conversation_key, message_class, callback):
-        self.client_manager.start(conversation_key, message_class, callback)
+    def register_client(self, key, message_class, callback):
+        self.client_manager.start(key, message_class, callback)
+        return self.client_manager.flush_backlog(key, message_class, callback)
 
     def unregister_client(self, conversation_key, callback):
         self.client_manager.stop(conversation_key, callback)
