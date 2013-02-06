@@ -79,6 +79,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
         self.web_path = self.config['web_path']
         self.web_port = int(self.config['web_port'])
         self.health_path = self.config.get('health_path', '/health/')
+        self.metrics_prefix = self.config['metrics_prefix']
 
     @inlineCallbacks
     def setup_application(self):
@@ -92,7 +93,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
         self.stream_publisher = yield self.publish_to(
             '%s.stream.lost_and_found' % (self.transport_name,))
         self.metric_publisher = yield self.start_publisher(MetricManager,
-            self.transport_name)
+            self.metrics_prefix)
         self.client_manager = StreamingClientManager(
             self.redis.sub_manager('http_api:message_cache'))
 
