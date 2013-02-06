@@ -130,6 +130,7 @@ TEMPLATE_DIRS = (
     abspath("apps", "sequential_send", "templates"),
     abspath("apps", "wikipedia", "ussd", "templates"),
     abspath("apps", "jsbox", "templates"),
+    abspath("apps", "http_api", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -264,6 +265,10 @@ VUMI_INSTALLED_APPS = {
     'go.apps.jsbox': {
         'namespace': 'jsbox',
         'display_name': 'Javascript App',
+    },
+    'go.apps.http_api': {
+        'namespace': 'http_api',
+        'display_name': 'HTTP API',
     },
 }
 
