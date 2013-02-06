@@ -6,9 +6,18 @@ from twisted.internet.defer import inlineCallbacks, returnValue, gatherResults
 from twisted.internet.task import LoopingCall
 
 from vumi import log
+from vumi.config import ConfigInt, ConfigDict, ConfigList
 from vumi.components.schedule_manager import ScheduleManager
 
 from go.vumitools.app_worker import GoApplicationWorker
+
+
+class SequentialSendConfig(GoApplicationWorker.CONFIG_CLASS):
+    poll_interval = ConfigInt(
+        "Interval between polling watched conversations for scheduled events.",
+        default=60)
+    schedule = ConfigDict("Scheduler config.")
+    messages = ConfigList("List of messages to send in sequence")
 
 
 class SequentialSendApplication(GoApplicationWorker):
@@ -28,16 +37,13 @@ class SequentialSendApplication(GoApplicationWorker):
     accordingly.
     """
 
+    CONFIG_CLASS = SequentialSendConfig
     SEND_TO_TAGS = frozenset(['default'])
     worker_name = 'sequential_send_application'
 
-    def validate_config(self):
-        super(SequentialSendApplication, self).validate_config()
-        self.poll_interval = self.config.get('poll_interval', 60)
-
     def _setup_poller(self):
         self.poller = LoopingCall(self.poll_conversations)
-        self.poller.start(self.poll_interval, now=False)
+        self.poller.start(self.get_static_config().poll_interval, now=False)
 
     @inlineCallbacks
     def setup_application(self):
@@ -98,13 +104,14 @@ class SequentialSendApplication(GoApplicationWorker):
 
     @inlineCallbacks
     def process_conversation_schedule(self, then, now, conv):
-        schedule = conv.get_metadata()['schedule']
+        schedule = self._get_config_for_conversation(conv).schedule
         if ScheduleManager(schedule).is_scheduled(then, now):
             yield self.send_scheduled_messages(conv)
 
     @inlineCallbacks
     def send_scheduled_messages(self, conv):
-        messages = conv.get_metadata()['messages']
+        config = self._get_config_for_conversation(conv)
+        messages = config.messages
         batch_id = conv.get_batch_keys()[0]
         tag = (conv.c.delivery_tag_pool, conv.c.delivery_tag)
         message_options = yield conv.make_message_options(tag)
