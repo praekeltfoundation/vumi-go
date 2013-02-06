@@ -87,6 +87,7 @@ def send_one_off_reply(account_key, conversation_key, in_reply_to, content):
     conversation = user_api.get_wrapped_conversation(conversation_key)
     [tag] = conversation.get_tags()
     msg_options = conversation.make_message_options(tag)
+    msg_options['in_reply_to'] = in_reply_to
     conversation.dispatch_command('send_message', command_data={
         "batch_id": conversation.get_latest_batch_key(),
         "to_addr": inbound_message['from_addr'],

@@ -513,6 +513,8 @@ class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
 
         [start_cmd, reply_to_cmd] = self.get_api_commands_sent()
         [tag] = conversation.get_tags()
+        msg_options = conversation.make_message_options(tag)
+        msg_options['in_reply_to'] = msg['message_id']
         self.assertEqual(reply_to_cmd['worker_name'],
                             'bulk_message_application')
         self.assertEqual(reply_to_cmd['command'], 'send_message')
@@ -520,5 +522,5 @@ class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
             'batch_id': conversation.get_latest_batch_key(),
             'content': 'foo',
             'to_addr': msg['from_addr'],
-            'msg_options': conversation.make_message_options(tag),
+            'msg_options': msg_options,
             })
