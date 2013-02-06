@@ -8,6 +8,7 @@ from django.contrib.sites.models import Site
 from django.template.defaultfilters import stringfilter
 
 from go.conversation.utils import PagedMessageCache
+from go.conversation.forms import ReplyToMessageForm
 from go.base import message_store_client as ms_client
 from go.base.utils import page_range_window
 
@@ -125,6 +126,16 @@ def get_contact_for_message(user_api, message):
     }.get(message['transport_type'], 'unkown')
     return user_api.contact_store.contact_for_addr(
         delivery_class, unicode(message.user()))
+
+
+@register.assignment_tag
+def get_reply_form_for_message(message):
+    form = ReplyToMessageForm(initial={
+        'to_addr': message['from_addr'],
+        'in_reply_to': message['message_id'],
+        })
+    form.fields['to_addr'].widget.attrs['readonly'] = True
+    return form
 
 
 @register.filter
