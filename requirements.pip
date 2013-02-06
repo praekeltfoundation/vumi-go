@@ -27,4 +27,4 @@ raven==2.0.7
 requests==0.14.2
 mock==1.0.1
 raven>=2.0,<3.0
--e git://github.com/lambdalisue/django-codemirror-widget@8eb620d43c181985246e1ac543adda0474240fc0#egg=django_codemirror_widget
+-e git://github.com/peterp/django-codemirror-widget@f2a44b6c3c3d4d455b277588c9805720feb46e9a#egg=django_codemirror_widget

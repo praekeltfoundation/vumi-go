@@ -225,7 +225,7 @@ SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
 #       configuration file so that configuration values aren't
 #       duplicated
 VUMI_API_CONFIG = {
-    'redis_manager': {'key_prefix': 'vumigo'},
+    'redis_manager': {'key_prefix': 'vumigo', 'db': 1},
     'riak_manager': {'bucket_prefix': 'vumigo.'},
     }
 
@@ -294,6 +294,7 @@ if DEBUG:
 # Password resets are sent from this address
 DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 
+CODEMIRROR_VARNAME = 'cm'
 CODEMIRROR_PATH = STATIC_URL + '/codemirror'
 CODEMIRROR_MODE = 'javascript'
 CODEMIRROR_THEME = 'default'
