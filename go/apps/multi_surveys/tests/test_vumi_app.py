@@ -16,6 +16,8 @@ from go.vumitools.opt_out import OptOutStore
 
 class TestMultiSurveyApplication(AppWorkerTestCase):
 
+    timeout = 10
+
     application_class = MultiSurveyApplication
     transport_type = u'sms'
 
