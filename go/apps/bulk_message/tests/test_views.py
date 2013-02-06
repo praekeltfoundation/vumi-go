@@ -169,9 +169,10 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             'conversation_key': self.conv_key}))
 
         # Check pagination
-        # We should have 20 links to contacts which by default display
-        # the from_addr if a contact cannot be found.
-        self.assertContains(response, 'from-', 20)
+        # We should have 60 references to a contact, which by default display
+        # the from_addr if a contact cannot be found. (each block as 3
+        # references, one in the table listing, 2 in the reply-to modal div)
+        self.assertContains(response, 'from-', 60)
         # We should have 2 links to page to, one for the actual page link
         # and one for the 'Next' page link
         self.assertContains(response, '&amp;p=2', 2)
