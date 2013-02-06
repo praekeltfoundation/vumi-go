@@ -22,8 +22,10 @@ from go.vumitools.conversation.models import (
     CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import (ConversationForm, ConversationGroupForm,
-                                    ConfirmConversationForm)
-from go.conversation.tasks import export_conversation_messages
+                                    ConfirmConversationForm,
+                                    ReplyToMessageForm)
+from go.conversation.tasks import (export_conversation_messages,
+                                    send_one_off_reply)
 from go.base import message_store_client as ms_client
 from go.base.utils import (make_read_only_form, conversation_or_404,
                             page_range_window)
@@ -329,6 +331,19 @@ class ShowConversationView(ConversationView):
             messages.info(request, 'Conversation messages CSV file export '
                                     'scheduled. CSV file should arrive in '
                                     'your mailbox shortly.')
+        if '_send_one_off_reply' in request.POST:
+            form = ReplyToMessageForm(request.POST)
+            if form.is_valid():
+                in_reply_to = form.cleaned_data['in_reply_to']
+                content = form.cleaned_data['content']
+                send_one_off_reply.delay(
+                    request.user_api.user_account_key, conversation.key,
+                    in_reply_to, content)
+                messages.info(request, 'Reply scheduled for sending.')
+            else:
+                messages.error(request,
+                    'Something went wrong. Please try again.')
+                print form.errors
         return self.redirect_to('show', conversation_key=conversation.key)
 
 

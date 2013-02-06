@@ -134,3 +134,10 @@ class ConversationSearchForm(BootstrapForm):
             ('draft', 'Draft'),
         ],
         widget=forms.Select(attrs={'class': 'input-small'}))
+
+
+class ReplyToMessageForm(BootstrapForm):
+    in_reply_to = forms.CharField(widget=forms.HiddenInput, required=True)
+    to_addr = forms.CharField(label='Send To', required=True)
+    content = forms.CharField(label='Reply Message', required=True,
+        widget=forms.Textarea)
