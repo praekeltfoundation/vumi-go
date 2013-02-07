@@ -62,6 +62,9 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
         yield self.pm.stop()
         yield self._go_teardown_application()
 
+    def is_registered(self, participant):
+        return participant.get_label('HIV_MESSAGES') is not None
+
     @inlineCallbacks
     def consume_user_message(self, message):
         helper_metadata = message['helper_metadata']
