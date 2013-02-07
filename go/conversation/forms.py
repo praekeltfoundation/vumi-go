@@ -134,3 +134,12 @@ class ConversationSearchForm(BootstrapForm):
             ('draft', 'Draft'),
         ],
         widget=forms.Select(attrs={'class': 'input-small'}))
+
+
+class ReplyToMessageForm(BootstrapForm):
+    in_reply_to = forms.CharField(widget=forms.HiddenInput, required=True)
+    # NOTE: the to_addr is only used to display in the UI, when sending the
+    #       reply the 'from_addr' of the 'in_reply_to' message copied over.
+    to_addr = forms.CharField(label='Send To', required=True)
+    content = forms.CharField(label='Reply Message', required=True,
+        widget=forms.Textarea)
