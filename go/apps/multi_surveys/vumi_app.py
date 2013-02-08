@@ -1,7 +1,7 @@
 # -*- test-case-name: go.apps.multi_surveys.tests.test_vumi_app -*-
 
 from twisted.internet.defer import inlineCallbacks
-from vxpolls.multipoll_example import MultiPollApplication
+from vxpolls.multipoll_example import MultiPollApplication, EventPublisher
 from vxpolls.manager import PollManager
 
 from vumi.message import TransportUserMessage
@@ -36,13 +36,34 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
 
     @inlineCallbacks
     def setup_application(self):
+        self.event_publisher = EventPublisher()
+
         yield self._go_setup_application()
         self.pm = PollManager(self.redis, self.poll_prefix)
+
+        @inlineCallbacks
+        def event_handler(event):
+            go = event.message['helper_metadata']['go']
+            event_name = "%s.%s.%s_count" % (
+                    go['user_account'],
+                    go['conversation_key'],
+                    event.event_type)
+            value = yield self.redis.incr(event_name)
+            self.publish_metric(event_name, value)
+
+        self.event_publisher.subscribe('new_user', event_handler)
+        self.event_publisher.subscribe('new_registrant', event_handler)
+        self.event_publisher.subscribe('new_poll', event_handler)
+        self.event_publisher.subscribe('inbound_message', event_handler)
+        self.event_publisher.subscribe('outbound_message', event_handler)
 
     @inlineCallbacks
     def teardown_application(self):
         yield self.pm.stop()
         yield self._go_teardown_application()
+
+    def is_registered(self, participant):
+        return participant.get_label('HIV_MESSAGES') is not None
 
     @inlineCallbacks
     def consume_user_message(self, message):
