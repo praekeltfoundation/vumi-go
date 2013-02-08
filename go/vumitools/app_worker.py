@@ -244,7 +244,7 @@ class GoApplicationMixin(object):
     def find_message_for_event(self, event):
         outbound_message = yield self.find_outboundmessage_for_event(event)
         if outbound_message:
-            returnValue(outbound_message.message)
+            returnValue(outbound_message.msg)
 
     @inlineCallbacks
     def event_for_message(self, message, event_type, content):
