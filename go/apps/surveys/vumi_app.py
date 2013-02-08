@@ -156,3 +156,12 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             for contact in (yield contacts):
                 to_addr = contact.addr_for(conv.delivery_class)
                 yield self.start_survey(to_addr, conv, **msg_options)
+
+    @inlineCallbacks
+    def process_command_send_message(self, *args, **kwargs):
+        log.info('Processing send_message: %s' % kwargs)
+        command_data = kwargs['command_data']
+        to_addr = command_data['to_addr']
+        content = command_data['content']
+        msg_options = command_data['msg_options']
+        yield self.send_to(to_addr, content, **msg_options)

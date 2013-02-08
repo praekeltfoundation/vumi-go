@@ -5,7 +5,7 @@
         <tr>
             <th width="32">Type</th>
             <th>Response</th>
-            <th width="70">Actions</th>
+            {% if message_direction == 'inbound' and not conversation.is_client_initiated %}<th width="70">Actions</th>{% endif %}
         </tr>
     </thead>
     <tbody>
@@ -15,8 +15,30 @@
             <td><i class="icon-repeat"></i> {{conversation.delivery_class}}</td>
             <td>
                 <h6><a href="{% url 'contacts:person' person_key=contact.key %}">{{contact}}</a> via {{message.transport_type}} - {{message.timestamp}}</h6>
-                <p>{{message.content}}</p></td>
-            <td><a href="#" class="btn" title="Reply"><i class="icon-repeat"></i> Reply</a></td>
+                <p>{{message.content}}</p>
+            </td>
+            {% if message_direction == 'inbound' and not conversation.is_client_initiated %}
+            <td>
+                <a href="#reply-{{message.key}}" class="btn" title="Reply" data-toggle='modal'><i class="icon-repeat"></i> Reply</a>
+                <div id="reply-{{message.key}}" class="modal hide fade" role="dialog">
+                    <div class="modal-header">
+                        <a class="close" data-dismiss="modal">×</a>
+                        <h3>Reply to {{contact}}</h3>
+                    </div>
+                    <form method="post" action="" class="form-horizontal">
+                        {% csrf_token %}
+                        <div class="modal-body">
+                            {% get_reply_form_for_message message as reply_form %}
+                            {{ reply_form }}
+                        </div>
+                        <div class="modal-footer">
+                            <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+                            <button type="submit" name="_send_one_off_reply" class="btn btn-primary" data-loading-text="sending...">Send Reply</button>
+                        </div>
+                    </form>
+                </div>
+            </td>
+            {% endif %}
         </tr>
         {% empty %}
             {% if query %}

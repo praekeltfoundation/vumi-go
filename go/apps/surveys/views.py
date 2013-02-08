@@ -14,8 +14,10 @@ from vumi.persist.redis_manager import RedisManager
 from go.base.utils import (make_read_only_form, make_read_only_formset,
     conversation_or_404)
 from go.vumitools.exceptions import ConversationSendError
-from go.conversation.forms import ConversationForm, ConversationGroupForm
-from go.conversation.tasks import export_conversation_messages
+from go.conversation.forms import (ConversationForm, ConversationGroupForm,
+                                    ReplyToMessageForm)
+from go.conversation.tasks import (export_conversation_messages,
+                                    send_one_off_reply)
 from go.apps.surveys import forms
 
 from vxpolls.manager import PollManager
@@ -245,6 +247,22 @@ def show(request, conversation_key):
         return redirect(reverse('survey:show', kwargs={
             'conversation_key': conversation.key,
             }))
+
+    if '_send_one_off_reply' in request.POST:
+        form = ReplyToMessageForm(request.POST)
+        if form.is_valid():
+            in_reply_to = form.cleaned_data['in_reply_to']
+            content = form.cleaned_data['content']
+            send_one_off_reply.delay(
+                request.user_api.user_account_key, conversation.key,
+                in_reply_to, content)
+            messages.info(request, 'Reply scheduled for sending.')
+            return redirect(reverse('survey:show', kwargs={
+                'conversation_key': conversation.key,
+                }))
+        else:
+            messages.error(request,
+                'Something went wrong. Please try again.')
 
     return render(request, 'surveys/show.html', {
         'conversation': conversation,
