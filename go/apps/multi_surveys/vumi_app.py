@@ -41,21 +41,39 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
         yield self._go_setup_application()
         self.pm = PollManager(self.redis, self.poll_prefix)
 
-        @inlineCallbacks
-        def event_handler(event):
-            go = event.message['helper_metadata']['go']
-            event_name = "%s.%s.%s_count" % (
-                    go['user_account'],
-                    go['conversation_key'],
-                    event.event_type)
-            value = yield self.redis.incr(event_name)
-            self.publish_metric(event_name, value)
+        self.event_publisher.subscribe('new_user', self.metric_event_handler)
+        self.event_publisher.subscribe('new_registrant',
+                                       self.metric_event_handler)
+        self.event_publisher.subscribe('new_poll', self.metric_event_handler)
+        self.event_publisher.subscribe('inbound_message',
+                                       self.metric_event_handler)
+        self.event_publisher.subscribe('outbound_message',
+                                       self.metric_event_handler)
+        self.event_publisher.subscribe('new_registrant',
+                                       self.new_registrant_handler)
 
-        self.event_publisher.subscribe('new_user', event_handler)
-        self.event_publisher.subscribe('new_registrant', event_handler)
-        self.event_publisher.subscribe('new_poll', event_handler)
-        self.event_publisher.subscribe('inbound_message', event_handler)
-        self.event_publisher.subscribe('outbound_message', event_handler)
+    @inlineCallbacks
+    def incr_event_metric(self, event, metric_suffix):
+        go = event.message['helper_metadata']['go']
+        metric_name = "%s.%s.%s" % (
+            go['user_account'], go['conversation_key'], metric_suffix)
+        value = yield self.redis.incr(metric_name)
+        self.publish_metric(metric_name, value)
+
+    @inlineCallbacks
+    def metric_event_handler(self, event):
+        yield self.incr_event_metric(event, "%s_count" % event.event_type)
+
+    @inlineCallbacks
+    def new_registrant_handler(self, event):
+        participant = event.participant
+        hiv_messages = participant.get_label('HIV_MESSAGES')
+        if hiv_messages == "1":
+            # Wants HIV messages
+            yield self.incr_event_metric(event, "hiv_registrant_count")
+        else:
+            # Wants STD messages
+            yield self.incr_event_metric(event, "std_registrant_count")
 
     @inlineCallbacks
     def teardown_application(self):
