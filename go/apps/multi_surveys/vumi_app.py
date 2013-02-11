@@ -1,7 +1,7 @@
 # -*- test-case-name: go.apps.multi_surveys.tests.test_vumi_app -*-
 
 from twisted.internet.defer import inlineCallbacks
-from vxpolls.multipoll_example import MultiPollApplication
+from vxpolls.multipoll_example import MultiPollApplication, EventPublisher
 from vxpolls.manager import PollManager
 
 from vumi.message import TransportUserMessage
@@ -36,13 +36,52 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
 
     @inlineCallbacks
     def setup_application(self):
+        self.event_publisher = EventPublisher()
+
         yield self._go_setup_application()
         self.pm = PollManager(self.redis, self.poll_prefix)
+
+        self.event_publisher.subscribe('new_user', self.metric_event_handler)
+        self.event_publisher.subscribe('new_registrant',
+                                       self.metric_event_handler)
+        self.event_publisher.subscribe('new_poll', self.metric_event_handler)
+        self.event_publisher.subscribe('inbound_message',
+                                       self.metric_event_handler)
+        self.event_publisher.subscribe('outbound_message',
+                                       self.metric_event_handler)
+        self.event_publisher.subscribe('new_registrant',
+                                       self.new_registrant_handler)
+
+    @inlineCallbacks
+    def incr_event_metric(self, event, metric_suffix):
+        go = event.message['helper_metadata']['go']
+        metric_name = "%s.%s.%s" % (
+            go['user_account'], go['conversation_key'], metric_suffix)
+        value = yield self.redis.incr(metric_name)
+        self.publish_metric(metric_name, value)
+
+    @inlineCallbacks
+    def metric_event_handler(self, event):
+        yield self.incr_event_metric(event, "%s_count" % event.event_type)
+
+    @inlineCallbacks
+    def new_registrant_handler(self, event):
+        participant = event.participant
+        hiv_messages = participant.get_label('HIV_MESSAGES')
+        if hiv_messages == "1":
+            # Wants HIV messages
+            yield self.incr_event_metric(event, "hiv_registrant_count")
+        else:
+            # Wants STD messages
+            yield self.incr_event_metric(event, "std_registrant_count")
 
     @inlineCallbacks
     def teardown_application(self):
         yield self.pm.stop()
         yield self._go_teardown_application()
+
+    def is_registered(self, participant):
+        return participant.get_label('HIV_MESSAGES') is not None
 
     @inlineCallbacks
     def consume_user_message(self, message):
