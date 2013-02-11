@@ -215,6 +215,15 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             # any input will restart the survey
             yield self.reply_to(msgs[-1], 'hi')
 
+        metrics = self.poll_metrics('%s.%s' % (self.user_account.key,
+                                               self.conversation.key))
+        self.assertEqual({
+            'inbound_message_count': [1, 2, 3, 4, 5, 6, 7],
+            'outbound_message_count': [1, 2, 3, 4, 5, 6, 7],
+            'new_user_count': [1]},
+            metrics)
+
+
     @inlineCallbacks
     def test_surveys_in_succession_demo_mode(self):
         self.app.is_demo = True
