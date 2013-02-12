@@ -46,6 +46,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield super(StreamingHTTPWorkerTestCase, self).setUp()
         self.config = self.mk_config({
             'worker_name': 'worker_name',
+            'health_path': '/health/',
             'web_path': '/foo',
             'web_port': 0,
             'metrics_prefix': 'metrics_prefix.',
@@ -322,3 +323,29 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             self.assertEqual(received['message_id'], str(i))
 
         receiver.disconnect()
+
+    @inlineCallbacks
+    def test_health_response(self):
+        health_url = 'http://%s:%s%s' % (self.addr.host, self.addr.port,
+            self.config['health_path'])
+
+        response = yield http_request_full(health_url, method='GET')
+        self.assertEqual(response.delivered_body, '0')
+
+        msg = self.mkmsg_in(content='in 1', message_id='1')
+        yield self.dispatch_with_tag(msg, self.tag)
+
+        queue = DeferredQueue()
+        stream_url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+        stream_receiver = self.client.stream(TransportUserMessage, queue.put,
+            queue.put, stream_url, Headers(self.auth_headers))
+
+        yield queue.get()
+
+        response = yield http_request_full(health_url, method='GET')
+        self.assertEqual(response.delivered_body, '1')
+
+        stream_receiver.disconnect()
+
+        response = yield http_request_full(health_url, method='GET')
+        self.assertEqual(response.delivered_body, '0')
