@@ -46,3 +46,7 @@ class ResponseTimeMiddlewareTestcase(TestCase):
             'test.prefix.django.contrib.auth.views.login')
         self.assertEqual(datapoint[1], ['avg'])
         self.assertTrue(datapoint[2])
+        self.assertEqual(kwargs['routing_key'], 'vumi.metrics')
+        exchange = kwargs['exchange']
+        self.assertEqual(exchange.name, 'vumi.metrics')
+        self.assertEqual(exchange.type, 'direct')
