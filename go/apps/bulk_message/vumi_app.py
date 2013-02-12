@@ -127,11 +127,19 @@ class BulkMessageApplication(GoApplicationWorker):
     def process_command_send_message(self, *args, **kwargs):
         command_data = kwargs['command_data']
         log.info('Processing send_message: %s' % kwargs)
-        yield self.send_message(
-                command_data['batch_id'],
-                command_data['to_addr'],
-                command_data['content'],
-                command_data['msg_options'])
+        to_addr = command_data['to_addr']
+        content = command_data['content']
+        msg_options = command_data['msg_options']
+        in_reply_to = msg_options.pop('in_reply_to', None)
+        if in_reply_to:
+            msg = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
+            if msg:
+                yield self.reply_to(msg, content)
+            else:
+                log.warning('Unable to reply, message %s does not exist.' % (
+                    in_reply_to))
+        else:
+            yield self.send_to(to_addr, content, **msg_options)
 
     @inlineCallbacks
     def collect_metrics(self, user_api, conversation_key):
