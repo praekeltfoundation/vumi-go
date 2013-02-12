@@ -15,7 +15,8 @@ from go.vumitools.app_worker import GoApplicationWorker
 class SequentialSendConfig(GoApplicationWorker.CONFIG_CLASS):
     poll_interval = ConfigInt(
         "Interval between polling watched conversations for scheduled events.",
-        default=60)
+        default=60, static=True)
+
     schedule = ConfigDict("Scheduler config.")
     messages = ConfigList("List of messages to send in sequence")
 
