@@ -2,6 +2,7 @@ import time
 import logging
 
 from django.core.urlresolvers import resolve, Resolver404
+from django.conf import settings
 
 from go.base.utils import vumi_api_for_user
 from go.base.amqp import connection
@@ -23,15 +24,20 @@ class ResponseTimeMiddleware(object):
     Middleware for generating metrics on page response times.
 
     """
+    def __init__(self):
+        self.metrics_prefix = getattr(settings, 'METRICS_PREFIX', 'go.django.')
+
     def process_request(self, request):
         request.start_time = time.time()
 
     def process_response(self, request, response):
         try:
+            stop_time = time.time()
             func = resolve(request.path)[0]
             metric_name = '%s.%s' % (func.__module__, func.__name__)
-            response_time = time.time() - request.start_time
+            response_time = stop_time - request.start_time
             self.publish_metric(metric_name, response_time)
+            response['X-Response-Time'] = response_time
         except (Resolver404, AttributeError), e:
             logger.exception(e)
         if response:
@@ -42,7 +48,8 @@ class ResponseTimeMiddleware(object):
         aggregators = aggregators or [AVG]
         timestamp = timestamp or time.time()
         metric_msg = MetricMessage()
-        metric_msg.append((metric_name,
+        prefixed_metric_name = '%s%s' % (self.metrics_prefix, metric_name)
+        metric_msg.append((prefixed_metric_name,
             tuple(sorted(agg.name for agg in aggregators)),
             [(timestamp, value)]))
         connection.publish_metric(metric_msg)
