@@ -13,6 +13,7 @@ from go.vumitools.app_worker import GoApplicationMixin
 class SurveyApplication(PollApplication, GoApplicationMixin):
 
     worker_name = 'survey_application'
+    SEND_TO_TAGS = frozenset(['default'])
 
     def validate_config(self):
         self._go_validate_config()
