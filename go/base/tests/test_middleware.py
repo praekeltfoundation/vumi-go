@@ -43,10 +43,28 @@ class ResponseTimeMiddlewareTestcase(TestCase):
         command = json.loads(args[0])
         [datapoint] = command['datapoints']
         self.assertEqual(datapoint[0],
-            'test.prefix.django.contrib.auth.views.login')
+            'test.prefix.django.contrib.auth.views.login.GET')
         self.assertEqual(datapoint[1], ['avg'])
         self.assertTrue(datapoint[2])
         self.assertEqual(kwargs['routing_key'], 'vumi.metrics')
         exchange = kwargs['exchange']
         self.assertEqual(exchange.name, 'vumi.metrics')
         self.assertEqual(exchange.type, 'direct')
+
+    @patch.object(AmqpConnection, 'is_connected')
+    @patch.object(AmqpConnection, 'publish')
+    def test_method_differentiation(self, publish, is_connected):
+        is_connected.return_value = True
+        publish.return_value = True
+        response = HttpResponse('ok')
+
+        request = self.factory.post('/accounts/login/')
+        request.start_time = time.time()
+        self.mw.process_response(request, response)
+
+        call = publish.call_args
+        args, kwargs = call
+        command = json.loads(args[0])
+        [datapoint] = command['datapoints']
+        self.assertEqual(datapoint[0],
+            'test.prefix.django.contrib.auth.views.login.POST')
