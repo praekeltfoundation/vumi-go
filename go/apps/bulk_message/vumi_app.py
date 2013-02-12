@@ -134,7 +134,7 @@ class BulkMessageApplication(GoApplicationWorker):
         if in_reply_to:
             msg = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
             if msg:
-                yield self.reply_to(msg, content, continue_session=False)
+                yield self.reply_to(msg, content)
                 return
 
         yield self.send_to(to_addr, content, **msg_options)
