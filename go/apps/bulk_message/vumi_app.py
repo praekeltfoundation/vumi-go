@@ -135,9 +135,11 @@ class BulkMessageApplication(GoApplicationWorker):
             msg = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
             if msg:
                 yield self.reply_to(msg, content)
-                return
-
-        yield self.send_to(to_addr, content, **msg_options)
+            else:
+                log.warning('Unable to reply, message %s does not exist.' % (
+                    in_reply_to))
+        else:
+            yield self.send_to(to_addr, content, **msg_options)
 
     @inlineCallbacks
     def collect_metrics(self, user_api, conversation_key):
