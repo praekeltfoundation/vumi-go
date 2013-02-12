@@ -291,7 +291,7 @@ MESSAGE_STORE_API_URL = 'http://localhost:8080/api/v1/'
 
 # Connect to AMQP straight
 from go.base import amqp
-amqp.connect('amqp://%s:%s@%s:%s/%s' % (
+amqp.connect('librabbitmq://%s:%s@%s:%s/%s' % (
     BROKER_USER, BROKER_PASSWORD, BROKER_HOST, BROKER_PORT, BROKER_VHOST))
 
 try:
