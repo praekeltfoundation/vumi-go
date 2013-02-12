@@ -141,6 +141,10 @@ class StreamingHTTPWorker(GoApplicationWorker):
         [conv_key] = yield mr.get_keys()
         yield self.stream(EventStream, conv_key, event)
 
+    def get_health_response(self):
+        return str(sum([len(callbacks) for callbacks in
+                    self.client_manager.clients.values()]))
+
     @inlineCallbacks
     def teardown_application(self):
         yield super(StreamingHTTPWorker, self).teardown_application()
