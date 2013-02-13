@@ -89,7 +89,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
 
     def mk_dummy_api(self, conversation):
         dummy_api = mock.Mock()
-        dummy_api.conversation = conversation
+        dummy_api.config = self.app.get_config_for_conversation(conversation)
         return dummy_api
 
     @inlineCallbacks
