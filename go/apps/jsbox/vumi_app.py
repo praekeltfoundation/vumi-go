@@ -3,13 +3,14 @@
 
 """Vumi application worker for the vumitools API."""
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
+from vumi.config import ConfigDict
 from vumi.application.sandbox import JsSandbox, SandboxResource
-from vumi.message import TransportEvent
 from vumi import log
 
-from go.vumitools.app_worker import GoApplicationMixin
+from go.vumitools.app_worker import (
+    GoApplicationMixin, GoApplicationConfigMixin)
 
 
 class ConversationConfigResource(SandboxResource):
@@ -24,6 +25,17 @@ class ConversationConfigResource(SandboxResource):
         key_config = app_config.get(key, {})
         value = key_config.get('value')
         return self.reply(command, value=value, success=True)
+
+
+class JsBoxConfig(JsSandbox.CONFIG_CLASS, GoApplicationConfigMixin):
+    jsbox_app_config = ConfigDict(
+        "Custom configuration passed to the javascript code.", default={})
+    jsbox = ConfigDict(
+        "Must have 'javascript' field containing JavaScript code to run.")
+
+    @property
+    def javascript(self):
+        return self.jsbox['javascript']
 
 
 class JsBoxApplication(GoApplicationMixin, JsSandbox):
@@ -44,6 +56,7 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
     And those from :class:`vumi.application.sandbox.JsSandbox`.
     """
 
+    CONFIG_CLASS = JsBoxConfig
     SEND_TO_TAGS = frozenset(['default'])
     worker_name = 'jsbox_application'
 
@@ -61,36 +74,15 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
         yield super(JsBoxApplication, self).teardown_application()
         yield self._go_teardown_application()
 
-    def javascript_for_api(self, api):
-        return api.javascript
-
     def conversation_for_api(self, api):
-        return api.conversation
+        return api.config.get_conversation()
 
     def user_api_for_api(self, api):
-        return self.get_user_api(api.conversation.user_account.key)
+        conv = self.conversation_for_api(api)
+        return self.get_user_api(conv.user_account.key)
 
-    @inlineCallbacks
-    def sandbox_protocol_for_message(self, msg_or_event):
-        """Return a sandbox protocol for a message or event.
-
-        Overrides method from :class:`Sandbox`.
-        """
-        if isinstance(msg_or_event, TransportEvent):
-            msg = yield self.find_message_for_event(msg_or_event)
-        else:
-            msg = msg_or_event
-
-        metadata = self.get_go_metadata(msg)
-        sandbox_id = yield metadata.get_account_key()
-        conversation = yield metadata.get_conversation()
-        config = conversation.metadata['jsbox']
-        javascript = config['javascript']
-        api = self.create_sandbox_api(self.resources)
-        api.javascript = javascript
-        api.conversation = conversation
-        protocol = self.create_sandbox_protocol(sandbox_id, api)
-        returnValue(protocol)
+    def get_config(self, msg):
+        return self.get_message_config(msg)
 
     def process_command_start(self, batch_id, conversation_type,
                               conversation_key, msg_options,
