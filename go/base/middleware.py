@@ -23,8 +23,9 @@ class ResponseTimeMiddleware(object):
     """
     Middleware for generating metrics on page response times.
 
-
-
+    Marks the time when a request is received and when the response for that
+    request is sent back again. Fires off metrics for the time taken to
+    generate the response.
     """
     def __init__(self):
         self.metrics_prefix = getattr(settings, 'METRICS_PREFIX', 'go.django.')
