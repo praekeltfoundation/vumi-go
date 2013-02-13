@@ -36,7 +36,9 @@ class ResponseTimeMiddlewareTestcase(TestCase):
         request.start_time = time.time()
 
         self.mw.process_response(request, response)
-        self.assertTrue(response['X-Response-Time'])
+        response_time_header = response['X-Response-Time']
+        self.assertTrue(response_time_header)
+        self.assertTrue(float(response_time_header))
 
         call = publish.call_args
         args, kwargs = call

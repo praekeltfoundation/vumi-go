@@ -26,6 +26,9 @@ class ResponseTimeMiddleware(object):
     Marks the time when a request is received and when the response for that
     request is sent back again. Fires off metrics for the time taken to
     generate the response.
+
+    It sets an X-Response-Time HTTP header which can be useful for debugging
+    or logging slow resources upstream.
     """
     def __init__(self):
         self.metrics_prefix = getattr(settings, 'METRICS_PREFIX', 'go.django.')
