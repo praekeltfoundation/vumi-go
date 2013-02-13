@@ -98,7 +98,7 @@ class GoApplicationMixin(object):
     def get_user_api(self, user_account_key):
         return self.vumi_api.get_user_api(user_account_key)
 
-    def _get_config_for_conversation(self, conversation):
+    def get_config_for_conversation(self, conversation):
         config_data = GoApplicationConfigData(self.config, conversation)
         return self.CONFIG_CLASS(config_data)
 
@@ -110,7 +110,7 @@ class GoApplicationMixin(object):
         metadata = self.get_go_metadata(msg)
         conversation = yield metadata.get_conversation()
 
-        returnValue(self._get_config_for_conversation(conversation))
+        returnValue(self.get_config_for_conversation(conversation))
 
     def consume_control_command(self, command_message):
         """
