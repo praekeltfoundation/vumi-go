@@ -7,7 +7,7 @@ from django.conf import settings
 from go.base.utils import vumi_api_for_user
 from go.base.amqp import connection
 
-from vumi.blinkenlights.metrics import AVG, MetricMessage
+from vumi.blinkenlights.metrics import AVG
 
 logger = logging.getLogger(__name__)
 
@@ -53,10 +53,6 @@ class ResponseTimeMiddleware(object):
     def publish_metric(self, metric_name, value, timestamp=None,
                         aggregators=None):
         aggregators = aggregators or [AVG]
-        timestamp = timestamp or time.time()
-        metric_msg = MetricMessage()
         prefixed_metric_name = '%s%s' % (self.metrics_prefix, metric_name)
-        metric_msg.append((prefixed_metric_name,
-            tuple(sorted(agg.name for agg in aggregators)),
-            [(timestamp, value)]))
-        connection.publish_metric(metric_msg)
+        connection.publish_metric(prefixed_metric_name, aggregators,
+            value, timestamp)
