@@ -66,12 +66,12 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
 
     @inlineCallbacks
     def setup_application(self):
-        yield super(JsBoxApplication, self).setup_application
+        yield super(JsBoxApplication, self).setup_application()
         yield self._go_setup_application()
 
     @inlineCallbacks
     def teardown_application(self):
-        yield super(JsBoxApplication, self).teardown_application
+        yield super(JsBoxApplication, self).teardown_application()
         yield self._go_teardown_application()
 
     def conversation_for_api(self, api):
