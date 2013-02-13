@@ -349,3 +349,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         response = yield http_request_full(health_url, method='GET')
         self.assertEqual(response.delivered_body, '0')
+
+        self.assertEqual(self.app.client_manager.clients, {
+            'sphex.stream.message.%s' % (self.conversation.key,): []
+            })
