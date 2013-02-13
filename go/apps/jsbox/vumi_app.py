@@ -3,7 +3,7 @@
 
 """Vumi application worker for the vumitools API."""
 
-from twisted.internet.defer import maybeDeferred
+from twisted.internet.defer import inlineCallbacks
 
 from vumi.config import ConfigDict
 from vumi.application.sandbox import JsSandbox, SandboxResource
@@ -64,13 +64,15 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
         super(JsBoxApplication, self).validate_config()
         self._go_validate_config()
 
+    @inlineCallbacks
     def setup_application(self):
-        d = maybeDeferred(super(JsBoxApplication, self).setup_application)
-        return d.addCallback(lambda r: self._go_setup_application())
+        yield super(JsBoxApplication, self).setup_application
+        yield self._go_setup_application()
 
+    @inlineCallbacks
     def teardown_application(self):
-        d = maybeDeferred(super(JsBoxApplication, self).teardown_application)
-        return d.addCallback(lambda r: self._go_teardown_application())
+        yield super(JsBoxApplication, self).teardown_application
+        yield self._go_teardown_application()
 
     def conversation_for_api(self, api):
         return api.config.get_conversation()
