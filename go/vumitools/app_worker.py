@@ -1,8 +1,11 @@
+from zope.interface import implements
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi import log
 from vumi.application import ApplicationWorker
 from vumi.blinkenlights.metrics import MetricManager, Metric, MAX
+from vumi.message import TransportEvent
+from vumi.config import IConfigData
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.api_worker import GoMessageMetadata
@@ -19,6 +22,29 @@ class OneShotMetricManager(MetricManager):
     def _publish_metrics(self):
         super(OneShotMetricManager, self)._publish_metrics()
         self._clear_metrics()
+
+
+class GoApplicationConfigData(object):
+    implements(IConfigData)
+
+    def __init__(self, config_dict, conversation):
+        self.config_dict = config_dict
+        self.conv = conversation
+
+    def get(self, field_name, default):
+        if self.conv.metadata and field_name in self.conv.metadata:
+            return self.conv.metadata[field_name]
+        return self.config_dict.get(field_name, default)
+
+    def has_key(self, field_name):
+        if self.conv.metadata and field_name in self.conv.metadata:
+            return True
+        return self.config_dict.has_key(field_name)
+
+
+class GoApplicationConfigMixin(object):
+    def get_conversation(self):
+        return self._config_data.conv
 
 
 class GoApplicationMixin(object):
@@ -71,6 +97,20 @@ class GoApplicationMixin(object):
 
     def get_user_api(self, user_account_key):
         return self.vumi_api.get_user_api(user_account_key)
+
+    def get_config_for_conversation(self, conversation):
+        config_data = GoApplicationConfigData(self.config, conversation)
+        return self.CONFIG_CLASS(config_data)
+
+    @inlineCallbacks
+    def get_message_config(self, msg):
+        if isinstance(msg, TransportEvent):
+            msg = yield self.find_message_for_event(msg)
+
+        metadata = self.get_go_metadata(msg)
+        conversation = yield metadata.get_conversation()
+
+        returnValue(self.get_config_for_conversation(conversation))
 
     def consume_control_command(self, command_message):
         """
