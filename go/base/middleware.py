@@ -41,7 +41,7 @@ class ResponseTimeMiddleware(object):
             stop_time = time.time()
             func = resolve(request.path)[0]
             metric_name = '%s.%s.%s' % (func.__module__, func.__name__,
-                                        request.method.upper())
+                                        request.method.lower())
             response_time = stop_time - request.start_time
             self.publish_metric(metric_name, response_time)
             response['X-Response-Time'] = response_time
