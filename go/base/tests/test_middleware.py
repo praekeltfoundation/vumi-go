@@ -45,7 +45,7 @@ class ResponseTimeMiddlewareTestcase(TestCase):
         command = json.loads(args[0])
         [datapoint] = command['datapoints']
         self.assertEqual(datapoint[0],
-            'test.prefix.django.contrib.auth.views.login.GET')
+            'test.prefix.django.contrib.auth.views.login.get')
         self.assertEqual(datapoint[1], ['avg'])
         self.assertTrue(datapoint[2])
         self.assertEqual(kwargs['routing_key'], 'vumi.metrics')
@@ -69,4 +69,4 @@ class ResponseTimeMiddlewareTestcase(TestCase):
         command = json.loads(args[0])
         [datapoint] = command['datapoints']
         self.assertEqual(datapoint[0],
-            'test.prefix.django.contrib.auth.views.login.POST')
+            'test.prefix.django.contrib.auth.views.login.post')
