@@ -45,8 +45,13 @@ class ResponseTimeMiddleware(object):
             response_time = stop_time - request.start_time
             self.publish_metric(metric_name, response_time)
             response['X-Response-Time'] = response_time
-        except (Resolver404, AttributeError), e:
+        except AttributeError, e:
             logger.exception(e)
+        except Resolver404:
+            # Ignoring the Resolver404 as that just means we've not found a
+            # page and any response metric on that will not be of interest
+            # to us.
+            pass
         if response:
             return response
 
