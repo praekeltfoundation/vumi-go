@@ -37,6 +37,10 @@ class JsBoxConfig(JsSandbox.CONFIG_CLASS, GoApplicationConfigMixin):
     def javascript(self):
         return self.jsbox['javascript']
 
+    @property
+    def sandbox_id(self):
+        return self.get_conversation().user_account.key
+
 
 class JsBoxApplication(GoApplicationMixin, JsSandbox):
     """
