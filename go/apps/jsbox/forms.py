@@ -40,7 +40,7 @@ class JsboxAppConfigForm(BootstrapForm):
     def to_metadata(self):
         return {
             'key': self.cleaned_data['key'],
-            'value': value,
+            'value': self.cleaned_data['value'],
             'source_url': self.cleaned_data['source_url'],
         }
 
