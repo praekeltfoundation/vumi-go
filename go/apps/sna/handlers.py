@@ -11,7 +11,15 @@ from vumi import log
 from vxpolls.manager import PollManager
 
 
-class USSDOptOutHandler(EventHandler):
+class SNAEventHandler(EventHandler):
+
+    def find_contact(self, account_key, msisdn):
+        contact_store = ContactStore(self.dispatcher.vumi_api.manager,
+                                        account_key)
+        return contact_store.contact_for_addr('ussd', msisdn)
+
+
+class USSDOptOutHandler(SNAEventHandler):
 
     def setup_handler(self):
         self.pm_prefix = self.config['poll_manager_prefix']
@@ -42,7 +50,6 @@ class USSDOptOutHandler(EventHandler):
         """
         account_key = event.payload['account_key']
         oo_store = OptOutStore(self.vumi_api.manager, account_key)
-        contact_store = ContactStore(self.vumi_api.manager, account_key)
 
         event_data = event.payload['content']
 
@@ -54,7 +61,7 @@ class USSDOptOutHandler(EventHandler):
             log.info("SNAUSSDOptOutHandler skipping non-ussd"
                      " message for %r" % (from_addr,))
             return
-        contact = yield contact_store.contact_for_addr('ussd', from_addr)
+        contact = yield self.find_contact(account_key, from_addr)
         if contact:
             opted_out = contact.extra['opted_out']
             if opted_out is not None and opted_out.isdigit():
@@ -66,25 +73,36 @@ class USSDOptOutHandler(EventHandler):
                     yield oo_store.delete_opt_out('msisdn', from_addr)
 
 
-class USSDMenuCompletionHandler(EventHandler):
+class USSDMenuCompletionHandler(SNAEventHandler):
 
     @inlineCallbacks
     def handle_event(self, event, handler_config):
-        sms_content = handler_config['sms_content']
+        sms_copy = handler_config['sms_copy']
         conversation_key = handler_config['conversation_key']
 
-        user_api = self.get_user_api(event['account_key'])
+        account_key = event['account_key']
+        from_addr = event['content']['from_addr']
+
+        user_api = self.get_user_api(account_key)
+        contact = yield self.find_contact(account_key, from_addr)
+
+        if not contact:
+            log.msg('Unable to find contact for %s' % (from_addr,))
+            return
+
+        content = (sms_copy['swahili'] if contact.extra['language'] == '2'
+                    else sms_copy['english'])
+
         conversation = yield user_api.get_wrapped_conversation(
                                                 conversation_key)
         batch_id = yield conversation.get_latest_batch_key()
-        from_addr = event['content']['from_addr']
         [tag] = yield conversation.get_tags()
         msg_options = yield conversation.make_message_options(tag)
         send_message = VumiApiCommand.command('bulk_message', 'send_message',
             command_data={
                 'batch_id': batch_id,
                 'to_addr': from_addr,
-                'content': sms_content,
+                'content': content,
                 'msg_options': msg_options,
             })
         yield self.dispatcher.api_command_publisher.publish_message(
