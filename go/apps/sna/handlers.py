@@ -4,7 +4,6 @@ from twisted.internet.defer import inlineCallbacks
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.handler import EventHandler
-from go.vumitools.api import VumiApiCommand
 
 from vumi import log
 
@@ -98,12 +97,10 @@ class USSDMenuCompletionHandler(SNAEventHandler):
         batch_id = yield conversation.get_latest_batch_key()
         [tag] = yield conversation.get_tags()
         msg_options = yield conversation.make_message_options(tag)
-        send_message = VumiApiCommand.command('bulk_message', 'send_message',
-            command_data={
+
+        yield conversation.dispatch_command('send_message', command_data={
                 'batch_id': batch_id,
                 'to_addr': from_addr,
                 'content': content,
                 'msg_options': msg_options,
             })
-        yield self.dispatcher.api_command_publisher.publish_message(
-            send_message)

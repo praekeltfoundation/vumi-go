@@ -165,7 +165,6 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
     def test_handle_event_swahili(self):
         self.contact.extra['language'] = u'2'
         yield self.contact.save()
-        print self.contact.key
         yield self.send_event(self.contact.msisdn)
         [command] = self.get_dispatcher_commands()[1:]
 
