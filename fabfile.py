@@ -18,7 +18,7 @@ def deploy_vumi():
 
 def restart_celery():
     with cd(env.path):
-        supervisorctl('restart celery')
+        supervisorctl('restart vumi_web:celery')
 
 
 def restart_gunicorn():
@@ -29,11 +29,11 @@ def restart_gunicorn():
     """
     with cd(env.path):
         for i in range(1, 5):
-            supervisorctl('restart go:go_%s' % (i,))
+            supervisorctl('restart vumi_web:goui_%s' % (i,))
 
 
 def supervisorctl(command):
-    return _venv_command('./ve/bin/supervisorctl %s' % (command,))
+    return sudo('supervisorctl %s' % (command,))
 
 
 def _venv_command(command, user='vumi'):
