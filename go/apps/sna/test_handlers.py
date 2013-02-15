@@ -98,3 +98,53 @@ class USSDOptOutHandlerTestCase(EventHandlerTestCase):
 
         opt_outs = yield self.oo_store.list_opt_outs()
         self.assertEqual(opt_outs, [])
+
+
+class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
+
+    handlers = [
+        ('sisi_ni_amani', 'go.apps.sna.USSDMenuCompletionHandler', {}),
+    ]
+
+    @inlineCallbacks
+    def setUp(self):
+        yield super(USSDMenuCompletionHandlerTestCase, self).setUp()
+        yield self.conversation.start()
+        [self.tag] = yield self.conversation.get_tags()
+        self.msg_options = yield self.conversation.make_message_options(
+            self.tag)
+        self.track_event(self.account.key, self.conversation.key,
+            'survey_completed', 'sisi_ni_amani', handler_config={
+                'sms_content': 'foo',
+                'conversation_key': self.conversation.key,
+            })
+
+    @inlineCallbacks
+    def test_handle_event(self):
+        event = self.mkevent('survey_completed', {
+            'from_addr': 'msisdn',
+            'message_id': 'message-id',
+            'transport_type': 'ussd',
+            }, conv_key=self.conversation.key, account_key=self.account.key)
+        yield self.publish_event(event)
+        [start_cmd, send_msg_command] = self.get_dispatcher_commands()
+
+        self.assertEqual(start_cmd['command'], 'start')
+        self.assertEqual(start_cmd['kwargs'], {
+            'batch_id': (yield self.conversation.get_latest_batch_key()),
+            'conversation_key': self.conversation.key,
+            'conversation_type': self.conversation.conversation_type,
+            'is_client_initiated': (
+                yield self.conversation.is_client_initiated()),
+            'msg_options': self.msg_options,
+        })
+
+        self.assertEqual(send_msg_command['command'], 'send_message')
+        self.assertEqual(send_msg_command['kwargs'], {
+            'command_data': {
+                'batch_id': (yield self.conversation.get_latest_batch_key()),
+                'content': 'foo',
+                'to_addr': 'msisdn',
+                'msg_options': self.msg_options,
+            }
+        })
