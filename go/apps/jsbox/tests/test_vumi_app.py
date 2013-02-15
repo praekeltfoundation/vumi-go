@@ -89,7 +89,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
 
     def mk_dummy_api(self, conversation):
         dummy_api = mock.Mock()
-        dummy_api.conversation = conversation
+        dummy_api.config = self.app.get_config_for_conversation(conversation)
         return dummy_api
 
     @inlineCallbacks
@@ -108,6 +108,15 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         yield self.start_conversation(conversation)
         msg = self.set_conversation_tag(self.mkmsg_in(), conversation)
         yield self.dispatch_inbound(msg)
+
+    @inlineCallbacks
+    def test_user_message_sandbox_id(self):
+        conversation = yield self.setup_conversation(
+            metadata=self.mk_metadata('on_inbound_message'))
+        yield self.start_conversation(conversation)
+        msg = self.set_conversation_tag(self.mkmsg_in(), conversation)
+        config = yield self.app.get_config(msg)
+        self.assertEqual(config.sandbox_id, self.user_account.key)
 
     @inlineCallbacks
     def test_event(self):

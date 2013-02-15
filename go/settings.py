@@ -107,12 +107,14 @@ TEMPLATE_LOADERS = (
 )
 
 MIDDLEWARE_CLASSES = (
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'go.base.middleware.VumiUserApiMiddleware',
+    'go.base.middleware.ResponseTimeMiddleware',
 )
 
 ROOT_URLCONF = 'go.urls'
@@ -130,6 +132,7 @@ TEMPLATE_DIRS = (
     abspath("apps", "sequential_send", "templates"),
     abspath("apps", "wikipedia", "ussd", "templates"),
     abspath("apps", "jsbox", "templates"),
+    abspath("apps", "http_api", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -159,7 +162,8 @@ INSTALLED_APPS = (
     'registration',
     'bootstrap',
     'raven.contrib.django',
-    'codemirror'
+    'debug_toolbar',
+    'codemirror',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -175,6 +179,12 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "go.base.context_processors.credit",
     "go.base.context_processors.google_analytics",
 )
+
+DEBUG_TOOLBAR_CONFIG = {
+    'INTERCEPT_REDIRECTS': False,
+    'ENABLE_STACKTRACES': True,
+}
+
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -265,6 +275,10 @@ VUMI_INSTALLED_APPS = {
     'go.apps.jsbox': {
         'namespace': 'jsbox',
         'display_name': 'Javascript App',
+    },
+    'go.apps.http_api': {
+        'namespace': 'http_api',
+        'display_name': 'HTTP API',
     },
 }
 
