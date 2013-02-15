@@ -5,6 +5,7 @@ from django.forms.formsets import BaseFormSet
 from bootstrap.forms import BootstrapForm
 from codemirror.widgets import CodeMirrorTextarea
 
+
 class JsboxForm(BootstrapForm):
     javascript = forms.CharField(widget=CodeMirrorTextarea(), required=False)
     source_url = forms.URLField(required=False)
