@@ -9,7 +9,11 @@ from django.utils.safestring import mark_safe
 class CodeMirrorTextarea(forms.Textarea):
     """A textarea that is edited via the CodeMirror editor."""
 
-    def __init__(self, attrs=None, mode='javascript', theme='default',
+    DEFAULT_CONFIG = {
+        'lineNumbers': True,
+    }
+
+    def __init__(self, attrs=None, mode='javascript', theme='twilight',
                  config=None, codemirror_path='codemirror', **kwargs):
         super(CodeMirrorTextarea, self).__init__(attrs=attrs, **kwargs)
 
@@ -17,14 +21,15 @@ class CodeMirrorTextarea(forms.Textarea):
             mode = {'name': mode}
         self.mode_name = mode['name']
 
-        config = config.copy() if config is not None else {}
+        config = config if config is not None else self.DEFAULT_CONFIG
+        config = config.copy()
         config['mode'] = mode
         config['theme'] = theme
 
         self.option_json = json.dumps(config)
 
         self.js_files = (
-            "%s/lib/codemirror.js" % (codemirror_path,),
+            "%s/lib/codemirror-compressed.js" % (codemirror_path,),
         )
         self.css_files = {
             'all': (
