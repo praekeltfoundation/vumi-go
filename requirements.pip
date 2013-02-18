@@ -30,4 +30,3 @@ django-debug-toolbar==0.9.4
 kombu==2.5.6
 librabbitmq==1.0.1
 hiredis==0.1.1
--e git://github.com/peterp/django-codemirror-widget@f2a44b6c3c3d4d455b277588c9805720feb46e9a#egg=django_codemirror_widget
