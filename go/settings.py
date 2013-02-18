@@ -163,7 +163,6 @@ INSTALLED_APPS = (
     'bootstrap',
     'raven.contrib.django',
     'debug_toolbar',
-    'codemirror',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
