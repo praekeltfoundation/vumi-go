@@ -501,6 +501,7 @@ class VumiApiCommand(Message):
         'exchange': 'vumi',
         'exchange_type': 'direct',
         'routing_key': 'vumi.api',
+        'durable': True,
         }
 
     @classmethod
