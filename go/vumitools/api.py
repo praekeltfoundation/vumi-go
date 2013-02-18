@@ -501,6 +501,7 @@ class VumiApiCommand(Message):
         'exchange': 'vumi',
         'exchange_type': 'direct',
         'routing_key': 'vumi.api',
+        'durable': True,
         }
 
     @classmethod
@@ -525,6 +526,7 @@ class VumiApiEvent(Message):
         'exchange': 'vumi',
         'exchange_type': 'direct',
         'routing_key': 'vumi.event',
+        'durable': True,
         }
 
     @classmethod
