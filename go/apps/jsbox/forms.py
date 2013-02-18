@@ -3,7 +3,7 @@ from django.forms import widgets
 from django.forms.formsets import BaseFormSet
 
 from bootstrap.forms import BootstrapForm
-from codemirror.widgets import CodeMirrorTextarea
+from go.base.widgets import CodeMirrorTextarea
 
 
 class JsboxForm(BootstrapForm):
