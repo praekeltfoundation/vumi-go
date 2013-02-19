@@ -1,6 +1,10 @@
 import json
 from uuid import uuid4
 
+from django.contrib import messages
+from django.core.urlresolvers import reverse
+from django.contrib.sites.models import Site
+
 
 class TokenManagerException(Exception):
     pass
@@ -23,6 +27,10 @@ class TokenManager(object):
 
     def __init__(self, redis):
         self.redis = redis
+
+    @classmethod
+    def for_redis(cls, redis):
+        return cls(redis.sub_manager('token_manager'))
 
     def generate_token(self, user_token_size=6):
         """
@@ -126,14 +134,9 @@ class TokenManager(object):
         """
         return self.redis.delete(token)
 
-
-class DjangoTokenManager(TokenManager):
-
-    def generate_callback(self, return_to, message, callback, callback_args,
-                        callback_kwargs, message_level=None, user_id=None,
-                        lifetime=None):
-        from django.contrib import messages
-        from django.core.urlresolvers import reverse
+    def generate_callback_token(self, return_to, message, callback,
+            callback_args, callback_kwargs, message_level=None, user_id=None,
+            lifetime=None):
 
         message_level = message_level or messages.INFO
         callback_name = '%s.%s' % (callback.__module__, callback.__name__)
@@ -149,8 +152,6 @@ class DjangoTokenManager(TokenManager):
         return token
 
     def url_for_token(self, token):
-        from django.core.urlresolvers import reverse
-        from django.contrib.sites.models import Site
         site = Site.objects.get_current()
         return 'http://%s%s' % (site.domain, reverse('token',
                     kwargs={'token': token}))

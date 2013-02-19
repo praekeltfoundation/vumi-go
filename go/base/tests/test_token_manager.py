@@ -6,25 +6,21 @@ from django.contrib import messages
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.token_manager import (TokenManager, InvalidToken, MalformedToken,
-                                    TokenManagerException, DjangoTokenManager)
+                                    TokenManagerException)
 
-from mock import patch, Mock
+from mock import patch
 
 
-class BaseTokenManagerTestCase(DjangoGoApplicationTestCase):
+class TokenManagerTestCase(DjangoGoApplicationTestCase):
+
     use_riak = False
-    token_manager_class = TokenManager
 
     def setUp(self):
-        super(BaseTokenManagerTestCase, self).setUp()
+        super(TokenManagerTestCase, self).setUp()
         self.client = Client()
         self.redis = self.get_redis_manager()
-        self.tm = self.token_manager_class(
-            self.redis.sub_manager('token_manager'))
+        self.tm = TokenManager(self.redis.sub_manager('token_manager'))
         self.user = self.mk_django_user()
-
-
-class DefaultTokenManagerTestCase(BaseTokenManagerTestCase):
 
     def test_token_generation(self):
         token = self.tm.generate('/some/path/', lifetime=10)
@@ -123,17 +119,8 @@ class DefaultTokenManagerTestCase(BaseTokenManagerTestCase):
             user_token = self.tm.generate('/foo/')
         self.assertEqual(user_token, 'to3')
 
-
-def callback_for_test(arg, kwarg='kwarg'):
-    pass
-
-
-class DjangoTokenManagerTestCase(BaseTokenManagerTestCase):
-
-    token_manager_class = DjangoTokenManager
-
     def test_generate_callback(self):
-        token = self.tm.generate_callback('/foo/', 'It worked',
+        token = self.tm.generate_callback_token('/foo/', 'It worked',
             callback_for_test, callback_args=['arg'],
             callback_kwargs={'kwarg': 'kwarg'}, message_level=messages.SUCCESS,
             user_id=self.user.pk)
@@ -149,3 +136,7 @@ class DjangoTokenManagerTestCase(BaseTokenManagerTestCase):
             'message_level': messages.SUCCESS,
             'message': 'It worked',
             })
+
+
+def callback_for_test(arg, kwarg='kwarg'):
+    pass

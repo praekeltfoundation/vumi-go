@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
-from django.contrib.sites.models import Site
+
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
@@ -9,13 +9,13 @@ from django.template.loader import render_to_string
 
 from go.account.forms import EmailForm, AccountForm
 from go.account.tasks import update_account_details
-from go.base.token_manager import DjangoTokenManager
-from vumi.persist.redis_manager import RedisManager
+from go.base.token_manager import TokenManager
 
 
 @login_required
 def index(request):
     profile = request.user.get_profile()
+    redis = request.user_api.api.redis
     account = profile.get_user_account()
     account_form = AccountForm(request.user, initial={
         'name': request.user.first_name,
@@ -42,12 +42,9 @@ def index(request):
                         data['confirm_start_conversation'],
                 }
 
-                redis = RedisManager.from_config(
-                                    settings.VUMI_API_CONFIG['redis_manager'])
-                token_manager = DjangoTokenManager(
+                token_manager = TokenManager(
                                     redis.sub_manager('token_manager'))
-
-                token = token_manager.generate_callback(request.path,
+                token = token_manager.generate_callback_token(request.path,
                     'Your details are being updated', update_account_details,
                     callback_args=(request.user.id,),
                     callback_kwargs=params, user_id=request.user.id)

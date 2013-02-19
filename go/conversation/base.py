@@ -28,7 +28,7 @@ from go.conversation.tasks import (export_conversation_messages,
 from go.base import message_store_client as ms_client
 from go.base.utils import (make_read_only_form, conversation_or_404,
                             page_range_window)
-from go.base.token_manager import DjangoTokenManager
+from go.base.token_manager import TokenManager
 
 
 class ConversationView(TemplateView):
@@ -221,9 +221,8 @@ class StartConversationView(ConversationView):
         redirect_to = self.get_view_url('confirm',
                             conversation_key=conversation.key)
         # The token to be sent.
-        redis = RedisManager.from_config(
-                                    settings.VUMI_API_CONFIG['redis_manager'])
-        token_manager = DjangoTokenManager(redis.sub_manager('token_manager'))
+        redis = request.user_api.api.redis
+        token_manager = TokenManager(redis.sub_manager('token_manager'))
         token = token_manager.generate(redirect_to, user_id=request.user.id,
                                         extra_params=params)
         conversation.send_token_url(token_manager.url_for_token(token),
@@ -253,9 +252,8 @@ class ConfirmConversationView(ConversationView):
                 sending a conversation confirmation SMS will assign a batch key
                 while not actually starting the conversation.
         """
-        redis = RedisManager.from_config(
-                                    settings.VUMI_API_CONFIG['redis_manager'])
-        token_manager = DjangoTokenManager(redis.sub_manager('token_manager'))
+        redis = request.user_api.api.redis
+        token_manager = TokenManager(redis.sub_manager('token_manager'))
         token = request.GET.get('token')
         token_data = token_manager.verify_get(token)
         if not token_data:
@@ -268,9 +266,8 @@ class ConfirmConversationView(ConversationView):
 
     def post(self, request, conversation):
         token = request.POST.get('token')
-        redis = RedisManager.from_config(
-                                    settings.VUMI_API_CONFIG['redis_manager'])
-        token_manager = DjangoTokenManager(redis.sub_manager('token_manager'))
+        redis = request.user_api.api.redis
+        token_manager = TokenManager(redis.sub_manager('token_manager'))
         token_data = token_manager.verify_get(token)
         if not token_data:
             raise Http404
