@@ -137,7 +137,7 @@ class DjangoTokenManager(TokenManager):
 
         message_level = message_level or messages.INFO
         callback_name = '%s.%s' % (callback.__module__, callback.__name__)
-        return self.generate(reverse('token_task'), user_id=user_id,
+        token = self.generate(reverse('token_task'), user_id=user_id,
             lifetime=lifetime, extra_params={
                 'callback_name': callback_name,
                 'callback_args': callback_args,
@@ -146,3 +146,11 @@ class DjangoTokenManager(TokenManager):
                 'message': message,
                 'message_level': message_level,
             })
+        return token
+
+    def url_for_token(self, token):
+        from django.core.urlresolvers import reverse
+        from django.contrib.sites.models import Site
+        site = Site.objects.get_current()
+        return 'http://%s%s' % (site.domain, reverse('token',
+                    kwargs={'token': token}))

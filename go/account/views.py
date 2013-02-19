@@ -42,7 +42,6 @@ def index(request):
                         data['confirm_start_conversation'],
                 }
 
-                site = Site.objects.get_current()
                 redis = RedisManager.from_config(
                                     settings.VUMI_API_CONFIG['redis_manager'])
                 token_manager = DjangoTokenManager(
@@ -53,12 +52,9 @@ def index(request):
                     callback_args=(request.user.id,),
                     callback_kwargs=params, user_id=request.user.id)
 
-                token_url = 'http://%s%s' % (site.domain,
-                                reverse('token', kwargs={'token': token}))
-
                 context = params.copy()
                 context.update({
-                    'token_url': token_url,
+                    'token_url': token_manager.url_for_token(token),
                     })
 
                 send_mail('Confirm account detail changes',
