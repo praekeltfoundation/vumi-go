@@ -28,10 +28,6 @@ class TokenManager(object):
     def __init__(self, redis):
         self.redis = redis
 
-    @classmethod
-    def for_redis(cls, redis):
-        return cls(redis.sub_manager('token_manager'))
-
     def generate_token(self, user_token_size=6):
         """
         Generate a token that doesn't exist yet but is also short enough
