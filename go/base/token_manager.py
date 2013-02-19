@@ -129,20 +129,19 @@ class TokenManager(object):
 
 class DjangoTokenManager(TokenManager):
 
-    def generate_task(self, return_to, message, task, task_args, task_kwargs,
-                        immediate=False, message_level=None, user_id=None,
+    def generate_callback(self, return_to, message, callback, callback_args,
+                        callback_kwargs, message_level=None, user_id=None,
                         lifetime=None):
         from django.contrib import messages
         from django.core.urlresolvers import reverse
 
         message_level = message_level or messages.INFO
-        task_name = '%s.%s' % (task.__module__, task.__name__)
+        callback_name = '%s.%s' % (callback.__module__, callback.__name__)
         return self.generate(reverse('token_task'), user_id=user_id,
             lifetime=lifetime, extra_params={
-                'immediate': immediate,
-                'task_name': task_name,
-                'task_args': task_args,
-                'task_kwargs': task_kwargs,
+                'callback_name': callback_name,
+                'callback_args': callback_args,
+                'callback_kwargs': callback_kwargs,
                 'return_to': return_to,
                 'message': message,
                 'message_level': message_level,

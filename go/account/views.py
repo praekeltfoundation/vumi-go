@@ -48,11 +48,10 @@ def index(request):
                 token_manager = DjangoTokenManager(
                                     redis.sub_manager('token_manager'))
 
-                token = token_manager.generate_task(request.path,
+                token = token_manager.generate_callback(request.path,
                     'Your details are being updated', update_account_details,
-                    task_args=(request.user.id,),
-                    task_kwargs=params, user_id=request.user.id,
-                    immediate=True)
+                    callback_args=(request.user.id,),
+                    callback_kwargs=params, user_id=request.user.id)
 
                 token_url = 'http://%s%s' % (site.domain,
                                 reverse('token', kwargs={'token': token}))
