@@ -42,8 +42,12 @@ class CodeMirrorTextarea(forms.Textarea):
     def media(self):
         return forms.Media(css=self.css_files, js=self.js_files)
 
+    @staticmethod
+    def id_for_name(name):
+        return "id_%s" % (name,)
+
     def render(self, name, value, attrs=None):
-        code_textarea_id = "id_%s" % (name,)
+        code_textarea_id = self.id_for_name(name)
         output = [super(CodeMirrorTextarea, self).render(name, value, attrs),
                   '<script type="text/javascript">'
                   '$(function () {'
@@ -65,26 +69,37 @@ class CodeField(forms.CharField):
 class SourceUrlTextInput(forms.TextInput):
     """Source URL widget."""
 
-    def __init__(self, dest, attrs=None, **kwargs):
+    def __init__(self, code_field, attrs=None, **kwargs):
         super(SourceUrlTextInput, self).__init__(attrs=attrs, **kwargs)
-        self.dest_widget = dest
+        self.code_field = code_field
 
     @property
     def media(self):
         js = ('js/jsbox.js',)
         return forms.Media(js=js)
 
+    def code_field_name(self, name):
+        parts = name.rsplit('-', 1)
+        if len(parts) != 2:
+            raise ValueError("Couldn't understand field name %r" % name)
+        return "%s-%s" % (parts[0], self.code_field)
+
     def render(self, name, value, attrs=None):
         source_input_id = 'id_%s' % (name,)
+        # constructing the correct code field name like this isn't
+        # great but I don't have a better idea
+        code_field_name = self.code_field_name(name)
+        code_field_id = CodeMirrorTextarea.id_for_name(code_field_name)
         output = [super(SourceUrlTextInput, self).render(name, value, attrs),
                   '<script type="text/javascript">'
-                  'SourceUrl(document.getElementById("%s"));'
+                  'SourceUrl(document.getElementById("%s"),'
+                  '          document.getElementById("%s"));'
                   '</script>' %
-                  (source_input_id,)]
+                  (source_input_id, code_field_id)]
         return mark_safe("\n".join(output))
 
 
 class SourceUrlField(forms.URLField):
-    def __init__(self, dest, **kwargs):
-        widget = SourceUrlTextInput(dest=dest.widget)
+    def __init__(self, code_field, **kwargs):
+        widget = SourceUrlTextInput(code_field=code_field)
         super(SourceUrlField, self).__init__(widget=widget, **kwargs)
