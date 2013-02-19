@@ -15,8 +15,6 @@ from django.conf.urls.defaults import url, patterns
 from django.conf import settings
 from django.http import HttpResponse
 
-from vumi.persist.redis_manager import RedisManager
-
 from go.vumitools.conversation.models import (
     CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
