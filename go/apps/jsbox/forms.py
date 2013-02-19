@@ -7,7 +7,7 @@ from go.base.widgets import CodeField, SourceUrlField
 
 class JsboxForm(BootstrapForm):
     javascript = CodeField(required=False)
-    source_url = SourceUrlField(dest=javascript, required=False)
+    source_url = SourceUrlField(code_field='javascript', required=False)
 
     @staticmethod
     def initial_from_metadata(metadata):
@@ -23,7 +23,7 @@ class JsboxForm(BootstrapForm):
 class JsboxAppConfigForm(BootstrapForm):
     key = forms.CharField()
     value = CodeField(required=False)
-    source_url = SourceUrlField(dest=value, required=False)
+    source_url = SourceUrlField(code_field='value', required=False)
 
     @staticmethod
     def initial_from_metadata(metadata):

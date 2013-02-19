@@ -1,6 +1,5 @@
-function SourceUrl(elem) {
+function SourceUrl(elem, dest) {
     var $input = $('#' + elem.id);
-    var $dest = null;  // TODO: find this somehow!?
 
     $button = $('<button><i class="icon-plus"></i> Update via URL</button>');
     $button.on('click', function() {
@@ -13,8 +12,7 @@ function SourceUrl(elem) {
                 type: 'POST',
                 data: {'url': url},
                 success: function(r) {
-                    alert('Yay!');
-                    // TODO: dest.on_source_update(r);
+                    dest.on_source_update(r);
                 },
                 error: function() {
                     alert('Something bad happened.');
