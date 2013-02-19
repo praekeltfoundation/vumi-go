@@ -11,6 +11,7 @@ class CodeMirrorTextarea(forms.Textarea):
 
     DEFAULT_CONFIG = {
         'lineNumbers': True,
+        'lineWrapping': True,
     }
 
     def __init__(self, attrs=None, mode='javascript', theme='twilight',
