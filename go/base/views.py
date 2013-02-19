@@ -6,6 +6,7 @@ from django.shortcuts import render, Http404, redirect
 from django.contrib.auth.views import logout
 from django.contrib import messages
 from django.core.urlresolvers import reverse
+from django.contrib.auth.decorators import login_required
 
 from vumi.persist.redis_manager import RedisManager
 from vumi.utils import load_class_by_string
@@ -50,8 +51,9 @@ def token(request, token):
         })))
 
 
+@login_required
 def token_task(request):
-    redis = RedisManager.from_config(settings.VUMI_API_CONFIG['redis_manager'])
+    redis = request.user_api.api.redis
     tm = TokenManager(redis.sub_manager('token_manager'))
 
     token = request.GET.get('token')
