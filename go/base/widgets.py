@@ -75,7 +75,7 @@ class SourceUrlTextInput(forms.TextInput):
 
     @property
     def media(self):
-        js = ('js/jsbox.js',)
+        js = ('js/source_url.js',)
         return forms.Media(js=js)
 
     def code_field_name(self, name):
