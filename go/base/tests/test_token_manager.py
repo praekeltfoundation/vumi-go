@@ -2,23 +2,29 @@ import urllib
 
 from django.test.client import Client
 from django.core.urlresolvers import reverse
+from django.contrib import messages
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.token_manager import (TokenManager, InvalidToken, MalformedToken,
-                                    TokenManagerException)
+                                    TokenManagerException, DjangoTokenManager)
 
-from mock import patch
+from mock import patch, Mock
 
 
-class TokenManagerTestCase(DjangoGoApplicationTestCase):
+class BaseTokenManagerTestCase(DjangoGoApplicationTestCase):
     use_riak = False
+    token_manager_class = TokenManager
 
     def setUp(self):
-        super(TokenManagerTestCase, self).setUp()
+        super(BaseTokenManagerTestCase, self).setUp()
         self.client = Client()
         self.redis = self.get_redis_manager()
-        self.tm = TokenManager(self.redis.sub_manager('token_manager'))
+        self.tm = self.token_manager_class(
+            self.redis.sub_manager('token_manager'))
         self.user = self.mk_django_user()
+
+
+class DefaultTokenManagerTestCase(BaseTokenManagerTestCase):
 
     def test_token_generation(self):
         token = self.tm.generate('/some/path/', lifetime=10)
@@ -116,3 +122,30 @@ class TokenManagerTestCase(DjangoGoApplicationTestCase):
             mock.side_effect = [('to1', 'ken'), ('to2', 'ken'), ('to3', 'ken')]
             user_token = self.tm.generate('/foo/')
         self.assertEqual(user_token, 'to3')
+
+
+def callback_for_test(arg, kwarg='kwarg'):
+    pass
+
+
+class DjangoTokenManagerTestCase(BaseTokenManagerTestCase):
+
+    token_manager_class = DjangoTokenManager
+
+    def test_generate_callback(self):
+        token = self.tm.generate_callback('/foo/', 'It worked',
+            callback_for_test, callback_args=['arg'],
+            callback_kwargs={'kwarg': 'kwarg'}, message_level=messages.SUCCESS,
+            user_id=self.user.pk)
+        token_data = self.tm.get(token)
+        self.assertEqual(token_data['redirect_to'], reverse('token_task'))
+        self.assertEqual(token_data['user_id'], str(self.user.pk))
+        self.assertEqual(token_data['extra_params'], {
+            'callback_args': ['arg'],
+            'callback_kwargs': {'kwarg': 'kwarg'},
+            'callback_name': '%s.%s' % (callback_for_test.__module__,
+                                        callback_for_test.__name__),
+            'return_to': '/foo/',
+            'message_level': messages.SUCCESS,
+            'message': 'It worked',
+            })

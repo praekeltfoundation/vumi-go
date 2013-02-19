@@ -60,16 +60,14 @@ def token_task(request):
         raise Http404
 
     params = token_data['extra_params']
-    immediate = params['immediate']
-    task_name = params['task_name']
-    task_args = params['task_args']
-    task_kwargs = params['task_kwargs']
+    callback_name = params['callback_name']
+    callback_args = params['callback_args']
+    callback_kwargs = params['callback_kwargs']
     return_to = params['return_to']
     message = params['message']
     message_level = params['message_level']
 
-    task = load_class_by_string(task_name)
-    func = task if immediate else task.delay
-    func(*task_args, **task_kwargs)
+    callback = load_class_by_string(callback_name)
+    callback(*callback_args, **callback_kwargs)
     messages.add_message(request, message_level, message)
     return redirect(return_to)
