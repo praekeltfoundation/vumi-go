@@ -43,9 +43,48 @@ class CodeMirrorTextarea(forms.Textarea):
         return forms.Media(css=self.css_files, js=self.js_files)
 
     def render(self, name, value, attrs=None):
+        code_textarea_id = "id_%s" % (name,)
         output = [super(CodeMirrorTextarea, self).render(name, value, attrs),
                   '<script type="text/javascript">'
-                  'CodeMirror.fromTextArea(document.getElementById("%s"), %s);'
+                  '$(function () {'
+                  '  var elem = document.getElementById("%s");'
+                  '  var cm = CodeMirror.fromTextArea(elem, %s);'
+                  '  elem.on_source_update = function (src) {'
+                  '    cm.setValue(src);'
+                  '  };'
+                  '});'
                   '</script>' %
-                  ('id_%s' % name, self.option_json)]
+                  (code_textarea_id, self.option_json)]
         return mark_safe("\n".join(output))
+
+
+class CodeField(forms.CharField):
+    widget = CodeMirrorTextarea
+
+
+class SourceUrlTextInput(forms.TextInput):
+    """Source URL widget."""
+
+    def __init__(self, dest, attrs=None, **kwargs):
+        super(SourceUrlTextInput, self).__init__(attrs=attrs, **kwargs)
+        self.dest_widget = dest
+
+    @property
+    def media(self):
+        js = ('js/jsbox.js',)
+        return forms.Media(js=js)
+
+    def render(self, name, value, attrs=None):
+        source_input_id = 'id_%s' % (name,)
+        output = [super(SourceUrlTextInput, self).render(name, value, attrs),
+                  '<script type="text/javascript">'
+                  'SourceUrl(document.getElementById("%s"));'
+                  '</script>' %
+                  (source_input_id,)]
+        return mark_safe("\n".join(output))
+
+
+class SourceUrlField(forms.URLField):
+    def __init__(self, dest, **kwargs):
+        widget = SourceUrlTextInput(dest=dest.widget)
+        super(SourceUrlField, self).__init__(widget=widget, **kwargs)

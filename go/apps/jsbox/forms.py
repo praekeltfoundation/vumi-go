@@ -1,14 +1,13 @@
 from django import forms
-from django.forms import widgets
 from django.forms.formsets import BaseFormSet
 
 from bootstrap.forms import BootstrapForm
-from go.base.widgets import CodeMirrorTextarea
+from go.base.widgets import CodeField, SourceUrlField
 
 
 class JsboxForm(BootstrapForm):
-    javascript = forms.CharField(widget=CodeMirrorTextarea(), required=False)
-    source_url = forms.URLField(required=False)
+    javascript = CodeField(required=False)
+    source_url = SourceUrlField(dest=javascript, required=False)
 
     @staticmethod
     def initial_from_metadata(metadata):
@@ -20,18 +19,11 @@ class JsboxForm(BootstrapForm):
             'source_url': self.cleaned_data['source_url'],
         }
 
-    class Media:
-        js = ('js/jsbox.js',)
-
-
-class ConfigValueField(forms.CharField):
-    widget = widgets.Textarea
-
 
 class JsboxAppConfigForm(BootstrapForm):
     key = forms.CharField()
-    value = ConfigValueField(required=False)
-    source_url = forms.URLField(required=False)
+    value = CodeField(required=False)
+    source_url = SourceUrlField(dest=value, required=False)
 
     @staticmethod
     def initial_from_metadata(metadata):
