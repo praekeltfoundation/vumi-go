@@ -63,6 +63,8 @@ def index(request):
     # NOTE: If we have no conversations, we don't pad.
     last_page_size = len(conversations) % CONVERSATIONS_PER_PAGE
     padding = [None] * (CONVERSATIONS_PER_PAGE - last_page_size)
+    conversations = sorted(conversations, key=lambda c: c.created_at,
+                            reverse=True)
     conversations += padding
 
     paginator = Paginator(conversations, CONVERSATIONS_PER_PAGE)

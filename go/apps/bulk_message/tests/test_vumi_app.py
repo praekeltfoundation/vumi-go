@@ -2,6 +2,8 @@
 
 """Tests for go.vumitools.bulk_send_application"""
 
+import uuid
+
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet.task import Clock
 
@@ -10,6 +12,7 @@ from vumi.components.window_manager import WindowManager
 from vumi.tests.utils import LogCatcher
 
 from go.vumitools.tests.utils import AppWorkerTestCase
+from go.vumitools.api import VumiApiCommand
 from go.apps.bulk_message.vumi_app import BulkMessageApplication
 
 
@@ -179,6 +182,36 @@ class TestBulkMessageApplication(AppWorkerTestCase):
                                                             user_account_key)
         self.assertEqual(msg.payload['helper_metadata']['tag']['tag'],
                                                             ['pool', 'tag1'])
+
+    @inlineCallbacks
+    def test_process_command_send_message_in_reply_to(self):
+        msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
+        yield self.vumi_api.mdb.add_inbound_message(msg)
+        command = VumiApiCommand.command('worker', 'send_message',
+            command_data={
+                u'batch_id': u'batch-id',
+                u'content': u'foo',
+                u'to_addr': u'to_addr',
+                u'msg_options': {
+                    u'helper_metadata': {
+                        u'go': {
+                            u'user_account': u'account-key'
+                        },
+                        u'tag': {
+                            u'tag': [u'longcode', u'default10080']
+                        }
+                    },
+                    u'transport_name': u'smpp_transport',
+                    u'in_reply_to': msg['message_id'],
+                    u'transport_type': u'sms',
+                    u'from_addr': u'default10080',
+                }
+            })
+        yield self.app.consume_control_command(command)
+        [sent_msg] = self.get_dispatched_messages()
+        self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
+        self.assertEqual(sent_msg['content'], 'foo')
+        self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
 
     @inlineCallbacks
     def test_collect_metrics(self):

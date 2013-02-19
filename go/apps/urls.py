@@ -19,4 +19,6 @@ urlpatterns = patterns('',
         include('go.apps.wikipedia.sms.urls', namespace='wikipedia_sms')),
     url(r'^jsbox/',
         include('go.apps.jsbox.urls', namespace='jsbox')),
+    url(r'^http_api/',
+        include('go.apps.http_api.urls', namespace='http_api')),
 )
