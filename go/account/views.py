@@ -67,7 +67,9 @@ def index(request):
                         context), settings.DEFAULT_FROM_EMAIL,
                         [request.user.email, 'support@vumi.org'])
 
-                messages.info(request, 'Please confirm this change via email.')
+                messages.info(request,
+                    'Please confirm this change by clicking on the link '
+                    'that was just sent to your mailbox.')
                 return redirect('account:index')
 
         elif '_email' in request.POST:
