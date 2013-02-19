@@ -1,5 +1,5 @@
-from uuid import uuid4
 import json
+from uuid import uuid4
 
 
 class TokenManagerException(Exception):
@@ -125,3 +125,25 @@ class TokenManager(object):
             The token to expire.
         """
         return self.redis.delete(token)
+
+
+class DjangoTokenManager(TokenManager):
+
+    def generate_task(self, return_to, message, task, task_args, task_kwargs,
+                        immediate=False, message_level=None, user_id=None,
+                        lifetime=None):
+        from django.contrib import messages
+        from django.core.urlresolvers import reverse
+
+        message_level = message_level or messages.INFO
+        task_name = '%s.%s' % (task.__module__, task.__name__)
+        return self.generate(reverse('token_task'), user_id=user_id,
+            lifetime=lifetime, extra_params={
+                'immediate': immediate,
+                'task_name': task_name,
+                'task_args': task_args,
+                'task_kwargs': task_kwargs,
+                'return_to': return_to,
+                'message': message,
+                'message_level': message_level,
+            })

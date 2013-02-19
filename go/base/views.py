@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.core.urlresolvers import reverse
 
 from vumi.persist.redis_manager import RedisManager
+from vumi.utils import load_class_by_string
 
 from go.base.token_manager import TokenManager
 
@@ -23,6 +24,7 @@ def token(request, token):
     token_data = tm.get(token)
     if not token_data:
         raise Http404
+
     user_id = int(token_data['user_id'])
     redirect_to = token_data['redirect_to']
     system_token = token_data['system_token']
@@ -46,3 +48,28 @@ def token(request, token):
     return redirect('%s?%s' % (reverse('auth_login'), urllib.urlencode({
         'next': reverse('token', kwargs={'token': token}),
         })))
+
+
+def token_task(request):
+    redis = RedisManager.from_config(settings.VUMI_API_CONFIG['redis_manager'])
+    tm = TokenManager(redis.sub_manager('token_manager'))
+
+    token = request.GET.get('token')
+    token_data = tm.verify_get(token)
+    if not token_data:
+        raise Http404
+
+    params = token_data['extra_params']
+    immediate = params['immediate']
+    task_name = params['task_name']
+    task_args = params['task_args']
+    task_kwargs = params['task_kwargs']
+    return_to = params['return_to']
+    message = params['message']
+    message_level = params['message_level']
+
+    task = load_class_by_string(task_name)
+    func = task if immediate else task.delay
+    func(*task_args, **task_kwargs)
+    messages.add_message(request, message_level, message)
+    return redirect(return_to)
