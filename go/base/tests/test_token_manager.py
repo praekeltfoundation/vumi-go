@@ -12,7 +12,6 @@ from mock import patch
 
 
 class TokenManagerTestCase(DjangoGoApplicationTestCase):
-
     use_riak = False
 
     def setUp(self):
@@ -139,4 +138,8 @@ class TokenManagerTestCase(DjangoGoApplicationTestCase):
 
 
 def callback_for_test(arg, kwarg='kwarg'):
+    """
+    This is just here to so the test_generate_callback has an actual
+    callback to refer to.
+    """
     pass
