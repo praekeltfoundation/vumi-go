@@ -1,10 +1,16 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
+from django.contrib.sites.models import Site
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.conf import settings
+from django.template.loader import render_to_string
 
 from go.account.forms import EmailForm, AccountForm
+from go.account.tasks import update_account_details
+from go.base.token_manager import DjangoTokenManager
+from vumi.persist.redis_manager import RedisManager
 
 
 @login_required
@@ -24,22 +30,44 @@ def index(request):
         if '_account' in request.POST:
             account_form = AccountForm(request.user, request.POST)
             if account_form.is_valid():
-                user = request.user
-                new_password = account_form.cleaned_data['new_password']
-                if new_password:
-                    user.set_password(new_password)
-                user.first_name = account_form.cleaned_data['name']
-                user.last_name = account_form.cleaned_data['surname']
-                email_address = account_form.cleaned_data['email_address']
-                user.email = user.username = email_address
-                user.save()
 
-                account.msisdn = unicode(account_form.cleaned_data['msisdn'])
-                account.confirm_start_conversation = \
-                        account_form.cleaned_data['confirm_start_conversation']
-                account.save()
+                data = account_form.cleaned_data
+                params = {
+                    'first_name': data['name'],
+                    'last_name': data['surname'],
+                    'new_password': data['new_password'],
+                    'email_address': data['email_address'],
+                    'msisdn': data['msisdn'],
+                    'confirm_start_conversation':
+                        data['confirm_start_conversation'],
+                }
 
-                messages.info(request, 'Account Details updated.')
+                site = Site.objects.get_current()
+                redis = RedisManager.from_config(
+                                    settings.VUMI_API_CONFIG['redis_manager'])
+                token_manager = DjangoTokenManager(
+                                    redis.sub_manager('token_manager'))
+
+                token = token_manager.generate_task(request.path,
+                    'Your details are being updated', update_account_details,
+                    task_args=(request.user.id,),
+                    task_kwargs=params, user_id=request.user.id,
+                    immediate=True)
+
+                token_url = 'http://%s%s' % (site.domain,
+                                reverse('token', kwargs={'token': token}))
+
+                context = params.copy()
+                context.update({
+                    'token_url': token_url,
+                    })
+
+                send_mail('Confirm account detail changes',
+                    render_to_string('account/change_account_details_mail.txt',
+                        context), settings.DEFAULT_FROM_EMAIL,
+                        [request.user.email, 'support@vumi.org'])
+
+                messages.info(request, 'Please confirm this change via email.')
                 return redirect('account:index')
 
         elif '_email' in request.POST:
