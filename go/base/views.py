@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from vumi.persist.redis_manager import RedisManager
 from vumi.utils import load_class_by_string
 
-from go.base.token_manager import TokenManager
+from go.vumitools.token_manager import TokenManager
 
 
 def todo(request):  # pragma: no cover
