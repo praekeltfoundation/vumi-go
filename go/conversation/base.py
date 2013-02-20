@@ -309,6 +309,7 @@ class ShowConversationView(ConversationView):
         params = {
             'conversation': conversation,
             'is_editable': (self.edit_conversation_forms is not None),
+            'user_api': request.user_api,
             }
         status = conversation.get_status()
         templ = lambda name: self.get_template_name('includes/%s' % (name,))
@@ -452,6 +453,7 @@ class MessageSearchResultConversationView(ConversationView):
             'token': token,
             'batch_id': batch_id,
             'message_direction': direction,
+            'user_api': request.user_api,
         }
         if match_results.is_in_progress():
             context.update({
