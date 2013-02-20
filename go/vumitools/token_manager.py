@@ -90,12 +90,10 @@ class TokenManager(object):
 
         # If we end up here then we've hit the race condition and we need to
         # retry.
-        call_again = lambda: self.generate(redirect_to, user_id=user_id,
-                    lifetime=lifetime, token=token, extra_params=extra_params)
-        user_token = None
-        while user_token is None:
-            user_token = yield call_again()
-        returnValue(user_token)
+        value = yield self.generate(redirect_to, user_id=user_id,
+                                        lifetime=lifetime, token=token,
+                                        extra_params=extra_params)
+        returnValue(value)
 
     @Manager.calls_manager
     def get(self, token, verify=None):
