@@ -6,10 +6,12 @@ from django.shortcuts import render, Http404, redirect
 from django.contrib.auth.views import logout
 from django.contrib import messages
 from django.core.urlresolvers import reverse
+from django.contrib.auth.decorators import login_required
 
 from vumi.persist.redis_manager import RedisManager
+from vumi.utils import load_class_by_string
 
-from go.base.token_manager import TokenManager
+from go.vumitools.token_manager import TokenManager
 
 
 def todo(request):  # pragma: no cover
@@ -23,6 +25,7 @@ def token(request, token):
     token_data = tm.get(token)
     if not token_data:
         raise Http404
+
     user_id = int(token_data['user_id'])
     redirect_to = token_data['redirect_to']
     system_token = token_data['system_token']
@@ -46,3 +49,27 @@ def token(request, token):
     return redirect('%s?%s' % (reverse('auth_login'), urllib.urlencode({
         'next': reverse('token', kwargs={'token': token}),
         })))
+
+
+@login_required
+def token_task(request):
+    redis = request.user_api.api.redis
+    tm = TokenManager(redis.sub_manager('token_manager'))
+
+    token = request.GET.get('token')
+    token_data = tm.verify_get(token)
+    if not token_data:
+        raise Http404
+
+    params = token_data['extra_params']
+    callback_name = params['callback_name']
+    callback_args = params['callback_args']
+    callback_kwargs = params['callback_kwargs']
+    return_to = params['return_to']
+    message = params['message']
+    message_level = params['message_level']
+
+    callback = load_class_by_string(callback_name)
+    callback(*callback_args, **callback_kwargs)
+    messages.add_message(request, message_level, message)
+    return redirect(return_to)
