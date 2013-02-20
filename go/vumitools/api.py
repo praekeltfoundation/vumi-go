@@ -26,6 +26,7 @@ from go.vumitools.conversation import ConversationStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
 from go.vumitools.middleware import DebitAccountMiddleware
+from go.vumitools.token_manager import TokenManager
 
 from django.conf import settings
 from django.utils.datastructures import SortedDict
@@ -332,6 +333,8 @@ class VumiApi(object):
         self.mdb = MessageStore(self.manager,
                                 self.redis.sub_manager('message_store'))
         self.account_store = AccountStore(self.manager)
+        self.token_manager = TokenManager(
+                                self.redis.sub_manager('token_manager'))
         self.mapi = sender
 
     @staticmethod
