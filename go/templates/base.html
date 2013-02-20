@@ -76,7 +76,7 @@
             <div class="modal-body">
                 <select id="convtype" class="required">
                     <option value="" selected="selected">Please choose</option>
-                    {% for application, settings in user_api.applications.items %}
+                    {% for application, settings in request.user_api.applications.items %}
                         <option value="{% url settings.namespace|add:':new' %}">{{settings.display_name}}</option>
                     {% endfor %}
                 </select>

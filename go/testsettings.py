@@ -3,7 +3,11 @@ from settings import *
 
 
 # This needs to point at the test riak buckets.
-VUMI_API_CONFIG['riak_manager'] = {'bucket_prefix': 'test.'}
+VUMI_API_CONFIG['riak_manager'] = {
+    'bucket_prefix': 'test.',
+    # 'transport_class': 'riak.RiakPbcTransport',
+    # 'port': 8087,
+    }
 VUMI_API_CONFIG['redis_manager'] = {
     'key_prefix': 'test',
     'FAKE_REDIS': 'sure',
