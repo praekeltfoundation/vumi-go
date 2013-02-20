@@ -9,13 +9,13 @@ from django.template.loader import render_to_string
 
 from go.account.forms import EmailForm, AccountForm
 from go.account.tasks import update_account_details
-from go.base.token_manager import TokenManager
+from go.base.django_token_manager import DjangoTokenManager
 
 
 @login_required
 def index(request):
     profile = request.user.get_profile()
-    redis = request.user_api.api.redis
+    token_manager = DjangoTokenManager(request.user_api.api.token_manager)
     account = profile.get_user_account()
     account_form = AccountForm(request.user, initial={
         'name': request.user.first_name,
@@ -42,8 +42,6 @@ def index(request):
                         data['confirm_start_conversation'],
                 }
 
-                token_manager = TokenManager(
-                                    redis.sub_manager('token_manager'))
                 token = token_manager.generate_callback_token(request.path,
                     'Your details are being updated', update_account_details,
                     callback_args=(request.user.id,),

@@ -1,9 +1,9 @@
+# -*- test-case-name: go.vumitools.tests.test_token_manager -*-
 import json
 from uuid import uuid4
 
-from django.contrib import messages
-from django.core.urlresolvers import reverse
-from django.contrib.sites.models import Site
+from twisted.internet.defer import returnValue
+from vumi.persist.redis_base import Manager
 
 
 class TokenManagerException(Exception):
@@ -26,8 +26,9 @@ class TokenManager(object):
     DEFAULT_LIFETIME = 60 * 60 * 4
 
     def __init__(self, redis):
-        self.redis = redis
+        self.manager = self.redis = redis
 
+    @Manager.calls_manager
     def generate_token(self, user_token_size=6):
         """
         Generate a token that doesn't exist yet but is also short enough
@@ -41,9 +42,10 @@ class TokenManager(object):
             full_token = uuid4().hex
             user_token = full_token[0:user_token_size]
             system_token = full_token[user_token_size:]
-            token_taken = self.redis.exists(user_token)
-        return (user_token, system_token)
+            token_taken = (yield self.redis.exists(user_token))
+        returnValue((user_token, system_token))
 
+    @Manager.calls_manager
     def generate(self, redirect_to, user_id=None, lifetime=None, token=None,
                     extra_params=None):
         """
@@ -66,20 +68,20 @@ class TokenManager(object):
             data that can be encoded as JSON.
         """
         lifetime = lifetime or self.DEFAULT_LIFETIME
-        user_token, system_token = token or self.generate_token()
+        user_token, system_token = token or (yield self.generate_token())
         extra_params = extra_params or {}
 
         # This is to avoid a possible race condition which could occur in
         # `generate_token()` if two identical user_tokens are generated before
         # either is stored.
-        if self.redis.hsetnx(user_token, 'system_token', system_token):
-            self.redis.hmset(user_token, {
+        if (yield self.redis.hsetnx(user_token, 'system_token', system_token)):
+            yield self.redis.hmset(user_token, {
                 'redirect_to': redirect_to,
                 'user_id': user_id or '',
                 'extra_params': json.dumps(extra_params),
                 })
-            self.redis.expire(user_token, lifetime)
-            return user_token
+            yield self.redis.expire(user_token, lifetime)
+            returnValue(user_token)
 
         # If we've been given a token then we need to raise an exception as
         # that's not something we can recover from.
@@ -88,9 +90,13 @@ class TokenManager(object):
 
         # If we end up here then we've hit the race condition and we need to
         # retry.
-        return self.generate(redirect_to, user_id=user_id, lifetime=lifetime,
-            token=token, extra_params=extra_params)
+        while True:
+            user_token = yield self.generate(redirect_to, user_id=user_id,
+                    lifetime=lifetime, token=token, extra_params=extra_params)
+            returnValue(user_token)
+            break
 
+    @Manager.calls_manager
     def get(self, token, verify=None):
         """
         Retrieve the data for the given token. If there is no match then `None`
@@ -99,27 +105,32 @@ class TokenManager(object):
         :param str verify:
             Provide the system_token if matching needs to occur.
         """
-        if not self.redis.exists(token):
-            return None
+        if not (yield self.redis.exists(token)):
+            return
 
-        token_data = self.redis.hgetall(token)
+        token_data = yield self.redis.hgetall(token)
         if verify is not None and verify != token_data.get('system_token'):
             raise InvalidToken()
 
         token_data['extra_params'] = json.loads(token_data['extra_params'])
-        return token_data
+        returnValue(token_data)
 
+    @Manager.calls_manager
     def verify_get(self, full_token):
         """
         Retrieve the data for a full token as supplied to the `redirect_to`
         URL.
+
+        NOTE: The only reason we're using the @Manager.calls_manager decorator
+                here is to ensure that errors are raised consistently.
         """
         user_token_length, _, token = full_token.partition('-')
         if not user_token_length.isdigit():
             raise MalformedToken()
         user_token = token[0:int(user_token_length)]
         system_token = token[int(user_token_length):]
-        return self.get(user_token, verify=system_token)
+        result = yield self.get(user_token, verify=system_token)
+        returnValue(result)
 
     def delete(self, token):
         """
@@ -129,25 +140,3 @@ class TokenManager(object):
             The token to expire.
         """
         return self.redis.delete(token)
-
-    def generate_callback_token(self, return_to, message, callback,
-            callback_args, callback_kwargs, message_level=None, user_id=None,
-            lifetime=None):
-
-        message_level = message_level or messages.INFO
-        callback_name = '%s.%s' % (callback.__module__, callback.__name__)
-        token = self.generate(reverse('token_task'), user_id=user_id,
-            lifetime=lifetime, extra_params={
-                'callback_name': callback_name,
-                'callback_args': callback_args,
-                'callback_kwargs': callback_kwargs,
-                'return_to': return_to,
-                'message': message,
-                'message_level': message_level,
-            })
-        return token
-
-    def url_for_token(self, token):
-        site = Site.objects.get_current()
-        return 'http://%s%s' % (site.domain, reverse('token',
-                    kwargs={'token': token}))
