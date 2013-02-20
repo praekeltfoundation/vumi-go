@@ -4,7 +4,12 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi_wikipedia.wikipedia import WikipediaWorker
 from vumi import log
 
-from go.vumitools.app_worker import GoApplicationMixin
+from go.vumitools.app_worker import GoApplicationMixin, GoWorkerConfigMixin
+
+
+class WikipediaConfig(WikipediaWorker.CONFIG_CLASS,
+                                 GoWorkerConfigMixin):
+    pass
 
 
 class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
@@ -17,11 +22,11 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
     with an SMS tag and steal it by storing it in its metadata.
 
     """
+    CONFIG_CLASS = WikipediaConfig
     worker_name = 'wikipedia_ussd_application'
 
     def validate_config(self):
         super(WikipediaApplication, self).validate_config()
-        self._go_validate_config()
         self._tagpool_metadata = None
 
     @inlineCallbacks
@@ -30,12 +35,12 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
         metrics_prefix, self.metrics_prefix = self.metrics_prefix, None
         yield super(WikipediaApplication, self).setup_application()
         self.metrics_prefix = metrics_prefix
-        yield self._go_setup_application()
+        yield self._go_setup_worker()
 
     @inlineCallbacks
     def teardown_application(self):
         yield super(WikipediaApplication, self).teardown_application()
-        yield self._go_teardown_application()
+        yield self._go_teardown_worker()
 
     def fire_metric(self, metric_name, metric_suffix=None, value=1):
         # Don't try to collect metrics.

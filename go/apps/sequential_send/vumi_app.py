@@ -48,7 +48,7 @@ class SequentialSendApplication(GoApplicationWorker):
 
     @inlineCallbacks
     def setup_application(self):
-        yield self._go_setup_application()
+        yield super(SequentialSendApplication, self).setup_application()
         self.redis = self.redis.sub_manager(self.worker_name)
         self._setup_poller()
         # Store the current time so we don't process stale events.
@@ -57,7 +57,7 @@ class SequentialSendApplication(GoApplicationWorker):
     @inlineCallbacks
     def teardown_application(self):
         yield self.poller.stop()
-        yield self._go_teardown_application()
+        yield super(SequentialSendApplication, self).teardown_application()
 
     def consume_user_message(self, message):
         # This should not receive inbound messages.

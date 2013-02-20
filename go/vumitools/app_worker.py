@@ -5,7 +5,7 @@ from vumi import log
 from vumi.application import ApplicationWorker
 from vumi.blinkenlights.metrics import MetricManager, Metric, MAX
 from vumi.message import TransportEvent
-from vumi.config import IConfigData
+from vumi.config import IConfigData, ConfigText, ConfigDict
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.api_worker import GoMessageMetadata
@@ -42,51 +42,74 @@ class GoApplicationConfigData(object):
         return self.config_dict.has_key(field_name)
 
 
-class GoApplicationConfigMixin(object):
+class GoWorkerConfigMixin(object):
+    worker_name = ConfigText("Name of this worker.", static=True)
+    metrics_prefix = ConfigText(
+        "Metric name prefix.", required=True, static=True)
+    riak_manager = ConfigDict("Riak config.", static=True)
+    redis_manager = ConfigDict("Redis config.", static=True)
+
+    api_routing = ConfigDict("AMQP config for API commands.", static=True)
+    app_event_routing = ConfigDict("AMQP config for app events.", static=True)
+
     def get_conversation(self):
         return self._config_data.conv
 
 
-class GoApplicationMixin(object):
+class GoWorkerMixin(object):
+    redis = None
+    manager = None
+    control_consumer = None
 
-    def _go_validate_config(self):
-        self.worker_name = self.config.get('worker_name', self.worker_name)
-        self.api_routing_config = VumiApiCommand.default_routing_config()
-        self.api_routing_config.update(self.config.get('api_routing', {}))
-        self.app_event_routing_config = VumiApiEvent.default_routing_config()
-        self.app_event_routing_config.update(
-            self.config.get('app_event_routing', {}))
-        self.control_consumer = None
-        # This is now mandatory, so you need to provide it even if the app
-        # doesn't do metrics.
-        self.metrics_prefix = self.config['metrics_prefix']
+    def _go_setup_vumi_api(self, config):
+        api_config = {
+            'riak_manager': config.riak_manager,
+            'redis_manager': config.redis_manager,
+            }
+        d = VumiApi.from_config_async(api_config, self._amqp_client)
 
-    @inlineCallbacks
-    def _go_setup_application(self):
-        self.vumi_api = yield VumiApi.from_config_async(
-            self.config, self._amqp_client)
-        self._metrics_conversations = set()
-        self._cache_recon_conversations = set()
+        def cb(vumi_api):
+            self.vumi_api = vumi_api
+            self.redis = vumi_api.redis
+            self.manager = vumi_api.manager
+        return d.addCallback(cb)
 
-        # In case we need these.
-        self.redis = self.vumi_api.redis
-        self.manager = self.vumi_api.manager
-
-        self.app_event_publisher = yield self.publish_to(
-            self.app_event_routing_config['routing_key'])
-
-        self.metrics = yield self.start_publisher(
-            OneShotMetricManager, self.metrics_prefix)
-
-        self.control_consumer = yield self.consume(
+    def _go_setup_command_consumer(self, config):
+        api_routing_config = VumiApiCommand.default_routing_config()
+        if config.api_routing:
+            api_routing_config.update(config.api_routing)
+        d = self.consume(
             '%s.control' % (self.worker_name,),
             self.consume_control_command,
-            exchange_name=self.api_routing_config['exchange'],
-            exchange_type=self.api_routing_config['exchange_type'],
+            exchange_name=api_routing_config['exchange'],
+            exchange_type=api_routing_config['exchange_type'],
             message_class=VumiApiCommand)
+        return d.addCallback(lambda r: setattr(self, 'control_consumer', r))
+
+    def _go_setup_event_publisher(self, config):
+        app_event_routing_config = VumiApiEvent.default_routing_config()
+        if config.app_event_routing:
+            app_event_routing_config.update(config.app_event_routing)
+        d = self.publish_to(app_event_routing_config['routing_key'])
+        return d.addCallback(lambda r: setattr(self, 'app_event_publisher', r))
 
     @inlineCallbacks
-    def _go_teardown_application(self):
+    def _go_setup_worker(self):
+        self._metrics_conversations = set()
+        self._cache_recon_conversations = set()
+        config = self.get_static_config()
+        if config.worker_name is not None:
+            self.worker_name = config.worker_name
+
+        self.metrics = yield self.start_publisher(
+            OneShotMetricManager, config.metrics_prefix)
+
+        yield self._go_setup_vumi_api(config)
+        yield self._go_setup_event_publisher(config)
+        yield self._go_setup_command_consumer(config)
+
+    @inlineCallbacks
+    def _go_teardown_worker(self):
         # Sometimes something else closes our Redis connection.
         if self.redis is not None:
             yield self.redis.close_manager()
@@ -302,6 +325,15 @@ class GoApplicationMixin(object):
             conversation, 'messages_received', received)
 
 
+class GoApplicationMixin(GoWorkerMixin):
+    # TODO: Move some stuff to here.
+    pass
+
+
+class GoApplicationConfig(ApplicationWorker.CONFIG_CLASS, GoWorkerConfigMixin):
+    pass
+
+
 class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):
     """
     A base class for Vumi Go application worker.
@@ -313,14 +345,12 @@ class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):
         The name of this worker, used for receiving control messages.
 
     """
+    CONFIG_CLASS = GoApplicationConfig
 
     worker_name = None
 
-    def validate_config(self):
-        return self._go_validate_config()
-
     def setup_application(self):
-        return self._go_setup_application()
+        return self._go_setup_worker()
 
     def teardown_application(self):
-        return self._go_teardown_application()
+        return self._go_teardown_worker()

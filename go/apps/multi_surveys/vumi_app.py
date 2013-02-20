@@ -7,7 +7,7 @@ from vxpolls.manager import PollManager
 from vumi.message import TransportUserMessage
 from vumi import log
 
-from go.vumitools.app_worker import GoApplicationMixin
+from go.vumitools.app_worker import GoApplicationMixin, GoWorkerConfigMixin
 from go.vumitools.opt_out import OptOutStore
 
 
@@ -24,12 +24,16 @@ class MamaPollApplication(MultiPollApplication):
                                 "Visit askmama.mobi"
 
 
+class MultiSurveyConfig(MamaPollApplication.CONFIG_CLASS, GoWorkerConfigMixin):
+    pass
+
+
 class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
+    CONFIG_CLASS = MultiSurveyConfig
 
     worker_name = 'multi_survey_application'
 
     def validate_config(self):
-        self._go_validate_config()
         # vxpolls
         vxp_config = self.config.get('vxpolls', {})
         self.poll_prefix = vxp_config.get('prefix')
@@ -38,7 +42,7 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
     def setup_application(self):
         self.event_publisher = EventPublisher()
 
-        yield self._go_setup_application()
+        yield self._go_setup_worker()
         self.pm = PollManager(self.redis, self.poll_prefix)
 
         self.event_publisher.subscribe('new_user', self.metric_event_handler)
@@ -78,7 +82,7 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
     @inlineCallbacks
     def teardown_application(self):
         yield self.pm.stop()
-        yield self._go_teardown_application()
+        yield self._go_teardown_worker()
 
     def is_registered(self, participant):
         return participant.get_label('HIV_MESSAGES') is not None

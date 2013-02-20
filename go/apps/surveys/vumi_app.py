@@ -7,29 +7,33 @@ from vxpolls.manager import PollManager
 from vumi.message import TransportUserMessage
 from vumi import log
 
-from go.vumitools.app_worker import GoApplicationMixin
+from go.vumitools.app_worker import GoApplicationMixin, GoWorkerConfigMixin
+
+
+class SurveyConfig(PollApplication.CONFIG_CLASS, GoWorkerConfigMixin):
+    pass
 
 
 class SurveyApplication(PollApplication, GoApplicationMixin):
+    CONFIG_CLASS = SurveyConfig
 
     worker_name = 'survey_application'
     SEND_TO_TAGS = frozenset(['default'])
 
     def validate_config(self):
-        self._go_validate_config()
         # vxpolls
         vxp_config = self.config.get('vxpolls', {})
         self.poll_prefix = vxp_config.get('prefix')
 
     @inlineCallbacks
     def setup_application(self):
-        yield self._go_setup_application()
+        yield self._go_setup_worker()
         self.pm = PollManager(self.redis, self.poll_prefix)
 
     @inlineCallbacks
     def teardown_application(self):
         yield self.pm.stop()
-        yield self._go_teardown_application()
+        yield self._go_teardown_worker()
 
     @inlineCallbacks
     def consume_user_message(self, message):
