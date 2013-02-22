@@ -7,7 +7,6 @@ from django.views.generic import TemplateView
 from django.core.paginator import PageNotAnInteger, EmptyPage
 
 from django.utils.decorators import method_decorator
-from django.contrib.sites.models import Site
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render, Http404
 from django.core.urlresolvers import reverse
@@ -16,11 +15,10 @@ from django.conf.urls.defaults import url, patterns
 from django.conf import settings
 from django.http import HttpResponse
 
-from vumi.persist.redis_manager import RedisManager
-
 from go.vumitools.conversation.models import (
     CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
+from go.base.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConversationForm, ConversationGroupForm,
                                     ConfirmConversationForm,
                                     ReplyToMessageForm)
@@ -29,7 +27,6 @@ from go.conversation.tasks import (export_conversation_messages,
 from go.base import message_store_client as ms_client
 from go.base.utils import (make_read_only_form, conversation_or_404,
                             page_range_window)
-from go.base.token_manager import TokenManager
 
 
 class ConversationView(TemplateView):
@@ -222,15 +219,11 @@ class StartConversationView(ConversationView):
         redirect_to = self.get_view_url('confirm',
                             conversation_key=conversation.key)
         # The token to be sent.
-        site = Site.objects.get_current()
-        redis = RedisManager.from_config(
-                                    settings.VUMI_API_CONFIG['redis_manager'])
-        token_manager = TokenManager(redis.sub_manager('token_manager'))
+        token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = token_manager.generate(redirect_to, user_id=request.user.id,
                                         extra_params=params)
-        token_url = 'http://%s%s' % (site.domain,
-                                reverse('token', kwargs={'token': token}))
-        conversation.send_token_url(token_url, account.msisdn)
+        conversation.send_token_url(token_manager.url_for_token(token),
+                                        account.msisdn)
         messages.info(request, 'Confirmation request sent.')
         return self.redirect_to('show', conversation_key=conversation.key)
 
@@ -256,9 +249,7 @@ class ConfirmConversationView(ConversationView):
                 sending a conversation confirmation SMS will assign a batch key
                 while not actually starting the conversation.
         """
-        redis = RedisManager.from_config(
-                                    settings.VUMI_API_CONFIG['redis_manager'])
-        token_manager = TokenManager(redis.sub_manager('token_manager'))
+        token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = request.GET.get('token')
         token_data = token_manager.verify_get(token)
         if not token_data:
@@ -271,9 +262,7 @@ class ConfirmConversationView(ConversationView):
 
     def post(self, request, conversation):
         token = request.POST.get('token')
-        redis = RedisManager.from_config(
-                                    settings.VUMI_API_CONFIG['redis_manager'])
-        token_manager = TokenManager(redis.sub_manager('token_manager'))
+        token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token_data = token_manager.verify_get(token)
         if not token_data:
             raise Http404
