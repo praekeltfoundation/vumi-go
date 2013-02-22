@@ -6,7 +6,7 @@ from django.contrib import messages
 from go.conversation.forms import ConversationSearchForm
 
 
-CONVERSATIONS_PER_PAGE = 6
+CONVERSATIONS_PER_PAGE = 12
 
 
 @login_required
