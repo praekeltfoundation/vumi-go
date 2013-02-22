@@ -1,15 +1,5 @@
 from go.contacts import forms
-from go.base.utils import vumi_api_for_user
 from django.conf import settings
-
-
-def user_profile(request):
-    if request.user.is_anonymous():
-        return {}
-    return {
-        'user_profile': request.user.get_profile(),
-        'user_api': vumi_api_for_user(request.user),
-    }
 
 
 def standard_forms(request):
