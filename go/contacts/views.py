@@ -57,7 +57,7 @@ def groups(request):
         contact_group_form = ContactGroupForm()
         smart_group_form = SmartGroupForm()
 
-    query = request.GET.get('q', None)
+    query = request.GET.get('query', None)
     if query:
         if ':' not in query:
             query = 'name:%s' % (query,)
@@ -69,7 +69,7 @@ def groups(request):
         groups = contact_store.list_groups()
 
     groups = sorted(groups, key=lambda group: group.created_at, reverse=True)
-    paginator = Paginator(groups, 5)
+    paginator = Paginator(groups, 15)
     page = paginator.page(request.GET.get('p', 1))
     return render(request, 'contacts/groups.html', {
         'paginator': paginator,
