@@ -1,3 +1,5 @@
+from urllib import urlencode
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.core.paginator import Paginator
@@ -69,12 +71,16 @@ def index(request):
 
     paginator = Paginator(conversations, CONVERSATIONS_PER_PAGE)
     page = paginator.page(request.GET.get('p', 1))
+    pagination_params = urlencode({
+        'query': query,
+        'conversation_status': conversation_status,
+        'conversation_type': conversation_type,
+        })
     return render(request, 'conversation/index.html', {
         'conversations': conversations,
         'paginator': paginator,
+        'pagination_params': pagination_params,
         'page': page,
         'query': query,
         'search_form': search_form,
-        'conversation_status': conversation_status,
-        'conversation_type': conversation_type,
     })
