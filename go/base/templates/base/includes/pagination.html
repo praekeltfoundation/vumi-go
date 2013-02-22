@@ -1,7 +1,7 @@
 {% if page.has_other_pages %}
 <div class="pagination pagination-centered">
     <ul>
-        <li {% if page.has_previous %}{%else%}class="disabled"{%endif%}><a href="{{page.previous_page_number}}">&larr;</a></li>
+        <li {% if page.has_previous %}{%else%}class="disabled"{%endif%}><a href="?p={{page.previous_page_number}}&amp;query={{query}}&amp;conversation_type={{conversation_type}}&amp;conversation_status={{conversation_status}}conversation_type={{conversation_type}}">&larr;</a></li>
         {% for page_number in paginator.page_range %}
             {% if page_number == page.number %}
                 <li class="active"><a href="#">{{page_number}}</a></li>
@@ -10,7 +10,7 @@
             {% endif %}
         {% endfor %}
         {# TODO: fix page numbering for large numbers of conversations  #}
-        <li {% if page.has_next %}{%else%}class="disabled"{%endif%}><a href="?p={{page.next_page_number}}&amp;q={{query}}">&rarr;</a></li>
+        <li {% if page.has_next %}{%else%}class="disabled"{%endif%}><a href="?p={{page.next_page_number}}&amp;query={{query}}&amp;conversation_type={{conversation_type}}&amp;conversation_status={{conversation_status}}">&rarr;</a></li>
     </ul>
 </div>
 {% endif %}
