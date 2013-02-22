@@ -143,6 +143,27 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(reverse('conversations:index'), {'p': 2})
         self.assertContains(response, self.TEST_SUBJECT, count=4)
 
+    def test_pagination_with_query_and_type(self):
+        # Create 9, we already have 1 from setUp()
+        for i in range(9):
+            self.conv_store.new_conversation(
+                conversation_type=u'bulk_message', subject=self.TEST_SUBJECT,
+                message=u"", delivery_class=u"sms",
+                delivery_tag_pool=u"longcode")
+        response = self.client.get(reverse('conversations:index'), {
+            'query': self.TEST_SUBJECT,
+            'p': 2,
+            'conversation_type': 'bulk_message',
+            'conversation_status': 'draft',
+            })
+
+        next_page = ("?p=1&amp;query=Test Conversation" +
+                    "&amp;conversation_type=bulk_message" +
+                    "&amp;conversation_status=draft")
+        # twice, once for the page back link and once for the numbered link.
+        self.assertContains(response, next_page, count=2)
+        self.assertNotContains(response, '?p=2')
+
     def test_scrub_tokens(self):
         content = 'Please visit http://example.com/t/6be226/ ' \
                     'to start your conversation.'

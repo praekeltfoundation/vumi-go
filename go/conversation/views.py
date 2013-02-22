@@ -75,4 +75,6 @@ def index(request):
         'page': page,
         'query': query,
         'search_form': search_form,
+        'conversation_status': conversation_status,
+        'conversation_type': conversation_type,
     })
