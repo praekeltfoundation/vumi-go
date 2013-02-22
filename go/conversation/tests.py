@@ -131,21 +131,21 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(tag_batch(msg_tag), None)
 
     def test_pagination(self):
-        # Create 9, we already have 1 from setUp()
-        for i in range(9):
+        # Create 13, we already have 1 from setUp()
+        for i in range(12):
             self.conv_store.new_conversation(
                 conversation_type=u'bulk_message', subject=self.TEST_SUBJECT,
                 message=u"", delivery_class=u"sms",
                 delivery_tag_pool=u"longcode")
         response = self.client.get(reverse('conversations:index'))
-        # CONVERSATIONS_PER_PAGE = 6
-        self.assertContains(response, self.TEST_SUBJECT, count=6)
+        # CONVERSATIONS_PER_PAGE = 12
+        self.assertContains(response, self.TEST_SUBJECT, count=12)
         response = self.client.get(reverse('conversations:index'), {'p': 2})
-        self.assertContains(response, self.TEST_SUBJECT, count=4)
+        self.assertContains(response, self.TEST_SUBJECT, count=1)
 
     def test_pagination_with_query_and_type(self):
-        # Create 9, we already have 1 from setUp()
-        for i in range(9):
+        # Create 13, we already have 1 from setUp()
+        for i in range(12):
             self.conv_store.new_conversation(
                 conversation_type=u'bulk_message', subject=self.TEST_SUBJECT,
                 message=u"", delivery_class=u"sms",
@@ -157,11 +157,13 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
             'conversation_status': 'draft',
             })
 
-        next_page = ("?p=1&amp;query=Test Conversation" +
-                    "&amp;conversation_type=bulk_message" +
-                    "&amp;conversation_status=draft")
-        # twice, once for the page back link and once for the numbered link.
-        self.assertContains(response, next_page, count=2)
+        qs_parts = ("?p=1&amp;query=Test+Conversation" +
+                    "&amp;conversation_status=draft" +
+                    "&amp;conversation_type=bulk_message").split("&amp;")
+        for part in qs_parts:
+            # twice, once for the page back link and once for
+            # the numbered link.
+            self.assertContains(response, part, count=2)
         self.assertNotContains(response, '?p=2')
 
     def test_scrub_tokens(self):

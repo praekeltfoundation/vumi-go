@@ -1,5 +1,7 @@
 import re
 
+from urllib import urlencode
+
 from django.http import Http404
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
@@ -71,8 +73,12 @@ def groups(request):
     groups = sorted(groups, key=lambda group: group.created_at, reverse=True)
     paginator = Paginator(groups, 15)
     page = paginator.page(request.GET.get('p', 1))
+    pagination_params = urlencode({
+        'query': query,
+        })
     return render(request, 'contacts/groups.html', {
         'paginator': paginator,
+        'pagination_params': pagination_params,
         'page': page,
         'query': query,
         'contact_group_form': contact_group_form,
