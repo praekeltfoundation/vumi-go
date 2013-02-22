@@ -5,6 +5,7 @@ from StringIO import StringIO
 
 from django.views.generic import TemplateView
 from django.core.paginator import PageNotAnInteger, EmptyPage
+from django import forms
 
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
@@ -364,8 +365,12 @@ class EditConversationView(ConversationView):
     edit_conversation_forms = ()
 
     def _render_forms(self, request, conversation, edit_forms):
+        edit_forms_media = forms.Media()
+        for edit_form in edit_forms:
+            edit_forms_media += edit_form.media
         return self.render_to_response({
                 'conversation': conversation,
+                'edit_forms_media': edit_forms_media,
                 'edit_forms': edit_forms,
                 })
 
