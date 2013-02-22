@@ -365,12 +365,12 @@ class EditConversationView(ConversationView):
     edit_conversation_forms = ()
 
     def _render_forms(self, request, conversation, edit_forms):
-        edit_forms_media = forms.Media()
-        for edit_form in edit_forms:
-            edit_forms_media += edit_form.media
+        def sum_media(form_list):
+            return sum((f.media for f in form_list), forms.Media())
+
         return self.render_to_response({
                 'conversation': conversation,
-                'edit_forms_media': edit_forms_media,
+                'edit_forms_media': sum_media(edit_forms),
                 'edit_forms': edit_forms,
                 })
 
