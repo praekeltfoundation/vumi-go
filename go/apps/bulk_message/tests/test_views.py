@@ -7,9 +7,9 @@ from django.core.urlresolvers import reverse
 from django.contrib.sites.models import Site
 
 from go.vumitools.tests.utils import VumiApiCommand
+from go.vumitools.token_manager import TokenManager
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
-from go.base.token_manager import TokenManager
 
 from mock import patch
 

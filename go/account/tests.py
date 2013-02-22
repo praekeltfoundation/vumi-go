@@ -1,7 +1,10 @@
+import urlparse
+
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.core import mail
+
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 
@@ -32,6 +35,10 @@ class AccountTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(user.email, 'user@domain.com')
         self.assertTrue(user.check_password('password'))
 
+    def confirm(self, token_url):
+        url = urlparse.urlsplit(token_url)
+        return self.client.get(url.path, follow=True)
+
     def test_update_details(self):
         response = self.client.post(reverse('account:index'), {
             'name': 'foo',
@@ -41,6 +48,8 @@ class AccountTestCase(DjangoGoApplicationTestCase):
             '_account': True,
             })
         self.assertRedirects(response, reverse('account:index'))
+        token_url = response.context['token_url']
+        self.confirm(token_url)
         # reload from db
         user = User.objects.get(pk=self.user.pk)
         self.assertEqual(user.first_name, 'foo')
@@ -58,6 +67,8 @@ class AccountTestCase(DjangoGoApplicationTestCase):
             '_account': True,
             })
         self.assertRedirects(response, reverse('account:index'))
+        token_url = response.context['token_url']
+        self.confirm(token_url)
         # reload from db
         user = User.objects.get(pk=self.user.pk)
         self.assertTrue(user.check_password('new_password'))
@@ -74,6 +85,8 @@ class AccountTestCase(DjangoGoApplicationTestCase):
                 '_account': True,
                 })
             self.assertRedirects(response, reverse('account:index'))
+            token_url = response.context['token_url']
+            self.confirm(token_url)
             profile = User.objects.get(pk=self.user.pk).get_profile()
             user_account = profile.get_user_account()
             self.assertEqual(user_account.msisdn, '+27761234567')
@@ -91,35 +104,13 @@ class AccountTestCase(DjangoGoApplicationTestCase):
                 })
             self.assertFormError(response, 'account_form', 'msisdn',
                 'Please provide a valid phone number.')
+            self.assertEqual([], mail.outbox)
             profile = User.objects.get(pk=self.user.pk).get_profile()
             user_account = profile.get_user_account()
             self.assertEqual(user_account.msisdn, None)
 
     def test_confirm_start_conversation(self):
-        self.client.post(reverse('account:index'), {
-            'name': 'foo',
-            'surname': 'bar',
-            'email_address': 'user@domain.com',
-            'existing_password': 'password',
-            '_account': True,
-            })
-        profile = User.objects.get(pk=self.user.pk).get_profile()
-        user_account = profile.get_user_account()
-        self.assertFalse(user_account.confirm_start_conversation)
-
-        self.client.post(reverse('account:index'), {
-            'name': 'foo',
-            'surname': 'bar',
-            'email_address': 'user@domain.com',
-            'existing_password': 'password',
-            'confirm_start_conversation': False,
-            '_account': True,
-            })
-        profile = User.objects.get(pk=self.user.pk).get_profile()
-        user_account = profile.get_user_account()
-        self.assertFalse(user_account.confirm_start_conversation)
-
-        self.client.post(reverse('account:index'), {
+        response = self.client.post(reverse('account:index'), {
             'name': 'foo',
             'surname': 'bar',
             'email_address': 'user@domain.com',
@@ -128,6 +119,21 @@ class AccountTestCase(DjangoGoApplicationTestCase):
             'confirm_start_conversation': True,
             '_account': True,
             })
+        token_url = response.context['token_url']
+        response = self.client.get(reverse('account:index'))
+        self.assertContains(response,
+            'Please confirm this change by clicking on the link that was '
+            'just sent to your mailbox.')
+        profile = User.objects.get(pk=self.user.pk).get_profile()
+        user_account = profile.get_user_account()
+        self.assertFalse(user_account.confirm_start_conversation)
+
+        [email] = mail.outbox
+        self.assertTrue(token_url in email.body)
+
+        response = self.confirm(token_url)
+        self.assertContains(response, 'Your details are being updated')
+
         profile = User.objects.get(pk=self.user.pk).get_profile()
         user_account = profile.get_user_account()
         self.assertTrue(user_account.confirm_start_conversation)
@@ -143,6 +149,7 @@ class AccountTestCase(DjangoGoApplicationTestCase):
             })
         self.assertFormError(response, 'account_form', 'msisdn',
             'Please provide a valid phone number.')
+        self.assertEqual([], mail.outbox)
 
 
 class EmailTestCase(DjangoGoApplicationTestCase):

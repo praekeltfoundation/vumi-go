@@ -41,9 +41,9 @@ class ResponseTimeMiddleware(object):
             stop_time = time.time()
             func = resolve(request.path)[0]
             metric_name = '%s.%s.%s' % (func.__module__, func.__name__,
-                                        request.method.lower())
+                                        request.method)
             response_time = stop_time - request.start_time
-            self.publish_metric(metric_name, response_time)
+            self.publish_metric(metric_name.lower(), response_time)
             response['X-Response-Time'] = response_time
         except AttributeError, e:
             logger.exception(e)

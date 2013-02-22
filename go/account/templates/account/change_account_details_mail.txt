@@ -1,0 +1,18 @@
+Hi!
+
+We've received a request to change the following details on your account.
+
+First name: {{first_name}}
+Last name: {{last_name}}
+Email address: {{email_address}}
+Contact number: {{msisdn}}
+Confirm starting of a conversation: {% if confirm_start_conversation %}Yes{% else %}No{% endif %}
+{% if new_password %}You also specified a new password of {{new_password|length}} characters long, ending in '{{new_password|slice:"-2:"}}'.{% endif %}
+
+Please confirm that you want to apply these changes by clicking on the following link within the next 4 hours: {{token_url}}.
+
+If you don't want to apply these changes then feel free to ignore this email.
+
+thanks!
+
+Vumi Go
