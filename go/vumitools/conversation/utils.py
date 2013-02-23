@@ -7,6 +7,7 @@ from collections import defaultdict
 from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Manager
+from vumi import log
 
 from go.vumitools.exceptions import ConversationSendError
 from go.vumitools.opt_out import OptOutStore
@@ -37,6 +38,7 @@ class ConversationWrapper(object):
     def end_conversation(self):
         self.c.end_timestamp = datetime.utcnow()
         yield self.c.save()
+        yield self._remove_from_routing_table()
         yield self._release_batches()
 
     @Manager.calls_manager
@@ -202,6 +204,8 @@ class ConversationWrapper(object):
 
         msg_options = yield self.make_message_options(tag)
 
+        yield self._add_to_routing_table(tag)
+
         is_client_initiated = yield self.is_client_initiated()
         yield self.dispatch_command('start',
             batch_id=batch_id,
@@ -214,6 +218,68 @@ class ConversationWrapper(object):
         if batch_id not in self.get_batch_keys():
             self.c.batches.add_key(batch_id)
         yield self.c.save()
+
+    @Manager.calls_manager
+    def _add_to_routing_table(self, tag):
+        """Add routing entries for this conversation.
+
+        XXX: This is temporary. It will go away once we have a proper routing
+        setup UI, even if we still have unmigrated user accounts with no
+        routing tables.
+        """
+        user_account = yield self.c.user_account.get(self.api.manager)
+        routing_table = yield self.user_api.get_routing_table(user_account)
+
+        # It's safe to use self._tagpool_metadata here because we're guaranteed
+        # to have initialised it already.
+        transport_name = self._tagpool_metadata.get('transport_name')
+        if transport_name is None:
+            log.warning(
+                "No transport_name configured for tagpool: %r" % (tag[0],))
+            return
+
+        conv_type = self.c.conversation_type
+        conv_endpoint = "%s:%s" % (self.c.key, "default")
+        tag_endpoint = "%s:%s:%s" % (tag[0], tag[1], "default")
+        # Bad form to use someone else's underscore methods here, but this is
+        # an even more temporary hack than that.
+        self.user_api._add_routing_entry(
+            routing_table, conv_type, conv_endpoint, transport_name,
+            tag_endpoint)
+        self.user_api._add_routing_entry(
+            routing_table, transport_name, tag_endpoint, conv_type,
+            conv_endpoint)
+
+        yield user_account.save()
+
+    @Manager.calls_manager
+    def _remove_from_routing_table(self):
+        """Remove routing entries for this conversation.
+
+        XXX: This is probably temporary. Removing routing for ended
+        conversations is probably a good idea, but we may have to do it in a
+        completely different way.
+        """
+        conv_type = self.c.conversation_type
+        user_account = yield self.c.user_account.get(self.api.manager)
+        routing_table = yield self.user_api.get_routing_table(user_account)
+        if conv_type not in routing_table:
+            return
+
+        routing_entry = routing_table[conv_type].pop(
+            "%s:%s" % (self.c.key, "default"), None)
+        if routing_entry is None:
+            return
+        if not routing_table[conv_type]:
+            routing_table.pop(conv_type)
+
+        transport_name, endpoint = routing_entry
+        if transport_name in routing_table:
+            routing_table[transport_name].pop(endpoint)
+            if not routing_table[transport_name]:
+                routing_table.pop(transport_name)
+
+        yield user_account.save()
 
     @Manager.calls_manager
     def send_token_url(self, token_url, msisdn, **extra_params):

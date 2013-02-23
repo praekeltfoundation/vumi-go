@@ -15,6 +15,7 @@ from go.vumitools.api import (
     VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent)
 from go.vumitools.tests.utils import (
     AppWorkerTestCase, CeleryTestMixIn, DummyConsumerFactory)
+from go.vumitools.account.old_models import AccountStoreVNone, AccountStoreV1
 
 
 class TestTxVumiApi(AppWorkerTestCase, CeleryTestMixIn):
@@ -23,12 +24,12 @@ class TestTxVumiApi(AppWorkerTestCase, CeleryTestMixIn):
         yield super(TestTxVumiApi, self).setUp()
         if self.sync_persistence:
             self.set_up_celery()
-            self.api = VumiApi.from_config_sync(self._persist_config)
+            self.vumi_api = VumiApi.from_config_sync(self._persist_config)
         else:
-            self.api = yield VumiApi.from_config_async(
+            self.vumi_api = yield VumiApi.from_config_async(
                 self._persist_config, get_fake_amq_client(self._amqp))
-        self._persist_riak_managers.append(self.api.manager)
-        self._persist_redis_managers.append(self.api.redis)
+        self._persist_riak_managers.append(self.vumi_api.manager)
+        self._persist_redis_managers.append(self.vumi_api.redis)
 
     def tearDown(self):
         if self.sync_persistence:
@@ -54,78 +55,80 @@ class TestTxVumiApi(AppWorkerTestCase, CeleryTestMixIn):
     @inlineCallbacks
     def test_batch_start(self):
         tag = ("pool", "tag")
-        batch_id = yield self.api.batch_start([tag])
+        batch_id = yield self.vumi_api.batch_start([tag])
         self.assertEqual(len(batch_id), 32)
 
     @inlineCallbacks
     def test_batch_status(self):
         tag = ("pool", "tag")
-        batch_id = yield self.api.mdb.batch_start([tag])
-        batch_status = yield self.api.batch_status(batch_id)
+        batch_id = yield self.vumi_api.mdb.batch_start([tag])
+        batch_status = yield self.vumi_api.batch_status(batch_id)
         self.assertEqual(batch_status['sent'], 0)
 
     @inlineCallbacks
     def test_batch_outbound_keys(self):
-        batch_id = yield self.api.batch_start([("poolA", "default10001")])
+        batch_id = yield self.vumi_api.batch_start([("poolA", "default10001")])
         msgs = [self.mkmsg_out(content=msg, message_id=str(i)) for
                 i, msg in enumerate(("msg1", "msg2"))]
         for msg in msgs:
-            yield self.api.mdb.add_outbound_message(msg, batch_id=batch_id)
-        api_msgs = yield self.api.batch_outbound_keys(batch_id)
+            yield self.vumi_api.mdb.add_outbound_message(
+                msg, batch_id=batch_id)
+        api_msgs = yield self.vumi_api.batch_outbound_keys(batch_id)
         self.assertEqual(sorted(api_msgs), ['0', '1'])
 
     @inlineCallbacks
     def test_batch_inbound_keys(self):
         tag = ("ambient", "default10001")
         to_addr = "+12310001"
-        batch_id = yield self.api.batch_start([tag])
+        batch_id = yield self.vumi_api.batch_start([tag])
         msgs = [self.mkmsg_in(content=msg, to_addr=to_addr, message_id=str(i),
                               transport_type="sms")
                 for i, msg in enumerate(("msg1", "msg2"))]
         for msg in msgs:
-            yield self.api.mdb.add_inbound_message(msg, batch_id=batch_id)
-        api_msgs = yield self.api.batch_inbound_keys(batch_id)
+            yield self.vumi_api.mdb.add_inbound_message(msg, batch_id=batch_id)
+        api_msgs = yield self.vumi_api.batch_inbound_keys(batch_id)
         self.assertEqual(sorted(api_msgs), ['0', '1'])
 
     @inlineCallbacks
     def test_batch_tags(self):
         tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
-        batch_id = yield self.api.batch_start([tag1])
-        self.assertEqual((yield self.api.batch_tags(batch_id)), [tag1])
-        batch_id = yield self.api.batch_start([tag1, tag2])
-        self.assertEqual((yield self.api.batch_tags(batch_id)), [tag1, tag2])
+        batch_id = yield self.vumi_api.batch_start([tag1])
+        self.assertEqual((yield self.vumi_api.batch_tags(batch_id)), [tag1])
+        batch_id = yield self.vumi_api.batch_start([tag1, tag2])
+        self.assertEqual(
+            (yield self.vumi_api.batch_tags(batch_id)), [tag1, tag2])
 
     @inlineCallbacks
     def test_declare_tags_from_different_pools(self):
         tag1, tag2 = ("poolA", "tag1"), ("poolB", "tag2")
-        yield self.api.tpm.declare_tags([tag1, tag2])
-        self.assertEqual((yield self.api.tpm.acquire_tag("poolA")), tag1)
-        self.assertEqual((yield self.api.tpm.acquire_tag("poolB")), tag2)
+        yield self.vumi_api.tpm.declare_tags([tag1, tag2])
+        self.assertEqual((yield self.vumi_api.tpm.acquire_tag("poolA")), tag1)
+        self.assertEqual((yield self.vumi_api.tpm.acquire_tag("poolB")), tag2)
 
     @inlineCallbacks
     def test_start_batch_and_batch_done(self):
         tag = ("pool", "tag")
-        yield self.api.tpm.declare_tags([tag])
+        yield self.vumi_api.tpm.declare_tags([tag])
 
         @inlineCallbacks
         def tag_batch(t):
-            tb = yield self.api.mdb.get_tag_info(t)
+            tb = yield self.vumi_api.mdb.get_tag_info(t)
             if tb is None:
                 returnValue(None)
             returnValue(tb.current_batch.key)
 
         self.assertEqual((yield tag_batch(tag)), None)
 
-        batch_id = yield self.api.batch_start([tag])
+        batch_id = yield self.vumi_api.batch_start([tag])
         self.assertEqual((yield tag_batch(tag)), batch_id)
 
-        yield self.api.batch_done(batch_id)
+        yield self.vumi_api.batch_done(batch_id)
         self.assertEqual((yield tag_batch(tag)), None)
 
     @inlineCallbacks
     def test_send_command(self):
         for addr in ["+12", "+34"]:
-            yield self.api.send_command(
+            yield self.vumi_api.send_command(
                     "dummy_worker", "send",
                     batch_id="b123", content="Hello!",
                     msg_options={'from_addr': '+56'}, to_addr=addr)
@@ -144,11 +147,16 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     def setUp(self):
         yield super(TestTxVumiUserApi, self).setUp()
         if self.sync_persistence:
-            self.api = VumiApi.from_config_sync(self._persist_config)
+            self.vumi_api = VumiApi.from_config_sync(self._persist_config)
         else:
-            self.api = yield VumiApi.from_config_async(self._persist_config)
-        self.user_account = yield self.mk_user(self.api, u'Buster')
-        self.user_api = VumiUserApi(self.api, self.user_account.key)
+            self.vumi_api = yield VumiApi.from_config_async(
+                self._persist_config)
+        self.user_account = yield self.mk_user(self.vumi_api, u'Buster')
+        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+
+        # Some stores for old versions to test migrations.
+        self.account_store_vnone = AccountStoreVNone(self.vumi_api.manager)
+        self.account_store_v1 = AccountStoreV1(self.vumi_api.manager)
 
     @inlineCallbacks
     def test_optout_filtering(self):
@@ -186,18 +194,17 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_exists(self):
-        self.assertTrue((yield self.api.user_exists(self.user_account.key)))
+        self.assertTrue(
+            (yield self.vumi_api.user_exists(self.user_account.key)))
         self.assertTrue((yield self.user_api.exists()))
 
-        self.assertFalse((yield self.api.user_exists('foo')))
-        self.assertFalse((yield VumiUserApi(self.api, 'foo').exists()))
+        self.assertFalse((yield self.vumi_api.user_exists('foo')))
+        self.assertFalse((yield VumiUserApi(self.vumi_api, 'foo').exists()))
 
     @inlineCallbacks
     def test_list_conversation_endpoints(self):
-        tag1 = (u'pool1', u'1234')
-        tag2 = (u'pool1', u'5678')
-        tag3 = (u'pool1', u'9012')
-        yield self.api.tpm.declare_tags([tag1, tag2, tag3])
+        tag1, tag2, tag3 = yield self.setup_tagpool(
+            u"pool1", [u"1234", u"5678", u"9012"])
         yield self.user_api.acquire_specific_tag(tag2)
         yield self.user_api.new_conversation(
             u'bulk_message', u'subject', u'message', delivery_class=u'sms',
@@ -207,23 +214,46 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_list_endpoints(self):
-        tag1 = (u'pool1', u'1234')
-        tag2 = (u'pool1', u'5678')
-        yield self.api.tpm.declare_tags([tag1, tag2])
-        yield self.add_tagpool_permission(u'pool1')
+        tag1, tag2, tag3 = yield self.setup_tagpool(
+            u"pool1", [u"1234", u"5678", u"9012"])
         yield self.user_api.acquire_specific_tag(tag1)
         endpoints = yield self.user_api.list_endpoints()
         self.assertEqual(endpoints, set([tag1]))
 
     @inlineCallbacks
+    def test_list_endpoints_migration(self):
+        tag1, tag2, tag3 = yield self.setup_tagpool(
+            u"pool1", [u"1234", u"5678", u"9012"])
+        yield self.user_api.acquire_specific_tag(tag1)
+        conv = yield self.user_api.new_conversation(
+            u'bulk_message', u'subject', u'message', delivery_class=u'sms',
+            delivery_tag_pool=tag1[0], delivery_tag=tag1[1])
+        conv = self.user_api.wrap_conversation(conv)
+        # We don't want to actually send commands here.
+        conv.dispatch_command = lambda *args, **kw: None
+        yield conv.start(acquire_tag=False)
+
+        self.assertEqual(tag1, (conv.delivery_tag_pool, conv.delivery_tag))
+        conv_endpoints = yield self.user_api.list_conversation_endpoints()
+        self.assertEqual(conv_endpoints, set([tag1]))
+
+        # Pretend this is an old-style account that was migrated.
+        user = yield self.user_api.get_user_account()
+        user.tags = None
+        yield user.save()
+
+        endpoints = yield self.user_api.list_endpoints()
+        self.assertEqual(endpoints, set([tag1]))
+
+    @inlineCallbacks
     def test_msg_options(self):
-        tag = ('pool1', '1234')
-        yield self.api.tpm.declare_tags([tag])
-        yield self.api.tpm.set_metadata(tag[0], {
+        tag1, tag2, tag3 = yield self.setup_tagpool(
+            u"pool1", [u"1234", u"5678", u"9012"])
+        yield self.vumi_api.tpm.set_metadata(u"pool1", {
             'transport_type': 'dummy_transport',
             'msg_options': {'opt1': 'bar'},
         })
-        msg_options = yield self.user_api.msg_options(tag)
+        msg_options = yield self.user_api.msg_options(tag1)
         self.assertEqual(msg_options, {
             'from_addr': '1234',
             'helper_metadata': {
@@ -260,7 +290,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     @inlineCallbacks
     def test_declare_acquire_and_release_tags(self):
         tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
-        yield self.api.tpm.declare_tags([tag1, tag2])
+        yield self.vumi_api.tpm.declare_tags([tag1, tag2])
         yield self.add_tagpool_permission(u"poolA")
         yield self.add_tagpool_permission(u"poolB")
 
@@ -276,6 +306,66 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag2)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), None)
         yield self.assert_account_tags([list(tag1), list(tag2)])
+
+    @inlineCallbacks
+    def test_get_empty_routing_table(self):
+        routing_table = yield self.user_api.get_routing_table()
+        self.assertEqual({}, routing_table)
+
+    @inlineCallbacks
+    def test_get_routing_table(self):
+        tag1, tag2, tag3 = yield self.setup_tagpool(
+            u"pool1", [u"1234", u"5678", u"9012"])
+        yield self.user_api.acquire_specific_tag(tag1)
+        conv = yield self.user_api.new_conversation(
+            u'bulk_message', u'subject', u'message', delivery_class=u'sms',
+            delivery_tag_pool=tag2[0], delivery_tag=tag2[1])
+        conv = self.user_api.wrap_conversation(conv)
+        # We don't want to actually send commands here.
+        conv.dispatch_command = lambda *args, **kw: None
+        yield conv.start()
+
+        routing_table = yield self.user_api.get_routing_table()
+        self.assertEqual(routing_table, {
+            u'bulk_message': {
+                u'%s:default' % conv.key: [u'sphex', u'pool1:5678:default']},
+            u'sphex': {
+                u'pool1:5678:default': [
+                    u'bulk_message', u'%s:default' % conv.key]}
+        })
+
+        # TODO: This belongs in a different test.
+        yield conv.end_conversation()
+
+        routing_table = yield self.user_api.get_routing_table()
+        self.assertEqual(routing_table, {})
+
+    @inlineCallbacks
+    def test_get_routing_table_migration(self):
+        tag1, tag2, tag3 = yield self.setup_tagpool(
+            u"pool1", [u"1234", u"5678", u"9012"])
+        yield self.user_api.acquire_specific_tag(tag1)
+        conv = yield self.user_api.new_conversation(
+            u'bulk_message', u'subject', u'message', delivery_class=u'sms',
+            delivery_tag_pool=tag2[0], delivery_tag=tag2[1])
+        conv = self.user_api.wrap_conversation(conv)
+        # We don't want to actually send commands here.
+        conv.dispatch_command = lambda *args, **kw: None
+        yield conv.start()
+
+        # Pretend this is an old-style account that was migrated.
+        user = yield self.user_api.get_user_account()
+        user.routing_table = None
+        yield user.save()
+
+        routing_table = yield self.user_api.get_routing_table()
+        self.assertEqual(routing_table, {
+            u'bulk_message': {
+                u'%s:default' % conv.key: [u'sphex', u'pool1:5678:default']},
+            u'sphex': {
+                u'pool1:5678:default': [
+                    u'bulk_message', u'%s:default' % conv.key]}
+        })
 
 
 class TestVumiUserApi(TestTxVumiUserApi):

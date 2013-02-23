@@ -27,7 +27,7 @@ class UserAppPermission(Model):
 class UserAccount(Model):
     """A user account."""
 
-    VERSION = 1
+    VERSION = 2
     MIGRATOR = UserAccountMigrator
 
     # key is uuid
@@ -45,6 +45,11 @@ class UserAccount(Model):
     # has no legacy tags or conversations, so we start with an empty list and
     # skip the tag collection.
     tags = Json(default=[], null=True)
+    # `routing_table` is allowed to be null so that we can detect
+    # freshly-migrated accounts and populate the routing table from active
+    # conversations. A new account has no legacy conversations, so we start
+    # with an empty dict and skip the table building.
+    routing_table = Json(default={}, null=True)
 
     @Manager.calls_manager
     def has_tagpool_permission(self, tagpool):

@@ -232,6 +232,21 @@ class GoWorkerMixin(object):
             returnValue(contact)
 
     @inlineCallbacks
+    def get_user_account(self, batch_id):
+        batch = yield self.vumi_api.mdb.get_batch(batch_id)
+        if batch is None:
+            log.error('Cannot find batch for batch_id %s' % (batch_id,))
+            return
+
+        user_account_key = batch.metadata["user_account"]
+        if user_account_key is None:
+            log.error("No account key in batch metadata: %r" % (batch,))
+            return
+
+        user_account = yield self.vumi_api.get_user_account(user_account_key)
+        returnValue(user_account)
+
+    @inlineCallbacks
     def get_conversation(self, batch_id, conversation_key):
         batch = yield self.vumi_api.mdb.get_batch(batch_id)
         if batch is None:

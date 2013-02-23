@@ -47,6 +47,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             "delivery_class": "sms",
             "transport_type": "sms",
             "server_initiated": True,
+            "transport_name": self.transport_name,
             }
         defaults.update(metadata or {})
         yield self.api.tpm.set_metadata(name, defaults)

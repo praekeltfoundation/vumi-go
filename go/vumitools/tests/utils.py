@@ -225,17 +225,22 @@ class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
     def _command_rkey(self):
         return "%s.control" % (self._worker_name(),)
 
-    @inlineCallbacks
     def setup_tagpools(self):
-        yield self.vumi_api.tpm.declare_tags(
-           [(u"pool", u"tag1"), (u"pool", u"tag2")])
-        yield self.vumi_api.tpm.set_metadata(u"pool", {
+        return self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
+
+    @inlineCallbacks
+    def setup_tagpool(self, pool, tags, transport_name=None, permission=True):
+        tags = [(pool, tag) for tag in tags]
+        if transport_name is None:
+            transport_name = self.transport_name
+        yield self.vumi_api.tpm.declare_tags(tags)
+        yield self.vumi_api.tpm.set_metadata(pool, {
             "transport_type": self.transport_type,
-            "msg_options": {
-                "transport_name": self.transport_name,
-                },
-            })
-        yield self.add_tagpool_permission(u"pool")
+            "transport_name": transport_name,
+        })
+        if permission:
+            yield self.add_tagpool_permission(pool)
+        returnValue(tags)
 
     @inlineCallbacks
     def add_tagpool_permission(self, tagpool, max_keys=None):

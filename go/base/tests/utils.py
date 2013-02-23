@@ -115,6 +115,7 @@ def declare_longcode_tags(api):
         "delivery_class": "sms",
         "transport_type": "sms",
         "server_initiated": True,
+        "transport_name": "sphex",
         })
 
 
