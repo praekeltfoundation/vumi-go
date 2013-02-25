@@ -5,6 +5,7 @@ from StringIO import StringIO
 
 from django.views.generic import TemplateView
 from django.core.paginator import PageNotAnInteger, EmptyPage
+from django import forms
 
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
@@ -365,8 +366,12 @@ class EditConversationView(ConversationView):
     edit_conversation_forms = ()
 
     def _render_forms(self, request, conversation, edit_forms):
+        def sum_media(form_list):
+            return sum((f.media for f in form_list), forms.Media())
+
         return self.render_to_response({
                 'conversation': conversation,
+                'edit_forms_media': sum_media(edit_forms),
                 'edit_forms': edit_forms,
                 })
 
