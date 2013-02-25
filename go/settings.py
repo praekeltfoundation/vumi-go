@@ -173,7 +173,6 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "django.core.context_processors.media",
     "django.core.context_processors.static",
     "django.contrib.messages.context_processors.messages",
-    "go.base.context_processors.user_profile",
     "go.base.context_processors.standard_forms",
     "go.base.context_processors.credit",
     "go.base.context_processors.google_analytics",
