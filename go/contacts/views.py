@@ -59,7 +59,7 @@ def groups(request):
         contact_group_form = ContactGroupForm()
         smart_group_form = SmartGroupForm()
 
-    query = request.GET.get('query', None)
+    query = request.GET.get('query', '')
     if query:
         if ':' not in query:
             query = 'name:%s' % (query,)
