@@ -5,7 +5,7 @@
             {% if page.has_previous %}
                 <a href="?p={{page.previous_page_number}}&amp;{{pagination_params}}">&larr;</a>
             {% else %}
-                &larr;
+                <a href="#">&larr;</a>
             {% endif %}
         </li>
         {% for page_number in paginator.page_range %}
@@ -20,7 +20,7 @@
             {% if page.has_next %}
                 <a href="?p={{page.next_page_number}}&amp;{{pagination_params}}">&rarr;</a>
             {% else %}
-                &rarr;
+                <a href="#">&rarr;</a>
             {% endif %}
         </li>
     </ul>
