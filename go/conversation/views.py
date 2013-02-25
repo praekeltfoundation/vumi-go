@@ -54,8 +54,8 @@ def index(request):
         page = paginator.page(1)
     except EmptyPage:
         page = paginator.page(paginator.num_pages)
-    
-    pagination_params = {
+
+    pagination_params = urlencode({
         'query': query,
         'conversation_status': conversation_status,
         'conversation_type': conversation_type,
