@@ -3,43 +3,7 @@ import mock
 from django.test import TestCase
 
 from go.apps.jsbox.forms import (JsboxForm, JsboxAppConfigForm,
-                                 JsboxAppConfigFormset,
-                                 possibly_load_from_url)
-
-
-class PossiblyLoadFromUrlTestCase(TestCase):
-    def mock_response(self, status_code, text):
-        r = mock.Mock()
-        r.status_code = status_code
-        r.text = text
-        r.ok = status_code == 200
-        return r
-
-    @mock.patch('requests.get')
-    def test_blank_url(self, requests_get):
-        value = possibly_load_from_url('', 'foo', True)
-        self.assertEqual(value, 'foo')
-        self.assertEqual(requests_get.call_count, 0)
-
-    @mock.patch('requests.get')
-    def test_update_false(self, requests_get):
-        value = possibly_load_from_url('http://www.example.com', 'foo', False)
-        self.assertEqual(value, 'foo')
-        self.assertEqual(requests_get.call_count, 0)
-
-    @mock.patch('requests.get')
-    def test_successful_request(self, requests_get):
-        requests_get.return_value = self.mock_response(200, 'source text')
-        value = possibly_load_from_url('http://www.example.com', 'foo', True)
-        self.assertEqual(value, 'source text')
-        requests_get.assert_called_once_with('http://www.example.com')
-
-    @mock.patch('requests.get')
-    def test_failed_request(self, requests_get):
-        requests_get.return_value = self.mock_response(500, 'error text')
-        value = possibly_load_from_url('http://www.example.com', 'foo', True)
-        self.assertEqual(value, 'foo')
-        requests_get.assert_called_once_with('http://www.example.com')
+                                 JsboxAppConfigFormset)
 
 
 class JsboxFormTestCase(TestCase):
@@ -62,23 +26,6 @@ class JsboxFormTestCase(TestCase):
         self.assertEqual(metadata, {
             'javascript': 'x = 1;',
             'source_url': '',
-        })
-
-    @mock.patch('go.apps.jsbox.forms.possibly_load_from_url')
-    def test_update_from_source(self, possibly_load):
-        possibly_load.return_value = "custom javascript"
-        source_url = 'http://www.example.com/'
-        form = JsboxForm(data={
-            'javascript': '',
-            'source_url': source_url,
-            'update_from_source': '1',
-        })
-        self.assertTrue(form.is_valid())
-        metadata = form.to_metadata()
-        possibly_load.assert_called_once_with(source_url, '', True)
-        self.assertEqual(metadata, {
-            'javascript': possibly_load.return_value,
-            'source_url': source_url,
         })
 
 
@@ -106,25 +53,6 @@ class JsboxAppConfigFormTestCase(TestCase):
             'key': 'foo',
             'value': 'bar',
             'source_url': '',
-        })
-
-    @mock.patch('go.apps.jsbox.forms.possibly_load_from_url')
-    def test_update_from_source(self, possibly_load):
-        possibly_load.return_value = "custom javascript"
-        source_url = 'http://www.example.com/'
-        form = JsboxAppConfigForm(data={
-            'key': 'bar',
-            'value': '',
-            'source_url': source_url,
-            'update_from_source': '1',
-        })
-        self.assertTrue(form.is_valid())
-        metadata = form.to_metadata()
-        possibly_load.assert_called_once_with(source_url, '', True)
-        self.assertEqual(metadata, {
-            'key': 'bar',
-            'value': possibly_load.return_value,
-            'source_url': source_url,
         })
 
 
