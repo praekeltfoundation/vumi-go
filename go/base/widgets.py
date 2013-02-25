@@ -7,7 +7,25 @@ from django.utils.safestring import mark_safe
 
 
 class CodeMirrorTextarea(forms.Textarea):
-    """A textarea that is edited via the CodeMirror editor."""
+    """A textarea that is edited via the CodeMirror editor.
+
+    :type mode: str or dict
+    :param mode:
+        The language mode to use. Either a string, e.g. `'python'` or
+        `'javascript'` or a dictionary to pass to CodeMirror as the
+        mode configuration.
+    :param str theme:
+        Name of the theme to use.
+    :param dict config:
+        Configuration dictionary to pass to CodeMirror. The 'mode'
+        and 'theme' keys are overridden by the `mode` and `theme`
+        parameters.
+    :param str codemirror_path:
+        Path under `/static/` that the CodeMirror Javascript and CSS
+        files are served from.
+
+    The usual Django widget parameters are supported.
+    """
 
     DEFAULT_CONFIG = {
         'lineNumbers': True,
