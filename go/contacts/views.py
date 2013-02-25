@@ -5,7 +5,7 @@ from urllib import urlencode
 from django.http import Http404
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.uploadhandler import TemporaryFileUploadHandler
@@ -72,7 +72,12 @@ def groups(request):
 
     groups = sorted(groups, key=lambda group: group.created_at, reverse=True)
     paginator = Paginator(groups, 15)
-    page = paginator.page(request.GET.get('p', 1))
+    try:
+        page = paginator.page(request.GET.get('p', 1))
+    except PageNotAnInteger:
+        page = paginator.page(1)
+    except EmptyPage:
+        page = paginator.page(paginator.num_pages)
     pagination_params = urlencode({
         'query': query,
         })
