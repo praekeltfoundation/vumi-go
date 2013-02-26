@@ -122,6 +122,7 @@ class AccountRoutingTableDispatcherMiddleware(BaseMiddleware):
         return message
 
     def handle_consume_event(self, message, connector_name):
+        raise NotImplementedError()
         tag = message.get('helper_metadata', {}).get('tag', {}).get('tag')
         if tag is not None:
             endpoint = message.get_routing_endpoint()
@@ -130,6 +131,7 @@ class AccountRoutingTableDispatcherMiddleware(BaseMiddleware):
         return message
 
     def handle_publish_event(self, message, connector_name):
+        raise NotImplementedError()
         conv_key, endpoint = message.get_routing_endpoint().split(':', 1)
         go_metadata = message['helper_metadata'].setdefault('go', {})
         go_metadata['conversation_key'] = conv_key
