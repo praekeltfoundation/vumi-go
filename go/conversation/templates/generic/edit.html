@@ -5,6 +5,17 @@
 <link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
 {% endblock %}
 
+{% block extra_js %}
+<script>
+    $(document).ready(function(){
+        $("#conversation").validate();
+    });
+</script>
+
+{{ edit_forms_media }}
+
+{% endblock %}
+
 {% block main %}
 <form name="conversation" id="conversation" method="post" action="">
     {% csrf_token %}
@@ -35,6 +46,8 @@
                     <fieldset>
                         {{ edit_form }}
                     </fieldset>
+
+
                 {% endfor %}
             </div>
         </div>
@@ -42,10 +55,3 @@
 </form>
 {% endblock %}
 
-{% block extra_js %}
-<script>
-    $(document).ready(function(){
-        $("#conversation").validate();
-    });
-</script>
-{% endblock %}

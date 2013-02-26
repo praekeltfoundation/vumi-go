@@ -23,9 +23,11 @@ from vumi import log
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
+from go.vumitools.conversation.models import CONVERSATION_DRAFT
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
 from go.vumitools.middleware import DebitAccountMiddleware
+from go.vumitools.token_manager import TokenManager
 
 from django.conf import settings
 from django.utils.datastructures import SortedDict
@@ -131,6 +133,15 @@ class VumiUserApi(object):
             returnValue(self.wrap_conversation(conversation))
 
     @Manager.calls_manager
+    def finished_conversations(self):
+        conv_store = self.conversation_store
+        keys = yield conv_store.list_conversations()
+        conversations = []
+        for bunch in conv_store.conversations.load_all_bunches(keys):
+            conversations.extend((yield bunch))
+        returnValue([c for c in conversations if c.ended()])
+
+    @Manager.calls_manager
     def active_conversations(self):
         conversations = self.conversation_store.conversations
         keys = yield conversations.index_lookup(
@@ -146,6 +157,12 @@ class VumiUserApi(object):
     def running_conversations(self):
         conversations = yield self.active_conversations()
         returnValue([c for c in conversations if c.running()])
+
+    @Manager.calls_manager
+    def draft_conversations(self):
+        conversations = yield self.active_conversations()
+        returnValue([c for c in conversations
+                        if c.get_status() == CONVERSATION_DRAFT])
 
     @Manager.calls_manager
     def tagpools(self):
@@ -433,6 +450,8 @@ class VumiApi(object):
         self.mdb = MessageStore(self.manager,
                                 self.redis.sub_manager('message_store'))
         self.account_store = AccountStore(self.manager)
+        self.token_manager = TokenManager(
+                                self.redis.sub_manager('token_manager'))
         self.mapi = sender
 
     @staticmethod

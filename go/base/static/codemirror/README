@@ -1,0 +1,15 @@
+CodeMirror
+==========
+
+These are files for the CodeMirror Javascript editor
+(http://codemirror.net/).
+
+* lib/codemirror-compressed.js was constructed using
+  http://codemirror.net/doc/compress.html
+
+* lib/codemirror.css was taken from the CodeMirror source
+  distribution at http://codemirror.net/codemirror.zip
+
+* theme/*.css are themes and were picked from the source distribution.
+
+See LICENSE file for the CodeMirror license.
