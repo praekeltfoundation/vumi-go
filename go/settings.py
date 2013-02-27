@@ -97,7 +97,8 @@ STATICFILES_FINDERS = (
 )
 
 # Make this unique, and don't share it with anybody.
-SECRET_KEY = 'oe)=p0z-r*pu7=%s!fd^sgcyx$=f0_tq=m@4%h1km*^d)3np5w'
+# override this in production_settings.py
+SECRET_KEY = ""
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
