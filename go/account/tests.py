@@ -4,9 +4,11 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.core import mail
+from django.conf import settings
 
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.account.tasks import daily_account_summary
 
 
 class AccountTestCase(DjangoGoApplicationTestCase):
@@ -159,6 +161,7 @@ class EmailTestCase(DjangoGoApplicationTestCase):
         self.setup_riak_fixtures()
         self.client = Client()
         self.client.login(username='username', password='password')
+        self.declare_longcode_tags()
 
     def test_email_sending(self):
         response = self.client.post(reverse('account:index'), {
@@ -171,3 +174,31 @@ class EmailTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(email.subject, 'foo')
         self.assertEqual(email.from_email, self.user.email)
         self.assertTrue('bar' in email.body)
+
+    def test_daily_account_summary(self):
+        contact_store = self.user_api.contact_store
+        contact_keys = contact_store.list_contacts()
+        [contacts] = contact_store.contacts.load_all_bunches(contact_keys)
+        for contact in contacts:
+            # create a duplicate
+            contact_store.new_contact(msisdn=contact.msisdn)
+
+        self.put_sample_messages_in_conversation(self.user_api,
+                                                    self.conv_key, 10)
+
+        # schedule the task
+        daily_account_summary(self.user.pk)
+
+        [email] = mail.outbox
+        self.assertEqual(email.subject, 'Vumi Go Account Summary')
+        self.assertEqual(email.from_email, settings.DEFAULT_FROM_EMAIL)
+        self.assertEqual(email.recipients(), [self.user.email])
+        self.assertTrue('number of contacts: 2' in email.body)
+        self.assertTrue('number of unique contacts by contact number: 1'
+                            in email.body)
+        self.assertTrue('number of messages sent and received: 20'
+                            in email.body)
+        self.assertTrue('Send Bulk SMS and track replies' in email.body)
+        self.assertTrue('Test Conversation' in email.body)
+        self.assertTrue('Sent: 10 to 10 uniques.' in email.body)
+        self.assertTrue('Received: 10 from 10 uniques.' in email.body)
