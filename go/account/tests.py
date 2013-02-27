@@ -8,7 +8,7 @@ from django.conf import settings
 
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.account.tasks import daily_account_summary
+from go.account.tasks import send_account_summary
 
 
 class AccountTestCase(DjangoGoApplicationTestCase):
@@ -208,7 +208,7 @@ class EmailTestCase(DjangoGoApplicationTestCase):
                                                     self.conv_key, 10)
 
         # schedule the task
-        daily_account_summary(self.user.pk)
+        send_account_summary(self.user.pk)
 
         [email] = mail.outbox
         self.assertEqual(email.subject, 'Vumi Go Account Summary')

@@ -35,7 +35,7 @@ def update_account_details(user_id, first_name=None, last_name=None,
 
 
 @task(ignore_result=True)
-def daily_account_summary(user_id):
+def send_account_summary(user_id):
     user = User.objects.get(pk=user_id)
     user_api = vumi_api_for_user(user)
     contact_store = user_api.contact_store
@@ -66,7 +66,7 @@ def daily_account_summary(user_id):
                                 for conv_type in message_count.values())
 
     send_mail('Vumi Go Account Summary',
-        render_to_string('account/daily_account_summary.txt', {
+        render_to_string('account/account_summary_mail.txt', {
             'all_conversations': all_conversations,
             'user': user,
             'unique_identifier': 'contact number',
