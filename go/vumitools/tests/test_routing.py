@@ -87,7 +87,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
     @inlineCallbacks
     def test_outbound_message_routing(self):
         yield self.get_dispatcher()
-        msg = self.with_conv(self.mkmsg_in(), 'app1', 'conv1')
+        msg = self.with_conv(self.mkmsg_out(), 'app1', 'conv1')
         yield self.dispatch_outbound(msg, 'app1')
         self.assert_rkeys_used('app1.outbound', 'transport1.outbound')
         self.assertEqual(
@@ -95,7 +95,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
             self.get_dispatched_outbound('transport1'))
 
         self.clear_all_dispatched()
-        msg = self.with_conv(self.mkmsg_in(), 'app2', 'conv2')
+        msg = self.with_conv(self.mkmsg_out(), 'app2', 'conv2')
         yield self.dispatch_outbound(msg, 'app2')
         self.assert_rkeys_used('app2.outbound', 'transport1.outbound')
         self.assertEqual(
@@ -103,9 +103,48 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
             self.get_dispatched_outbound('transport1'))
 
         self.clear_all_dispatched()
-        msg = self.with_conv(self.mkmsg_in(), 'app1', 'conv1', ep='other')
+        msg = self.with_conv(self.mkmsg_out(), 'app1', 'conv1', ep='other')
         yield self.dispatch_outbound(msg, 'app1')
         self.assert_rkeys_used('app1.outbound', 'transport1.outbound')
         self.assertEqual(
             [self.with_tag(msg, ("pool1", "5678"), ep='default')],
             self.get_dispatched_outbound('transport1'))
+
+    @inlineCallbacks
+    def mk_msg_ack(self, conv_type, conv_key, ep=None):
+        "Create and store an outbound message, then create an ack for it."
+        msg = self.with_conv(self.mkmsg_out(), conv_type, conv_key, ep=ep)
+        yield self.vumi_api.mdb.add_outbound_message(msg)
+
+        ack = self.mkmsg_ack(
+            user_message_id=msg['message_id'])
+
+        returnValue((msg, ack))
+
+    @inlineCallbacks
+    def test_event_routing(self):
+        dispatcher = yield self.get_dispatcher()
+        self.vumi_api = dispatcher.vumi_api
+
+        msg, ack = yield self.mk_msg_ack('app1', 'conv1')
+        yield self.dispatch_event(ack, 'transport1')
+        self.assert_rkeys_used('transport1.event', 'app1.event')
+        self.assertEqual(
+            [self.with_endpoint(ack)],
+            self.get_dispatched_events('app1'))
+
+        self.clear_all_dispatched()
+        msg, ack = yield self.mk_msg_ack('app1', 'conv1', ep='other')
+        yield self.dispatch_event(ack, 'transport1')
+        self.assert_rkeys_used('transport1.event', 'app1.event')
+        self.assertEqual(
+            [self.with_endpoint(ack)],
+            self.get_dispatched_events('app1'))
+
+        self.clear_all_dispatched()
+        msg, ack = yield self.mk_msg_ack('app2', 'conv2')
+        yield self.dispatch_event(ack, 'transport1')
+        self.assert_rkeys_used('transport1.event', 'app2.event')
+        self.assertEqual(
+            [self.with_endpoint(ack)],
+            self.get_dispatched_events('app2'))
