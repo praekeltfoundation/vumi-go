@@ -140,6 +140,27 @@ class AccountTestCase(DjangoGoApplicationTestCase):
         user_account = profile.get_user_account()
         self.assertTrue(user_account.confirm_start_conversation)
 
+    def test_email_summary(self):
+        user_account = self.user.get_profile().get_user_account()
+        response = self.client.post(reverse('account:index'), {
+            'name': 'foo',
+            'surname': 'bar',
+            'email_address': 'user@domain.com',
+            'existing_password': 'password',
+            'msisdn': '+27761234567',
+            'email_summary': 'daily',
+            '_account': True,
+            })
+        token_url = response.context['token_url']
+
+        self.assertNotEqual(user_account.email_summary, 'daily')
+
+        response = self.confirm(token_url)
+        self.assertContains(response, 'Your details are being updated')
+
+        user_account = self.user.get_profile().get_user_account()
+        self.assertEqual(user_account.email_summary, 'daily')
+
     def test_require_msisdn_if_confirm_start_conversation(self):
         response = self.client.post(reverse('account:index'), {
             'name': 'foo',
