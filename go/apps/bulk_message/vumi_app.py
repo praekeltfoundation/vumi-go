@@ -134,6 +134,9 @@ class BulkMessageApplication(GoApplicationWorker):
         if in_reply_to:
             msg = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
             if msg:
+                # We can't override transport_name in reply_to(), so we set it
+                # on the message we're replying to.
+                msg['transport_name'] = msg_options['transport_name']
                 yield self.reply_to(msg, content)
             else:
                 log.warning('Unable to reply, message %s does not exist.' % (
