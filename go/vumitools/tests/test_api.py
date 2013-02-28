@@ -295,14 +295,21 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         yield self.add_tagpool_permission(u"poolB")
 
         yield self.assert_account_tags([])
+        tag2_info = yield self.vumi_api.mdb.get_tag_info(tag2)
+        self.assertEqual(tag2_info.metadata['user_account'], None)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag1)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag2)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), None)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolB")), None)
         yield self.assert_account_tags([list(tag1), list(tag2)])
+        tag2_info = yield self.vumi_api.mdb.get_tag_info(tag2)
+        self.assertEqual(tag2_info.metadata['user_account'],
+                         self.user_api.user_account_key)
 
         yield self.user_api.release_tag(tag2)
         yield self.assert_account_tags([list(tag1)])
+        tag2_info = yield self.vumi_api.mdb.get_tag_info(tag2)
+        self.assertEqual(tag2_info.metadata['user_account'], None)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag2)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), None)
         yield self.assert_account_tags([list(tag1), list(tag2)])
@@ -328,10 +335,10 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         routing_table = yield self.user_api.get_routing_table()
         self.assertEqual(routing_table, {
             u'bulk_message': {
-                u'%s:default' % conv.key: [u'sphex', u'pool1:5678:default']},
-            u'sphex': {
-                u'pool1:5678:default': [
-                    u'bulk_message', u'%s:default' % conv.key]}
+                u':'.join([conv.key, 'default']): [u'pool1:5678', u'default']},
+            u'pool1:5678': {
+                u'default': [
+                    u'bulk_message', u'%s:default' % conv.key]},
         })
 
         # TODO: This belongs in a different test.
@@ -361,10 +368,10 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         routing_table = yield self.user_api.get_routing_table()
         self.assertEqual(routing_table, {
             u'bulk_message': {
-                u'%s:default' % conv.key: [u'sphex', u'pool1:5678:default']},
-            u'sphex': {
-                u'pool1:5678:default': [
-                    u'bulk_message', u'%s:default' % conv.key]}
+                u':'.join([conv.key, 'default']): [u'pool1:5678', u'default']},
+            u'pool1:5678': {
+                u'default': [
+                    u'bulk_message', u'%s:default' % conv.key]},
         })
 
 

@@ -298,23 +298,15 @@ class VumiUserApi(object):
             if conv is None:
                 continue
 
-            tagpool_metadata = yield self.api.tpm.get_metadata(tag[0])
-            transport_name = tagpool_metadata.get('transport_name', None)
-            if transport_name is None:
-                log.warning(
-                    "No transport_name configured for tagpool: %r" % (tag[0],))
-                continue
-
-            # If we get here, we have a conversation to set up routing for and
-            # a transport to route it to.
+            # If we get here, we have a conversation to set up routing for.
 
             conv_type = conv.conversation_type
             conv_endpoint = "%s:%s" % (conv.key, "default")
-            tag_endpoint = "%s:%s:%s" % (tag[0], tag[1], "default")
+            tag_connector = "%s:%s" % tag
             self._add_routing_entry(routing_table, conv_type, conv_endpoint,
-                                    transport_name, tag_endpoint)
-            self._add_routing_entry(routing_table, transport_name,
-                                    tag_endpoint, conv_type, conv_endpoint)
+                                    tag_connector, "default")
+            self._add_routing_entry(routing_table, tag_connector, "default",
+                                    conv_type, conv_endpoint)
 
         # XXX: Saving here could lead to a race condition if something else
         # populates the routing table with some different data and saves before
@@ -370,6 +362,14 @@ class VumiUserApi(object):
         returnValue(msg_options)
 
     @Manager.calls_manager
+    def _update_tag_data_for_acquire(self, user_account, tag):
+        user_account.tags.append(tag)
+        tag_info = yield self.api.mdb.get_tag_info(tag)
+        tag_info.metadata['user_account'] = user_account.key.decode('utf-8')
+        yield tag_info.save()
+        yield user_account.save()
+
+    @Manager.calls_manager
     def acquire_tag(self, pool):
         """Acquire a tag from a given tag pool.
 
@@ -389,8 +389,7 @@ class VumiUserApi(object):
             returnValue(None)
         tag = yield self.api.tpm.acquire_tag(pool)
         if tag is not None:
-            user_account.tags.append(tag)
-            yield user_account.save()
+            yield self._update_tag_data_for_acquire(user_account, tag)
         returnValue(tag)
 
     @Manager.calls_manager
@@ -413,8 +412,7 @@ class VumiUserApi(object):
             returnValue(None)
         tag = yield self.api.tpm.acquire_specific_tag(tag)
         if tag is not None:
-            user_account.tags.append(tag)
-            yield user_account.save()
+            yield self._update_tag_data_for_acquire(user_account, tag)
         returnValue(tag)
 
     @Manager.calls_manager
@@ -436,7 +434,11 @@ class VumiUserApi(object):
             user_account.tags.remove(list(tag))
         except ValueError, e:
             log.error("Tag not allocated to account: %s" % (tag,), e)
-        yield user_account.save()
+        else:
+            tag_info = yield self.api.mdb.get_tag_info(tag)
+            del tag_info.metadata['user_account']
+            yield tag_info.save()
+            yield user_account.save()
         yield self.api.tpm.release_tag(tag)
 
 

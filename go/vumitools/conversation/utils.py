@@ -230,25 +230,16 @@ class ConversationWrapper(object):
         user_account = yield self.c.user_account.get(self.api.manager)
         routing_table = yield self.user_api.get_routing_table(user_account)
 
-        # It's safe to use self._tagpool_metadata here because we're guaranteed
-        # to have initialised it already.
-        transport_name = self._tagpool_metadata.get('transport_name')
-        if transport_name is None:
-            log.warning(
-                "No transport_name configured for tagpool: %r" % (tag[0],))
-            return
-
         conv_type = self.c.conversation_type
         conv_endpoint = "%s:%s" % (self.c.key, "default")
-        tag_endpoint = "%s:%s:%s" % (tag[0], tag[1], "default")
+        tag_connector = "%s:%s" % tag
+
         # Bad form to use someone else's underscore methods here, but this is
         # an even more temporary hack than that.
         self.user_api._add_routing_entry(
-            routing_table, conv_type, conv_endpoint, transport_name,
-            tag_endpoint)
+            routing_table, conv_type, conv_endpoint, tag_connector, "default")
         self.user_api._add_routing_entry(
-            routing_table, transport_name, tag_endpoint, conv_type,
-            conv_endpoint)
+            routing_table, tag_connector, "default", conv_type, conv_endpoint)
 
         yield user_account.save()
 
