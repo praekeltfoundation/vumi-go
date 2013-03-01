@@ -6,7 +6,7 @@ import logging
 
 from celery.signals import task_failure
 
-from raven.handlers.logging import SentryHandler
+from sentry.client.handlers import SentryHandler
 
 djcelery.setup_loader()
 
