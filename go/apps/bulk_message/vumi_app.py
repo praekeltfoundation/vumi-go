@@ -16,7 +16,7 @@ class BulkMessageApplication(GoApplicationWorker):
     """
     SEND_TO_TAGS = frozenset(['default'])
     worker_name = 'bulk_message_application'
-    max_ack_window = 1000
+    max_ack_window = 10000
     max_ack_wait = 10
     monitor_interval = 1
     monitor_window_cleanup = True
