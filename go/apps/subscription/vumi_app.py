@@ -38,9 +38,9 @@ class SubscriptionApplication(GoApplicationWorker):
 
     @inlineCallbacks
     def consume_user_message(self, message):
-        gmd = self.get_go_metadata(message)
-        user_api = self.get_user_api((yield gmd.get_account_key()))
-        conv = user_api.wrap_conversation((yield gmd.get_conversation()))
+        msg_mdh = self.get_metadata_helper(message)
+        user_api = self.get_user_api(msg_mdh.get_account_key())
+        conv = yield msg_mdh.get_conversation()
 
         contact = yield user_api.contact_store.contact_for_addr(
             conv.delivery_class, message['from_addr'])

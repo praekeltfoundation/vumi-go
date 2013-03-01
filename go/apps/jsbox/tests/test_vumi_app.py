@@ -106,15 +106,16 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         conversation = yield self.setup_conversation(
             metadata=self.mk_metadata('on_inbound_message'))
         yield self.start_conversation(conversation)
-        msg = self.set_conversation_tag(self.mkmsg_in(), conversation)
-        yield self.dispatch_inbound(msg)
+        msg = self.mkmsg_in()
+        yield self.dispatch_to_conv(msg, conversation)
 
     @inlineCallbacks
     def test_user_message_sandbox_id(self):
         conversation = yield self.setup_conversation(
             metadata=self.mk_metadata('on_inbound_message'))
         yield self.start_conversation(conversation)
-        msg = self.set_conversation_tag(self.mkmsg_in(), conversation)
+        msg = self.mkmsg_in()
+        conversation.set_go_helper_metadata(msg['helper_metadata'])
         config = yield self.app.get_config(msg)
         self.assertEqual(config.sandbox_id, self.user_account.key)
 
@@ -123,9 +124,9 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         conversation = yield self.setup_conversation(
             metadata=self.mk_metadata('on_inbound_event'))
         yield self.start_conversation(conversation)
-        msg = self.set_conversation_tag(self.mkmsg_in(), conversation)
-        tag = (conversation.delivery_tag_pool, conversation.delivery_tag)
-        yield self.vumi_api.mdb.add_outbound_message(msg, tag=tag)
+        msg = self.mkmsg_in()
+        conversation.set_go_helper_metadata(msg['helper_metadata'])
+        yield self.store_outbound_msg(msg, conversation)
         event = self.mkmsg_ack(user_message_id=msg['message_id'])
         yield self.dispatch_event(event)
 

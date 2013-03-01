@@ -49,23 +49,15 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             tag_info = yield self.vumi_api.mdb.get_tag_info(tuple(tag))
             user_account_key = tag_info.metadata['user_account']
 
-        go_md = self.get_go_metadata(msg)
+        msg_mdh = self.get_metadata_helper(msg)
         if user_account_key is None:
-            user_account_key = yield go_md.get_account_key()
+            user_account_key = yield msg_mdh.get_account_key()
 
         user_api = self.get_user_api(user_account_key)
         routing_table = yield user_api.get_routing_table()
         config_dict['routing_table'] = routing_table
 
-        # TODO: Clean up GoMessageMetadata to make digging in _go_metadata
-        #       unnecessary.
-        if 'conversation_key' in go_md._go_metadata:
-            config_dict['conversation_info'] = {
-                'conversation_type': go_md._go_metadata['conversation_type'],
-                'conversation_key': go_md._go_metadata['conversation_key'],
-                'user_account': go_md._go_metadata['user_account'],
-            }
-
+        config_dict['conversation_info'] = msg_mdh.get_conversation_info()
         config_dict['user_account_key'] = user_account_key.decode('utf-8')
 
         returnValue(self.CONFIG_CLASS(config_dict))

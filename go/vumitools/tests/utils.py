@@ -309,3 +309,19 @@ class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
                 name = name[len(assert_prefix):]
             values[name] = [v for _, v in metric.poll()]
         return values
+
+    def dispatch_to_conv(self, msg, conv):
+        conv.set_go_helper_metadata(msg['helper_metadata'])
+        return self.dispatch(msg)
+
+    def store_outbound_msg(self, msg, conv=None, batch_id=None):
+        if batch_id is None and conv is not None:
+            [batch_id] = conv.get_batch_keys()
+        return self.user_api.api.mdb.add_outbound_message(
+            msg, batch_id=batch_id)
+
+    def store_inbound_msg(self, msg, conv=None, batch_id=None):
+        if batch_id is None and conv is not None:
+            [batch_id] = conv.get_batch_keys()
+        return self.user_api.api.mdb.add_inbound_message(
+            msg, batch_id=batch_id)

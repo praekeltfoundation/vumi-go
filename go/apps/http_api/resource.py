@@ -1,3 +1,5 @@
+# -*- test-case-name: go.apps.http_api.tests.test_vumi_app -*-
+
 import json
 import copy
 
@@ -148,9 +150,8 @@ class MessageStream(StreamResource):
             request.finish()
             return
 
-        batch = yield reply_to.batch.get()
-        if batch is None or (batch.metadata['user_account']
-                             != user_account):
+        batch_id = reply_to.batch.key
+        if batch_id is None or batch_id not in conversation.get_batch_keys():
             request.setResponseCode(http.BAD_REQUEST)
             request.write('Invalid in_reply_to value')
             request.finish()
@@ -158,35 +159,14 @@ class MessageStream(StreamResource):
 
         msg_options = self.get_msg_options(payload,
                                            ['session_event', 'content'])
-
-        # FIXME:    At some point this needs to be done better as it makes some
-        #           assumption about how messages are routed which won't be
-        #           true for very much longer.
-        tag = self.get_conversation_tag(conversation)
-        msg_options.update((yield user_api.msg_options(tag)))
-
         content = msg_options.pop('content')
         continue_session = (msg_options.pop('session_event', None)
                             != TransportUserMessage.SESSION_CLOSE)
-        helper_metadata = msg_options.pop('helper_metadata')
-        transport_type = msg_options.pop('transport_type')
-        from_addr = msg_options.pop('from_addr')
+        helper_metadata = conversation.set_go_helper_metadata()
 
-        # NOTE:
-        #
-        # Not able to use `worker.reply_to()` because TransportUserMessage's
-        # reply() method sets the `helper_metadata` which it isn't really
-        # supposed to do. Because of this we're doing the manual call
-        # to `worker._publish_message()` instead.
-        msg = reply_to.msg.reply(content, continue_session, **msg_options)
-
-        # These need to be set manually to ensure that stuff cannot be forged.
-        msg['helper_metadata'].update(helper_metadata)
-        msg['from_addr'] = from_addr
-        msg['transport_type'] = transport_type
-        msg['transport_name'] = self.worker.transport_name
-
-        yield self.worker._publish_message(msg)
+        msg = yield self.worker.reply_to(
+            reply_to.msg, content, continue_session,
+            helper_metadata=helper_metadata)
 
         request.setResponseCode(http.OK)
         request.write(msg.to_json())
@@ -203,6 +183,7 @@ class MessageStream(StreamResource):
         msg_options.update((yield user_api.msg_options(tag)))
         to_addr = msg_options.pop('to_addr')
         content = msg_options.pop('content')
+        msg_options['helper_metadata'] = conversation.set_go_helper_metadata()
 
         msg = yield self.worker.send_to(to_addr, content, **msg_options)
 

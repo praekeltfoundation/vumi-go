@@ -98,8 +98,8 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
         # For the current use case (USSD sign-ups) we can
         # now assume that if someone is dialing back in they
         # want to register, therefore we can delete the opt-out
-        gmt = self.get_go_metadata(message)
-        account_key = yield gmt.get_account_key()
+        msg_mdh = self.get_metadata_helper(message)
+        account_key = msg_mdh.get_account_key()
 
         if account_key is not None:
             # check if user is opted out
@@ -125,13 +125,12 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
         # We reverse the to_addr & from_addr since we're faking input
         # from the client to start the survey.
         from_addr = msg_options.pop('from_addr')
+        conversation.set_go_helper_metadata(
+            msg_options.setdefault('helper_metadata', {}))
         msg = TransportUserMessage(from_addr=to_addr, to_addr=from_addr,
                 content='', **msg_options)
 
-        gmt = self.get_go_metadata(msg)
-        gmt.set_conversation_info(conversation)
-
-        self.consume_user_message(msg)
+        return self.consume_user_message(msg)
 
     @inlineCallbacks
     def process_command_start(self, batch_id, conversation_type,

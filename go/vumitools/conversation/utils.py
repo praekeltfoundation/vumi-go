@@ -11,7 +11,7 @@ from vumi import log
 
 from go.vumitools.exceptions import ConversationSendError
 from go.vumitools.opt_out import OptOutStore
-from go.vumitools.utils import GoMessageMetadata
+from go.vumitools.utils import MessageMetadataHelper
 
 
 class ConversationWrapper(object):
@@ -151,6 +151,15 @@ class ConversationWrapper(object):
             tag, self._tagpool_metadata)
         returnValue(msg_options)
 
+    def set_go_helper_metadata(self, helper_metadata=None):
+        if helper_metadata is None:
+            helper_metadata = {}
+        go_metadata = helper_metadata.setdefault('go', {})
+        go_metadata['user_account'] = self.user_account.key
+        go_metadata['conversation_type'] = self.conversation_type
+        go_metadata['conversation_key'] = self.key
+        return helper_metadata
+
     @Manager.calls_manager
     def start(self, no_batch_tag=False, batch_id=None, acquire_tag=True,
                 **extra_params):
@@ -201,10 +210,13 @@ class ConversationWrapper(object):
                 tag = yield self.acquire_existing_tag()
             batch_tags = [] if no_batch_tag else [tag]
             batch_id = yield self.start_batch(*batch_tags)
+            # FIXME: We only want to set up routing if we haven't done it
+            #        already. We assume that being passed a batch id means it's
+            #        already happened. This will go away once we have a better
+            #        conversation model.
+            yield self._add_to_routing_table(tag)
 
         msg_options = yield self.make_message_options(tag)
-
-        yield self._add_to_routing_table(tag)
 
         is_client_initiated = yield self.is_client_initiated()
         yield self.dispatch_command('start',
@@ -290,6 +302,10 @@ class ConversationWrapper(object):
         helper_metadata = msg_options.setdefault('helper_metadata', {})
         go_metadata = helper_metadata.setdefault('go', {})
         go_metadata['sensitive'] = True
+
+        # We need to have routing set up so that we can send the message with
+        # the token in it.
+        yield self._add_to_routing_table(tag)
 
         yield self.dispatch_command('send_message', command_data={
             "batch_id": batch_id,
@@ -433,8 +449,8 @@ class ConversationWrapper(object):
         for message in messages:
             # vumi message is an attribute on the inbound message object
             msg = message.msg
-            msg_metadata = GoMessageMetadata(self.api, msg)
-            if not msg_metadata.is_sensitive():
+            msg_mdh = MessageMetadataHelper(self.api, msg)
+            if not msg_mdh.is_sensitive():
                 collection.append(msg)
             elif include_sensitive:
                 scrubbed_msg = scrubber(msg)

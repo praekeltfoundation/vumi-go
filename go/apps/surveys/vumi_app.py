@@ -93,11 +93,10 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         # We reverse the to_addr & from_addr since we're faking input
         # from the client to start the survey.
         from_addr = msg_options.pop('from_addr')
+        conversation.set_go_helper_metadata(
+            msg_options.setdefault('helper_metadata', {}))
         msg = TransportUserMessage(from_addr=to_addr, to_addr=from_addr,
                 content='', **msg_options)
-
-        gmt = self.get_go_metadata(msg)
-        gmt.set_conversation_info(conversation)
 
         return self.consume_user_message(msg)
 

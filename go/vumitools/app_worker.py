@@ -8,7 +8,7 @@ from vumi.message import TransportEvent
 from vumi.config import IConfigData, ConfigText, ConfigDict
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
-from go.vumitools.api_worker import GoMessageMetadata
+from go.vumitools.utils import MessageMetadataHelper
 
 
 class OneShotMetricManager(MetricManager):
@@ -130,8 +130,8 @@ class GoWorkerMixin(object):
         if isinstance(msg, TransportEvent):
             msg = yield self.find_message_for_event(msg)
 
-        metadata = self.get_go_metadata(msg)
-        conversation = yield metadata.get_conversation()
+        msg_mdh = self.get_metadata_helper(msg)
+        conversation = yield msg_mdh.get_conversation()
 
         returnValue(self.get_config_for_conversation(conversation))
 
@@ -262,8 +262,8 @@ class GoWorkerMixin(object):
         conv = yield user_api.get_wrapped_conversation(conversation_key)
         returnValue(conv)
 
-    def get_go_metadata(self, msg):
-        return GoMessageMetadata(self.vumi_api, msg)
+    def get_metadata_helper(self, msg):
+        return MessageMetadataHelper(self.vumi_api, msg)
 
     @inlineCallbacks
     def find_outboundmessage_for_event(self, event):
@@ -284,19 +284,15 @@ class GoWorkerMixin(object):
         if outbound_message:
             returnValue(outbound_message.msg)
 
-    @inlineCallbacks
     def event_for_message(self, message, event_type, content):
-        gmt = self.get_go_metadata(message)
-        account_key = yield gmt.get_account_key()
-        conversation_key, conversation_type = yield gmt.get_conversation_info()
-        event = VumiApiEvent.event(account_key, conversation_key,
-                                    event_type, content)
-        returnValue(event)
+        msg_mdh = self.get_metadata_helper(message)
+        return VumiApiEvent.event(msg_mdh.get_account_key(),
+                                  msg_mdh.get_conversation_key(),
+                                  event_type, content)
 
-    @inlineCallbacks
     def trigger_event(self, message, event_type, content):
-        event = yield self.event_for_message(message, event_type, content)
-        yield self.publish_app_event(event)
+        event = self.event_for_message(message, event_type, content)
+        return self.publish_app_event(event)
 
     def publish_app_event(self, event):
         self.app_event_publisher.publish_message(event)
@@ -339,6 +335,11 @@ class GoWorkerMixin(object):
         self.publish_conversation_metric(
             conversation, 'messages_received', received)
 
+    def add_conv_to_msg_options(self, conv, msg_options):
+        helper_metadata = msg_options.setdefault('helper_metadata', {})
+        conv.set_go_helper_metadata(helper_metadata)
+        return msg_options
+
 
 class GoApplicationMixin(GoWorkerMixin):
     # TODO: Move some stuff to here.
@@ -369,3 +370,11 @@ class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):
 
     def teardown_application(self):
         return self._go_teardown_worker()
+
+    def _publish_message(self, message, endpoint_name=None):
+        if not self.get_metadata_helper(message).get_conversation_info:
+            log.error(
+                "Conversation metadata missing for message for %s: %s" % (
+                    type(self).__name__, message))
+        return super(GoApplicationWorker, self)._publish_message(
+            message, endpoint_name)

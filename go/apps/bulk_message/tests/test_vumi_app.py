@@ -33,7 +33,6 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
-        self.message_store = self.vumi_api.mdb
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
@@ -125,9 +124,9 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         self.clock.advance(self.app.monitor_interval + 1)
 
         [msg1, msg2] = yield self.get_dispatched_messages()
-        yield self.message_store.add_outbound_message(
+        yield self.store_outbound_msg(
             TransportUserMessage(**msg1.payload), batch_id=batch_id)
-        yield self.message_store.add_outbound_message(
+        yield self.store_outbound_msg(
             TransportUserMessage(**msg2.payload), batch_id=batch_id)
 
         # We should have two in flight
@@ -150,26 +149,22 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_send_message_command(self):
-        user_account_key = "4f5gfdtrfe44rgffserf"
         msg_options = {
             'transport_name': 'sphex_transport',
             'from_addr': '666666',
             'transport_type': 'sphex',
-            "helper_metadata": {
-                "go": {
-                    "user_account": user_account_key
-                },
-                'tag': {
-                    'tag': ['pool', 'tag1']
-                },
-            }
+            'helper_metadata': {'foo': {'bar': 'baz'}},
         }
+        conversation = yield self.setup_conversation()
+        yield self.start_conversation(conversation)
+        batch_id = yield conversation.get_latest_batch_key()
         yield self.dispatch_command("send_message", command_data={
-                    "batch_id": "345dt54fgtffdsft54ffg",
-                    "to_addr": "123456",
-                    "content": "hello world",
-                    "msg_options": msg_options
-                    })
+            "batch_id": batch_id,
+            "conversation_key": conversation.key,
+            "to_addr": "123456",
+            "content": "hello world",
+            "msg_options": msg_options,
+        })
 
         [msg] = yield self.get_dispatched_messages()
         self.assertEqual(msg.payload['to_addr'], "123456")
@@ -178,34 +173,33 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         self.assertEqual(msg.payload['transport_name'], "sphex_transport")
         self.assertEqual(msg.payload['transport_type'], "sphex")
         self.assertEqual(msg.payload['message_type'], "user_message")
-        self.assertEqual(msg.payload['helper_metadata']['go']['user_account'],
-                                                            user_account_key)
-        self.assertEqual(msg.payload['helper_metadata']['tag']['tag'],
-                                                            ['pool', 'tag1'])
+        self.assertEqual(msg.payload['helper_metadata']['go'], {
+            'user_account': self.user_account.key,
+            'conversation_type': 'bulk_message',
+            'conversation_key': conversation.key,
+        })
+        self.assertEqual(msg.payload['helper_metadata']['foo'],
+                         {'bar': 'baz'})
 
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
+        conversation = yield self.setup_conversation()
+        yield self.start_conversation(conversation)
+        batch_id = yield conversation.get_latest_batch_key()
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
-        yield self.vumi_api.mdb.add_inbound_message(msg)
+        yield self.store_inbound_msg(msg)
         command = VumiApiCommand.command('worker', 'send_message',
             command_data={
-                u'batch_id': u'batch-id',
+                u'batch_id': batch_id,
+                u'conversation_key': conversation.key,
                 u'content': u'foo',
                 u'to_addr': u'to_addr',
                 u'msg_options': {
-                    u'helper_metadata': {
-                        u'go': {
-                            u'user_account': u'account-key'
-                        },
-                        u'tag': {
-                            u'tag': [u'longcode', u'default10080']
-                        }
-                    },
                     u'transport_name': u'smpp_transport',
                     u'in_reply_to': msg['message_id'],
                     u'transport_type': u'sms',
                     u'from_addr': u'default10080',
-                }
+                },
             })
         yield self.app.consume_control_command(command)
         [sent_msg] = self.get_dispatched_messages()
@@ -215,22 +209,18 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to_bad_transport_name(self):
+        conversation = yield self.setup_conversation()
+        yield self.start_conversation(conversation)
+        batch_id = yield conversation.get_latest_batch_key()
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex, transport_name="bad")
-        yield self.vumi_api.mdb.add_inbound_message(msg)
+        yield self.store_inbound_msg(msg)
         command = VumiApiCommand.command('worker', 'send_message',
             command_data={
-                u'batch_id': u'batch-id',
+                u'batch_id': batch_id,
+                u'conversation_key': conversation.key,
                 u'content': u'foo',
                 u'to_addr': u'to_addr',
                 u'msg_options': {
-                    u'helper_metadata': {
-                        u'go': {
-                            u'user_account': u'account-key'
-                        },
-                        u'tag': {
-                            u'tag': [u'longcode', u'default10080']
-                        }
-                    },
                     u'transport_name': u'smpp_transport',
                     u'in_reply_to': msg['message_id'],
                     u'transport_type': u'sms',
@@ -249,15 +239,14 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         conv = yield self.create_conversation(
             delivery_tag_pool=u'pool', delivery_class=u'sms')
         yield self.start_conversation(conv)
-        [batch_id] = conv.get_batch_keys()
 
         mkid = TransportUserMessage.generate_id
-        yield self.user_api.api.mdb.add_outbound_message(
-            self.mkmsg_out("out 1", message_id=mkid()), batch_id=batch_id)
-        yield self.user_api.api.mdb.add_outbound_message(
-            self.mkmsg_out("out 2", message_id=mkid()), batch_id=batch_id)
-        yield self.user_api.api.mdb.add_inbound_message(
-            self.mkmsg_in("in 2", message_id=mkid()), batch_id=batch_id)
+        yield self.store_outbound_msg(
+            self.mkmsg_out("out 1", message_id=mkid()), conv)
+        yield self.store_outbound_msg(
+            self.mkmsg_out("out 2", message_id=mkid()), conv)
+        yield self.store_inbound_msg(
+            self.mkmsg_in("in 2", message_id=mkid()), conv)
 
         yield self.dispatch_command(
             'collect_metrics', conversation_key=conv.key,

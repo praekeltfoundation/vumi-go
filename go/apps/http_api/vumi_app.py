@@ -9,7 +9,6 @@ from vumi.transports.httprpc import httprpc
 from vumi.blinkenlights.metrics import MetricManager
 from vumi import log
 
-from go.vumitools.api import VumiApi
 from go.vumitools.app_worker import GoApplicationWorker
 from go.apps.http_api.resource import (StreamingResource, MessageStream,
                                         EventStream)
@@ -88,7 +87,6 @@ class StreamingHTTPWorker(GoApplicationWorker):
         # in using any of the helper functions at this point.
         self._event_handlers = {}
         self._session_handlers = {}
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
         # We do give the publisher a key but won't actually use it
         self.stream_publisher = yield self.publish_to(
             '%s.stream.lost_and_found' % (self.transport_name,))
@@ -117,11 +115,10 @@ class StreamingHTTPWorker(GoApplicationWorker):
     def unregister_client(self, conversation_key, callback):
         self.client_manager.stop(conversation_key, callback)
 
-    @inlineCallbacks
     def consume_user_message(self, message):
-        md = self.get_go_metadata(message)
-        conv_key, conv_type = yield md.get_conversation_info()
-        yield self.stream(MessageStream, conv_key, message)
+        msg_mdh = self.get_metadata_helper(message)
+        conv_key = msg_mdh.get_conversation_key()
+        return self.stream(MessageStream, conv_key, message)
 
     @inlineCallbacks
     def consume_unknown_event(self, event):

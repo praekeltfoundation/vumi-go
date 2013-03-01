@@ -5,11 +5,11 @@ from vumi.message import TransportUserMessage
 from vumi.middleware.tagger import TaggingMiddleware
 
 from go.vumitools.api import VumiApi
-from go.vumitools.api_worker import GoMessageMetadata
+from go.vumitools.api_worker import OldGoMessageMetadata
 from go.vumitools.tests.utils import GoPersistenceMixin
 
 
-class GoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
+class OldGoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
     use_riak = True
 
     @inlineCallbacks
@@ -45,7 +45,7 @@ class GoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
                                    transport_type="dummy_transport_type")
 
     def mk_md(self, message):
-        return GoMessageMetadata(self.vumi_api, message)
+        return OldGoMessageMetadata(self.vumi_api, message)
 
     @inlineCallbacks
     def test_account_key_lookup(self):

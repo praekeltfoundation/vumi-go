@@ -12,6 +12,21 @@ from vumi import log
 class GoOutboundResource(OutboundResource):
     """Resource that provides outbound message support for Go."""
 
+    def _handle_reply(self, api, command, reply_func):
+        content = command['content']
+        continue_session = command.get('continue_session', True)
+        orig_msg = api.get_inbound_message(command['in_reply_to'])
+        conv = self.worker.conversation_for_api(api)
+        helper_metadata = conv.set_go_helper_metadata()
+        return reply_func(orig_msg, content, continue_session=continue_session,
+                          helper_metadata=helper_metadata)
+
+    def handle_reply_to(self, api, command):
+        return self._handle_reply(api, command, self.app_worker.reply_to)
+
+    def handle_reply_to_group(self, api, command):
+        return self._handle_reply(api, command, self.app_worker.reply_to_group)
+
     @inlineCallbacks
     def handle_send_to_tag(self, api, command):
         tag = (command.get('tagpool'), command.get('tag'))

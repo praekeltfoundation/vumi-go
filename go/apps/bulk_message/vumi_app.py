@@ -42,11 +42,10 @@ class BulkMessageApplication(GoApplicationWorker):
     @inlineCallbacks
     def on_window_key_ready(self, window_id, flight_key):
         data = yield self.window_manager.get_data(window_id, flight_key)
-        batch_id = data['batch_id']
         to_addr = data['to_addr']
         content = data['content']
         msg_options = data['msg_options']
-        msg = yield self.send_message(batch_id, to_addr, content, msg_options)
+        msg = yield self.send_to(to_addr, content, **msg_options)
         yield self.window_manager.set_external_id(window_id, flight_key,
             msg['message_id'])
 
@@ -57,20 +56,15 @@ class BulkMessageApplication(GoApplicationWorker):
         return ':'.join([conversation_key, batch_id])
 
     @inlineCallbacks
-    def send_message_via_window(self, window_id, batch_id, to_addr, content,
-                                    msg_options):
+    def send_message_via_window(self, conv, window_id, batch_id, to_addr,
+                                msg_options):
         yield self.window_manager.create_window(window_id, strict=False)
         yield self.window_manager.add(window_id, {
             'batch_id': batch_id,
             'to_addr': to_addr,
-            'content': content,
+            'content': conv.message,
             'msg_options': msg_options,
             })
-
-    @inlineCallbacks
-    def send_message(self, batch_id, to_addr, content, msg_options):
-        msg = yield self.send_to(to_addr, content, **msg_options)
-        returnValue(msg)
 
     @inlineCallbacks
     def process_command_start(self, batch_id, conversation_type,
@@ -95,10 +89,11 @@ class BulkMessageApplication(GoApplicationWorker):
         if extra_params.get('dedupe'):
             to_addresses = set(to_addresses)
 
+        self.add_conv_to_msg_options(conv, msg_options)
         window_id = self.get_window_id(conversation_key, batch_id)
         for to_addr in to_addresses:
-            yield self.send_message_via_window(window_id, batch_id, to_addr,
-                                    conv.message, msg_options)
+            yield self.send_message_via_window(
+                conv, window_id, batch_id, to_addr, msg_options)
 
     def consume_ack(self, event):
         return self.handle_event(event)
@@ -114,11 +109,12 @@ class BulkMessageApplication(GoApplicationWorker):
                 event['event_type'], event.get('user_message_id')))
             return
 
-        gm = self.get_go_metadata(message)
-        conversation = yield gm.get_conversation()
-        batch_key = yield gm.get_batch_key()
-        if conversation and batch_key:
-            window_id = self.get_window_id(conversation.key, batch_key)
+        msg_mdh = self.get_metadata_helper(message)
+        conv = yield msg_mdh.get_conversation()
+        # XXX: This is a really horrible idea.
+        batch_key = yield conv.get_latest_batch_key()
+        if conv and batch_key:
+            window_id = self.get_window_id(conv.key, batch_key)
             flight_key = yield self.window_manager.get_internal_id(window_id,
                                 message['message_id'])
             yield self.window_manager.remove_key(window_id, flight_key)
@@ -127,17 +123,24 @@ class BulkMessageApplication(GoApplicationWorker):
     def process_command_send_message(self, *args, **kwargs):
         command_data = kwargs['command_data']
         log.info('Processing send_message: %s' % kwargs)
+        batch_id = command_data['batch_id']
+        conversation_key = command_data['conversation_key']
         to_addr = command_data['to_addr']
         content = command_data['content']
         msg_options = command_data['msg_options']
         in_reply_to = msg_options.pop('in_reply_to', None)
+        conv = yield self.get_conversation(batch_id, conversation_key)
+        self.add_conv_to_msg_options(conv, msg_options)
         if in_reply_to:
             msg = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
             if msg:
+                # TODO: This should no longer be necessary.
                 # We can't override transport_name in reply_to(), so we set it
                 # on the message we're replying to.
                 msg['transport_name'] = msg_options['transport_name']
-                yield self.reply_to(msg, content)
+                yield self.reply_to(
+                    msg, content,
+                    helper_metadata=msg_options['helper_metadata'])
             else:
                 log.warning('Unable to reply, message %s does not exist.' % (
                     in_reply_to))
