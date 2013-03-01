@@ -9,6 +9,7 @@ from django.conf import settings
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.account.utils import send_user_account_summary
+from go.account.tasks import send_scheduled_account_summary
 
 
 class AccountTestCase(DjangoGoApplicationTestCase):
@@ -223,3 +224,24 @@ class EmailTestCase(DjangoGoApplicationTestCase):
         self.assertTrue('Test Conversation' in email.body)
         self.assertTrue('Sent: 10 to 10 uniques.' in email.body)
         self.assertTrue('Received: 10 from 10 uniques.' in email.body)
+
+    def test_send_scheduled_account_summary_task(self):
+        profile = self.user.get_profile()
+        user_account = profile.get_user_account()
+        user_account.email_summary = u'daily'
+        user_account.save()
+
+        send_scheduled_account_summary('daily')
+        send_scheduled_account_summary('weekly')
+
+        [daily] = mail.outbox
+        self.assertEqual(daily.subject, 'Vumi Go Account Summary')
+
+        user_account.email_summary = u'weekly'
+        user_account.save()
+
+        send_scheduled_account_summary('daily')
+        send_scheduled_account_summary('weekly')
+
+        [daily, weekly] = mail.outbox
+        self.assertEqual(weekly.subject, 'Vumi Go Account Summary')
