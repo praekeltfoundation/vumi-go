@@ -467,6 +467,7 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
             )
 
         self.assertEqual(cmd, expected_cmd)
+        self.assertRaises(Exception, self.tm.get, token)
 
 
 class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):

@@ -276,6 +276,8 @@ class ConfirmConversationView(ConversationView):
                 conversation.start(batch_id=batch_id, **params)
                 messages.info(request, '%s started succesfully!' % (
                                             self.conversation_display_name,))
+                user_token, sys_token = token_manager.parse_full_token(token)
+                token_manager.delete(token)
                 return redirect('%s?%s' % (
                     self.get_view_url('confirm',
                         conversation_key=conversation.key),
