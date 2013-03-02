@@ -250,15 +250,20 @@ class ConfirmConversationView(ConversationView):
                 sending a conversation confirmation SMS will assign a batch key
                 while not actually starting the conversation.
         """
+        success = request.GET.get('success')
         token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = request.GET.get('token')
         token_data = token_manager.verify_get(token)
         if not token_data:
             raise Http404
+        if token_data and success:
+            user_token, sys_token = token_manager.parse_full_token(token)
+            print 'deleting token', user_token
+            token_manager.delete(user_token)
         return self.render_to_response({
             'form': ConfirmConversationForm(initial={'token': token}),
             'conversation': conversation,
-            'success': request.GET.get('success'),  # FIXME
+            'success': success,  # FIXME
             })
 
     def post(self, request, conversation):
@@ -276,8 +281,6 @@ class ConfirmConversationView(ConversationView):
                 conversation.start(batch_id=batch_id, **params)
                 messages.info(request, '%s started succesfully!' % (
                                             self.conversation_display_name,))
-                user_token, sys_token = token_manager.parse_full_token(token)
-                token_manager.delete(token)
                 return redirect('%s?%s' % (
                     self.get_view_url('confirm',
                         conversation_key=conversation.key),

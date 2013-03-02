@@ -426,13 +426,13 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
                 'token': full_token,
             })
 
-        self.assertRedirects(response, '%s?%s' % (
-            reverse('bulk_message:confirm', kwargs={
-                'conversation_key': conversation.key,
-            }), urllib.urlencode({
-                'token': full_token,
-                'success': 1
-            })))
+        success_url = '%s?%s' % (reverse('bulk_message:confirm', kwargs={
+                    'conversation_key': conversation.key,
+                }), urllib.urlencode({
+                    'token': full_token,
+                    'success': 1
+                }))
+        self.assertRedirects(response, success_url)
 
         # reload the conversation because batches are cached.
         conversation = self.user_api.get_wrapped_conversation(conversation.key)
@@ -467,7 +467,9 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
             )
 
         self.assertEqual(cmd, expected_cmd)
-        self.assertRaises(Exception, self.tm.get, token)
+        response = self.client.get(success_url)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(self.tm.get(token), None)
 
 
 class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
