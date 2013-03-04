@@ -242,16 +242,15 @@ class ConversationWrapper(object):
         user_account = yield self.c.user_account.get(self.api.manager)
         routing_table = yield self.user_api.get_routing_table(user_account)
 
-        conv_type = self.c.conversation_type
-        conv_endpoint = "%s:%s" % (self.c.key, "default")
+        conv_connector = "%s:%s" % (self.c.conversation_type, self.c.key)
         tag_connector = "%s:%s" % tag
 
         # Bad form to use someone else's underscore methods here, but this is
         # an even more temporary hack than that.
         self.user_api._add_routing_entry(
-            routing_table, conv_type, conv_endpoint, tag_connector, "default")
+            routing_table, conv_connector, "default", tag_connector, "default")
         self.user_api._add_routing_entry(
-            routing_table, tag_connector, "default", conv_type, conv_endpoint)
+            routing_table, tag_connector, "default", conv_connector, "default")
 
         yield user_account.save()
 
@@ -263,24 +262,18 @@ class ConversationWrapper(object):
         conversations is probably a good idea, but we may have to do it in a
         completely different way.
         """
-        conv_type = self.c.conversation_type
         user_account = yield self.c.user_account.get(self.api.manager)
         routing_table = yield self.user_api.get_routing_table(user_account)
-        if conv_type not in routing_table:
-            return
 
-        routing_entry = routing_table[conv_type].pop(
-            "%s:%s" % (self.c.key, "default"), None)
+        conv_connector = "%s:%s" % (self.c.conversation_type, self.c.key)
+        routing_entry = routing_table.pop(conv_connector, None)
         if routing_entry is None:
             return
-        if not routing_table[conv_type]:
-            routing_table.pop(conv_type)
 
-        transport_name, endpoint = routing_entry
-        if transport_name in routing_table:
-            routing_table[transport_name].pop(endpoint)
-            if not routing_table[transport_name]:
-                routing_table.pop(transport_name)
+        # XXX: This assumes symmetry, which is not guaranteed once we have
+        #      proper tools for managing routing tables.
+        for tag_connector, _endpoint in routing_entry.values():
+            routing_table.pop(tag_connector, None)
 
         yield user_account.save()
 

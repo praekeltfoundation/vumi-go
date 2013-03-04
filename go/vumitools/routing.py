@@ -12,6 +12,8 @@ from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 
 class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
                                           GoWorkerConfigMixin):
+    application_connector_mapping = ConfigDict(
+        "Mapping from conversation_type to connector name.", static=True)
     message_tag = ConfigList("Tag for the message, if any.")
     tagpool_metadata = ConfigDict(
         "Tagpool metadata for the tag attached to the message if any.")
@@ -62,7 +64,12 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         returnValue(self.CONFIG_CLASS(config_dict))
 
+    def get_application_connector(self, conversation_type):
+        mapping = self.get_static_config().application_connector_mapping or {}
+        return mapping.get(conversation_type, conversation_type)
+
     def process_inbound(self, config, msg, connector_name):
+        log.debug("Processing inbound: %s" % (msg,))
         if not config.message_tag:
             log.warning("No tag found for inbound message: %s" % (msg,))
             return
@@ -80,9 +87,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         go_metadata['conversation_key'] = conv_key
         go_metadata['user_account'] = config.user_account_key
 
-        return self.publish_inbound(msg, conv_type, endpoint)
+        conv_connector = self.get_application_connector(conv_type)
+        return self.publish_inbound(msg, conv_connector, endpoint)
 
     def process_outbound(self, config, msg, connector_name):
+        log.debug("Processing outbound: %s" % (msg,))
         if not config.conversation_info:
             log.warning(
                 "No conversation info found for outbound message: %s" % (msg,))
@@ -113,9 +122,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         return d
 
     def process_event(self, config, event, connector_name):
+        log.debug("Processing event: %s" % (event,))
         if not config.conversation_info:
             log.warning("No conversation info found on outbound message "
                         "for event: %s" % (event,))
             return
         conv_type = config.conversation_info['conversation_type']
-        return self.publish_event(event, conv_type, "default")
+        conv_connector = self.get_application_connector(conv_type)
+        return self.publish_event(event, conv_connector, "default")
