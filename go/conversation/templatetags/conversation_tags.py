@@ -123,7 +123,7 @@ def get_contact_for_message(user_api, message):
         TransportUserMessage.TT_USSD: 'ussd',
         TransportUserMessage.TT_XMPP: 'gtalk',
         TransportUserMessage.TT_TWITTER: 'twitter',
-    }.get(message['transport_type'], 'unkown')
+    }.get(message['transport_type'], 'unknown')
     return user_api.contact_store.contact_for_addr(
         delivery_class, unicode(message.user()))
 
