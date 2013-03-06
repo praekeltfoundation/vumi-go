@@ -42,6 +42,9 @@ class DjangoTokenManager(object):
             })
         return token
 
+    def parse_full_token(self, full_token):
+        return self.tm.parse_full_token(full_token)
+
     def url_for_token(self, token):
         site = Site.objects.get_current()
         return 'http://%s%s' % (site.domain, reverse('token',

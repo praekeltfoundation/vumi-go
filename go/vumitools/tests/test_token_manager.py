@@ -82,6 +82,12 @@ class TokenManagerTestCase(GoPersistenceMixin, TestCase):
         yield self.assertFailure(self.tm.generate('/foo/', token=token),
             TokenManagerException)
 
+    def test_parse_full_token(self):
+        user_token, sys_token = self.tm.parse_full_token('1-ab')
+        self.assertEqual(user_token, 'a')
+        self.assertEqual(sys_token, 'b')
+        self.assertRaises(MalformedToken, self.tm.parse_full_token, 'a-bc')
+
     @inlineCallbacks
     def test_race_condition(self):
         # claim these
