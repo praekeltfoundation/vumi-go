@@ -11,7 +11,7 @@
     <tbody>
         {% for message in message_page.object_list %}
         <tr>
-            {% get_contact_for_message request.user_api message as contact %}
+            {% get_contact_for_message request.user_api message message_direction as contact %}
             <td><i class="icon-repeat"></i> {{conversation.delivery_class}}</td>
             <td>
                 <h6><a href="{% url 'contacts:person' person_key=contact.key %}">{{contact}}</a> via {{message.transport_type}} - {{message.timestamp}}</h6>
