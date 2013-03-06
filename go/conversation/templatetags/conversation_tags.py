@@ -114,7 +114,7 @@ def show_conversation_messages(context, conversation, direction=None,
 
 
 @register.assignment_tag
-def get_contact_for_message(user_api, message):
+def get_contact_for_message(user_api, message, direction='inbound'):
     # This is a temporary work around to deal with the hackiness that
     # lives in `contact_for_addr()`. It used to expect to be passed a
     # `conversation.delivery_class` and this emulates that.
@@ -128,8 +128,9 @@ def get_contact_for_message(user_api, message):
         TransportUserMessage.TT_TWITTER: 'twitter',
     }.get(message['transport_type'],
           message['transport_type'])
+    user = message.user() if direction == 'inbound' else message['to_addr']
     return user_api.contact_store.contact_for_addr(
-        delivery_class, unicode(message.user()))
+        delivery_class, unicode(user))
 
 
 @register.assignment_tag
