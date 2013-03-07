@@ -23,6 +23,7 @@ def index(request):
         'email_address': request.user.username,
         'msisdn': account.msisdn,
         'confirm_start_conversation': account.confirm_start_conversation,
+        'email_summary': account.email_summary,
     })
     email_form = EmailForm()
 
@@ -40,6 +41,7 @@ def index(request):
                     'msisdn': data['msisdn'],
                     'confirm_start_conversation':
                         data['confirm_start_conversation'],
+                    'email_summary': data['email_summary'],
                 }
 
                 token = token_manager.generate_callback_token(request.path,
