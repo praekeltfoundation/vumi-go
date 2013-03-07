@@ -19,6 +19,13 @@ class AccountForm(BootstrapForm):
     msisdn = forms.CharField(label='Your mobile phone number', required=False)
     confirm_start_conversation = forms.BooleanField(
         label='SMS to confirm starting of a conversation', required=False)
+    email_summary = forms.ChoiceField(
+        label='How often do you want to receive an account summary via email?',
+        required=False, choices=(
+            ('never', 'Never.'),
+            ('daily', 'Once a day.'),
+            ('weekly', 'Once a week.'),
+        ))
     existing_password = forms.CharField(
         label='Your existing password',
         widget=forms.PasswordInput(attrs={
@@ -40,6 +47,7 @@ class AccountForm(BootstrapForm):
                 "email_address",
                 "msisdn",
                 "confirm_start_conversation",
+                "email_summary",
                 "new_password",),
             Fieldset('Verify your password',
                 'existing_password'))

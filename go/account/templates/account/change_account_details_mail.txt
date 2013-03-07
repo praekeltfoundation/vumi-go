@@ -7,6 +7,7 @@ Last name: {{last_name}}
 Email address: {{email_address}}
 Contact number: {{msisdn}}
 Confirm starting of a conversation: {% if confirm_start_conversation %}Yes{% else %}No{% endif %}
+Email summary: {{email_summary}}
 {% if new_password %}You also specified a new password of {{new_password|length}} characters long, ending in '{{new_password|slice:"-2:"}}'.{% endif %}
 
 Please confirm that you want to apply these changes by clicking on the following link within the next 4 hours: {{token_url}}.

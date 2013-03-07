@@ -289,6 +289,20 @@ GOOGLE_ANALYTICS_UA = None
 
 MESSAGE_STORE_API_URL = 'http://localhost:8080/api/v1/'
 
+from celery.schedules import crontab
+CELERYBEAT_SCHEDULE = {
+    'send-weekly-account-summary': {
+        'task': 'go.account.tasks.send_scheduled_account_summary',
+        'schedule': crontab(hour=0, minute=0, day_of_week=1),
+        'args': ('weekly',)
+    },
+    'send-daily-account-summary': {
+        'task': 'go.account.tasks.send_scheduled_account_summary',
+        'schedule': crontab(hour=0, minute=0),
+        'args': ('daily',)
+    },
+}
+
 try:
     from production_settings import *
 except ImportError:
