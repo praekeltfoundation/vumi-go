@@ -428,8 +428,7 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertContains(response, conversation.subject)
         self.assertContains(response, conversation.message)
         self.assertContains(response, "Conversation confirmed")
-        self.assertContains(response, "%s started succesfully!" %
-                            conversation.name)
+        self.assertContains(response, "Conversation started succesfully!")
 
         # reload the conversation because batches are cached.
         conversation = self.user_api.get_wrapped_conversation(conversation.key)
@@ -467,7 +466,7 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
 
         # check token was consumed so it can't be re-used to send the
         # conversation messages again
-        self.assertEqual(self.tm.verify_get(token), None)
+        self.assertEqual(self.tm.get(token), None)
 
         # check repost fails because token has been deleted
         response = self.client.post(reverse('bulk_message:confirm', kwargs={

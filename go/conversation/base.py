@@ -272,11 +272,13 @@ class ConfirmConversationView(ConversationView):
         if confirmation_form.is_valid():
             try:
                 batch_id = conversation.get_latest_batch_key()
-                conversation.start(batch_id=batch_id, **params)
-                token_manager.delete(user_token)
-                messages.info(request, '%s started succesfully!' %
-                              (self.conversation_display_name,))
-                success = True
+                if token_manager.delete(user_token):
+                    conversation.start(batch_id=batch_id, **params)
+                    messages.info(request, '%s started succesfully!' %
+                                  (self.conversation_display_name,))
+                    success = True
+                else:
+                    messages.warning("Conversation already confirmed!")
             except ConversationSendError as error:
                 messages.error(request, str(error))
         else:
