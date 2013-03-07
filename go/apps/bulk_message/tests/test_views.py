@@ -1,5 +1,4 @@
 from datetime import date
-import urllib
 
 from django.test.client import Client
 from django.core import mail
@@ -428,13 +427,11 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
                 'token': full_token,
             })
 
-        self.assertRedirects(response, '%s?%s' % (
-            reverse('bulk_message:confirm', kwargs={
-                'conversation_key': conversation.key,
-            }), urllib.urlencode({
-                'token': full_token,
-                'success': 1
-            })))
+        self.assertContains(response, conversation.subject)
+        self.assertContains(response, conversation.message)
+        self.assertContains(response, "Conversation confirmed")
+        self.assertContains(response, "%s started succesfully!" %
+                            conversation.name)
 
         # reload the conversation because batches are cached.
         conversation = self.user_api.get_wrapped_conversation(conversation.key)
@@ -470,6 +467,19 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
             )
 
         self.assertEqual(cmd, expected_cmd)
+
+        # check token was consumed so it can't be re-used to send the
+        # conversation messages again
+        self.assertEqual(self.tm.verify_get(token), None)
+
+        # check repost fails because token has been deleted
+        response = self.client.post(reverse('bulk_message:confirm', kwargs={
+            'conversation_key': conversation.key,
+            }), {
+                'token': full_token,
+            })
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(self.tm.get(token), None)
 
 
 class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
