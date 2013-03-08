@@ -45,7 +45,7 @@ def send_user_account_summary(user):
     for bunch in bunches:
         all_conversations.extend([user_api.wrap_conversation(conv)
                                     for conv in bunch])
-    all_conversations.sort(lambda conv: conv.created_at, reverse=True)
+    all_conversations.sort(key=(lambda conv: conv.created_at), reverse=True)
 
     active_conversations = {}
     known_types = dict(CONVERSATION_TYPES)
