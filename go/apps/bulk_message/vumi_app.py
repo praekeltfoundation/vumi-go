@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Vumi application worker for the vumitools API."""
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
 from vumi.components.window_manager import WindowManager
 from vumi import log
@@ -14,7 +14,6 @@ class BulkMessageApplication(GoApplicationWorker):
     """
     Application that accepts 'send message' commands and does exactly that.
     """
-    SEND_TO_TAGS = frozenset(['default'])
     worker_name = 'bulk_message_application'
     max_ack_window = 10000
     max_ack_wait = 10
@@ -45,7 +44,8 @@ class BulkMessageApplication(GoApplicationWorker):
         to_addr = data['to_addr']
         content = data['content']
         msg_options = data['msg_options']
-        msg = yield self.send_to(to_addr, content, **msg_options)
+        msg = yield self.send_to(
+            to_addr, content, endpoint='default', **msg_options)
         yield self.window_manager.set_external_id(window_id, flight_key,
             msg['message_id'])
 
@@ -145,7 +145,8 @@ class BulkMessageApplication(GoApplicationWorker):
                 log.warning('Unable to reply, message %s does not exist.' % (
                     in_reply_to))
         else:
-            yield self.send_to(to_addr, content, **msg_options)
+            yield self.send_to(
+                to_addr, content, endpoint='default', **msg_options)
 
     @inlineCallbacks
     def collect_metrics(self, user_api, conversation_key):

@@ -71,7 +71,6 @@ class StreamingHTTPWorker(GoApplicationWorker):
         Defaults to '/health/'
     """
     worker_name = 'http_api_worker'
-    SEND_TO_TAGS = frozenset(['default'])
 
     def validate_config(self):
         super(StreamingHTTPWorker, self).validate_config()

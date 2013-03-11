@@ -18,7 +18,6 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
     CONFIG_CLASS = SurveyConfig
 
     worker_name = 'survey_application'
-    SEND_TO_TAGS = frozenset(['default'])
 
     def validate_config(self):
         # vxpolls
@@ -180,4 +179,5 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
                 log.warning('Unable to reply, message %s does not exist.' % (
                     in_reply_to))
         else:
-            yield self.send_to(to_addr, content, **msg_options)
+            yield self.send_to(
+                to_addr, content, endpoint='default', **msg_options)

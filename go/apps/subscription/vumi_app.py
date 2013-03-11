@@ -12,13 +12,13 @@ class SubscriptionApplication(GoApplicationWorker):
     """
     Application that recognises keywords and fires events.
     """
-    SEND_TO_TAGS = frozenset(['default'])
     worker_name = 'subscription_application'
 
     @inlineCallbacks
     def send_message(self, batch_id, to_addr, content, msg_options):
         # TODO: Update
-        msg = yield self.send_to(to_addr, content, **msg_options)
+        msg = yield self.send_to(
+            to_addr, content, endpoint='default', **msg_options)
         yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=batch_id)
         log.info('Stored outbound %s' % (msg,))
 

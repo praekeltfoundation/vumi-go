@@ -185,7 +185,8 @@ class MessageStream(StreamResource):
         content = msg_options.pop('content')
         msg_options['helper_metadata'] = conversation.set_go_helper_metadata()
 
-        msg = yield self.worker.send_to(to_addr, content, **msg_options)
+        msg = yield self.worker.send_to(
+            to_addr, content, endpoint='default', **msg_options)
 
         request.setResponseCode(http.OK)
         request.write(msg.to_json())

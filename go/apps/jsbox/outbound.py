@@ -46,7 +46,9 @@ class GoOutboundResource(OutboundResource):
                                    reason="Tag %r not held by account"
                                    % (tag,)))
         msg_options = yield user_api.msg_options(tag)
-        yield self.app_worker.send_to(to_addr, content, **msg_options)
+        endpoint = ':'.join(tag)
+        yield self.app_worker.send_to(
+            to_addr, content, endpoint=endpoint, **msg_options)
 
         returnValue(self.reply(command, success=True))
 

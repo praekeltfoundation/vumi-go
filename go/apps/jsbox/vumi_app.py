@@ -60,7 +60,6 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
     """
 
     CONFIG_CLASS = JsBoxConfig
-    SEND_TO_TAGS = frozenset(['default'])
     worker_name = 'jsbox_application'
 
     @inlineCallbacks
