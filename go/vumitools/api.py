@@ -20,7 +20,7 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
-from go.vumitools.account import AccountStore
+from go.vumitools.account import AccountStore, RoutingTableHelper
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.conversation.models import CONVERSATION_DRAFT
@@ -286,6 +286,7 @@ class VumiUserApi(object):
             return
 
         routing_table = {}
+        rt_helper = RoutingTableHelper(routing_table)
 
         # Start by walking forward from tags owned by this account.
         account_tags = yield self.list_endpoints(user_account)
@@ -300,12 +301,10 @@ class VumiUserApi(object):
 
             # If we get here, we have a conversation to set up routing for.
 
-            conv_connector = conv.get_routing_name()
-            tag_connector = "%s:%s" % tag
-            self._add_routing_entry(routing_table, conv_connector, "default",
-                                    tag_connector, "default")
-            self._add_routing_entry(routing_table, tag_connector, "default",
-                                    conv_connector, "default")
+            conv_conn = conv.get_routing_name()
+            tag_conn = "%s:%s" % tag
+            rt_helper.add_entry(conv_conn, "default", tag_conn, "default")
+            rt_helper.add_entry(tag_conn, "default", conv_conn, "default")
 
         # XXX: Saving here could lead to a race condition if something else
         # populates the routing table with some different data and saves before
@@ -321,16 +320,6 @@ class VumiUserApi(object):
                     conv.conversation_type, {}):
                 log.warning(
                     "No routing configured for conversation: %r" % (conv,))
-
-    def _add_routing_entry(self, routing_table, src_connector, src_endpoint,
-                           dst_connector, dst_endpoint):
-        connector_dict = routing_table.setdefault(src_connector, {})
-        if src_endpoint in connector_dict:
-            log.warning(
-                "Replacing routing entry for (%r, %r): was %r, now %r" % (
-                    src_connector, src_endpoint, connector_dict[src_endpoint],
-                    [dst_connector, dst_endpoint]))
-        connector_dict[src_endpoint] = [dst_connector, dst_endpoint]
 
     @Manager.calls_manager
     def get_routing_table(self, user_account=None):

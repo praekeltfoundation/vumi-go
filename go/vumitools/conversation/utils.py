@@ -7,11 +7,11 @@ from collections import defaultdict
 from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Manager
-from vumi import log
 
 from go.vumitools.exceptions import ConversationSendError
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.utils import MessageMetadataHelper
+from go.vumitools.account import RoutingTableHelper
 
 
 class ConversationWrapper(object):
@@ -241,16 +241,13 @@ class ConversationWrapper(object):
         """
         user_account = yield self.c.user_account.get(self.api.manager)
         routing_table = yield self.user_api.get_routing_table(user_account)
+        rt_helper = RoutingTableHelper(routing_table)
 
-        conv_connector = self.c.get_routing_name()
-        tag_connector = "%s:%s" % tag
+        conv_conn = self.c.get_routing_name()
+        tag_conn = "%s:%s" % tag
 
-        # Bad form to use someone else's underscore methods here, but this is
-        # an even more temporary hack than that.
-        self.user_api._add_routing_entry(
-            routing_table, conv_connector, "default", tag_connector, "default")
-        self.user_api._add_routing_entry(
-            routing_table, tag_connector, "default", conv_connector, "default")
+        rt_helper.add_entry(conv_conn, "default", tag_conn, "default")
+        rt_helper.add_entry(tag_conn, "default", conv_conn, "default")
 
         yield user_account.save()
 

@@ -5,6 +5,7 @@ from datetime import datetime
 
 from twisted.internet.defer import returnValue
 
+from vumi import log
 from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (
    Integer, Unicode, Timestamp, ManyToMany, Json, Boolean)
@@ -59,6 +60,36 @@ class UserAccount(Model):
                 if tp.tagpool == tagpool:
                     returnValue(True)
         returnValue(False)
+
+
+class RoutingTableHelper(object):
+    def __init__(self, routing_table):
+        self.routing_table = routing_table
+
+    def add_entry(self, src_conn, src_endpoint, dst_conn, dst_endpoint):
+        connector_dict = self.routing_table.setdefault(src_conn, {})
+        if src_endpoint in connector_dict:
+            log.warning(
+                "Replacing routing entry for (%r, %r): was %r, now %r" % (
+                    src_conn, src_endpoint, connector_dict[src_endpoint],
+                    [dst_conn, dst_endpoint]))
+        connector_dict[src_endpoint] = [dst_conn, dst_endpoint]
+
+    def remove_entry(self, src_conn, src_endpoint):
+        connector_dict = self.routing_table.get(src_conn)
+        if connector_dict is None or src_endpoint not in connector_dict:
+            log.warning(
+                "Attempting to remove missing routing entry for (%r, %r)." % (
+                    src_conn, src_endpoint))
+            return None
+
+        old_dest = connector_dict.pop(src_endpoint)
+
+        if not connector_dict:
+            # This is the last entry for this connector
+            self.routing_table.pop(src_conn)
+
+        return old_dest
 
 
 class AccountStore(object):
