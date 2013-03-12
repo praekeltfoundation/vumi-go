@@ -42,18 +42,18 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         config_dict = self.config.copy()
         user_account_key = None
 
+        msg_mdh = self.get_metadata_helper(msg)
+
         # TODO: Better way to look up account for either tag or conversation.
-        tag = msg.get('helper_metadata', {}).get('tag', {}).get('tag')
-        if tag is not None:
-            tagpool_md = yield self.vumi_api.tpm.get_metadata(tag[0])
+        if msg_mdh.tag is not None:
+            tagpool_md = yield self.vumi_api.tpm.get_metadata(msg_mdh.tag[0])
             config_dict['tagpool_metadata'] = tagpool_md
-            config_dict['message_tag'] = tag
-            tag_info = yield self.vumi_api.mdb.get_tag_info(tuple(tag))
+            config_dict['message_tag'] = msg_mdh.tag
+            tag_info = yield self.vumi_api.mdb.get_tag_info(tuple(msg_mdh.tag))
             user_account_key = tag_info.metadata['user_account']
 
-        msg_mdh = self.get_metadata_helper(msg)
         if user_account_key is None:
-            user_account_key = yield msg_mdh.get_account_key()
+            user_account_key = msg_mdh.get_account_key()
 
         user_api = self.get_user_api(user_account_key)
         routing_table = yield user_api.get_routing_table()
@@ -82,10 +82,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         target_conn, endpoint = target
         conv_type, conv_key = target_conn.split(':', 1)
-        go_metadata = msg.get('helper_metadata', {}).setdefault('go', {})
-        go_metadata['conversation_type'] = conv_type
-        go_metadata['conversation_key'] = conv_key
-        go_metadata['user_account'] = config.user_account_key
+        msg_mdh = self.get_metadata_helper(msg)
+        msg_mdh.set_conversation_info(
+            conv_type, conv_key, config.user_account_key)
 
         conv_connector = self.get_application_connector(conv_type)
         return self.publish_inbound(msg, conv_connector, endpoint)

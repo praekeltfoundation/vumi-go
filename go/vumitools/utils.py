@@ -81,6 +81,14 @@ class MessageMetadataHelper(object):
             return None
         return conversation_info
 
+    def set_conversation_info(self, conversation_type, conversation_key,
+                              user_account):
+        self._go_metadata.update({
+            'conversation_type': conversation_type,
+            'conversation_key': conversation_key,
+            'user_account': user_account,
+        })
+
 
 class OldGoMessageMetadata(object):
     """Look up various bits of metadata for a Vumi Go message.
