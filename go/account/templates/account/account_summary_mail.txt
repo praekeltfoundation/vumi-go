@@ -5,7 +5,8 @@ Here is your Vumi Go account summary:
 
 Total number of contacts: {{total_contacts}}
 Total number of unique contacts by {{unique_identifier}}: {{total_uniques}}
-Total number of messages sent and received: {{total_message_count}}
+Total number of messages sent: {{total_messages_sent}}
+Total number of messages received: {{total_messages_received}}
 
 {% for type, conversations in active_conversations.items %}
 {{type}}

@@ -56,17 +56,22 @@ def send_user_account_summary(user):
             conv_list.append(conv)
 
     message_count = get_messages_count(all_conversations)
-    total_message_count = sum(conv_type['sent'] + conv_type['received']
-                                for conv_type in message_count.values())
+    total_messages_sent = sum(conv_type['sent'] for conv_type
+                                in message_count.values())
+    total_messages_received = sum(conv_type['received'] for conv_type
+                                    in message_count.values())
+    total_message_count = total_messages_received + total_messages_sent
 
-    send_mail('Vumi Go Account Summary',
-        render_to_string('account/account_summary_mail.txt', {
+    send_mail('Vumi Go Account Summary', render_to_string(
+        'account/account_summary_mail.txt', {
             'all_conversations': all_conversations,
             'user': user,
             'unique_identifier': 'contact number',
             'total_uniques': len(uniques),
             'total_contacts': len(contact_keys),
+            'total_messages_received': total_messages_received,
+            'total_messages_sent': total_messages_sent,
             'total_message_count': total_message_count,
             'active_conversations': active_conversations,
-            }), settings.DEFAULT_FROM_EMAIL, [user.email],
+        }), settings.DEFAULT_FROM_EMAIL, [user.email],
         fail_silently=False)
