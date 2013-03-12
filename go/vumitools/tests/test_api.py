@@ -367,11 +367,11 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
         routing_table = yield self.user_api.get_routing_table()
         self.assertEqual(routing_table, {
-            u'bulk_message': {
-                u':'.join([conv.key, 'default']): [u'pool1:5678', u'default']},
+            u':'.join(['bulk_message', conv.key]): {
+                'default': [u'pool1:5678', u'default']},
             u'pool1:5678': {
-                u'default': [
-                    u'bulk_message', u'%s:default' % conv.key]},
+                u'default': [u':'.join(['bulk_message', conv.key]), 'default'],
+            },
         })
 
 

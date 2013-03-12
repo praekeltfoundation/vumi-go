@@ -242,7 +242,7 @@ class ConversationWrapper(object):
         user_account = yield self.c.user_account.get(self.api.manager)
         routing_table = yield self.user_api.get_routing_table(user_account)
 
-        conv_connector = "%s:%s" % (self.c.conversation_type, self.c.key)
+        conv_connector = self.c.get_routing_name()
         tag_connector = "%s:%s" % tag
 
         # Bad form to use someone else's underscore methods here, but this is

@@ -85,6 +85,9 @@ class Conversation(Model):
         addrs = [contact.addr_for(self.delivery_class) for contact in contacts]
         return [addr for addr in addrs if addr]
 
+    def get_routing_name(self):
+        return ':'.join((self.conversation_type, self.key))
+
 
 class ConversationStore(PerAccountStore):
     def setup_proxies(self):

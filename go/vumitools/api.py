@@ -300,13 +300,12 @@ class VumiUserApi(object):
 
             # If we get here, we have a conversation to set up routing for.
 
-            conv_type = conv.conversation_type
-            conv_endpoint = "%s:%s" % (conv.key, "default")
+            conv_connector = conv.get_routing_name()
             tag_connector = "%s:%s" % tag
-            self._add_routing_entry(routing_table, conv_type, conv_endpoint,
+            self._add_routing_entry(routing_table, conv_connector, "default",
                                     tag_connector, "default")
             self._add_routing_entry(routing_table, tag_connector, "default",
-                                    conv_type, conv_endpoint)
+                                    conv_connector, "default")
 
         # XXX: Saving here could lead to a race condition if something else
         # populates the routing table with some different data and saves before
