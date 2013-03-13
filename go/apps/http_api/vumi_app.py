@@ -114,8 +114,22 @@ class StreamingHTTPWorker(GoApplicationWorker):
     @inlineCallbacks
     def consume_user_message(self, message):
         md = self.get_go_metadata(message)
-        conv_key, conv_type = yield md.get_conversation_info()
-        yield self.stream(MessageStream, conv_key, message)
+        account_key = yield md.get_account_key()
+        raw_conv = yield md.get_conversation()
+        if raw_conv is None:
+            log.warning("Cannot find conversation for message: %r" % (
+                message,))
+            return
+
+        user_api = self.get_user_api(account_key)
+        conversation = user_api.wrap_conversation(raw_conv)
+        metadata = conversation.get_metadata(default={})
+        http_api_metadata = metadata.get('http_api', {})
+        push_message_url = http_api_metadata.get('push_message_url')
+        if push_message_url:
+            yield self.push(push_message_url, message)
+        else:
+            yield self.stream(MessageStream, conversation.key, message)
 
     @inlineCallbacks
     def consume_unknown_event(self, event):
