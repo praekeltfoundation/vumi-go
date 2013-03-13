@@ -4,10 +4,12 @@ import json
 from twisted.internet.defer import inlineCallbacks, DeferredQueue
 from twisted.web.http_headers import Headers
 from twisted.web import http
+from twisted.web.server import NOT_DONE_YET
 
 from vumi.utils import http_request_full
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.message import TransportUserMessage, TransportEvent
+from vumi.tests.utils import MockHttpServer
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApi
@@ -88,6 +90,20 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         }
 
         self.client = StreamingClient()
+
+        # Mock server to test HTTP posting of inbound messages & events
+        self.mock_push_server = MockHttpServer(self.handle_request)
+        yield self.mock_push_server.start()
+        self.push_calls = DeferredQueue()
+
+    @inlineCallbacks
+    def tearDown(self):
+        yield super(StreamingHTTPWorkerTestCase, self).tearDown()
+        yield self.mock_push_server.stop()
+
+    def handle_request(self, request):
+        self.push_calls.put(request)
+        return NOT_DONE_YET
 
     def dispatch_with_tag(self, msg, tag=None):
         if tag:
@@ -353,3 +369,49 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(self.app.client_manager.clients, {
             'sphex.stream.message.%s' % (self.conversation.key,): []
         })
+
+    @inlineCallbacks
+    def test_post_inbound_message(self):
+        # Set the URL so stuff is HTTP Posted instead of streamed.
+        metadata = self.conversation.get_metadata(default={})
+        http_metadata = metadata.get('http_api')
+        http_metadata.update({
+            'push_message_url': self.mock_push_server.url,
+        })
+        self.conversation.set_metadata(metadata)
+        yield self.conversation.save()
+
+        msg = self.mkmsg_in(content='in 1', message_id='1')
+        msg_d = self.dispatch_with_tag(msg, self.tag)
+
+        req = yield self.push_calls.get()
+        posted_json_data = req.content.read()
+        req.finish()
+        yield msg_d
+
+        posted_msg = TransportUserMessage.from_json(posted_json_data)
+        self.assertEqual(posted_msg['message_id'], msg['message_id'])
+
+    @inlineCallbacks
+    def test_post_inbound_event(self):
+        # Set the URL so stuff is HTTP Posted instead of streamed.
+        metadata = self.conversation.get_metadata(default={})
+        http_metadata = metadata.get('http_api')
+        http_metadata.update({
+            'push_event_url': self.mock_push_server.url,
+        })
+        self.conversation.set_metadata(metadata)
+        yield self.conversation.save()
+
+        msg1 = self.mkmsg_out(content='in 1', message_id='1')
+        yield self.vumi_api.mdb.add_outbound_message(msg1,
+                                                        batch_id=self.batch_id)
+        ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
+        event_d = self.dispatch_event(ack1)
+
+        req = yield self.push_calls.get()
+        posted_json_data = req.content.read()
+        req.finish()
+        yield event_d
+
+        self.assertEqual(TransportEvent.from_json(posted_json_data), ack1)

@@ -4,7 +4,7 @@ import random
 
 from twisted.internet.defer import inlineCallbacks, maybeDeferred
 
-
+from vumi.utils import http_request_full
 from vumi.transports.httprpc import httprpc
 from vumi import log
 
@@ -154,9 +154,16 @@ class StreamingHTTPWorker(GoApplicationWorker):
         conversation = yield user_api.get_wrapped_conversation(conv_key)
         push_event_url = self.get_api_metadata(conversation, 'push_event_url')
         if push_event_url:
-            yield self.push(push_event_url, event)
+            resp = yield self.push(push_event_url, event)
+            print resp.delivered_body
         else:
             yield self.stream(EventStream, conversation.key, event)
+
+    def push(self, url, vumi_message):
+        data = vumi_message.to_json().encode('utf-8')
+        return http_request_full(url.encode('utf-8'), data=data, headers={
+            'Content-Type': 'application/json',
+        })
 
     def get_health_response(self):
         return str(sum([len(callbacks) for callbacks in
