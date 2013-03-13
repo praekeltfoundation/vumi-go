@@ -108,7 +108,10 @@ class Command(BaseCommand):
             raise CommandError("No routing table found.")
         rt_helper = RoutingTableHelper(account.routing_table)
         rt_helper.add_entry(*options['add'])
-        # TODO: Validation
+        try:
+            user_api.validate_routing_table(account)
+        except Exception as e:
+            raise CommandError(e)
         account.save()
         self.stdout.write("Routing table entry added.\n")
 
@@ -127,7 +130,10 @@ class Command(BaseCommand):
                 "Existing entry (%s, %s) does not match (%s, %s)." % (
                     target[0], target[1], dst_conn, dst_endpoint))
         rt_helper.remove_entry(src_conn, src_endpoint)
-        # TODO: Validation
+        try:
+            user_api.validate_routing_table(account)
+        except Exception as e:
+            raise CommandError(e)
         account.save()
         self.stdout.write("Routing table entry removed.\n")
 
