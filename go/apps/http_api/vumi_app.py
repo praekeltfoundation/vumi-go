@@ -3,6 +3,7 @@ from collections import defaultdict
 import random
 
 from twisted.internet.defer import inlineCallbacks, maybeDeferred
+from twisted.web import http
 
 from vumi.utils import http_request_full
 from vumi.transports.httprpc import httprpc
@@ -131,7 +132,10 @@ class StreamingHTTPWorker(GoApplicationWorker):
         push_message_url = self.get_api_metadata(conversation,
             'push_message_url')
         if push_message_url:
-            yield self.push(push_message_url, message)
+            resp = yield self.push(push_message_url, message)
+            if resp.code != http.OK:
+                log.warning('Got unexpected response code %s from %s' % (
+                    resp.code, push_message_url))
         else:
             yield self.stream(MessageStream, conversation.key, message)
 
@@ -155,7 +159,9 @@ class StreamingHTTPWorker(GoApplicationWorker):
         push_event_url = self.get_api_metadata(conversation, 'push_event_url')
         if push_event_url:
             resp = yield self.push(push_event_url, event)
-            print resp.delivered_body
+            if resp.code != http.OK:
+                log.warning('Got unexpected response code %s from %s' % (
+                    resp.code, push_event_url))
         else:
             yield self.stream(EventStream, conversation.key, event)
 
