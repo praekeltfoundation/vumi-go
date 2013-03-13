@@ -55,7 +55,7 @@ class StreamResource(BaseResource):
         self._rk = self.routing_key % {
             'transport_name': self.worker.transport_name,
             'conversation_key': self.conversation_key,
-            }
+        }
 
     def render_GET(self, request):
         # Twisted's Agent has trouble closing a connection when the server has

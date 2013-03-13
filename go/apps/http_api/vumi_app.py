@@ -100,14 +100,14 @@ class StreamingHTTPWorker(GoApplicationWorker):
         self.webserver = self.start_web_resources([
             (StreamingResource(self), self.web_path),
             (httprpc.HttpRpcHealthResource(self), self.health_path),
-            ], self.web_port)
+        ], self.web_port)
 
     def stream(self, stream_class, conversation_key, message):
         # Publish the message by manually specifying the routing key
         rk = stream_class.routing_key % {
             'transport_name': self.transport_name,
             'conversation_key': conversation_key,
-            }
+        }
         return self.client_manager.publish(rk, message)
 
     def register_client(self, key, message_class, callback):
