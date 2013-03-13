@@ -50,7 +50,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             'web_path': '/foo',
             'web_port': 0,
             'metrics_prefix': 'metrics_prefix.',
-            })
+        })
         self.app = yield self.get_application(self.config)
         self.addr = self.app.webserver.getHost()
         self.url = 'http://%s:%s%s' % (self.addr.host, self.addr.port,
@@ -85,7 +85,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.auth_headers = {
             'Authorization': ['Basic ' + base64.b64encode('%s:%s' % (
                 self.account.key, 'token-1'))],
-            }
+        }
 
         self.client = StreamingClient()
 
@@ -170,7 +170,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         headers = Headers({
             'Authorization': ['Basic %s' % (base64.b64encode('foo:bar'),)],
-            })
+        })
 
         receiver = self.client.stream(TransportUserMessage, queue.put,
                                                 queue.put, url,
@@ -268,7 +268,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         metric_data = [
             ("vumi.test.v1", 1234, 'SUM'),
             ("vumi.test.v2", 3456, 'AVG'),
-            ]
+        ]
 
         url = '%s/%s/metrics.json' % (self.url, self.conversation.key)
         response = yield http_request_full(url, json.dumps(metric_data),
@@ -352,4 +352,4 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         self.assertEqual(self.app.client_manager.clients, {
             'sphex.stream.message.%s' % (self.conversation.key,): []
-            })
+        })
