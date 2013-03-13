@@ -168,7 +168,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
     def push(self, url, vumi_message):
         data = vumi_message.to_json().encode('utf-8')
         return http_request_full(url.encode('utf-8'), data=data, headers={
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json; charset=utf-8',
         })
 
     def get_health_response(self):
