@@ -111,6 +111,11 @@ class StreamingHTTPWorker(GoApplicationWorker):
     def unregister_client(self, conversation_key, callback):
         self.client_manager.stop(conversation_key, callback)
 
+    def get_api_metadata(self, conversation, key):
+        metadata = conversation.get_metadata(default={})
+        http_api_metadata = metadata.get('http_api', {})
+        return http_api_metadata.get(key)
+
     @inlineCallbacks
     def consume_user_message(self, message):
         md = self.get_go_metadata(message)
@@ -123,9 +128,8 @@ class StreamingHTTPWorker(GoApplicationWorker):
 
         user_api = self.get_user_api(account_key)
         conversation = user_api.wrap_conversation(raw_conv)
-        metadata = conversation.get_metadata(default={})
-        http_api_metadata = metadata.get('http_api', {})
-        push_message_url = http_api_metadata.get('push_message_url')
+        push_message_url = self.get_api_metadata(conversation,
+            'push_message_url')
         if push_message_url:
             yield self.push(push_message_url, message)
         else:
@@ -147,7 +151,12 @@ class StreamingHTTPWorker(GoApplicationWorker):
         conversations = user_api.conversation_store.conversations
         mr = conversations.index_lookup('batches', batch.key)
         [conv_key] = yield mr.get_keys()
-        yield self.stream(EventStream, conv_key, event)
+        conversation = yield user_api.get_wrapped_conversation(conv_key)
+        push_event_url = self.get_api_metadata(conversation, 'push_event_url')
+        if push_event_url:
+            yield self.push(push_event_url, event)
+        else:
+            yield self.stream(EventStream, conversation.key, event)
 
     def get_health_response(self):
         return str(sum([len(callbacks) for callbacks in
