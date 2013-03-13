@@ -66,6 +66,9 @@ class RoutingTableHelper(object):
     def __init__(self, routing_table):
         self.routing_table = routing_table
 
+    def lookup_target(self, src_conn, src_endpoint):
+        return self.routing_table.get(src_conn, {}).get(src_endpoint)
+
     def add_entry(self, src_conn, src_endpoint, dst_conn, dst_endpoint):
         connector_dict = self.routing_table.setdefault(src_conn, {})
         if src_endpoint in connector_dict:
