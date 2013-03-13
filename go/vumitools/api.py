@@ -316,8 +316,8 @@ class VumiUserApi(object):
         # Check that we have routing set up for all our active conversations.
         convs = yield self.active_conversations()
         for conv in convs:
-            if "%s:%s" % (conv.key, "default") not in routing_table.get(
-                    conv.conversation_type, {}):
+            conv_conn = u':'.join([conv.conversation_type, conv.key])
+            if conv_conn not in routing_table:
                 log.warning(
                     "No routing configured for conversation: %r" % (conv,))
 
@@ -327,6 +327,42 @@ class VumiUserApi(object):
             user_account = yield self.get_user_account()
         yield self._populate_routing_table(user_account)
         returnValue(user_account.routing_table)
+
+    @Manager.calls_manager
+    def validate_routing_table(self, user_account=None):
+        """Check that the routing table on this account is valid.
+
+        Currently we just check account ownership of tags and conversations.
+
+        TODO: Cycle detection, if that's even possible. Maybe other stuff.
+        """
+        if user_account is None:
+            user_account = yield self.get_user_account()
+        routing_table = yield self.get_routing_table(user_account)
+        # We don't care about endpoints here, only connectors.
+        routing_connectors = set()
+        for src_conn, connector_dict in routing_table.iteritems():
+            routing_connectors.add(src_conn)
+            for dst_conn, _ in connector_dict.values():
+                routing_connectors.add(dst_conn)
+
+        # Checking tags is cheap and easy, so do that first.
+        for tag in user_account.tags:
+            tag_conn = u':'.join(tag)
+            if tag_conn in routing_connectors:
+                routing_connectors.remove(tag_conn)
+
+        # Now we run through active conversations to check those.
+        convs = yield self.active_conversations()
+        for conv in convs:
+            conv_conn = u':'.join([conv.conversation_type, conv.key])
+            if conv_conn in routing_connectors:
+                routing_connectors.remove(conv_conn)
+
+        if routing_connectors:
+            raise VumiError(
+                "Routing table contains illegal connector names: %s" % (
+                    routing_connectors,))
 
     @Manager.calls_manager
     def msg_options(self, tag, tagpool_metadata=None):
