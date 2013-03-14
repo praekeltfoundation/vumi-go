@@ -172,7 +172,7 @@ class MessageStream(StreamResource):
         transport_type = msg_options.pop('transport_type')
         # We need to pop this out of the msg_options, should it exist
         # because otherwise `msg.reply(...)` is unhappy
-        msg_options.pop('transport_name', None)
+        transport_name = msg_options.pop('transport_name', None)
         from_addr = msg_options.pop('from_addr')
 
         # NOTE:
@@ -187,7 +187,7 @@ class MessageStream(StreamResource):
         msg['helper_metadata'].update(helper_metadata)
         msg['from_addr'] = from_addr
         msg['transport_type'] = transport_type
-        msg['transport_name'] = self.worker.transport_name
+        msg['transport_name'] = transport_name
 
         yield self.worker._publish_message(msg)
 
