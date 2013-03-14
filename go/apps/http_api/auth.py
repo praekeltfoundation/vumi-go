@@ -33,7 +33,7 @@ class ConversationAccessChecker(object):
         if user_exists:
             user_api = self.vumi_api.get_user_api(username)
             conversation = yield user_api.get_wrapped_conversation(
-                                                        self.conversation_key)
+                self.conversation_key)
             if conversation is not None:
                 metadata = conversation.get_metadata(default={})
                 http_api_metadata = metadata.get('http_api', {})
