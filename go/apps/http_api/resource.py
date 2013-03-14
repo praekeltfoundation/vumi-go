@@ -170,6 +170,9 @@ class MessageStream(StreamResource):
                             != TransportUserMessage.SESSION_CLOSE)
         helper_metadata = msg_options.pop('helper_metadata')
         transport_type = msg_options.pop('transport_type')
+        # We need to pop this out of the msg_options, should it exist
+        # because otherwise `msg.reply(...)` is unhappy
+        msg_options.pop('transport_name', None)
         from_addr = msg_options.pop('from_addr')
 
         # NOTE:
