@@ -207,6 +207,8 @@ class EmailTestCase(DjangoGoApplicationTestCase):
 
         self.put_sample_messages_in_conversation(self.user_api,
                                                     self.conv_key, 10)
+        # create a second conversation to test sorting
+        self.mkconversation()
 
         # schedule the task
         send_user_account_summary(self.user)
