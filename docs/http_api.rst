@@ -17,24 +17,24 @@ Vumi messages are JSON objects of the following format:
 
 ::
 
-	{
-		"message_id": "59b37288d8d94e42ab804158bdbf53e5",
-		"in_reply_to": null,
-		"session_event": null,
-	    "to_addr": "1234",
-	    "from_addr": "27761234567",
-	    "content": "This is an incoming SMS!",
-	    "transport_name": "smpp_transport",
-	    "transport_type": "sms",
-	    "transport_metadata": {
-	        // this is a dictionary containing
-	        // transport specific data
-	    },
-	    "helper_metadata": {
-	    	// this is a dictionary containing
-	    	// application specific data
-	    }
-	}
+    {
+        "message_id": "59b37288d8d94e42ab804158bdbf53e5",
+        "in_reply_to": null,
+        "session_event": null,
+        "to_addr": "1234",
+        "from_addr": "27761234567",
+        "content": "This is an incoming SMS!",
+        "transport_name": "smpp_transport",
+        "transport_type": "sms",
+        "transport_metadata": {
+            // this is a dictionary containing
+            // transport specific data
+        },
+        "helper_metadata": {
+            // this is a dictionary containing
+            // application specific data
+        }
+    }
 
 This is the base message format for messages sent & received. A reply to this message would put the value of the "message_id" in the "in_reply_to" field so as to link the two.
 
@@ -45,7 +45,8 @@ Receiving Messages
 ------------------
 
 ::
-	GET http://go.vumi.org/api/v1/go/http_api/<conversation-key>/messages.json
+
+    GET http://go.vumi.org/api/v1/go/http_api/<conversation-key>/messages.json
 
 If you want messages forwarded to your application with HTTP POST then please supply the URL.
 
@@ -53,12 +54,14 @@ Sending Messages
 ----------------
 
 ::
-	PUT http://go.vumi.org/api/v1/go/http_api/<conversation-key>/messages.json
+
+    PUT http://go.vumi.org/api/v1/go/http_api/<conversation-key>/messages.json
 
 Receiving Events
 ----------------
 
 ::
-	GET http://go.vumi.org/api/v1/go/http_api/<conversation-key>/events.json
+
+    GET http://go.vumi.org/api/v1/go/http_api/<conversation-key>/events.json
 
 If you want events forwarded to your application with HTTP POST then please supply the URL.
