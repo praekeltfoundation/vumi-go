@@ -79,7 +79,6 @@ class Command(BaseCommand):
         metadata['http_api'] = api_metadata
         conversation.set_metadata(metadata)
         conversation.save()
-        print conversation.metadata, conversation.key
 
     def create_token(self, conversation):
         token = uuid4().hex
@@ -105,7 +104,6 @@ class Command(BaseCommand):
 
     def remove_message_url(self, conversation):
         md = self.get_metadata(conversation)
-        print 'got', md
         try:
             url = md.pop('push_message_url')
             self.save_metadata(conversation, md)
