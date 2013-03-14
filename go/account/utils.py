@@ -56,6 +56,9 @@ def send_user_account_summary(user):
             conv_list.append(conv)
 
     message_count = get_messages_count(all_conversations)
+    message_count_friendly = dict((known_types.get(conv_type), value)
+                                    for conv_type, value
+                                    in message_count.items())
     total_messages_sent = sum(conv_type['sent'] for conv_type
                                 in message_count.values())
     total_messages_received = sum(conv_type['received'] for conv_type
@@ -72,6 +75,8 @@ def send_user_account_summary(user):
             'total_messages_received': total_messages_received,
             'total_messages_sent': total_messages_sent,
             'total_message_count': total_message_count,
+            'message_count': message_count,
+            'message_count_friendly': message_count_friendly,
             'active_conversations': active_conversations,
         }), settings.DEFAULT_FROM_EMAIL, [user.email],
         fail_silently=False)

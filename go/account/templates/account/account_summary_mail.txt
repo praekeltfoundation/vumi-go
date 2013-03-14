@@ -8,6 +8,14 @@ Total number of unique contacts by {{unique_identifier}}: {{total_uniques}}
 Total number of messages sent: {{total_messages_sent}}
 Total number of messages received: {{total_messages_received}}
 
+Totals per conversation type:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+{% for friendly_type, counts in message_count_friendly.items %}
+"{{friendly_type}}" Sent: {{counts.sent}}
+"{{friendly_type}}" Received: {{counts.received}}
+
+{% endfor %}
+
 {% for type, conversations in active_conversations.items %}
 {{type}}
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
