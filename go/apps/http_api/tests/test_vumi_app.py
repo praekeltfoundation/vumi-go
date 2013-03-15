@@ -1,7 +1,7 @@
 import base64
 import json
 
-from twisted.internet.defer import inlineCallbacks, DeferredQueue
+from twisted.internet.defer import inlineCallbacks, DeferredQueue, returnValue
 from twisted.web.http_headers import Headers
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
@@ -16,7 +16,7 @@ from go.vumitools.api import VumiApi
 
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
 from go.apps.http_api.client import StreamingClient, VumiMessageReceiver
-from go.apps.http_api.resource import ConversationResource
+from go.apps.http_api.resource import ConversationResource, StreamResource
 
 
 class TestMessageReceiver(VumiMessageReceiver):
@@ -109,6 +109,40 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         if tag:
             TaggingMiddleware.add_tag_to_msg(msg, tag)
         return self.dispatch(msg)
+
+    @inlineCallbacks
+    def pull_message(self, count=1):
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+
+        messages = DeferredQueue()
+        errors = DeferredQueue()
+        receiver = self.client.stream(TransportUserMessage, messages.put,
+                                            errors.put, url,
+                                            Headers(self.auth_headers))
+
+        received_messages = []
+        for msg_id in range(count):
+            sent_msg = self.mkmsg_in(content='in %s' % (msg_id,),
+                                        message_id=str(msg_id))
+            yield self.dispatch_with_tag(sent_msg, self.tag)
+            recv_msg = yield messages.get()
+            received_messages.append(recv_msg)
+
+        receiver.disconnect()
+        returnValue((receiver, received_messages))
+
+    @inlineCallbacks
+    def test_proxy_buffering_headers_off(self):
+        receiver, received_messages = yield self.pull_message()
+        headers = receiver._response.headers
+        self.assertEqual(headers.getRawHeaders('x-accel-buffering'), ['no'])
+
+    @inlineCallbacks
+    def test_proxy_buffering_headers_on(self):
+        StreamResource.proxy_buffering = True
+        receiver, received_messages = yield self.pull_message()
+        headers = receiver._response.headers
+        self.assertEqual(headers.getRawHeaders('x-accel-buffering'), ['yes'])
 
     @inlineCallbacks
     def test_messages_stream(self):
