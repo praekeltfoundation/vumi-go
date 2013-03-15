@@ -136,7 +136,6 @@ class MessageStream(StreamResource):
     @inlineCallbacks
     def handle_PUT_in_reply_to(self, request, payload, in_reply_to):
         user_account = request.getUser()
-        user_api = yield self.get_user_api(user_account)
         conversation = yield self.get_conversation(user_account)
 
         # Using the proxy's load() directly instead of

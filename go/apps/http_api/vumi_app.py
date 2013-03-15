@@ -114,6 +114,12 @@ class StreamingHTTPWorker(GoApplicationWorker):
         http_api_metadata = metadata.get('http_api', {})
         return http_api_metadata.get(key)
 
+    def process_command_start(self, batch_id, conversation_type,
+                              conversation_key, msg_options,
+                              is_client_initiated, **extra_params):
+        log.info("Starting HTTP API for conversation (key: %r)." %
+                 (conversation_key,))
+
     @inlineCallbacks
     def consume_user_message(self, message):
         msg_mdh = self.get_metadata_helper(message)
