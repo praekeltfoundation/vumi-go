@@ -1,0 +1,270 @@
+@charset "utf-8";
+/* CSS Document */
+
+/*-----------------------------
+Basic Reset
+-----------------------------*/
+* {
+	margin:0;
+	padding:0;
+}
+
+/*-----------------------------
+General Styles
+-----------------------------*/
+html {
+	overflow: hidden;
+	position: relative;
+}
+
+body {
+	background:#2f3436;
+	color: #c1c1c1;
+	display: block;
+	min-width:896px;
+}
+
+html, body {
+	height: 100%;
+}
+
+a, a:visited {
+	text-decoration: none;
+	outline: none;
+	color: #54a6de;
+}
+
+a:hover {
+	text-decoration: underline;
+	cursor:pointer !important;
+}
+
+header, footer, section, aside {
+	display: block;
+}
+
+.center {
+	text-align: center;
+}
+
+.hidden {
+	display: none;
+}
+
+.left{
+	float:left;
+}
+
+.right{
+	float:right;
+}
+
+/*-----------------------------
+General Layout
+-----------------------------*/
+.content{
+	background:#f2f1ed;
+	color:#2f3436;
+	outline:solid 4px #212527;
+	
+}
+
+.content-inner{
+	padding:20px;
+}
+
+.module{
+	background:#fff;
+	padding:10px;
+	margin-bottom:20px;
+}
+
+.graph_metric{
+	text-align:center;
+	width:280px;
+	margin-top:70px;
+}
+
+/*-----------------------------
+Nav Area
+-----------------------------*/
+ul.nav{display:inline-block;}
+
+.nav a{
+	color:#0bcac3;
+}
+
+.nav a:hover{
+	color:#fff;
+}
+
+
+.nav li.disabled a:hover{
+	color:#999;
+	cursor:default !important;
+}
+
+.logo {
+	position:relative;
+	top:17px;
+	left:-27px;
+	margin-right: -20px;
+}
+
+
+.avatar{
+	background:url(../img/avatar.png) no-repeat;
+	width:32px;
+	height:32px;
+	display:inline-block;
+	float:left;
+	margin-right:15px;
+	bottom:6px;
+	position:relative;
+	margin-top:-2px;
+}
+
+.boxes .master{
+	height:111px;
+	
+}
+
+.boxes .box{
+	position:relative;
+	font-size:16px;
+	font-weight:bold;
+	background:#0fb5af;
+	padding:10px;
+	float:left;
+	text-align:center;
+	/*margin:5px 0;*/
+	margin-bottom:10px;
+}
+
+.boxes .box .bootstrap-select, .boxes .box input{
+	text-align:left;
+	margin-bottom:0;
+}
+
+.boxes .box .sprite{
+	cursor:pointer;
+	position:absolute;
+	top:-5px;
+	right:-5px;
+}
+
+.boxes .titles{
+	color:#878b8e;
+	text-transform:uppercase;
+}
+
+/*-----------------------------
+Title Area
+-----------------------------*/
+.titlebar h3{
+	margin-left:20px;
+}
+
+.taskbar li{
+	font-weight:bold;
+	display:inline-block;
+	float:right;
+	margin:20px 20px;
+	font-size:16px;
+}
+
+.taskbar li.currency span{
+	font-size:13px;
+	font-weight:bold;
+	margin-right:10px;
+}
+
+.taskbar li.currency .bootstrap-select{
+	margin-bottom:0;
+}
+
+.taskbar .complete{
+	color:#2280ff;
+	cursor:pointer;
+}
+
+.taskbar .unfocus{
+	color:#878b8e;
+	cursor:default;
+}
+
+.taskbar .focus{
+	color:#2f3436;
+	cursor:default;
+}
+
+.taskbar .sprite{
+	margin:0 10px 2px;
+}
+
+.taskbar .focus .sprite{
+	margin:0 10px 0px;
+}
+
+/*-----------------------------
+Control Area
+-----------------------------*/
+.controls{
+	background:#d9d8d3;
+}
+.controls .action{
+	float:left;
+	padding:10px 0 10px 0;
+	background:#d2d0c7;
+	width:250px;
+}
+.controls .action button{
+	position:relative;
+	left:-4px;
+}
+
+.controls .options{
+	margin:10px 20px;
+}
+.controls .right{
+	text-align:right;
+}
+
+/*-----------------------------
+Misc
+-----------------------------*/
+button{
+    position: relative;
+}
+
+.point-right:after{
+	/*
+	background-color: #006dcc;
+	*background-color: #0044cc;
+	background-image: -moz-linear-gradient(top, #0088cc, #0044cc);
+	background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#0088cc), to(#0044cc));
+	background-image: -webkit-linear-gradient(top, #0088cc, #0044cc);
+	background-image: -o-linear-gradient(top, #0088cc, #0044cc);
+	background-image: linear-gradient(to bottom, #0088cc, #0044cc);
+	background-repeat: repeat-x;
+
+    border: solid #dd0009;
+    border-width: 0 0 1px 1px;
+    border-radius: 2px 0 2px 2px;
+    content: '';
+    display: block;
+    height: 21px;
+    left: -11px;
+    position: absolute;
+    top: 3px;
+    -moz-transform: rotate(45deg);
+    -webkit-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    transform: rotate(45deg);
+    width: 21px;
+	*/
+}
+
+.point-left{
+
+}

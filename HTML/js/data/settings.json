@@ -1,0 +1,27 @@
+/*
+--Controls App settings
+
+	id:		(UINT) unique identifier
+	x:		(INT) position from starting 'block'
+	
+*/
+
+{
+  "widgets": {
+    "widget": [
+      {
+		"id": "",
+        "x": "0",
+        "y": "0",
+		"type": "ussd",
+		"options": ""
+      },
+      {
+        "x": "1",
+        "y": "0",
+		"type": "ussd",
+		"options": ""
+      }
+    ]
+  }
+}
