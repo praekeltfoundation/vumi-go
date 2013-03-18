@@ -13,7 +13,8 @@ Basic Reset
 General Styles
 -----------------------------*/
 html {
-	overflow: hidden;
+	height:100%;
+	/*overflow: hidden;*/
 	position: relative;
 }
 
@@ -58,7 +59,19 @@ header, footer, section, aside {
 .right{
 	float:right;
 }
+.no-margin{
+	margin:0;
+}
 
+h3{
+	font-size:20px;
+}
+.titlebar h3{
+	font-size:24px;
+}
+h4{
+	font-size:16px;
+}
 /*-----------------------------
 General Layout
 -----------------------------*/
@@ -83,6 +96,188 @@ General Layout
 	text-align:center;
 	width:280px;
 	margin-top:70px;
+}
+
+.title{
+	color:#878b8e;
+	text-transform:uppercase;
+}
+
+.breaker{
+	position:relative;
+	margin-top:10px;
+	height:2px;
+	border-top:3px solid #c9c9c9;
+	border-bottom:1px solid #c9c9c9;
+}
+
+.more-messages{
+	width:200px;
+	position:absolute;
+	top:125px;
+	right:-285px;
+	font-size:16px;
+	color:#2280ff;
+	font-weight:bold;
+}
+
+.details .widget{
+	position:relative;
+	
+}
+
+.details .widget .dragstart{
+	right:-70px;
+}
+
+.details .widget .widget-content{
+	padding-bottom:10px;
+}
+
+.pages{text-align:center;}
+
+/*--Details--*/
+.campign-title{
+	top:43%; position:relative;
+}
+
+.boxes .master{
+	height:150px;
+}
+
+.boxes .master-small{
+	height:90px;
+}
+.boxes .master-small .campign-title{
+	top:40%;
+}
+
+.boxes .box{
+	position:relative;
+	font-size:16px;
+	font-weight:bold;
+	background:#0fb5af;
+	padding:10px;
+	float:left;
+	text-align:center;
+	margin-bottom:10px;
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+}
+
+.boxes .box small{
+	font-weight:normal;
+}
+
+.boxes .box .bootstrap-select, .boxes .box input{
+	text-align:left;
+	margin-bottom:0;
+}
+
+.boxes .box .sprite{
+	cursor:pointer;
+	position:absolute;
+	top:-5px;
+	right:-5px;
+}
+
+.boxes .box .title{
+	color:#333;
+	text-align:left;
+	font-size:12px;
+}
+
+.boxes .control{
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+	padding:10px;
+	text-align:center;
+	border:solid 1px #CCC;
+}
+
+/*--Preview and Activate--*/
+
+.details .title{
+	font-weight:bold;
+}
+
+.details h4{
+	margin-top:0;
+}
+
+/*-----------------------------
+Phone Styling
+-----------------------------*/
+.phone{
+	position:relative;
+	width:365px;
+	background:#2f3436;
+	-webkit-border-radius: 15px;
+	border-radius: 15px;
+	height:585px;
+	border:solid 4px #535e62;
+}
+.phone .speaker{
+	background:#1b1f20;
+	border-radius:15px;
+	-webkit-border-radius: 15px;
+	width:15px;
+	height:15px;
+	position:absolute;
+	top:15px;
+	left:182px;
+}
+
+.phone .inner{
+	position:relative;
+	margin:40px 20px;
+}
+.phone .titlebar{
+	color:#fff;
+	font-weight:bold;
+	text-transform:uppercase;
+	height:30px;
+}
+
+.phone .screen{
+	position:relative;
+	width:91%;
+	background:#9ec0bf;
+	border-radius:10px;
+	-webkit-border-radius: 10px;
+	border:solid 3px #50545c;
+	padding:10px;
+	margin-bottom:15px;
+}
+.phone .screen p{
+	padding:8px;
+	font-weight:bold;
+	font-size:18px;
+}
+.phone .sprite-phone-button{
+	margin:5px 0 0 48px;
+}
+
+.phone .keypad{
+	margin-top:10px;
+}
+.phone .keypad button{
+	font-weight:bold;
+	font-size:14px;
+	float:left;
+	width:103px;
+	margin-top:5px;
+}
+
+.phone .mic{
+	background:#1b1f20;
+	border-radius:5px;
+	-webkit-border-radius: 5px;
+	width:5px;
+	height:5px;
+	position:absolute;
+	bottom:15px;
+	left:182px;
 }
 
 /*-----------------------------
@@ -122,40 +317,6 @@ ul.nav{display:inline-block;}
 	bottom:6px;
 	position:relative;
 	margin-top:-2px;
-}
-
-.boxes .master{
-	height:111px;
-	
-}
-
-.boxes .box{
-	position:relative;
-	font-size:16px;
-	font-weight:bold;
-	background:#0fb5af;
-	padding:10px;
-	float:left;
-	text-align:center;
-	/*margin:5px 0;*/
-	margin-bottom:10px;
-}
-
-.boxes .box .bootstrap-select, .boxes .box input{
-	text-align:left;
-	margin-bottom:0;
-}
-
-.boxes .box .sprite{
-	cursor:pointer;
-	position:absolute;
-	top:-5px;
-	right:-5px;
-}
-
-.boxes .titles{
-	color:#878b8e;
-	text-transform:uppercase;
 }
 
 /*-----------------------------
