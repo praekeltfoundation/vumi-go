@@ -29,6 +29,11 @@ ViewPort
 	z-index: 1;
 }
 
+.viewport * {
+	user-select: none;
+	-webkit-user-select: none;
+}
+
 .stage {
 	width: 16000px;
 	position: absolute;
@@ -47,6 +52,11 @@ ViewPort
 	background: url("../img/stage_bg.png") repeat-x left top;
 }
 
+#overlay {
+	position: absolute; width: 100%; height: 100%; background-color: black; opacity: 0.4;
+	z-index: 10; 
+}
+
 
 /*-----------------------------
 Widgets
@@ -58,6 +68,15 @@ Widgets
 	margin: 0;
 	position: absolute;
 	cursor: default;
+	z-index: 9;
+}
+
+.widget.Edit {
+	z-index: 11;
+}
+
+.widget.ui-draggable-dragging {
+	z-index: 10;
 }
 
 .widget .header{
@@ -152,9 +171,15 @@ Widgets
 	color:#2f3436;
 }
 
+.widget form textarea {
+	resize: vertical;
+}
+
 .widget form textarea, .widget form input{
 	padding-left:10px;
 	background:#f3f3f3;
+	user-select: text;
+	-webkit-user-select: text;
 }
 
 .widget ul.answers{
