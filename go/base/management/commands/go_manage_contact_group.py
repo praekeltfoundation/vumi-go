@@ -1,4 +1,3 @@
-import uuid
 from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
@@ -78,8 +77,11 @@ class Command(BaseCommand):
 
     def handle_list(self, user_api, options):
         groups = user_api.list_groups()
-        for group in sorted(groups, key=lambda g: g.created_at):
-            self.stdout.write(" * %s\n" % (self.format_group(group),))
+        if groups:
+            for group in sorted(groups, key=lambda g: g.created_at):
+                self.stdout.write(" * %s\n" % (self.format_group(group),))
+        else:
+            self.stdout.write("No contact groups found.\n")
 
     def handle_create(self, user_api, options):
         group = user_api.contact_store.new_group(
