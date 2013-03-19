@@ -12,8 +12,6 @@ from optparse import make_option
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.riak_manager import RiakManager
 from vumi.components import TagpoolManager
-from vumi.transports.safaricom import SafaricomTransport
-from vumi.middleware.tagger import TaggingMiddleware
 
 from go.base.utils import vumi_api_for_user
 from go.vumitools.api import VumiApi
