@@ -141,9 +141,6 @@ General Layout
 	top:43%; position:relative;
 }
 
-.boxes .master{
-	height:150px;
-}
 
 .boxes .master-small{
 	height:90px;
@@ -159,7 +156,7 @@ General Layout
 	background:#0fb5af;
 	padding:10px;
 	float:left;
-	text-align:center;
+	text-align:left;
 	margin-bottom:10px;
 	-webkit-border-radius: 3px;
 	border-radius: 3px;
@@ -167,6 +164,13 @@ General Layout
 
 .boxes .box small{
 	font-weight:normal;
+	display:block;
+	margin-top:5px;
+}
+
+.boxes .master{
+	height:150px;
+	text-align:center
 }
 
 .boxes .box .bootstrap-select, .boxes .box input{
