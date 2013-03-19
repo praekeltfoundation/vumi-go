@@ -48,11 +48,14 @@ class Command(BaseCommand):
                 self.ask_for_option(options, opt)
 
     def get_operation(self, options, operations):
-        operations = [op for op in operations if options[op]]
-        if len(operations) != 1:
+        chosen_operations = [op for op in operations if options[op]]
+        if len(chosen_operations) != 1:
+            # Assume we have more than one possible operation.
+            opts = ['--%s' for op in operations]
+            opts[-1] = 'or %s' % (opts[-1],)
             raise CommandError(
-                "Please provide either --create, --delete or --list.")
-        return operations[0]
+                "Please provide either %s." % (', '.join(opts),))
+        return chosen_operations[0]
 
     def handle(self, *args, **options):
         options = options.copy()
