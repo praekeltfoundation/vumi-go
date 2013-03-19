@@ -1,0 +1,24 @@
+{% if messages %}
+    {% for message in messages %}
+        <div class="{% spaceless %}
+            alert 
+            {% if message.tags == 'info' %}alert-success{% endif %}
+            {% if message.tags == 'error' %}alert-error{% endif %}
+            show
+            {% endspaceless %}">
+            <a class="close" data-dismiss="alert">×</a>
+            {{message}}
+        </div>
+        {% if error_form.errors %}
+        <div class="control-group error">
+            {% for field in error_form.visible_fields %}
+                {% for error in field.errors %}
+                    <div class="controls">
+                        <span class="help-inline">{{field.label}}: {{error}}</span>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}

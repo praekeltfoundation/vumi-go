@@ -1,0 +1,83 @@
+{% extends "app.html" %}
+{% load url from future %}
+
+{% block main %}
+    <div class="row">
+        <div class="span12">
+            <div id="welcome">
+                <h1><a href="{% url 'contacts:people' %}">People &amp; Groups</a> &raquo; {{contact}}</h1>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+    <div class="row">
+		<div class="span1">
+		    <img src="{{ STATIC_URL }}img/avatar-empty.png" class="avatar" />
+		</div>
+		<div class="span11">
+            <form name="frm-person" id="frm-person" method="post" action="" class="form-horizontal">
+             {% csrf_token %}
+                <fieldset>
+                <legend>{{contact}}</legend>
+                    {% for field in form.visible_fields %}
+                    <div class="control-group {% if field.errors %}error{% endif %}">
+                        <label class="control-label" for="{{field.name}}">
+                            {{field.label}}
+                        </label>
+                        <div class="controls">
+                            {{field}}
+                            <span class="help-inline">
+                                {% if field.errors %}
+                                    {{field.errors|join:" "}}
+                                {% endif %}
+                                {% if field.help_text %}
+                                    ({{field.help_text}})
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    {% if contact_extra_items %}
+                        <strong>Extra Fields</strong>
+                        <p>
+                            These were fields that were either imported
+                            via CSV or assigned during a Vumi conversation.
+                        </p>
+                        <hr/>
+                        {% for field, value in contact_extra_items %}
+                        <div class="control-group">
+                            <label class="control-label">{{field}}</label>
+                            <div class="controls">
+                                <input type="text" readonly="readonly" value="{{value}}"/>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" data-loading-text="saving...">Save changes</button>
+                        <button name='_delete_contact' type="submit" class="btn btn-danger" data-loading-text="saving...">Delete Contact</button>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+    
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript">
+      $(document).ready(function(){
+          $('#frm-new-group').validate();
+          $('#frm-upload-contacts').validate();
+          $("#frm-person").validate();
+      });
+    </script>
+    <link type="text/css" href="{{ STATIC_URL }}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
+    <link type="text/css" href="{{ STATIC_URL }}css/jquery-ui-timepicker.css" rel="stylesheet" />
+{% endblock %}

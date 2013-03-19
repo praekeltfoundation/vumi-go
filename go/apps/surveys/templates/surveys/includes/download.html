@@ -1,0 +1,17 @@
+{% load url from future %}
+<div class="row">
+    <div class="span12">
+        <h3>Download Survey Data</h3>
+    </div>
+</div>
+<div class="row padtop">
+    <div class="span12">
+        <table>
+            <tr>
+                <td>Download <a href="{% url 'survey:user_data' conversation_key=conversation.key %}">User data</a></td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<hr>

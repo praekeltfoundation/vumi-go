@@ -1,0 +1,34 @@
+{% for form in questions_formset %}
+    <legend>Question {{forloop.counter}}:</legend>
+    {% for field in form.visible_fields %}
+    <div class="control-group" {% if field.erros %}error{% endif %}>
+        <label class="control-label" for="{{field.auto_id}}">{{field.label}}</label>
+        <div class="controls">
+            {{field}}
+            {% if field.errors %}
+                <span class="help-inline">{{field.errors}}</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% endfor %}
+
+{% for form in completed_response_formset %}
+    <legend>Closing Response {{forloop.counter}}:</legend>
+    {% for field in form.visible_fields %}
+    <div class="control-group" {% if field.erros %}error{% endif %}>
+        <label class="control-label" for="{{field.auto_id}}">{{field.label}}</label>
+        <div class="controls">
+            {{field}}
+            {% if field.errors %}
+                <span class="help-inline">{{field.errors}}</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% endfor %}
+
+{{ poll_form }}
+
+{{ completed_response_formset.management_form }}
+{{ questions_formset.management_form }}

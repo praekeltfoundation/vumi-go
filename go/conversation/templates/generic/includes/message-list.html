@@ -1,0 +1,88 @@
+{% load url from future %}
+{% load conversation_tags %}
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th width="32">Type</th>
+            <th>Response</th>
+            {% if message_direction == 'inbound' and not conversation.is_client_initiated %}<th width="70">Actions</th>{% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for message in message_page.object_list %}
+        <tr>
+            {% get_contact_for_message request.user_api message message_direction as contact %}
+            <td><i class="icon-repeat"></i> {{conversation.delivery_class}}</td>
+            <td>
+                <h6><a href="{% url 'contacts:person' person_key=contact.key %}">{{contact}}</a> via {{message.transport_type}} - {{message.timestamp}}</h6>
+                <p>{{message.content}}</p>
+            </td>
+            {% if message_direction == 'inbound' and not conversation.is_client_initiated %}
+            <td>
+                <a href="#reply-{{message.key}}" class="btn" title="Reply" data-toggle='modal'><i class="icon-repeat"></i> Reply</a>
+                <div id="reply-{{message.key}}" class="modal hide fade" role="dialog">
+                    <div class="modal-header">
+                        <a class="close" data-dismiss="modal">×</a>
+                        <h3>Reply to {{contact}}</h3>
+                    </div>
+                    <form method="post" action="" class="form-horizontal">
+                        {% csrf_token %}
+                        <div class="modal-body">
+                            {% get_reply_form_for_message message as reply_form %}
+                            {{ reply_form }}
+                        </div>
+                        <div class="modal-footer">
+                            <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+                            <button type="submit" name="_send_one_off_reply" class="btn btn-primary" data-loading-text="sending...">Send Reply</button>
+                        </div>
+                    </form>
+                </div>
+            </td>
+            {% endif %}
+        </tr>
+        {% empty %}
+            {% if query %}
+                <tr>
+                    <td colspan="3">No messages match <strong>{{query}}</strong></td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="3">No one has replied yet</td>
+                </tr>
+            {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+{% if message_page.paginator.count %}
+<div class="pagination pagination-centered">
+    <ul>
+        {% if message_page.has_previous %}
+        <li>
+            <a href="?direction={{message_direction}}&amp;p={{message_page.previous_page_number}}&amp;q={{query}}&amp;token={{token}}">
+                Prev
+            </a>
+        </li>
+        {% else %}
+        <li class="disabled">
+            <a href="#">Prev</a>
+        </li>
+        {% endif %}
+        {% for page_number in message_page_range %}
+            <li class="{% if page_number == message_page.number %}active{% endif %}">
+                <a href="?direction={{message_direction}}&amp;p={{page_number}}&amp;q={{query}}&amp;token={{token}}">{{page_number}}</a>
+            </li>
+        {% endfor %}
+        {% if message_page.has_next %}
+        <li>
+            <a href="?direction={{message_direction}}&amp;p={{message_page.next_page_number}}&amp;q={{query}}&amp;token={{token}}">
+                Next
+            </a>
+        </li>
+        {% else %}
+        <li class="disabled">
+            <a href="#">Next</a>
+        </li>
+        {% endif %}
+    </ul>
+</div>
+{% endif %}

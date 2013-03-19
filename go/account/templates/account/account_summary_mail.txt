@@ -1,0 +1,18 @@
+Hi {{user.get_profile}}!
+
+Here is your Vumi Go account summary:
+-------------------------------------
+
+Total number of contacts: {{total_contacts}}
+Total number of unique contacts by {{unique_identifier}}: {{total_uniques}}
+Total number of messages sent and received: {{total_message_count}}
+
+{% for type, conversations in active_conversations.items %}
+{{type}}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+{% for conversation in conversations %}{{conversation.subject}}
+    Sent: {{conversation.count_sent_messages}} to {{conversation.count_outbound_uniques }} uniques.
+    Received: {{conversation.count_replies}} from {{conversation.count_inbound_uniques }} uniques.
+
+{% endfor %}
+{% endfor %}
