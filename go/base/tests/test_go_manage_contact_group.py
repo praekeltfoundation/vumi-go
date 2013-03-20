@@ -21,6 +21,7 @@ class GoManageContactGroupCommandTestCase(VumiGoDjangoTestCase):
             'email-address': self.user.username,
             'list': False,
             'create': False,
+            'create-smart': False,
             'delete': False,
         }
         options[command] = True
@@ -39,6 +40,15 @@ class GoManageContactGroupCommandTestCase(VumiGoDjangoTestCase):
         self.assertEqual(output, ' * %s [%s] "test group"\n' % (
             group.key, group.created_at.strftime('%Y-%m-%d %H:%M')))
 
+        sgroup = self.user_api.contact_store.new_smart_group(
+            u'sg', query=u'foo')
+        output = self.invoke_command('list')
+        self.assertEqual(
+            output, ' * %s [%s] "test group"\n * %s [%s] (smart) "sg"\n' % (
+                group.key, group.created_at.strftime('%Y-%m-%d %H:%M'),
+                sgroup.key, sgroup.created_at.strftime('%Y-%m-%d %H:%M'),
+            ))
+
     def test_create_group(self):
         self.assertEqual([], self.user_api.list_groups())
         output = self.invoke_command('create', group=u'new group')
@@ -48,6 +58,19 @@ class GoManageContactGroupCommandTestCase(VumiGoDjangoTestCase):
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0], 'Group created:')
         self.assertTrue(group.key in lines[1])
+
+    def test_create_smart_group(self):
+        self.assertEqual([], self.user_api.list_groups())
+        output = self.invoke_command(
+            'create-smart', group='smart group', query='foo')
+        [group] = self.user_api.list_groups()
+        self.assertEqual(group.name, u'smart group')
+        self.assertEqual(group.query, u'foo')
+        lines = output.splitlines()
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[0], 'Group created:')
+        self.assertTrue(group.key in lines[1])
+        self.assertTrue('(smart)' in lines[1])
 
     def test_delete_empty_group(self):
         self.assertEqual([], self.user_api.list_groups())

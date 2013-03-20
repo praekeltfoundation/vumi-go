@@ -16,21 +16,29 @@ class Command(BaseCommand):
         make_option('--group',
             dest='group',
             help='The contact group to operate on'),
-        make_option('--create',
-            dest='create',
-            action='store_true',
-            default=False,
-            help='Create a new group'),
-        make_option('--delete',
-            dest='delete',
-            action='store_true',
-            default=False,
-            help='Delete a group'),
+        make_option('--query',
+            dest='query',
+            help='The query for a newly-created smart group'),
         make_option('--list',
             dest='list',
             action='store_true',
             default=False,
             help='List groups'),
+        make_option('--create',
+            dest='create',
+            action='store_true',
+            default=False,
+            help='Create a new group'),
+        make_option('--create-smart',
+            dest='create-smart',
+            action='store_true',
+            default=False,
+            help='Create a new smart group'),
+        make_option('--delete',
+            dest='delete',
+            action='store_true',
+            default=False,
+            help='Delete a group'),
     ]
     option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
 
@@ -59,7 +67,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         options = options.copy()
-        operation = self.get_operation(options, ('create', 'delete', 'list'))
+        operation = self.get_operation(
+            options, ('list', 'create', 'create-smart', 'delete'))
 
         self.ask_for_options(options, ['email-address'])
         user = User.objects.get(username=options['email-address'])
@@ -70,13 +79,17 @@ class Command(BaseCommand):
         elif operation == 'create':
             self.ask_for_options(options, ['group'])
             return self.handle_create(user_api, options)
+        elif operation == 'create-smart':
+            self.ask_for_options(options, ['group', 'query'])
+            return self.handle_create_smart(user_api, options)
         elif operation == 'delete':
             self.ask_for_options(options, ['group'])
             return self.handle_delete(user_api, options)
 
     def format_group(self, group):
-        return '%s [%s] "%s"' % (
-            group.key, group.created_at.strftime("%Y-%m-%d %H:%M"), group.name)
+        return '%s [%s] %s"%s"' % (
+            group.key, group.created_at.strftime("%Y-%m-%d %H:%M"),
+            '(smart) ' if group.is_smart_group() else '', group.name)
 
     def handle_list(self, user_api, options):
         groups = user_api.list_groups()
@@ -89,6 +102,12 @@ class Command(BaseCommand):
     def handle_create(self, user_api, options):
         group = user_api.contact_store.new_group(
             options['group'].decode('utf-8'))
+        self.stdout.write(
+            "Group created:\n * %s\n" % (self.format_group(group),))
+
+    def handle_create_smart(self, user_api, options):
+        group = user_api.contact_store.new_smart_group(
+            options['group'].decode('utf-8'), options['query'].decode('utf-8'))
         self.stdout.write(
             "Group created:\n * %s\n" % (self.format_group(group),))
 
