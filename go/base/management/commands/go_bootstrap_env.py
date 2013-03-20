@@ -48,7 +48,7 @@ class Command(BaseCommand):
         if not config_file:
             raise CommandError('Please provide --config-file')
 
-        self.config = yaml.safe_load(config_file)
+        self.config = self.read_yaml(config_file)
         self.setup_backend(self.config)
 
         for tagpool_file in options['tagpool_files']:
@@ -89,7 +89,7 @@ class Command(BaseCommand):
             self.tagpool.declare_tags([(pool_name, tag) for tag in tags])
             self.tagpool.set_metadata(pool_name, pool_data['metadata'])
 
-        self.stdout.write('Tag pools created: %s' % (
+        self.stdout.write('Tag pools created: %s\n' % (
             ', '.join(sorted(pools.keys())),))
 
     def setup_accounts(self, file_path):
@@ -123,7 +123,7 @@ class Command(BaseCommand):
             for application in user_info['applications']:
                 self.assign_application(account, application)
 
-            self.stdout.write('Account %s created' % (username,))
+            self.stdout.write('Account %s created\n' % (username,))
 
     def assign_tagpool(self, account, pool_name, max_keys):
         if pool_name not in self.tagpool.list_pools():
@@ -181,4 +181,4 @@ class Command(BaseCommand):
                 message=unicode(conv_info.pop('message')),
                 start_timestamp=timestamp, **conv_info)
             conv.save()
-            self.stdout.write('Conversation %s created' % (conv.key,))
+            self.stdout.write('Conversation %s created\n' % (conv.key,))
