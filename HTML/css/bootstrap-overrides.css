@@ -102,3 +102,11 @@ padding-left: 28px !important;
 	border:none;
 	margin-top:-2px;
 }
+
+.modal-body div{
+	display:block;
+}
+
+.import-recipients{
+	height:370px;
+}
