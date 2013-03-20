@@ -76,19 +76,17 @@
                 <!----------------CONTROLS---------------->
                 <div class="row-fluid">
                     <div class="span12 controls">
-                    	<!----------------ACTION BAR---------------->
-                        <div class="span12">
-                        	<div class="action">
+                    	<div class="row-fluid">
+                        	<div class="span2 action-dash">
                             	<button type="button" class="btn btn-primary">New campaign</button>
                             </div>
-                            <!----------------OPTIONS BAR---------------->
-                            <div class="options left">
-                                <button type="button" class="btn disabled">Copy</button>
+                            <div class="span10 dash-options">
+                            	<button type="button" class="btn disabled">Copy</button>
                                 <button type="button" class="btn disabled">Archive</button>
                                 <button type="button" class="btn disabled">Edit</button>
-                            </div>
-                            <div class="options right">
-                            	<input type="text" placeholder="Filter campaigns...">
+                                <div class="right">
+                                <input type="text" placeholder="Filter campaigns...">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -124,10 +122,10 @@
                                             <tr>
                                               <th>Campaigns</th>
                                               <th>Status</th>
-                                              <th>Channel</th>
-                                              <th>Interactions</th>
-                                              <th>In last</th>
-                                              <th>Last edited</th>
+                                              <th class="channel">Channel</th>
+                                              <th class="interactions">Interactions</th>
+                                              <th class="in-last">In last</th>
+                                              <th class="last-edited">Last edited</th>
                                               <th class="clear"></th>
                                               <th class="clear"></th>
                                             </tr>
@@ -135,15 +133,15 @@
                                           <tbody>
                                             <tr>
                                               <td>
-                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Crowdsourcing Congo"/>
+                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Crowdsourcing Congo"/><p class="check-label"></p>
                                               </td>
                                               <td><p><span class="sprite sprite-ico-draft"></span>Draft</p></td>
                                               <td></td>
                                               <td></td>
                                               <td></td>
                                               <td><p>09:02 today</p></td>
-                                              <td><a href="#">Messages</a></td>
-                                              <td><a href="#">Report</a></td>
+                                              <td><p><a href="#">Messages</a></p></td>
+                                              <td><p><a href="#">Report</a></p></td>
                                             </tr>
                                             <tr>
                                               <td><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Guinness Favourite Drinks"/></td>
@@ -156,8 +154,8 @@
                                               <td><p>134</p></td>
                                               <td><p>24 hours</p></td>
                                               <td><p>08:57 yesterday</p></td>
-                                              <td><a href="#">Messages</a></td>
-                                              <td><a href="#">Report</a></td>
+                                              <td><p><a href="#">Messages</a></p></td>
+                                              <td><p><a href="#">Report</a></p></td>
                                             </tr>
                                             <tr>
                                               <td><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Environmental Needs"/></td>
@@ -168,8 +166,8 @@
                                               <td><p>134</p></td>
                                               <td><p>12 hours</p></td>
                                               <td><p>08:52 yesterday</p></td>
-                                              <td><a href="#">Messages</a></td>
-                                              <td><a href="#">Report</a></td>
+                                              <td><p><a href="#">Messages</a></p></td>
+                                              <td><p><a href="#">Report</a></p></td>
                                             </tr>
                                             <tr>
                                               <td><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="Environmental Needs"/></td>
@@ -180,11 +178,13 @@
                                               <td><p>134</p></td>
                                               <td><p>12 hours</p></td>
                                               <td><p>08:52 yesterday</p></td>
-                                              <td><a href="#">Messages</a></td>
-                                              <td><a href="#">Report</a></td>
+                                              <td><p><a href="#">Messages</a></p></td>
+                                              <td><p><a href="#">Report</a></p></td>
                                             </tr>
                                           </tbody>
                                         </table>
+                                        
+                                        
                                         <div class="pages">
                                         	<ul>
                                             	<li><button type="button" class="btn btn-primary"><strong><</strong></button></li>

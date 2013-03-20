@@ -21,7 +21,7 @@ body {
 	background:#2f3436;
 	color: #c1c1c1;
 	display: block;
-	min-width:896px;
+	min-width:960px;
 }
 
 html, body {
@@ -72,6 +72,7 @@ h3{
 h4{
 	font-size:16px;
 }
+
 /*-----------------------------
 General Layout
 -----------------------------*/
@@ -226,16 +227,13 @@ font-size:16px;}
 
 /*--Dashboard--*/
 .sidebar{
-	width:250px;
+	/*width:250px;*/
 }
 
 .sidebar .inner, .inbox .inner{
 	padding:10px;
 }
 
-.sidebar .breaker{
-	margin-bottom:10px;
-}
 
 .sidebar li{
 	list-style:none;
@@ -292,6 +290,11 @@ font-size:16px;}
 .inbox table .flag{
 	vertical-align:middle;
 }
+
+.inbox table .last-edited{min-width:105px;}
+.inbox table .channel{min-width:78px;}
+.inbox table .in-last{min-width:65px;}
+.inbox table .interactions{min-width:115px;}
 
 /*-----------------------------
 Phone Styling
@@ -392,6 +395,7 @@ ul.nav{display:inline-block;}
 	top:17px;
 	left:-27px;
 	margin-right: -20px;
+	z-index:99;
 }
 
 
@@ -467,7 +471,17 @@ Control Area
 	background:#d2d0c7;
 	width:250px;
 }
-.controls .action button{
+
+.dash-options{
+	padding:10px 0 10px 0;
+	margin-left:10px !important;
+}
+.action-dash{
+	background:#d2d0c7;
+	padding:10px 0 10px 0;
+}
+
+.controls .action button, .action-dash button{
 	position:relative;
 	left:-4px;
 }
@@ -480,6 +494,10 @@ Control Area
 }
 .controls .options input{
 	margin-bottom:0;
+}
+
+.dash-options input{
+	margin:0 10px 0 0;
 }
 
 
