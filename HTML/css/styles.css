@@ -296,6 +296,24 @@ font-size:16px;}
 .inbox table .in-last{min-width:65px;}
 .inbox table .interactions{min-width:115px;}
 
+.inbox table .prettycheckbox .labelright {
+	white-space: nowrap;
+}
+
+.inbox table .prettycheckbox  label {
+	float: none;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.inbox table p {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+
 /*-----------------------------
 Phone Styling
 -----------------------------*/
