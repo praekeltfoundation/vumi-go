@@ -7,7 +7,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.base.management.commands import go_bootstrap_env
+from go.base.management.commands import go_setup_env
 from go.base.utils import vumi_api_for_user
 
 
@@ -26,7 +26,7 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
         self.setup_riak_fixtures()
         self.config = self.mk_config({})
 
-        self.command = go_bootstrap_env.Command()
+        self.command = go_setup_env.Command()
         self.command.setup_backend(self.config)
         self.tagpool = self.command.tagpool
         self.command.stdout = StringIO()
@@ -96,8 +96,8 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
 
     def test_tagpool_loading(self):
         self.command.setup_tagpools(self.tagpool_file.name)
-        self.assertEqual(self.command.stdout.getvalue(),
-            'Tag pools created: pool1, pool2')
+        self.assertTrue('Tag pools created: pool1, pool2' in
+                            self.command.stdout.getvalue())
         self.assertEqual(self.tagpool.acquire_tag('pool2'), ('pool2', 'a'))
         self.assertEqual(self.tagpool.acquire_tag('pool2'), ('pool2', 'b'))
         self.assertEqual(self.tagpool.acquire_tag('pool2'), ('pool2', 'c'))

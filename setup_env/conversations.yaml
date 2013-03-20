@@ -1,6 +1,6 @@
 -
     key: conversation-key-1
-    account: user1@foo.org
+    account: user1@example.org
     conversation_type: bulk_message
     subject: subject
     message: message
@@ -9,7 +9,7 @@
 
 -
     key: conversation-key-2
-    account: user2@foo.org
+    account: user2@example.org
     conversation_type: bulk_message
     subject: subject
     message: message
@@ -18,7 +18,7 @@
 
 -
     key: conversation-key-3
-    account: user2@foo.org
+    account: user2@example.org
     conversation_type: survey
     subject: subject
     message: message

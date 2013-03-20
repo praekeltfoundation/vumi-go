@@ -1,4 +1,4 @@
-user1@foo.org:
+user1@example.org:
     password: password
     applications:
         - go.apps.bulk_message
@@ -7,7 +7,7 @@ user1@foo.org:
     tagpools:
         - [longcode, null]
 
-user2@foo.org:
+user2@example.org:
     password: password
     applications:
         - go.apps.bulk_message
