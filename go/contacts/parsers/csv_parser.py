@@ -3,14 +3,13 @@ import csv
 from go.contacts.parsers import ContactFileParser, ContactParserException
 
 from django.utils.datastructures import SortedDict
-from django.core.files.storage import default_storage
 
 
 class CSVFileParser(ContactFileParser):
 
     def read_data_from_file(self, file_path, field_names, has_header):
         try:
-            csvfile = default_storage.open(file_path, 'rU')
+            csvfile = open(self.get_real_path(file_path), 'rU')
             dialect = csv.Sniffer().sniff(csvfile.read(1024))
             csvfile.seek(0)
             reader = csv.DictReader(csvfile, field_names, dialect=dialect)
@@ -38,7 +37,7 @@ class CSVFileParser(ContactFileParser):
             (header_found, known_headers, sample_data_row)
         """
         try:
-            fp = default_storage.open(file_path, 'rU')
+            fp = open(self.get_real_path(file_path), 'rU')
             dialect = csv.Sniffer().sniff(fp.read(1024))
             fp.seek(0)
         except (csv.Error,), e:
