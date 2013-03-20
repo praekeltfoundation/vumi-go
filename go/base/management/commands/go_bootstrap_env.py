@@ -21,16 +21,44 @@ class Command(BaseCommand):
     help = "Bootstrap a Vumi Go environment, primarily intended for testing."
 
     LOCAL_OPTIONS = [
-        make_option('--config',
-            dest='config',
+        make_option('--config-file',
+            dest='config_file',
             default=False,
             help='Config file telling us how to connect to Riak & Redis'),
+        make_option('--tagpool-file',
+            dest='tagpool_files',
+            action='append',
+            default=[],
+            help='YAML file with tagpools to create.'),
+        make_option('--account-file',
+            dest='account_files',
+            action='append',
+            default=[],
+            help='YAML file with accounts to create.'),
+        make_option('--conversation-file',
+            dest='conversation_files',
+            action='append',
+            default=[],
+            help='YAML file with conversations to create.'),
     ]
     option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
 
     def handle(self, *apps, **options):
-        self.config = yaml.safe_load(options['config'])
+        config_file = options['config_file']
+        if not config_file:
+            raise CommandError('Please provide --config-file')
+
+        self.config = yaml.safe_load(config_file)
         self.setup_backend(self.config)
+
+        for tagpool_file in options['tagpool_files']:
+            self.setup_tagpools(tagpool_file)
+
+        for account_file in options['account_files']:
+            self.setup_accounts(account_file)
+
+        for conversation_file in options['conversation_files']:
+            self.setup_conversations(conversation_file)
 
     def setup_backend(self, config):
         self.redis = RedisManager.from_config(config['redis_manager'])
