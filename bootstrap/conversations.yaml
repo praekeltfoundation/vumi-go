@@ -1,0 +1,27 @@
+-
+    key: conversation-key-1
+    account: user1@foo.org
+    conversation_type: bulk_message
+    subject: subject
+    message: message
+    metadata:
+        foo: bar
+
+-
+    key: conversation-key-2
+    account: user2@foo.org
+    conversation_type: bulk_message
+    subject: subject
+    message: message
+    metadata:
+        foo: bar
+
+-
+    key: conversation-key-3
+    account: user2@foo.org
+    conversation_type: survey
+    subject: subject
+    message: message
+    metadata:
+        foo: bar
+        baz: zab

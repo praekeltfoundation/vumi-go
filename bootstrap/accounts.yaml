@@ -1,0 +1,18 @@
+user1@foo.org:
+    password: password
+    applications:
+        - go.apps.bulk_message
+        - go.apps.surveys
+        - go.apps.jsbox
+    tagpools:
+        - [longcode, null]
+
+user2@foo.org:
+    password: password
+    applications:
+        - go.apps.bulk_message
+        - go.apps.surveys
+        - go.apps.jsbox
+    tagpools:
+        - [longcode, 10]
+

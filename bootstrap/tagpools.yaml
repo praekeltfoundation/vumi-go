@@ -1,0 +1,20 @@
+# The defined pools
+pools:
+
+  # The name of a pool
+  longcode:
+
+    # The available tags, either Python code that can be eval()'d or
+    # YAML list of values.
+    tags: '["longcode-%d" % i for i in range(10001, 10001 + 1000)]'
+
+    # The metadata relevant to each tag in this pool, generally added to
+    # messages when they've been associated with a given tag. Used in the UI
+    # and for message routing.
+    metadata:
+      display_name: "Long code"
+      delivery_class: sms
+      transport_type: sms
+      server_initiated: true
+      msg_options:
+        transport_name: smpp_transport

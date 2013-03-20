@@ -111,6 +111,12 @@ class Command(BaseCommand):
         """
         users = self.read_yaml(file_path)
         for username, user_info in users.items():
+
+            if User.objects.filter(username=username).exists():
+                self.stderr.write('User %s already exists. Skipping.\n' %
+                    (username,))
+                continue
+
             user = User.objects.create_user(username, username,
                                             user_info['password'])
 
@@ -174,8 +180,15 @@ class Command(BaseCommand):
             user = User.objects.get(username=conv_info.pop('account'))
             user_api = vumi_api_for_user(user)
             timestamp = conv_info.pop('start_timestamp', datetime.utcnow())
+            conversation_key = conv_info.pop('key')
+            if user_api.get_wrapped_conversation(conversation_key):
+                self.stderr.write(
+                    'Conversation %s already exists. Skipping.\n' % (
+                        conversation_key,))
+                continue
+
             conv = user_api.conversation_store.conversations(
-                conv_info.pop('key'), user_account=user_api.user_account_key,
+                conversation_key, user_account=user_api.user_account_key,
                 conversation_type=unicode(conv_info.pop('conversation_type')),
                 subject=unicode(conv_info.pop('subject')),
                 message=unicode(conv_info.pop('message')),
