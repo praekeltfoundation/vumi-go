@@ -96,6 +96,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
 
     def setup_api(self):
         self.api = VumiApi.from_config_sync(settings.VUMI_API_CONFIG)
+        self._persist_riak_managers.append(self.api.manager)
 
     def mk_django_user(self):
         user = User.objects.create_user(

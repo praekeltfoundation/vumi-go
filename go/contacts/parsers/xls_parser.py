@@ -1,19 +1,14 @@
 import xlrd
-import os.path
 
 from django.utils.datastructures import SortedDict
-from django.conf import settings
 
 from go.contacts.parsers.base import ContactFileParser, ContactParserException
 
 
 class XLSFileParser(ContactFileParser):
 
-    def default_storage_path(self, file_path):
-        return os.path.join(settings.MEDIA_ROOT, file_path)
-
     def read_data_from_file(self, file_path, field_names, has_header):
-        book = xlrd.open_workbook(self.default_storage_path(file_path))
+        book = xlrd.open_workbook(self.get_real_path(file_path))
         sheet = book.sheet_by_index(0)
         start_at = 1 if has_header else 0
         for row_number in range(start_at, sheet.nrows):
@@ -24,7 +19,7 @@ class XLSFileParser(ContactFileParser):
                         sheet.row_values(row_number)[:len(field_names)]))
 
     def guess_headers_and_row(self, file_path):
-        book = xlrd.open_workbook(self.default_storage_path(file_path))
+        book = xlrd.open_workbook(self.get_real_path(file_path))
         sheet = book.sheet_by_index(0)
         if sheet.nrows == 0:
             raise ContactParserException('Worksheet is empty.')
