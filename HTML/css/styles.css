@@ -81,7 +81,7 @@ General Layout
 }
 
 .content{
-	height:100%;
+	min-height:100%;
 	position:relative;
 	background:#f2f1ed;
 	color:#2f3436;
@@ -271,6 +271,10 @@ font-size:16px;}
 	position:relative;
 }
 
+.inbox table{
+	overflow:hidden;
+}
+
 .inbox table th.clear div{
 	display:none;
 }
@@ -296,11 +300,15 @@ font-size:16px;}
 .inbox table .in-last{min-width:65px;}
 .inbox table .interactions{min-width:115px;}
 
+table td.td-campaign label, table td.td-channel p{
+		max-width:250px;
+}
+	
 .inbox table .prettycheckbox .labelright {
 	white-space: nowrap;
 }
 
-.inbox table .prettycheckbox  label {
+.inbox table .prettycheckbox  label, table td.td-channel{
 	float: none;
 	white-space: nowrap;
 	overflow: hidden;
@@ -556,4 +564,49 @@ button{
 
 .point-left{
 
+}
+
+@media (max-width: 1420px){
+	td.td-channel p{
+		max-width:120px !important;
+	}
+	td.td-campaign label{
+		max-width:120px !important;
+	}
+}
+
+
+@media (max-width: 1220px){
+	td.td-channel p{
+		max-width:100px !important;
+	}
+	td.td-campaign label{
+		max-width:100px !important;
+	}
+	
+	td.td-message, td.td-report{
+		font-size:1em !important;
+	}
+	
+	td.td-status p{
+		max-width:100px !important;
+	}
+	
+	td.td-lastedit p{
+		max-width:100px !important;
+	}
+}
+
+@media (max-width: 1160px){
+	td.td-message, td.td-report{
+		font-size:0.75em !important;
+	}
+	
+	td.td-status p{
+		max-width:80px !important;
+	}
+	
+	td.td-lastedit p{
+		max-width:80px !important;
+	}
 }
