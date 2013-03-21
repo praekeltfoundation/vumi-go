@@ -66,9 +66,15 @@ header, footer, section, aside {
 h3{
 	font-size:20px;
 }
+
+.span5.titlebar {
+	width: 100%;
+}
+
 .titlebar h3{
 	font-size:24px;
 }
+
 h4{
 	font-size:16px;
 }
@@ -303,7 +309,11 @@ font-size:16px;}
 table td.td-campaign label, table td.td-channel p{
 		max-width:250px;
 }
-	
+
+.inbox table {
+	table-layout: fixed;
+}
+
 .inbox table .prettycheckbox .labelright {
 	white-space: nowrap;
 }
@@ -319,6 +329,19 @@ table td.td-campaign label, table td.td-channel p{
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
+}
+
+.inbox table .sprite {
+	margin-top: 8px;
+}
+
+.inbox th .prettycheckbox a {
+	margin-bottom: -8px;
+	margin-right: -8px;
+}
+
+.inbox table .align-right {
+	text-align: right;
 }
 
 
