@@ -21,7 +21,7 @@ body {
 	background:#2f3436;
 	color: #c1c1c1;
 	display: block;
-	min-width:960px;
+	min-width:1000px;
 }
 
 html, body {
@@ -65,10 +65,6 @@ header, footer, section, aside {
 
 h3{
 	font-size:20px;
-}
-
-.span5.titlebar {
-	width: 100%;
 }
 
 .titlebar h3{
@@ -325,14 +321,18 @@ table td.td-campaign label, table td.td-channel p{
 	text-overflow: ellipsis;
 }
 
-.inbox table p {
+.inbox table p, .inbox table th {
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
 }
 
-.inbox table .sprite {
-	margin-top: 8px;
+.inbox table .icon-move {
+	margin-top: 6px;
+}
+
+.inbox table th .icon-move {
+	visibility: hidden;
 }
 
 .inbox th .prettycheckbox a {
@@ -344,6 +344,39 @@ table td.td-campaign label, table td.td-channel p{
 	text-align: right;
 }
 
+.inbox table .align-center {
+	text-align: center;
+}
+
+.inbox table.form td {
+	padding: 4px;
+	vertical-align: top;
+	line-height: 30px;
+}
+
+.taskbar.searchbar {
+	text-align: right;
+}
+
+.taskbar.searchbar input {
+	height: 30px;
+	width: 310px;
+	margin-top: 8px;
+	margin-bottom: 0;
+	padding-right: 80px;
+}
+
+.taskbar.searchbar button {
+	margin-left: -80px;
+	margin-right: 8px;
+	margin-top: 8px;
+}
+
+.taskbar.searchbar a {
+	vertical-align: bottom;
+	margin-right: 8px;
+	white-space: nowrap;
+}
 
 /*-----------------------------
 Phone Styling
@@ -463,9 +496,16 @@ ul.nav{display:inline-block;}
 /*-----------------------------
 Title Area
 -----------------------------*/
-.titlebar h3{
-	margin-left:20px;
+.span5.titlebar {
 }
+
+.titlebar h3{
+	white-space: nowrap;
+	margin-left:20px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 
 .taskbar li{
 	font-weight:bold;

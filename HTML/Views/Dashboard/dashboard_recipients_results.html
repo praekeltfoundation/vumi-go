@@ -68,9 +68,10 @@
 						<h3>Dashboard &ndash; Recipients &ndash; Results</h3>
                     </div>
                     <!----------------TASKBAR--------------------->
-                    <div class="span7 taskbar">
-                    	<ul>
-                        </ul>
+                    <div class="span7 taskbar searchbar">
+						<input type="text" placeholder="Search recipients, responses, and smart groups">
+						<button type="button" class="btn btn-primary">Search</button>
+						<a>Advanced search...</a>
                     </div>
 				</div>
                 <!----------------CONTROLS---------------->
@@ -82,13 +83,14 @@
                             </div>
                             <div class="span10 dash-options">
                             	<button type="button" class="btn disabled">Delete</button>
+                                <button type="button" class="btn disabled">Export</button>
                                 <button type="button" class="btn disabled">Assign to group</button>
 								<button type="button" class="btn disabled">Clear group</button>
-                                <button type="button" class="btn disabled">Export contacts</button>
-								<button type="button" class="btn">New recipient...</button>
-                                <div class="right">
+                                <!--
+								<div class="right">
                                 <input type="text" placeholder="Filter recipients...">
                                 </div>
+								-->
                             </div>
                         </div>
                     </div>
@@ -98,6 +100,9 @@
                     <div class="span12">
                         <div class="sidebar span2">
                             <div class="inner">
+								<ul>
+									<p><a>New recipient...</a></p>
+								</ul>
                             	<ul class="selected">
                                 	<p>All recipients (53)</p>
                                 </ul>
@@ -116,17 +121,17 @@
 									<colgroup><col style="width: 2%;"><col style="width: 30%;"><col style="width: 10%;"><col style="width: 20%;"><col style="width: 20%;"><col style="width: 20%;"></colgroup>
                                           <thead>
                                             <tr>
-											  <th><span class="sprite sprite-ico-drag" style="visibility: hidden"></span></td>
+											  <th><i class="icon-move"></i></td>
 											  <th><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/><p class="check-label"></p> Phone number</th>
                                               <th>Name</th>
-                                              <th></th>
+                                              <th>Surname</th>
                                               <th>Email</th>
                                               <th>Groups</th>
                                             </tr>
                                           </thead>
                                           <tbody>
                                             <tr>
-											  <th><span class="sprite sprite-ico-drag"></span></td>
+											  <td><i class="icon-move"></i></td>
                                               <td>
                                                   <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="25406705575 "/><p class="check-label"></p>
                                               </td>
@@ -136,7 +141,7 @@
                                               <td><p>All_ENG</p></td>
                                             </tr>
                                             <tr>
-											  <th><span class="sprite sprite-ico-drag"></span></td>
+											  <td><i class="icon-move"></i></td>
                                               <td>
                                                   <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="25423255475 "/><p class="check-label"></p>
                                               </td>
@@ -146,7 +151,7 @@
                                               <td><p>All_Nairobi</p></td>
                                             </tr>
                                             <tr>
-											  <th><span class="sprite sprite-ico-drag"></span></td>
+											  <td><i class="icon-move"></i></td>
                                               <td>
                                                   <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="25853344211 "/><p class="check-label"></p>
                                               </td>
@@ -156,7 +161,7 @@
                                               <td><p>All_ENG</p></td>
                                             </tr>
                                             <tr>
-											  <th><span class="sprite sprite-ico-drag"></span></td>
+											  <td><i class="icon-move"></i></td>
                                               <td>
                                                   <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="25966223345 "/><p class="check-label"></p>
                                               </td>
@@ -257,9 +262,6 @@
 			},
 			headers: {
 				0: {
-					sorter: false
-				},
-				3: {
 					sorter: false
 				}
 			}

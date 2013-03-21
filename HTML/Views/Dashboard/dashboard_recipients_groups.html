@@ -68,9 +68,10 @@
 						<h3>Dashboard &ndash; Recipients &ndash; Groups</h3>
                     </div>
                     <!----------------TASKBAR--------------------->
-                    <div class="span7 taskbar">
-                    	<ul>
-                        </ul>
+                    <div class="span7 taskbar searchbar">
+						<input type="text" placeholder="Search recipients, responses, and smart groups">
+						<button type="button" class="btn btn-primary">Search</button>
+						<a>Advanced search...</a>
                     </div>
 				</div>
                 <!----------------CONTROLS---------------->
@@ -83,9 +84,11 @@
                             <div class="span10 dash-options">
                             	<button type="button" class="btn disabled">Delete</button>
                                 <button type="button" class="btn disabled">Export</button>
-                                <div class="right">
+                                <!--
+								<div class="right">
                                 <input type="text" placeholder="Filter recipients...">
                                 </div>
+								-->
                             </div>
                         </div>
                     </div>
@@ -95,6 +98,9 @@
                     <div class="span12">
                         <div class="sidebar span2">
                             <div class="inner">
+								<ul>
+									<p><a>New recipient...</a></p>
+								</ul>
                             	<ul >
                                 	<p>All recipients (11 337)</p>
                                 </ul>

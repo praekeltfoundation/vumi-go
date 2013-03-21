@@ -68,9 +68,10 @@
 						<h3>Dashboard &ndash; Recipients  &ndash; Group 1</h3>
                     </div>
                     <!----------------TASKBAR--------------------->
-                    <div class="span7 taskbar">
-                    	<ul>
-                        </ul>
+                    <div class="span7 taskbar searchbar">
+						<input type="text" placeholder="Search recipients, responses, and smart groups">
+						<button type="button" class="btn btn-primary">Search</button>
+						<a>Advanced search...</a>
                     </div>
 				</div>
                 <!----------------CONTROLS---------------->
@@ -81,14 +82,25 @@
                             	<button type="button" class="btn btn-primary">Import recipients</button>
                             </div>
                             <div class="span10 dash-options">
-                            	<button type="button" class="btn disabled">Delete</button>
+								<button type="button" class="btn disabled">Delete</button>
 								<button type="button" class="btn disabled">Export</button>
                                 With group: <button type="button" class="btn">Delete</button>
 								<button type="button" class="btn">Rename</button>
 								<button type="button" class="btn">Start campaign</button>
-                                <div class="right">
+                                <!--
+								<div class="right">
                                 <input type="text" placeholder="Filter recipients...">
                                 </div>
+								-->
+								
+								<!-- Original button bar: requires 1120px horizontal body
+								<button type="button" class="btn disabled">Delete</button>
+								<button type="button" class="btn">Import contacts to this group</button>
+                                <button type="button" class="btn">Delete group</button>
+								<button type="button" class="btn">Rename group</button>
+								<button type="button" class="btn">Start campaign with this group</button>
+								<button type="button" class="btn disabled">Export contacts</button>
+								 -->								
                             </div>
                         </div>
                     </div>
@@ -98,6 +110,9 @@
                     <div class="span12">
                         <div class="sidebar span2">
                             <div class="inner">
+								<ul>
+									<p><a>New recipient...</a></p>
+								</ul>
                             	<ul>
                                 	<p>All recipients (11 337)</p>
                                 </ul>
@@ -116,16 +131,16 @@
 									<colgroup><col style="width: 2%;"><col style="width: 30%;"><col style="width: 20%;"><col style="width: 20%;"><col style="width: 30%;"></colgroup>
                                           <thead>
                                             <tr>
-											  <th><span class="sprite sprite-ico-drag" style="visibility: hidden"></span></td>
+											  <th><i class="icon-move"></i></td>
 											  <th><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/><p class="check-label"></p> Phone number</th>
                                               <th>Name</th>
-                                              <th></th>
+                                              <th>Surname</th>
                                               <th>Email</th>
                                             </tr>
                                           </thead>
                                           <tbody>
                                             <tr>
-											  <th><span class="sprite sprite-ico-drag"></span></td>
+											  <td><i class="icon-move"></i></td>
                                               <td>
                                                   <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="25406705575 "/><p class="check-label"></p>
                                               </td>
@@ -134,7 +149,7 @@
                                               <td><p>lorum@ipsum.com</p></td>
                                             </tr>
                                             <tr>
-											  <th><span class="sprite sprite-ico-drag"></span></td>
+											  <td><i class="icon-move"></i></td>
                                               <td>
                                                   <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="25423255475 "/><p class="check-label"></p>
                                               </td>
@@ -143,7 +158,7 @@
                                               <td><p>lorumipsum@ipsumlorum.com</p></td>
                                             </tr>
                                             <tr>
-											  <th><span class="sprite sprite-ico-drag"></span></td>
+											  <td><i class="icon-move"></i></td>
                                               <td>
                                                   <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="25853344211 "/><p class="check-label"></p>
                                               </td>
@@ -152,7 +167,7 @@
                                               <td><p>lorumdolor@sitamet.com</p></td>
                                             </tr>
                                             <tr>
-											  <th><span class="sprite sprite-ico-drag"></span></td>
+											  <td><i class="icon-move"></i></td>
                                               <td>
                                                   <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="25966223345 "/><p class="check-label"></p>
                                               </td>
@@ -252,9 +267,6 @@
 			},
 			headers: {
 				0: {
-					sorter: false
-				},
-				3: {
 					sorter: false
 				}
 			}
