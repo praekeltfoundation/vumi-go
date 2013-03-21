@@ -228,8 +228,11 @@ font-size:16px;}
 }
 
 /*--Dashboard--*/
-.sidebar{
-	/*width:250px;*/
+.sidebar ul p{
+	float: none;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .sidebar .inner, .inbox .inner{
@@ -355,32 +358,38 @@ table td.td-campaign label, table td.td-channel p{
 }
 
 .taskbar.searchbar {
-	text-align: right;
+	/*text-align: right;*/
+	margin-left:0;
 }
 
 .taskbar.searchbar input {
 	height: 30px;
 	width: 310px;
-	margin-top: 8px;
-	margin-bottom: 0;
+	margin:8px 0 0 0;
 	padding-right: 80px;
 }
 
-.taskbar.searchbar button {
+.taskbar.searchbar .search-btn{
 	margin-left: -80px;
 	margin-right: 8px;
 	margin-top: 8px;
 }
 
+.taskbar.searchbar .smart-group{
+	margin:8px 0 0 5px;
+
+}
+
 .taskbar.searchbar a {
 	vertical-align: bottom;
-	margin-right: 8px;
+	margin: 30px 5px 0 0;
 	white-space: nowrap;
+	float:right;
 }
 
 .taskbar.searchbar .search-pills {
 	position: absolute;
-	right: 220px;
+	left: 210px;
 	top: 16px;
 	width: 310px;
 	height: 30px;
