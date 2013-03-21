@@ -378,6 +378,43 @@ table td.td-campaign label, table td.td-channel p{
 	white-space: nowrap;
 }
 
+.taskbar.searchbar .search-pills {
+	position: absolute;
+	right: 220px;
+	top: 16px;
+	width: 310px;
+	height: 30px;
+	text-align: left;
+}
+
+.taskbar.searchbar .search-pills li {
+	display: inline-block;
+	border: #ddd 1px solid;
+	height: 28px;
+	background: #eee;
+	border-radius: 4px;
+	font-size: 14px;
+	line-height: 30px;
+	padding: 0 10px;
+	font-weight: normal;
+	margin: 0;
+	float: none;
+}
+.taskbar.searchbar .search-pills li span.cat {
+	text-transform: uppercase;
+	color: #666;
+	font-weight: bold;
+	margin-right: 0.5em;
+}
+
+.taskbar.searchbar .search-pills li a.close {
+	line-height: 30px;
+	margin-left: 8px;
+	margin-right: 0;
+	float: none;
+	color: #000;
+}
+
 /*-----------------------------
 Phone Styling
 -----------------------------*/
