@@ -53,15 +53,12 @@ class Command(BaseCommand):
             raise CommandError('Wrong conversation type: %s vs %s' %
                                 (conversation.conversation_type,
                                     conversation_type))
+        elif not conversation.delivery_tag_pool:
+            raise CommandError('Conversation missing delivery_tag_pool')
 
-        handler = getattr(self, 'start_%s' % (conversation_type,), None)
-        if handler is None:
-            raise CommandError('No handler available for type: %s' %
-                                (conversation_type,))
-
+        handler = getattr(self, 'start_%s' % (conversation_type,),
+            self.default_start_conversation)
         handler(user_api, conversation)
 
-    def start_bulk_message(self, user_api, conversation):
-        if not conversation.delivery_tag_pool:
-            raise CommandError('Conversation missing delivery_tag_pool')
+    def default_start_conversation(self, user_api, conversation):
         conversation.start()

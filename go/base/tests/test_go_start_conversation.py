@@ -1,11 +1,19 @@
 from StringIO import StringIO
 
-from django.contrib.auth.models import User
 from django.core.management.base import CommandError
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.management.commands import go_start_conversation
-from go.base.utils import vumi_api_for_user
+
+from mock import patch
+
+
+class DummyMessageSender(object):
+    def __init__(self):
+        self.outbox = []
+
+    def send_command(self, command):
+        self.outbox.append(command)
 
 
 class GoStartConversationTestCase(DjangoGoApplicationTestCase):
@@ -20,8 +28,8 @@ class GoStartConversationTestCase(DjangoGoApplicationTestCase):
         self.command.stdout = StringIO()
         self.command.stderr = StringIO()
 
-    def get_user_api(self, username):
-        return vumi_api_for_user(User.objects.get(username=username))
+    def get_conversation(self):
+        return self.user_api.get_wrapped_conversation(self.conv_key)
 
     def test_sanity_checks(self):
         self.assertRaisesRegexp(CommandError, 'provide --email-address',
@@ -37,5 +45,21 @@ class GoStartConversationTestCase(DjangoGoApplicationTestCase):
             self.command.handle, email_address=self.user.username,
             conversation_key='foo', conversation_type='foo')
 
-    def test_start_conversation(self):
-        print self.conversation
+    @patch('go.vumitools.api.SyncMessageSender')
+    def test_start_conversation(self, SyncMessageSender):
+        sender = DummyMessageSender()
+        SyncMessageSender.return_value = sender
+        conversation = self.get_conversation()
+        self.assertEqual(conversation.get_tags(), [])
+        self.assertEqual(conversation.get_status(), 'draft')
+        self.command.handle(email_address=self.user.username,
+            conversation_key=conversation.key,
+            conversation_type=conversation.conversation_type)
+        # reload b/c DB changed
+        conversation = self.get_conversation()
+        self.assertEqual(conversation.get_status(), 'running')
+        [(pool, tag)] = conversation.get_tags()
+        self.assertEqual(pool, 'longcode')
+        self.assertTrue(tag)
+        [command] = sender.outbox
+        self.assertEqual(command['command'], 'start')
