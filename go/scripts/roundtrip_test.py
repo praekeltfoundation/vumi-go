@@ -39,7 +39,7 @@ class RoundTripTester(BaseWorker):
 def main(options):
     worker_creator = WorkerCreator(options.vumi_options)
     worker_creator.create_worker_by_class(
-        RoundTripTester, options)
+        RoundTripTester, options).startService()
     worker = yield RoundTripTester.WORKER_QUEUE.get()
     print worker
     reactor.stop()
