@@ -33,17 +33,13 @@ class GoStartConversationTestCase(DjangoGoApplicationTestCase):
 
     def test_sanity_checks(self):
         self.assertRaisesRegexp(CommandError, 'provide --email-address',
-            self.command.handle, email_address=None, conversation_key=None,
-            conversation_type=None)
+            self.command.handle, email_address=None, conversation_key=None)
         self.assertRaisesRegexp(CommandError, 'provide --conversation-key',
             self.command.handle, email_address=self.user.username,
-            conversation_key=None, conversation_type=None)
-        self.assertRaisesRegexp(CommandError, 'provide --conversation-type',
-            self.command.handle, email_address=self.user.username,
-            conversation_key='foo', conversation_type=None)
+            conversation_key=None)
         self.assertRaisesRegexp(CommandError, 'Conversation does not exist',
             self.command.handle, email_address=self.user.username,
-            conversation_key='foo', conversation_type='foo')
+            conversation_key='foo')
 
     @patch('go.vumitools.api.SyncMessageSender')
     def test_start_conversation(self, SyncMessageSender):
@@ -53,8 +49,7 @@ class GoStartConversationTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(conversation.get_tags(), [])
         self.assertEqual(conversation.get_status(), 'draft')
         self.command.handle(email_address=self.user.username,
-            conversation_key=conversation.key,
-            conversation_type=conversation.conversation_type)
+            conversation_key=conversation.key)
         # reload b/c DB changed
         conversation = self.get_conversation()
         self.assertEqual(conversation.get_status(), 'running')

@@ -10,9 +10,6 @@ class Command(BaseCommand):
     help = "Tell a conversation to start"
 
     LOCAL_OPTIONS = [
-        make_option('--conversation-type',
-            dest='conversation_type',
-            help='What type of conversation to start'),
         make_option('--conversation-key',
             dest='conversation_key',
             help='What conversation to load'),
@@ -41,22 +38,15 @@ class Command(BaseCommand):
         if not conversation_key:
             raise CommandError('Please provide --conversation-key.')
 
-        conversation_type = options['conversation_type']
-        if not conversation_type:
-            raise CommandError('Please provide --conversation-type.')
-
         user_api = self.get_user_api(email_address)
         conversation = user_api.get_wrapped_conversation(conversation_key)
         if conversation is None:
             raise CommandError('Conversation does not exist.')
-        elif conversation.conversation_type != conversation_type:
-            raise CommandError('Wrong conversation type: %s vs %s' %
-                                (conversation.conversation_type,
-                                    conversation_type))
         elif not conversation.delivery_tag_pool:
             raise CommandError('Conversation missing delivery_tag_pool')
 
-        handler = getattr(self, 'start_%s' % (conversation_type,),
+        handler = getattr(self, 'start_%s' %
+            (conversation.conversation_type,),
             self.default_start_conversation)
         handler(user_api, conversation)
 
