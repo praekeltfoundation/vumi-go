@@ -264,14 +264,9 @@ font-size:16px;}
 
 .inbox{
 	background:#fff;
-	/*
-	position:absolute;
-	left:250px;
-	right:0;
-	*/
 	margin-left:0 !important;
-	
 }
+
 .inbox .inner{
 	position:relative;
 }
@@ -304,6 +299,7 @@ font-size:16px;}
 .inbox table .channel{min-width:78px;}
 .inbox table .in-last{min-width:65px;}
 .inbox table .interactions{min-width:115px;}
+
 
 table td.td-campaign label, table td.td-channel p{
 		max-width:250px;

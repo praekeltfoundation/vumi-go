@@ -133,7 +133,7 @@
                                           <thead>
                                             <tr>
 											  <th><i class="icon-move"></i></td>
-											  <th><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/><p class="check-label"></p> Phone number</th>
+											  <th class="select-all"><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/><p class="check-label"></p> Phone number</th>
                                               <th>Name</th>
                                               <th>Surname</th>
                                               <th>Email</th>
@@ -269,6 +269,9 @@
 			headers: {
 				0: {
 					sorter: false
+				},
+				1: {
+					sorter: false
 				}
 			}
 		  })
@@ -298,7 +301,38 @@
 		$('input.prettyCheck').prettyCheckable({
 	    	color: 'red'
 		});
+		
+		//--Selecting All Checboxes
+		var allOn = false;
+		$('.select-all').click( function(){
+			if(allOn){
+				allOn = false;
+				$('.prettycheckbox a').removeClass('checked');
+				// Disable Buttons
+				$('.dash-options .btn').addClass('disabled');
+			}else{
+				allOn = true;
+				$('.prettycheckbox a').addClass('checked');
+				// Enable Buttons
+				$('.dash-options .btn').removeClass('disabled');
+			}
+			
+		});
+		
+		
+		$('.prettyCheck').change(function() {
 
+			setTimeout(function () {
+				//Count checkboxes
+				var count = $('.checked').length;
+				if(count == 0){
+					$('.dash-options .btn').addClass('disabled');
+				}else{
+					$('.dash-options .btn').removeClass('disabled');
+				}
+			}, 10);
+
+		});
 		
 		</script>
         <!-- InstanceEndEditable -->

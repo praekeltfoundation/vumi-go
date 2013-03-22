@@ -120,7 +120,7 @@
 									<colgroup><col style="width: 25%;"><col style="width: 25%;"><col style="width: 30%;"><col style="width: 20%;"></colgroup>
                                           <thead>
                                             <tr>
-											  <th><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/><p class="check-label"></p> Name</th>
+											  <th class="select-all"><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/><p class="check-label"></p> Name</th>
                                               <th class="align-right">No. of recipients</th>
                                               <th>Search terms used</th>
                                               <th>Date created</th>
@@ -250,6 +250,9 @@
 		
 			},
 			headers: {
+				0: {
+					sorter: false
+				}
 			}
 		  })
 		  .tablesorterPager({
@@ -278,7 +281,38 @@
 		$('input.prettyCheck').prettyCheckable({
 	    	color: 'red'
 		});
+		
+		//--Selecting All Checboxes
+		var allOn = false;
+		$('.select-all').click( function(){
+			if(allOn){
+				allOn = false;
+				$('.prettycheckbox a').removeClass('checked');
+				// Disable Buttons
+				$('.dash-options .btn').addClass('disabled');
+			}else{
+				allOn = true;
+				$('.prettycheckbox a').addClass('checked');
+				// Enable Buttons
+				$('.dash-options .btn').removeClass('disabled');
+			}
+			
+		});
+		
+		
+		$('.prettyCheck').change(function() {
 
+			setTimeout(function () {
+				//Count checkboxes
+				var count = $('.checked').length;
+				if(count == 0){
+					$('.dash-options .btn').addClass('disabled');
+				}else{
+					$('.dash-options .btn').removeClass('disabled');
+				}
+			}, 10);
+
+		});
 		
 		</script>
         <!-- InstanceEndEditable -->
