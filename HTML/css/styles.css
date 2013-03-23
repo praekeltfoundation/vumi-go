@@ -326,6 +326,10 @@ table td.td-campaign label, table td.td-channel p{
 	text-overflow: ellipsis;
 }
 
+.inbox table th{
+	overflow:visible;
+}
+
 .inbox table .icon-move {
 	margin-top: 6px;
 }

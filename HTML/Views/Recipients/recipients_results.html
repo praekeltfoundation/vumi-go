@@ -125,11 +125,13 @@
                         <div class="inbox span10">
 	                        <div class="inner">
                             	<table class="table table-hover">
-									<colgroup><col style="width: 2%;"><col style="width: 30%;"><col style="width: 10%;"><col style="width: 20%;"><col style="width: 20%;"><col style="width: 20%;"></colgroup>
+									<colgroup><col style="width: 2%;"><col style="width: 4%;"><col style="width: 30%;"><col style="width: 10%;"><col style="width: 20%;"><col style="width: 20%;"><col style="width: 20%;"></colgroup>
                                           <thead>
                                             <tr>
 											  <th><i class="icon-move"></i></td>
-											  <th class="select-all"><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/><p class="check-label"></p> Phone number</th>
+											  <th class="select-all"><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/>
+                                              </th>
+                                              <th>Phone number</th>
                                               <th>Name</th>
                                               <th>Surname</th>
                                               <th>Email</th>
@@ -140,8 +142,9 @@
                                             <tr>
 											  <td><i class="icon-move"></i></td>
                                               <td>
-                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="25406705575 "/><p class="check-label"></p>
+                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/>
                                               </td>
+                                              <td><p>25406705575</p></td>
                                               <td><p>Hamidi</p></td>
                                               <td><p>Chudasama</p></td>
                                               <td><p>lorum@ipsum.com</p></td>
@@ -150,8 +153,9 @@
                                             <tr>
 											  <td><i class="icon-move"></i></td>
                                               <td>
-                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="25423255475 "/><p class="check-label"></p>
+                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/>
                                               </td>
+                                              <td><p>25423255475</p></td>
                                               <td><p>Angalia</p></td>
                                               <td><p>Karim</p></td>
                                               <td><p>lorumipsum@ipsumlorum.com</p></td>
@@ -160,8 +164,9 @@
                                             <tr>
 											  <td><i class="icon-move"></i></td>
                                               <td>
-                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="25853344211 "/><p class="check-label"></p>
+                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/>
                                               </td>
+                                              <td><p>25853344211</p></td>
                                               <td><p>Hali</p></td>
                                               <td><p>Modo</p></td>
                                               <td><p>lorumdolor@sitamet.com</p></td>
@@ -170,8 +175,9 @@
                                             <tr>
 											  <td><i class="icon-move"></i></td>
                                               <td>
-                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1" data-label="25966223345 "/><p class="check-label"></p>
+                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/>
                                               </td>
+                                              <td><p>25966223345</p></td>
                                               <td><p>Halisi</p></td>
                                               <td><p>Odoyo</p></td>
                                               <td><p>lorum@ipsum.com</p></td>
@@ -321,11 +327,30 @@
 			if(allOn){
 				allOn = false;
 				$('.prettycheckbox a').removeClass('checked');
+				// Disable Buttons
+				$('.dash-options .btn').addClass('disabled');
 			}else{
 				allOn = true;
 				$('.prettycheckbox a').addClass('checked');
+				// Enable Buttons
+				$('.dash-options .btn').removeClass('disabled');
 			}
 			
+		});
+		
+		
+		$('.prettyCheck').change(function() {
+
+			setTimeout(function () {
+				//Count checkboxes
+				var count = $('.checked').length;
+				if(count == 0){
+					$('.dash-options .btn').addClass('disabled');
+				}else{
+					$('.dash-options .btn').removeClass('disabled');
+				}
+			}, 10);
+
 		});
 		
 		</script>
