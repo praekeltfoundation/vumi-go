@@ -449,3 +449,19 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield event_d
 
         self.assertEqual(TransportEvent.from_json(posted_json_data), ack1)
+
+    @inlineCallbacks
+    def test_bad_urls(self):
+        def assert_not_found(url, headers={}):
+            d = http_request_full(self.url, method='GET', headers=headers)
+            d.addCallback(lambda r: self.assertEqual(r.code, http.NOT_FOUND))
+            return d
+
+        yield assert_not_found(self.url)
+        yield assert_not_found(self.url + '/')
+        yield assert_not_found('%s/%s' % (self.url, self.conversation.key),
+                               headers=self.auth_headers)
+        yield assert_not_found('%s/%s/' % (self.url, self.conversation.key),
+                               headers=self.auth_headers)
+        yield assert_not_found('%s/%s/foo' % (self.url, self.conversation.key),
+                               headers=self.auth_headers)
