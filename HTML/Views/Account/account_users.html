@@ -64,122 +64,69 @@
             <div class="content">
                 <div class="row-fluid">
 	                <!----------------TITLEBAR--------------------->
-                    <div class="span2 titlebar">
-						<h3>Recipients</h3>
+                    <div class="span12 titlebar">
+						<h3>Users</h3>
                     </div>
                     <!----------------TASKBAR--------------------->
-                    <div class="span10 taskbar searchbar">
-						<input type="text" placeholder="Search recipients, responses, and smart groups">
-						<button type="button" class="btn btn-primary search-btn">Search</button>
-                        <button type="button" class="btn btn-primary smart-group disabled">Make smart group with results</button>
-						<a>Advanced search...</a>
-                    </div>
 				</div>
                 <!----------------CONTROLS---------------->
                 <div class="row-fluid">
                     <div class="span12 controls">
                     	<div class="row-fluid">
                         	<div class="span2 action-dash">
-                            	<button type="button" class="btn btn-primary">Import recipients</button>
+                            	<button type="button" class="btn btn-primary">Add user</button>
                             </div>
                             <div class="span10 dash-options">
-								<button type="button" class="btn disabled">Delete</button>
-								<button type="button" class="btn disabled">Export</button>
-                                With group: <button type="button" class="btn">Delete</button>
-								<button type="button" class="btn">Rename</button>
-								<button type="button" class="btn">Start campaign</button>
-                                <!--
-								<div class="right">
-                                <input type="text" placeholder="Filter recipients...">
-                                </div>
-								-->
-								
-								<!-- Original button bar: requires 1120px horizontal body
-								<button type="button" class="btn disabled">Delete</button>
-								<button type="button" class="btn">Import contacts to this group</button>
-                                <button type="button" class="btn">Delete group</button>
-								<button type="button" class="btn">Rename group</button>
-								<button type="button" class="btn">Start campaign with this group</button>
-								<button type="button" class="btn disabled">Export contacts</button>
-								 -->								
+                            	<button type="button" class="btn">Show deleted users</button>
+                                With user: <button type="button" class="btn disabled user">Edit</button>
+								<button type="button" class="btn disabled user">Delete</button>
                             </div>
                         </div>
                     </div>
                 </div>
                 <!----------------VIEWPORT--------------------->
                 <div class="row-fluid">
-                    <div class="span12">
-                        <div class="sidebar span2">
-                            <div class="inner">
-								<ul>
-									<p><a>New recipient...</a></p>
-								</ul>
-                            	<ul>
-                                	<p>All recipients (11 337)</p>
-                                </ul>
-                                <ul class="selected">
-                                	<p>Smart groups (12)</p>
-                                </ul>
-                                <ul>
-                                	<p>Groups (112)</p>
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <div class="inbox span10">
-	                        <div class="inner">
-                            	<table class="table table-hover">
-									<colgroup><col style="width: 2%;"><col style="width: 4%;"><col style="width: 30%;"><col style="width: 20%;"><col style="width: 20%;"><col style="width: 30%;"></colgroup>
+                    <div class="span12 content-inner">
+	                        <div class="module">
+                            	<table class="table table-hover users">
+									<colgroup><col style="width: 2%;"><col style="width: 20%;"><col style="width: 40%;"><col style="width: 15%;"><col style="width: 25%;"></colgroup>
                                           <thead>
                                             <tr>
-											  <th><i class="icon-move"></i></td>
-                                              <th class="select-all"><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/></th>
-											  <th>Phone number</th>
+                                              <th></th>
                                               <th>Name</th>
-                                              <th>Surname</th>
                                               <th>Email</th>
+                                              <th>Role</th>
+                                              <th>Last active</th>
                                             </tr>
                                           </thead>
                                           <tbody>
                                             <tr>
-											  <td><i class="icon-move"></i></td>
-                                              <td>
-                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/>
-                                              </td>
-                                              <td><p>25406705575</p></td>
-                                              <td><p>Hamidi</p></td>
-                                              <td><p>Chudasama</p></td>
-                                              <td><p>lorum@ipsum.com</p></td>
+                                              <td><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/></td>
+                                              <td><p><a href="">Alex Maughan</a></p></td>
+                                              <td><p>alex@userexperience.co.za</p></td>
+                                              <td></td>
+                                              <td>10m ago</td>
                                             </tr>
                                             <tr>
-											  <td><i class="icon-move"></i></td>
-                                              <td>
-                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/>
-                                              </td>
-                                              <td><p>25406705575</p></td>
-                                              <td><p>Angalia</p></td>
-                                              <td><p>Karim</p></td>
-                                              <td><p>lorumipsum@ipsumlorum.com</p></td>
+                                              <td><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/></td>
+                                              <td><p><a href="">Angela Hutchison</a></p></td>
+                                              <td><p>angela@userexperience.co.za</p></td>
+                                              <td>Admin</td>
+                                              <td>Mar 20, 2013 12:48pm</td>
                                             </tr>
                                             <tr>
-											  <td><i class="icon-move"></i></td>
-                                              <td>
-                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/>
-                                              </td>
-                                              <td><p>25406705575</p></td>
-                                              <td><p>Hali</p></td>
-                                              <td><p>Modo</p></td>
-                                              <td><p>lorumdolor@sitamet.com</p></td>
+                                              <td><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/></td>
+                                              <td><p><a href="">Crystal Methcalfe</a></p></td>
+                                              <td><p>chris@userexperience.co.za</p></td>
+                                              <td></td>
+                                              <td>Right now</td>
                                             </tr>
                                             <tr>
-											  <td><i class="icon-move"></i></td>
-                                              <td>
-                                                  <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/>
-                                              </td>
-                                              <td><p>25406705575</p></td>
-                                              <td><p>Halisi</p></td>
-                                              <td><p>Odoyo</p></td>
-                                              <td><p>lorum@ipsum.com</p></td>
+                                              <td><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/></td>
+                                              <td><p><a href="">Debre Barrett</a></p></td>
+                                              <td><p>debre@userexperience.co.za</p></td>
+                                              <td>Owner</td>
+                                              <td>Mar 20, 2013 09:48am</td>
                                             </tr>
                                           </tbody>
                                         </table>
@@ -193,7 +140,6 @@
                                             </ul>
                                        </div>
                             </div>
-                        </div>
                         
                     </div>
                 </div>
@@ -274,9 +220,6 @@
 			headers: {
 				0: {
 					sorter: false
-				},
-				1: {
-					sorter: false
 				}
 			}
 		  })
@@ -304,25 +247,9 @@
 		
 		
 		$('input.prettyCheck').prettyCheckable({
-	    	color: 'red'
+	    	color: 'red',
 		});
 		
-		//--Selecting All Checboxes
-		var allOn = false;
-		$('.select-all').click( function(){
-			if(allOn){
-				allOn = false;
-				$('.prettycheckbox a').removeClass('checked');
-				// Disable Buttons
-				$('.dash-options .btn').addClass('disabled');
-			}else{
-				allOn = true;
-				$('.prettycheckbox a').addClass('checked');
-				// Enable Buttons
-				$('.dash-options .btn').removeClass('disabled');
-			}
-			
-		});
 		
 		
 		$('.prettyCheck').change(function() {
@@ -331,9 +258,9 @@
 				//Count checkboxes
 				var count = $('.checked').length;
 				if(count == 0){
-					$('.dash-options .btn').addClass('disabled');
+					$('.dash-options .user').addClass('disabled');
 				}else{
-					$('.dash-options .btn').removeClass('disabled');
+					$('.dash-options .user').removeClass('disabled');
 				}
 			}, 10);
 

@@ -114,9 +114,15 @@ General Layout
 .breaker{
 	position:relative;
 	margin-top:10px;
-	height:2px;
-	border-top:3px solid #c9c9c9;
+	height:1px;
+	border-top:2px solid #c9c9c9;
 	border-bottom:1px solid #c9c9c9;
+}
+
+.breaker-light{
+	position:relative;
+	height:1px;
+	border-bottom:1px dotted #c9c9c9;
 }
 
 .more-messages{
@@ -153,6 +159,117 @@ General Layout
 
 .result-count{margin-right:10px;
 font-size:16px;}
+
+/*--Account--*/
+.account-details p{
+	padding:15px 0 5px 0;
+	margin:0;
+}
+.account-details h3{
+	margin:0;
+	padding:0;
+	line-height:25px;
+}
+
+.account-settings{
+	margin-bottom:40px;
+}
+
+.account-settings a{
+	font-size:16px;
+	margin-top:15px;
+	display:block;
+	font-weight:bold;
+}
+
+.modal-body.extra-height{
+	height:370px;
+}
+
+table.users a{
+	margin-top:-3px;
+}
+
+.message{
+	font-style:italic;
+}
+
+/*--Pricing--*/
+.taskbar.pricing{
+	text-align:right;
+	padding:11px 25px 0 0;
+}
+.taskbar.pricing p.currency{
+	position:relative;
+	top:4px;
+	vertical-align:top;
+	font-weight:bold;
+	display:inline;
+	padding-right:10px;
+	margin-top:5px;
+}
+
+.controls .subdiv{
+	margin:15px 20px;
+	font-weight:bold;
+	float: none;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.taskbar .dropdown-menu li{
+	display:block;
+	float:none;
+	margin:auto;
+	font-size:1em;
+	text-align:left;
+}
+
+span.ussd{
+	text-align:center;
+}
+
+.msg-num{
+	padding-bottom:32px;
+}
+
+.quantity input{
+	text-align:right;
+}
+.quantity p{
+	margin-top:5px;
+		float: none;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.total .span8{
+	margin-top:-5px;
+}
+.total h5{
+	margin-bottom:0;
+	line-height:10px;
+}
+.total .span8 span{
+	font-size:12px;
+	margin-top:-2px;
+}
+
+.add-control{
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+	padding:10px;
+	border:dotted 1px #CCC;
+}
+.add-control.space{
+	padding-bottom:20px;
+}
+
+.create-campaign{
+	margin:40px 0 10px 0;
+}
 
 /*--Details--*/
 .campign-title{
@@ -214,7 +331,7 @@ font-size:16px;}
 	border-radius: 3px;
 	padding:10px;
 	text-align:center;
-	border:solid 1px #CCC;
+	border:dotted 1px #CCC;
 }
 
 /*--Preview and Activate--*/

@@ -110,3 +110,7 @@ padding-left: 28px !important;
 .import-recipients{
 	height:370px;
 }
+
+.text-error {
+color: #b94a48 !important;
+}

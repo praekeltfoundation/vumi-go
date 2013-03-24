@@ -64,44 +64,22 @@
             <div class="content">
                 <div class="row-fluid">
 	                <!----------------TITLEBAR--------------------->
-                    <div class="span2 titlebar">
-						<h3>Recipients</h3>
-                    </div>
-                    <!----------------TASKBAR--------------------->
-                    <div class="span10 taskbar searchbar">
-						<input type="text" placeholder="Search recipients, responses, and smart groups">
-						<button type="button" class="btn btn-primary search-btn">Search</button>
-                        <button type="button" class="btn btn-primary smart-group disabled">Make smart group with results</button>
-						<a>Advanced search...</a>
+                    <div class="span12 titlebar">
+						<h3>Election Peace Messages</h3>
                     </div>
 				</div>
                 <!----------------CONTROLS---------------->
                 <div class="row-fluid">
                     <div class="span12 controls">
                     	<div class="row-fluid">
-                        	<div class="span2 action-dash">
-                            	<button type="button" class="btn btn-primary">Import recipients</button>
+                        	<div class="span2">
                             </div>
                             <div class="span10 dash-options">
-								<button type="button" class="btn disabled">Delete</button>
-								<button type="button" class="btn disabled">Export</button>
-                                With group: <button type="button" class="btn">Delete</button>
-								<button type="button" class="btn">Rename</button>
-								<button type="button" class="btn">Start campaign</button>
-                                <!--
+                            	<button type="button" class="btn">Download .csv</button>
+                                With message: <button type="button" class="btn disabled msg">Delete</button>
 								<div class="right">
-                                <input type="text" placeholder="Filter recipients...">
+                                <input type="text" placeholder="Filter messages...">
                                 </div>
-								-->
-								
-								<!-- Original button bar: requires 1120px horizontal body
-								<button type="button" class="btn disabled">Delete</button>
-								<button type="button" class="btn">Import contacts to this group</button>
-                                <button type="button" class="btn">Delete group</button>
-								<button type="button" class="btn">Rename group</button>
-								<button type="button" class="btn">Start campaign with this group</button>
-								<button type="button" class="btn disabled">Export contacts</button>
-								 -->								
                             </div>
                         </div>
                     </div>
@@ -111,17 +89,8 @@
                     <div class="span12">
                         <div class="sidebar span2">
                             <div class="inner">
-								<ul>
-									<p><a>New recipient...</a></p>
-								</ul>
-                            	<ul>
-                                	<p>All recipients (11 337)</p>
-                                </ul>
                                 <ul class="selected">
-                                	<p>Smart groups (12)</p>
-                                </ul>
-                                <ul>
-                                	<p>Groups (112)</p>
+                                	<p>All messages (553)</p>
                                 </ul>
                             </div>
                         </div>
@@ -129,57 +98,52 @@
                         <div class="inbox span10">
 	                        <div class="inner">
                             	<table class="table table-hover">
-									<colgroup><col style="width: 2%;"><col style="width: 4%;"><col style="width: 30%;"><col style="width: 20%;"><col style="width: 20%;"><col style="width: 30%;"></colgroup>
+									<colgroup><col style="width: 4%;"><col style="width: 15%;"><col style="width: 15%;"><col style="width: 55%;"><col style="width: 15%;"></colgroup>
                                           <thead>
                                             <tr>
-											  <th><i class="icon-move"></i></td>
-                                              <th class="select-all"><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/></th>
-											  <th>Phone number</th>
-                                              <th>Name</th>
-                                              <th>Surname</th>
-                                              <th>Email</th>
+                                            <th class="select-all"><input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/></th>
+											  <th>Recipient</th>
+                                              <th>Messages<br/>Per Thread</th>
+                                              <th>Messages</th>
+                                              <th>Date</th>
                                             </tr>
                                           </thead>
                                           <tbody>
                                             <tr>
-											  <td><i class="icon-move"></i></td>
                                               <td>
                                                   <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/>
                                               </td>
-                                              <td><p>25406705575</p></td>
-                                              <td><p>Hamidi</p></td>
-                                              <td><p>Chudasama</p></td>
-                                              <td><p>lorum@ipsum.com</p></td>
+                                              <td><p><a>254067055475</a></p></td>
+                                              <td><p>35</p></td>
+                                              <td><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p></td>
+                                              <td><p>2013-03-21</p></td>
                                             </tr>
                                             <tr>
-											  <td><i class="icon-move"></i></td>
                                               <td>
                                                   <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/>
                                               </td>
-                                              <td><p>25406705575</p></td>
-                                              <td><p>Angalia</p></td>
-                                              <td><p>Karim</p></td>
-                                              <td><p>lorumipsum@ipsumlorum.com</p></td>
+                                              <td><p><a>254067047811</a></p></td>
+                                              <td><p>23</p></td>
+                                              <td><p>In imperdiet nulla non turpis facilisis lobortis ut eget lacus.</p></td>
+                                              <td><p>2013-03-21</p></td>
                                             </tr>
                                             <tr>
-											  <td><i class="icon-move"></i></td>
                                               <td>
                                                   <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/>
                                               </td>
-                                              <td><p>25406705575</p></td>
-                                              <td><p>Hali</p></td>
-                                              <td><p>Modo</p></td>
-                                              <td><p>lorumdolor@sitamet.com</p></td>
+                                              <td><p><a>254067031245</a></p></td>
+                                              <td><p>9</p></td>
+                                              <td><p>Proin a ante quis lectus pulvinar venenatis in eu libero.</p></td>
+                                              <td><p>2013-03-21</p></td>
                                             </tr>
                                             <tr>
-											  <td><i class="icon-move"></i></td>
                                               <td>
                                                   <input type="checkbox" class="prettyCheck" value="group1" id="group1" name="group1"/>
                                               </td>
-                                              <td><p>25406705575</p></td>
-                                              <td><p>Halisi</p></td>
-                                              <td><p>Odoyo</p></td>
-                                              <td><p>lorum@ipsum.com</p></td>
+                                              <td><p><a>254067045198</a></p></td>
+                                              <td><p>3</p></td>
+                                              <td><p>Aliquam elementum nisl non augue facilisis vitae bibendum ligula condimentum.</p></td>
+                                              <td><p>2013-03-21</p></td>
                                             </tr>
                                           </tbody>
                                         </table>
@@ -274,9 +238,6 @@
 			headers: {
 				0: {
 					sorter: false
-				},
-				1: {
-					sorter: false
 				}
 			}
 		  })
@@ -314,12 +275,12 @@
 				allOn = false;
 				$('.prettycheckbox a').removeClass('checked');
 				// Disable Buttons
-				$('.dash-options .btn').addClass('disabled');
+				$('.dash-options .msg').addClass('disabled');
 			}else{
 				allOn = true;
 				$('.prettycheckbox a').addClass('checked');
 				// Enable Buttons
-				$('.dash-options .btn').removeClass('disabled');
+				$('.dash-options .msg').removeClass('disabled');
 			}
 			
 		});
@@ -331,9 +292,9 @@
 				//Count checkboxes
 				var count = $('.checked').length;
 				if(count == 0){
-					$('.dash-options .btn').addClass('disabled');
+					$('.dash-options .msg').addClass('disabled');
 				}else{
-					$('.dash-options .btn').removeClass('disabled');
+					$('.dash-options .msg').removeClass('disabled');
 				}
 			}, 10);
 
