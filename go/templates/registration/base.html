@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row-fluid">
+    <div class="span6 offset3 text-center">
+        <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi" class="logo-large">
+        {% block auth_form %}
+        {% endblock %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+
+        console.log('why are we doing this?')
+        $(document).ready(function(){
+            $("#signin-form").validate();
+        });
+    </script>
+{% endblock %}
