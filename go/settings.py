@@ -162,6 +162,7 @@ INSTALLED_APPS = (
     'bootstrap',
     'raven.contrib.django',
     'debug_toolbar',
+    'pipeline',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -181,6 +182,9 @@ DEBUG_TOOLBAR_CONFIG = {
     'INTERCEPT_REDIRECTS': False,
     'ENABLE_STACKTRACES': True,
 }
+
+
+
 
 
 # A sample logging configuration. The only tangible logging
