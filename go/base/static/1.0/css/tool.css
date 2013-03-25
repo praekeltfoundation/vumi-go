@@ -1,0 +1,255 @@
+@charset "utf-8";
+/* CSS Document */
+
+/*-----------------------------
+General Layout
+-----------------------------*/
+.wrapper {
+	min-height: 100%;
+	position: relative;
+	overflow: hidden;
+}
+
+.pageblock {
+	width: 1200px;
+	margin: 0 auto;
+	position: relative;
+}
+
+/*-----------------------------
+ViewPort
+-----------------------------*/
+.viewport {
+	position: absolute;
+	top: 0px;
+	bottom: 0px;
+	left: 0;
+	overflow: hidden;
+	width: 100%;
+	z-index: 1;
+}
+
+.viewport * {
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.stage {
+	width: 16000px;
+	position: absolute;
+	z-index: 1;
+}
+
+.stage.enableCSSAnimations {
+	transition: 0.6s all;
+	-moz-transition: 0.6s all;
+	-webkit-transition: 0.6s all;
+	-o-transition: 0.6s all;
+}
+
+.viewport .hrow {
+	height: 400px;
+	background: url("../img/stage_bg.png") repeat-x left top;
+}
+
+#overlay {
+	position: absolute; width: 100%; height: 100%; background-color: black; opacity: 0.4;
+	z-index: 10; 
+}
+
+
+/*-----------------------------
+Widgets
+-----------------------------*/
+.widget {
+	width: 300px;
+	background:#fff;
+	outline:solid 2px #0fb5af;
+	margin: 0;
+	position: absolute;
+	cursor: default;
+	z-index: 9;
+}
+
+.widget.Edit {
+	z-index: 11;
+}
+
+.widget.ui-draggable-dragging {
+	z-index: 10;
+}
+
+.widget .header{
+	height:22px;
+	background:#0fb5af;
+	padding:8px;
+	
+}
+
+.widget .header span{
+	color:#fff;
+	text-transform:uppercase;
+	font-weight:bold;
+	margin-right:10px;
+}
+
+.widget-inner{
+	padding:15px 10px;
+	font-size:16px;
+}
+
+.widget .caption{
+	font-weight:bold;
+}
+
+.widget-content{
+	font-size:16px;
+	font-weight:bold;
+	font-style:italic;
+}
+.widget-content li{
+	position:relative;
+	background-image:url(../img/question-lead.png);
+	background-repeat: repeat-x;
+	list-style:none;
+	padding:5px;
+}
+.widget-content .end li{
+	background:none;
+}
+
+.widget-content .end li.end{
+	font-style:normal;
+	font-weight:bold;
+	color:#b41c30;
+}
+
+.end-box{
+	width:8px;
+	height:8px;
+	background:#b41c30;
+	display:inline-block;
+}
+
+.widget-content li span{
+	padding:0 10px;
+	margin-left:-10px;
+	background:#FFF;
+}
+
+.widget .feedback{
+	font-weight:normal;
+}
+
+.widget-footer{
+	background:#d9d8d3;
+	height:30px;
+	padding:10px;
+}
+
+.widget-footer button{
+	float:right;
+}
+
+.widget-footer button.btn-primary{
+	position:relative;
+	margin-right:-15px;
+	z-index:99;
+}
+
+.widget-footer button.btn-link{
+	color:#2280ff;
+	font-weight:bold;
+}
+
+.widget form{
+	margin:0;
+}
+
+.widget form span, .widget form textarea, .widget form input{
+	font-size:12px;
+	color:#2f3436;
+}
+
+.widget form textarea {
+	resize: vertical;
+}
+
+.widget form textarea, .widget form input{
+	padding-left:10px;
+	background:#f3f3f3;
+	user-select: text;
+	-webkit-user-select: text;
+}
+
+.widget ul.answers{
+	margin-left:0;
+}
+
+.widget .answer-btn{
+	margin-left:27px;
+}
+
+.widget .answers li, .widget .answers span{
+	font-size:13px;
+	color:#2f3436;
+	list-style:none;
+}
+.widget .answers span{
+	margin:10px;
+}
+.widget .answers li input{
+	margin-top: 2px;
+	margin-bottom: 4px;
+	width:230px;
+}
+
+.widget form .bootstrap-select span, .widget form textarea, .widget form input{
+	font-weight:bold;
+}
+
+.widget form .right span{
+	color:#878b8e;
+	font-size:11px;
+}
+
+.widget form .caret{
+	border-top: 4px solid #2280ff;
+}
+
+.widget .ico-move, .widget .ico-del{
+	margin:5px;
+	float:right;
+}
+
+.add-btn{
+	cursor:pointer;
+	position:absolute;
+}
+
+.add-btn:hover{
+	position:absolute;
+	width: 90px;
+	height: 48px;
+    background-position: -1px -1px;
+	margin-left:-40px;
+	margin-top:-20px;
+}
+
+.sprite-ico-del, .sprite-ico-drag{
+	margin:4px;
+	float:right;
+	cursor:pointer;
+}
+
+.dragstart{
+	position:absolute;
+	right:-9px;
+	top:10px;
+}
+
+.dragend{
+	position:absolute;
+	left:-10px;
+	top:30px;
+}
