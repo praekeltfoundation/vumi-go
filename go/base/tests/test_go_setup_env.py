@@ -40,10 +40,15 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
         self.command = go_setup_env.Command()
         self.command.setup_backend(self.config)
         self.tagpool = self.command.tagpool
+        # do whatever setup command.handle() does manually
         self.command.stdout = StringIO()
         self.command.stderr = StringIO()
         self.command.file_name_template = 'go_%(file_name)s.%(suffix)s'
         self.command.dest_dir = 'setup_env'
+        self.command.config = {
+            'redis_manager': {'key_prefix': 'test'},
+            'riak_manager': {'bucket_prefix': 'test.'}
+        }
 
         self.tagpool_file = tmp_yaml_file({
             'pools': {
@@ -226,3 +231,33 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
         ussd_command = ussd_cp.get('program:ussd_transport', 'command')
         self.assertTrue(ussd_command.startswith('twistd'))
         self.assertTrue('TelnetServerTransport' in ussd_command)
+
+    def test_create_app_msg_dispatcher_config(self):
+        fake_file = FakeFile()
+        self.command.open_file = Mock(side_effect=[fake_file])
+        self.command.create_app_msg_dispatcher_config([
+            'transport1', 'transport2'])
+        fake_file.seek(0)
+        config = yaml.load(fake_file)
+        self.assertEqual(config['exposed_names'],
+            ['transport1', 'transport2'])
+        self.assertEqual(config['redis_manager'], {
+            'key_prefix': 'test',
+        })
+        self.assertEqual(config['riak_manager'], {
+            'bucket_prefix': 'test.',
+        })
+
+    def test_create_vumigo_router_config(self):
+        fake_file = FakeFile()
+        self.command.open_file = Mock(side_effect=[fake_file])
+        self.command.create_vumigo_router_config([
+            'transport1', 'transport2'])
+        fake_file.seek(0)
+        config = yaml.load(fake_file)
+        self.assertEqual(config['transport_names'],
+            ['transport1', 'transport2'])
+        self.assertEqual(config['route_mappings'], {
+            'transport1': ['vumigo_router'],
+            'transport2': ['vumigo_router'],
+        })
