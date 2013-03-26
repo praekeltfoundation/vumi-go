@@ -24,6 +24,7 @@ class EventHandlerTestCase(AppWorkerTestCase):
         self.vumi_api = self.event_dispatcher.vumi_api
         self.account = yield self.mk_user(self.vumi_api, u'acct')
         self.user_api = self.vumi_api.get_user_api(self.account.key)
+        yield self.setup_tagpools()
         self.conversation = yield self.create_conversation(
             delivery_tag_pool=u'pool', delivery_class=u'sms',
             conversation_type=u'survey')

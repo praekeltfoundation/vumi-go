@@ -4,11 +4,17 @@
 {% block content %}
 <div>
     <img src="{{STATIC_URL}}pics/header/logo.png"/>
+    {% if success %}
+    <h2>Conversation confirmed</h2>
+    {% else %}
     <h2>Please Confirm</h2>
+    {% endif %}
     {% include "base/includes/messages.html" %}
     <p>
+    {% if not success %}
         You are about to start a conversation. Please review the details below
         and click confirm if everything is in order.
+    {% endif %}
     </p>
     <table class="table table-bordered">
         <thead>

@@ -31,7 +31,6 @@ class AuthenticationTestCase(VumiGoDjangoTestCase):
             reverse('auth_login'), reverse('conversations:index')))
 
     def test_login(self):
-        """test correct login"""
         self.client.login(username=self.user.username, password='password')
         response = self.client.get(reverse('conversations:index'))
         self.assertContains(response, '%s %s' % (self.user.first_name,

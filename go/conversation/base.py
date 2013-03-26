@@ -5,9 +5,9 @@ from StringIO import StringIO
 
 from django.views.generic import TemplateView
 from django.core.paginator import PageNotAnInteger, EmptyPage
+from django import forms
 
 from django.utils.decorators import method_decorator
-from django.contrib.sites.models import Site
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render, Http404
 from django.core.urlresolvers import reverse
@@ -16,18 +16,18 @@ from django.conf.urls.defaults import url, patterns
 from django.conf import settings
 from django.http import HttpResponse
 
-from vumi.persist.redis_manager import RedisManager
-
 from go.vumitools.conversation.models import (
     CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
+from go.base.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConversationForm, ConversationGroupForm,
-                                    ConfirmConversationForm)
-from go.conversation.tasks import export_conversation_messages
+                                    ConfirmConversationForm,
+                                    ReplyToMessageForm)
+from go.conversation.tasks import (export_conversation_messages,
+                                    send_one_off_reply)
 from go.base import message_store_client as ms_client
 from go.base.utils import (make_read_only_form, conversation_or_404,
                             page_range_window)
-from go.base.token_manager import TokenManager
 
 
 class ConversationView(TemplateView):
@@ -219,15 +219,11 @@ class StartConversationView(ConversationView):
         redirect_to = self.get_view_url('confirm',
                             conversation_key=conversation.key)
         # The token to be sent.
-        site = Site.objects.get_current()
-        redis = RedisManager.from_config(
-                                    settings.VUMI_API_CONFIG['redis_manager'])
-        token_manager = TokenManager(redis.sub_manager('token_manager'))
+        token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = token_manager.generate(redirect_to, user_id=request.user.id,
                                         extra_params=params)
-        token_url = 'http://%s%s' % (site.domain,
-                                reverse('token', kwargs={'token': token}))
-        conversation.send_token_url(token_url, account.msisdn)
+        conversation.send_token_url(token_manager.url_for_token(token),
+                                        account.msisdn)
         messages.info(request, 'Confirmation request sent.')
         return self.redirect_to('show', conversation_key=conversation.key)
 
@@ -244,18 +240,13 @@ class ConfirmConversationView(ConversationView):
     template_name = 'confirm'
 
     def get(self, request, conversation):
-        """
-        NOTE:   we need the hack involving `success` in the query string here
-                because we don't have a good way to telling whether a
-                conversation has started yet or not. The current implementation
-                does a guess based on whether or not the conversation has any
-                batch keys assigned, which in the current scenario breaks since
-                sending a conversation confirmation SMS will assign a batch key
-                while not actually starting the conversation.
-        """
-        redis = RedisManager.from_config(
-                                    settings.VUMI_API_CONFIG['redis_manager'])
-        token_manager = TokenManager(redis.sub_manager('token_manager'))
+        # TODO: Ideally we should display a nice message to the user
+        #       if they access the page for a conversation that has
+        #       already been started.  Currently we just display a 404
+        #       page if the token no longer exists because it has
+        #       already been used.
+
+        token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = request.GET.get('token')
         token_data = token_manager.verify_get(token)
         if not token_data:
@@ -263,40 +254,40 @@ class ConfirmConversationView(ConversationView):
         return self.render_to_response({
             'form': ConfirmConversationForm(initial={'token': token}),
             'conversation': conversation,
-            'success': request.GET.get('success'),  # FIXME
-            })
+            'success': False,
+        })
 
     def post(self, request, conversation):
         token = request.POST.get('token')
-        redis = RedisManager.from_config(
-                                    settings.VUMI_API_CONFIG['redis_manager'])
-        token_manager = TokenManager(redis.sub_manager('token_manager'))
+        token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token_data = token_manager.verify_get(token)
         if not token_data:
             raise Http404
 
         params = token_data.get('extra_params', {})
+        user_token, sys_token = token_manager.parse_full_token(token)
         confirmation_form = ConfirmConversationForm(request.POST)
+        success = False
         if confirmation_form.is_valid():
             try:
                 batch_id = conversation.get_latest_batch_key()
-                conversation.start(batch_id=batch_id, **params)
-                messages.info(request, '%s started succesfully!' % (
-                                            self.conversation_display_name,))
-                return redirect('%s?%s' % (
-                    self.get_view_url('confirm',
-                        conversation_key=conversation.key),
-                    urllib.urlencode({
-                        'token': token,
-                        'success': 1,
-                        })))
+                if token_manager.delete(user_token):
+                    conversation.start(batch_id=batch_id, **params)
+                    messages.info(request, '%s started succesfully!' %
+                                  (self.conversation_display_name,))
+                    success = True
+                else:
+                    messages.warning("Conversation already confirmed!")
             except ConversationSendError as error:
                 messages.error(request, str(error))
+        else:
+            messages.error('Invalid confirmation form.')
 
         return self.render_to_response({
             'form': confirmation_form,
             'conversation': conversation,
-            })
+            'success': success,
+        })
 
 
 class ShowConversationView(ConversationView):
@@ -306,6 +297,7 @@ class ShowConversationView(ConversationView):
         params = {
             'conversation': conversation,
             'is_editable': (self.edit_conversation_forms is not None),
+            'user_api': request.user_api,
             }
         status = conversation.get_status()
         templ = lambda name: self.get_template_name('includes/%s' % (name,))
@@ -328,6 +320,19 @@ class ShowConversationView(ConversationView):
             messages.info(request, 'Conversation messages CSV file export '
                                     'scheduled. CSV file should arrive in '
                                     'your mailbox shortly.')
+        if '_send_one_off_reply' in request.POST:
+            form = ReplyToMessageForm(request.POST)
+            if form.is_valid():
+                in_reply_to = form.cleaned_data['in_reply_to']
+                content = form.cleaned_data['content']
+                send_one_off_reply.delay(
+                    request.user_api.user_account_key, conversation.key,
+                    in_reply_to, content)
+                messages.info(request, 'Reply scheduled for sending.')
+            else:
+                messages.error(request,
+                    'Something went wrong. Please try again.')
+                print form.errors
         return self.redirect_to('show', conversation_key=conversation.key)
 
 
@@ -359,8 +364,12 @@ class EditConversationView(ConversationView):
     edit_conversation_forms = ()
 
     def _render_forms(self, request, conversation, edit_forms):
+        def sum_media(form_list):
+            return sum((f.media for f in form_list), forms.Media())
+
         return self.render_to_response({
                 'conversation': conversation,
+                'edit_forms_media': sum_media(edit_forms),
                 'edit_forms': edit_forms,
                 })
 
@@ -436,6 +445,7 @@ class MessageSearchResultConversationView(ConversationView):
             'token': token,
             'batch_id': batch_id,
             'message_direction': direction,
+            'user_api': request.user_api,
         }
         if match_results.is_in_progress():
             context.update({

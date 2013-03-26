@@ -14,6 +14,8 @@ from mock import patch
 
 class SurveyTestCase(DjangoGoApplicationTestCase):
 
+    TEST_CONVERSATION_TYPE = u'survey'
+
     def setUp(self):
         super(SurveyTestCase, self).setUp()
         self.setup_riak_fixtures()
@@ -343,3 +345,34 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(response2.context['token'], fake_client.token)
         self.assertEqual(len(response2.context['message_page'].object_list),
             10)
+
+    def test_send_one_off_reply(self):
+        self.put_sample_messages_in_conversation(self.user_api,
+                                                    self.conv_key, 1)
+        conversation = self.get_wrapped_conv()
+        [msg] = conversation.received_messages()
+        response = self.client.post(reverse('survey:show', kwargs={
+            'conversation_key': self.conv_key
+            }), {
+                'in_reply_to': msg['message_id'],
+                'content': 'foo',
+                'to_addr': 'should be ignored',
+                '_send_one_off_reply': True,
+            })
+        self.assertRedirects(response, reverse('survey:show', kwargs={
+            'conversation_key': self.conv_key,
+            }))
+
+        [start_cmd, reply_to_cmd] = self.get_api_commands_sent()
+        [tag] = conversation.get_tags()
+        msg_options = conversation.make_message_options(tag)
+        msg_options['in_reply_to'] = msg['message_id']
+        self.assertEqual(reply_to_cmd['worker_name'],
+                            'survey_application')
+        self.assertEqual(reply_to_cmd['command'], 'send_message')
+        self.assertEqual(reply_to_cmd['kwargs']['command_data'], {
+            'batch_id': conversation.get_latest_batch_key(),
+            'content': 'foo',
+            'to_addr': msg['from_addr'],
+            'msg_options': msg_options,
+            })

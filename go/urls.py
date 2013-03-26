@@ -27,6 +27,7 @@ urlpatterns = patterns('',
 
     # simple todo view for stuff that's not completed yet
     url(r'^todo/.*$', 'go.base.views.todo', name='todo'),
+    url(r'^t/task/$', 'go.base.views.token_task', name='token_task'),
     url(r'^t/(?P<token>\w+)/$', 'go.base.views.token', name='token'),
 
     # vumi go!

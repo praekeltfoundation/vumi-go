@@ -89,7 +89,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
 
     def mk_dummy_api(self, conversation):
         dummy_api = mock.Mock()
-        dummy_api.conversation = conversation
+        dummy_api.config = self.app.get_config_for_conversation(conversation)
         return dummy_api
 
     @inlineCallbacks
@@ -108,6 +108,15 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         yield self.start_conversation(conversation)
         msg = self.set_conversation_tag(self.mkmsg_in(), conversation)
         yield self.dispatch_inbound(msg)
+
+    @inlineCallbacks
+    def test_user_message_sandbox_id(self):
+        conversation = yield self.setup_conversation(
+            config=self.mk_conv_config('on_inbound_message'))
+        yield self.start_conversation(conversation)
+        msg = self.set_conversation_tag(self.mkmsg_in(), conversation)
+        config = yield self.app.get_config(msg)
+        self.assertEqual(config.sandbox_id, self.user_account.key)
 
     @inlineCallbacks
     def test_event(self):
@@ -148,7 +157,7 @@ class TestConversationConfigResource(TestCase):
     def set_app_config(self, key_values):
         app_config = dict((k, {"value": v}) for k, v
                           in key_values.iteritems())
-        self.conversation.metadata = {
+        self.conversation.config = {
             "jsbox_app_config": app_config,
         }
 
@@ -171,6 +180,6 @@ class TestConversationConfigResource(TestCase):
 
     def test_with_app_config_absent(self):
         cmd = SandboxCommand(key="foo")
-        self.conversation.metadata = {"jsbox": {}}
+        self.conversation.config = {"jsbox": {}}
         reply = self.resource.handle_get(self.dummy_api, cmd)
         self.check_reply(reply, cmd, None)

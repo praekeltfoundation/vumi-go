@@ -1,5 +1,7 @@
 import os.path
 
+from django.core.files.storage import default_storage
+
 from vumi.utils import load_class, normalize_msisdn
 
 
@@ -38,6 +40,7 @@ class FieldNormalizer(object):
             ('msisdn_gh', 'Ghanaian contact number (+233)'),
             ('msisdn_cm', 'Cameroonian contact number (+237)'),
             ('msisdn_ng', 'Nigerian contact number (+234)'),
+            ('msisdn_tz', 'Tanzanian contact number (+255)'),
             ('msisdn_int',
                 'Contact number (already prefixed with country code)'),
         ]
@@ -113,6 +116,9 @@ class FieldNormalizer(object):
     def normalize_msisdn_ng(self, value):
         return self.do_msisdn(value, '234')
 
+    def normalize_msisdn_tz(self, value):
+        return self.do_msisdn(value, '255')
+
     def normalize_msisdn_int(self, value):
         value = self.normalize_string(value)
         value = self.lchop(value, ['+', '00'])
@@ -146,6 +152,9 @@ class ContactFileParser(object):
 
     def __init__(self):
         self.normalizer = FieldNormalizer()
+
+    def get_real_path(self, file_path):
+        return default_storage.path(file_path)
 
     def is_header_row(self, columns):
         """
