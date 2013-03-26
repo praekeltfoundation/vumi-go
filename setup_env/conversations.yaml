@@ -34,6 +34,7 @@
     message: this is the Wikipedia USSD connection
     delivery_class: ussd
     delivery_tag_pool: ussd_tagpool
+    delivery_tag: '*120*10001#'
     metadata:
         send_from_tagpool: longcode_tagpool
         send_from_tag: longcode-10001

@@ -2,8 +2,32 @@ sms_transport:
     class: vumi.transports.telnet.TelnetServerTransport
     config:
         telnet_port: 8080
+        to_addr: '10001'
+        middleware:
+            - tagging_mw: vumi.middleware.tagger.TaggingMiddleware
+
+        tagging_mw:
+            incoming:
+                addr_pattern: ^(.*)$
+                tagpool_template: 'longcode_tagpool'
+                tagname_template: \1
+            outgoing:
+                tagname_pattern: .*
+                msg_template: {}
 
 ussd_transport:
     class: vumi.transports.telnet.TelnetServerTransport
     config:
         telnet_port: 8081
+        to_addr: '*120*10001#'
+        middleware:
+            - tagging_mw: vumi.middleware.tagger.TaggingMiddleware
+
+        tagging_mw:
+            incoming:
+                addr_pattern: ^(.*)$
+                tagpool_template: 'ussd_tagpool'
+                tagname_template: \1
+            outgoing:
+                tagname_pattern: .*
+                msg_template: {}

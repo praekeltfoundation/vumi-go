@@ -5,8 +5,7 @@ transport_names:
   - vumigo_router
 
 exposed_names:
-  - sms_transport
-  - ussd_transport
+  - wikipedia_ussd_transport
 
 
 upstream_transport: vumigo_router
@@ -14,16 +13,8 @@ optout_transport: opt_out_transport
 
 router_class: go.vumitools.api_worker.GoApplicationRouter
 conversation_mappings:
-  survey: survey_transport
-  http_api: http_api_transport
-  jsbox: jsbox_transport
-  multi_survey: multi_survey_transport
-  bulk_message: bulk_message_transport
-  opt_out: opt_out_transport
-  sequential_send: sequential_send_transport
-  subscription: subscription_transport
   wikipedia_ussd: wikipedia_ussd_transport
-  wikipedia_sms: wikipedia_sms_transport
+
 
 redis_manager: &REDIS_MANAGER
   key_prefix: vumigo

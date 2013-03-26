@@ -236,11 +236,16 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
         fake_file = FakeFile()
         self.command.open_file = Mock(side_effect=[fake_file])
         self.command.create_app_msg_dispatcher_config([
-            'transport1', 'transport2'])
+            'app1', 'app2'])
         fake_file.seek(0)
         config = yaml.load(fake_file)
         self.assertEqual(config['exposed_names'],
-            ['transport1', 'transport2'])
+            ['app1_transport', 'app2_transport'])
+        self.assertEqual(config['conversation_mappings'],
+            {
+                'app1': 'app1_transport',
+                'app2': 'app2_transport',
+            })
         self.assertEqual(config['redis_manager'], {
             'key_prefix': 'test',
         })
