@@ -47,7 +47,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,
                            from_addr=u'+27831234567{0}',
-                           metadata=None):
+                           config={}):
         user_api = self.user_api
         group = yield user_api.contact_store.new_group(u'test group')
 
@@ -58,7 +58,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
 
         conversation = yield self.create_conversation(
             delivery_tag_pool=u'pool', delivery_class=u'sms',
-            delivery_tag=u'tag1', metadata=metadata)
+            delivery_tag=u'tag1', config=config)
         conversation.add_group(group)
         yield conversation.save()
         returnValue(conversation)
@@ -69,7 +69,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         TaggingMiddleware.add_tag_to_msg(msg, tag)
         return msg
 
-    def mk_metadata(self, method):
+    def mk_conv_config(self, method):
         app_js = """
             api.%(method)s = function(command) {
                 this.log_info("From command: inbound-message",
@@ -80,12 +80,12 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
                 );
             }
         """ % {'method': method}
-        metadata = {
+        config = {
             'jsbox': {
                 'javascript': app_js,
             },
         }
-        return metadata
+        return config
 
     def mk_dummy_api(self, conversation):
         dummy_api = mock.Mock()
@@ -104,7 +104,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_user_message(self):
         conversation = yield self.setup_conversation(
-            metadata=self.mk_metadata('on_inbound_message'))
+            config=self.mk_conv_config('on_inbound_message'))
         yield self.start_conversation(conversation)
         msg = self.set_conversation_tag(self.mkmsg_in(), conversation)
         yield self.dispatch_inbound(msg)
@@ -112,7 +112,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_user_message_sandbox_id(self):
         conversation = yield self.setup_conversation(
-            metadata=self.mk_metadata('on_inbound_message'))
+            config=self.mk_conv_config('on_inbound_message'))
         yield self.start_conversation(conversation)
         msg = self.set_conversation_tag(self.mkmsg_in(), conversation)
         config = yield self.app.get_config(msg)
@@ -121,7 +121,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_event(self):
         conversation = yield self.setup_conversation(
-            metadata=self.mk_metadata('on_inbound_event'))
+            config=self.mk_conv_config('on_inbound_event'))
         yield self.start_conversation(conversation)
         msg = self.set_conversation_tag(self.mkmsg_in(), conversation)
         tag = (conversation.delivery_tag_pool, conversation.delivery_tag)
@@ -157,7 +157,7 @@ class TestConversationConfigResource(TestCase):
     def set_app_config(self, key_values):
         app_config = dict((k, {"value": v}) for k, v
                           in key_values.iteritems())
-        self.conversation.metadata = {
+        self.conversation.config = {
             "jsbox_app_config": app_config,
         }
 
@@ -180,6 +180,6 @@ class TestConversationConfigResource(TestCase):
 
     def test_with_app_config_absent(self):
         cmd = SandboxCommand(key="foo")
-        self.conversation.metadata = {"jsbox": {}}
+        self.conversation.config = {"jsbox": {}}
         reply = self.resource.handle_get(self.dummy_api, cmd)
         self.check_reply(reply, cmd, None)

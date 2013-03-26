@@ -36,6 +36,7 @@ class ConversationWrapper(object):
     @Manager.calls_manager
     def end_conversation(self):
         self.c.end_timestamp = datetime.utcnow()
+        self.c.set_status_finished()
         yield self.c.save()
         yield self._release_batches()
 
@@ -52,11 +53,11 @@ class ConversationWrapper(object):
 
     # TODO: Something about setattr?
 
-    def get_metadata(self, default=None):
-        return self.c.metadata or default
+    def get_config(self):
+        return self.c.config
 
-    def set_metadata(self, metadata):
-        self.c.metadata = metadata
+    def set_config(self, config):
+        self.c.config = config
 
     def start_batch(self, *tags):
         user_account = unicode(self.c.user_account.key)
@@ -213,6 +214,7 @@ class ConversationWrapper(object):
 
         if batch_id not in self.get_batch_keys():
             self.c.batches.add_key(batch_id)
+        self.c.set_status_started()
         yield self.c.save()
 
     @Manager.calls_manager

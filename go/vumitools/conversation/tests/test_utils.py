@@ -8,7 +8,6 @@ from vumi.application.tests.test_base import DummyApplicationWorker
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApi
-from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.exceptions import ConversationSendError
 
 
@@ -32,10 +31,9 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.user_api = self.api.get_user_api(self.user.key)
         yield self.setup_tags()
 
-        raw_conv = yield self.user_api.conversation_store.new_conversation(
-            u'bulk_message', u'subject', u'message',
+        self.conv = yield self.create_conversation(
+            conversation_type=u'dummy',
             delivery_tag_pool=u'longcode', delivery_class=u'sms')
-        self.conv = ConversationWrapper(raw_conv, self.user_api)
 
     @inlineCallbacks
     def setup_tags(self, name=u'longcode', count=4, metadata=None):

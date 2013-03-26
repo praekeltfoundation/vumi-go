@@ -68,9 +68,9 @@ def export_conversation_messages(account_key, conversation_key):
                             for fn in field_names])
 
     email = EmailMessage(
-        'Conversation message export: %s' % (conversation.subject,),
+        'Conversation message export: %s' % (conversation.name,),
         'Please find the messages of the conversation %s attached.\n' % (
-            conversation.subject),
+            conversation.name),
         settings.DEFAULT_FROM_EMAIL, [user_profile.user.email])
     email.attach('messages-export.csv', io.getvalue(), 'text/csv')
     email.send()

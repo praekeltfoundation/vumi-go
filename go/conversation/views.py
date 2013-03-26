@@ -30,13 +30,13 @@ def index(request):
     conversations = [user_api.wrap_conversation(c)
                         for c in get_conversations()]
 
-    if conversation_type:
-        conversations = [c for c in conversations
-                            if c.conversation_type == conversation_type]
-
     if query:
         conversations = [c for c in conversations
-                            if query.lower() in c.subject.lower()]
+                         if query.lower() in c.name.lower()]
+
+    if conversation_type:
+        conversations = [c for c in conversations
+                         if c.conversation_type == conversation_type]
 
     # sort with newest first
     conversations = sorted(conversations, key=lambda c: c.created_at,

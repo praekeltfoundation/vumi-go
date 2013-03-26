@@ -258,9 +258,8 @@ class MetricResource(BaseResource):
             return
 
         conversation = yield self.get_conversation(user_account)
-        metadata = conversation.get_metadata(default={})
-        http_api_metadata = metadata.get('http_api', {})
-        store = http_api_metadata.get('metrics_store', self.DEFAULT_STORE_NAME)
+        store = conversation.config.get('http_api', {}).get(
+            'metrics_store', self.DEFAULT_STORE_NAME)
         for name, value, agg_class in metrics:
             self.worker.publish_account_metric(user_account, store, name,
                                                 value, agg_class)

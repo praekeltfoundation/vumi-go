@@ -214,6 +214,7 @@ class EmailTestCase(DjangoGoApplicationTestCase):
         send_user_account_summary(self.user)
 
         [email] = mail.outbox
+        print email.body
         self.assertEqual(email.subject, 'Vumi Go Account Summary')
         self.assertEqual(email.from_email, settings.DEFAULT_FROM_EMAIL)
         self.assertEqual(email.recipients(), [self.user.email])

@@ -72,7 +72,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.batch_id = yield self.vumi_api.mdb.batch_start([self.tag],
                                     user_account=unicode(self.account.key))
         self.conversation.batches.add_key(self.batch_id)
-        self.conversation.set_metadata({
+        self.conversation.set_config({
             'http_api': {
                 'api_tokens': [
                     'token-1',
@@ -407,12 +407,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_post_inbound_message(self):
         # Set the URL so stuff is HTTP Posted instead of streamed.
-        metadata = self.conversation.get_metadata(default={})
-        http_metadata = metadata.get('http_api')
-        http_metadata.update({
+        self.conversation.config['http_api'].update({
             'push_message_url': self.mock_push_server.url,
         })
-        self.conversation.set_metadata(metadata)
         yield self.conversation.save()
 
         msg = self.mkmsg_in(content='in 1', message_id='1')
@@ -429,12 +426,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_post_inbound_event(self):
         # Set the URL so stuff is HTTP Posted instead of streamed.
-        metadata = self.conversation.get_metadata(default={})
-        http_metadata = metadata.get('http_api')
-        http_metadata.update({
+        self.conversation.config['http_api'].update({
             'push_event_url': self.mock_push_server.url,
         })
-        self.conversation.set_metadata(metadata)
         yield self.conversation.save()
 
         msg1 = self.mkmsg_out(content='in 1', message_id='1')

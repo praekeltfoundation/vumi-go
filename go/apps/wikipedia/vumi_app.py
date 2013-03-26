@@ -45,8 +45,8 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
     def get_conversation_metadata(self, message):
         gm = self.get_go_metadata(message)
         conversation = yield gm.get_conversation()
-        if conversation and conversation.metadata:
-            returnValue(conversation.metadata)
+        if conversation and conversation.config:
+            returnValue(conversation.config)
         returnValue({})
 
     @inlineCallbacks

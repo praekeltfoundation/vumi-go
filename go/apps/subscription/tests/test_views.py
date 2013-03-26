@@ -122,4 +122,4 @@ class SubscriptionTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(reverse('subscription:show', kwargs={
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.subject, self.TEST_SUBJECT)
+        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
