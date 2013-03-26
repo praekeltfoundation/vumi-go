@@ -1,0 +1,57 @@
+body {
+  background: #2f3436;
+  color: #c1c1c1;
+}
+.logo {
+  position: relative;
+  top: 17px;
+  left: -27px;
+  margin-right: -20px;
+  z-index: 99;
+}
+.main-menu .nav li {
+  height: 39px;
+  line-height: 39px;
+}
+.main-menu .nav > li {
+  float: left;
+  border-right: 1px #212527 solid;
+}
+.main-menu .nav:last-child > li:first-child {
+  border-left: 1px #212527 solid;
+}
+.main-menu li a {
+  color: #0bcac3;
+  padding: 0 29px;
+}
+.main-menu .nav > li a:hover {
+  color: #fff;
+  background: transparent;
+}
+.main-menu .nav > li a:hover .caret {
+  border-top-color: #fff;
+}
+.main-menu .nav .caret {
+  margin-bottom: 10px;
+  vertical-align: middle;
+}
+.main-menu .dropdown .dropdown-toggle {
+  background: transparent;
+  outline: none;
+}
+.main-menu .open .dropdown-toggle {
+  color: #fff;
+  background: transparent;
+}
+.main-menu .dropdown-menu {
+  -webkit-border-radius: 0;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 0;
+  -moz-background-clip: padding;
+  border-radius: 0;
+  background-clip: padding-box;
+  background: #2f3436;
+}
+.main-menu .dropdown-menu a {
+  line-height: 39px;
+}
