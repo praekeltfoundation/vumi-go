@@ -8,5 +8,23 @@ wikipedia_ussd:
         max_sms_unicode_length: 190
         redis_manager:
           key_prefix: "vumigo"
+          db: 1
         riak_manager:
           bucket_prefix: vumigo.
+        middleware:
+          - logging_mw: vumi.middleware.logging.LoggingMiddleware
+wikipedia_sms:
+    class: go.apps.wikipedia.vumi_app.WikipediaApplication
+    config:
+        metrics_prefix: wikipedia_ussd_application
+        sms_transport: wikipedia_sms_transport
+        incoming_sms_transport: wikipedia_sms_transport
+        max_sms_content_length: 450
+        max_sms_unicode_length: 190
+        redis_manager:
+          key_prefix: "vumigo"
+          db: 1
+        riak_manager:
+          bucket_prefix: vumigo.
+        middleware:
+          - logging_mw: vumi.middleware.logging.LoggingMiddleware

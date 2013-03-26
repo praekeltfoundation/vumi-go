@@ -2,7 +2,7 @@ sms_transport:
     class: vumi.transports.telnet.TelnetServerTransport
     config:
         telnet_port: 8080
-        to_addr: '10001'
+        to_addr: 'longcode-10001'
         middleware:
             - tagging_mw: vumi.middleware.tagger.TaggingMiddleware
 
