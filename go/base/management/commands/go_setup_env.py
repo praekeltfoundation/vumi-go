@@ -258,7 +258,9 @@ class Command(BaseCommand):
         transports = self.read_yaml(file_path)
         for transport_info in transports:
             self.write_transport_config_file(transport_info)
-            self.write_supervisor_config_file(transport_info)
+            self.write_supervisor_config_file(
+                transport_info['config']['transport_name'],
+                transport_info['class'])
         return [self.get_transport_name(transport_info)
                 for transport_info in transports]
 
@@ -270,19 +272,20 @@ class Command(BaseCommand):
             self.write_yaml(fp, data)
         self.stdout.write('Wrote %s.\n' % (fn,))
 
-    def write_supervisor_config_file(self, data):
-        transport_name = self.get_transport_name(data)
-        fn = self.mk_filename(transport_name, 'conf')
+    def write_supervisor_config_file(self, program_name, worker_class,
+                                        config=None):
+        fn = self.mk_filename(program_name, 'conf')
+        config = config or self.mk_filename(program_name, 'yaml')
         with open(fn, 'w') as fp:
-            section = "program:%s" % (transport_name,)
+            section = "program:%s" % (program_name,)
             fp.write(self.auto_gen_warning)
             cp = ConfigParser()
             cp.add_section(section)
             cp.set(section, "command", " ".join([
-                "twistd -n --pidfile=./tmp/pids/%s.pid" % (transport_name,),
+                "twistd -n --pidfile=./tmp/pids/%s.pid" % (program_name,),
                 "start_worker",
-                "--worker-class=%s" % (data['class'],),
-                "--config=%s" % (self.mk_filename(transport_name, 'yaml')),
+                "--worker-class=%s" % (worker_class,),
+                "--config=%s" % (config,),
             ]))
             cp.set(section, "stdout_logfile",
                 "./logs/%(program_name)s_%(process_num)s.log")
@@ -305,12 +308,8 @@ class Command(BaseCommand):
             fp.write(self.auto_gen_warning)
             fp.write(data)
 
-        self.write_supervisor_config_file({
-            'config': {
-                'transport_name': 'application_message_dispatcher',
-            },
-            'class': 'vumi.dispatchers.base.BaseDispatchWorker',
-        })
+        self.write_supervisor_config_file('application_message_dispatcher',
+            'vumi.dispatchers.base.BaseDispatchWorker')
         self.stdout.write('Wrote %s.\n' % (fn,))
 
     def create_vumigo_router_config(self, transport_names):
@@ -323,10 +322,6 @@ class Command(BaseCommand):
             fp.write(self.auto_gen_warning)
             fp.write(data)
 
-        self.write_supervisor_config_file({
-            'config': {
-                'transport_name': 'vumigo_router',
-            },
-            'class': 'vumi.dispatchers.base.BaseDispatchWorker',
-        })
+        self.write_supervisor_config_file('vumigo_router',
+            'vumi.dispatchers.base.BaseDispatchWorker')
         self.stdout.write('Wrote %s.\n' % (fn,))
