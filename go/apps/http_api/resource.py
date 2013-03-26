@@ -1,3 +1,4 @@
+# -*- test-case-name: go.apps.http_api.tests.test_vumi_app -*-
 import json
 import copy
 
@@ -5,8 +6,7 @@ from functools import partial
 
 from twisted.web import resource, http, util
 from twisted.web.server import NOT_DONE_YET
-from twisted.web.guard import HTTPAuthSessionWrapper
-from twisted.web.guard import BasicCredentialFactory
+from twisted.web.guard import HTTPAuthSessionWrapper, BasicCredentialFactory
 from twisted.cred import portal
 from twisted.internet.error import ConnectionDone
 from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
@@ -292,6 +292,9 @@ class ConversationResource(resource.Resource):
     def release_request(self, err, user_id):
         return self.redis.decr(self.key(user_id))
 
+    def render(self, request):
+        return resource.NoResource().render(request)
+
     def getChild(self, path, request):
         return util.DeferredResource(self.getDeferredChild(path, request))
 
@@ -327,17 +330,20 @@ class StreamingResource(resource.Resource):
         resource.Resource.__init__(self)
         self.worker = worker
 
+    def render(self, request):
+        return resource.NoResource().render(request)
+
     def getChild(self, conversation_key, request):
         if conversation_key:
-
-            resource = ConversationResource(self.worker, conversation_key)
-
+            res = ConversationResource(self.worker, conversation_key)
             checker = ConversationAccessChecker(self.worker.vumi_api,
                                                 conversation_key)
-            realm = ConversationRealm(resource)
+            realm = ConversationRealm(res)
             p = portal.Portal(realm, [checker])
 
             factory = BasicCredentialFactory("Conversation Stream")
             protected_resource = HTTPAuthSessionWrapper(p, [factory])
 
             return protected_resource
+        else:
+            return resource.NoResource()
