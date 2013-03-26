@@ -13,6 +13,14 @@ wikipedia_ussd:
           bucket_prefix: vumigo.
         middleware:
           - logging_mw: vumi.middleware.logging.LoggingMiddleware
+
+# NOTE: This is a terrible hack to have an application claim the
+#       wikipedia_sms_transport queue. We need this so that the
+#       application_message_dispatcher.yaml is properly notified
+#       of which queues need to be listened on.
+#
+#       Our big routing rewrite addresses specifically problems
+#       like these.
 wikipedia_sms:
     class: go.apps.wikipedia.vumi_app.WikipediaApplication
     config:
