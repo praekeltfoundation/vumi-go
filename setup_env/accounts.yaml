@@ -5,7 +5,8 @@ user1@example.org:
         - go.apps.surveys
         - go.apps.jsbox
     tagpools:
-        - [longcode, null]
+        - [longcode_tagpool, null]
+        - [ussd_tagpool, null]
 
 user2@example.org:
     password: password
@@ -14,5 +15,5 @@ user2@example.org:
         - go.apps.surveys
         - go.apps.jsbox
     tagpools:
-        - [longcode, 10]
-
+        - [longcode_tagpool, 10]
+        - [ussd_tagpool, 10]

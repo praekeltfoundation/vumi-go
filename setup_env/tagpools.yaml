@@ -2,7 +2,7 @@
 pools:
 
   # The name of a pool
-  longcode:
+  longcode_tagpool:
 
     # The available tags, either Python code that can be eval()'d or
     # YAML list of values.
@@ -17,4 +17,22 @@ pools:
       transport_type: sms
       server_initiated: true
       msg_options:
-        transport_name: smpp_transport
+        transport_name: sms_transport
+
+  # The name of a pool
+  ussd_tagpool:
+
+    # The available tags, either Python code that can be eval()'d or
+    # YAML list of values.
+    tags: '["*120*%d#" % i for i in range(10001, 10001 + 1000)]'
+
+    # The metadata relevant to each tag in this pool, generally added to
+    # messages when they've been associated with a given tag. Used in the UI
+    # and for message routing.
+    metadata:
+      display_name: "USSD code"
+      delivery_class: ussd
+      transport_type: ussd
+      client_initiated: true
+      msg_options:
+        transport_name: ussd_transport

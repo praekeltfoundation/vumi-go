@@ -25,3 +25,25 @@
     metadata:
         foo: bar
         baz: zab
+
+-
+    key: conversation-key-4
+    account: user1@example.org
+    conversation_type: wikipedia_ussd
+    subject: Wikipedia USSD connection
+    message: this is the Wikipedia USSD connection
+    delivery_class: ussd
+    delivery_tag_pool: ussd_tagpool
+    metadata:
+        send_from_tagpool: longcode_tagpool
+        send_from_tag: longcode-10001
+
+-
+    key: conversation-key-5
+    account: user1@example.org
+    conversation_type: wikipedia_sms
+    subject: Wikipedia SMS connection
+    message: this is the Wikipedia SMS connection
+    delivery_class: sms
+    delivery_tag_pool: longcode_tagpool
+    delivery_tag: longcode-10001
