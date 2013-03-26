@@ -12,7 +12,8 @@ table td{
 button{
 	margin-right:5px;
 }
-.nav{
+
+/*.nav{
 	margin-bottom:0;
 	position:relative;
 }
@@ -65,17 +66,17 @@ button{
   color: #0bcac3;
   background: none !important;
   border-color: #212527;
-}
+}*/
 
-.container-fluid {
+/*.container-fluid {
 padding-left: 28px !important;
 }
-
-.nav > li > a:hover, .nav > li > a:focus {
+*/
+/*.nav > li > a:hover, .nav > li > a:focus {
 	outline:none;
 	background:none;
 }
-
+*/
 .bootstrap-select .caret{
 	border-top: 4px solid #2280ff;
 }
@@ -83,7 +84,7 @@ padding-left: 28px !important;
 	font-weight:bold;
 }
 
-.nav .dropdown-menu {
+/*.nav .dropdown-menu {
 	background:#2f3436;
 }
 .nav .dropdown-menu li a{
@@ -102,7 +103,7 @@ padding-left: 28px !important;
 	border:none;
 	margin-top:-2px;
 }
-
+*/
 .modal-body div{
 	display:block;
 }

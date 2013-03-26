@@ -2,64 +2,34 @@
 {% load url from future %}
 
 {% block header %}
-	<div class="navbar navbar-fixed-top">
-	<div class="navbar-inner">
-	<div class="container">
-	    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-	       <span class="icon-bar"></span>
-	       <span class="icon-bar"></span>
-	       <span class="icon-bar"></span>
-	    </a>
-	    <a class="brand" href="{% url 'home' %}"><img src="{{ STATIC_URL }}img/logo.png"></a>
-	    <div class="nav-collapse">
-	        <ul class="nav">
-	            <li><a href="{% url 'conversations:index' %}">Conversations</a></li>
-	            <li><a href="{% url 'contacts:people' %}">People</a></li>
-	            <li><a href="#newConv" class="start" data-toggle="modal">New Conversation</a></li>
-	        </ul>
-	        <form id="search-form" name="search-form" action="{% url 'conversations:index' %}" method="get" class="navbar-search pull-right">
-	            <input type="text" placeholder="Search" name="query" class="search-query" />
-	        </form>
-	        <ul class="nav pull-right">
-	            <li><a href="{% url 'help' %}">Help</a></li>
-	            <li class="divider-vertical"></li>
-	            <li class="dropdown">
-	               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Credits <b class="caret"></b></a>
-	               <ul class="dropdown-menu">
-	                   <li><a href="{% url 'credits' %}#Balance"><strong>Balance: {{account_credits}} Credits</strong></a></li>
-	                   <li class="divider"></li>
-	                   <li><a href="{% url 'credits' %}#Buy"><i class="icon-shopping-cart"></i> Buy More Credits</a></li>
-	                   <li><a href="{% url 'credits' %}#FAQ"><i class="icon-info-sign"></i> Credits FAQ</a></li>
-	               </ul>
-	            </li>
-	            <li class="divider-vertical"></li>
-	            <li class="dropdown">
-	               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Settings <b class="caret"></b></a>
-	               <ul class="dropdown-menu">
-	                   <li><a href="{% url 'account:index' %}#account"><i class="icon-list-alt"></i> Account Information</a></li>
-	                   <li><a href="{% url 'account:index' %}#social"><i class="icon-heart"></i> Social Networks</a></li>
-	                   <li><a href="{% url 'account:index' %}#im"><i class="icon-comment"></i> IM Accounts</a></li>
-	                   <li><a href="{% url 'account:index' %}#contact"><i class="icon-envelope"></i> Contact Us</a></li>
-	                   <li class="divider"></li>
-	                   <li><a href="{% url 'auth_logout' %}"><i class="icon-off"></i> <strong>Sign Out</strong></a></li>
-	              </ul>
-	        </li>
-	        <li class="divider-vertical"></li>
-	        </ul>
-	    </div><!--/nav-collapse -->
-	</div>
-	</div>
-	</div><!--/navbar-->
+<div class="main-menu">
+    
+    <ul class="nav pull-left">
+        <li><a href="/">Logo</a>
+        <li><a href="">Dashboard</a></li>
+        <li><a href="">Recipients</a></li>
+        <li><a href="">Help</a></li>
+        
+    </ul>
+
+    <ul class="nav pull-right">
+        <li><a href="">Balance</a></li>
+        
+        <li class="dropdown">
+            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                Account
+                <b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu" role="menu">
+                <li><a href="#">Switch account</a></li>
+                <li><a href="#">Logout</a></li>    
+            </ul>
+        </li>
+    </ul>
+</div>
+
 {% endblock %}
 
-{% block content %}
-    {% block main %}{% endblock %}
-{% endblock %}
 
-{% block footer %}
-	<hr>
-	<footer class="footer">
-	    <p class="pull-right"><a href="#">Back to top</a></p>
-	    <p>&copy; 2012 <a href="http://praekeltfoundation.org">Praekelt Foundation</a>. <a href="{% url 'account:index' %}#contact">Contact</a>. <a href="https://github.com/praekelt/vumi">Github</a></p>
-	</footer>
-{% endblock %}
+
+

@@ -187,17 +187,6 @@ DEBUG_TOOLBAR_CONFIG = {
 # PIPELINES CONFIGURATION
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
 
-# PIPELINE_JS = {
-#     'bootstrap': {
-#         'source_filenames': (
-
-
-        
-#         ),
-#         'output_filename': 'js/bootstrap.js',
-#     },
-# }
-
 PIPELINE_CSS = {
     'all': {
         'source_filenames': (
@@ -207,14 +196,14 @@ PIPELINE_CSS = {
             '1.0/css/bootstrap-fileupload.css',
             '1.0/css/bootstrap-overrides.css',
             '1.0/css/prettyCheckable.css',
-            '1.0/css/styles.css',
+            '1.0/css/vumigo.css',
             '1.0/css/sprites.css'
         ),
         'output_filename': '1.0/css/all.css',
     },
 }
 
-PIPELINES_JS = {
+PIPELINE_JS = {
     'lib': {
         'source_filenames': (
             '1.0/js/lib/jquery-1.9.1.min.js',
@@ -230,7 +219,6 @@ PIPELINES_JS = {
         ),
         'output_filename': '1.0/js/bootstrap.js'
     }
-
 }
 
 
