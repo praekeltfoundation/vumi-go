@@ -97,7 +97,11 @@ class Command(BaseCommand):
 
         if options['write_dispatcher_configs']:
             self.create_app_msg_dispatcher_config(transport_names)
+            self.write_supervisor_config_file('application_message_dispatcher',
+                'vumi.dispatchers.base.BaseDispatchWorker')
             self.create_vumigo_router_config(transport_names)
+            self.write_supervisor_config_file('vumigo_router',
+                'vumi.dispatchers.base.BaseDispatchWorker')
 
     def setup_backend(self, config):
         self.redis = RedisManager.from_config(config['redis_manager'])
@@ -112,6 +116,10 @@ class Command(BaseCommand):
 
     def write_yaml(self, fp, data):
         yaml.safe_dump(data, stream=fp, default_flow_style=False)
+
+    def open_file(self, file_name, mode):
+        "NOTE: this is only here to make testing easier"
+        return open(file_name, mode)
 
     def render_template(self, template_name, context):
         template_dir = 'setup_env/templates/'
@@ -256,27 +264,27 @@ class Command(BaseCommand):
 
     def create_transport_configs(self, file_path):
         transports = self.read_yaml(file_path)
-        for transport_info in transports:
-            self.write_transport_config_file(transport_info)
+        for transport_name, transport_info in transports.items():
+            config = transport_info['config']
+            config.update({'transport_name': transport_name})
+            self.write_transport_config_file(transport_name, config)
             self.write_supervisor_config_file(
-                transport_info['config']['transport_name'],
+                transport_name,
                 transport_info['class'])
-        return [self.get_transport_name(transport_info)
-                for transport_info in transports]
+        return transports.keys()
 
-    def write_transport_config_file(self, data):
-        transport_name = self.get_transport_name(data)
+    def write_transport_config_file(self, transport_name, config):
         fn = self.mk_filename(transport_name, 'yaml')
-        with open(fn, 'w') as fp:
+        with self.open_file(fn, 'w') as fp:
             fp.write(self.auto_gen_warning)
-            self.write_yaml(fp, data)
+            self.write_yaml(fp, config)
         self.stdout.write('Wrote %s.\n' % (fn,))
 
     def write_supervisor_config_file(self, program_name, worker_class,
                                         config=None):
         fn = self.mk_filename(program_name, 'conf')
         config = config or self.mk_filename(program_name, 'yaml')
-        with open(fn, 'w') as fp:
+        with self.open_file(fn, 'w') as fp:
             section = "program:%s" % (program_name,)
             fp.write(self.auto_gen_warning)
             cp = ConfigParser()
@@ -296,7 +304,7 @@ class Command(BaseCommand):
 
     def create_app_msg_dispatcher_config(self, transport_names):
         fn = self.mk_filename('application_message_dispatcher', 'yaml')
-        with open(fn, 'w') as fp:
+        with self.open_file(fn, 'w') as fp:
             templ = 'application_message_dispatcher.yaml.template'
             data = self.render_template(templ, {
                 'exposed_names': transport_names,
@@ -308,13 +316,11 @@ class Command(BaseCommand):
             fp.write(self.auto_gen_warning)
             fp.write(data)
 
-        self.write_supervisor_config_file('application_message_dispatcher',
-            'vumi.dispatchers.base.BaseDispatchWorker')
         self.stdout.write('Wrote %s.\n' % (fn,))
 
     def create_vumigo_router_config(self, transport_names):
         fn = self.mk_filename('vumigo_router', 'yaml')
-        with open(fn, 'w') as fp:
+        with self.open_file(fn, 'w') as fp:
             templ = 'vumigo_router.yaml.template'
             data = self.render_template(templ, {
                 'transport_names': transport_names,
@@ -322,6 +328,4 @@ class Command(BaseCommand):
             fp.write(self.auto_gen_warning)
             fp.write(data)
 
-        self.write_supervisor_config_file('vumigo_router',
-            'vumi.dispatchers.base.BaseDispatchWorker')
         self.stdout.write('Wrote %s.\n' % (fn,))

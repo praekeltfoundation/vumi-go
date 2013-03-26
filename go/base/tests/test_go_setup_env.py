@@ -2,6 +2,7 @@ import yaml
 
 from tempfile import NamedTemporaryFile
 from StringIO import StringIO
+from ConfigParser import ConfigParser
 
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
@@ -10,11 +11,21 @@ from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.management.commands import go_setup_env
 from go.base.utils import vumi_api_for_user
 
+from mock import Mock
+
 
 def tmp_yaml_file(data):
     tmp = NamedTemporaryFile()
     yaml.dump(data, stream=tmp)
     return tmp
+
+
+class FakeFile(StringIO):
+    def __enter__(self, *args, **kwargs):
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        pass
 
 
 class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
@@ -31,6 +42,8 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
         self.tagpool = self.command.tagpool
         self.command.stdout = StringIO()
         self.command.stderr = StringIO()
+        self.command.file_name_template = 'go_%(file_name)s.%(suffix)s'
+        self.command.dest_dir = 'setup_env'
 
         self.tagpool_file = tmp_yaml_file({
             'pools': {
@@ -90,6 +103,22 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
                 }
             },
         ])
+
+        self.transports_file = tmp_yaml_file({
+            'sms_transport': {
+                'class': 'vumi.transports.telnet.TelnetServerTransport',
+                'config': {
+                    'telnet_port': 8080,
+                }
+            },
+            'ussd_transport': {
+                'class': 'vumi.transports.telnet.TelnetServerTransport',
+                'config': {
+                    'telnet_port': 8081,
+                }
+
+            }
+        })
 
     def get_user_api(self, username):
         return vumi_api_for_user(User.objects.get(username=username))
@@ -164,3 +193,36 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
                             self.command.stdout.getvalue())
         self.assertTrue('Conversation conversation-key-2 created' in
                             self.command.stdout.getvalue())
+
+    def test_write_transport_config_file(self):
+        fake_files = [FakeFile() for i in range(4)]
+        sms_yaml, sms_conf, ussd_yaml, ussd_conf = fake_files
+        self.command.open_file = Mock(side_effect=fake_files)
+        self.command.create_transport_configs(self.transports_file.name)
+        self.assertEqual(yaml.load(ussd_yaml.getvalue()), {
+            'telnet_port': 8081,
+            'transport_name': 'ussd_transport',
+        })
+        self.assertEqual(yaml.load(sms_yaml.getvalue()), {
+            'telnet_port': 8080,
+            'transport_name': 'sms_transport',
+        })
+
+        sms_conf.seek(0)
+        sms_cp = ConfigParser()
+        sms_cp.readfp(sms_conf)
+
+        ussd_conf.seek(0)
+        ussd_cp = ConfigParser()
+        ussd_cp.readfp(ussd_conf)
+
+        self.assertTrue(sms_cp.has_section('program:sms_transport'))
+        self.assertTrue(ussd_cp.has_section('program:ussd_transport'))
+
+        sms_command = sms_cp.get('program:sms_transport', 'command')
+        self.assertTrue(sms_command.startswith('twistd'))
+        self.assertTrue('TelnetServerTransport' in sms_command)
+
+        ussd_command = ussd_cp.get('program:ussd_transport', 'command')
+        self.assertTrue(ussd_command.startswith('twistd'))
+        self.assertTrue('TelnetServerTransport' in ussd_command)

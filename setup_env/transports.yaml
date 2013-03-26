@@ -1,11 +1,9 @@
--
+sms_transport:
     class: vumi.transports.telnet.TelnetServerTransport
     config:
-        transport_name: sms_transport
         telnet_port: 8080
 
--
+ussd_transport:
     class: vumi.transports.telnet.TelnetServerTransport
     config:
-        transport_name: ussd_transport
         telnet_port: 8081
