@@ -338,13 +338,11 @@ PIPELINE_CSS = {
     'all': {
         'source_filenames': (
             '1.0/css/bootstrap.css',
-            '1.0/css/bootstrap-responsive.css',
             '1.0/css/bootstrap-select.css',
             '1.0/css/bootstrap-fileupload.css',
-            '1.0/css/bootstrap-overrides.css',
             '1.0/css/prettyCheckable.css',
             '1.0/css/vumigo.css',
-            '1.0/css/sprites.css'
+                '1.0/css/sprites.css'
         ),
         'output_filename': '1.0/css/all.css',
     },
