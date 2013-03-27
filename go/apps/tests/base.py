@@ -244,3 +244,12 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
 
     def get_contacts_for_conversation(self, conversation):
         return self.contact_store.get_contacts_for_conversation(conversation)
+
+    def add_app_permission(self, application):
+        permission = self.user_api.api.account_store.application_permissions(
+            uuid.uuid4().hex, application=application)
+        permission.save()
+
+        account = self.user_api.get_user_account()
+        account.applications.add(permission)
+        account.save()

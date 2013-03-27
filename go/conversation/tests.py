@@ -18,7 +18,6 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         super(ConversationTestCase, self).setUp()
         self.setup_riak_fixtures()
 
-        # self.conversation = self.user.conversation_set.latest()
         self.client = Client()
         self.client.login(username=self.user.username, password='password')
         self.csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
@@ -39,6 +38,8 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         self.assertNotContains(response, self.TEST_CONVERSATION_NAME)
 
     def test_index_search_on_type(self):
+        self.add_app_permission(u'go.apps.surveys')
+        self.add_app_permission(u'go.apps.bulk_message')
         conversation = self.get_wrapped_conv()
         conversation.c.conversation_type = u'survey'
         conversation.save()
@@ -149,6 +150,8 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         self.assertContains(response, self.TEST_CONVERSATION_NAME, count=1)
 
     def test_pagination_with_query_and_type(self):
+        self.add_app_permission(u'go.apps.surveys')
+        self.add_app_permission(u'go.apps.bulk_message')
         # Create 13, we already have 1 from setUp()
         for i in range(12):
             self.conv_store.new_conversation(

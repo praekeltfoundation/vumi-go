@@ -223,14 +223,12 @@ class EmailTestCase(DjangoGoApplicationTestCase):
                             in email.body)
         self.assertTrue('number of messages sent: 10' in email.body)
         self.assertTrue('number of messages received: 10' in email.body)
-        self.assertTrue('Send Bulk SMS and track replies' in email.body)
+        self.assertTrue('Group Message' in email.body)
         self.assertTrue('Test Conversation' in email.body)
         self.assertTrue('Sent: 10 to 10 uniques.' in email.body)
         self.assertTrue('Received: 10 from 10 uniques.' in email.body)
-        self.assertTrue('"Send Bulk SMS and track replies" Sent: 10'
-                            in email.body)
-        self.assertTrue('"Send Bulk SMS and track replies" Received: 10'
-                            in email.body)
+        self.assertTrue('"Group Message" Sent: 10' in email.body)
+        self.assertTrue('"Group Message" Received: 10' in email.body)
 
     def test_send_scheduled_account_summary_task(self):
         profile = self.user.get_profile()

@@ -15,12 +15,6 @@ from go.vumitools.contact import ContactGroup
 from go.vumitools.conversation.migrators import ConversationMigrator
 
 
-CONVERSATION_TYPES = [
-    ('bulk_message', 'Send Bulk SMS and track replies'),
-    ('survey', 'Interactive Survey'),
-    ('multi_survey', 'Multi-stage Interactive Survey'),
-]
-
 CONVERSATION_DRAFT = u'draft'
 CONVERSATION_RUNNING = u'running'
 CONVERSATION_FINISHED = u'finished'
