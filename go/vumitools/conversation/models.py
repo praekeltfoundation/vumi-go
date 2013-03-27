@@ -14,12 +14,6 @@ from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.contact import ContactGroup
 
 
-CONVERSATION_TYPES = [
-    ('bulk_message', 'Send Bulk SMS and track replies'),
-    ('survey', 'Interactive Survey'),
-    ('multi_survey', 'Multi-stage Interactive Survey'),
-]
-
 CONVERSATION_DRAFT = 'draft'
 CONVERSATION_RUNNING = 'running'
 CONVERSATION_FINISHED = 'finished'
