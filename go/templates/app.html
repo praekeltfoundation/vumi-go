@@ -9,7 +9,6 @@
         <li><a href="">Dashboard</a></li>
         <li><a href="">Recipients</a></li>
         <li><a href="">Help</a></li>
-        
     </ul>
 
     <ul class="nav pull-right">
@@ -32,11 +31,11 @@
 {% block content %}
 <div class="content {% block content_extraclass %}{% endblock %}">
 
-    <div class="header clearfix">
-        <div class="page-header">
+    <div class="header clearfix row-fluid">
+        <div class="span4">
             <h1> {% block content_title %}Title{% endblock %}</h1>
         </div>
-        <div class="context-tasks">
+        <div class="span8 context-tasks">
             {% block content_context_tasks %}
             {% endblock %}
         </div>
