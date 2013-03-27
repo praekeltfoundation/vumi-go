@@ -2,7 +2,7 @@
 {% load url from future %}
 
 {% block header %}
-<div class="main-menu">
+<div class="main-menu clearfix">
     
     <ul class="nav pull-left">
         <li><a href="/">Logo</a>
@@ -27,9 +27,18 @@
         </li>
     </ul>
 </div>
-
 {% endblock %}
 
+{% block content %}
+<div class="content">
+
+    <div class="section-header clearfix">
+        <h2>{% block section_title %}{% endblock %}</h2>
+        
+    </div>
 
 
-
+    {% block main %}
+    {% endblock %}
+</div>
+{% endblock %}

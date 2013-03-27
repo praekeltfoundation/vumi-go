@@ -184,42 +184,7 @@ DEBUG_TOOLBAR_CONFIG = {
 }
 
 
-# PIPELINES CONFIGURATION
-STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
 
-PIPELINE_CSS = {
-    'all': {
-        'source_filenames': (
-            '1.0/css/bootstrap.css',
-            '1.0/css/bootstrap-responsive.css',
-            '1.0/css/bootstrap-select.css',
-            '1.0/css/bootstrap-fileupload.css',
-            '1.0/css/bootstrap-overrides.css',
-            '1.0/css/prettyCheckable.css',
-            '1.0/css/vumigo.css',
-            '1.0/css/sprites.css'
-        ),
-        'output_filename': '1.0/css/all.css',
-    },
-}
-
-PIPELINE_JS = {
-    'lib': {
-        'source_filenames': (
-            '1.0/js/lib/jquery-1.9.1.min.js',
-            '1.0/js/lib/jquery-ui-1.8.11.custom.min.js',
-        ),
-        'output_filename': '1.0/js/lib.js'
-    },
-    'bootstrap': {
-        'source_filenames': (
-            '1.0/js/bootstrap/bootstrap.min.js',
-            '1.0/js/bootstrap/bootstrap-select.min.js',
-            '1.0/js/bootstrap/bootstrap-fileupload.min.js',
-        ),
-        'output_filename': '1.0/js/bootstrap.js'
-    }
-}
 
 
 # A sample logging configuration. The only tangible logging
@@ -365,3 +330,41 @@ DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 # from django.core.urlresolvers import reverse
 
 # LOGIN_REDIRECT_URL = reverse('home')
+
+# PIPELINES CONFIGURATION
+
+STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
+
+PIPELINE_CSS = {
+    'all': {
+        'source_filenames': (
+            '1.0/css/bootstrap.css',
+            '1.0/css/bootstrap-responsive.css',
+            '1.0/css/bootstrap-select.css',
+            '1.0/css/bootstrap-fileupload.css',
+            '1.0/css/bootstrap-overrides.css',
+            '1.0/css/prettyCheckable.css',
+            '1.0/css/vumigo.css',
+            '1.0/css/sprites.css'
+        ),
+        'output_filename': '1.0/css/all.css',
+    },
+}
+
+PIPELINE_JS = {
+    'lib': {
+        'source_filenames': (
+            '1.0/js/lib/jquery-1.9.1.min.js',
+            '1.0/js/lib/jquery-ui-1.8.11.custom.min.js',
+        ),
+        'output_filename': '1.0/js/lib.js'
+    },
+    'bootstrap': {
+        'source_filenames': (
+            '1.0/js/bootstrap/bootstrap.min.js',
+            '1.0/js/bootstrap/bootstrap-select.min.js',
+            '1.0/js/bootstrap/bootstrap-fileupload.min.js',
+        ),
+        'output_filename': '1.0/js/bootstrap.js'
+    }
+}
