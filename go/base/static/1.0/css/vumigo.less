@@ -6,6 +6,11 @@ body {
   color: #c1c1c1;
 }
 
+.header {}
+.footer {
+  margin:1em;
+}
+
 .logo {
     position:relative;
     top:17px;
@@ -15,6 +20,17 @@ body {
 }
 
 .main-menu {
+
+  // allot of the overrides that I'm doing here just have 
+  // a ton to do with bootstrap, 
+
+  // it's not that easy to overwrite the rules because there
+  // are so many.
+
+  .nav {
+    margin-bottom:0;
+  }
+
 
   .nav li {
     height:39px;
@@ -41,8 +57,6 @@ body {
     }
   }
 
-
-
   .nav .caret {
     margin-bottom:10px;
     vertical-align:middle;
@@ -66,5 +80,11 @@ body {
       line-height:39px;
     }
   }
+}
+
+.content {
+  background:#f2f1ed;
+  border:#212527 solid 5px;
+  .border-radius(5px);
 }
 

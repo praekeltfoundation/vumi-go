@@ -2,12 +2,18 @@ body {
   background: #2f3436;
   color: #c1c1c1;
 }
+.footer {
+  margin: 1em;
+}
 .logo {
   position: relative;
   top: 17px;
   left: -27px;
   margin-right: -20px;
   z-index: 99;
+}
+.main-menu .nav {
+  margin-bottom: 0;
 }
 .main-menu .nav li {
   height: 39px;
@@ -54,4 +60,14 @@ body {
 }
 .main-menu .dropdown-menu a {
   line-height: 39px;
+}
+.content {
+  background: #f2f1ed;
+  border: #212527 solid 5px;
+  -webkit-border-radius: 5px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 5px;
+  -moz-background-clip: padding;
+  border-radius: 5px;
+  background-clip: padding-box;
 }
