@@ -7,8 +7,7 @@ from functools import partial
 
 from twisted.web import resource, http, util
 from twisted.web.server import NOT_DONE_YET
-from twisted.web.guard import HTTPAuthSessionWrapper
-from twisted.web.guard import BasicCredentialFactory
+from twisted.web.guard import HTTPAuthSessionWrapper, BasicCredentialFactory
 from twisted.cred import portal
 from twisted.internet.error import ConnectionDone
 from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
@@ -48,6 +47,7 @@ class BaseResource(resource.Resource):
 class StreamResource(BaseResource):
 
     message_class = None
+    proxy_buffering = False
 
     def __init__(self, worker, conversation_key):
         BaseResource.__init__(self, worker, conversation_key)
@@ -60,6 +60,12 @@ class StreamResource(BaseResource):
         }
 
     def render_GET(self, request):
+        # Turn off proxy buffering, nginx will otherwise buffer our streaming
+        # output which makes clients sad.
+        # See #proxy_buffering at
+        # http://nginx.org/en/docs/http/ngx_http_proxy_module.html
+        request.responseHeaders.addRawHeader('X-Accel-Buffering',
+            'yes' if self.proxy_buffering else 'no')
         # Twisted's Agent has trouble closing a connection when the server has
         # sent the HTTP headers but not the body, but sometimes we need to
         # close a connection when only the headers have been received.
@@ -263,6 +269,9 @@ class ConversationResource(resource.Resource):
     def release_request(self, err, user_id):
         return self.redis.decr(self.key(user_id))
 
+    def render(self, request):
+        return resource.NoResource().render(request)
+
     def getChild(self, path, request):
         return util.DeferredResource(self.getDeferredChild(path, request))
 
@@ -298,17 +307,20 @@ class StreamingResource(resource.Resource):
         resource.Resource.__init__(self)
         self.worker = worker
 
+    def render(self, request):
+        return resource.NoResource().render(request)
+
     def getChild(self, conversation_key, request):
         if conversation_key:
-
-            resource = ConversationResource(self.worker, conversation_key)
-
+            res = ConversationResource(self.worker, conversation_key)
             checker = ConversationAccessChecker(self.worker.vumi_api,
                                                 conversation_key)
-            realm = ConversationRealm(resource)
+            realm = ConversationRealm(res)
             p = portal.Portal(realm, [checker])
 
             factory = BasicCredentialFactory("Conversation Stream")
             protected_resource = HTTPAuthSessionWrapper(p, [factory])
 
             return protected_resource
+        else:
+            return resource.NoResource()
