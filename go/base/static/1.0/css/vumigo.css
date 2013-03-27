@@ -71,3 +71,16 @@ body {
   border-radius: 5px;
   background-clip: padding-box;
 }
+.content .header {
+  height: 54px;
+  background: #999;
+}
+.content .page-header {
+  color: #2f3436;
+  padding: 0 20px;
+  margin: 0;
+}
+.content .page-header h1 {
+  font-size: 24px;
+  font-weight: bold;
+}
