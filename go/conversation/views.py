@@ -13,14 +13,18 @@ CONVERSATIONS_PER_PAGE = 12
 @login_required
 def index(request):
     # grab the fields from the GET request
-    search_form = ConversationSearchForm(request.GET)
+    user_api = request.user_api
+    conversation_types = [(app['namespace'], app['display_name'])
+                          for app in user_api.applications().values()]
+    print conversation_types
+    search_form = ConversationSearchForm(
+        request.GET, conversation_types=conversation_types)
     search_form.is_valid()
 
     conversation_status = search_form.cleaned_data['conversation_status']
     conversation_type = search_form.cleaned_data['conversation_type']
     query = search_form.cleaned_data['query']
 
-    user_api = request.user_api
     get_conversations = {
         'running': user_api.running_conversations,
         'finished': user_api.finished_conversations,
