@@ -16,7 +16,6 @@ def index(request):
     user_api = request.user_api
     conversation_types = [(app['namespace'], app['display_name'])
                           for app in user_api.applications().values()]
-    print conversation_types
     search_form = ConversationSearchForm(
         request.GET, conversation_types=conversation_types)
     search_form.is_valid()
