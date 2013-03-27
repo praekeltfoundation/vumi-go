@@ -1,50 +1,83 @@
 -
-    key: conversation-key-1
-    account: user1@example.org
-    conversation_type: bulk_message
-    subject: subject
-    message: message
-    metadata:
-        foo: bar
+  key: conversation-key-1
+  account: user1@example.org
+  conversation_type: bulk_message
+  subject: subject
+  message: message
+  metadata:
+    foo: bar
 
 -
-    key: conversation-key-2
-    account: user2@example.org
-    conversation_type: bulk_message
-    subject: subject
-    message: message
-    metadata:
-        foo: bar
+  key: conversation-key-2
+  account: user2@example.org
+  conversation_type: bulk_message
+  subject: subject
+  message: message
+  metadata:
+    foo: bar
 
 -
-    key: conversation-key-3
-    account: user2@example.org
-    conversation_type: survey
-    subject: subject
-    message: message
-    metadata:
-        foo: bar
-        baz: zab
+  key: conversation-key-3
+  account: user2@example.org
+  conversation_type: survey
+  subject: subject
+  message: message
+  metadata:
+    foo: bar
+    baz: zab
 
 -
-    key: conversation-key-4
-    account: user1@example.org
-    conversation_type: wikipedia_ussd
-    subject: Wikipedia USSD connection
-    message: this is the Wikipedia USSD connection
-    delivery_class: ussd
-    delivery_tag_pool: ussd_tagpool
-    delivery_tag: '*120*10001#'
-    metadata:
-        send_from_tagpool: longcode_tagpool
-        send_from_tag: longcode-10001
+  key: conversation-key-4
+  account: user1@example.org
+  conversation_type: wikipedia_ussd
+  subject: Wikipedia USSD connection
+  message: this is the Wikipedia USSD connection
+  delivery_class: ussd
+  delivery_tag_pool: ussd_tagpool
+  delivery_tag: '*120*10001#'
+  metadata:
+    send_from_tagpool: longcode_tagpool
+    send_from_tag: longcode-10001
 
 -
-    key: conversation-key-5
-    account: user1@example.org
-    conversation_type: wikipedia_sms
-    subject: Wikipedia SMS connection
-    message: this is the Wikipedia SMS connection
-    delivery_class: sms
-    delivery_tag_pool: longcode_tagpool
-    delivery_tag: longcode-10001
+  key: conversation-key-5
+  account: user1@example.org
+  conversation_type: wikipedia_sms
+  subject: Wikipedia SMS connection
+  message: this is the Wikipedia SMS connection
+  delivery_class: sms
+  delivery_tag_pool: longcode_tagpool
+  delivery_tag: longcode-10001
+
+-
+  key: conversation-key-6
+  account: user1@example.org
+  conversation_type: jsbox
+  subject: JavaScript App
+  message: "Sample JS App, listens on USSD and replies via SMS."
+  delivery_class: ussd
+  delivery_tag_pool: ussd_tagpool
+  delivery_tag: '*120*10002#'
+  metadata:
+    jsbox_app_config:
+      source_url: "source URL goes here"
+      config: {}
+    jsbox:
+      source_url: "source URL goes here"
+      javascript: |
+        api.on_inbound_message = function (cmd) {
+            var msg = cmd.msg;
+            api.request("outbound.reply_to", {
+                content: "Echoing: " + msg.content,
+                in_reply_to: msg.message_id,
+                continue_session: false
+            }, function (response) {
+                api.request("outbound.send_to_tag", {
+                  to_addr: msg.from_addr,
+                  content: "sent to tag",
+                  tagpool: "longcode_tagpool",
+                  tag: "longcode-10002"
+                });
+            });
+            api.done();
+        };
