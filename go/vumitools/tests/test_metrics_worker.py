@@ -46,14 +46,16 @@ class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
 
     def make_conv(self, user_api, conv_name, conv_type=u'my_conv'):
         return user_api.conversation_store.new_conversation(
-            conv_type, conv_name, conv_name)
+            conv_type, conv_name, {})
 
     def start_conv(self, conv):
         conv.batches.add_key(u'batch-%s' % (conv.key,))
+        conv.set_status_started()
         return conv.save()
 
     def end_conv(self, conv):
         conv.end_timestamp = datetime.utcnow()
+        conv.set_status_finished()
         return conv.save()
 
     @inlineCallbacks

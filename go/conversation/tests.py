@@ -30,13 +30,13 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
     def test_index(self):
         """Display all conversations"""
         response = self.client.get(reverse('conversations:index'))
-        self.assertContains(response, self.get_wrapped_conv().subject)
+        self.assertContains(response, self.get_wrapped_conv().name)
 
     def test_index_search(self):
         """Filter conversations based on query string"""
         response = self.client.get(reverse('conversations:index'), {
             'query': 'something that does not exist in the fixtures'})
-        self.assertNotContains(response, self.TEST_SUBJECT)
+        self.assertNotContains(response, self.TEST_CONVERSATION_NAME)
 
     def test_index_search_on_type(self):
         conversation = self.get_wrapped_conv()
@@ -45,38 +45,43 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
 
         def search(conversation_type):
             return self.client.get(reverse('conversations:index'), {
-                'query': self.TEST_SUBJECT,
+                'query': self.TEST_CONVERSATION_NAME,
                 'conversation_type': conversation_type,
                 })
 
-        self.assertNotContains(search('bulk_message'), conversation.message)
-        self.assertContains(search('survey'), conversation.message)
+        self.assertNotContains(
+            search('bulk_message'), conversation.config['content'])
+        self.assertContains(search('survey'), conversation.config['content'])
 
     def test_index_search_on_status(self):
         conversation = self.get_wrapped_conv()
 
         def search(conversation_status):
             return self.client.get(reverse('conversations:index'), {
-                'query': conversation.subject,
+                'query': conversation.name,
                 'conversation_status': conversation_status,
                 })
 
         # it should be draft
-        self.assertContains(search('draft'), conversation.message)
-        self.assertNotContains(search('running'), conversation.message)
-        self.assertNotContains(search('finished'), conversation.message)
+        self.assertContains(search('draft'), conversation.config['content'])
+        self.assertNotContains(
+            search('running'), conversation.config['content'])
+        self.assertNotContains(
+            search('finished'), conversation.config['content'])
 
         # now it should be running
         conversation.start()
-        self.assertNotContains(search('draft'), conversation.message)
-        self.assertContains(search('running'), conversation.message)
-        self.assertNotContains(search('finished'), conversation.message)
+        self.assertNotContains(search('draft'), conversation.config['content'])
+        self.assertContains(search('running'), conversation.config['content'])
+        self.assertNotContains(
+            search('finished'), conversation.config['content'])
 
         # now it shouldn't be
         conversation.end_conversation()
-        self.assertNotContains(search('draft'), conversation.message)
-        self.assertNotContains(search('running'), conversation.message)
-        self.assertContains(search('finished'), conversation.message)
+        self.assertNotContains(search('draft'), conversation.config['content'])
+        self.assertNotContains(
+            search('running'), conversation.config['content'])
+        self.assertContains(search('finished'), conversation.config['content'])
 
     def test_received_messages(self):
         """
@@ -134,24 +139,24 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         # Create 13, we already have 1 from setUp()
         for i in range(12):
             self.conv_store.new_conversation(
-                conversation_type=u'bulk_message', subject=self.TEST_SUBJECT,
-                message=u"", delivery_class=u"sms",
-                delivery_tag_pool=u"longcode")
+                conversation_type=u'bulk_message',
+                name=self.TEST_CONVERSATION_NAME, config={u'content': u""},
+                delivery_class=u"sms", delivery_tag_pool=u"longcode")
         response = self.client.get(reverse('conversations:index'))
         # CONVERSATIONS_PER_PAGE = 12
-        self.assertContains(response, self.TEST_SUBJECT, count=12)
+        self.assertContains(response, self.TEST_CONVERSATION_NAME, count=12)
         response = self.client.get(reverse('conversations:index'), {'p': 2})
-        self.assertContains(response, self.TEST_SUBJECT, count=1)
+        self.assertContains(response, self.TEST_CONVERSATION_NAME, count=1)
 
     def test_pagination_with_query_and_type(self):
         # Create 13, we already have 1 from setUp()
         for i in range(12):
             self.conv_store.new_conversation(
-                conversation_type=u'bulk_message', subject=self.TEST_SUBJECT,
-                message=u"", delivery_class=u"sms",
-                delivery_tag_pool=u"longcode")
+                conversation_type=u'bulk_message',
+                name=self.TEST_CONVERSATION_NAME, config={u'content': u''},
+                delivery_class=u"sms", delivery_tag_pool=u"longcode")
         response = self.client.get(reverse('conversations:index'), {
-            'query': self.TEST_SUBJECT,
+            'query': self.TEST_CONVERSATION_NAME,
             'p': 2,
             'conversation_type': 'bulk_message',
             'conversation_status': 'draft',

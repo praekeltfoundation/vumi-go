@@ -47,8 +47,9 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
 
     def test_new_conversation(self):
         parent = self.conv_store.new_conversation(
-            conversation_type=u'bulk_message', subject=self.TEST_SUBJECT,
-            message=u"Test message", delivery_class=u"sms",
+            conversation_type=u'bulk_message',
+            name=self.TEST_CONVERSATION_NAME,
+            config={u'content': u"Test message"}, delivery_class=u"sms",
             delivery_tag_pool=u"longcode", delivery_tag=u"default10001")
         self.run_new_conversation(
             parent.key, parent.delivery_tag_pool, parent.delivery_tag)
@@ -77,7 +78,7 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
 
     def test_edit_conversation_schedule_config(self):
         conversation = self.get_wrapped_conv()
-        self.assertEqual(conversation.metadata, None)
+        self.assertEqual(conversation.config, {u'content': u'Test message'})
         response = self.client.post(reverse('sequential_send:edit',
             kwargs={'conversation_key': conversation.key}), {
                 'schedule-recurring': ['daily'],
@@ -93,7 +94,8 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
             response, reverse('sequential_send:people', kwargs={
                     'conversation_key': conversation.key}))
         conversation = self.get_wrapped_conv()
-        self.assertEqual(conversation.metadata, {
+        self.assertEqual(conversation.config, {
+            u'content': u'Test message',
             u'messages': [],
             u'schedule': {
                 u'recurring': u'daily',
@@ -150,4 +152,4 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(reverse('sequential_send:show', kwargs={
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.subject, 'Test Conversation')
+        self.assertEqual(conversation.name, 'Test Conversation')

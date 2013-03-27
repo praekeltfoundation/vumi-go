@@ -32,7 +32,7 @@ class SubscriptionApplication(GoApplicationWorker):
     def handlers_for_content(self, conv, content):
         words = (content or '').strip().split() + ['']
         keyword = words[0].lower()
-        handlers = conv.get_metadata(default={}).get('handlers', [])
+        handlers = conv.get_config().get('handlers', [])
         return [handler for handler in handlers
                 if handler['keyword'].lower() == keyword]
 
@@ -85,7 +85,7 @@ class SubscriptionApplication(GoApplicationWorker):
         contact_proxy = user_api.contact_store.contacts
 
         campaign_names = set()
-        for handler in conv.get_metadata(default={}).get('handlers', []):
+        for handler in conv.get_config().get('handlers', []):
             campaign_names.add(handler['campaign_name'])
 
         for campaign_name in campaign_names:

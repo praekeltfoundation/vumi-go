@@ -68,27 +68,23 @@ class Command(BaseCommand):
         elif options.get('remove_event_url'):
             self.remove_event_url(conversation)
 
-    def get_metadata(self, conversation):
-        metadata = conversation.get_metadata(default={})
-        return metadata.get('http_api', {})
+    def get_api_config(self, conversation):
+        return conversation.config.get('http_api', {})
 
-    def save_metadata(self, conversation, md):
-        metadata = conversation.get_metadata(default={})
-        api_metadata = metadata.get('http_api', {})
-        api_metadata.update(md)
-        metadata['http_api'] = api_metadata
-        conversation.set_metadata(metadata)
+    def save_api_config(self, conversation, md):
+        api_config = conversation.config.setdefault('http_api', {})
+        api_config.update(md)
         conversation.save()
 
     def create_token(self, conversation):
         token = uuid4().hex
-        md = self.get_metadata(conversation)
+        md = self.get_api_config(conversation)
         md.setdefault('api_tokens', []).append(token)
-        self.save_metadata(conversation, md)
+        self.save_api_config(conversation, md)
         self.stdout.write('Created token: %s\n' % (token,))
 
     def remove_token(self, conversation, token):
-        md = self.get_metadata(conversation)
+        md = self.get_api_config(conversation)
         tokens = md.setdefault('api_tokens', [])
         try:
             tokens.remove(token)
@@ -97,31 +93,31 @@ class Command(BaseCommand):
             raise CommandError('Token does not exist')
 
     def set_message_url(self, conversation, url):
-        md = self.get_metadata(conversation)
+        md = self.get_api_config(conversation)
         md['push_message_url'] = url
-        self.save_metadata(conversation, md)
+        self.save_api_config(conversation, md)
         self.stdout.write('Saved push_message_url: %s' % (url,))
 
     def remove_message_url(self, conversation):
-        md = self.get_metadata(conversation)
+        md = self.get_api_config(conversation)
         try:
             url = md.pop('push_message_url')
-            self.save_metadata(conversation, md)
+            self.save_api_config(conversation, md)
             self.stdout.write('Removed push_message_url: %s' % (url,))
         except KeyError:
             raise CommandError('push_message_url not set')
 
     def set_event_url(self, conversation, url):
-        md = self.get_metadata(conversation)
+        md = self.get_api_config(conversation)
         md['push_event_url'] = url
-        self.save_metadata(conversation, md)
+        self.save_api_config(conversation, md)
         self.stdout.write('Saved push_event_url: %s' % (url,))
 
     def remove_event_url(self, conversation):
-        md = self.get_metadata(conversation)
+        md = self.get_api_config(conversation)
         try:
             url = md.pop('push_event_url')
-            self.save_metadata(conversation, md)
+            self.save_api_config(conversation, md)
             self.stdout.write('Removed push_event_url: %s' % (url,))
         except KeyError:
             raise CommandError('push_event_url not set')

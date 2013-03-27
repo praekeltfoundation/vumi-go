@@ -12,6 +12,7 @@ from twisted.internet.defer import returnValue
 
 from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.contact import ContactGroup
+from go.vumitools.conversation.migrators import ConversationMigrator
 
 
 CONVERSATION_TYPES = [
@@ -20,38 +21,42 @@ CONVERSATION_TYPES = [
     ('multi_survey', 'Multi-stage Interactive Survey'),
 ]
 
-CONVERSATION_DRAFT = 'draft'
-CONVERSATION_RUNNING = 'running'
-CONVERSATION_FINISHED = 'finished'
+CONVERSATION_DRAFT = u'draft'
+CONVERSATION_RUNNING = u'running'
+CONVERSATION_FINISHED = u'finished'
 
 
 class Conversation(Model):
     """A conversation with an audience"""
+
+    VERSION = 1
+    MIGRATOR = ConversationMigrator
+
     user_account = ForeignKey(UserAccount)
-    subject = Unicode(max_length=255)
-    message = Unicode()
-    start_timestamp = Timestamp()
+    name = Unicode(max_length=255)
+    conversation_type = Unicode(index=True)
+    config = Json(default=dict)
+
+    created_at = Timestamp(default=datetime.utcnow, index=True)
+    start_timestamp = Timestamp(index=True)
     end_timestamp = Timestamp(null=True, index=True)
-    created_at = Timestamp(default=datetime.utcnow)
+    status = Unicode(default=CONVERSATION_DRAFT, index=True)
 
     groups = ManyToMany(ContactGroup)
-    conversation_type = Unicode()
+    batches = ManyToMany(Batch)
+
     delivery_class = Unicode(null=True)
     delivery_tag_pool = Unicode(null=True)
     delivery_tag = Unicode(null=True)
 
-    batches = ManyToMany(Batch)
-    metadata = Json(null=True)
-
     def started(self):
-        # TODO: Better way to tell if we've started than looking for batches.
-        return bool(self.batches.keys())
+        return self.running() or self.ended()
 
     def ended(self):
-        return self.end_timestamp is not None
+        return self.status == CONVERSATION_FINISHED
 
     def running(self):
-        return self.started() and not self.ended()
+        return self.status == CONVERSATION_RUNNING
 
     def get_status(self):
         """
@@ -61,12 +66,15 @@ class Conversation(Model):
             CONVERSATION_DRAFT)
 
         """
-        if self.ended():
-            return CONVERSATION_FINISHED
-        elif self.running():
-            return CONVERSATION_RUNNING
-        else:
-            return CONVERSATION_DRAFT
+        return self.status
+
+    # The following are to keep the implementation of this stuff in the model
+    # rather than potentially multiple external places.
+    def set_status_started(self):
+        self.status = CONVERSATION_RUNNING
+
+    def set_status_finished(self):
+        self.status = CONVERSATION_FINISHED
 
     def add_group(self, group):
         if isinstance(group, ContactGroup):
@@ -75,7 +83,7 @@ class Conversation(Model):
             self.groups.add_key(group)
 
     def __unicode__(self):
-        return self.subject
+        return self.name
 
     def get_contacts_addresses(self, contacts):
         """
@@ -104,7 +112,7 @@ class ConversationStore(PerAccountStore):
         return self.conversations.load(key)
 
     @Manager.calls_manager
-    def new_conversation(self, conversation_type, subject, message,
+    def new_conversation(self, conversation_type, name, config,
                          start_timestamp=None, **fields):
         conversation_id = uuid4().get_hex()
         start_timestamp = start_timestamp or datetime.utcnow()
@@ -115,8 +123,7 @@ class ConversationStore(PerAccountStore):
         conversation = self.conversations(
             conversation_id, user_account=self.user_account_key,
             conversation_type=conversation_type,
-            subject=subject, message=message,
-            start_timestamp=start_timestamp,
+            name=name, config=config, start_timestamp=start_timestamp,
             **fields)
 
         for group in groups:
@@ -124,3 +131,43 @@ class ConversationStore(PerAccountStore):
 
         conversation = yield conversation.save()
         returnValue(conversation)
+
+    @Manager.calls_manager
+    def list_running_conversations(self):
+        # We need to list things by both the old-style 'end_timestamp' index
+        # and the new-style 'status' index, at least until we've migrated all
+        # old-style conversations to v1.
+        keys = yield self.conversations.index_lookup(
+            'status', CONVERSATION_RUNNING).get_keys()
+        keys.extend((yield self._list_oldstyle_running_conversations()))
+        returnValue(list(set(keys)))  # Dedupe
+
+    @Manager.calls_manager
+    def _list_oldstyle_running_conversations(self):
+        keys = yield self.conversations.index_lookup(
+            'end_timestamp', None).get_keys()
+        # NOTE: This assumes that we don't have very large numbers of active
+        #       conversations.
+        filtered_keys = []
+        for convs_bunch in self.load_all_bunches(keys):
+            for conv in (yield convs_bunch):
+                if conv.running:
+                    filtered_keys = conv.key
+        returnValue(filtered_keys)
+
+    @Manager.calls_manager
+    def list_active_conversations(self):
+        # We need to list things by both the old-style 'end_timestamp' index
+        # and the new-style 'status' index, at least until we've migrated all
+        # old-style conversations to v1.
+        keys = yield self.conversations.index_lookup(
+            'status', CONVERSATION_RUNNING).get_keys()
+        keys.extend((yield self.conversations.index_lookup(
+            'status', CONVERSATION_DRAFT).get_keys()))
+        keys.extend((yield self.conversations.index_lookup(
+            'end_timestamp', None).get_keys()))
+        returnValue(list(set(keys)))  # Dedupe.
+
+    def load_all_bunches(self, keys):
+        # Convenience to avoid the extra attribute lookup everywhere.
+        return self.conversations.load_all_bunches(keys)

@@ -22,27 +22,27 @@ redis = RedisManager.from_config(settings.VXPOLLS_REDIS_CONFIG)
 
 
 def link_poll_to_conversation(poll_name, poll_id, conversation):
-    metadata = conversation.get_metadata(default={})
-    vxpolls_metadata = metadata.setdefault('vxpolls', {})
-    polls = vxpolls_metadata.setdefault('polls', {})
+    config = conversation.get_config()
+    vxpolls_config = config.setdefault('vxpolls', {})
+    polls = vxpolls_config.setdefault('polls', {})
     polls.update({
         poll_name: poll_id,
     })
-    conversation.set_metadata(metadata)
+    conversation.set_config(config)
     conversation.save()
 
 
 def unlink_poll_from_conversation(poll_name, conversation):
-    metadata = conversation.get_metadata(default={})
-    vxpolls_metadata = metadata.setdefault('vxpolls', {})
-    polls = vxpolls_metadata.setdefault('polls', {})
+    config = conversation.get_config()
+    vxpolls_config = config.setdefault('vxpolls', {})
+    polls = vxpolls_config.setdefault('polls', {})
     del polls[poll_name]
-    conversation.set_metadata(metadata)
+    conversation.set_config(config)
     conversation.save()
 
 
 def get_polls_for_conversation(conversation):
-    metadata = conversation.get_metadata(default={})
+    metadata = conversation.get_config()
     vxpolls_metadata = metadata.setdefault('vxpolls', {})
     return vxpolls_metadata.get('polls', {})
 
@@ -65,15 +65,11 @@ def new(request):
     if request.POST:
         form = ConversationForm(request.user_api, request.POST)
         if form.is_valid():
-            conversation_data = {}
-            copy_keys = [
-                'subject',
-                'message',
-                'delivery_class',
-            ]
-
-            for key in copy_keys:
-                conversation_data[key] = form.cleaned_data[key]
+            conversation_data = {
+                'name': form.cleaned_data['subject'],
+                'delivery_class': form.cleaned_data['delivery_class'],
+                'config': {u'content': form.cleaned_data['message']},
+                }
 
             tag_info = form.cleaned_data['delivery_tag_pool'].partition(':')
             conversation_data['delivery_tag_pool'] = tag_info[0]

@@ -9,7 +9,6 @@ from twisted.web.server import NOT_DONE_YET
 from vumi.utils import http_request_full
 from vumi.message import TransportUserMessage, TransportEvent
 from vumi.tests.utils import MockHttpServer
-from vumi.middleware.tagger import TaggingMiddleware
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 
@@ -63,7 +62,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         yield self.setup_tagpools()
 
-        conv_metadata = {
+        conv_config = {
             'http_api': {
                 'api_tokens': [
                     'token-1',
@@ -74,7 +73,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             }
         }
         self.conversation = yield self.create_conversation(
-            delivery_tag_pool=u'pool', metadata=conv_metadata)
+            delivery_tag_pool=u'pool', config=conv_config)
         yield self.start_conversation(self.conversation)
 
         self.auth_headers = {
@@ -390,12 +389,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_post_inbound_message(self):
         # Set the URL so stuff is HTTP Posted instead of streamed.
-        metadata = self.conversation.get_metadata(default={})
-        http_metadata = metadata.get('http_api')
-        http_metadata.update({
+        self.conversation.config['http_api'].update({
             'push_message_url': self.mock_push_server.url,
         })
-        self.conversation.set_metadata(metadata)
         yield self.conversation.save()
 
         msg = self.mkmsg_in(content='in 1', message_id='1')
@@ -412,12 +408,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_post_inbound_event(self):
         # Set the URL so stuff is HTTP Posted instead of streamed.
-        metadata = self.conversation.get_metadata(default={})
-        http_metadata = metadata.get('http_api')
-        http_metadata.update({
+        self.conversation.config['http_api'].update({
             'push_event_url': self.mock_push_server.url,
         })
-        self.conversation.set_metadata(metadata)
         yield self.conversation.save()
 
         msg1 = self.mkmsg_out(content='in 1', message_id='1')

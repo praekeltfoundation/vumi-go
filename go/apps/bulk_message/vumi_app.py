@@ -62,7 +62,7 @@ class BulkMessageApplication(GoApplicationWorker):
         yield self.window_manager.add(window_id, {
             'batch_id': batch_id,
             'to_addr': to_addr,
-            'content': conv.message,
+            'content': conv.config['content'],
             'msg_options': msg_options,
             })
 

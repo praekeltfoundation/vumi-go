@@ -171,9 +171,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         yield self.user_api.contact_store.new_contact(
             msisdn=u'+27760000000', groups=[group.key])
 
-        conv = yield self.user_api.new_conversation(
-            u'bulk_message', u'subject', u'message', delivery_class=u'sms')
-        conv = self.user_api.wrap_conversation(conv)
+        conv = yield self.create_conversation(
+            conversation_type=u'dummy', delivery_class=u'sms')
         conv.add_group(group)
         yield conv.save()
 
