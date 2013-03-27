@@ -125,6 +125,9 @@ class Command(BaseCommand):
             self.create_vumigo_router_config(transport_names)
             self.write_supervisor_config_file('vumigo_router',
                 'vumi.dispatchers.base.BaseDispatchWorker')
+            self.create_command_dispatcher_config(applications)
+            self.write_supervisor_config_file('command_dispatcher',
+                'go.vumitools.api_worker.CommandDispatcher')
 
         if options['write_supervisord_config']:
             self.write_supervisord_conf()
@@ -369,6 +372,18 @@ class Command(BaseCommand):
             templ = 'vumigo_router.yaml.template'
             data = self.render_template(templ, {
                 'transport_names': transport_names,
+            })
+            fp.write(self.auto_gen_warning)
+            fp.write(data)
+
+        self.stdout.write('Wrote %s.\n' % (fn,))
+
+    def create_command_dispatcher_config(self, applications):
+        fn = self.mk_filename('command_dispatcher', 'yaml')
+        with self.open_file(fn, 'w') as fp:
+            templ = 'command_dispatcher.yaml.template'
+            data = self.render_template(templ, {
+                'applications': applications
             })
             fp.write(self.auto_gen_warning)
             fp.write(data)

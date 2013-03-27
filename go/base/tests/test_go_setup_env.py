@@ -266,3 +266,15 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
             'transport1': ['vumigo_router'],
             'transport2': ['vumigo_router'],
         })
+
+    def test_create_command_dispatcher_config(self):
+        fake_file = FakeFile()
+        self.command.open_file = Mock(side_effect=[fake_file])
+        self.command.create_command_dispatcher_config([
+            'app1', 'app2'])
+        fake_file.seek(0)
+        config = yaml.load(fake_file)
+        self.assertEqual(config['transport_name'],
+            'command_dispatcher')
+        self.assertEqual(config['worker_names'],
+            ['app1_application', 'app2_application'])

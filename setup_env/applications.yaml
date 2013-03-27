@@ -1,18 +1,18 @@
 wikipedia_ussd:
-    class: go.apps.wikipedia.vumi_app.WikipediaApplication
-    config:
-        metrics_prefix: wikipedia_ussd_application
-        sms_transport: wikipedia_sms_transport
-        incoming_sms_transport: wikipedia_sms_transport
-        max_sms_content_length: 450
-        max_sms_unicode_length: 190
-        redis_manager:
-          key_prefix: "vumigo"
-          db: 1
-        riak_manager:
-          bucket_prefix: vumigo.
-        middleware:
-          - logging_mw: vumi.middleware.logging.LoggingMiddleware
+  class: go.apps.wikipedia.vumi_app.WikipediaApplication
+  config:
+    metrics_prefix: wikipedia_ussd_application
+    sms_transport: wikipedia_sms_transport
+    incoming_sms_transport: wikipedia_sms_transport
+    max_sms_content_length: 450
+    max_sms_unicode_length: 190
+    redis_manager:
+      key_prefix: "vumigo"
+      db: 1
+    riak_manager:
+      bucket_prefix: vumigo.
+    middleware:
+      - logging_mw: vumi.middleware.logging.LoggingMiddleware
 
 # NOTE: This is a terrible hack to have an application claim the
 #       wikipedia_sms_transport queue. We need this so that the
@@ -22,17 +22,112 @@ wikipedia_ussd:
 #       Our big routing rewrite addresses specifically problems
 #       like these.
 wikipedia_sms:
-    class: go.apps.wikipedia.vumi_app.WikipediaApplication
-    config:
-        metrics_prefix: wikipedia_ussd_application
-        sms_transport: wikipedia_sms_transport
-        incoming_sms_transport: wikipedia_sms_transport
-        max_sms_content_length: 450
-        max_sms_unicode_length: 190
+  class: go.apps.wikipedia.vumi_app.WikipediaApplication
+  config:
+    metrics_prefix: wikipedia_ussd_application
+    sms_transport: wikipedia_sms_transport
+    incoming_sms_transport: wikipedia_sms_transport
+    max_sms_content_length: 450
+    max_sms_unicode_length: 190
+    redis_manager:
+      key_prefix: "vumigo"
+      db: 1
+    riak_manager:
+      bucket_prefix: vumigo.
+    middleware:
+      - logging_mw: vumi.middleware.logging.LoggingMiddleware
+
+bulk_message:
+  class: go.apps.bulk_message.vumi_app.BulkMessageApplication
+  config:
+    metrics_prefix: bulk_message_application
+    redis_manager:
+      key_prefix: "vumigo"
+      db: 1
+    riak_manager:
+      bucket_prefix: vumigo.
+    send_to:
+      default:
+        transport_name: "invalid broken transport"
+    middleware:
+      - logging_mw: vumi.middleware.logging.LoggingMiddleware
+
+survey:
+  class: go.apps.surveys.vumi_app.SurveyApplication
+  config:
+    batch_size: 2
+    metrics_prefix: survey_application
+    redis_manager:
+      key_prefix: "vumigo"
+      db: 1
+    riak_manager:
+      bucket_prefix: vumigo.
+    send_to:
+      default:
+        transport_name: "invalid broken transport"
+    middleware:
+      - logging_mw: vumi.middleware.logging.LoggingMiddleware
+
+sequential_send:
+  class: go.apps.sequential_send.vumi_app.SequentialSendApplication
+  config:
+    metrics_prefix: sequential_send_application
+    redis_manager:
+      key_prefix: "vumigo"
+      db: 1
+    riak_manager:
+      bucket_prefix: vumigo.
+    send_to:
+      default:
+        transport_name: "invalid broken transport"
+
+subscription:
+  class: go.apps.subscription.vumi_app.SubscriptionApplication
+  config:
+    metrics_prefix: subscription_application
+    redis_manager:
+      key_prefix: "vumigo"
+      db: 1
+    riak_manager:
+      bucket_prefix: vumigo.
+    send_to:
+      default:
+        transport_name: "invalid broken transport"
+
+jsbox:
+  class: go.apps.jsbox.vumi_app.JsBoxApplication
+  config:
+    metrics_prefix: "go.accounts."
+    env:
+      NODE_PATH: "/usr/lib/node_modules"
+    app_context: "{require: function(m) { if (m == 'jed' || m == 'vumigo_v01') return require(m); return null; }, Buffer: Buffer}"
+
+    sandbox:
+      config:
+        cls: go.apps.jsbox.vumi_app.ConversationConfigResource
+      outbound:
+        cls: go.apps.jsbox.outbound.GoOutboundResource
+      metrics:
+        cls: go.apps.jsbox.metrics.MetricsResource
+      http:
+        cls: vumi.application.sandbox.HttpClientResource
+      kv:
+        cls: vumi.application.sandbox.RedisResource
         redis_manager:
-          key_prefix: "vumigo"
+          key_prefix: "vumigo.jsbox.kv"
           db: 1
-        riak_manager:
-          bucket_prefix: vumigo.
-        middleware:
-          - logging_mw: vumi.middleware.logging.LoggingMiddleware
+        keys_per_user: 10000
+
+    rlimits:
+      RLIMIT_DATA: [67108864, 67108864] # 64 MB
+      RLIMIT_STACK: [2097152, 2097152] # 2 MB
+      RLIMIT_AS: [268435456, 268435456] # 256 MB
+
+    redis_manager:
+      key_prefix: "vumigo"
+      db: 1
+    riak_manager:
+      bucket_prefix: vumigo.
+    send_to:
+      default:
+        transport_name: "invalid broken transport"
