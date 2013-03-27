@@ -5,8 +5,9 @@ from django.forms.util import ErrorList
 
 from bootstrap.forms import BootstrapForm
 
-from go.vumitools.conversation import CONVERSATION_TYPES
 from vumi.persist.fields import (ListProxy, ForeignKeyProxy, ManyToManyProxy)
+
+from go.base.utils import configured_conversation_types
 
 
 class VumiModelForm(BootstrapForm):
@@ -124,7 +125,8 @@ class ConversationSearchForm(BootstrapForm):
         'class': 'input-xlarge',
         }))
     conversation_type = forms.ChoiceField(required=False,
-        choices=([('', 'Type ...')] + CONVERSATION_TYPES),
+        choices=([('', 'Type ...')] +
+                 sorted(configured_conversation_types().items())),
         widget=forms.Select(attrs={'class': 'input-small'}))
     conversation_status = forms.ChoiceField(required=False,
         choices=[
