@@ -1,8 +1,7 @@
 from operator import attrgetter
 
-from go.base.utils import vumi_api_for_user
-from go.vumitools.conversation.models import (CONVERSATION_TYPES,
-                                                CONVERSATION_RUNNING)
+from go.base.utils import vumi_api_for_user, configured_conversation_types
+from go.vumitools.conversation.models import CONVERSATION_RUNNING
 
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
@@ -48,7 +47,7 @@ def send_user_account_summary(user):
     all_conversations.sort(key=(lambda conv: conv.created_at), reverse=True)
 
     active_conversations = {}
-    known_types = dict(CONVERSATION_TYPES)
+    known_types = configured_conversation_types()
     for conv in all_conversations:
         conv_list = active_conversations.setdefault(
             known_types.get(conv.conversation_type, 'Unknown'), [])

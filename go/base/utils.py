@@ -104,3 +104,8 @@ class UnicodeCSVWriter(object):
     def writerows(self, rows):
         for row in rows:
             self.writerow(row)
+
+
+def configured_conversation_types():
+    return dict((a['namespace'], a['display_name'])
+                for a in settings.VUMI_INSTALLED_APPS.itervalues())
