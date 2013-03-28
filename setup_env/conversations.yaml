@@ -1,5 +1,5 @@
 -
-  key: conversation-key-1
+  key: conversation1
   account: user1@example.org
   conversation_type: bulk_message
   subject: subject
@@ -8,7 +8,7 @@
     foo: bar
 
 -
-  key: conversation-key-2
+  key: conversation2
   account: user2@example.org
   conversation_type: bulk_message
   subject: subject
@@ -17,7 +17,7 @@
     foo: bar
 
 -
-  key: conversation-key-3
+  key: conversation3
   account: user2@example.org
   conversation_type: survey
   subject: subject
@@ -27,7 +27,7 @@
     baz: zab
 
 -
-  key: conversation-key-4
+  key: conversation4
   account: user1@example.org
   conversation_type: wikipedia_ussd
   subject: Wikipedia USSD connection
@@ -40,7 +40,7 @@
     send_from_tag: longcode-10001
 
 -
-  key: conversation-key-5
+  key: conversation5
   account: user1@example.org
   conversation_type: wikipedia_sms
   subject: Wikipedia SMS connection
@@ -50,7 +50,7 @@
   delivery_tag: longcode-10001
 
 -
-  key: conversation-key-6
+  key: conversation6
   account: user1@example.org
   conversation_type: jsbox
   subject: JavaScript App
@@ -86,7 +86,7 @@
         };
 
 -
-  key: conversation-key-7
+  key: conversation7
   account: user1@example.org
   conversation_type: bulk_message
   subject: Messages sent from JSBox
