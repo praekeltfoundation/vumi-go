@@ -66,18 +66,31 @@
       source_url: "source URL goes here"
       javascript: |
         api.on_inbound_message = function (cmd) {
+
             var msg = cmd.msg;
+
             api.request("outbound.reply_to", {
                 content: "Echoing: " + msg.content,
                 in_reply_to: msg.message_id,
                 continue_session: false
-            }, function (response) {
-                api.request("outbound.send_to_tag", {
-                  to_addr: msg.from_addr,
-                  content: "sent to tag",
-                  tagpool: "longcode_tagpool",
-                  tag: "longcode-10002"
-                });
             });
+
+            api.request("outbound.send_to_tag", {
+              to_addr: msg.from_addr,
+              content: "sent to tag",
+              tagpool: "longcode_tagpool",
+              tag: "longcode-10002"
+            });
+
             api.done();
         };
+
+-
+  key: conversation-key-7
+  account: user1@example.org
+  conversation_type: bulk_message
+  subject: Messages sent from JSBox
+  message: "Collection of messages sent from JSBox"
+  delivery_class: sms
+  delivery_tag_pool: longcode_tagpool
+  delivery_tag: 'longcode-10002'
