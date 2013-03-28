@@ -131,6 +131,7 @@ class Command(BaseCommand):
 
         if options['write_supervisord_config']:
             self.write_supervisord_conf()
+            self.create_webui_supervisord_conf()
 
     def setup_backend(self, config):
         self.redis = RedisManager.from_config(config['redis_manager'])
@@ -403,3 +404,18 @@ class Command(BaseCommand):
             fp.write(data)
         self.stdout.write('Wrote %s.\n' % (fn,))
 
+    def create_webui_supervisord_conf(self):
+        program_name = 'webui'
+        fn = self.mk_filename(program_name, 'conf')
+        with self.open_file(fn, 'w') as fp:
+            section = "program:%s" % (program_name,)
+            fp.write(self.auto_gen_warning)
+            cp = ConfigParser()
+            cp.add_section(section)
+            cp.set(section, "command", "./go-admin.sh runserver")
+            cp.set(section, "stdout_logfile",
+                   "./logs/%(program_name)s_%(process_num)s.log")
+            cp.set(section, "stderr_logfile",
+                   "./logs/%(program_name)s_%(process_num)s.log")
+            cp.write(fp)
+        self.stdout.write('Wrote %s.\n' % (fn,))
