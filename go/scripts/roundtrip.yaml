@@ -1,9 +1,0 @@
-transport_name: foo
-test_class: go.scripts.roundtrip.ScriptedConversation
-test_class_config:
-    transport_name: foo
-    client_initiated: false
-    dialogue:
-        "what's your name?": "simon"
-        "what's your gender?": "male"
-        "thanks!": null
