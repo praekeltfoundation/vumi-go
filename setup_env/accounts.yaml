@@ -4,8 +4,11 @@ user1@example.org:
         - go.apps.bulk_message
         - go.apps.surveys
         - go.apps.jsbox
+        - go.apps.subscription
+        - go.apps.sequential_send
     tagpools:
         - [longcode_tagpool, null]
+        - [longcode_tagpool_2, null]
         - [ussd_tagpool, null]
 
 user2@example.org:
@@ -14,6 +17,9 @@ user2@example.org:
         - go.apps.bulk_message
         - go.apps.surveys
         - go.apps.jsbox
+        - go.apps.subscription
+        - go.apps.sequential_send
     tagpools:
         - [longcode_tagpool, 10]
+        - [longcode_tagpool_2, null]
         - [ussd_tagpool, 10]

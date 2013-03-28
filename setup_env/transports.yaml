@@ -29,3 +29,19 @@ ussd_transport:
             outgoing:
                 tagname_pattern: .*
                 msg_template: {}
+
+sms_transport_2:
+    class: vumi.transports.telnet.AddressedTelnetServerTransport
+    config:
+        telnet_port: 8082
+        middleware:
+            - tagging_mw: vumi.middleware.tagger.TaggingMiddleware
+
+        tagging_mw:
+            incoming:
+                addr_pattern: ^(.*)$
+                tagpool_template: 'longcode_tagpool_2'
+                tagname_template: \1
+            outgoing:
+                tagname_pattern: .*
+                msg_template: {}
