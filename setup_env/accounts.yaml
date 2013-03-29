@@ -1,5 +1,7 @@
 user1@example.org:
     password: password
+    first_name: User
+    last_name: One
     applications:
         - go.apps.bulk_message
         - go.apps.surveys
@@ -13,6 +15,8 @@ user1@example.org:
 
 user2@example.org:
     password: password
+    first_name: User
+    last_name: Two
     applications:
         - go.apps.bulk_message
         - go.apps.surveys

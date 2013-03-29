@@ -205,6 +205,9 @@ class Command(BaseCommand):
 
             user = User.objects.create_user(username, username,
                                             user_info['password'])
+            user.first_name = user_info.get('first_name')
+            user.last_name = user_info.get('last_name')
+            user.save()
 
             profile = user.get_profile()
             account = profile.get_user_account()
@@ -339,6 +342,7 @@ class Command(BaseCommand):
                 "start_worker",
                 "--worker-class=%s" % (worker_class,),
                 "--config=%s" % (config,),
+                "--vhost=%s" % self.config.get('vhost', '/develop'),
             ]))
             cp.set(section, "stdout_logfile",
                 "./logs/%(program_name)s_%(process_num)s.log")
@@ -412,7 +416,7 @@ class Command(BaseCommand):
             fp.write(self.auto_gen_warning)
             cp = ConfigParser()
             cp.add_section(section)
-            cp.set(section, "command", "./go-admin.sh runserver")
+            cp.set(section, "command", "./go-admin.sh runserver --noreload")
             cp.set(section, "stdout_logfile",
                    "./logs/%(program_name)s_%(process_num)s.log")
             cp.set(section, "stderr_logfile",

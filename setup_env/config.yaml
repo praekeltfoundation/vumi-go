@@ -3,3 +3,4 @@ redis_manager:
   key_prefix: "vumigo"
 riak_manager:
   bucket_prefix: vumigo.
+vhost: "/develop"
