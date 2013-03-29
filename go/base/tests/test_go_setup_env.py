@@ -70,6 +70,8 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
         self.account_file = tmp_yaml_file({
             'user1@go.com': {
                 'password': 'foo',
+                'first_name': 'First',
+                'last_name': 'Last',
                 'applications': ['go.apps.surveys', 'go.apps.bulk_message'],
                 'tagpools': [
                     ['pool1', 10],
@@ -124,6 +126,21 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
 
             }
         })
+
+        self.contact_group_file = tmp_yaml_file([
+            {
+                'key': 'group1',
+                'name': 'group1',
+                'account': 'user1@go.com',
+                'contacts_csv': 'contacts.csv',
+            },
+            {
+                'key': 'group2',
+                'name': 'group2',
+                'account': 'user2@go.com',
+                'contacts_csv': 'contacts.csv',
+            },
+        ])
 
     def get_user_api(self, username):
         return vumi_api_for_user(User.objects.get(username=username))
@@ -278,3 +295,35 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
             'command_dispatcher')
         self.assertEqual(config['worker_names'],
             ['app1_application', 'app2_application'])
+
+    def test_create_webui_supervisord_conf(self):
+        fake_file = FakeFile()
+        self.command.open_file = Mock(side_effect=[fake_file])
+        self.command.create_webui_supervisord_conf()
+        fake_file.seek(0)
+        webui_cp = ConfigParser()
+        webui_cp.readfp(fake_file)
+        self.assertTrue(webui_cp.has_section('program:webui'))
+        webui_command = webui_cp.get('program:webui', 'command')
+        self.assertEqual('./go-admin.sh runserver --noreload', webui_command)
+
+    def test_group_loading(self):
+        self.command.setup_tagpools(self.tagpool_file.name)
+        self.command.setup_accounts(self.account_file.name)
+        self.command.setup_contact_groups(self.contact_group_file.name)
+
+        user1 = self.get_user_api('user1@go.com')
+        user2 = self.get_user_api('user2@go.com')
+
+        [group1] = user1.list_groups()
+        [group2] = user2.list_groups()
+
+        self.assertEqual(group1.key, 'group1')
+        self.assertEqual(group1.name, 'group1')
+        self.assertEqual(group2.key, 'group2')
+        self.assertEqual(group2.name, 'group2')
+
+        self.assertTrue(
+            'Group group1 created' in self.command.stdout.getvalue())
+        self.assertTrue(
+            'Group group2 created' in self.command.stdout.getvalue())

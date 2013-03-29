@@ -60,6 +60,11 @@ class Command(BaseCommand):
             action='append',
             default=[],
             help='YAML file with applications to create.'),
+        make_option('--contact-group-file',
+            dest='contact_group_file',
+            action='append',
+            default=[],
+            help='YAML file with contact groups to create.'),
         make_option('--dest-dir',
             dest='dest_dir',
             default='setup_env',
@@ -111,6 +116,9 @@ class Command(BaseCommand):
 
         for conversation_file in options['conversation_files']:
             self.setup_conversations(conversation_file)
+
+        for contact_group_file in options['contact_group_files']:
+            self.setup_contact_groups(contact_group_file)
 
         for transport_file in options['transport_files']:
             transport_names = self.create_transport_configs(transport_file)
@@ -205,8 +213,8 @@ class Command(BaseCommand):
 
             user = User.objects.create_user(username, username,
                                             user_info['password'])
-            user.first_name = user_info.get('first_name')
-            user.last_name = user_info.get('last_name')
+            user.first_name = user_info.get('first_name', '')
+            user.last_name = user_info.get('last_name', '')
             user.save()
 
             profile = user.get_profile()
@@ -423,3 +431,33 @@ class Command(BaseCommand):
                    "./logs/%(program_name)s_%(process_num)s.log")
             cp.write(fp)
         self.stdout.write('Wrote %s.\n' % (fn,))
+
+    def setup_contact_groups(self, file_path):
+        """
+        Setup contact groups for specific accounts.
+
+        :param str file_path:
+            Path to the YAML file with the contact group info. Expecting to
+            load the following info from it:
+
+            [{
+                'key': 'group1',
+                'name': 'group1',
+                'account': 'user1@go.com',
+                'contacts_csv': 'path/to/contacts.csv',
+            },
+            {
+                ...
+            }]
+
+        """
+        contact_groups = self.read_yaml(file_path)
+        for group_info in contact_groups:
+            user = User.objects.get(username=group_info['account'])
+            user_api = vumi_api_for_user(user)
+            name = group_info['name'].decode('utf-8')
+            account_key = user_api.user_account_key
+            group = user_api.contact_store.groups(
+                group_info['key'], name=name, user_account=account_key)
+            group.save()
+            self.stdout.write('Group %s created\n' % (group.key,))
