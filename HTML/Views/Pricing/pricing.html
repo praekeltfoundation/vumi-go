@@ -99,23 +99,26 @@
                         	<div class="span6 module">
                             	<div class="row-fluid">
                                 	<div class="span4">
-                                    	<select class="selectpicker span12">
+                                    	<select class="countrypicker1 selectpicker span12">
                                           <option>Kenya</option>
                                           <option>All countries</option>
                                        </select>
                                     </div>
                                     <div class="span8">
-                                    	<select class="selectpicker span7">
+                                    	<select class="channelpicker1 selectpicker span7">
                                           <option>USSD - for interactive campaigns. Also known as star menus (eg *111#)</option>
                                           <option>SMS - used for bulk messaging</option>
                                        </select>
                                        <span class="ussd input-xlarge uneditable-input span2">*120*8864*</span>
+                                       <br/>
+                                       <button class="btn btn-primary btn-mini">Add channel</button>
                                     </div>
                                 </div>
                                 <div class="row-fluid">
                                 	<div class="span4">
 
                                     </div>
+                                    <!--
                                     <div class="span8">
                                     	<select class="selectpicker span7">
 	                                      <option>SMS - used for bulk messaging</option>
@@ -124,6 +127,7 @@
                                        <br/>
                                        <button class="btn btn-primary btn-mini">Add channel</button>
                                     </div>
+                                    -->
                                 </div>
                             </div>
                             <div class="span6 module msg-num">
@@ -234,6 +238,36 @@
         <!-- InstanceBeginEditable name="includes" -->
         <script type="text/javascript">
 	        $('.selectpicker').selectpicker();
+			
+			//-- Swap out dropdowns based on choice
+			$(".countrypicker1").change(function () {
+			  var country = "";
+			  $(".countrypicker1 option:selected").each(function () {
+						country = $(this).text();
+			  });
+			  
+			  if(country == "All countries"){
+				  $('.channelpicker1')
+				    .find('option')
+			    	.remove()
+				    .end()
+    				.append('<option>SMS Sync</option>')
+					.append('<option>Mxit</option>');
+					
+					$('.ussd').hide()
+			  }else{
+			  	$('.channelpicker1')
+				    .find('option')
+			    	.remove()
+				    .end()
+    				.append('<option>USSD - for interactive campaigns. Also known as star menus (eg *111#)</option>')
+					.append('<option>SMS - used for bulk messaging</option>');
+					
+					$('.ussd').show()
+			  }
+			  
+			})
+			
 		</script>
         <!--JQuery Base Includes-->
         <!-- InstanceEndEditable -->
