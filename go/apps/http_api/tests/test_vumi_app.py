@@ -99,6 +99,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def tearDown(self):
         yield super(StreamingHTTPWorkerTestCase, self).tearDown()
+        yield self.client.pool.closeCachedConnections()
         yield self.mock_push_server.stop()
 
     def handle_request(self, request):
@@ -145,19 +146,11 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(headers.getRawHeaders('x-accel-buffering'), ['yes'])
 
     @inlineCallbacks
-    def test_connection_default(self):
+    def test_content_type(self):
         receiver, received_messages = yield self.pull_message()
         headers = receiver._response.headers
-        self.assertEqual(headers.getRawHeaders('connection'), None)
-
-    @inlineCallbacks
-    def test_connection_keep_alive(self):
-        self.default_headers['Connection'] = ['keep-alive']
-        receiver, received_messages = yield self.pull_message()
-        response = yield receiver.get_response()
-        headers = response.headers
-        print list(headers.getAllRawHeaders())
-        self.assertEqual(headers.getRawHeaders('connection'), ['keep-alive'])
+        self.assertEqual(headers.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
 
     @inlineCallbacks
     def test_messages_stream(self):

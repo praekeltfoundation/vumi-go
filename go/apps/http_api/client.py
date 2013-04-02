@@ -63,7 +63,8 @@ class VumiMessageReceiver(basic.LineReceiver):
 class StreamingClient(object):
 
     def __init__(self, persistent=True):
-        self.agent = Agent(reactor, pool=self.get_pool(persistent))
+        self.pool = self.get_pool(persistent)
+        self.agent = Agent(reactor, pool=self.pool)
 
     def get_pool(self, persistent):
         return HTTPConnectionPool(reactor, persistent=persistent)
