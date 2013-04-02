@@ -133,3 +133,18 @@
     messages:
       - 'foo'
       - 'bar'
+
+-
+  key: conversation10
+  account: user1@example.org
+  conversation_type: http_api
+  subject: HTTP API
+  message: Sample HTTP API
+  delivery_class: sms
+  delivery_tag_pool: longcode_tagpool
+  delivery_tag: longcode-10003
+  metadata:
+    http_api:
+      api_tokens:
+        - token1
+        - token2

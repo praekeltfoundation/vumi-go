@@ -144,3 +144,15 @@ opt_out:
     send_to:
       default:
         transport_name: "invalid broken transport"
+
+http_api:
+  class: go.apps.http_api.vumi_app.StreamingHTTPWorker
+  config:
+    web_path: /api/v1/go/http_api/
+    web_port: 8001
+    metrics_prefix: http_api_application
+    redis_manager:
+      key_prefix: "vumigo"
+      db: 1
+    riak_manager:
+      bucket_prefix: vumigo.

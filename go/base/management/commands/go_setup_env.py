@@ -61,7 +61,7 @@ class Command(BaseCommand):
             default=[],
             help='YAML file with applications to create.'),
         make_option('--contact-group-file',
-            dest='contact_group_file',
+            dest='contact_group_files',
             action='append',
             default=[],
             help='YAML file with contact groups to create.'),
