@@ -1,9 +1,9 @@
 metrics_prefix: "routing_table_dispatcher"
 
 redis_manager: &REDIS_MANAGER
-  {{ redis_manager }}
+{{ redis_manager }}
 riak_manager: &RIAK_MANAGER
-  {{ riak_manager }}
+{{ riak_manager }}
 
 receive_inbound_connectors:
 {% for transport_name in transport_names %}  - {{transport_name}}

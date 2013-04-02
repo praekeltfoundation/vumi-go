@@ -16,6 +16,7 @@ pools:
       delivery_class: sms
       transport_type: sms
       server_initiated: true
+      transport_name: sms_transport
       msg_options:
         transport_name: sms_transport
 
@@ -34,6 +35,7 @@ pools:
       delivery_class: sms
       transport_type: sms
       client_initiated: true
+      transport_name: sms_transport_2
       msg_options:
         transport_name: sms_transport_2
 
@@ -52,5 +54,6 @@ pools:
       delivery_class: ussd
       transport_type: ussd
       client_initiated: true
+      transport_name: ussd_transport
       msg_options:
         transport_name: ussd_transport

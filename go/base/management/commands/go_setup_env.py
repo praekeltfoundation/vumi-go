@@ -177,6 +177,11 @@ class Command(BaseCommand):
     def write_yaml(self, fp, data):
         yaml.safe_dump(data, stream=fp, default_flow_style=False)
 
+    def dump_yaml_block(self, data, indent=0):
+        dumped = yaml.safe_dump(data, default_flow_style=False)
+        return '\n'.join('%s%s' % ('  ' * indent, line)
+                         for line in dumped.splitlines())
+
     def open_file(self, file_name, mode):
         "NOTE: this is only here to make testing easier"
         return open(file_name, mode)
@@ -401,10 +406,10 @@ class Command(BaseCommand):
                 'conversation_mappings': dict([
                     (application, '%s_transport' % (application,)) for
                     application in applications]),
-                'redis_manager': yaml.safe_dump(self.config['redis_manager'],
-                    default_flow_style=False),
-                'riak_manager': yaml.safe_dump(self.config['riak_manager'],
-                    default_flow_style=False)
+                'redis_manager': self.dump_yaml_block(
+                    self.config['redis_manager'], 1),
+                'riak_manager': self.dump_yaml_block(
+                    self.config['riak_manager'], 1),
             })
             fp.write(self.auto_gen_warning)
             fp.write(data)
@@ -445,10 +450,10 @@ class Command(BaseCommand):
                     '%s_transport' % (app,) for app in applications],
                 'conversation_mappings': dict([
                     (app, '%s_transport' % (app,)) for app in applications]),
-                'redis_manager': yaml.safe_dump(self.config['redis_manager'],
-                    default_flow_style=False),
-                'riak_manager': yaml.safe_dump(self.config['riak_manager'],
-                    default_flow_style=False)
+                'redis_manager': self.dump_yaml_block(
+                    self.config['redis_manager'], 1),
+                'riak_manager': self.dump_yaml_block(
+                    self.config['riak_manager'], 1),
             })
             fp.write(self.auto_gen_warning)
             fp.write(data)

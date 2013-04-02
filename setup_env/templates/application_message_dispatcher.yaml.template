@@ -14,9 +14,9 @@ conversation_mappings:
 {% endfor %}
 
 redis_manager: &REDIS_MANAGER
-  {{ redis_manager }}
+{{ redis_manager }}
 riak_manager: &RIAK_MANAGER
-  {{ riak_manager }}
+{{ riak_manager }}
 
 # NOTE: the order is important
 middleware:
