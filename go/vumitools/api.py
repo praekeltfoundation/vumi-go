@@ -292,6 +292,9 @@ class VumiUserApi(object):
         account_tags = yield self.list_endpoints(user_account)
         for tag in account_tags:
             tag_info = yield self.api.mdb.get_tag_info(tag)
+            account_key = user_account.key.decode('utf-8')
+            tag_info.metadata['user_account'] = account_key
+            yield tag_info.save()
             if tag_info.current_batch.key is None:
                 continue
             batch = yield tag_info.current_batch.get()
