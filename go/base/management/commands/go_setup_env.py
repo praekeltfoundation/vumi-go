@@ -116,6 +116,8 @@ class Command(BaseCommand):
 
         self.contact_group_info = []
         self.conversation_info = []
+        self.transport_names = []
+        self.application_names = []
 
         for tagpool_file in options['tagpool_files']:
             self.setup_tagpools(tagpool_file)
@@ -130,19 +132,21 @@ class Command(BaseCommand):
             self.setup_contact_groups(contact_group_file)
 
         for transport_file in options['transport_files']:
-            transport_names = self.create_transport_configs(transport_file)
+            self.transport_names.extend(
+                self.create_transport_configs(transport_file))
 
         for application_file in options['application_files']:
-            applications = self.create_application_configs(application_file)
+            self.application_names.extend(
+                self.create_application_configs(application_file))
 
         if options['write_dispatcher_configs']:
-            self.create_app_msg_dispatcher_config(applications)
+            self.create_app_msg_dispatcher_config(self.application_names)
             self.write_supervisor_config_file('application_message_dispatcher',
                 'vumi.dispatchers.base.BaseDispatchWorker')
-            self.create_vumigo_router_config(transport_names)
+            self.create_vumigo_router_config(self.transport_names)
             self.write_supervisor_config_file('vumigo_router',
                 'vumi.dispatchers.base.BaseDispatchWorker')
-            self.create_command_dispatcher_config(applications)
+            self.create_command_dispatcher_config(self.application_names)
             self.write_supervisor_config_file('command_dispatcher',
                 'go.vumitools.api_worker.CommandDispatcher')
 
@@ -338,18 +342,23 @@ class Command(BaseCommand):
 
     def create_application_configs(self, file_path):
         applications = self.read_yaml(file_path)
+        application_names = []
         for application_name, application_info in applications.items():
+            application_names.append(application_name)
+            application_names.extend(
+                application_info.get('extra_application_names', []))
             transport_name = '%s_transport' % (application_name,)
             worker_name = '%s_application' % (application_name,)
             config = application_info['config']
+            # Wikipedia SMS needs to override this.
+            config.setdefault('transport_name', transport_name)
             config.update({
-                'transport_name': transport_name,
                 'worker_name': worker_name,
             })
             self.write_worker_config_file(worker_name, config)
             self.write_supervisor_config_file(worker_name,
                 application_info['class'])
-        return applications.keys()
+        return application_names
 
     def write_supervisor_config_file(self, program_name, worker_class,
                                         config=None):
