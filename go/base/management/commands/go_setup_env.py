@@ -60,6 +60,11 @@ class Command(BaseCommand):
             action='append',
             default=[],
             help='YAML file with applications to create.'),
+        make_option('--contact-group-file',
+            dest='contact_group_file',
+            action='append',
+            default=[],
+            help='YAML file with contact groups to create.'),
         make_option('--dest-dir',
             dest='dest_dir',
             default='setup_env',
@@ -112,6 +117,9 @@ class Command(BaseCommand):
         for conversation_file in options['conversation_files']:
             self.setup_conversations(conversation_file)
 
+        for contact_group_file in options['contact_group_files']:
+            self.setup_contact_groups(contact_group_file)
+
         for transport_file in options['transport_files']:
             transport_names = self.create_transport_configs(transport_file)
 
@@ -131,6 +139,7 @@ class Command(BaseCommand):
 
         if options['write_supervisord_config']:
             self.write_supervisord_conf()
+            self.create_webui_supervisord_conf()
 
     def setup_backend(self, config):
         self.redis = RedisManager.from_config(config['redis_manager'])
@@ -204,6 +213,9 @@ class Command(BaseCommand):
 
             user = User.objects.create_user(username, username,
                                             user_info['password'])
+            user.first_name = user_info.get('first_name', '')
+            user.last_name = user_info.get('last_name', '')
+            user.save()
 
             profile = user.get_profile()
             account = profile.get_user_account()
@@ -338,6 +350,7 @@ class Command(BaseCommand):
                 "start_worker",
                 "--worker-class=%s" % (worker_class,),
                 "--config=%s" % (config,),
+                "--vhost=%s" % self.config.get('vhost', '/develop'),
             ]))
             cp.set(section, "stdout_logfile",
                 "./logs/%(program_name)s_%(process_num)s.log")
@@ -403,3 +416,48 @@ class Command(BaseCommand):
             fp.write(data)
         self.stdout.write('Wrote %s.\n' % (fn,))
 
+    def create_webui_supervisord_conf(self):
+        program_name = 'webui'
+        fn = self.mk_filename(program_name, 'conf')
+        with self.open_file(fn, 'w') as fp:
+            section = "program:%s" % (program_name,)
+            fp.write(self.auto_gen_warning)
+            cp = ConfigParser()
+            cp.add_section(section)
+            cp.set(section, "command", "./go-admin.sh runserver --noreload")
+            cp.set(section, "stdout_logfile",
+                   "./logs/%(program_name)s_%(process_num)s.log")
+            cp.set(section, "stderr_logfile",
+                   "./logs/%(program_name)s_%(process_num)s.log")
+            cp.write(fp)
+        self.stdout.write('Wrote %s.\n' % (fn,))
+
+    def setup_contact_groups(self, file_path):
+        """
+        Setup contact groups for specific accounts.
+
+        :param str file_path:
+            Path to the YAML file with the contact group info. Expecting to
+            load the following info from it:
+
+            [{
+                'key': 'group1',
+                'name': 'group1',
+                'account': 'user1@go.com',
+                'contacts_csv': 'path/to/contacts.csv',
+            },
+            {
+                ...
+            }]
+
+        """
+        contact_groups = self.read_yaml(file_path)
+        for group_info in contact_groups:
+            user = User.objects.get(username=group_info['account'])
+            user_api = vumi_api_for_user(user)
+            name = group_info['name'].decode('utf-8')
+            account_key = user_api.user_account_key
+            group = user_api.contact_store.groups(
+                group_info['key'], name=name, user_account=account_key)
+            group.save()
+            self.stdout.write('Group %s created\n' % (group.key,))

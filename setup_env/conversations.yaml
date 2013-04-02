@@ -94,3 +94,42 @@
   delivery_class: sms
   delivery_tag_pool: longcode_tagpool
   delivery_tag: 'longcode-10002'
+
+-
+  key: conversation8
+  account: user1@example.org
+  conversation_type: subscription
+  subject: Subscription for seq send
+  message: "Subscription for seq send"
+  delivery_class: sms
+  delivery_tag_pool: longcode_tagpool_2
+  delivery_tag: 'longcode-20001'
+  metadata:
+    handlers:
+      -
+        keyword: sub
+        campaign_name: conv8
+        operation: subscribe
+        reply_copy: "subscribed"
+      -
+        keyword: unsub
+        campaign_name: conv8
+        operation: unsubscribe
+        reply_copy: "unsubscribed"
+
+-
+  key: conversation9
+  account: user1@example.org
+  conversation_type: sequential_send
+  subject: Sequential send
+  message: "Sequential send"
+  delivery_class: sms
+  delivery_tag_pool: longcode_tagpool_2
+  delivery_tag: 'longcode-20001'
+  metadata:
+    schedule:
+      recurring: daily
+      time: '12:00:00'
+    messages:
+      - 'foo'
+      - 'bar'
