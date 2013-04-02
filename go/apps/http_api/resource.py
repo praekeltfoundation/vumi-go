@@ -48,7 +48,7 @@ class StreamResource(BaseResource):
     message_class = None
     proxy_buffering = False
     encoding = 'utf-8'
-    defaultContentType = 'application/json; charset=%s' % (encoding,)
+    content_type = 'application/json; charset=%s' % (encoding,)
 
     def __init__(self, worker, conversation_key):
         BaseResource.__init__(self, worker, conversation_key)
@@ -62,7 +62,7 @@ class StreamResource(BaseResource):
 
     def render_GET(self, request):
         resp_headers = request.responseHeaders
-        request.defaultContentType = 'application/json; charset=utf-8'
+        request.defaultContentType = self.content_type
         # Turn off proxy buffering, nginx will otherwise buffer our streaming
         # output which makes clients sad.
         # See #proxy_buffering at
