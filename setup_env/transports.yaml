@@ -2,6 +2,7 @@ sms_transport:
     class: vumi.transports.telnet.AddressedTelnetServerTransport
     config:
         telnet_port: 8080
+        transport_type: 'sms'
         middleware:
             - tagging_mw: vumi.middleware.tagger.TaggingMiddleware
 
@@ -18,6 +19,7 @@ ussd_transport:
     class: vumi.transports.telnet.AddressedTelnetServerTransport
     config:
         telnet_port: 8081
+        transport_type: 'ussd'
         middleware:
             - tagging_mw: vumi.middleware.tagger.TaggingMiddleware
 
@@ -34,6 +36,7 @@ sms_transport_2:
     class: vumi.transports.telnet.AddressedTelnetServerTransport
     config:
         telnet_port: 8082
+        transport_type: 'sms'
         middleware:
             - tagging_mw: vumi.middleware.tagger.TaggingMiddleware
 
