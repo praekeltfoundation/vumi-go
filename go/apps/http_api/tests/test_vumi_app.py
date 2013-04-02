@@ -84,7 +84,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         })
         yield self.conversation.save()
 
-        self.default_headers = {
+        self.auth_headers = {
             'Authorization': ['Basic ' + base64.b64encode('%s:%s' % (
                 self.account.key, 'token-1'))],
         }
@@ -99,7 +99,6 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def tearDown(self):
         yield super(StreamingHTTPWorkerTestCase, self).tearDown()
-        yield self.client.pool.closeCachedConnections()
         yield self.mock_push_server.stop()
 
     def handle_request(self, request):
@@ -119,7 +118,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         errors = DeferredQueue()
         receiver = self.client.stream(TransportUserMessage, messages.put,
                                             errors.put, url,
-                                            Headers(self.default_headers))
+                                            Headers(self.auth_headers))
 
         received_messages = []
         for msg_id in range(count):
@@ -160,7 +159,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         errors = DeferredQueue()
         receiver = self.client.stream(TransportUserMessage, messages.put,
                                             errors.put, url,
-                                            Headers(self.default_headers))
+                                            Headers(self.auth_headers))
 
         msg1 = self.mkmsg_in(content='in 1', message_id='1')
         yield self.dispatch_with_tag(msg1, self.tag)
@@ -185,7 +184,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         errors = DeferredQueue()
         receiver = yield self.client.stream(TransportEvent, events.put,
                                             events.put, url,
-                                            Headers(self.default_headers))
+                                            Headers(self.auth_headers))
 
         msg1 = self.mkmsg_out(content='in 1', message_id='1')
         yield self.vumi_api.mdb.add_outbound_message(msg1,
@@ -250,7 +249,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         response = yield http_request_full(url, json.dumps(msg),
-                                           self.default_headers, method='PUT')
+                                           self.auth_headers, method='PUT')
 
         self.assertEqual(response.code, http.OK)
         put_msg = json.loads(response.delivered_body)
@@ -280,7 +279,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         response = yield http_request_full(url, json.dumps(msg),
-                                           self.default_headers, method='PUT')
+                                           self.auth_headers, method='PUT')
         self.assertEqual(response.code, http.BAD_REQUEST)
 
     @inlineCallbacks
@@ -298,7 +297,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         response = yield http_request_full(url, json.dumps(msg),
-                                           self.default_headers, method='PUT')
+                                           self.auth_headers, method='PUT')
 
         put_msg = json.loads(response.delivered_body)
         self.assertEqual(response.code, http.OK)
@@ -330,7 +329,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         url = '%s/%s/metrics.json' % (self.url, self.conversation.key)
         response = yield http_request_full(url, json.dumps(metric_data),
-                                            self.default_headers, method='PUT')
+                                            self.auth_headers, method='PUT')
 
         self.assertEqual(response.code, http.OK)
 
@@ -347,7 +346,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         max_receivers = [self.client.stream(TransportUserMessage, queue.put,
                                             queue.put, url,
-                                            Headers(self.default_headers))
+                                            Headers(self.auth_headers))
                             for _ in range(concurrency)]
 
         for i in range(concurrency):
@@ -357,7 +356,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             self.assertEqual(msg['message_id'], received['message_id'])
 
         maxed_out_resp = yield http_request_full(url, method='GET',
-                                                headers=self.default_headers)
+                                                headers=self.auth_headers)
 
         self.assertEqual(maxed_out_resp.code, 403)
         self.assertTrue('Too many concurrent connections'
@@ -374,7 +373,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         queue = DeferredQueue()
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         receiver = self.client.stream(TransportUserMessage, queue.put,
-            queue.put, url, Headers(self.default_headers))
+            queue.put, url, Headers(self.auth_headers))
 
         for i in range(10):
             received = yield queue.get()
@@ -396,7 +395,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         queue = DeferredQueue()
         stream_url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         stream_receiver = self.client.stream(TransportUserMessage, queue.put,
-            queue.put, stream_url, Headers(self.default_headers))
+            queue.put, stream_url, Headers(self.auth_headers))
 
         yield queue.get()
 
@@ -468,8 +467,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield assert_not_found(self.url)
         yield assert_not_found(self.url + '/')
         yield assert_not_found('%s/%s' % (self.url, self.conversation.key),
-                               headers=self.default_headers)
+                               headers=self.auth_headers)
         yield assert_not_found('%s/%s/' % (self.url, self.conversation.key),
-                               headers=self.default_headers)
+                               headers=self.auth_headers)
         yield assert_not_found('%s/%s/foo' % (self.url, self.conversation.key),
-                               headers=self.default_headers)
+                               headers=self.auth_headers)

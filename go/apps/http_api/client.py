@@ -2,8 +2,7 @@ import json
 
 from twisted.internet.defer import Deferred
 from twisted.internet import reactor
-from twisted.web.client import (Agent, ResponseDone, ResponseFailed,
-    HTTPConnectionPool)
+from twisted.web.client import Agent, ResponseDone, ResponseFailed
 from twisted.web import http
 from twisted.protocols import basic
 
@@ -62,12 +61,8 @@ class VumiMessageReceiver(basic.LineReceiver):
 
 class StreamingClient(object):
 
-    def __init__(self, persistent=True):
-        self.pool = self.get_pool(persistent)
-        self.agent = Agent(reactor, pool=self.pool)
-
-    def get_pool(self, persistent):
-        return HTTPConnectionPool(reactor, persistent=persistent)
+    def __init__(self):
+        self.agent = Agent(reactor)
 
     def stream(self, message_class, callback, errback, url, headers=None):
         receiver = VumiMessageReceiver(message_class, callback, errback)
