@@ -149,6 +149,12 @@ class Command(BaseCommand):
             self.create_command_dispatcher_config(self.application_names)
             self.write_supervisor_config_file('command_dispatcher',
                 'go.vumitools.api_worker.CommandDispatcher')
+            # For endpoint-based routing.
+            self.create_routing_table_dispatcher_config(
+                self.application_names, self.transport_names)
+            self.write_supervisor_config_file('routing_table_dispatcher',
+                'go.vumitools.routing.AccountRoutingTableDispatcher',
+                enabled=False)
 
         if options['write_supervisord_config']:
             self.write_supervisord_conf()
@@ -361,8 +367,10 @@ class Command(BaseCommand):
         return application_names
 
     def write_supervisor_config_file(self, program_name, worker_class,
-                                        config=None):
+                                     config=None, enabled=True):
         fn = self.mk_filename(program_name, 'conf')
+        if not enabled:
+            fn += '.disabled'
         config = config or self.mk_filename(program_name, 'yaml')
         with self.open_file(fn, 'w') as fp:
             section = "program:%s" % (program_name,)
@@ -421,6 +429,26 @@ class Command(BaseCommand):
             templ = 'command_dispatcher.yaml.template'
             data = self.render_template(templ, {
                 'applications': applications
+            })
+            fp.write(self.auto_gen_warning)
+            fp.write(data)
+
+        self.stdout.write('Wrote %s.\n' % (fn,))
+
+    def create_routing_table_dispatcher_config(self, applications, transports):
+        fn = self.mk_filename('routing_table_dispatcher', 'yaml')
+        with self.open_file(fn, 'w') as fp:
+            templ = 'routing_table_dispatcher.yaml.template'
+            data = self.render_template(templ, {
+                'transport_names': transports,
+                'application_names': [
+                    '%s_transport' % (app,) for app in applications],
+                'conversation_mappings': dict([
+                    (app, '%s_transport' % (app,)) for app in applications]),
+                'redis_manager': yaml.safe_dump(self.config['redis_manager'],
+                    default_flow_style=False),
+                'riak_manager': yaml.safe_dump(self.config['riak_manager'],
+                    default_flow_style=False)
             })
             fp.write(self.auto_gen_warning)
             fp.write(data)
