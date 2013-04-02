@@ -52,3 +52,6 @@ class Command(BaseCommand):
 
     def default_start_conversation(self, user_api, conversation):
         conversation.start()
+
+    def start_sequential_send(self, user_api, conversation):
+        conversation.start(no_batch_tag=True, acquire_tag=False)

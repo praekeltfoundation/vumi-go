@@ -124,7 +124,7 @@
 
 -
   key: conversation9
-  start: false
+  start: true
   account: user1@example.org
   conversation_type: sequential_send
   subject: Sequential send
