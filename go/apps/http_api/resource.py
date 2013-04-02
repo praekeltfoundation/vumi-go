@@ -59,12 +59,19 @@ class StreamResource(BaseResource):
         }
 
     def render_GET(self, request):
+        resp_headers = request.responseHeaders
+        req_headers = request.requestHeaders
         # Turn off proxy buffering, nginx will otherwise buffer our streaming
         # output which makes clients sad.
         # See #proxy_buffering at
         # http://nginx.org/en/docs/http/ngx_http_proxy_module.html
-        request.responseHeaders.addRawHeader('X-Accel-Buffering',
+        resp_headers.addRawHeader('X-Accel-Buffering',
             'yes' if self.proxy_buffering else 'no')
+        # Tell upstream that we're happy to have the connection stay alive
+        # if the client requested it.
+        conn_hdrs = req_headers.getRawHeaders('Connection', ())
+        if 'keep-alive' in conn_hdrs:
+            resp_headers.setRawHeaders('Connection', ['keep-alive'])
         # Twisted's Agent has trouble closing a connection when the server has
         # sent the HTTP headers but not the body, but sometimes we need to
         # close a connection when only the headers have been received.
