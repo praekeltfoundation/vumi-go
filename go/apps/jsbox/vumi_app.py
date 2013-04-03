@@ -59,6 +59,7 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
     And those from :class:`vumi.application.sandbox.JsSandbox`.
     """
 
+    ALLOWED_ENDPOINTS = None
     CONFIG_CLASS = JsBoxConfig
     worker_name = 'jsbox_application'
 
