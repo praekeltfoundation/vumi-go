@@ -214,7 +214,8 @@ class ConversationWrapper(object):
             #        already. We assume that being passed a batch id means it's
             #        already happened. This will go away once we have a better
             #        conversation model.
-            yield self._add_to_routing_table(tag)
+            outbound_only = not acquire_tag  # XXX: Hack for seq send.
+            yield self._add_to_routing_table(tag, outbound_only=outbound_only)
 
         msg_options = yield self.make_message_options(tag)
 
@@ -232,7 +233,7 @@ class ConversationWrapper(object):
         yield self.c.save()
 
     @Manager.calls_manager
-    def _add_to_routing_table(self, tag):
+    def _add_to_routing_table(self, tag, outbound_only=False):
         """Add routing entries for this conversation.
 
         XXX: This is temporary. It will go away once we have a proper routing
@@ -247,7 +248,8 @@ class ConversationWrapper(object):
         tag_conn = "%s:%s" % tag
 
         rt_helper.add_entry(conv_conn, "default", tag_conn, "default")
-        rt_helper.add_entry(tag_conn, "default", conv_conn, "default")
+        if not outbound_only:
+            rt_helper.add_entry(tag_conn, "default", conv_conn, "default")
 
         yield user_account.save()
 
