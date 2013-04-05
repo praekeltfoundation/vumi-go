@@ -50,6 +50,11 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
             'riak_manager': {'bucket_prefix': 'test.'}
         }
 
+        self.command.contact_group_info = []
+        self.command.conversation_info = []
+        self.command.transport_names = []
+        self.command.application_names = []
+
         self.tagpool_file = tmp_yaml_file({
             'pools': {
                 'pool1': {
