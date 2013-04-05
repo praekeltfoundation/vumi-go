@@ -145,6 +145,13 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(headers.getRawHeaders('x-accel-buffering'), ['yes'])
 
     @inlineCallbacks
+    def test_content_type(self):
+        receiver, received_messages = yield self.pull_message()
+        headers = receiver._response.headers
+        self.assertEqual(headers.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
+
+    @inlineCallbacks
     def test_messages_stream(self):
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
 
