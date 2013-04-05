@@ -48,6 +48,8 @@ class StreamResource(BaseResource):
 
     message_class = None
     proxy_buffering = False
+    encoding = 'utf-8'
+    content_type = 'application/json; charset=%s' % (encoding,)
 
     def __init__(self, worker, conversation_key):
         BaseResource.__init__(self, worker, conversation_key)
@@ -60,11 +62,13 @@ class StreamResource(BaseResource):
         }
 
     def render_GET(self, request):
+        resp_headers = request.responseHeaders
+        resp_headers.addRawHeader('Content-Type', self.content_type)
         # Turn off proxy buffering, nginx will otherwise buffer our streaming
         # output which makes clients sad.
         # See #proxy_buffering at
         # http://nginx.org/en/docs/http/ngx_http_proxy_module.html
-        request.responseHeaders.addRawHeader('X-Accel-Buffering',
+        resp_headers.addRawHeader('X-Accel-Buffering',
             'yes' if self.proxy_buffering else 'no')
         # Twisted's Agent has trouble closing a connection when the server has
         # sent the HTTP headers but not the body, but sometimes we need to
@@ -90,7 +94,7 @@ class StreamResource(BaseResource):
 
     def publish(self, request, message):
         line = u'%s\n' % (message.to_json(),)
-        request.write(line.encode('utf-8'))
+        request.write(line.encode(self.encoding))
 
 
 class InvalidAggregate(errors.VumiError):
