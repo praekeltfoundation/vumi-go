@@ -19,8 +19,8 @@
             </td>
             {% if message_direction == 'inbound' and not conversation.is_client_initiated %}
             <td>
-                <a href="#reply-{{message.key}}" class="btn" title="Reply" data-toggle='modal'><i class="icon-repeat"></i> Reply</a>
-                <div id="reply-{{message.key}}" class="modal hide fade" role="dialog">
+                <a href="#reply-{{message.message_id}}" class="btn" title="Reply" data-toggle='modal'><i class="icon-repeat"></i> Reply</a>
+                <div id="reply-{{message.message_id}}" class="modal hide fade" role="dialog">
                     <div class="modal-header">
                         <a class="close" data-dismiss="modal">×</a>
                         <h3>Reply to {{contact}}</h3>
