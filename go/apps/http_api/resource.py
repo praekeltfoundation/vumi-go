@@ -62,7 +62,7 @@ class StreamResource(BaseResource):
 
     def render_GET(self, request):
         resp_headers = request.responseHeaders
-        request.defaultContentType = self.content_type
+        resp_headers.addRawHeader('Content-Type', self.content_type)
         # Turn off proxy buffering, nginx will otherwise buffer our streaming
         # output which makes clients sad.
         # See #proxy_buffering at
