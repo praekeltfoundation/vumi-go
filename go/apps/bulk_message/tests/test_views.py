@@ -494,12 +494,16 @@ class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
         return self.user_api.wrap_conversation(conv)
 
     def test_actions_on_inbound_only(self):
-        self.put_sample_messages_in_conversation(self.user_api,
+        messages = self.put_sample_messages_in_conversation(self.user_api,
                                                     self.conv_key, 1)
+        [msg_in, msg_out, ack, dr] = messages[0]
+
         response = self.client.get(reverse('bulk_message:show', kwargs={
             'conversation_key': self.conv_key
             }), {'direction': 'inbound'})
         self.assertContains(response, 'Reply')
+        self.assertContains(response, 'href="#reply-%s"' % (
+            msg_in['message_id'],))
 
         response = self.client.get(reverse('bulk_message:show', kwargs={
             'conversation_key': self.conv_key

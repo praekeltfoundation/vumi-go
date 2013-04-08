@@ -16,7 +16,7 @@ class GoOutboundResource(OutboundResource):
         content = command['content']
         continue_session = command.get('continue_session', True)
         orig_msg = api.get_inbound_message(command['in_reply_to'])
-        conv = self.worker.conversation_for_api(api)
+        conv = self.app_worker.conversation_for_api(api)
         helper_metadata = conv.set_go_helper_metadata()
         return reply_func(orig_msg, content, continue_session=continue_session,
                           helper_metadata=helper_metadata)
@@ -46,6 +46,8 @@ class GoOutboundResource(OutboundResource):
                                    reason="Tag %r not held by account"
                                    % (tag,)))
         msg_options = yield user_api.msg_options(tag)
+        conv = self.app_worker.conversation_for_api(api)
+        self.app_worker.add_conv_to_msg_options(conv, msg_options)
         endpoint = ':'.join(tag)
         yield self.app_worker.send_to(
             to_addr, content, endpoint=endpoint, **msg_options)

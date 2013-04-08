@@ -43,7 +43,8 @@ class GoApplicationConfigData(object):
 
 
 class GoWorkerConfigMixin(object):
-    worker_name = ConfigText("Name of this worker.", static=True)
+    worker_name = ConfigText(
+        "Name of this worker.", required=True, static=True)
     metrics_prefix = ConfigText(
         "Metric name prefix.", required=True, static=True)
     riak_manager = ConfigDict("Riak config.", static=True)

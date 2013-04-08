@@ -288,3 +288,14 @@ class TestSequentialSendApplication(AppWorkerTestCase):
                 u'messages_sent': [0],
                 u'messages_received': [0],
                 }, metrics)
+
+    @inlineCallbacks
+    def test_routing_table_setup(self):
+        conv = yield self.create_conversation(delivery_tag=u'tag1')
+        rt = yield self.user_api.get_routing_table()
+        self.assertEqual(len(rt), 0)
+        yield self.user_api.acquire_specific_tag((u'pool', u'tag1'))
+        yield self.start_conversation(
+            conv, no_batch_tag=True, acquire_tag=False)
+        rt = yield self.user_api.get_routing_table()
+        self.assertEqual(len(rt), 1)

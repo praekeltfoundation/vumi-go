@@ -36,6 +36,16 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
         # Don't try to collect metrics.
         pass
 
+    def get_config(self, msg):
+        return self.get_message_config(msg)
+
+    def send_sms_non_reply(self, msg, config, sms_content):
+        helper_metadata = {}
+        config.get_conversation().set_go_helper_metadata(helper_metadata)
+        return self.send_to(
+            msg['from_addr'], sms_content, transport_type='sms',
+            endpoint='sms_content', helper_metadata=helper_metadata)
+
     def process_command_start(self, batch_id, conversation_type,
                               conversation_key, msg_options,
                               is_client_initiated, **extra_params):
