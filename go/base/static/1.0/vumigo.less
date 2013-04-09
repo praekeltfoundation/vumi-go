@@ -7,12 +7,12 @@ body {
 }
 
 .container {
-  background:red;
+  background:teal;
 }
 
-.header {}
 .footer {
   margin:1em;
+  background:pink;
 }
 
 .logo {
@@ -24,70 +24,18 @@ body {
     background:#333;
 }
 
-.main-menu {
-
-  .nav {
-    margin-bottom:0;
-  }
-
-
-  .nav li {
-    height:39px;
-    line-height:39px;
-    float:left;
-  }
-
-  .nav > li {
-    border-right:1px #212527 solid;
-  }
-  .nav:last-child > li:first-child {
-    border-left:1px #212527 solid; 
-  }
-
-  li a {
-    color:#0bcac3;
-    padding:0 29px;
-  }
-  .nav > li a:hover {
-    color:#fff;
-    background:transparent;
-
-    .caret {
-      border-top-color:#fff;
-    }
-  }
-
-  .nav .caret {
-    margin-bottom:10px;
-    vertical-align:middle;
-  }
-
-  .dropdown .dropdown-toggle {
-    background:transparent;
-    outline:none;
-  }
-
-  .open .dropdown-toggle {
-    color:#fff;
-    background:transparent;
-  }
-
-  .dropdown-menu {
-    .border-radius(0);
-    background:#2f3436;
-    margin-left:-5px;
-
-    a {
-      line-height:39px;
-    }
-  }
+.main-nav {
+  background:orange;
 }
 
 .content {
 
+
   background:#f2f1ed;
-  border:#212527 solid 5px;
-  .border-radius(5px);
+  // border:#212527 solid 5px;
+  // .border-radius(5px);
+
+
 
 
   .sidebar {
@@ -97,7 +45,7 @@ body {
   .header {
     height:54px;
     line-height:54px;
-    background:pink;
+
 
     h1 {
       font-size:24px;
@@ -113,9 +61,12 @@ body {
   }
 
   .actions {
-    background:#d9d8d3;
     height:50px;
     line-height:50px;
+
+    .span3, .span9 {
+      background:pink;
+    }
   }
 }
 

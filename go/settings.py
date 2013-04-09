@@ -338,7 +338,7 @@ PIPELINE_CSS = {
     'all': {
         'source_filenames': (
             '1.0/bootstrap/css/bootstrap.min.css',
-            '1.0/css/vumigo.css',
+            '1.0/vumigo.css',
         ),
         'output_filename': '1.0/all.css',
     },
