@@ -1,6 +1,45 @@
 {% extends "app.html" %}
 
-{% block main %}
+
+{% block content_extraclass %}dashboard{% endblock %}
+
+{% block content_title %}Dashboard{% endblock %}
+
+{% block content_search %}
+    Search?
+{% endblock %}
+
+{% block content_main %}
+
+<div class="row">
+    <div class="span3 sidebar">
+
+        <ul class="nav nav-list">
+            <li class="active">
+                <a href="#">All Campaigns</a>
+                <ul class="nav nav-list">
+                    <li><a href="#">Running Smoothly</a></li>
+                    <li><a href="#">Offline</a></li>
+                    <li><a href="#">Some problems</a></li>
+                    <li><a href="#">Paused</a></li>
+                    <li><a href="#">Drafts</a></li>
+                </ul>
+            </li>
+
+            <li><a href="#">Archived Campagins</a></li>
+
+            <li><a href="#">All Channels</a></li>
+            
+        </ul>
+
+    </div>
+    <div class="span8">
+    </div>
+</div>
+{%endblock %}
+
+
+{% block meh %}
 
     {% if conversations %}
 	    <div class="row">
