@@ -42,10 +42,8 @@ body {
 .content .actions {
   height: 50px;
   line-height: 50px;
+  background: #000;
 }
-.content .sidebar {
-  background: green;
-}
-.dashboard .actions .fixed-width-column {
+.dashboard .actions .sidebar {
   background: #d2d0c7;
 }
