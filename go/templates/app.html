@@ -2,7 +2,6 @@
 {% load url from future %}
 
 {% block header %}
-
 <div class="main-nav navbar clearfix">
     <div class="pull-left">
         <a class="brand" href="/">VumiGo</a>
@@ -34,26 +33,25 @@
 {% block content %}
 <div class="content {% block content_extraclass %}{% endblock %}">
 
-    <div class="header row">
-        
+    <div class="row-fluid header">
         <div class="span3 sidebar">
             <h1>{% block content_title %}Title{% endblock %}</h1>
         </div>
 
-        <div class="span8 search">
+        <div class="span9 search">
             {# this is also used for breadcrumbs in campaign setup #}
             {% block content_search %}
             {% endblock %}
         </div>
     </div>
 
-    <div class="actions row">
+    <div class="row-fluid actions">
         <div class="span3 sidebar">
             <button class="button">
                 New Campaign
             </button>
         </div>
-        <div class="span7">
+        <div class="span9">
             <button class="button">Copy</button>
             <button class="button">Archive</button>
             <button class="button">Edit</button>
