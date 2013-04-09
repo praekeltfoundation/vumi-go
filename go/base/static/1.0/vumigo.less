@@ -47,10 +47,22 @@ body {
   a {
     color:#0bcac3 !important;
     text-shadow:none !important;
+    outline:none;
   }
   a:hover {
     color:#fff !important;
+
+    .caret {
+      border-top-color:#fff !important;
+      border-bottom-color:#fff !important;
+    }
   }
+
+  .caret {
+      border-top-color:#0bcac3 !important;
+      border-bottom-color:#0bcac3 !important;
+  }
+
 
   .dropdown.open > a {
     background:transparent !important;
@@ -65,10 +77,14 @@ body {
       height:auto;
       border:0 !important;
     }
-
     a:hover {
       background:transparent;
     }
+  }
+
+  .dropdown-menu:after {
+    border-top-color:#212527 !important;
+    border-bottom-color:#212527 !important;
   }
 
   

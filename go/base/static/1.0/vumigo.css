@@ -37,9 +37,18 @@ body {
 .main-nav a {
   color: #0bcac3 !important;
   text-shadow: none !important;
+  outline: none;
 }
 .main-nav a:hover {
   color: #fff !important;
+}
+.main-nav a:hover .caret {
+  border-top-color: #fff !important;
+  border-bottom-color: #fff !important;
+}
+.main-nav .caret {
+  border-top-color: #0bcac3 !important;
+  border-bottom-color: #0bcac3 !important;
 }
 .main-nav .dropdown.open > a {
   background: transparent !important;
@@ -55,6 +64,10 @@ body {
 }
 .main-nav .dropdown-menu a:hover {
   background: transparent;
+}
+.main-nav .dropdown-menu:after {
+  border-top-color: #212527 !important;
+  border-bottom-color: #212527 !important;
 }
 .content {
   background: #f2f1ed;
