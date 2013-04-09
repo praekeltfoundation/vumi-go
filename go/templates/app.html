@@ -47,16 +47,13 @@
     </div>
 
     <div class="row-fluid actions">
-        
         <div class="span3 sidebar">
-            <button class="button">
-                New Campaign
-            </button>
+            {% block content_actions_left %}
+            {% endblock %}
         </div>
         <div class="span9">
-            <button class="button">Copy</button>
-            <button class="button">Archive</button>
-            <button class="button">Edit</button>
+            {% block content_actions_right %}
+            {% endblock %}
         </div>
     </div>
 
