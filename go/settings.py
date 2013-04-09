@@ -338,31 +338,20 @@ STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
 PIPELINE_CSS = {
     'all': {
         'source_filenames': (
-            '1.0/css/bootstrap.css',
-            '1.0/css/bootstrap-select.css',
-            '1.0/css/bootstrap-fileupload.css',
-            '1.0/css/prettyCheckable.css',
+            '1.0/bootstrap/css/bootstrap.min.css',
             '1.0/css/vumigo.css',
-                '1.0/css/sprites.css'
         ),
-        'output_filename': '1.0/css/all.css',
+        'output_filename': '1.0/all.css',
     },
 }
 
 PIPELINE_JS = {
-    'lib': {
+    'all': {
         'source_filenames': (
-            '1.0/js/lib/jquery-1.9.1.min.js',
-            '1.0/js/lib/jquery-ui-1.8.11.custom.min.js',
+            '1.0/lib/jquery-1.9.1.min.js',
+            '1.0/bootstrap/js/bootstrap.min.js',
+            '1.0/lib/jquery-ui-1.8.11.custom.min.js',
         ),
-        'output_filename': '1.0/js/lib.js'
+        'output_filename': '1.0/lib.js'
     },
-    'bootstrap': {
-        'source_filenames': (
-            '1.0/js/bootstrap/bootstrap.min.js',
-            '1.0/js/bootstrap/bootstrap-select.min.js',
-            '1.0/js/bootstrap/bootstrap-fileupload.min.js',
-        ),
-        'output_filename': '1.0/js/bootstrap.js'
-    }
 }

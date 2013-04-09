@@ -2,14 +2,17 @@
 {% load url from future %}
 
 {% block header %}
-<div class="main-menu clearfix">
-    
-    <ul class="nav pull-left">
-        <li><a href="/">Logo</a>
-        <li><a href="">Dashboard</a></li>
-        <li><a href="">Recipients</a></li>
-        <li><a href="">Help</a></li>
-    </ul>
+
+<div class="main-nav navbar clearfix">
+    <div class="pull-left">
+        <a class="brand" href="/">VumiGo</a>
+        
+        <ul class="nav">
+          <li class="active"><a href="#">Dashboard</a></li>
+          <li><a href="#">Recipients</a></li>
+          <li><a href="#">Help</a></li>
+        </ul>
+    </div>
 
     <ul class="nav pull-right">
         <li><a href="">Balance</a></li>
@@ -31,17 +34,34 @@
 {% block content %}
 <div class="content {% block content_extraclass %}{% endblock %}">
 
-    <div class="header clearfix row-fluid">
-        <div class="span4">
-            <h1> {% block content_title %}Title{% endblock %}</h1>
+    <div class="header row">
+        
+        <div class="span3 sidebar">
+            <h1>{% block content_title %}Title{% endblock %}</h1>
         </div>
-        <div class="span8 context-tasks">
-            {% block content_context_tasks %}
+
+        <div class="span8 search">
+            {# this is also used for breadcrumbs in campaign setup #}
+            {% block content_search %}
             {% endblock %}
         </div>
     </div>
 
-    {% block main %}
+    <div class="actions row">
+        <div class="span3 sidebar">
+            <button class="button">
+                New Campaign
+            </button>
+        </div>
+        <div class="span7">
+            <button class="button">Copy</button>
+            <button class="button">Archive</button>
+            <button class="button">Edit</button>
+        </div>
+    </div>
+
+
+    {% block content_main %}
     {% endblock %}
 </div>
 {% endblock %}

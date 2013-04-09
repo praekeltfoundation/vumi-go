@@ -6,6 +6,10 @@ body {
   color: #c1c1c1;
 }
 
+.container {
+  background:red;
+}
+
 .header {}
 .footer {
   margin:1em;
@@ -17,15 +21,10 @@ body {
     left:-27px;
     margin-right: -20px;
     z-index:99;
+    background:#333;
 }
 
 .main-menu {
-
-  // allot of the overrides that I'm doing here just have 
-  // a ton to do with bootstrap, 
-
-  // it's not that easy to overwrite the rules because there
-  // are so many.
 
   .nav {
     margin-bottom:0;
@@ -35,9 +34,10 @@ body {
   .nav li {
     height:39px;
     line-height:39px;
-  }
-  .nav > li {
     float:left;
+  }
+
+  .nav > li {
     border-right:1px #212527 solid;
   }
   .nav:last-child > li:first-child {
@@ -75,6 +75,7 @@ body {
   .dropdown-menu {
     .border-radius(0);
     background:#2f3436;
+    margin-left:-5px;
 
     a {
       line-height:39px;
@@ -83,36 +84,44 @@ body {
 }
 
 .content {
+
   background:#f2f1ed;
   border:#212527 solid 5px;
   .border-radius(5px);
-  
-}
 
-.content .header {
-  height:54px;
-  line-height:54px;
 
-  h1 {
-    font-size:24px;
-    font-weight:bold;
-    color:#2f3436;
-    padding:0 20px;
-    margin:0;
-    line-height:54px;
+  .sidebar {
+    //background:teal;
   }
-}
 
-.content .actions {
-  background:#d9d8d3;
-  height:50px;
-  line-height:50px;
+  .header {
+    height:54px;
+    line-height:54px;
+    background:pink;
+
+    h1 {
+      font-size:24px;
+      font-weight:bold;
+      color:#2f3436;
+      padding:0 20px;
+      margin:0;
+      line-height:54px;
+    }
+
+    .search {
+    }
+  }
+
+  .actions {
+    background:#d9d8d3;
+    height:50px;
+    line-height:50px;
+  }
 }
 
 
 .dashboard {
-  
-  .actions .left-column {
+  .actions .fixed-width-column {
     background:#d2d0c7;
   }
 }
