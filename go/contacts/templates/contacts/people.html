@@ -2,7 +2,30 @@
 {% load go_tags %}
 {% load url from future %}
 
-{% block main %}
+
+
+{% block content_extraclass %}recipients{% endblock %}
+
+{% block content_title %}Recipients{% endblock %}
+
+
+{% block content_actions_left %}
+    <button class="btn btn-primary">Import people...</button>
+{% endblock %}
+
+{% block content_actions_right %}
+    <div class="button pull-left">
+        <button class="btn">Copy</button>
+        <button class="btn">Archive</button>
+    </div>
+
+    <form class="navbar-search pull-right">
+        <input type="text" class="search-query" placeholder="Search">
+    </form>
+{% endblock %}
+
+
+{% block main1 %}
     <div class="row">
         <div class="span12">
             {% include "contacts/includes/menu.html" %}
