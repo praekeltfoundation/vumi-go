@@ -108,3 +108,10 @@ body {
 .content .actions .navbar-search {
   margin: 0;
 }
+.content .sidebar .nav-list .active > a {
+  background: #b41c30;
+  border-left: 5px #6f0f1c solid;
+  text-shadow: none;
+  font-weight: bold;
+  margin-left: -20px;
+}
