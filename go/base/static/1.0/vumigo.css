@@ -14,11 +14,47 @@ body {
   background: #333;
 }
 .main-nav {
-  height: 39px;
   margin: 0;
+  font-size: 13px;
 }
 .main-nav .brand {
   visibility: hidden;
+}
+.main-nav li {
+  height: 39px;
+  padding: 0 20px;
+  border-right: 1px #212527 solid;
+}
+.main-nav ul li:first-child {
+  padding: 0;
+}
+.main-nav ul:last-child li:first-child {
+  border-left: 1px #212527 solid;
+}
+.main-nav li.active a {
+  background: transparent !important;
+}
+.main-nav a {
+  color: #0bcac3 !important;
+  text-shadow: none !important;
+}
+.main-nav a:hover {
+  color: #fff !important;
+}
+.main-nav .dropdown.open > a {
+  background: transparent !important;
+  color: #fff !important;
+}
+.main-nav .dropdown-menu {
+  background: #2f3436;
+}
+.main-nav .dropdown-menu li {
+  padding: 0;
+  height: auto;
+  border: 0 !important;
+}
+.main-nav .dropdown-menu a:hover {
+  background: transparent;
 }
 .content {
   background: #f2f1ed;
