@@ -17,11 +17,15 @@ body {
   z-index: 99;
   background: #333;
 }
-.main-nav {
-  background: orange;
-}
 .content {
   background: #f2f1ed;
+  border: #212527 solid 5px;
+  -webkit-border-radius: 5px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 5px;
+  -moz-background-clip: padding;
+  border-radius: 5px;
+  background-clip: padding-box;
 }
 .content .header {
   height: 54px;
@@ -39,9 +43,8 @@ body {
   height: 50px;
   line-height: 50px;
 }
-.content .actions .span3,
-.content .actions .span9 {
-  background: pink;
+.content .sidebar {
+  background: green;
 }
 .dashboard .actions .fixed-width-column {
   background: #d2d0c7;
