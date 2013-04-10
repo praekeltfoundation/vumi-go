@@ -425,7 +425,7 @@ def person(request, person_key):
     if contact_store.contact_has_opted_out(contact):
         messages.error(request, 'This contact has opted out.')
 
-    return render(request, 'contacts/person.html', {
+    return render(request, 'contacts/person_add_edit.html', {
         'contact': contact,
         'contact_extra_items': contact.extra.items(),
         'form': form,
@@ -440,7 +440,7 @@ def new_person(request):
         form = ContactForm(request.POST, groups=groups)
         if form.is_valid():
             contact = contact_store.new_contact(**form.cleaned_data)
-            messages.add_message(request, messages.INFO, 'Profile Created')
+            messages.add_message(request, messages.INFO, 'Recipient created')
             return redirect(reverse('contacts:person', kwargs={
                 'person_key': contact.key}))
         else:
@@ -448,6 +448,6 @@ def new_person(request):
                 'Please correct the problem below.')
     else:
         form = ContactForm(groups=groups)
-    return render(request, 'contacts/new_person.html', {
+    return render(request, 'contacts/person_add_edit.html', {
         'form': form,
     })

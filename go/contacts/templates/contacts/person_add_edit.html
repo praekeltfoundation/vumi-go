@@ -11,18 +11,22 @@
 
 
 {% block content_main_list %}
-    <h2>New recipient</h2>
-
     {% include "base/includes/messages.html" %}
 
-    <form id="frm-person" method="post" action="">
+    <form id="frm-person" method="post" action="" class="form-horizontal">
         {% csrf_token %}
         <fieldset>
-            <legend>{{ contact }}</legend>
+            <legend>
+                {% if contact %}
+                    {{ contact }}
+                {% else %}
+                    New recipient
+                {% endif %}
+            </legend>
             {% for field in form.visible_fields %}
-            <div class="control-group {% if field.errors %}error{% endif %}">
+            <div class="control-group{% if field.errors %} error{% endif %}">
                 
-                <label class="control-label" for="{{ field.name }}">
+                <label class="control-label" for="id_{{ field.name }}">
                     {{ field.label }}
                 </label>
                 <div class="controls">
@@ -38,8 +42,9 @@
                 </div>
             </div>
             {% endfor %}
+
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary" data-loading-text="saving...">Save changes</button>
+                <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save changes</button>
             </div>
         </fieldset>
     </form>
@@ -49,26 +54,6 @@
 
 {% block main %}
 
-    <div class="row">
-        <div class="span12">
-            <div id="welcome">
-                <h1><a href="{% url 'contacts:people' %}">People &amp; Groups</a> &raquo; New Contact</h1>
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="span12">
-            
-        </div>
-    </div>
-    <div class="row">
-        <div class="span1">
-            <img src="{{ STATIC_URL }}img/avatar-empty.png" class="avatar" />
-        </div>
-        <div class="span11">
-            
-        </div>
-    </div>
 
 {% endblock %}
 
