@@ -1,10 +1,6 @@
 {% extends "contacts/base.html" %}
 {% load url from future %}
 
-{% block content_title %}
-New recipient
-{% endblock %}
-
 
 
 {% block content_actions_left %}
@@ -14,10 +10,41 @@ New recipient
 {% endblock %}
 
 
+{% block content_main_list %}
+    <h2>New recipient</h2>
 
+    {% include "base/includes/messages.html" %}
 
+    <form id="frm-person" method="post" action="">
+        {% csrf_token %}
+        <fieldset>
+            <legend>{{ contact }}</legend>
+            {% for field in form.visible_fields %}
+            <div class="control-group {% if field.errors %}error{% endif %}">
+                
+                <label class="control-label" for="{{ field.name }}">
+                    {{ field.label }}
+                </label>
+                <div class="controls">
+                    {{ field }}
+                    <span class="help-inline">
+                        {% if field.errors %}
+                            {{ field.errors|join:" " }}
+                        {% endif %}
+                        {% if field.help_text %}
+                            ({{ field.help_text }})
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" data-loading-text="saving...">Save changes</button>
+            </div>
+        </fieldset>
+    </form>
 
-
+{% endblock %}
 
 
 {% block main %}
@@ -31,7 +58,7 @@ New recipient
     </div>
     <div class="row">
         <div class="span12">
-            {% include "base/includes/messages.html" %}
+            
         </div>
     </div>
     <div class="row">
@@ -39,33 +66,7 @@ New recipient
             <img src="{{ STATIC_URL }}img/avatar-empty.png" class="avatar" />
         </div>
         <div class="span11">
-            <form name="frm-person" id="frm-person" method="post" action="" class="form-horizontal">
-             {% csrf_token %}
-                <fieldset>
-                <legend>{{contact}}</legend>
-                    {% for field in form.visible_fields %}
-                    <div class="control-group {% if field.errors %}error{% endif %}">
-                        <label class="control-label" for="{{field.name}}">
-                            {{field.label}}
-                        </label>
-                        <div class="controls">
-                            {{field}}
-                            <span class="help-inline">
-                                {% if field.errors %}
-                                    {{field.errors|join:" "}}
-                                {% endif %}
-                                {% if field.help_text %}
-                                    ({{field.help_text}})
-                                {% endif %}
-                            </span>
-                        </div>
-                    </div>
-                    {% endfor %}
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary" data-loading-text="saving...">Save changes</button>
-                    </div>
-                </fieldset>
-            </form>
+            
         </div>
     </div>
 
