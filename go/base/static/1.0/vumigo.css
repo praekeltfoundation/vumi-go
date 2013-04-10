@@ -125,3 +125,13 @@ body {
   font-weight: bold;
   margin-left: -20px;
 }
+.content .sidebar .extra-actions {
+  margin-bottom: 1em;
+}
+.content .sidebar .extra-actions a {
+  color: #0088cc;
+}
+.content .sidebar .extra-actions a:hover {
+  color: ##54a6de;
+  text-decoration: underline;
+}
