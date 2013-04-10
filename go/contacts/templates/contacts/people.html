@@ -1,50 +1,7 @@
-{% extends "app.html" %}
+{% extends "contacts/base.html" %}
 {% load go_tags %}
 {% load url from future %}
 
-
-
-{% block content_extraclass %}recipients{% endblock %}
-
-{% block content_title %}Recipients{% endblock %}
-
-
-{% block content_actions_left %}
-    <button class="btn btn-primary">Import recipients</button>
-{% endblock %}
-
-{% block content_actions_right %}
-    <div class="button pull-left">
-        <button class="btn">Delete</button>
-        <button class="btn">Export</button>
-        <button class="btn">Assign to group</button>
-    </div>
-
-    <form class="navbar-search pull-right">
-        <input type="text" class="search-query" placeholder="Search">
-    </form>
-{% endblock %}
-
-
-{% block content_main %}
-<div class="row-fluid">
-    <div class="span3 sidebar">
-
-        <div class="nav nav-list">
-            <a href="{% url 'contacts:new_person' %}">New recipient...</a>
-        </div>
-
-        <ul class="nav nav-list">
-            <li class="active"><a href="{% url 'contacts:people' %}">All recipients</a></li>
-            <li><a href="#">Smart groups</a></li>
-            <li><a href="{% url 'contacts:groups' %}">Groups</a></li>
-        </ul>
-
-    </div>
-    <div class="span9">
-    </div>
-</div>
-{%endblock %}
 
 
 
