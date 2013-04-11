@@ -132,7 +132,8 @@ class ConversationWrapper(object):
         status = yield self.get_progress_status()
         if status['sent'] == 0:
             returnValue(0)
-        returnValue(int(status['ack'] / float(status['sent']) * 100))
+        sent_to_network = status['ack'] + status['nack']
+        returnValue(int(sent_to_network / float(status['sent']) * 100))
 
     @Manager.calls_manager
     def get_groups(self):

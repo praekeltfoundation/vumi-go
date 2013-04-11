@@ -291,12 +291,21 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             })
 
     @inlineCallbacks
-    def test_get_progress_percentage(self):
+    def test_get_progress_percentage_acks(self):
         yield self.conv.start()
         self.assertEqual((yield self.conv.get_progress_percentage()), 0)
         batch_key = yield self.conv.get_latest_batch_key()
         outbound = yield self.store_outbound(batch_key, count=10)
         yield self.store_event(outbound, 'ack', count=8)
+        self.assertEqual((yield self.conv.get_progress_percentage()), 80)
+
+    @inlineCallbacks
+    def test_get_progress_percentage_nacks(self):
+        yield self.conv.start()
+        self.assertEqual((yield self.conv.get_progress_percentage()), 0)
+        batch_key = yield self.conv.get_latest_batch_key()
+        outbound = yield self.store_outbound(batch_key, count=10)
+        yield self.store_event(outbound, 'nack', count=8)
         self.assertEqual((yield self.conv.get_progress_percentage()), 80)
 
     @inlineCallbacks
