@@ -225,6 +225,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         conversation.start()
         batch_key = conversation.get_latest_batch_key()
 
+        messages = []
         for i in range(message_count):
             content = (content_generator.next()
                         if content_generator else 'hello')
@@ -241,6 +242,17 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
             self.api.mdb.add_outbound_message(msg_out, batch_id=batch_key)
             self.api.mdb.add_event(ack)
             self.api.mdb.add_event(dr)
+            messages.append((msg_in, msg_out, ack, dr))
+        return messages
 
     def get_contacts_for_conversation(self, conversation):
         return self.contact_store.get_contacts_for_conversation(conversation)
+
+    def add_app_permission(self, application):
+        permission = self.user_api.api.account_store.application_permissions(
+            uuid.uuid4().hex, application=application)
+        permission.save()
+
+        account = self.user_api.get_user_account()
+        account.applications.add(permission)
+        account.save()

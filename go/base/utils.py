@@ -123,3 +123,8 @@ def multikeysort(items, columns):
         else:
             return 0
     return sorted(items, cmp=comparer)
+
+
+def configured_conversation_types():
+    return dict((a['namespace'], a['display_name'])
+                for a in settings.VUMI_INSTALLED_APPS.itervalues())

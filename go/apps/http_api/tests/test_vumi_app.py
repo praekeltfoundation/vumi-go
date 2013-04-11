@@ -1,20 +1,23 @@
+import uuid
 import base64
 import json
 
-from twisted.internet.defer import inlineCallbacks, DeferredQueue
+from twisted.internet.defer import inlineCallbacks, DeferredQueue, returnValue
 from twisted.web.http_headers import Headers
 from twisted.web import http
+from twisted.web.server import NOT_DONE_YET
 
 from vumi.utils import http_request_full
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.message import TransportUserMessage, TransportEvent
+from vumi.tests.utils import MockHttpServer
 
 from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.api import VumiApi
+from go.vumitools.api import VumiApi, VumiApiCommand
 
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
 from go.apps.http_api.client import StreamingClient, VumiMessageReceiver
-from go.apps.http_api.resource import ConversationResource
+from go.apps.http_api.resource import ConversationResource, StreamResource
 
 
 class TestMessageReceiver(VumiMessageReceiver):
@@ -50,7 +53,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             'web_path': '/foo',
             'web_port': 0,
             'metrics_prefix': 'metrics_prefix.',
-            })
+        })
         self.app = yield self.get_application(self.config)
         self.addr = self.app.webserver.getHost()
         self.url = 'http://%s:%s%s' % (self.addr.host, self.addr.port,
@@ -85,14 +88,69 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.auth_headers = {
             'Authorization': ['Basic ' + base64.b64encode('%s:%s' % (
                 self.account.key, 'token-1'))],
-            }
+        }
 
         self.client = StreamingClient()
+
+        # Mock server to test HTTP posting of inbound messages & events
+        self.mock_push_server = MockHttpServer(self.handle_request)
+        yield self.mock_push_server.start()
+        self.push_calls = DeferredQueue()
+
+    @inlineCallbacks
+    def tearDown(self):
+        yield super(StreamingHTTPWorkerTestCase, self).tearDown()
+        yield self.mock_push_server.stop()
+
+    def handle_request(self, request):
+        self.push_calls.put(request)
+        return NOT_DONE_YET
 
     def dispatch_with_tag(self, msg, tag=None):
         if tag:
             TaggingMiddleware.add_tag_to_msg(msg, tag)
         return self.dispatch(msg)
+
+    @inlineCallbacks
+    def pull_message(self, count=1):
+        url = '%s/%s/messages.json' % (self.url, self.conversation.key)
+
+        messages = DeferredQueue()
+        errors = DeferredQueue()
+        receiver = self.client.stream(TransportUserMessage, messages.put,
+                                            errors.put, url,
+                                            Headers(self.auth_headers))
+
+        received_messages = []
+        for msg_id in range(count):
+            sent_msg = self.mkmsg_in(content='in %s' % (msg_id,),
+                                        message_id=str(msg_id))
+            yield self.dispatch_with_tag(sent_msg, self.tag)
+            recv_msg = yield messages.get()
+            received_messages.append(recv_msg)
+
+        receiver.disconnect()
+        returnValue((receiver, received_messages))
+
+    @inlineCallbacks
+    def test_proxy_buffering_headers_off(self):
+        receiver, received_messages = yield self.pull_message()
+        headers = receiver._response.headers
+        self.assertEqual(headers.getRawHeaders('x-accel-buffering'), ['no'])
+
+    @inlineCallbacks
+    def test_proxy_buffering_headers_on(self):
+        StreamResource.proxy_buffering = True
+        receiver, received_messages = yield self.pull_message()
+        headers = receiver._response.headers
+        self.assertEqual(headers.getRawHeaders('x-accel-buffering'), ['yes'])
+
+    @inlineCallbacks
+    def test_content_type(self):
+        receiver, received_messages = yield self.pull_message()
+        headers = receiver._response.headers
+        self.assertEqual(headers.getRawHeaders('content-type'),
+            ['application/json; charset=utf-8'])
 
     @inlineCallbacks
     def test_messages_stream(self):
@@ -170,7 +228,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         headers = Headers({
             'Authorization': ['Basic %s' % (base64.b64encode('foo:bar'),)],
-            })
+        })
 
         receiver = self.client.stream(TransportUserMessage, queue.put,
                                                 queue.put, url,
@@ -268,7 +326,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         metric_data = [
             ("vumi.test.v1", 1234, 'SUM'),
             ("vumi.test.v2", 3456, 'AVG'),
-            ]
+        ]
 
         url = '%s/%s/metrics.json' % (self.url, self.conversation.key)
         response = yield http_request_full(url, json.dumps(metric_data),
@@ -352,4 +410,131 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         self.assertEqual(self.app.client_manager.clients, {
             'sphex.stream.message.%s' % (self.conversation.key,): []
+        })
+
+    @inlineCallbacks
+    def test_post_inbound_message(self):
+        # Set the URL so stuff is HTTP Posted instead of streamed.
+        metadata = self.conversation.get_metadata(default={})
+        http_metadata = metadata.get('http_api')
+        http_metadata.update({
+            'push_message_url': self.mock_push_server.url,
+        })
+        self.conversation.set_metadata(metadata)
+        yield self.conversation.save()
+
+        msg = self.mkmsg_in(content='in 1', message_id='1')
+        msg_d = self.dispatch_with_tag(msg, self.tag)
+
+        req = yield self.push_calls.get()
+        posted_json_data = req.content.read()
+        req.finish()
+        yield msg_d
+
+        posted_msg = TransportUserMessage.from_json(posted_json_data)
+        self.assertEqual(posted_msg['message_id'], msg['message_id'])
+
+    @inlineCallbacks
+    def test_post_inbound_event(self):
+        # Set the URL so stuff is HTTP Posted instead of streamed.
+        metadata = self.conversation.get_metadata(default={})
+        http_metadata = metadata.get('http_api')
+        http_metadata.update({
+            'push_event_url': self.mock_push_server.url,
+        })
+        self.conversation.set_metadata(metadata)
+        yield self.conversation.save()
+
+        msg1 = self.mkmsg_out(content='in 1', message_id='1')
+        yield self.vumi_api.mdb.add_outbound_message(msg1,
+                                                        batch_id=self.batch_id)
+        ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
+        event_d = self.dispatch_event(ack1)
+
+        req = yield self.push_calls.get()
+        posted_json_data = req.content.read()
+        req.finish()
+        yield event_d
+
+        self.assertEqual(TransportEvent.from_json(posted_json_data), ack1)
+
+    @inlineCallbacks
+    def test_bad_urls(self):
+        def assert_not_found(url, headers={}):
+            d = http_request_full(self.url, method='GET', headers=headers)
+            d.addCallback(lambda r: self.assertEqual(r.code, http.NOT_FOUND))
+            return d
+
+        yield assert_not_found(self.url)
+        yield assert_not_found(self.url + '/')
+        yield assert_not_found('%s/%s' % (self.url, self.conversation.key),
+                               headers=self.auth_headers)
+        yield assert_not_found('%s/%s/' % (self.url, self.conversation.key),
+                               headers=self.auth_headers)
+        yield assert_not_found('%s/%s/foo' % (self.url, self.conversation.key),
+                               headers=self.auth_headers)
+
+    @inlineCallbacks
+    def test_send_message_command(self):
+        command = VumiApiCommand.command('worker', 'send_message',
+            command_data={
+                u'batch_id': u'batch-id',
+                u'content': u'foo',
+                u'to_addr': u'to_addr',
+                u'msg_options': {
+                    u'helper_metadata': {
+                        u'go': {
+                            u'user_account': u'account-key'
+                        },
+                        u'tag': {
+                            u'tag': [u'longcode', u'default10080']
+                        }
+                    },
+                    u'transport_name': self.transport_name,
+                    u'transport_type': self.transport_type,
+                    u'from_addr': u'default10080',
+                }
             })
+        yield self.app.consume_control_command(command)
+
+        [msg] = yield self.get_dispatched_messages()
+        self.assertEqual(msg.payload['to_addr'], "to_addr")
+        self.assertEqual(msg.payload['from_addr'], "default10080")
+        self.assertEqual(msg.payload['content'], "foo")
+        self.assertEqual(msg.payload['transport_name'], self.transport_name)
+        self.assertEqual(msg.payload['transport_type'], self.transport_type)
+        self.assertEqual(msg.payload['message_type'], "user_message")
+        self.assertEqual(msg.payload['helper_metadata']['go']['user_account'],
+                                                            'account-key')
+        self.assertEqual(msg.payload['helper_metadata']['tag']['tag'],
+                                                ['longcode', 'default10080'])
+
+    @inlineCallbacks
+    def test_process_command_send_message_in_reply_to(self):
+        msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
+        yield self.vumi_api.mdb.add_inbound_message(msg)
+        command = VumiApiCommand.command('worker', 'send_message',
+            command_data={
+                u'batch_id': u'batch-id',
+                u'content': u'foo',
+                u'to_addr': u'to_addr',
+                u'msg_options': {
+                    u'helper_metadata': {
+                        u'go': {
+                            u'user_account': u'account-key'
+                        },
+                        u'tag': {
+                            u'tag': [u'longcode', u'default10080']
+                        }
+                    },
+                    u'transport_name': u'smpp_transport',
+                    u'in_reply_to': msg['message_id'],
+                    u'transport_type': u'sms',
+                    u'from_addr': u'default10080',
+                }
+            })
+        yield self.app.consume_control_command(command)
+        [sent_msg] = self.get_dispatched_messages()
+        self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
+        self.assertEqual(sent_msg['content'], 'foo')
+        self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])

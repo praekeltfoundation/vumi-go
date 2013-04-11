@@ -1,5 +1,4 @@
 from datetime import date
-import urllib
 
 from django.test.client import Client
 from django.core import mail
@@ -426,13 +425,10 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
                 'token': full_token,
             })
 
-        self.assertRedirects(response, '%s?%s' % (
-            reverse('bulk_message:confirm', kwargs={
-                'conversation_key': conversation.key,
-            }), urllib.urlencode({
-                'token': full_token,
-                'success': 1
-            })))
+        self.assertContains(response, conversation.subject)
+        self.assertContains(response, conversation.message)
+        self.assertContains(response, "Conversation confirmed")
+        self.assertContains(response, "Conversation started succesfully!")
 
         # reload the conversation because batches are cached.
         conversation = self.user_api.get_wrapped_conversation(conversation.key)
@@ -468,6 +464,19 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
 
         self.assertEqual(cmd, expected_cmd)
 
+        # check token was consumed so it can't be re-used to send the
+        # conversation messages again
+        self.assertEqual(self.tm.get(token), None)
+
+        # check repost fails because token has been deleted
+        response = self.client.post(reverse('bulk_message:confirm', kwargs={
+            'conversation_key': conversation.key,
+            }), {
+                'token': full_token,
+            })
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(self.tm.get(token), None)
+
 
 class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
 
@@ -482,12 +491,16 @@ class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
         return self.user_api.wrap_conversation(conv)
 
     def test_actions_on_inbound_only(self):
-        self.put_sample_messages_in_conversation(self.user_api,
+        messages = self.put_sample_messages_in_conversation(self.user_api,
                                                     self.conv_key, 1)
+        [msg_in, msg_out, ack, dr] = messages[0]
+
         response = self.client.get(reverse('bulk_message:show', kwargs={
             'conversation_key': self.conv_key
             }), {'direction': 'inbound'})
         self.assertContains(response, 'Reply')
+        self.assertContains(response, 'href="#reply-%s"' % (
+            msg_in['message_id'],))
 
         response = self.client.get(reverse('bulk_message:show', kwargs={
             'conversation_key': self.conv_key

@@ -114,6 +114,14 @@ class TokenManager(object):
         token_data['extra_params'] = json.loads(token_data['extra_params'])
         returnValue(token_data)
 
+    def parse_full_token(self, full_token):
+        user_token_length, _, token = full_token.partition('-')
+        if not user_token_length.isdigit():
+            raise MalformedToken()
+        user_token = token[0:int(user_token_length)]
+        system_token = token[int(user_token_length):]
+        return user_token, system_token
+
     @Manager.calls_manager
     def verify_get(self, full_token):
         """
@@ -123,11 +131,7 @@ class TokenManager(object):
         NOTE: The only reason we're using the @Manager.calls_manager decorator
                 here is to ensure that errors are raised consistently.
         """
-        user_token_length, _, token = full_token.partition('-')
-        if not user_token_length.isdigit():
-            raise MalformedToken()
-        user_token = token[0:int(user_token_length)]
-        system_token = token[int(user_token_length):]
+        user_token, system_token = self.parse_full_token(full_token)
         result = yield self.get(user_token, verify=system_token)
         returnValue(result)
 

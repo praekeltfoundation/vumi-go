@@ -82,7 +82,10 @@ class GoMessageMetadata(object):
                 self._go_metadata['batch_key'] = batch.key
                 returnValue(batch)
             else:
-                log.error('Cannot find batch for tag_info %s' % (tag_info,))
+                # TODO: change this back to .error() once close a
+                #       conversation doesn't cause it to be triggered for
+                #       every message.
+                log.msg('Cannot find batch for tag_info %s' % (tag_info,))
 
     @inlineCallbacks
     def get_batch_key(self):

@@ -215,7 +215,7 @@ class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
     use_riak = True
 
     def _worker_name(self):
-        return self.application_class.worker_name
+        return getattr(self.application_class, 'worker_name', 'unnamed')
 
     def _conversation_type(self):
         # This is a guess based on worker_name.
@@ -267,9 +267,11 @@ class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
         return d
 
     @inlineCallbacks
-    def get_application(self, *args, **kw):
+    def get_application(self, config, *args, **kw):
+        if 'worker_name' not in config:
+            config['worker_name'] = self._worker_name()
         worker = yield super(AppWorkerTestCase, self).get_application(
-            *args, **kw)
+            config, *args, **kw)
         if hasattr(worker, 'vumi_api'):
             self._persist_riak_managers.append(worker.vumi_api.manager)
             self._persist_redis_managers.append(worker.vumi_api.redis)

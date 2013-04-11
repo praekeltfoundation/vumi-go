@@ -40,6 +40,7 @@ class UserAccount(Model):
     event_handler_config = Json(default=list)
     msisdn = Unicode(max_length=255, null=True)
     confirm_start_conversation = Boolean(default=False)
+    email_summary = Unicode(max_length=255, null=True)
     # `tags` is allowed to be null so that we can detect freshly-migrated
     # accounts and populate the tags from active conversations. A new account
     # has no legacy tags or conversations, so we start with an empty list and

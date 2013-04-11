@@ -1,3 +1,4 @@
+# -*- test-case-name: go.apps.http_api.tests.test_vumi_app -*-
 import json
 import copy
 
@@ -5,8 +6,7 @@ from functools import partial
 
 from twisted.web import resource, http, util
 from twisted.web.server import NOT_DONE_YET
-from twisted.web.guard import HTTPAuthSessionWrapper
-from twisted.web.guard import BasicCredentialFactory
+from twisted.web.guard import HTTPAuthSessionWrapper, BasicCredentialFactory
 from twisted.cred import portal
 from twisted.internet.error import ConnectionDone
 from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
@@ -46,6 +46,9 @@ class BaseResource(resource.Resource):
 class StreamResource(BaseResource):
 
     message_class = None
+    proxy_buffering = False
+    encoding = 'utf-8'
+    content_type = 'application/json; charset=%s' % (encoding,)
 
     def __init__(self, worker, conversation_key):
         BaseResource.__init__(self, worker, conversation_key)
@@ -55,9 +58,17 @@ class StreamResource(BaseResource):
         self._rk = self.routing_key % {
             'transport_name': self.worker.transport_name,
             'conversation_key': self.conversation_key,
-            }
+        }
 
     def render_GET(self, request):
+        resp_headers = request.responseHeaders
+        resp_headers.addRawHeader('Content-Type', self.content_type)
+        # Turn off proxy buffering, nginx will otherwise buffer our streaming
+        # output which makes clients sad.
+        # See #proxy_buffering at
+        # http://nginx.org/en/docs/http/ngx_http_proxy_module.html
+        resp_headers.addRawHeader('X-Accel-Buffering',
+            'yes' if self.proxy_buffering else 'no')
         # Twisted's Agent has trouble closing a connection when the server has
         # sent the HTTP headers but not the body, but sometimes we need to
         # close a connection when only the headers have been received.
@@ -82,7 +93,7 @@ class StreamResource(BaseResource):
 
     def publish(self, request, message):
         line = u'%s\n' % (message.to_json(),)
-        request.write(line.encode('utf-8'))
+        request.write(line.encode(self.encoding))
 
 
 class InvalidAggregate(errors.VumiError):
@@ -170,6 +181,9 @@ class MessageStream(StreamResource):
                             != TransportUserMessage.SESSION_CLOSE)
         helper_metadata = msg_options.pop('helper_metadata')
         transport_type = msg_options.pop('transport_type')
+        # We need to pop this out of the msg_options, should it exist
+        # because otherwise `msg.reply(...)` is unhappy
+        transport_name = msg_options.pop('transport_name', None)
         from_addr = msg_options.pop('from_addr')
 
         # NOTE:
@@ -184,7 +198,7 @@ class MessageStream(StreamResource):
         msg['helper_metadata'].update(helper_metadata)
         msg['from_addr'] = from_addr
         msg['transport_type'] = transport_type
-        msg['transport_name'] = self.worker.transport_name
+        msg['transport_name'] = transport_name
 
         yield self.worker._publish_message(msg)
 
@@ -282,6 +296,9 @@ class ConversationResource(resource.Resource):
     def release_request(self, err, user_id):
         return self.redis.decr(self.key(user_id))
 
+    def render(self, request):
+        return resource.NoResource().render(request)
+
     def getChild(self, path, request):
         return util.DeferredResource(self.getDeferredChild(path, request))
 
@@ -317,17 +334,20 @@ class StreamingResource(resource.Resource):
         resource.Resource.__init__(self)
         self.worker = worker
 
+    def render(self, request):
+        return resource.NoResource().render(request)
+
     def getChild(self, conversation_key, request):
         if conversation_key:
-
-            resource = ConversationResource(self.worker, conversation_key)
-
+            res = ConversationResource(self.worker, conversation_key)
             checker = ConversationAccessChecker(self.worker.vumi_api,
                                                 conversation_key)
-            realm = ConversationRealm(resource)
+            realm = ConversationRealm(res)
             p = portal.Portal(realm, [checker])
 
             factory = BasicCredentialFactory("Conversation Stream")
             protected_resource = HTTPAuthSessionWrapper(p, [factory])
 
             return protected_resource
+        else:
+            return resource.NoResource()

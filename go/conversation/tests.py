@@ -18,7 +18,6 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         super(ConversationTestCase, self).setUp()
         self.setup_riak_fixtures()
 
-        # self.conversation = self.user.conversation_set.latest()
         self.client = Client()
         self.client.login(username=self.user.username, password='password')
         self.csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
@@ -39,6 +38,8 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         self.assertNotContains(response, self.TEST_SUBJECT)
 
     def test_index_search_on_type(self):
+        self.add_app_permission(u'go.apps.surveys')
+        self.add_app_permission(u'go.apps.bulk_message')
         conversation = self.get_wrapped_conv()
         conversation.c.conversation_type = u'survey'
         conversation.save()
@@ -131,17 +132,42 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(tag_batch(msg_tag), None)
 
     def test_pagination(self):
-        # Create 9, we already have 1 from setUp()
-        for i in range(9):
+        # Create 13, we already have 1 from setUp()
+        for i in range(12):
             self.conv_store.new_conversation(
                 conversation_type=u'bulk_message', subject=self.TEST_SUBJECT,
                 message=u"", delivery_class=u"sms",
                 delivery_tag_pool=u"longcode")
         response = self.client.get(reverse('conversations:index'))
-        # CONVERSATIONS_PER_PAGE = 6
-        self.assertContains(response, self.TEST_SUBJECT, count=6)
+        # CONVERSATIONS_PER_PAGE = 12
+        self.assertContains(response, self.TEST_SUBJECT, count=12)
         response = self.client.get(reverse('conversations:index'), {'p': 2})
-        self.assertContains(response, self.TEST_SUBJECT, count=4)
+        self.assertContains(response, self.TEST_SUBJECT, count=1)
+
+    def test_pagination_with_query_and_type(self):
+        self.add_app_permission(u'go.apps.surveys')
+        self.add_app_permission(u'go.apps.bulk_message')
+        # Create 13, we already have 1 from setUp()
+        for i in range(12):
+            self.conv_store.new_conversation(
+                conversation_type=u'bulk_message', subject=self.TEST_SUBJECT,
+                message=u"", delivery_class=u"sms",
+                delivery_tag_pool=u"longcode")
+        response = self.client.get(reverse('conversations:index'), {
+            'query': self.TEST_SUBJECT,
+            'p': 2,
+            'conversation_type': 'bulk_message',
+            'conversation_status': 'draft',
+            })
+
+        qs_parts = ("?p=1&amp;query=Test+Conversation" +
+                    "&amp;conversation_status=draft" +
+                    "&amp;conversation_type=bulk_message").split("&amp;")
+        for part in qs_parts:
+            # twice, once for the page back link and once for
+            # the numbered link.
+            self.assertContains(response, part, count=2)
+        self.assertNotContains(response, '?p=2')
 
     def test_scrub_tokens(self):
         content = 'Please visit http://example.com/t/6be226/ ' \

@@ -5,6 +5,7 @@ from StringIO import StringIO
 
 from django.views.generic import TemplateView
 from django.core.paginator import PageNotAnInteger, EmptyPage
+from django import forms
 
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
@@ -240,15 +241,12 @@ class ConfirmConversationView(ConversationView):
     template_name = 'confirm'
 
     def get(self, request, conversation):
-        """
-        NOTE:   we need the hack involving `success` in the query string here
-                because we don't have a good way to telling whether a
-                conversation has started yet or not. The current implementation
-                does a guess based on whether or not the conversation has any
-                batch keys assigned, which in the current scenario breaks since
-                sending a conversation confirmation SMS will assign a batch key
-                while not actually starting the conversation.
-        """
+        # TODO: Ideally we should display a nice message to the user
+        #       if they access the page for a conversation that has
+        #       already been started.  Currently we just display a 404
+        #       page if the token no longer exists because it has
+        #       already been used.
+
         token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = request.GET.get('token')
         token_data = token_manager.verify_get(token)
@@ -257,8 +255,8 @@ class ConfirmConversationView(ConversationView):
         return self.render_to_response({
             'form': ConfirmConversationForm(initial={'token': token}),
             'conversation': conversation,
-            'success': request.GET.get('success'),  # FIXME
-            })
+            'success': False,
+        })
 
     def post(self, request, conversation):
         token = request.POST.get('token')
@@ -268,27 +266,29 @@ class ConfirmConversationView(ConversationView):
             raise Http404
 
         params = token_data.get('extra_params', {})
+        user_token, sys_token = token_manager.parse_full_token(token)
         confirmation_form = ConfirmConversationForm(request.POST)
+        success = False
         if confirmation_form.is_valid():
             try:
                 batch_id = conversation.get_latest_batch_key()
-                conversation.start(batch_id=batch_id, **params)
-                messages.info(request, '%s started succesfully!' % (
-                                            self.conversation_display_name,))
-                return redirect('%s?%s' % (
-                    self.get_view_url('confirm',
-                        conversation_key=conversation.key),
-                    urllib.urlencode({
-                        'token': token,
-                        'success': 1,
-                        })))
+                if token_manager.delete(user_token):
+                    conversation.start(batch_id=batch_id, **params)
+                    messages.info(request, '%s started succesfully!' %
+                                  (self.conversation_display_name,))
+                    success = True
+                else:
+                    messages.warning("Conversation already confirmed!")
             except ConversationSendError as error:
                 messages.error(request, str(error))
+        else:
+            messages.error('Invalid confirmation form.')
 
         return self.render_to_response({
             'form': confirmation_form,
             'conversation': conversation,
-            })
+            'success': success,
+        })
 
 
 class ShowConversationView(ConversationView):
@@ -365,8 +365,12 @@ class EditConversationView(ConversationView):
     edit_conversation_forms = ()
 
     def _render_forms(self, request, conversation, edit_forms):
+        def sum_media(form_list):
+            return sum((f.media for f in form_list), forms.Media())
+
         return self.render_to_response({
                 'conversation': conversation,
+                'edit_forms_media': sum_media(edit_forms),
                 'edit_forms': edit_forms,
                 })
 

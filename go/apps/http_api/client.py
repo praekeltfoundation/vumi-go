@@ -47,8 +47,8 @@ class VumiMessageReceiver(basic.LineReceiver):
         # the PotentialDataLoss here is because Twisted didn't receive a
         # content length header, which is normal because we're streaming.
         if (reason.check(ResponseDone, ResponseFailed, http.PotentialDataLoss)
-            and self._response is not None
-            and not self._wait_for_response.called):
+                and self._response is not None
+                and not self._wait_for_response.called):
             self._wait_for_response.callback(self._response)
         else:
             self.errback(reason)
