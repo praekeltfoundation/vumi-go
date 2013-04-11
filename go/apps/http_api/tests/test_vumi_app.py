@@ -1,3 +1,4 @@
+import uuid
 import base64
 import json
 
@@ -11,6 +12,7 @@ from vumi.message import TransportUserMessage, TransportEvent
 from vumi.tests.utils import MockHttpServer
 
 from go.vumitools.tests.utils import AppWorkerTestCase
+from go.vumitools.api import VumiApiCommand
 
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
 from go.apps.http_api.client import StreamingClient, VumiMessageReceiver
@@ -447,3 +449,68 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                                headers=self.auth_headers)
         yield assert_not_found('%s/%s/foo' % (self.url, self.conversation.key),
                                headers=self.auth_headers)
+
+    @inlineCallbacks
+    def test_send_message_command(self):
+        command = VumiApiCommand.command('worker', 'send_message',
+            command_data={
+                u'batch_id': u'batch-id',
+                u'content': u'foo',
+                u'to_addr': u'to_addr',
+                u'msg_options': {
+                    u'helper_metadata': {
+                        u'go': {
+                            u'user_account': u'account-key'
+                        },
+                        u'tag': {
+                            u'tag': [u'longcode', u'default10080']
+                        }
+                    },
+                    u'transport_name': self.transport_name,
+                    u'transport_type': self.transport_type,
+                    u'from_addr': u'default10080',
+                }
+            })
+        yield self.app.consume_control_command(command)
+
+        [msg] = yield self.get_dispatched_messages()
+        self.assertEqual(msg.payload['to_addr'], "to_addr")
+        self.assertEqual(msg.payload['from_addr'], "default10080")
+        self.assertEqual(msg.payload['content'], "foo")
+        self.assertEqual(msg.payload['transport_name'], self.transport_name)
+        self.assertEqual(msg.payload['transport_type'], self.transport_type)
+        self.assertEqual(msg.payload['message_type'], "user_message")
+        self.assertEqual(msg.payload['helper_metadata']['go']['user_account'],
+                                                            'account-key')
+        self.assertEqual(msg.payload['helper_metadata']['tag']['tag'],
+                                                ['longcode', 'default10080'])
+
+    @inlineCallbacks
+    def test_process_command_send_message_in_reply_to(self):
+        msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
+        yield self.vumi_api.mdb.add_inbound_message(msg)
+        command = VumiApiCommand.command('worker', 'send_message',
+            command_data={
+                u'batch_id': u'batch-id',
+                u'content': u'foo',
+                u'to_addr': u'to_addr',
+                u'msg_options': {
+                    u'helper_metadata': {
+                        u'go': {
+                            u'user_account': u'account-key'
+                        },
+                        u'tag': {
+                            u'tag': [u'longcode', u'default10080']
+                        }
+                    },
+                    u'transport_name': u'smpp_transport',
+                    u'in_reply_to': msg['message_id'],
+                    u'transport_type': u'sms',
+                    u'from_addr': u'default10080',
+                }
+            })
+        yield self.app.consume_control_command(command)
+        [sent_msg] = self.get_dispatched_messages()
+        self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
+        self.assertEqual(sent_msg['content'], 'foo')
+        self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
