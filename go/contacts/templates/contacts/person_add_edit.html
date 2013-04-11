@@ -11,8 +11,6 @@
 
 
 {% block content_main_list %}
-    {% include "base/includes/messages.html" %}
-
     <form id="frm-person" method="post" action="" class="form-horizontal">
         {% csrf_token %}
         <fieldset>
@@ -51,11 +49,6 @@
 
 {% endblock %}
 
-
-{% block main %}
-
-
-{% endblock %}
 
 {% block extra_js %}
     <script type="text/javascript">

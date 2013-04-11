@@ -17,16 +17,24 @@ recipients
     <button class="btn btn-primary">Import recipients</button>
 {% endblock %}
 
+{% block content_breadcrumbs %}
+<form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
+    <input type="text" id="search-filter-input" name="q" value="{{query|default:''}}" placeholder="Find people..." class="input-large search-query">
+    <button type="submit" id="search-filter-btn" class="btn">Search</button>
+    {% if query %}
+    <span class="help-block">
+        Create a <a href="#createSmartGroup" data-toggle="modal">Smart Group</a> using these results.
+    </span>
+    {% endif %}
+</form>
+{% endblock %}
+
 {% block content_actions_right %}
     <div class="button pull-left">
         <button class="btn">Delete</button>
         <button class="btn">Export</button>
         <button class="btn">Assign to group</button>
     </div>
-
-    <form class="navbar-search pull-right">
-        <input type="text" class="search-query" placeholder="Search">
-    </form>
 {% endblock %}
 
 
@@ -44,6 +52,9 @@ recipients
             <li><a href="{% url 'contacts:groups' %}">Groups</a></li>
         </ul>
 
+    </div>
+    <div class="span9">
+        {% include "base/includes/messages.html" %}
     </div>
     <div class="span9">
         {% block content_main_list %}
