@@ -348,31 +348,30 @@ def _people(request):
     # TODO: A lot of this stuff is duplicated from the similar group search
     #       in the groups() view. We need a function that does that to avoid
     #       the duplication.
-    selected_letter = request.GET.get('l')
     query = request.GET.get('q', '')
     if query:
         if not ':' in query:
             query = 'name:%s' % (query,)
-        limit = int(request.GET.get('limit', 100))
-        keys = contact_store.contacts.raw_search(query).get_keys()
-        if limit:
-            messages.info(request,
-                'Showing up to %s random contacts matching your query' % (
-                    limit,))
-            keys = keys[:limit]
-        selected_contacts = []
-        for contact_bunch in contact_store.contacts.load_all_bunches(keys):
-            selected_contacts.extend(contact_bunch)
-    elif selected_letter:
-        selected_contacts = contact_store.filter_contacts_on_surname(
-            selected_letter)
+
+            keys = contact_store.contacts.raw_search(query).get_keys()
     else:
-        selected_contacts = []
+        keys = contact_store.list_contacts()
+
+
+    limit = int(request.GET.get('limit', 100))
+    if limit:
+        messages.info(request,
+            'Showing up to %s random contacts matching your query' % (
+                limit,))
+        keys = keys[:limit]
+
+    selected_contacts = []
+    for contact_bunch in contact_store.contacts.load_all_bunches(keys):
+        selected_contacts.extend(contact_bunch)
 
     smart_group_form = SmartGroupForm(initial={'query': query})
     return render(request, 'contacts/people.html', {
         'query': request.GET.get('q'),
-        'selected_letter': selected_letter,
         'selected_contacts': selected_contacts,
         'upload_contacts_form': upload_contacts_form,
         'select_contact_group_form': select_contact_group_form,
