@@ -7,23 +7,33 @@
 <table class="table table-bordered table-striped">
     <thead>
     <tr>
+        <th><input type="checkbox"></th>
+        <th>Phone number</th>
+        <th>Name</th>
         <th>Surname</th>
-        <th>Mobile</th>
-        <th>Location</th>
+        <th>Email</th>
+        <th>Groups</th>
     </tr>
     </thead>
     <tbody>
     {% for contact in selected_contacts %}
-         <tr>
+         <tr data-key="{{ contact.key }}">
             <td>
-                <a href="{% url 'contacts:person' person_key=contact.key %}">{{ contact.name }} {{ contact.surname }}</a>
+                <input type="checkbox">
             </td>
             <td>
-                <a href="">{{ contact.msisdn }}</a>
+                {{ contact.msisdn }}
             </td>
             <td>
-                <a href="">{{ contact.location }}</a>
+                {{ contact.name }}
             </td>
+            <td>
+                {{ contact.surname }}
+            </td>
+            <td>
+                {{ contact.email }}
+            </td>
+            <td></td>
          </tr>
     {% empty %}
         <tr>
@@ -48,23 +58,6 @@
 
 
 
-{% block main1 %}
-    <div class="row">
-        <div class="span12">
-            <form id="search-filter" name="search-filter" action="" method="get" class="well form-search">
-                <input type="text" id="search-filter-input" name="q" value="{{query|default:''}}" placeholder="Find people..." class="input-large search-query">
-                <button type="submit" id="search-filter-btn" class="btn">Search</button>
-                {% if query %}
-                <span class="help-block">
-                    Create a <a href="#createSmartGroup" data-toggle="modal">Smart Group</a> using these results.
-                </span>
-                {% endif %}
-            </form>
-
-        </div>
-    </div>
-    
-{% endblock %}
 
 {% block modals %}
     {% include "contacts/includes/tools.html" with show_groups=1 save_group=1 %}
