@@ -11,6 +11,15 @@
 </div>
 {% endblock %}
 
+{% block content_breadcrumbs %}
+<form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
+    <input type="text" id="search-filter-input" name="q" value="{{query|default:''}}" placeholder="Find people..." class="input-large search-query">
+    <button type="submit" id="search-filter-btn" class="btn">Search</button>
+    {% if query %}
+        Create a <a href="#createSmartGroup" data-toggle="modal">Smart Group</a> using these results.
+    {% endif %}
+</form>
+{% endblock %}
 
 
 {% block content_main_list %}
