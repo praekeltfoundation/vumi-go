@@ -4,7 +4,7 @@
 
 
 {% block content_main_list %}
-<table class="table table-bordered table-striped">
+<table class="table table-bordered toggle-table" data-id="people-list">
     <thead>
     <tr>
         <th><input type="checkbox"></th>
@@ -52,10 +52,54 @@
     {% endfor %}
     </tbody>
 </table>
-
 {% include "base/includes/pagination.html" %}
 {% endblock %}
 
+{% block extrascript %}
+
+{{ block.super }}
+
+<script type="text/javascript">
+    $(function() {
+
+        $('.toggle-table input[type="checkbox"]').click(function(e) {
+
+            $cb = $(this);
+            $tbody = $cb.parents('.toggle-table').find('tbody');
+            $cbs = $tbody.find('input[type="checkbox"]');
+
+            // select all / none
+            if ($cb.parents('thead').length) {
+                
+                $cbs.prop('checked', $cb.prop('checked'));
+
+            } else {
+
+                // are all checkboxes checked.
+                all = true
+                $cbs.each(function() {
+                    if (!$(this).is(':checked')) {
+                        all = false
+                        return false;
+                    }
+                });
+
+                $cb.parents('.toggle-table')
+                    .find('thead input[type="checkbox"]').prop('checked', all)
+
+                
+
+
+            }
+
+            // enable / disable buttons based on selection
+
+        });
+
+
+    });
+</script>
+{% endblock %}
 
 
 
