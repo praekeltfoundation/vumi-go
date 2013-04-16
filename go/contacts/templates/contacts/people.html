@@ -3,6 +3,15 @@
 {% load url from future %}
 
 
+{% block content_title %}
+<a href="{% url 'contacts:people' %}">Recipients</a>
+{% endblock %}
+
+{% block content_actions_left %}
+<button class="btn btn-primary">Import recipients</button>
+{% endblock %}
+
+
 {% block content_actions_right %}
 <div class="button pull-left">
     <button class="btn" disabled="disabled" data-table-id="people">Delete</button>
