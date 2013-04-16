@@ -3,6 +3,12 @@
 {% load url from future %}
 
 
+{% block content_title %}
+<a href="{% url 'contacts:groups' %}">Groups</a>
+{% endblock %}
+
+
+
 {% block content_actions_left %}
 <button class="btn btn-primary" data-toggle="modal" data-target="#newGroup">New group</button>
 {% endblock %}
@@ -18,10 +24,6 @@
 
 
 {% block content_actions_right %}
-<div class="button pull-left">
-    <button class="btn" disabled="disabled" data-table-id="groups">Delete</button>
-    <button class="btn" disabled="disabled" data-table-id="groups">Export</button>
-</div>
 {% endblock %}
 
 
