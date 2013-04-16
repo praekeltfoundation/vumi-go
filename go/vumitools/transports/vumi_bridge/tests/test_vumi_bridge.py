@@ -26,7 +26,6 @@ class GoConversationTransportTestCase(TransportTestCase):
             'conversation_key': 'conversation-key',
             'access_token': 'access-token',
         })
-        print config
         self.transport = yield self.get_transport(config)
         self._pending_reqs = []
         # when the transport fires up it stars two new connections,
