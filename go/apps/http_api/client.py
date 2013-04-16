@@ -15,12 +15,14 @@ class VumiMessageReceiver(basic.LineReceiver):
     delimiter = '\n'
     message_class = Message
 
-    def __init__(self, message_class, callback, errback):
+    def __init__(self, message_class, callback, errback, on_disconnect=None):
         self.message_class = message_class
         self.callback = callback
         self.errback = errback
         self._response = None
         self._wait_for_response = Deferred()
+        self._on_disconnect = on_disconnect or (lambda *a: None)
+        self.disconnecting = False
 
     def get_response(self):
         return self._wait_for_response
@@ -50,10 +52,11 @@ class VumiMessageReceiver(basic.LineReceiver):
                 and self._response is not None
                 and not self._wait_for_response.called):
             self._wait_for_response.callback(self._response)
-        else:
-            self.errback(reason)
+        if not self.disconnecting:
+            self._on_disconnect(reason)
 
     def disconnect(self):
+        self.disconnecting = True
         if self.transport and self.transport._producer is not None:
             self.transport._producer.loseConnection()
             self.transport._stopProxying()
@@ -64,8 +67,11 @@ class StreamingClient(object):
     def __init__(self):
         self.agent = Agent(reactor)
 
-    def stream(self, message_class, callback, errback, url, headers=None):
-        receiver = VumiMessageReceiver(message_class, callback, errback)
+    def stream(
+        self, message_class, callback, errback, url, headers=None,
+            on_disconnect=None):
+        receiver = VumiMessageReceiver(
+            message_class, callback, errback, on_disconnect=on_disconnect)
         d = self.agent.request('GET', url, headers)
         d.addCallback(lambda response: receiver.handle_response(response))
         d.addErrback(log.err)

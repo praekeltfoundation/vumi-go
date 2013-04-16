@@ -6,11 +6,14 @@ from twisted.internet.defer import inlineCallbacks, DeferredQueue, returnValue
 from twisted.web.http_headers import Headers
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
+from twisted.web.client import ResponseDone
+from twisted.python.failure import Failure
 
 from vumi.utils import http_request_full
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.message import TransportUserMessage, TransportEvent
 from vumi.tests.utils import MockHttpServer
+from vumi import log
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApi, VumiApiCommand
@@ -19,24 +22,7 @@ from go.apps.http_api.vumi_app import StreamingHTTPWorker
 from go.apps.http_api.client import StreamingClient, VumiMessageReceiver
 from go.apps.http_api.resource import ConversationResource, StreamResource
 
-
-class TestMessageReceiver(VumiMessageReceiver):
-    message_class = TransportUserMessage
-
-    def __init__(self, *args, **kwargs):
-        VumiMessageReceiver.__init__(self, *args, **kwargs)
-        self.inbox = DeferredQueue()
-        self.errors = DeferredQueue()
-
-    def onMessage(self, message):
-        self.inbox.put(message)
-
-    def onError(self, failure):
-        self.errors.put(failure)
-
-
-class TestEventReceiver(TestMessageReceiver):
-    message_class = TransportEvent
+from mock import Mock
 
 
 class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
@@ -111,25 +97,30 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             TaggingMiddleware.add_tag_to_msg(msg, tag)
         return self.dispatch(msg)
 
+    def dispatch_message(self, msg_id):
+        sent_msg = self.mkmsg_in(
+            content='in %s' % (msg_id,), message_id=str(msg_id))
+        return self.dispatch_with_tag(sent_msg, self.tag)
+
     @inlineCallbacks
-    def pull_message(self, count=1):
+    def pull_message(self, count=1, disconnect=True, on_disconnect=None):
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
 
         messages = DeferredQueue()
         errors = DeferredQueue()
         receiver = self.client.stream(
             TransportUserMessage, messages.put, errors.put, url,
-            Headers(self.auth_headers))
+            Headers(self.auth_headers),
+            on_disconnect=on_disconnect)
 
         received_messages = []
         for msg_id in range(count):
-            sent_msg = self.mkmsg_in(
-                content='in %s' % (msg_id,), message_id=str(msg_id))
-            yield self.dispatch_with_tag(sent_msg, self.tag)
+            yield self.dispatch_message(msg_id)
             recv_msg = yield messages.get()
             received_messages.append(recv_msg)
 
-        receiver.disconnect()
+        if disconnect:
+            receiver.disconnect()
         returnValue((receiver, received_messages))
 
     @inlineCallbacks
@@ -543,3 +534,16 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
+
+    @inlineCallbacks
+    def test_callback_on_disconnect(self):
+        mock = Mock()
+        receiver, received_messages = yield self.pull_message(
+            disconnect=False, on_disconnect=mock)
+        reason = Failure(ResponseDone())
+        receiver.connectionLost(reason)
+        call = mock.call_args
+        args, kwargs = call
+        (reason,) = args
+        self.assertTrue(reason.check(ResponseDone))
+        receiver.disconnect()
