@@ -24,16 +24,16 @@
 {% block content_main_list %}
 <table class="table table-bordered table-awesome" data-table-id="groups">
     <thead>
-    <tr>
-        <th><input type="checkbox"></th>
-        <th>Name</th>
-        <th>No. of recipients</th>
-        <th>Date created</th>
-    </tr>
+        <tr>
+            <th><input type="checkbox"></th>
+            <th>Name</th>
+            <th>No. of recipients</th>
+            <th>Date created</th>
+        </tr>
     </thead>
     <tbody>
     {% for group in page.object_list %}
-         <tr data-url="{% url 'contacts:group' group_key=group.key %}">
+        <tr data-url="{% url 'contacts:group' group_key=group.key %}">
             <td>
                 <input type="checkbox">
             </td>
@@ -44,18 +44,17 @@
                 {{ group.backlinks.contacts|length }}
             </td>
             <td>
-                
             </td>
-         </tr>
+        </tr>
     {% empty %}
         <tr>
-          <td colspan="4">
-          {% if query %}
-            No group names match <strong>{{query}}</strong>
-          {% else %}
-            You don't have any groups yet.
-          {% endif %}
-          </td>
+            <td colspan="4">
+            {% if query %}
+                No group names match <strong>{{query}}</strong>
+            {% else %}
+                You don't have any groups yet.
+            {% endif %}
+            </td>
         </tr>
     {% endfor %}
     </tbody>
@@ -71,53 +70,6 @@
         tableAwesome('.table-awesome');
     });
 </script>
-{% endblock %}
-
-
-
-
-
-
-{% block main2 %}
-    <div class="row">
-        <div class="span12">
-      			<form id="search-filter" name="search-filter" action="" method="get" class="well form-search">
-                <input type="text" id="search-filter-input" name="query" value="{{query|default:''}}" placeholder="Find Groups..." class="input-large search-query">
-                <button type="submit" id="search-filter-btn" class="btn">Search</button>
-            </form>
-            <table class="table table-bordered table-striped">
-            <thead>
-            <tr>
-              <th>Name</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for group in page.object_list %}
-               <tr>
-                     <td>
-                        <a href="{% url 'contacts:group' group_key=group.key %}">{{group.name}}</a>
-                        {% if group.is_smart_group %}
-                            <span class="label label-info">Smart Group</span>
-                        {% endif %}
-                        {# <span class="label label-info pull-right">{{group.backlinks.contacts|length}}</span> #}
-                     </td>
-               </tr>
-            {% empty %}
-                {% if query %}
-                 <tr>
-                     <td>No group names match <strong>{{query}}</strong>.</td>
-                 </tr>
-                {% else %}
-                 <tr>
-                     <td>You don't have any groups yet.</td>
-                 </tr>
-                 {% endif %}
-              {% endfor %}
-            </tbody>
-            </table>
-        </div>
-    </div>
-    {% include "base/includes/pagination.html" %}
 {% endblock %}
 
 {% block modals %}
