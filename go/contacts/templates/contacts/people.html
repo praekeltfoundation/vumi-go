@@ -3,6 +3,16 @@
 {% load url from future %}
 
 
+{% block content_actions_right %}
+<div class="button pull-left">
+    <button class="btn" disabled="disabled" data-id="people-list">Delete</button>
+    <button class="btn" disabled="disabled" data-id="people-list">Export</button>
+    <button class="btn" disabled="disabled" data-id="people-list">Assign to group</button>
+</div>
+{% endblock %}
+
+
+
 {% block content_main_list %}
 <table class="table table-bordered toggle-table" data-id="people-list">
     <thead>
@@ -73,27 +83,29 @@
                 
                 $cbs.prop('checked', $cb.prop('checked'));
 
-            } else {
-
-                // are all checkboxes checked.
-                all = true
-                $cbs.each(function() {
-                    if (!$(this).is(':checked')) {
-                        all = false
-                        return false;
-                    }
-                });
-
-                $cb.parents('.toggle-table')
-                    .find('thead input[type="checkbox"]').prop('checked', all)
-
-                
-
-
             }
+            
+            all = true
+            one = false
+            $cbs.each(function() {
+                //
+                if (!$(this).is(':checked')) {
+                    all = false
+                } else {
+                    one = true
+                }
 
-            // enable / disable buttons based on selection
+                if (all == true && one == true) {
+                    return false;
+                }
+                
+            });
+            $cb.parents('.toggle-table')
+                .find('thead input[type="checkbox"]').prop('checked', all)
 
+            // toggle the buttons associated with this table
+            id = $cb.parents('.toggle-table').attr('data-id');
+            $('button[data-id="' + id + '"]').prop('disabled', !one);
         });
 
 
