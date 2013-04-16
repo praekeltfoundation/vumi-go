@@ -351,6 +351,8 @@ PIPELINE_JS = {
             '1.0/lib/jquery-1.9.1.min.js',
             '1.0/bootstrap/js/bootstrap.min.js',
             '1.0/lib/jquery-ui-1.8.11.custom.min.js',
+
+            '1.0/lib/go.table.js',
         ),
         'output_filename': '1.0/lib.js'
     },

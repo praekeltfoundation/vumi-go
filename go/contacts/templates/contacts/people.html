@@ -5,16 +5,16 @@
 
 {% block content_actions_right %}
 <div class="button pull-left">
-    <button class="btn" disabled="disabled" data-id="people-list">Delete</button>
-    <button class="btn" disabled="disabled" data-id="people-list">Export</button>
-    <button class="btn" disabled="disabled" data-id="people-list">Assign to group</button>
+    <button class="btn" disabled="disabled" data-table-id="people">Delete</button>
+    <button class="btn" disabled="disabled" data-table-id="people">Export</button>
+    <button class="btn" disabled="disabled" data-table-id="people">Assign to group</button>
 </div>
 {% endblock %}
 
 
 
 {% block content_main_list %}
-<table class="table table-bordered toggle-table" data-id="people-list">
+<table class="table table-bordered table-awesome" data-table-id="people">
     <thead>
     <tr>
         <th><input type="checkbox"></th>
@@ -71,44 +71,7 @@
 
 <script type="text/javascript">
     $(function() {
-
-        $('.toggle-table input[type="checkbox"]').click(function(e) {
-
-            $cb = $(this);
-            $tbody = $cb.parents('.toggle-table').find('tbody');
-            $cbs = $tbody.find('input[type="checkbox"]');
-
-            // select all / none
-            if ($cb.parents('thead').length) {
-                
-                $cbs.prop('checked', $cb.prop('checked'));
-
-            }
-            
-            all = true
-            one = false
-            $cbs.each(function() {
-                //
-                if (!$(this).is(':checked')) {
-                    all = false
-                } else {
-                    one = true
-                }
-
-                if (all == true && one == true) {
-                    return false;
-                }
-                
-            });
-            $cb.parents('.toggle-table')
-                .find('thead input[type="checkbox"]').prop('checked', all)
-
-            // toggle the buttons associated with this table
-            id = $cb.parents('.toggle-table').attr('data-id');
-            $('button[data-id="' + id + '"]').prop('disabled', !one);
-        });
-
-
+        tableAwesome('.table-awesome');
     });
 </script>
 {% endblock %}
