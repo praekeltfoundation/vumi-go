@@ -27,7 +27,7 @@
     </thead>
     <tbody>
     {% for contact in selected_contacts %}
-         <tr data-key="{{ contact.key }}">
+         <tr data-url="{% url 'contacts:person' contact.key %}">
             <td>
                 <input type="checkbox">
             </td>
@@ -65,18 +65,15 @@
 {% include "base/includes/pagination.html" %}
 {% endblock %}
 
+
 {% block extrascript %}
-
 {{ block.super }}
-
 <script type="text/javascript">
     $(function() {
         tableAwesome('.table-awesome');
     });
 </script>
 {% endblock %}
-
-
 
 {% block modals %}
     {% include "contacts/includes/tools.html" with show_groups=1 save_group=1 %}
