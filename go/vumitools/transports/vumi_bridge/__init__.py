@@ -1,4 +1,4 @@
 from go.vumitools.transports.vumi_bridge.vumi_bridge import (
-    GoConverationTransport)
+    GoConversationTransport)
 
-__all__ = ['GoConverationTransport']
+__all__ = ['GoConversationTransport']
