@@ -77,8 +77,18 @@ class GoConversationTransportTestCase(TransportTestCase):
             '/conversation-key/events.json')
 
     @inlineCallbacks
-    def test_messages_json(self):
+    def test_receiving_messages(self):
         msg = self.mkmsg_in()
         msg['timestamp'] = datetime.utcnow()
         self.message_req.write(msg.to_json().encode('utf-8') + '\n')
-        print (yield self.get_dispatched_messages())
+        [received_msg] = yield self.wait_for_dispatched_messages(1)
+        self.assertEqual(received_msg['message_id'], msg['message_id'])
+
+    @inlineCallbacks
+    def test_receiving_events(self):
+        ack = self.mkmsg_ack()
+        ack['event_id'] = 'event-id'
+        ack['timestamp'] = datetime.utcnow()
+        self.event_req.write(ack.to_json().encode('utf-8') + '\n')
+        [received_ack] = yield self.wait_for_dispatched_events(1)
+        self.assertEqual(received_ack['event_id'], ack['event_id'])

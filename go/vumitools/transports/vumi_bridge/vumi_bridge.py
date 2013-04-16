@@ -85,5 +85,5 @@ class GoConversationTransport(Transport):
     def handle_inbound_message(self, message):
         return self.publish_message(**message.payload)
 
-    def handle_inbound_event(self):
-        pass
+    def handle_inbound_event(self, event):
+        return self.publish_event(**event.payload)
