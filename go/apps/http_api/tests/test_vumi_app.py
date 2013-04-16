@@ -13,13 +13,12 @@ from vumi.utils import http_request_full
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.message import TransportUserMessage, TransportEvent
 from vumi.tests.utils import MockHttpServer
-from vumi import log
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApi, VumiApiCommand
 
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
-from go.apps.http_api.client import StreamingClient, VumiMessageReceiver
+from go.apps.http_api.client import StreamingClient
 from go.apps.http_api.resource import ConversationResource, StreamResource
 
 from mock import Mock
@@ -97,11 +96,6 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             TaggingMiddleware.add_tag_to_msg(msg, tag)
         return self.dispatch(msg)
 
-    def dispatch_message(self, msg_id):
-        sent_msg = self.mkmsg_in(
-            content='in %s' % (msg_id,), message_id=str(msg_id))
-        return self.dispatch_with_tag(sent_msg, self.tag)
-
     @inlineCallbacks
     def pull_message(self, count=1, disconnect=True, on_disconnect=None):
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
@@ -115,7 +109,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         received_messages = []
         for msg_id in range(count):
-            yield self.dispatch_message(msg_id)
+            sent_msg = self.mkmsg_in(
+                content='in %s' % (msg_id,), message_id=str(msg_id))
+            yield self.dispatch_with_tag(sent_msg, self.tag)
             recv_msg = yield messages.get()
             received_messages.append(recv_msg)
 
