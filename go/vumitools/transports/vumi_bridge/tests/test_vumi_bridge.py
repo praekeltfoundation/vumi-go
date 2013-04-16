@@ -6,6 +6,7 @@ from twisted.web.server import NOT_DONE_YET
 
 from vumi.tests.utils import MockHttpServer
 from vumi.transports.tests.utils import TransportTestCase
+from vumi.message import TransportUserMessage
 
 from go.vumitools.transports.vumi_bridge import GoConversationTransport
 
@@ -92,3 +93,13 @@ class GoConversationTransportTestCase(TransportTestCase):
         self.event_req.write(ack.to_json().encode('utf-8') + '\n')
         [received_ack] = yield self.wait_for_dispatched_events(1)
         self.assertEqual(received_ack['event_id'], ack['event_id'])
+
+    @inlineCallbacks
+    def test_sending_messages(self):
+        msg = self.mkmsg_out()
+        self.dispatch(msg)
+        req = yield self.get_next_request()
+        self.assertEqual(
+            TransportUserMessage.from_json(req.content.read()),
+            msg)
+        req.finish()

@@ -2,11 +2,14 @@
 
 import base64
 
+from twisted.internet.defer import inlineCallbacks
 from twisted.web.http_headers import Headers
+from twisted.web import http
 
 from vumi.transports import Transport
 from vumi.config import ConfigText
 from vumi.message import TransportUserMessage, TransportEvent
+from vumi.utils import http_request_full
 from vumi import log
 
 from go.apps.http_api.client import StreamingClient
@@ -47,12 +50,12 @@ class GoConversationTransport(Transport):
         self.message_client = self.client.stream(
             TransportUserMessage, self.handle_inbound_message,
             log.error, self.get_url('messages.json'),
-            headers=self.get_auth_headers(),
+            headers=Headers(self.get_auth_headers()),
             on_disconnect=self.reconnect_api_clients)
         self.event_client = self.client.stream(
             TransportEvent, self.handle_inbound_event,
             log.error, self.get_url('events.json'),
-            headers=self.get_auth_headers(),
+            headers=Headers(self.get_auth_headers()),
             on_disconnect=self.reconnect_api_clients)
 
     def reconnect_api_clients(self, reason):
@@ -65,10 +68,10 @@ class GoConversationTransport(Transport):
 
     def get_auth_headers(self):
         config = self.get_static_config()
-        return Headers({
+        return {
             'Authorization': ['Basic ' + base64.b64encode('%s:%s' % (
                 config.account_key, config.access_token))],
-        })
+        }
 
     def get_url(self, path):
         config = self.get_static_config()
@@ -79,8 +82,22 @@ class GoConversationTransport(Transport):
     def teardown_transport(self):
         self.disconnect_api_clients()
 
-    def handle_outbound_message(self):
-        pass
+    @inlineCallbacks
+    def handle_outbound_message(self, message):
+
+        headers = {
+            'Content-Type': 'application/json; charset=utf-8',
+        }
+        headers.update(self.get_auth_headers())
+
+        resp = yield http_request_full(
+            self.get_url('messages.json'),
+            data=message.to_json().encode('utf-8'),
+            headers=headers,
+            method='PUT')
+        if resp.code != http.OK:
+            log.warning('Unexpected status code: %s, body: %s' % (
+                resp.code, resp.delivered_body))
 
     def handle_inbound_message(self, message):
         return self.publish_message(**message.payload)
