@@ -2,8 +2,10 @@ import requests
 
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 
+from go.base.models import UserProfile
 from go.conversation.base import ConversationViews
 from go.apps.jsbox.forms import JsboxForm, JsboxAppConfigFormset
 
@@ -15,7 +17,7 @@ class JsboxConversationViews(ConversationViews):
     edit_conversation_forms = (
         ('jsbox', JsboxForm),
         ('jsbox_app_config', JsboxAppConfigFormset),
-        )
+    )
 
 
 @login_required
@@ -24,3 +26,11 @@ def cross_domain_xhr(request):
     url = request.POST.get('url', None)
     r = requests.get(url)
     return HttpResponse(r.text, status=r.status_code)
+
+
+@csrf_exempt
+def post_commit(request, account_key, conversation_key):
+    user_profile = get_object_or_404(
+        UserProfile, user_account=account_key)
+    print user_profile
+    return HttpResponse('ok')
