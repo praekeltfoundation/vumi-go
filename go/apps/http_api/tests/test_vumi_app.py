@@ -93,15 +93,14 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         return self.dispatch(msg)
 
     @inlineCallbacks
-    def pull_message(self, count=1, disconnect=True, on_disconnect=None):
+    def pull_message(self, count=1):
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
 
         messages = DeferredQueue()
         errors = DeferredQueue()
         receiver = self.client.stream(
             TransportUserMessage, messages.put, errors.put, url,
-            Headers(self.auth_headers),
-            on_disconnect=on_disconnect)
+            Headers(self.auth_headers))
 
         received_messages = []
         for msg_id in range(count):
@@ -111,8 +110,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             recv_msg = yield messages.get()
             received_messages.append(recv_msg)
 
-        if disconnect:
-            receiver.disconnect()
+        receiver.disconnect()
         returnValue((receiver, received_messages))
 
     @inlineCallbacks
