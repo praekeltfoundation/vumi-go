@@ -170,25 +170,25 @@ class TestContactStore(GoPersistenceMixin, TestCase):
         yield check_contact_for_addr('gtalk', u'random@gmail.com', contact)
         yield check_contact_for_addr('twitter', u'random', contact)
 
-    def test_contact_for_addr_unsupported_transports(self):
+    def test_contact_for_addr_for_unsupported_transports(self):
         self.assertFailure(
             self.store.contact_for_addr('bad_transport_type', u'234234'),
             RuntimeError)
 
     @inlineCallbacks
-    def test_contact_for_addr_no_contact_found(self):
+    def test_contact_for_addr_for_nonexistent_contacts(self):
         contact = yield self.store.contact_for_addr('sms', u'27831234567')
         self.assertEqual(contact, None)
 
     @inlineCallbacks
-    def test_contact_for_addr_contact_creation(self):
+    def test_contact_for_addr_for_contact_creation(self):
         @inlineCallbacks
         def check_contact_for_addr(deliv_class, addr, **kw):
             contact = yield self.store.contact_for_addr(
                 deliv_class, addr, create=True)
             self.assertEqual(contact.user_account.key, self.account.key)
-            for field, value in kw.iteritems():
-                self.assertEqual(getattr(contact, field), value)
+            for field, expected_value in kw.iteritems():
+                self.assertEqual(getattr(contact, field), expected_value)
 
         yield check_contact_for_addr('sms', u'+27831234567',
                                      msisdn=u'+27831234567')

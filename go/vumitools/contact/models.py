@@ -260,7 +260,7 @@ class ContactStore(PerAccountStore):
 
         if create:
             contact_id = uuid4().get_hex()
-            returnValue((yield self.contacts(
+            returnValue(self.contacts(
                 contact_id,
                 user_account=self.user_account_key,
-                **contact_fields)))
+                **contact_fields))
