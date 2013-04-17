@@ -156,3 +156,15 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
     def test_handle_update_for_nonexistent_contacts(self):
         reply = yield self.dispatch_command('update', key='213123')
         self.check_reply(reply, success=False)
+
+    @inlineCallbacks
+    def test_handle_new(self):
+        reply = yield self.dispatch_command('new',
+            name=u'A Random',
+            surname=u'Jackal',
+            msisdn=u'+27831234567')
+
+        self.check_contact_reply(reply,
+            name=u'A Random',
+            surname=u'Jackal',
+            msisdn=u'+27831234567')

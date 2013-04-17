@@ -68,6 +68,13 @@ class ContactsResource(SandboxResource):
             success=True,
             contact=contact.get_data()))
 
+    def _filter_contact_fields(self, command):
+        """
+        Returns only the fields of a command that are Contact model fields.
+        """
+        return dict((k, command[k])for k in Contact.field_descriptors.keys()
+                    if k in command)
+
     @inlineCallbacks
     def handle_update(self, api, command):
         try:
@@ -77,16 +84,22 @@ class ContactsResource(SandboxResource):
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        # get the contact the fields to be updated
-        fields = dict(
-            (k, command[k]) for k in Contact.field_descriptors.keys()
-            if k in command)
+        contact = yield self._contact_store_for_api(api).update_contact(
+            command['key'], **self._filter_contact_fields(command))
 
-        contact_store = self._contact_store_for_api(api)
-        contact = yield contact_store.update_contact(command['key'], **fields)
         if contact is None:
             returnValue(self.reply(
                 command, success=False, reason="Contact not found"))
+
+        returnValue(self.reply(
+            command,
+            success=True,
+            contact=contact.get_data()))
+
+    @inlineCallbacks
+    def handle_new(self, api, command):
+        contact = yield self._contact_store_for_api(api).new_contact(
+            **self._filter_contact_fields(command))
 
         returnValue(self.reply(
             command,
