@@ -11,32 +11,13 @@ from vumi.utils import http_request_full
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.message import TransportUserMessage, TransportEvent
 from vumi.tests.utils import MockHttpServer
+from vumi.transports.vumi_bridge.client import StreamingClient
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApi, VumiApiCommand
 
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
-from go.apps.http_api.client import StreamingClient, VumiMessageReceiver
 from go.apps.http_api.resource import ConversationResource, StreamResource
-
-
-class TestMessageReceiver(VumiMessageReceiver):
-    message_class = TransportUserMessage
-
-    def __init__(self, *args, **kwargs):
-        VumiMessageReceiver.__init__(self, *args, **kwargs)
-        self.inbox = DeferredQueue()
-        self.errors = DeferredQueue()
-
-    def onMessage(self, message):
-        self.inbox.put(message)
-
-    def onError(self, failure):
-        self.errors.put(failure)
-
-
-class TestEventReceiver(TestMessageReceiver):
-    message_class = TransportEvent
 
 
 class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
@@ -70,8 +51,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.conversation.c.delivery_tag_pool = u'pool'
         self.tag = yield self.conversation.acquire_tag()
 
-        self.batch_id = yield self.vumi_api.mdb.batch_start([self.tag],
-                                    user_account=unicode(self.account.key))
+        self.batch_id = yield self.vumi_api.mdb.batch_start(
+            [self.tag], user_account=unicode(self.account.key))
         self.conversation.batches.add_key(self.batch_id)
         self.conversation.set_metadata({
             'http_api': {
