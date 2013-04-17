@@ -6,8 +6,6 @@ from twisted.internet.defer import inlineCallbacks, DeferredQueue, returnValue
 from twisted.web.http_headers import Headers
 from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
-from twisted.web.client import ResponseDone
-from twisted.python.failure import Failure
 
 from vumi.utils import http_request_full
 from vumi.middleware.tagger import TaggingMiddleware
@@ -20,8 +18,6 @@ from go.vumitools.api import VumiApi, VumiApiCommand
 
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
 from go.apps.http_api.resource import ConversationResource, StreamResource
-
-from mock import Mock
 
 
 class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
@@ -530,15 +526,3 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
-
-    @inlineCallbacks
-    def test_callback_on_disconnect(self):
-        mock = Mock()
-        receiver, received_messages = yield self.pull_message(
-            disconnect=False, on_disconnect=mock)
-        reason = Failure(ResponseDone())
-        receiver.connectionLost(reason)
-        args, kwargs = mock.call_args
-        (reason,) = args
-        self.assertTrue(reason.check(ResponseDone))
-        receiver.disconnect()
