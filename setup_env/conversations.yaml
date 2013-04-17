@@ -63,8 +63,9 @@
   delivery_tag: '*120*10002#'
   metadata:
     jsbox_app_config:
-      source_url: "source URL goes here"
-      config: {}
+      config:
+        source_url: "source URL goes here"
+        value: ''
     jsbox:
       source_url: "source URL goes here"
       javascript: |
