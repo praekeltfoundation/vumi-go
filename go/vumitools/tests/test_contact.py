@@ -150,3 +150,53 @@ class TestContactStore(GoPersistenceMixin, TestCase):
                 name=u'Contact', surname=u'Foo %d' % i, msisdn=u'12345')
         count = yield self.store.count_contacts_for_group(group)
         self.assertEqual(count, 1)
+
+    @inlineCallbacks
+    def test_contact_for_addr(self):
+        @inlineCallbacks
+        def check_contact_for_addr(delivery_class, addr, expected_contact):
+            contact = yield self.store.contact_for_addr(delivery_class, addr)
+            self.assert_models_equal(expected_contact, contact)
+
+        contact = yield self.store.new_contact(
+            name=u'A Random',
+            surname=u'Person',
+            msisdn=u'+27831234567',
+            gtalk_id=u'random@gmail.com',
+            twitter_handle=u'random')
+
+        yield check_contact_for_addr('sms', u'+27831234567', contact)
+        yield check_contact_for_addr('ussd', u'+27831234567', contact)
+        yield check_contact_for_addr('gtalk', u'random@gmail.com', contact)
+        yield check_contact_for_addr('twitter', u'random', contact)
+
+    def test_contact_for_addr_unsupported_transports(self):
+        self.assertFailure(
+            self.store.contact_for_addr('bad_transport_type', u'234234'),
+            RuntimeError)
+
+    @inlineCallbacks
+    def test_contact_for_addr_no_contact_found(self):
+        contact = yield self.store.contact_for_addr('sms', u'27831234567')
+        self.assertEqual(contact, None)
+
+    @inlineCallbacks
+    def test_contact_for_addr_contact_creation(self):
+        @inlineCallbacks
+        def check_contact_for_addr(deliv_class, addr, **kw):
+            contact = yield self.store.contact_for_addr(
+                deliv_class, addr, create=True)
+            self.assertEqual(contact.user_account.key, self.account.key)
+            for field, value in kw.iteritems():
+                self.assertEqual(getattr(contact, field), value)
+
+        yield check_contact_for_addr('sms', u'+27831234567',
+                                     msisdn=u'+27831234567')
+        yield check_contact_for_addr('ussd', u'+27831234567',
+                                     msisdn=u'+27831234567')
+        yield check_contact_for_addr('gtalk', u'random@gmail.com',
+                                     gtalk_id=u'random@gmail.com',
+                                     msisdn=u'unknown')
+        yield check_contact_for_addr('twitter', u'random',
+                                     twitter_handle=u'random',
+                                     msisdn=u'unknown')

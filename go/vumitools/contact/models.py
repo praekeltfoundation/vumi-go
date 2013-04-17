@@ -233,38 +233,34 @@ class ContactStore(PerAccountStore):
         returnValue(opt_out)
 
     @Manager.calls_manager
-    def contact_for_addr(self, delivery_class, addr):
+    def contact_for_addr(self, delivery_class, addr, create=False):
+        """
+        Returns a contact from a delivery class and address, or None if the
+        contact does not exist.
+        """
+
+        # TODO: change when we have proper address types in vumi
         if delivery_class in ('sms', 'ussd'):
             addr = '+' + addr.lstrip('+')
+            contact_fields = {'msisdn': addr}
             keys = yield self.contacts.search(msisdn=addr).get_keys()
-            if keys:
-                contact = yield self.contacts.load(keys[0])
-                returnValue(contact)
-            contact_id = uuid4().get_hex()
-            returnValue(self.contacts(contact_id,
-                                      user_account=self.user_account_key,
-                                      msisdn=addr))
         elif delivery_class == 'gtalk':
             addr = addr.partition('/')[0]
+            contact_fields = {'gtalk_id': addr, 'msisdn': u'unknown'}
             keys = yield self.contacts.search(gtalk_id=addr).get_keys()
-            if keys:
-                contact = yield self.contacts.load(keys[0])
-                returnValue(contact)
-            contact_id = uuid4().get_hex()
-            contact = self.contacts(contact_id,
-                                    user_account=self.user_account_key,
-                                    gtalk_id=addr, msisdn=u'unknown')
-            returnValue(contact)
         elif delivery_class == 'twitter':
+            contact_fields = {'twitter_handle': addr, 'msisdn': u'unknown'}
             keys = yield self.contacts.search(twitter_handle=addr).get_keys()
-            if keys:
-                contact = yield self.contacts.load(keys[0])
-                returnValue(contact)
-            contact_id = uuid4().get_hex()
-            contact = self.contacts(contact_id,
-                                    user_account=self.user_account_key,
-                                    twitter_handle=addr, msisdn=u'unknown')
-            returnValue(contact)
         else:
             raise RuntimeError("Unsupported transport_type %r"
                                % (delivery_class,))
+
+        if keys:
+            returnValue((yield self.contacts.load(keys[0])))
+
+        if create:
+            contact_id = uuid4().get_hex()
+            returnValue((yield self.contacts(
+                contact_id,
+                user_account=self.user_account_key,
+                **contact_fields)))
