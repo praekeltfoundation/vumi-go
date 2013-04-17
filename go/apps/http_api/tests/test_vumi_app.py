@@ -56,8 +56,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         })
         self.app = yield self.get_application(self.config)
         self.addr = self.app.webserver.getHost()
-        self.url = 'http://%s:%s%s' % (self.addr.host, self.addr.port,
-                                        self.config['web_path'])
+        self.url = 'http://%s:%s%s' % (
+            self.addr.host, self.addr.port, self.config['web_path'])
 
         # get the router to test
         self.vumi_api = yield VumiApi.from_config_async(self.config)
@@ -117,14 +117,14 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         messages = DeferredQueue()
         errors = DeferredQueue()
-        receiver = self.client.stream(TransportUserMessage, messages.put,
-                                            errors.put, url,
-                                            Headers(self.auth_headers))
+        receiver = self.client.stream(
+            TransportUserMessage, messages.put, errors.put, url,
+            Headers(self.auth_headers))
 
         received_messages = []
         for msg_id in range(count):
-            sent_msg = self.mkmsg_in(content='in %s' % (msg_id,),
-                                        message_id=str(msg_id))
+            sent_msg = self.mkmsg_in(
+                content='in %s' % (msg_id,), message_id=str(msg_id))
             yield self.dispatch_with_tag(sent_msg, self.tag)
             recv_msg = yield messages.get()
             received_messages.append(recv_msg)
@@ -149,7 +149,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     def test_content_type(self):
         receiver, received_messages = yield self.pull_message()
         headers = receiver._response.headers
-        self.assertEqual(headers.getRawHeaders('content-type'),
+        self.assertEqual(
+            headers.getRawHeaders('content-type'),
             ['application/json; charset=utf-8'])
 
     @inlineCallbacks
@@ -158,9 +159,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         messages = DeferredQueue()
         errors = DeferredQueue()
-        receiver = self.client.stream(TransportUserMessage, messages.put,
-                                            errors.put, url,
-                                            Headers(self.auth_headers))
+        receiver = self.client.stream(
+            TransportUserMessage, messages.put, errors.put, url,
+            Headers(self.auth_headers))
 
         msg1 = self.mkmsg_in(content='in 1', message_id='1')
         yield self.dispatch_with_tag(msg1, self.tag)
@@ -188,14 +189,14 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                                             Headers(self.auth_headers))
 
         msg1 = self.mkmsg_out(content='in 1', message_id='1')
-        yield self.vumi_api.mdb.add_outbound_message(msg1,
-                                                        batch_id=self.batch_id)
+        yield self.vumi_api.mdb.add_outbound_message(
+            msg1, batch_id=self.batch_id)
         ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
         yield self.dispatch_event(ack1)
 
         msg2 = self.mkmsg_out(content='in 1', message_id='2')
-        yield self.vumi_api.mdb.add_outbound_message(msg2,
-                                                        batch_id=self.batch_id)
+        yield self.vumi_api.mdb.add_outbound_message(
+            msg2, batch_id=self.batch_id)
         ack2 = self.mkmsg_ack(user_message_id=msg2['message_id'])
         yield self.dispatch_event(ack2)
 
@@ -213,8 +214,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
 
         queue = DeferredQueue()
-        receiver = self.client.stream(TransportUserMessage, queue.put,
-                                                queue.put, url)
+        receiver = self.client.stream(
+            TransportUserMessage, queue.put, queue.put, url)
         response = yield receiver.get_response()
         self.assertEqual(response.code, http.UNAUTHORIZED)
         self.assertEqual(response.headers.getRawHeaders('www-authenticate'), [
@@ -230,9 +231,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             'Authorization': ['Basic %s' % (base64.b64encode('foo:bar'),)],
         })
 
-        receiver = self.client.stream(TransportUserMessage, queue.put,
-                                                queue.put, url,
-                                                headers)
+        receiver = self.client.stream(
+            TransportUserMessage, queue.put, queue.put, url, headers)
         response = yield receiver.get_response()
         self.assertEqual(response.code, http.UNAUTHORIZED)
         self.assertEqual(response.headers.getRawHeaders('www-authenticate'), [
@@ -286,8 +286,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_in_reply_to(self):
         inbound_msg = self.mkmsg_in(content='in 1', message_id='1')
-        yield self.vumi_api.mdb.add_inbound_message(inbound_msg,
-                                                        batch_id=self.batch_id)
+        yield self.vumi_api.mdb.add_inbound_message(
+            inbound_msg, batch_id=self.batch_id)
 
         msg = {
             'content': 'foo',
@@ -329,8 +329,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         ]
 
         url = '%s/%s/metrics.json' % (self.url, self.conversation.key)
-        response = yield http_request_full(url, json.dumps(metric_data),
-                                            self.auth_headers, method='PUT')
+        response = yield http_request_full(
+            url, json.dumps(metric_data), self.auth_headers, method='PUT')
 
         self.assertEqual(response.code, http.OK)
 
@@ -345,10 +345,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         concurrency = ConversationResource.CONCURRENCY_LIMIT
         queue = DeferredQueue()
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-        max_receivers = [self.client.stream(TransportUserMessage, queue.put,
-                                            queue.put, url,
-                                            Headers(self.auth_headers))
-                            for _ in range(concurrency)]
+        max_receivers = [self.client.stream(
+            TransportUserMessage, queue.put, queue.put, url,
+            Headers(self.auth_headers)) for _ in range(concurrency)]
 
         for i in range(concurrency):
             msg = self.mkmsg_in(content='in %s' % (i,), message_id='%s' % (i,))
@@ -356,12 +355,12 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             received = yield queue.get()
             self.assertEqual(msg['message_id'], received['message_id'])
 
-        maxed_out_resp = yield http_request_full(url, method='GET',
-                                                headers=self.auth_headers)
+        maxed_out_resp = yield http_request_full(
+            url, method='GET', headers=self.auth_headers)
 
         self.assertEqual(maxed_out_resp.code, 403)
-        self.assertTrue('Too many concurrent connections'
-                            in maxed_out_resp.delivered_body)
+        self.assertTrue(
+            'Too many concurrent connections' in maxed_out_resp.delivered_body)
 
         [r.disconnect() for r in max_receivers]
 
@@ -373,8 +372,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         queue = DeferredQueue()
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-        receiver = self.client.stream(TransportUserMessage, queue.put,
-            queue.put, url, Headers(self.auth_headers))
+        receiver = self.client.stream(
+            TransportUserMessage, queue.put, queue.put, url,
+            Headers(self.auth_headers))
 
         for i in range(10):
             received = yield queue.get()
@@ -384,8 +384,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_health_response(self):
-        health_url = 'http://%s:%s%s' % (self.addr.host, self.addr.port,
-            self.config['health_path'])
+        health_url = 'http://%s:%s%s' % (
+            self.addr.host, self.addr.port, self.config['health_path'])
 
         response = yield http_request_full(health_url, method='GET')
         self.assertEqual(response.delivered_body, '0')
@@ -395,8 +395,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         queue = DeferredQueue()
         stream_url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-        stream_receiver = self.client.stream(TransportUserMessage, queue.put,
-            queue.put, stream_url, Headers(self.auth_headers))
+        stream_receiver = self.client.stream(
+            TransportUserMessage, queue.put, queue.put, stream_url,
+            Headers(self.auth_headers))
 
         yield queue.get()
 
@@ -446,8 +447,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.conversation.save()
 
         msg1 = self.mkmsg_out(content='in 1', message_id='1')
-        yield self.vumi_api.mdb.add_outbound_message(msg1,
-                                                        batch_id=self.batch_id)
+        yield self.vumi_api.mdb.add_outbound_message(
+            msg1, batch_id=self.batch_id)
         ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
         event_d = self.dispatch_event(ack1)
 
@@ -476,7 +477,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_send_message_command(self):
-        command = VumiApiCommand.command('worker', 'send_message',
+        command = VumiApiCommand.command(
+            'worker', 'send_message',
             command_data={
                 u'batch_id': u'batch-id',
                 u'content': u'foo',
@@ -504,16 +506,19 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(msg.payload['transport_name'], self.transport_name)
         self.assertEqual(msg.payload['transport_type'], self.transport_type)
         self.assertEqual(msg.payload['message_type'], "user_message")
-        self.assertEqual(msg.payload['helper_metadata']['go']['user_account'],
-                                                            'account-key')
-        self.assertEqual(msg.payload['helper_metadata']['tag']['tag'],
-                                                ['longcode', 'default10080'])
+        self.assertEqual(
+            msg.payload['helper_metadata']['go']['user_account'],
+            'account-key')
+        self.assertEqual(
+            msg.payload['helper_metadata']['tag']['tag'],
+            ['longcode', 'default10080'])
 
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
         yield self.vumi_api.mdb.add_inbound_message(msg)
-        command = VumiApiCommand.command('worker', 'send_message',
+        command = VumiApiCommand.command(
+            'worker', 'send_message',
             command_data={
                 u'batch_id': u'batch-id',
                 u'content': u'foo',
