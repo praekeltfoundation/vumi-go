@@ -538,8 +538,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             disconnect=False, on_disconnect=mock)
         reason = Failure(ResponseDone())
         receiver.connectionLost(reason)
-        call = mock.call_args
-        args, kwargs = call
+        args, kwargs = mock.call_args
         (reason,) = args
         self.assertTrue(reason.check(ResponseDone))
         receiver.disconnect()

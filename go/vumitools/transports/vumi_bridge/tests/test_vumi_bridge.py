@@ -1,4 +1,5 @@
 import base64
+import json
 from datetime import datetime
 
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -87,19 +88,38 @@ class GoConversationTransportTestCase(TransportTestCase):
 
     @inlineCallbacks
     def test_receiving_events(self):
+        # prime the mapping
+        self.transport.map_message_id('remote', 'local')
         ack = self.mkmsg_ack()
         ack['event_id'] = 'event-id'
+        ack['user_message_id'] = 'remote'
         ack['timestamp'] = datetime.utcnow()
         self.event_req.write(ack.to_json().encode('utf-8') + '\n')
         [received_ack] = yield self.wait_for_dispatched_events(1)
         self.assertEqual(received_ack['event_id'], ack['event_id'])
+        self.assertEqual(received_ack['user_message_id'], 'local')
+        self.assertEqual(received_ack['sent_message_id'], 'remote')
 
     @inlineCallbacks
     def test_sending_messages(self):
         msg = self.mkmsg_out()
-        self.dispatch(msg)
+        d = self.dispatch(msg)
         req = yield self.get_next_request()
-        self.assertEqual(
-            TransportUserMessage.from_json(req.content.read()),
-            msg)
+        received_msg = json.loads(req.content.read())
+        self.assertEqual(received_msg, {
+            'content': msg['content'],
+            'in_reply_to': None,
+            'to_addr': msg['to_addr'],
+            'message_id': msg['message_id'],
+        })
+
+        remote_id = TransportUserMessage.generate_id()
+        reply = msg.copy()
+        reply['message_id'] = remote_id
+        req.write(reply.to_json().encode('utf-8'))
         req.finish()
+        yield d
+
+        [ack] = yield self.wait_for_dispatched_events(1)
+        self.assertEqual(ack['user_message_id'], msg['message_id'])
+        self.assertEqual(ack['sent_message_id'], remote_id)
