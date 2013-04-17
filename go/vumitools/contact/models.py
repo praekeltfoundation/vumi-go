@@ -99,6 +99,16 @@ class ContactStore(PerAccountStore):
         returnValue(contact)
 
     @Manager.calls_manager
+    def update_contact(self, key, **fields):
+        # TODO remove once we have Model.from_data()
+        contact = yield self.get_contact_by_key(key)
+        if contact is not None:
+            for field_name, field_value in fields.iteritems():
+                setattr(contact, field_name, field_value)
+            yield contact.save()
+            returnValue(contact)
+
+    @Manager.calls_manager
     def new_group(self, name):
         group_id = uuid4().get_hex()
 

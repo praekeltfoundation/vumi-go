@@ -6,12 +6,17 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi import log
 from vumi.application.sandbox import SandboxResource
 
+from go.vumitools.contact import Contact
+
 
 class ContactsCommandError(Exception):
     """Raised when erroneous ContactsResource commands are encountered."""
 
 
 class ContactsResource(SandboxResource):
+    def _contact_store_for_api(self, api):
+        return self.app_worker.user_api_for_api(api).contact_store
+
     def _parse_get(self, command):
         if 'addr' not in command:
             raise ContactsCommandError("'addr' needs to be specified")
@@ -23,22 +28,18 @@ class ContactsResource(SandboxResource):
                 raise ContactsCommandError(
                     "'delivery_class' needs to be specified")
 
-    def _get(self, api, command, create=False):
+    @inlineCallbacks
+    def handle_get(self, api, command):
         try:
             self._parse_get(command)
         except ContactsCommandError, e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        contact_store = self.app_worker.user_api_for_api(api).contact_store
-        return contact_store.contact_for_addr(
+        contact = yield self._contact_store_for_api(api).contact_for_addr(
             command['delivery_class'],
             command['addr'],
-            create)
-
-    @inlineCallbacks
-    def handle_get(self, api, command):
-        contact = yield self._get(api, command, create=False)
+            create=False)
 
         if contact is None:
             returnValue(self.reply(
@@ -51,7 +52,42 @@ class ContactsResource(SandboxResource):
 
     @inlineCallbacks
     def handle_get_or_create(self, api, command):
-        contact = yield self._get(api, command, create=True)
+        try:
+            self._parse_get(command)
+        except ContactsCommandError, e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        contact = yield self._contact_store_for_api(api).contact_for_addr(
+            command['delivery_class'],
+            command['addr'],
+            create=True)
+
+        returnValue(self.reply(
+            command,
+            success=True,
+            contact=contact.get_data()))
+
+    @inlineCallbacks
+    def handle_update(self, api, command):
+        try:
+            if 'key' not in command:
+                raise ContactsCommandError("'key' needs to be specified")
+        except ContactsCommandError, e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        # get the contact the fields to be updated
+        fields = dict(
+            (k, command[k]) for k in Contact.field_descriptors.keys()
+            if k in command)
+
+        contact_store = self._contact_store_for_api(api)
+        contact = yield contact_store.update_contact(command['key'], **fields)
+        if contact is None:
+            returnValue(self.reply(
+                command, success=False, reason="Contact not found"))
+
         returnValue(self.reply(
             command,
             success=True,

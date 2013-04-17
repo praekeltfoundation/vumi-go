@@ -60,7 +60,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         return self.contact_store.new_contact(**fields)
 
     @inlineCallbacks
-    def test_handle_get_for_existing_contact(self):
+    def test_handle_get(self):
         contact = yield self.new_contact(
             name=u'A Random',
             surname=u'Person',
@@ -97,7 +97,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             msisdn=u'unknown')
 
     @inlineCallbacks
-    def test_handle_get_or_create_for_existing_contact(self):
+    def test_handle_get_or_create(self):
         contact = yield self.new_contact(
             name=u'A Random',
             surname=u'Person',
@@ -134,3 +134,25 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             surname=u'Person',
             twitter_handle=u'random',
             msisdn=u'unknown')
+
+    @inlineCallbacks
+    def test_handle_update(self):
+        contact = yield self.new_contact(
+            name=u'A Random',
+            surname=u'Person',
+            msisdn=u'+27831234567')
+
+        reply = yield self.dispatch_command('update',
+            key=contact.key,
+            surname=u'Jackal')
+
+        self.check_contact_reply(reply,
+            key=contact.key,
+            name=u'A Random',
+            surname=u'Jackal',
+            msisdn=u'+27831234567')
+
+    @inlineCallbacks
+    def test_handle_update_for_nonexistent_contacts(self):
+        reply = yield self.dispatch_command('update', key='213123')
+        self.check_reply(reply, success=False)
