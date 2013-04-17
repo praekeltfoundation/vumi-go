@@ -105,9 +105,8 @@ class TestContactStore(GoPersistenceMixin, TestCase):
         self.assertEqual(u'27831234567', updated_contact.msisdn)
         self.assert_models_equal(dbcontact, updated_contact)
 
-    @inlineCallbacks
     def test_update_contact_for_nonexistent_contact(self):
-        self.assertEqual((yield self.store.update_contact('123124')), None)
+        self.assertFailure(self.store.update_contact('123124'), RuntimeError)
 
     @inlineCallbacks
     def test_add_contact_to_group(self):
@@ -193,10 +192,9 @@ class TestContactStore(GoPersistenceMixin, TestCase):
             self.store.contact_for_addr('bad_transport_type', u'234234'),
             RuntimeError)
 
-    @inlineCallbacks
     def test_contact_for_addr_for_nonexistent_contacts(self):
-        contact = yield self.store.contact_for_addr('sms', u'27831234567')
-        self.assertEqual(contact, None)
+        self.assertFailure(self.store.contact_for_addr('sms', u'27831234567'),
+                           RuntimeError)
 
     @inlineCallbacks
     def test_contact_for_addr_for_contact_creation(self):

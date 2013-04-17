@@ -100,13 +100,16 @@ class ContactStore(PerAccountStore):
 
     @Manager.calls_manager
     def update_contact(self, key, **fields):
-        # TODO remove once we have Model.from_data()
         contact = yield self.get_contact_by_key(key)
-        if contact is not None:
-            for field_name, field_value in fields.iteritems():
+        if contact is None:
+            raise RuntimeError("Contact with key '%s' not found." % key)
+
+        for field_name, field_value in fields.iteritems():
+            if field_name in contact.field_descriptors:
                 setattr(contact, field_name, field_value)
-            yield contact.save()
-            returnValue(contact)
+
+        yield contact.save()
+        returnValue(contact)
 
     @Manager.calls_manager
     def new_group(self, name):
@@ -274,3 +277,7 @@ class ContactStore(PerAccountStore):
                 contact_id,
                 user_account=self.user_account_key,
                 **contact_fields))
+
+        raise RuntimeError(
+            "Contact with address '%s' for delivery class '%s' not found."
+            % (addr, delivery_class))
