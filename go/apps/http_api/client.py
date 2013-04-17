@@ -67,9 +67,8 @@ class StreamingClient(object):
     def __init__(self):
         self.agent = Agent(reactor)
 
-    def stream(
-        self, message_class, callback, errback, url, headers=None,
-            on_disconnect=None):
+    def stream(self, message_class, callback, errback, url,
+               headers=None, on_disconnect=None):
         receiver = VumiMessageReceiver(
             message_class, callback, errback, on_disconnect=on_disconnect)
         d = self.agent.request('GET', url, headers)
