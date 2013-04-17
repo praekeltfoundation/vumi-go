@@ -42,11 +42,14 @@ class GoConversationTransport(Transport):
 
     It allows one to bridge Vumi and Vumi Go installations.
 
+    NOTE:   Since we're basically bridging two separate installations we're
+            leaving some of the attributes that we would normally change the
+            same. Specifically `transport_type`.
+
     .. [1] https://github.com/praekelt/vumi-go/blob/develop/docs/http_api.rst
 
     """
 
-    transport_type = 'http'
     CONFIG_CLASS = VumiBridgeTransportConfig
 
     @inlineCallbacks
