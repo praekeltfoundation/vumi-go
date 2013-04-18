@@ -1,4 +1,4 @@
-# -*- test-case-name: go.apps.conversation_api.tests.test_conversation_api -*-
+# -*- test-case-name: go.api.conversation_api.tests.test_conversation_api -*-
 
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.resource import NoResource

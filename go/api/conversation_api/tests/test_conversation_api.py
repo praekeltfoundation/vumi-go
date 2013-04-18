@@ -8,7 +8,7 @@ from vumi.utils import http_request_full
 
 from go.vumitools.api import VumiApi
 from go.vumitools.tests.utils import AppWorkerTestCase
-from go.apps.conversation_api.conversation_api import (
+from go.api.conversation_api.conversation_api import (
     ConversationApiWorker, ConversationConfigResource)
 
 from mock import Mock
