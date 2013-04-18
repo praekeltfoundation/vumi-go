@@ -1,0 +1,53 @@
+{% extends "contacts/base.html" %}
+{% load go_tags %}
+{% load url from future %}
+
+
+{% block content_title %}
+    <a href="{% url 'contacts:groups' %}">Groups</a>
+    &raquo;
+    {{ group.name }}
+{% endblock %}
+
+
+{% block content_actions_left %}
+{% endblock %}
+
+{% block content_actions_right %}
+    <div class="pull-right">
+        <div class="btn-group">
+            <a class="btn btn-success" href="#" data-toggle="dropdown"><i class="icon-user white"></i> Group Actions</a>
+            <a class="btn btn-success dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
+            <ul class="dropdown-menu">
+                <li><a href="{% url 'contacts:new_person' %}"><i class="icon-user"></i> New Contact</a></li>
+                <li><a data-toggle="modal" href="#uplContactFrm"><i class="icon-upload"></i> Upload Contacts</a></li>
+                <li><a data-toggle="modal" href="#expContactFrm"><i class="icon-envelope"></i> Export Contacts</a></li>
+                <li><a data-toggle="modal" href="#editGroup"><i class="icon-edit"></i> Edit Group</a></li>
+                <li><a data-toggle="modal" href="#emptyGroup"><i class="icon-fire"></i> Delete Group's Contacts</a></li>
+                <li><a data-toggle="modal" href="#delGroup"><i class="icon-trash"></i> Remove Group</a></li>
+            </ul>
+        </div>
+    </div>
+{% endblock %}
+
+
+
+
+
+{% block content_main_list %}
+    {% include "contacts/recipient_list_table.html" %}
+{% endblock %}
+
+{% block extrascript %}
+    {{ block.super }}
+    <script type="text/javascript">
+        $(function() {
+            tableAwesome('.table-awesome');
+        });
+    </script>
+{% endblock %}
+
+
+{% block modals %}
+    {% include "contacts/includes/tools.html" %}
+{% endblock %}

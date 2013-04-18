@@ -1,0 +1,50 @@
+{% extends "contacts/base.html" %}
+{% load go_tags %}
+{% load url from future %}
+
+
+{% block content_title %}
+    <a href="{% url 'contacts:people' %}">Recipients</a>
+{% endblock %}
+
+{% block content_actions_left %}
+    <button class="btn btn-primary">Import recipients</button>
+{% endblock %}
+
+
+{% block content_actions_right %}
+    <div class="button pull-left">
+        <button class="btn" disabled="disabled" data-table-id="people">Delete</button>
+        <button class="btn" disabled="disabled" data-table-id="people">Export</button>
+        <button class="btn" disabled="disabled" data-table-id="people">Assign to group</button>
+    </div>
+{% endblock %}
+
+{% block content_breadcrumbs %}
+    <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
+        <input type="text" id="search-filter-input" name="q" value="{{query|default:''}}" placeholder="Find people..." class="input-large search-query">
+        <button type="submit" id="search-filter-btn" class="btn">Search</button>
+        {% if query %}
+            Create a <a href="#createSmartGroup" data-toggle="modal">Smart Group</a> using these results.
+        {% endif %}
+    </form>
+{% endblock %}
+
+
+{% block content_main_list %}
+    {% include "contacts/recipient_list_table.html" %}
+{% endblock %}
+
+
+{% block extrascript %}
+    {{ block.super }}
+    <script type="text/javascript">
+        $(function() {
+            tableAwesome('.table-awesome');
+        });
+    </script>
+{% endblock %}
+
+{% block modals %}
+    {% include "contacts/includes/tools.html" with show_groups=1 save_group=1 %}
+{% endblock %}
