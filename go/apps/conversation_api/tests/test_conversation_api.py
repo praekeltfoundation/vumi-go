@@ -27,7 +27,8 @@ class ConversationApiTestCase(AppWorkerTestCase):
         response = Mock()
         response.code = http.OK
         response.delivered_body = 'javascript!'
-        self.mocked_url_call = Mock(return_value=succeed(response))
+        self.mocked_url_call = Mock(
+            side_effect=[succeed(response), succeed(response)])
 
         self.patch(ConversationConfigResource, 'load_source_from_url',
                    self.mocked_url_call)
@@ -61,6 +62,11 @@ class ConversationApiTestCase(AppWorkerTestCase):
             [self.tag], user_account=unicode(self.account.key))
         self.conversation.batches.add_key(self.batch_id)
         self.conversation.set_metadata({
+            'jsbox_app_config': {
+                'config': {
+                    'source_url': 'http://configsourcecode/',
+                }
+            },
             'jsbox': {
                 'source_url': 'http://sourcecode/',
             },
@@ -140,4 +146,10 @@ class ConversationApiTestCase(AppWorkerTestCase):
         self.assertEqual(md['jsbox'], {
             'source_url': 'http://sourcecode/',
             'javascript': 'javascript!',
+        })
+        self.assertEqual(md['jsbox_app_config'], {
+            'config': {
+                'source_url': 'http://configsourcecode/',
+                'value': 'javascript!'
+            }
         })

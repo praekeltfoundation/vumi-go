@@ -57,13 +57,26 @@ class ConversationConfigResource(BaseResource):
     def handle_jsbox(self, request, command, conversation):
         if command == 'postcommit':
             metadata = conversation.get_metadata()
-            jsbox_md = metadata.get('jsbox')
+
+            # update the config blocks
+            jsbox_app_config_md = metadata.get('jsbox_app_config', {})
+            for key, config_section in jsbox_app_config_md.items():
+                src_url = config_section.get('source_url')
+                if src_url:
+                    response = yield self.load_source_from_url(src_url,
+                                                               method='GET')
+                    if response.code == http.OK:
+                        config_section['value'] = response.delivered_body
+
+            # update the application code
+            jsbox_md = metadata.get('jsbox', {})
             src_url = jsbox_md.get('source_url')
             if src_url is not None:
                 response = yield self.load_source_from_url(src_url,
                                                            method='GET')
                 if response.code == http.OK:
                     jsbox_md['javascript'] = response.delivered_body
+
             conversation.set_metadata(metadata)
             yield conversation.save()
         else:
