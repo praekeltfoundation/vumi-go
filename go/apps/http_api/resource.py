@@ -328,7 +328,9 @@ class ConversationResource(resource.Resource):
                                        'Too many concurrent connections'))
 
 
-class StreamingResource(resource.Resource):
+class AuthorizedResource(resource.Resource):
+
+    resource_class = ConversationResource
 
     def __init__(self, worker):
         resource.Resource.__init__(self)
@@ -339,13 +341,13 @@ class StreamingResource(resource.Resource):
 
     def getChild(self, conversation_key, request):
         if conversation_key:
-            res = ConversationResource(self.worker, conversation_key)
+            res = self.resource_class(self.worker, conversation_key)
             checker = ConversationAccessChecker(self.worker.vumi_api,
                                                 conversation_key)
             realm = ConversationRealm(res)
             p = portal.Portal(realm, [checker])
 
-            factory = BasicCredentialFactory("Conversation Stream")
+            factory = BasicCredentialFactory("Conversation Realm")
             protected_resource = HTTPAuthSessionWrapper(p, [factory])
 
             return protected_resource
