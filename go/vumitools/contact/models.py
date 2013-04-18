@@ -101,8 +101,6 @@ class ContactStore(PerAccountStore):
     @Manager.calls_manager
     def update_contact(self, key, **fields):
         contact = yield self.get_contact_by_key(key)
-        if contact is None:
-            raise RuntimeError("Contact with key '%s' not found." % key)
 
         for field_name, field_value in fields.iteritems():
             if field_name in contact.field_descriptors:
@@ -130,8 +128,12 @@ class ContactStore(PerAccountStore):
         yield group.save()
         returnValue(group)
 
+    @Manager.calls_manager
     def get_contact_by_key(self, key):
-        return self.contacts.load(key)
+        contact = yield self.contacts.load(key)
+        if contact is None:
+            raise RuntimeError("Contact with key '%s' not found." % key)
+        returnValue(contact)
 
     def get_group(self, name):
         return self.groups.load(name)

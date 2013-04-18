@@ -38,6 +38,16 @@ class TestContactStore(GoPersistenceMixin, TestCase):
                          "Models unexpectedly equal:\na: %r\nb: %r" % (m1, m2))
 
     @inlineCallbacks
+    def test_get_contact_by_key(self):
+        contact = yield self.store.new_contact(
+            name=u'J Random', surname=u'Person', msisdn=u'27831234567')
+        self.assert_models_equal(
+            contact, (yield self.store.get_contact_by_key(contact.key)))
+
+    def test_get_contact_by_key_for_nonexistent_contact(self):
+        self.assertFailure(self.store.get_contact_by_key(u'123'), RuntimeError)
+
+    @inlineCallbacks
     def test_new_group(self):
         self.assertEqual(None, (yield self.store.get_group(u'group1')))
 

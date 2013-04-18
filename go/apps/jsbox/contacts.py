@@ -63,12 +63,9 @@ class ContactsResource(SandboxResource):
             success=True,
             contact=contact.get_data()))
 
-    def _filter_contact_fields(self, command):
-        """
-        Returns only the fields of a command that are Contact model fields.
-        """
-        return dict((k, command[k]) for k in Contact.field_descriptors.keys()
-                    if k in command)
+    @staticmethod
+    def pick_fields(collection, *fields):
+        return dict((k, collection[k]) for k in fields if k in collection)
 
     @inlineCallbacks
     def handle_update(self, api, command):
@@ -76,8 +73,9 @@ class ContactsResource(SandboxResource):
             if 'key' not in command:
                 raise SandboxError("'key' needs to be specified for command")
 
-            contact = yield self._contact_store_for_api(api).update_contact(
-                command['key'], **self._filter_contact_fields(command))
+            store = self._contact_store_for_api(api)
+            fields = self.pick_fields(command, *Contact.field_descriptors)
+            contact = yield store.update_contact(command['key'], **fields)
         except (SandboxError, RuntimeError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
@@ -88,9 +86,36 @@ class ContactsResource(SandboxResource):
             contact=contact.get_data()))
 
     @inlineCallbacks
+    def _update_dynamic_field(self, field_name, api, command):
+        try:
+            if 'key' not in command:
+                raise SandboxError("'key' needs to be specified for command")
+
+            store = self._contact_store_for_api(api)
+            contact = yield store.get_contact_by_key(command['key'])
+
+            field = getattr(contact, field_name)
+            field.update(self.pick_fields(command, *field.keys()))
+            yield contact.save()
+        except (SandboxError, RuntimeError) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        returnValue(self.reply(
+            command,
+            success=True,
+            contact=contact.get_data()))
+
+    def handle_update_extra(self, api, command):
+        return self._update_dynamic_field('extra', api, command)
+
+    def handle_update_subscription(self, api, command):
+        return self._update_dynamic_field('subscription', api, command)
+
+    @inlineCallbacks
     def handle_new(self, api, command):
         contact = yield self._contact_store_for_api(api).new_contact(
-            **self._filter_contact_fields(command))
+            **self.pick_fields(command, *Contact.field_descriptors))
 
         returnValue(self.reply(
             command,
