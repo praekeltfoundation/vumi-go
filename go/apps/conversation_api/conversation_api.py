@@ -16,6 +16,8 @@ from go.vumitools.api import VumiApi
 
 class ConversationConfigResource(BaseResource):
 
+    isLeaf = True
+
     def render_POST(self, request):
         d = Deferred()
         d.addCallback(self.handle_POST)
@@ -32,13 +34,19 @@ class ConversationConfigResource(BaseResource):
                 needs to look like, which is updating the source-code for
                 a JSBox application from it's source URL.
         """
+        if not (1 <= len(request.postpath) < 2):
+            request.setResponseCode(http.NOT_FOUND)
+            request.finish()
+            return
+
+        [command] = request.postpath
         user_account = request.getUser()
         conversation = yield self.get_conversation(user_account)
         if conversation is not None:
             handler = getattr(self,
                               'handle_%s' % (conversation.conversation_type),
-                              lambda r, conversation: succeed(r))
-            yield handler(request, conversation)
+                              lambda r, command, conversation: succeed(r))
+            yield handler(request, command, conversation)
         request.finish()
 
     def load_source_from_url(self, url, method='GET'):
@@ -46,16 +54,20 @@ class ConversationConfigResource(BaseResource):
         return http_request_full(url, method=method)
 
     @inlineCallbacks
-    def handle_jsbox(self, request, conversation):
-        metadata = conversation.get_metadata()
-        jsbox_md = metadata.get('jsbox')
-        src_url = jsbox_md.get('source_url')
-        if src_url is not None:
-            response = yield self.load_source_from_url(src_url, method='GET')
-            if response.code == http.OK:
-                jsbox_md['javascript'] = response.delivered_body
-        conversation.set_metadata(metadata)
-        yield conversation.save()
+    def handle_jsbox(self, request, command, conversation):
+        if command == 'postcommit':
+            metadata = conversation.get_metadata()
+            jsbox_md = metadata.get('jsbox')
+            src_url = jsbox_md.get('source_url')
+            if src_url is not None:
+                response = yield self.load_source_from_url(src_url,
+                                                           method='GET')
+                if response.code == http.OK:
+                    jsbox_md['javascript'] = response.delivered_body
+            conversation.set_metadata(metadata)
+            yield conversation.save()
+        else:
+            request.setResponseCode(http.BAD_REQUEST)
 
 
 class ConversationApiResource(BaseResource):

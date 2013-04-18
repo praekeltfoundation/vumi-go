@@ -18,6 +18,7 @@ class ConversationApiTestCase(AppWorkerTestCase):
 
     use_riak = True
     application_class = ConversationApiWorker
+    timeout = 1
 
     @inlineCallbacks
     def setUp(self):
@@ -103,10 +104,30 @@ class ConversationApiTestCase(AppWorkerTestCase):
         self.assertNotEqual(resp.code, http.UNAUTHORIZED)
 
     @inlineCallbacks
-    def test_post_config(self):
+    def test_bad_command(self):
         resp = yield http_request_full(
-            self.get_conversation_url(self.conversation.key, 'config',
-                                      foo="bar", baz=1),
+            self.get_conversation_url(
+                self.conversation.key, 'config'), headers=self.auth_headers)
+        self.assertEqual(resp.code, http.NOT_FOUND)
+
+        resp = yield http_request_full(
+            self.get_conversation_url(
+                self.conversation.key, 'config', 'foo', 'bar'),
+            headers=self.auth_headers)
+        self.assertEqual(resp.code, http.NOT_FOUND)
+
+        resp = yield http_request_full(
+            self.get_conversation_url(
+                self.conversation.key, 'config', 'foo'),
+            headers=self.auth_headers)
+        self.assertEqual(resp.code, http.BAD_REQUEST)
+
+    @inlineCallbacks
+    def test_postcommit(self):
+        resp = yield http_request_full(
+            self.get_conversation_url(
+                self.conversation.key, 'config', 'postcommit',
+                foo="bar", baz=1),
             data='pickles', method='POST', headers=self.auth_headers)
         self.assertEqual(resp.code, http.OK)
         args, kwargs = self.mocked_url_call.call_args
