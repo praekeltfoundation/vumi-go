@@ -1,7 +1,7 @@
 import base64
 import urllib
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, succeed
 from twisted.web import http
 
 from vumi.utils import http_request_full
@@ -23,9 +23,13 @@ class ConversationApiTestCase(AppWorkerTestCase):
     def setUp(self):
         yield super(ConversationApiTestCase, self).setUp()
 
-        self.mocked_handle_jsbox = Mock()
-        self.patch(ConversationConfigResource, 'handle_jsbox',
-                   self.mocked_handle_jsbox)
+        response = Mock()
+        response.code = http.OK
+        response.delivered_body = 'javascript!'
+        self.mocked_url_call = Mock(return_value=succeed(response))
+
+        self.patch(ConversationConfigResource, 'load_source_from_url',
+                   self.mocked_url_call)
 
         self.config = self.mk_config({
             'worker_name': 'conversation_api_worker',
@@ -56,6 +60,9 @@ class ConversationApiTestCase(AppWorkerTestCase):
             [self.tag], user_account=unicode(self.account.key))
         self.conversation.batches.add_key(self.batch_id)
         self.conversation.set_metadata({
+            'jsbox': {
+                'source_url': 'http://sourcecode/',
+            },
             'http_api': {
                 'api_tokens': [
                     'token-1',
@@ -102,9 +109,14 @@ class ConversationApiTestCase(AppWorkerTestCase):
                                       foo="bar", baz=1),
             data='pickles', method='POST', headers=self.auth_headers)
         self.assertEqual(resp.code, http.OK)
-        args, kwargs = self.mocked_handle_jsbox.call_args
-        request, conversation = args
-        self.assertEqual(kwargs, {})
-        self.assertTrue(request.path.startswith('/foo/%s/config' % (
-                        self.conversation.key,)))
-        self.assertEqual(conversation.key, self.conversation.key)
+        args, kwargs = self.mocked_url_call.call_args
+        [url] = args
+        self.assertEqual(args, ('http://sourcecode/',))
+        self.assertEqual(kwargs, {'method': 'GET'})
+        conv = yield self.user_api.get_wrapped_conversation(
+            self.conversation.key)
+        md = conv.get_metadata()
+        self.assertEqual(md['jsbox'], {
+            'source_url': 'http://sourcecode/',
+            'javascript': 'javascript!',
+        })

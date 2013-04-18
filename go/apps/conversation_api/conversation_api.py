@@ -2,10 +2,12 @@
 
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.resource import NoResource
+from twisted.web import http
 from twisted.internet.defer import inlineCallbacks, Deferred, succeed
 
 from vumi.config import ConfigText, ConfigDict, ConfigInt
 from vumi.transports.httprpc import httprpc
+from vumi.utils import http_request_full
 
 from go.apps.http_api.resource import AuthorizedResource, BaseResource
 from go.vumitools.app_worker import GoApplicationWorker
@@ -39,9 +41,21 @@ class ConversationConfigResource(BaseResource):
             yield handler(request, conversation)
         request.finish()
 
+    def load_source_from_url(self, url, method='GET'):
+        # primarily here to make testing easier
+        return http_request_full(url, method=method)
+
     @inlineCallbacks
     def handle_jsbox(self, request, conversation):
-        return succeed(1)
+        metadata = conversation.get_metadata()
+        jsbox_md = metadata.get('jsbox')
+        src_url = jsbox_md.get('source_url')
+        if src_url is not None:
+            response = yield self.load_source_from_url(src_url, method='GET')
+            if response.code == http.OK:
+                jsbox_md['javascript'] = response.delivered_body
+        conversation.set_metadata(metadata)
+        yield conversation.save()
 
 
 class ConversationApiResource(BaseResource):
