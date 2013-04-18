@@ -2,6 +2,15 @@
 {% load url from future %}
 
 
+{% block content_title %}
+    <a href="{% url 'contacts:people' %}">Recipients</a>
+    &raquo;
+    {% if contact %}
+        {{ contact }}
+    {% else %}
+        New recipient
+    {% endif %}
+{% endblock %}
 
 {% block content_actions_left %}
 {% endblock %}
@@ -14,13 +23,6 @@
     <form id="frm-person" method="post" action="" class="form-horizontal">
         {% csrf_token %}
         <fieldset>
-            <legend>
-                {% if contact %}
-                    {{ contact }}
-                {% else %}
-                    New recipient
-                {% endif %}
-            </legend>
             {% for field in form.visible_fields %}
             <div class="control-group{% if field.errors %} error{% endif %}">
                 
@@ -46,18 +48,4 @@
             </div>
         </fieldset>
     </form>
-
-{% endblock %}
-
-
-{% block extra_js %}
-    <script type="text/javascript">
-      $(document).ready(function(){
-          $('#frm-new-group').validate();
-          $('#frm-upload-contacts').validate();
-          $("#frm-person").validate();
-      });
-    </script>
-    <link type="text/css" href="{{ STATIC_URL }}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
-    <link type="text/css" href="{{ STATIC_URL }}css/jquery-ui-timepicker.css" rel="stylesheet" />
 {% endblock %}

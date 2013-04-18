@@ -83,7 +83,7 @@ def groups(request):
     pagination_params = urlencode({
         'query': query,
     })
-    return render(request, 'contacts/groups.html', {
+    return render(request, 'contacts/group_list.html', {
         'paginator': paginator,
         'pagination_params': pagination_params,
         'page': page,
@@ -215,38 +215,55 @@ def _static_group(request, contact_store, group):
             utils.clear_file_hints_from_session(request)
             default_storage.delete(file_path)
 
-    selected_letter = request.GET.get('l', 'a')
+    # selected_letter = request.GET.get('l', 'a')
+    # query = request.GET.get('q', '')
+    # if query:
+    #     if ':' in query:
+    #         query_kwargs = _query_to_kwargs(request.GET.get('q'))
+    #     else:
+    #         query_kwargs = _query_to_kwargs('name:%s' % query)
+
+    #     limit = int(request.GET.get('limit', 100))
+    #     keys = contact_store.contacts.search(**query_kwargs).get_keys()
+    #     if limit:
+    #         messages.info(request,
+    #             'Showing up to %s random contacts matching your query' % (
+    #                 limit,))
+    #         keys = keys[:limit]
+
+    #     selected_contacts = []
+    #     for contact_bunch in contact_store.contacts.load_all_bunches(keys):
+    #         selected_contacts.extend(contact_bunch)
+    # else:
+    #     selected_contacts = contact_store.filter_contacts_on_surname(
+    #         selected_letter, group=group)
+
     query = request.GET.get('q', '')
     if query:
-        if ':' in query:
-            query_kwargs = _query_to_kwargs(request.GET.get('q'))
-        else:
-            query_kwargs = _query_to_kwargs('name:%s' % query)
-
-        limit = int(request.GET.get('limit', 100))
-        keys = contact_store.contacts.search(**query_kwargs).get_keys()
-        if limit:
-            messages.info(
-                request,
-                'Showing up to %s random contacts matching your query' % (
-                    limit,))
-            keys = keys[:limit]
-
-        selected_contacts = []
-        for contact_bunch in contact_store.contacts.load_all_bunches(keys):
-            selected_contacts.extend(contact_bunch)
+        if not ':' in query:
+            query = 'name:%s' % (query,)
+            keys = contact_store.contacts.raw_search(query).get_keys()
     else:
-        selected_contacts = contact_store.filter_contacts_on_surname(
-            selected_letter, group=group)
+        keys = contact_store.list_contacts()
+
+    limit = int(request.GET.get('limit', 100))
+    if limit:
+        messages.info(request,
+            'Showing up to %s random contacts matching your query' % (
+                limit,))
+        keys = keys[:limit]
+
+    selected_contacts = []
+    for contact_bunch in contact_store.contacts.load_all_bunches(keys):
+        selected_contacts.extend(contact_bunch)
 
     context.update({
         'query': request.GET.get('q'),
-        'selected_letter': selected_letter,
         'selected_contacts': selected_contacts,
         'member_count': contact_store.count_contacts_for_group(group),
     })
 
-    return render(request, 'contacts/group.html', context)
+    return render(request, 'contacts/group_detail.html', context)
 
 
 @csrf_protect
@@ -378,7 +395,7 @@ def _people(request):
         selected_contacts.extend(contact_bunch)
 
     smart_group_form = SmartGroupForm(initial={'query': query})
-    return render(request, 'contacts/people.html', {
+    return render(request, 'contacts/recipient_list.html', {
         'query': request.GET.get('q'),
         'selected_contacts': selected_contacts,
         'upload_contacts_form': upload_contacts_form,
@@ -433,7 +450,7 @@ def person(request, person_key):
     if contact_store.contact_has_opted_out(contact):
         messages.error(request, 'This contact has opted out.')
 
-    return render(request, 'contacts/person_add_edit.html', {
+    return render(request, 'contacts/recipient_detail.html', {
         'contact': contact,
         'contact_extra_items': contact.extra.items(),
         'form': form,
@@ -457,6 +474,6 @@ def new_person(request):
                 'Please correct the problem below.')
     else:
         form = ContactForm(groups=groups)
-    return render(request, 'contacts/person_add_edit.html', {
+    return render(request, 'contacts/recipient_detail.html', {
         'form': form,
     })
