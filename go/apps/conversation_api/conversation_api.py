@@ -2,7 +2,7 @@
 
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.resource import NoResource
-from twisted.internet.defer import inlineCallbacks, Deferred
+from twisted.internet.defer import inlineCallbacks, Deferred, succeed
 
 from vumi.config import ConfigText, ConfigDict, ConfigInt
 from vumi.transports.httprpc import httprpc
@@ -22,11 +22,26 @@ class ConversationConfigResource(BaseResource):
 
     @inlineCallbacks
     def handle_POST(self, request):
+        """
+        NOTE:   This at some point will grow the ability to accept generic
+                commands that a Conversation instance can act on. We're not
+                quite sure yet what that needs to look like so for now
+                we're hardcoding it for the case that we do know what it
+                needs to look like, which is updating the source-code for
+                a JSBox application from it's source URL.
+        """
         user_account = request.getUser()
         conversation = yield self.get_conversation(user_account)
-        yield conversation.update_configuration(request.args,
-                                                request.content.read())
+        if conversation is not None:
+            handler = getattr(self,
+                              'handle_%s' % (conversation.conversation_type),
+                              lambda r, conversation: succeed(r))
+            yield handler(request, conversation)
         request.finish()
+
+    @inlineCallbacks
+    def handle_jsbox(self, request, conversation):
+        return succeed(1)
 
 
 class ConversationApiResource(BaseResource):

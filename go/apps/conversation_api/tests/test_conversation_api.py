@@ -1,7 +1,7 @@
 import base64
 import urllib
 
-from twisted.internet.defer import inlineCallbacks, succeed
+from twisted.internet.defer import inlineCallbacks
 from twisted.web import http
 
 from vumi.utils import http_request_full
@@ -11,17 +11,7 @@ from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.conversation_api.conversation_api import (
     ConversationApiWorker, ConversationConfigResource)
 
-
-class FakeConversation(object):
-
-    def __init__(self):
-        self.args = None
-        self.contents = None
-
-    def update_configuration(self, args, contents):
-        self.args = args
-        self.contents = contents
-        return succeed(1)
+from mock import Mock
 
 
 class ConversationApiTestCase(AppWorkerTestCase):
@@ -33,9 +23,9 @@ class ConversationApiTestCase(AppWorkerTestCase):
     def setUp(self):
         yield super(ConversationApiTestCase, self).setUp()
 
-        self.mocked_conv = FakeConversation()
-        self.patch(ConversationConfigResource, 'get_conversation',
-                   lambda _, ua: self.mocked_conv)
+        self.mocked_handle_jsbox = Mock()
+        self.patch(ConversationConfigResource, 'handle_jsbox',
+                   self.mocked_handle_jsbox)
 
         self.config = self.mk_config({
             'worker_name': 'conversation_api_worker',
@@ -56,6 +46,9 @@ class ConversationApiTestCase(AppWorkerTestCase):
         yield self.setup_tagpools()
 
         self.conversation = yield self.create_conversation()
+        self.conversation.c.conversation_type = u'jsbox'
+        yield self.conversation.save()
+
         self.conversation.c.delivery_tag_pool = u'pool'
         self.tag = yield self.conversation.acquire_tag()
 
@@ -108,9 +101,10 @@ class ConversationApiTestCase(AppWorkerTestCase):
             self.get_conversation_url(self.conversation.key, 'config',
                                       foo="bar", baz=1),
             data='pickles', method='POST', headers=self.auth_headers)
-        self.assertEqual(self.mocked_conv.args, {
-            'foo': ['bar'],
-            'baz': ['1']
-        })
         self.assertEqual(resp.code, http.OK)
-        self.assertEqual(self.mocked_conv.contents, 'pickles')
+        args, kwargs = self.mocked_handle_jsbox.call_args
+        request, conversation = args
+        self.assertEqual(kwargs, {})
+        self.assertTrue(request.path.startswith('/foo/%s/config' % (
+                        self.conversation.key,)))
+        self.assertEqual(conversation.key, self.conversation.key)
