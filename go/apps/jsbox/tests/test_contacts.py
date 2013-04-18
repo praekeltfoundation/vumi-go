@@ -259,7 +259,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
     def test_handle_update_subscription_for_unicode_chars(self):
         contact = yield self.new_contact(
             msisdn=u'+27831234567',
-            extra={'foo': u'bar', 'lorem': u'ipsum'})
+            subscription={'foo': u'bar', 'lorem': u'ipsum'})
 
         reply = yield self.dispatch_command('update_extra',
             key=contact.key,
