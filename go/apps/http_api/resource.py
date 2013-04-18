@@ -89,6 +89,7 @@ class StreamResource(BaseResource):
     def teardown_stream(self, err):
         if not (err is None or err.trap(ConnectionDone)):
             log.error(err)
+        log.info('Unregistering: %s, %s' % (self._rk, err.getErrorMessage()))
         return self.worker.unregister_client(self._rk, self._callback)
 
     def publish(self, request, message):
