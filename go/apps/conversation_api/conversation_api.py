@@ -1,23 +1,31 @@
 # -*- test-case-name: go.apps.conversation_api.tests.test_conversation_api -*-
 
 from twisted.web import resource
-from twisted.internet.defer import inlineCallbacks
+from twisted.web.server import NOT_DONE_YET
+from twisted.internet.defer import inlineCallbacks, Deferred
 
 from vumi.config import ConfigText, ConfigDict, ConfigInt
 from vumi.transports.httprpc import httprpc
 
-from go.apps.http_api.resource import AuthorizedResource
+from go.apps.http_api.resource import AuthorizedResource, BaseResource
 from go.vumitools.app_worker import GoApplicationWorker
 from go.vumitools.api import VumiApi
 
 
-class ConversationApiResource(resource.Resource):
+class ConversationApiResource(BaseResource):
 
-    def __init__(self, worker, conversation_key):
-        resource.Resource.__init__(self)
-        self.worker = worker
-        self.redis = worker.redis
-        self.conversation_key = conversation_key
+    def render_POST(self, request):
+        d = Deferred()
+        d.addCallback(self.handle_POST)
+        d.callback(request)
+        return NOT_DONE_YET
+
+    @inlineCallbacks
+    def handle_POST(self, request):
+        user_account = request.getUser()
+        print (yield self.get_conversation(user_account))
+        request.write('foo')
+        request.finish()
 
 
 class ConversationApiWorkerConfig(GoApplicationWorker.CONFIG_CLASS):

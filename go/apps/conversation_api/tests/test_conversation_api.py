@@ -62,19 +62,28 @@ class ConversationApiTestCase(AppWorkerTestCase):
             ],
         }
 
-    def get_conversation_url(self, conversation):
-        return '%s%s/' % (self.url, conversation.key,)
+    def get_conversation_url(self, *args):
+        return '%s%s' % (self.url, '/'.join(map(str, args)))
 
     @inlineCallbacks
     def test_invalid_auth(self):
         resp = yield http_request_full(
-            self.get_conversation_url(self.conversation), data='',
+            self.get_conversation_url(self.conversation.key), data='',
             method='GET', headers={})
         self.assertEqual(resp.code, http.UNAUTHORIZED)
 
     @inlineCallbacks
     def test_valid_auth(self):
         resp = yield http_request_full(
-            self.get_conversation_url(self.conversation), data='',
+            self.get_conversation_url(self.conversation.key), data='',
             method='GET', headers=self.auth_headers)
         self.assertNotEqual(resp.code, http.UNAUTHORIZED)
+
+    @inlineCallbacks
+    def test_post_config(self):
+        print self.get_conversation_url(self.conversation.key)
+        resp = yield http_request_full(
+            self.get_conversation_url(self.conversation.key),
+            method='POST', headers=self.auth_headers)
+        print self.get_conversation_url(self.conversation.key)
+        print resp.delivered_body
