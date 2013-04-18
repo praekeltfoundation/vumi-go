@@ -1,12 +1,14 @@
 # -*- test-case-name: go.apps.conversation_api.tests.test_conversation_api -*-
 
 from twisted.web import resource
+from twisted.internet.defer import inlineCallbacks
 
 from vumi.config import ConfigText, ConfigDict, ConfigInt
-from vumi.worker import BaseWorker
 from vumi.transports.httprpc import httprpc
 
 from go.apps.http_api.resource import AuthorizedResource
+from go.vumitools.app_worker import GoApplicationWorker
+from go.vumitools.api import VumiApi
 
 
 class ConversationApiResource(resource.Resource):
@@ -16,10 +18,9 @@ class ConversationApiResource(resource.Resource):
         self.worker = worker
         self.redis = worker.redis
         self.conversation_key = conversation_key
-        print self.redis
 
 
-class ConversationApiWorkerConfig(BaseWorker.CONFIG_CLASS):
+class ConversationApiWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
     worker_name = ConfigText(
         "Name of this tagpool API worker.", required=True, static=True)
     web_path = ConfigText(
@@ -39,21 +40,25 @@ class AccountResource(AuthorizedResource):
     resource_class = ConversationApiResource
 
 
-class ConversationApiWorker(BaseWorker):
+class ConversationApiWorker(GoApplicationWorker):
 
-    SEND_TO_TAGS = frozenset(['default'])
-
+    worker_name = 'conversation_api_worker'
     CONFIG_CLASS = ConversationApiWorkerConfig
 
-    def setup_worker(self):
+    @inlineCallbacks
+    def setup_application(self):
+        yield super(ConversationApiWorker, self).setup_application()
+        self.vumi_api = yield VumiApi.from_config_async(self.config)
         config = self.get_static_config()
         self.webserver = self.start_web_resources([
             (AccountResource(self), config.web_path),
             (httprpc.HttpRpcHealthResource(self), config.health_path)
         ], config.web_port)
 
-    def teardown_worker(self):
-        return self.webserver.loseConnection()
+    @inlineCallbacks
+    def teardown_application(self):
+        yield super(ConversationApiWorker, self).teardown_application()
+        yield self.webserver.loseConnection()
 
     def setup_connectors(self):
         pass
