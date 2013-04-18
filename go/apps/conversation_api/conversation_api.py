@@ -1,7 +1,7 @@
 # -*- test-case-name: go.apps.conversation_api.tests.test_conversation_api -*-
 
-from twisted.web import resource
 from twisted.web.server import NOT_DONE_YET
+from twisted.web.resource import NoResource
 from twisted.internet.defer import inlineCallbacks, Deferred
 
 from vumi.config import ConfigText, ConfigDict, ConfigInt
@@ -12,7 +12,7 @@ from go.vumitools.app_worker import GoApplicationWorker
 from go.vumitools.api import VumiApi
 
 
-class ConversationApiResource(BaseResource):
+class ConversationConfigResource(BaseResource):
 
     def render_POST(self, request):
         d = Deferred()
@@ -23,9 +23,23 @@ class ConversationApiResource(BaseResource):
     @inlineCallbacks
     def handle_POST(self, request):
         user_account = request.getUser()
-        print (yield self.get_conversation(user_account))
-        request.write('foo')
+        conversation = yield self.get_conversation(user_account)
+        yield conversation.update_configuration(request.args,
+                                                request.content.read())
         request.finish()
+
+
+class ConversationApiResource(BaseResource):
+
+    def getChild(self, path, request):
+        class_map = {
+            'config': ConversationConfigResource
+        }
+        resource_class = class_map.get(path)
+        if resource_class is None:
+            return NoResource()
+
+        return resource_class(self.worker, self.conversation_key)
 
 
 class ConversationApiWorkerConfig(GoApplicationWorker.CONFIG_CLASS):

@@ -1,13 +1,27 @@
 import base64
+import urllib
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, succeed
 from twisted.web import http
 
 from vumi.utils import http_request_full
 
 from go.vumitools.api import VumiApi
 from go.vumitools.tests.utils import AppWorkerTestCase
-from go.apps.conversation_api import ConversationApiWorker
+from go.apps.conversation_api.conversation_api import (
+    ConversationApiWorker, ConversationConfigResource)
+
+
+class FakeConversation(object):
+
+    def __init__(self):
+        self.args = None
+        self.contents = None
+
+    def update_configuration(self, args, contents):
+        self.args = args
+        self.contents = contents
+        return succeed(1)
 
 
 class ConversationApiTestCase(AppWorkerTestCase):
@@ -18,6 +32,11 @@ class ConversationApiTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(ConversationApiTestCase, self).setUp()
+
+        self.mocked_conv = FakeConversation()
+        self.patch(ConversationConfigResource, 'get_conversation',
+                   lambda _, ua: self.mocked_conv)
+
         self.config = self.mk_config({
             'worker_name': 'conversation_api_worker',
             'web_path': '/foo/',
@@ -62,8 +81,12 @@ class ConversationApiTestCase(AppWorkerTestCase):
             ],
         }
 
-    def get_conversation_url(self, *args):
-        return '%s%s' % (self.url, '/'.join(map(str, args)))
+    def get_conversation_url(self, *args, **kwargs):
+        return '%s%s?%s' % (
+            self.url,
+            '/'.join(map(str, args)),
+            urllib.urlencode(kwargs),
+        )
 
     @inlineCallbacks
     def test_invalid_auth(self):
@@ -81,9 +104,13 @@ class ConversationApiTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_post_config(self):
-        print self.get_conversation_url(self.conversation.key)
         resp = yield http_request_full(
-            self.get_conversation_url(self.conversation.key),
-            method='POST', headers=self.auth_headers)
-        print self.get_conversation_url(self.conversation.key)
-        print resp.delivered_body
+            self.get_conversation_url(self.conversation.key, 'config',
+                                      foo="bar", baz=1),
+            data='pickles', method='POST', headers=self.auth_headers)
+        self.assertEqual(self.mocked_conv.args, {
+            'foo': ['bar'],
+            'baz': ['1']
+        })
+        self.assertEqual(resp.code, http.OK)
+        self.assertEqual(self.mocked_conv.contents, 'pickles')
