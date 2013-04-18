@@ -34,7 +34,7 @@ class ConversationConfigResource(BaseResource):
                 needs to look like, which is updating the source-code for
                 a JSBox application from it's source URL.
         """
-        if not (1 <= len(request.postpath) < 2):
+        if len(request.postpath) != 1:
             request.setResponseCode(http.NOT_FOUND)
             request.finish()
             return
@@ -45,13 +45,17 @@ class ConversationConfigResource(BaseResource):
         if conversation is not None:
             handler = getattr(self,
                               'handle_%s' % (conversation.conversation_type),
-                              lambda r, command, conversation: succeed(r))
+                              self.fallback_handler)
             yield handler(request, command, conversation)
         request.finish()
 
     def load_source_from_url(self, url, method='GET'):
         # primarily here to make testing easier
         return http_request_full(url, method=method)
+
+    def fallback_handler(self, request, command, conversation):
+        request.setResponseCode(http.BAD_REQUEST)
+        succeed(1)
 
     @inlineCallbacks
     def handle_jsbox(self, request, command, conversation):
