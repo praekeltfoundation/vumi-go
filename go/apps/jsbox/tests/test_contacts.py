@@ -1,4 +1,4 @@
-#import json
+# -*- coding: utf-8 -*-
 
 from mock import Mock
 from twisted.internet.defer import inlineCallbacks
@@ -73,6 +73,19 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             msisdn=u'+27831234567')
 
     @inlineCallbacks
+    def test_handle_get_for_unicode_chars(self):
+        contact = yield self.new_contact(
+            name=u'Zoë',
+            surname=u'Person',
+            msisdn=u'+27831234567')
+        reply = yield self.dispatch_command('get', addr=u'+27831234567')
+        self.check_contact_reply(reply,
+            key=contact.key,
+            name=u'Zoë',
+            surname=u'Person',
+            msisdn=u'+27831234567')
+
+    @inlineCallbacks
     def test_handle_get_for_nonexistent_contact(self):
         reply = yield self.dispatch_command('get', addr=u'+27831234567')
         self.check_reply(reply, success=False)
@@ -107,6 +120,20 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         self.check_contact_reply(reply,
             key=contact.key,
             name=u'A Random',
+            surname=u'Person',
+            msisdn=u'+27831234567')
+
+    @inlineCallbacks
+    def test_handle_get_or_create_for_unicode_chars(self):
+        contact = yield self.new_contact(
+            name=u'Zoë',
+            surname=u'Person',
+            msisdn=u'+27831234567')
+        reply = yield self.dispatch_command('get_or_create',
+                                            addr=u'+27831234567')
+        self.check_contact_reply(reply,
+            key=contact.key,
+            name=u'Zoë',
             surname=u'Person',
             msisdn=u'+27831234567')
 
@@ -153,6 +180,23 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             msisdn=u'+27831234567')
 
     @inlineCallbacks
+    def test_handle_update_for_unicode_chars(self):
+        contact = yield self.new_contact(
+            name=u'A Random',
+            surname=u'Person',
+            msisdn=u'+27831234567')
+
+        reply = yield self.dispatch_command('update',
+            key=contact.key,
+            surname=u'☃')
+
+        self.check_contact_reply(reply,
+            key=contact.key,
+            name=u'A Random',
+            surname=u'☃',
+            msisdn=u'+27831234567')
+
+    @inlineCallbacks
     def test_handle_update_for_nonexistent_contacts(self):
         reply = yield self.dispatch_command('update', key='213123')
         self.check_reply(reply, success=False)
@@ -167,4 +211,16 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         self.check_contact_reply(reply,
             name=u'A Random',
             surname=u'Jackal',
+            msisdn=u'+27831234567')
+
+    @inlineCallbacks
+    def test_handle_new_for_unicode_chars(self):
+        reply = yield self.dispatch_command('new',
+            name=u'A Random',
+            surname=u'☃',
+            msisdn=u'+27831234567')
+
+        self.check_contact_reply(reply,
+            name=u'A Random',
+            surname=u'☃',
             msisdn=u'+27831234567')
