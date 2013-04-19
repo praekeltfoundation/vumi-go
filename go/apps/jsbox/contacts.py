@@ -79,15 +79,12 @@ class ContactsResource(SandboxResource):
 
             store = self._contact_store_for_api(api)
             fields = self.pick_fields(command, *Contact.field_descriptors)
-            contact = yield store.update_contact(command['key'], **fields)
+            yield store.update_contact(command['key'], **fields)
         except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        returnValue(self.reply(
-            command,
-            success=True,
-            contact=contact.get_data()))
+        returnValue(self.reply(command, success=True))
 
     @inlineCallbacks
     def _update_dynamic_field(self, field_name, api, command):
@@ -111,10 +108,7 @@ class ContactsResource(SandboxResource):
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        returnValue(self.reply(
-            command,
-            success=True,
-            contact=contact.get_data()))
+        returnValue(self.reply(command, success=True))
 
     def handle_update_extra(self, api, command):
         return self._update_dynamic_field('extra', api, command)
