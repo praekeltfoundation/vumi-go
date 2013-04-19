@@ -56,7 +56,7 @@ class ConversationConfigResource(BaseResource):
 
     def fallback_handler(self, request, command, conversation):
         request.setResponseCode(http.BAD_REQUEST)
-        succeed(1)
+        succeed(None)
 
     @inlineCallbacks
     def handle_jsbox(self, request, command, conversation):
@@ -100,7 +100,7 @@ class ConversationApiResource(BaseResource):
         return resource_class(self.worker, self.conversation_key)
 
 
-class ConversationApiWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
+class ConversationApiWorkerConfig(BaseWorker.CONFIG_CLASS):
     worker_name = ConfigText(
         "Name of this tagpool API worker.", required=True, static=True)
     web_path = ConfigText(
