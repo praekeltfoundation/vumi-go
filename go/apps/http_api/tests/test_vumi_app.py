@@ -200,7 +200,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         response = yield receiver.get_response()
         self.assertEqual(response.code, http.UNAUTHORIZED)
         self.assertEqual(response.headers.getRawHeaders('www-authenticate'), [
-            'basic realm="Conversation Stream"'])
+            'basic realm="Conversation Realm"'])
 
     @inlineCallbacks
     def test_invalid_auth(self):
@@ -217,7 +217,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         response = yield receiver.get_response()
         self.assertEqual(response.code, http.UNAUTHORIZED)
         self.assertEqual(response.headers.getRawHeaders('www-authenticate'), [
-            'basic realm="Conversation Stream"'])
+            'basic realm="Conversation Realm"'])
 
     @inlineCallbacks
     def test_send_to(self):
