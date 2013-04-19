@@ -67,10 +67,6 @@ class ContactsResource(SandboxResource):
     def pick_fields(collection, *fields):
         return dict((k, collection[k]) for k in fields if k in collection)
 
-    @staticmethod
-    def omit_fields(collection, *fields):
-        return dict((k, collection[k]) for k in fields if k not in collection)
-
     @inlineCallbacks
     def handle_update(self, api, command):
         try:
