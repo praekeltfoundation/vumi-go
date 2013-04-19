@@ -228,7 +228,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
         reply = yield self.dispatch_command(
             'update_extra',
-            key=contact.key,
+            contact_key=contact.key,
             field='foo',
             value=u'larp')
         self.check_reply(reply)
@@ -247,7 +247,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
         reply = yield self.dispatch_command(
             'update_extra',
-            key=contact.key,
+            contact_key=contact.key,
             field='foo',
             value=u'☃')
         self.check_reply(reply)
@@ -262,7 +262,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
     def test_handle_update_extra_for_nonexistent_contacts(self):
         reply = yield self.dispatch_command(
             'update_extra',
-            key='213123',
+            contact_key='213123',
             field='foo',
             value=u'bar')
         self.check_reply(reply, success=False)
@@ -275,7 +275,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
         reply = yield self.dispatch_command(
             'update_subscription',
-            key=contact.key,
+            contact_key=contact.key,
             field='foo',
             value=u'larp')
         self.check_reply(reply)
@@ -294,7 +294,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
         reply = yield self.dispatch_command(
             'update_subscription',
-            key=contact.key,
+            contact_key=contact.key,
             field='foo',
             value=u'☃')
         self.check_reply(reply)
@@ -309,7 +309,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
     def test_handle_update_subscription_for_nonexistent_contacts(self):
         reply = yield self.dispatch_command(
             'update_subscription',
-            key='21312',
+            contact_key='21312',
             field='foo',
             value=u'bar')
         self.check_reply(reply, success=False)

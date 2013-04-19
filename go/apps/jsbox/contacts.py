@@ -85,8 +85,9 @@ class ContactsResource(SandboxResource):
     @inlineCallbacks
     def _update_dynamic_field(self, field_name, api, command):
         try:
-            if 'key' not in command:
-                raise SandboxError("'key' needs to be specified for command")
+            if 'contact_key' not in command:
+                raise SandboxError(
+                    "'contact_key' needs to be specified for command")
 
             if 'field' not in command:
                 raise SandboxError("'field' needs to be specified for command")
@@ -95,7 +96,7 @@ class ContactsResource(SandboxResource):
                 raise SandboxError("'value' needs to be specified for command")
 
             store = self._contact_store_for_api(api)
-            contact = yield store.get_contact_by_key(command['key'])
+            contact = yield store.get_contact_by_key(command['contact_key'])
 
             field = getattr(contact, field_name)
             field[command['field']] = command['value']
