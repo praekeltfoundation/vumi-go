@@ -11,7 +11,6 @@ from vumi.utils import http_request_full
 from vumi.worker import BaseWorker
 
 from go.apps.http_api.resource import AuthorizedResource, BaseResource
-from go.vumitools.app_worker import GoApplicationWorker
 from go.vumitools.api import VumiApi
 
 
