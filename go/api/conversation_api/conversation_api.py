@@ -8,6 +8,7 @@ from twisted.internet.defer import inlineCallbacks, Deferred, succeed
 from vumi.config import ConfigText, ConfigDict, ConfigInt
 from vumi.transports.httprpc import httprpc
 from vumi.utils import http_request_full
+from vumi.worker import BaseWorker
 
 from go.apps.http_api.resource import AuthorizedResource, BaseResource
 from go.vumitools.app_worker import GoApplicationWorker
@@ -119,14 +120,14 @@ class AccountResource(AuthorizedResource):
     resource_class = ConversationApiResource
 
 
-class ConversationApiWorker(GoApplicationWorker):
+class ConversationApiWorker(BaseWorker):
 
     worker_name = 'conversation_api_worker'
     CONFIG_CLASS = ConversationApiWorkerConfig
+    SEND_TO_TAGS = frozenset(['default'])
 
     @inlineCallbacks
-    def setup_application(self):
-        yield super(ConversationApiWorker, self).setup_application()
+    def setup_worker(self):
         self.vumi_api = yield VumiApi.from_config_async(self.config)
         config = self.get_static_config()
         self.webserver = self.start_web_resources([
@@ -135,8 +136,7 @@ class ConversationApiWorker(GoApplicationWorker):
         ], config.web_port)
 
     @inlineCallbacks
-    def teardown_application(self):
-        yield super(ConversationApiWorker, self).teardown_application()
+    def teardown_worker(self):
         yield self.webserver.loseConnection()
 
     def setup_connectors(self):
