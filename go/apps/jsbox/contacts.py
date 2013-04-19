@@ -6,7 +6,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi import log
 from vumi.application.sandbox import SandboxResource, SandboxError
 
-from go.vumitools.contact import Contact
+from go.vumitools.contact import Contact, ContactError
 
 
 class ContactsResource(SandboxResource):
@@ -33,7 +33,7 @@ class ContactsResource(SandboxResource):
                 command['delivery_class'],
                 command['addr'],
                 create=False)
-        except (SandboxError, RuntimeError) as e:
+        except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
@@ -54,7 +54,7 @@ class ContactsResource(SandboxResource):
                 command['delivery_class'],
                 command['addr'],
                 create=True)
-        except (SandboxError, RuntimeError) as e:
+        except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
@@ -67,6 +67,10 @@ class ContactsResource(SandboxResource):
     def pick_fields(collection, *fields):
         return dict((k, collection[k]) for k in fields if k in collection)
 
+    @staticmethod
+    def omit_fields(collection, *fields):
+        return dict((k, collection[k]) for k in fields if k not in collection)
+
     @inlineCallbacks
     def handle_update(self, api, command):
         try:
@@ -76,7 +80,7 @@ class ContactsResource(SandboxResource):
             store = self._contact_store_for_api(api)
             fields = self.pick_fields(command, *Contact.field_descriptors)
             contact = yield store.update_contact(command['key'], **fields)
-        except (SandboxError, RuntimeError) as e:
+        except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
@@ -91,13 +95,19 @@ class ContactsResource(SandboxResource):
             if 'key' not in command:
                 raise SandboxError("'key' needs to be specified for command")
 
+            if 'field' not in command:
+                raise SandboxError("'field' needs to be specified for command")
+
+            if 'value' not in command:
+                raise SandboxError("'value' needs to be specified for command")
+
             store = self._contact_store_for_api(api)
             contact = yield store.get_contact_by_key(command['key'])
 
             field = getattr(contact, field_name)
-            field.update(self.pick_fields(command, *field.keys()))
+            field[command['field']] = command['value']
             yield contact.save()
-        except (SandboxError, RuntimeError) as e:
+        except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 

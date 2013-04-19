@@ -7,7 +7,7 @@ from twisted.trial.unittest import TestCase
 
 from go.vumitools.tests.utils import model_eq, GoPersistenceMixin
 from go.vumitools.account import AccountStore
-from go.vumitools.contact import ContactStore
+from go.vumitools.contact import ContactStore, ContactError
 from go.vumitools.opt_out import OptOutStore
 
 
@@ -45,7 +45,7 @@ class TestContactStore(GoPersistenceMixin, TestCase):
             contact, (yield self.store.get_contact_by_key(contact.key)))
 
     def test_get_contact_by_key_for_nonexistent_contact(self):
-        self.assertFailure(self.store.get_contact_by_key(u'123'), RuntimeError)
+        self.assertFailure(self.store.get_contact_by_key(u'123'), ContactError)
 
     @inlineCallbacks
     def test_new_group(self):
@@ -116,7 +116,7 @@ class TestContactStore(GoPersistenceMixin, TestCase):
         self.assert_models_equal(dbcontact, updated_contact)
 
     def test_update_contact_for_nonexistent_contact(self):
-        self.assertFailure(self.store.update_contact('123124'), RuntimeError)
+        self.assertFailure(self.store.update_contact('123124'), ContactError)
 
     @inlineCallbacks
     def test_add_contact_to_group(self):
@@ -200,11 +200,11 @@ class TestContactStore(GoPersistenceMixin, TestCase):
     def test_contact_for_addr_for_unsupported_transports(self):
         self.assertFailure(
             self.store.contact_for_addr('bad_transport_type', u'234234'),
-            RuntimeError)
+            ContactError)
 
     def test_contact_for_addr_for_nonexistent_contacts(self):
         self.assertFailure(self.store.contact_for_addr('sms', u'27831234567'),
-                           RuntimeError)
+                           ContactError)
 
     @inlineCallbacks
     def test_contact_for_addr_for_contact_creation(self):

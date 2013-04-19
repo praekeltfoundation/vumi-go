@@ -209,7 +209,8 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
         reply = yield self.dispatch_command('update_extra',
             key=contact.key,
-            foo=u'larp')
+            field='foo',
+            value=u'larp')
 
         self.check_contact_reply(reply, **{
             'key': contact.key,
@@ -218,6 +219,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             'extras-lorem': u'ipsum',
         })
 
+    @inlineCallbacks
     def test_handle_update_extra_for_unicode_chars(self):
         contact = yield self.new_contact(
             msisdn=u'+27831234567',
@@ -225,7 +227,8 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
         reply = yield self.dispatch_command('update_extra',
             key=contact.key,
-            foo=u'larp')
+            field='foo',
+            value=u'☃')
 
         self.check_contact_reply(reply, **{
             'key': contact.key,
@@ -236,7 +239,10 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
     @inlineCallbacks
     def test_handle_update_extra_for_nonexistent_contacts(self):
-        reply = yield self.dispatch_command('update_extra', key='213123')
+        reply = yield self.dispatch_command('update_extra',
+            key='213123',
+            field='foo',
+            value=u'bar')
         self.check_reply(reply, success=False)
 
     @inlineCallbacks
@@ -247,7 +253,8 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
         reply = yield self.dispatch_command('update_subscription',
             key=contact.key,
-            foo=u'larp')
+            field='foo',
+            value=u'larp')
 
         self.check_contact_reply(reply, **{
             'key': contact.key,
@@ -256,14 +263,16 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             'subscription-lorem': u'ipsum',
         })
 
+    @inlineCallbacks
     def test_handle_update_subscription_for_unicode_chars(self):
         contact = yield self.new_contact(
             msisdn=u'+27831234567',
             subscription={'foo': u'bar', 'lorem': u'ipsum'})
 
-        reply = yield self.dispatch_command('update_extra',
+        reply = yield self.dispatch_command('update_subscription',
             key=contact.key,
-            foo=u'☃')
+            field='foo',
+            value=u'☃')
 
         self.check_contact_reply(reply, **{
             'key': contact.key,
@@ -274,7 +283,10 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
     @inlineCallbacks
     def test_handle_update_subscription_for_nonexistent_contacts(self):
-        reply = yield self.dispatch_command('update_subscription', key='21312')
+        reply = yield self.dispatch_command('update_subscription',
+            key='21312',
+            field='foo',
+            value=u'bar')
         self.check_reply(reply, success=False)
 
     @inlineCallbacks
