@@ -58,3 +58,14 @@ class GoStartConversationTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(tag)
         [command] = sender.outbox
         self.assertEqual(command['command'], 'start')
+
+    @patch('go.vumitools.api.SyncMessageSender')
+    def test_restart_conversation(self, SyncMessageSender):
+        sender = DummyMessageSender()
+        SyncMessageSender.return_value = sender
+        conversation = self.get_conversation()
+        conversation.start()
+        self.assertRaisesRegexp(
+            CommandError, 'Conversation already started',
+            self.command.handle, email_address=self.user.username,
+            conversation_key=conversation.key)

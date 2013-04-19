@@ -51,7 +51,13 @@ class Command(BaseCommand):
         handler(user_api, conversation)
 
     def default_start_conversation(self, user_api, conversation):
+        if conversation.started():
+            raise CommandError('Conversation already started.')
+
         conversation.start()
 
     def start_sequential_send(self, user_api, conversation):
+        if conversation.started():
+            raise CommandError('Conversation already started.')
+
         conversation.start(no_batch_tag=True, acquire_tag=False)
