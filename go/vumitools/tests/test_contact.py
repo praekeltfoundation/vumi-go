@@ -45,7 +45,8 @@ class TestContactStore(GoPersistenceMixin, TestCase):
             contact, (yield self.store.get_contact_by_key(contact.key)))
 
     def test_get_contact_by_key_for_nonexistent_contact(self):
-        self.assertFailure(self.store.get_contact_by_key(u'123'), ContactError)
+        return self.assertFailure(
+            self.store.get_contact_by_key(u'123'), ContactError)
 
     @inlineCallbacks
     def test_new_group(self):
@@ -116,7 +117,8 @@ class TestContactStore(GoPersistenceMixin, TestCase):
         self.assert_models_equal(dbcontact, updated_contact)
 
     def test_update_contact_for_nonexistent_contact(self):
-        self.assertFailure(self.store.update_contact('123124'), ContactError)
+        return self.assertFailure(
+            self.store.update_contact('123124'), ContactError)
 
     @inlineCallbacks
     def test_add_contact_to_group(self):
@@ -198,20 +200,21 @@ class TestContactStore(GoPersistenceMixin, TestCase):
         yield check_contact_for_addr('twitter', u'random', contact)
 
     def test_contact_for_addr_for_unsupported_transports(self):
-        self.assertFailure(
+        return self.assertFailure(
             self.store.contact_for_addr('bad_transport_type', u'234234'),
             ContactError)
 
     def test_contact_for_addr_for_nonexistent_contacts(self):
-        self.assertFailure(self.store.contact_for_addr('sms', u'27831234567'),
-                           ContactError)
+        return self.assertFailure(
+            self.store.contact_for_addr('sms', u'27831234567', create=False),
+            ContactError)
 
     @inlineCallbacks
     def test_contact_for_addr_for_contact_creation(self):
         @inlineCallbacks
         def check_contact_for_addr(deliv_class, addr, **kw):
             contact = yield self.store.contact_for_addr(
-                deliv_class, addr, create=True)
+                deliv_class, addr)
             self.assertEqual(contact.user_account.key, self.account.key)
             for field, expected_value in kw.iteritems():
                 self.assertEqual(getattr(contact, field), expected_value)
