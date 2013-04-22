@@ -202,13 +202,13 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             msisdn=u'+27831234567')
 
         reply = yield self.dispatch_command(
-            'update', key=contact.key, fields={'surname': u'☃'})
+            'update', key=contact.key, fields={'surname': u'Robot'})
         self.check_reply(reply)
 
         self.check_contact_fields(
             contact.key,
             name=u'A Random',
-            surname=u'☃',
+            surname=u'Robot',
             msisdn=u'+27831234567')
 
     @inlineCallbacks
@@ -328,12 +328,12 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
     def test_handle_new_for_unicode_chars(self):
         reply = yield self.dispatch_command('new', fields={
             'name': u'A Random',
-            'surname': u'☃',
+            'surname': u'Robot',
             'msisdn': u'+27831234567',
         })
 
         self.check_contact_reply(
             reply,
             name=u'A Random',
-            surname=u'☃',
+            surname=u'Robot',
             msisdn=u'+27831234567')
