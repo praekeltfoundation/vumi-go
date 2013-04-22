@@ -159,6 +159,8 @@ INSTALLED_APPS = (
     'go.conversation',
     'go.contacts',
     'go.account',
+    'go.campaigns',
+
     'vxpolls.djdashboard',
     'registration',
     'bootstrap',

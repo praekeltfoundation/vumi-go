@@ -140,3 +140,6 @@ body {
 .span9 {
   padding-right: 20px;
 }
+.campaigns form {
+  margin: 2em 1em;
+}

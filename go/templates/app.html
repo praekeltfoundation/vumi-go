@@ -34,14 +34,15 @@
 <div class="content {% block content_extraclass %}{% endblock %}">
 
     <div class="row-fluid header">
+        <div class="span12">
+            <div class="pull-left">
+                <h1>{% block content_title %}Title{% endblock %}</h1>
+            </div>
 
-        <div class="span6 sidebar">
-            <h1>{% block content_title %}Title{% endblock %}</h1>
-        </div>
-
-        <div class="span6">
-            {% block content_breadcrumbs %}
-            {% endblock %}
+            <div class="pull-right">
+                {% block content_breadcrumbs %}
+                {% endblock %}
+            </div>
         </div>
     </div>
 
