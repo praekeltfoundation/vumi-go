@@ -128,12 +128,9 @@ class ContactsResource(SandboxResource):
             fields = self.pick_fields(command['fields'],
                                       *Contact.field_descriptors)
             contact_store = self._contact_store_for_api(api)
-            contact = yield contact_store.new_contact(**fields)
+            yield contact_store.new_contact(**fields)
         except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        returnValue(self.reply(
-            command,
-            success=True,
-            contact=contact.get_data()))
+        returnValue(self.reply(command, success=True))

@@ -318,11 +318,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             'msisdn': u'+27831234567',
         })
 
-        self.check_contact_reply(
-            reply,
-            name=u'A Random',
-            surname=u'Jackal',
-            msisdn=u'+27831234567')
+        self.check_contact_reply(reply)
 
     @inlineCallbacks
     def test_handle_new_for_unicode_chars(self):
@@ -332,8 +328,4 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             'msisdn': u'+27831234567',
         })
 
-        self.check_contact_reply(
-            reply,
-            name=u'A Random',
-            surname=u'Robot',
-            msisdn=u'+27831234567')
+        self.check_contact_reply(reply)
