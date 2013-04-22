@@ -11,8 +11,8 @@ from vumi import log
 
 from go.vumitools.api import VumiApi
 from go.vumitools.app_worker import GoApplicationWorker
-from go.apps.http_api.resource import (StreamingResource, MessageStream,
-                                        EventStream)
+from go.apps.http_api.resource import (AuthorizedResource, MessageStream,
+                                       EventStream)
 
 
 class StreamingClientManager(object):
@@ -93,7 +93,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
             self.redis.sub_manager('http_api:message_cache'))
 
         self.webserver = self.start_web_resources([
-            (StreamingResource(self), self.web_path),
+            (AuthorizedResource(self), self.web_path),
             (httprpc.HttpRpcHealthResource(self), self.health_path),
         ], self.web_port)
 
@@ -157,7 +157,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
         user_api = self.get_user_api(account_key)
         conversation = user_api.wrap_conversation(raw_conv)
         push_message_url = self.get_api_metadata(conversation,
-            'push_message_url')
+                                                 'push_message_url')
         if push_message_url:
             resp = yield self.push(push_message_url, message)
             if resp.code != http.OK:
@@ -200,7 +200,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
 
     def get_health_response(self):
         return str(sum([len(callbacks) for callbacks in
-                    self.client_manager.clients.values()]))
+                   self.client_manager.clients.values()]))
 
     @inlineCallbacks
     def teardown_application(self):

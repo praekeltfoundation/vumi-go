@@ -7,7 +7,7 @@ from twisted.trial.unittest import TestCase
 
 from go.vumitools.tests.utils import model_eq, GoPersistenceMixin
 from go.vumitools.account import AccountStore
-from go.vumitools.contact import ContactStore
+from go.vumitools.contact import ContactStore, ContactError
 from go.vumitools.opt_out import OptOutStore
 
 
@@ -36,6 +36,17 @@ class TestContactStore(GoPersistenceMixin, TestCase):
     def assert_models_not_equal(self, m1, m2):
         self.assertFalse(model_eq(m1, m2),
                          "Models unexpectedly equal:\na: %r\nb: %r" % (m1, m2))
+
+    @inlineCallbacks
+    def test_get_contact_by_key(self):
+        contact = yield self.store.new_contact(
+            name=u'J Random', surname=u'Person', msisdn=u'27831234567')
+        self.assert_models_equal(
+            contact, (yield self.store.get_contact_by_key(contact.key)))
+
+    def test_get_contact_by_key_for_nonexistent_contact(self):
+        return self.assertFailure(
+            self.store.get_contact_by_key(u'123'), ContactError)
 
     @inlineCallbacks
     def test_new_group(self):
@@ -90,6 +101,24 @@ class TestContactStore(GoPersistenceMixin, TestCase):
         dbcontact = yield self.store.get_contact_by_key(contact.key)
 
         self.assert_models_equal(contact, dbcontact)
+
+    @inlineCallbacks
+    def test_update_contact(self):
+        contact = yield self.store.new_contact(
+            name=u'J Random', surname=u'Person', msisdn=u'27831234567')
+
+        updated_contact = yield self.store.update_contact(contact.key,
+                                                          surname=u'Jackal')
+        dbcontact = yield self.store.get_contact_by_key(contact.key)
+
+        self.assertEqual(u'J Random', updated_contact.name)
+        self.assertEqual(u'Jackal', updated_contact.surname)
+        self.assertEqual(u'27831234567', updated_contact.msisdn)
+        self.assert_models_equal(dbcontact, updated_contact)
+
+    def test_update_contact_for_nonexistent_contact(self):
+        return self.assertFailure(
+            self.store.update_contact('123124'), ContactError)
 
     @inlineCallbacks
     def test_add_contact_to_group(self):
@@ -150,3 +179,53 @@ class TestContactStore(GoPersistenceMixin, TestCase):
                 name=u'Contact', surname=u'Foo %d' % i, msisdn=u'12345')
         count = yield self.store.count_contacts_for_group(group)
         self.assertEqual(count, 1)
+
+    @inlineCallbacks
+    def test_contact_for_addr(self):
+        @inlineCallbacks
+        def check_contact_for_addr(delivery_class, addr, expected_contact):
+            contact = yield self.store.contact_for_addr(delivery_class, addr)
+            self.assert_models_equal(expected_contact, contact)
+
+        contact = yield self.store.new_contact(
+            name=u'A Random',
+            surname=u'Person',
+            msisdn=u'+27831234567',
+            gtalk_id=u'random@gmail.com',
+            twitter_handle=u'random')
+
+        yield check_contact_for_addr('sms', u'+27831234567', contact)
+        yield check_contact_for_addr('ussd', u'+27831234567', contact)
+        yield check_contact_for_addr('gtalk', u'random@gmail.com', contact)
+        yield check_contact_for_addr('twitter', u'random', contact)
+
+    def test_contact_for_addr_for_unsupported_transports(self):
+        return self.assertFailure(
+            self.store.contact_for_addr('bad_transport_type', u'234234'),
+            ContactError)
+
+    def test_contact_for_addr_for_nonexistent_contacts(self):
+        return self.assertFailure(
+            self.store.contact_for_addr('sms', u'27831234567', create=False),
+            ContactError)
+
+    @inlineCallbacks
+    def test_contact_for_addr_for_contact_creation(self):
+        @inlineCallbacks
+        def check_contact_for_addr(deliv_class, addr, **kw):
+            contact = yield self.store.contact_for_addr(
+                deliv_class, addr)
+            self.assertEqual(contact.user_account.key, self.account.key)
+            for field, expected_value in kw.iteritems():
+                self.assertEqual(getattr(contact, field), expected_value)
+
+        yield check_contact_for_addr('sms', u'+27831234567',
+                                     msisdn=u'+27831234567')
+        yield check_contact_for_addr('ussd', u'+27831234567',
+                                     msisdn=u'+27831234567')
+        yield check_contact_for_addr('gtalk', u'random@gmail.com',
+                                     gtalk_id=u'random@gmail.com',
+                                     msisdn=u'unknown')
+        yield check_contact_for_addr('twitter', u'random',
+                                     twitter_handle=u'random',
+                                     msisdn=u'unknown')
