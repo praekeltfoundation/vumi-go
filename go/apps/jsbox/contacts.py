@@ -10,6 +10,14 @@ from go.vumitools.contact import Contact, ContactError
 
 
 class ContactsResource(SandboxResource):
+    """
+    Sandbox resource for accessing, creating and modifying contacts for
+    a Go application.
+
+    See :class:`go.vumitools.contact.Contact` for a look at the Contact model
+    and its fields.
+    """
+
     def _contact_store_for_api(self, api):
         return self.app_worker.user_api_for_api(api).contact_store
 
@@ -26,6 +34,25 @@ class ContactsResource(SandboxResource):
 
     @inlineCallbacks
     def handle_get(self, api, command):
+        """
+        Accepts a delivery class and address and returns a contact's data, as
+        well as the success status of the operation (can be `true` or `false`).
+
+        Command fields:
+            :param delivery_class: The type of channel used for the passed in
+            address. Can be one of the following types: `sms`, `ussd`,
+            `twitter`, `gtalk`
+            :param addr: The address to use to lookup of the contact.For
+            example, if `sms` was the delivery class, the address would look
+            something like `+27731112233`
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'contacts.get',
+                {deliver_class: 'sms', addr: '+27731112233'},
+                function(reply) { api.log_info(reply.contact.name); });
+        """
         try:
             self._parse_get(command)
 
@@ -48,6 +75,10 @@ class ContactsResource(SandboxResource):
 
     @inlineCallbacks
     def handle_get_or_create(self, api, command):
+        """
+        Behaves the same as :method:handle_get, but creates the contact if it
+        does not yet exist.
+        """
         try:
             self._parse_get(command)
             contact = yield self._contact_store_for_api(api).contact_for_addr(
@@ -69,6 +100,25 @@ class ContactsResource(SandboxResource):
 
     @inlineCallbacks
     def handle_update(self, api, command):
+        """
+        Updates the given fields of an existing contact and returns the success
+        status of the operation (can be `true` or `false`).
+
+        **Note**: All subfields of a Dynamic field such as `extra` and
+        `subscription` are overwritten if specified as one of the fields to be
+        updated (see example below).
+
+        Command field:
+            :param key: The contacts key
+            :param fields: The contact fields to be updated
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'contacts.update',
+                {key: '123abc', surname: 'Jones', extra: {location: 'CPT'}},
+                function(reply) { api.log_info(reply.success); });
+        """
         try:
             if 'key' not in command:
                 raise SandboxError("'key' needs to be specified for command")
@@ -113,13 +163,61 @@ class ContactsResource(SandboxResource):
         returnValue(self.reply(command, success=True))
 
     def handle_update_extra(self, api, command):
+        """
+        Updates a single subfield of an existing contact's `extra` field and
+        returns the success status of the operation (can be `true` or `false`).
+
+        Command field:
+            :param contact_key: The contact's key
+            :param field: The name of the subfield to be updated
+            :param value: The subfield's new value
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'contacts.update_extra',
+                {contact_key: '123abc', field: 'surname', value: 'Jones'},
+                function(reply) { api.log_info(reply.success); });
+        """
         return self._update_dynamic_field('extra', api, command)
 
     def handle_update_subscription(self, api, command):
+        """
+        Updates a single subfield of an existing contact's `subscription` field
+        and returns the success status of the operation (can be `true` or
+        `false`).
+
+        Command field:
+            :param contact_key: The contact's key
+            :param field: The name of the subfield to be updated
+            :param value: The subfield's new value
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'contacts.update_subscription',
+                {contact_key: '123abc', field: 'foo', value: 'bar'},
+                function(reply) { api.log_info(reply.success); });
+        """
         return self._update_dynamic_field('subscription', api, command)
 
     @inlineCallbacks
     def handle_new(self, api, command):
+        """
+        Creates a new contacts with the given fields of an existing contact and
+        returns a the new contact's key and the success status of the
+        operation (can be `true` or `false`).
+
+        Command field:
+            :param fields: The fields to be set for the new contact
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'contacts.new',
+                {fields: {surname: 'Jones', extra: {location: 'CPT'}}},
+                function(reply) { api.log_info(reply.key); });
+        """
         try:
             if 'fields' not in command:
                 raise SandboxError(
