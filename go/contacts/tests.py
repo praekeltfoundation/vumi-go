@@ -6,11 +6,12 @@ from django.conf import settings
 from django.test import TestCase
 from django.test.client import Client
 from django.core.urlresolvers import reverse
-
-from go.apps.tests.base import DjangoGoApplicationTestCase
 from django.core import mail
 
+from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.contacts.parsers.base import FieldNormalizer
+from go.vumitools.contact import ContactError
+
 
 TEST_GROUP_NAME = u"Test Group"
 TEST_CONTACT_NAME = u"Name"
@@ -404,7 +405,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(
             self.contact_store.contact_for_addr('gtalk',
                 u'gtalk@host.com').key, gtalk_contact.key)
-        self.assertRaisesRegexp(RuntimeError, 'Unsupported transport_type',
+        self.assertRaisesRegexp(ContactError, 'Unsupported transport_type',
             self.contact_store.contact_for_addr, u'unknown', u'unknown')
 
 

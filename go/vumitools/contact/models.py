@@ -252,7 +252,7 @@ class ContactStore(PerAccountStore):
         returnValue(opt_out)
 
     @Manager.calls_manager
-    def contact_for_addr(self, delivery_class, addr, create=False):
+    def contact_for_addr(self, delivery_class, addr, create=True):
         """
         Returns a contact from a delivery class and address, or None if the
         contact does not exist.
