@@ -1,4 +1,5 @@
 {% extends "app.html" %}
+{% load url from future %}
 
 
 {% block content_extraclass %}dashboard{% endblock %}
@@ -8,7 +9,7 @@
 
 
 {% block content_actions_left %}
-    <button class="btn btn-primary">New Campaign</button>
+    <a href="{% url 'campaigns:new' %}" class="btn btn-primary">New Campaign</a>
 {% endblock %}
 
 {% block content_actions_right %}
