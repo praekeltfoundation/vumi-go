@@ -29,6 +29,9 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def get_tagpool_metadata(self, key, default=None):
+        if self.delivery_tag_pool is None:
+            returnValue({})
+
         if self._tagpool_metadata is None:
             self._tagpool_metadata = yield self.api.tpm.get_metadata(
                 self.delivery_tag_pool)

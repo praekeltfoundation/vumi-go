@@ -10,32 +10,13 @@ from twisted.web.server import NOT_DONE_YET
 from vumi.utils import http_request_full
 from vumi.message import TransportUserMessage, TransportEvent
 from vumi.tests.utils import MockHttpServer
+from vumi.transports.vumi_bridge.client import StreamingClient
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApiCommand
 
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
-from go.apps.http_api.client import StreamingClient, VumiMessageReceiver
 from go.apps.http_api.resource import ConversationResource, StreamResource
-
-
-class TestMessageReceiver(VumiMessageReceiver):
-    message_class = TransportUserMessage
-
-    def __init__(self, *args, **kwargs):
-        VumiMessageReceiver.__init__(self, *args, **kwargs)
-        self.inbox = DeferredQueue()
-        self.errors = DeferredQueue()
-
-    def onMessage(self, message):
-        self.inbox.put(message)
-
-    def onError(self, failure):
-        self.errors.put(failure)
-
-
-class TestEventReceiver(TestMessageReceiver):
-    message_class = TransportEvent
 
 
 class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
@@ -55,8 +36,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         })
         self.app = yield self.get_application(self.config)
         self.addr = self.app.webserver.getHost()
-        self.url = 'http://%s:%s%s' % (self.addr.host, self.addr.port,
-                                        self.config['web_path'])
+        self.url = 'http://%s:%s%s' % (
+            self.addr.host, self.addr.port, self.config['web_path'])
 
         self.vumi_api = yield self.app.vumi_api
         self.account = yield self.mk_user(self.vumi_api, u'user')
@@ -105,9 +86,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         messages = DeferredQueue()
         errors = DeferredQueue()
-        receiver = self.client.stream(TransportUserMessage, messages.put,
-                                            errors.put, url,
-                                            Headers(self.auth_headers))
+        receiver = self.client.stream(
+            TransportUserMessage, messages.put, errors.put, url,
+            Headers(self.auth_headers))
 
         received_messages = []
         for msg_id in range(count):
@@ -137,7 +118,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     def test_content_type(self):
         receiver, received_messages = yield self.pull_message()
         headers = receiver._response.headers
-        self.assertEqual(headers.getRawHeaders('content-type'),
+        self.assertEqual(
+            headers.getRawHeaders('content-type'),
             ['application/json; charset=utf-8'])
 
     @inlineCallbacks
@@ -146,9 +128,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         messages = DeferredQueue()
         errors = DeferredQueue()
-        receiver = self.client.stream(TransportUserMessage, messages.put,
-                                            errors.put, url,
-                                            Headers(self.auth_headers))
+        receiver = self.client.stream(
+            TransportUserMessage, messages.put, errors.put, url,
+            Headers(self.auth_headers))
 
         msg1 = self.mkmsg_in(content='in 1', message_id='1')
         yield self.dispatch_to_conv(msg1, self.conversation)
@@ -199,12 +181,12 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
 
         queue = DeferredQueue()
-        receiver = self.client.stream(TransportUserMessage, queue.put,
-                                                queue.put, url)
+        receiver = self.client.stream(
+            TransportUserMessage, queue.put, queue.put, url)
         response = yield receiver.get_response()
         self.assertEqual(response.code, http.UNAUTHORIZED)
         self.assertEqual(response.headers.getRawHeaders('www-authenticate'), [
-            'basic realm="Conversation Stream"'])
+            'basic realm="Conversation Realm"'])
 
     @inlineCallbacks
     def test_invalid_auth(self):
@@ -216,13 +198,12 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             'Authorization': ['Basic %s' % (base64.b64encode('foo:bar'),)],
         })
 
-        receiver = self.client.stream(TransportUserMessage, queue.put,
-                                                queue.put, url,
-                                                headers)
+        receiver = self.client.stream(
+            TransportUserMessage, queue.put, queue.put, url, headers)
         response = yield receiver.get_response()
         self.assertEqual(response.code, http.UNAUTHORIZED)
         self.assertEqual(response.headers.getRawHeaders('www-authenticate'), [
-            'basic realm="Conversation Stream"'])
+            'basic realm="Conversation Realm"'])
 
     @inlineCallbacks
     def test_send_to(self):
@@ -312,8 +293,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         ]
 
         url = '%s/%s/metrics.json' % (self.url, self.conversation.key)
-        response = yield http_request_full(url, json.dumps(metric_data),
-                                            self.auth_headers, method='PUT')
+        response = yield http_request_full(
+            url, json.dumps(metric_data), self.auth_headers, method='PUT')
 
         self.assertEqual(response.code, http.OK)
 
@@ -328,10 +309,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         concurrency = ConversationResource.CONCURRENCY_LIMIT
         queue = DeferredQueue()
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-        max_receivers = [self.client.stream(TransportUserMessage, queue.put,
-                                            queue.put, url,
-                                            Headers(self.auth_headers))
-                            for _ in range(concurrency)]
+        max_receivers = [self.client.stream(
+            TransportUserMessage, queue.put, queue.put, url,
+            Headers(self.auth_headers)) for _ in range(concurrency)]
 
         for i in range(concurrency):
             msg = self.mkmsg_in(content='in %s' % (i,), message_id='%s' % (i,))
@@ -339,12 +319,12 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             received = yield queue.get()
             self.assertEqual(msg['message_id'], received['message_id'])
 
-        maxed_out_resp = yield http_request_full(url, method='GET',
-                                                headers=self.auth_headers)
+        maxed_out_resp = yield http_request_full(
+            url, method='GET', headers=self.auth_headers)
 
         self.assertEqual(maxed_out_resp.code, 403)
-        self.assertTrue('Too many concurrent connections'
-                            in maxed_out_resp.delivered_body)
+        self.assertTrue(
+            'Too many concurrent connections' in maxed_out_resp.delivered_body)
 
         [r.disconnect() for r in max_receivers]
 
@@ -356,8 +336,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         queue = DeferredQueue()
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-        receiver = self.client.stream(TransportUserMessage, queue.put,
-            queue.put, url, Headers(self.auth_headers))
+        receiver = self.client.stream(
+            TransportUserMessage, queue.put, queue.put, url,
+            Headers(self.auth_headers))
 
         for i in range(10):
             received = yield queue.get()
@@ -367,8 +348,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_health_response(self):
-        health_url = 'http://%s:%s%s' % (self.addr.host, self.addr.port,
-            self.config['health_path'])
+        health_url = 'http://%s:%s%s' % (
+            self.addr.host, self.addr.port, self.config['health_path'])
 
         response = yield http_request_full(health_url, method='GET')
         self.assertEqual(response.delivered_body, '0')
@@ -378,8 +359,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         queue = DeferredQueue()
         stream_url = '%s/%s/messages.json' % (self.url, self.conversation.key)
-        stream_receiver = self.client.stream(TransportUserMessage, queue.put,
-            queue.put, stream_url, Headers(self.auth_headers))
+        stream_receiver = self.client.stream(
+            TransportUserMessage, queue.put, queue.put, stream_url,
+            Headers(self.auth_headers))
 
         yield queue.get()
 
@@ -458,7 +440,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_send_message_command(self):
-        command = VumiApiCommand.command('worker', 'send_message',
+        command = VumiApiCommand.command(
+            'worker', 'send_message',
             command_data={
                 u'batch_id': u'batch-id',
                 u'content': u'foo',
@@ -486,16 +469,19 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(msg.payload['transport_name'], self.transport_name)
         self.assertEqual(msg.payload['transport_type'], self.transport_type)
         self.assertEqual(msg.payload['message_type'], "user_message")
-        self.assertEqual(msg.payload['helper_metadata']['go']['user_account'],
-                                                            'account-key')
-        self.assertEqual(msg.payload['helper_metadata']['tag']['tag'],
-                                                ['longcode', 'default10080'])
+        self.assertEqual(
+            msg.payload['helper_metadata']['go']['user_account'],
+            'account-key')
+        self.assertEqual(
+            msg.payload['helper_metadata']['tag']['tag'],
+            ['longcode', 'default10080'])
 
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
         yield self.vumi_api.mdb.add_inbound_message(msg)
-        command = VumiApiCommand.command('worker', 'send_message',
+        command = VumiApiCommand.command(
+            'worker', 'send_message',
             command_data={
                 u'batch_id': u'batch-id',
                 u'content': u'foo',

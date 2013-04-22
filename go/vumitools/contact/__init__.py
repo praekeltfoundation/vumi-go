@@ -1,5 +1,5 @@
 from go.vumitools.contact.models import (
-    ContactGroup, Contact, ContactStore)
+    ContactGroup, Contact, ContactStore, ContactError)
 
 
-__all__ = ['ContactGroup', 'Contact', 'ContactStore']
+__all__ = ['ContactGroup', 'Contact', 'ContactStore', 'ContactError']
