@@ -93,6 +93,9 @@ body {
 .content .header h1 a {
   color: #2f3436;
 }
+.content .header .pull-right {
+  text-align: right;
+}
 .content .actions {
   height: 50px;
   line-height: 50px;
