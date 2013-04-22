@@ -51,10 +51,17 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         for key, expected_value in kw.iteritems():
             self.assertEqual(reply[key], expected_value)
 
-    def check_contact_reply(self, reply, **fields):
-        for field_name, expected_value in fields.iteritems():
+    def check_contact_reply(self, reply, **expected_fields):
+        for field_name, expected_value in expected_fields.iteritems():
             self.assertEqual(reply['contact'][field_name], expected_value)
         self.check_reply(reply)
+
+    @inlineCallbacks
+    def check_contact_fields(self, key, **expected_fields):
+        contact = yield self.contact_store.get_contact_by_key(key)
+        fields = yield contact.get_data()
+        for field_name, expected_value in expected_fields.iteritems():
+            self.assertEqual(fields[field_name], expected_value)
 
     def new_contact(self, **fields):
         return self.contact_store.new_contact(**fields)
@@ -66,7 +73,8 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             surname=u'Person',
             msisdn=u'+27831234567')
         reply = yield self.dispatch_command('get', addr=u'+27831234567')
-        self.check_contact_reply(reply,
+        self.check_contact_reply(
+            reply,
             key=contact.key,
             name=u'A Random',
             surname=u'Person',
@@ -79,7 +87,8 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             surname=u'Person',
             msisdn=u'+27831234567')
         reply = yield self.dispatch_command('get', addr=u'+27831234567')
-        self.check_contact_reply(reply,
+        self.check_contact_reply(
+            reply,
             key=contact.key,
             name=u'Zoë',
             surname=u'Person',
@@ -98,11 +107,13 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             twitter_handle=u'random',
             msisdn=u'unknown')
 
-        reply = yield self.dispatch_command('get',
+        reply = yield self.dispatch_command(
+            'get',
             addr=u'random',
             delivery_class=u'twitter')
 
-        self.check_contact_reply(reply,
+        self.check_contact_reply(
+            reply,
             key=contact.key,
             name=u'A Random',
             surname=u'Person',
@@ -117,7 +128,8 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             msisdn=u'+27831234567')
         reply = yield self.dispatch_command('get_or_create',
                                             addr=u'+27831234567')
-        self.check_contact_reply(reply,
+        self.check_contact_reply(
+            reply,
             key=contact.key,
             name=u'A Random',
             surname=u'Person',
@@ -131,7 +143,8 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             msisdn=u'+27831234567')
         reply = yield self.dispatch_command('get_or_create',
                                             addr=u'+27831234567')
-        self.check_contact_reply(reply,
+        self.check_contact_reply(
+            reply,
             key=contact.key,
             name=u'Zoë',
             surname=u'Person',
@@ -151,11 +164,13 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             twitter_handle=u'random',
             msisdn=u'unknown')
 
-        reply = yield self.dispatch_command('get_or_create',
+        reply = yield self.dispatch_command(
+            'get_or_create',
             addr=u'random',
             delivery_class=u'twitter')
 
-        self.check_contact_reply(reply,
+        self.check_contact_reply(
+            reply,
             key=contact.key,
             name=u'A Random',
             surname=u'Person',
@@ -169,12 +184,14 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             surname=u'Person',
             msisdn=u'+27831234567')
 
-        reply = yield self.dispatch_command('update',
+        reply = yield self.dispatch_command(
+            'update',
             key=contact.key,
             surname=u'Jackal')
+        self.check_reply(reply)
 
-        self.check_contact_reply(reply,
-            key=contact.key,
+        self.check_contact_fields(
+            contact.key,
             name=u'A Random',
             surname=u'Jackal',
             msisdn=u'+27831234567')
@@ -186,12 +203,14 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             surname=u'Person',
             msisdn=u'+27831234567')
 
-        reply = yield self.dispatch_command('update',
+        reply = yield self.dispatch_command(
+            'update',
             key=contact.key,
             surname=u'☃')
+        self.check_reply(reply)
 
-        self.check_contact_reply(reply,
-            key=contact.key,
+        self.check_contact_fields(
+            contact.key,
             name=u'A Random',
             surname=u'☃',
             msisdn=u'+27831234567')
@@ -202,20 +221,117 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         self.check_reply(reply, success=False)
 
     @inlineCallbacks
+    def test_handle_update_extra(self):
+        contact = yield self.new_contact(
+            msisdn=u'+27831234567',
+            extra={'foo': u'bar', 'lorem': u'ipsum'})
+
+        reply = yield self.dispatch_command(
+            'update_extra',
+            contact_key=contact.key,
+            field='foo',
+            value=u'larp')
+        self.check_reply(reply)
+
+        self.check_contact_fields(contact.key, **{
+            'msisdn': u'+27831234567',
+            'extras-foo': u'larp',
+            'extras-lorem': u'ipsum',
+        })
+
+    @inlineCallbacks
+    def test_handle_update_extra_for_unicode_chars(self):
+        contact = yield self.new_contact(
+            msisdn=u'+27831234567',
+            extra={'foo': u'bar', 'lorem': u'ipsum'})
+
+        reply = yield self.dispatch_command(
+            'update_extra',
+            contact_key=contact.key,
+            field='foo',
+            value=u'☃')
+        self.check_reply(reply)
+
+        self.check_contact_fields(contact.key, **{
+            'msisdn': u'+27831234567',
+            'extras-foo': u'☃',
+            'extras-lorem': u'ipsum',
+        })
+
+    @inlineCallbacks
+    def test_handle_update_extra_for_nonexistent_contacts(self):
+        reply = yield self.dispatch_command(
+            'update_extra',
+            contact_key='213123',
+            field='foo',
+            value=u'bar')
+        self.check_reply(reply, success=False)
+
+    @inlineCallbacks
+    def test_handle_update_subscription(self):
+        contact = yield self.new_contact(
+            msisdn=u'+27831234567',
+            subscription={'foo': u'bar', 'lorem': u'ipsum'})
+
+        reply = yield self.dispatch_command(
+            'update_subscription',
+            contact_key=contact.key,
+            field='foo',
+            value=u'larp')
+        self.check_reply(reply)
+
+        self.check_contact_fields(contact.key, **{
+            'msisdn': u'+27831234567',
+            'subscription-foo': u'larp',
+            'subscription-lorem': u'ipsum',
+        })
+
+    @inlineCallbacks
+    def test_handle_update_subscription_for_unicode_chars(self):
+        contact = yield self.new_contact(
+            msisdn=u'+27831234567',
+            subscription={'foo': u'bar', 'lorem': u'ipsum'})
+
+        reply = yield self.dispatch_command(
+            'update_subscription',
+            contact_key=contact.key,
+            field='foo',
+            value=u'☃')
+        self.check_reply(reply)
+
+        self.check_contact_fields(contact.key, **{
+            'msisdn': u'+27831234567',
+            'subscription-foo': u'☃',
+            'subscription-lorem': u'ipsum',
+        })
+
+    @inlineCallbacks
+    def test_handle_update_subscription_for_nonexistent_contacts(self):
+        reply = yield self.dispatch_command(
+            'update_subscription',
+            contact_key='21312',
+            field='foo',
+            value=u'bar')
+        self.check_reply(reply, success=False)
+
+    @inlineCallbacks
     def test_handle_new(self):
-        reply = yield self.dispatch_command('new',
+        reply = yield self.dispatch_command(
+            'new',
             name=u'A Random',
             surname=u'Jackal',
             msisdn=u'+27831234567')
 
-        self.check_contact_reply(reply,
+        self.check_contact_reply(
+            reply,
             name=u'A Random',
             surname=u'Jackal',
             msisdn=u'+27831234567')
 
     @inlineCallbacks
     def test_handle_new_for_unicode_chars(self):
-        reply = yield self.dispatch_command('new',
+        reply = yield self.dispatch_command(
+            'new',
             name=u'A Random',
             surname=u'☃',
             msisdn=u'+27831234567')
