@@ -12,33 +12,34 @@ class Command(BaseCommand):
 
     LOCAL_OPTIONS = [
         make_option('--email-address',
-            dest='email_address',
-            help='Email address for the Vumi Go user'),
+                    dest='email_address',
+                    help='Email address for the Vumi Go user'),
         make_option('--conversation-key',
-            dest='conversation_key',
-            help='The conversation key'),
+                    dest='conversation_key',
+                    help='The conversation key'),
         make_option('--create-token',
-            dest='create_token',
-            action='store_true',
-            default=False,
-            help='Create a new access token for this conversation'),
+                    dest='create_token',
+                    action='store_true',
+                    default=False,
+                    help='Create a new access token for this conversation'),
         make_option('--remove-token',
-            dest='remove_token',
-            help='Remove an access token for this conversation'),
+                    dest='remove_token',
+                    help='Remove an access token for this conversation'),
         make_option('--set-message-url',
-            dest='set_message_url',
-            help='Set a message URL'),
+                    dest='set_message_url',
+                    help='Set a message URL'),
         make_option('--remove-message-url',
-            dest='remove_message_url',
-            help='Remove a message URL'),
+                    dest='remove_message_url',
+                    help='Remove a message URL'),
         make_option('--set-event-url',
-            dest='set_event_url',
-            help='Set an event URL'),
+                    dest='set_event_url',
+                    help='Set an event URL'),
         make_option('--remove-event-url',
-            dest='remove_event_url',
-            help='Remove an event URL'),
+                    dest='remove_event_url',
+                    help='Remove an event URL'),
     ]
     option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
+    allowed_conversation_types = ['http_api', 'jsbox']
 
     def handle(self, *args, **options):
         try:
@@ -52,8 +53,9 @@ class Command(BaseCommand):
 
         if conversation is None:
             raise CommandError('Conversation does not exist')
-        elif conversation.conversation_type != 'http_api':
-            raise CommandError('Conversation is not for the HTTP API')
+        elif (conversation.conversation_type not in
+                self.allowed_conversation_types):
+            raise CommandError('Conversation is not allowed for an HTTP API')
 
         if options.get('create_token'):
             self.create_token(conversation)
