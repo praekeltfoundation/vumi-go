@@ -73,8 +73,13 @@ class ContactsResource(SandboxResource):
             if 'key' not in command:
                 raise SandboxError("'key' needs to be specified for command")
 
+            if 'fields' not in command:
+                raise SandboxError(
+                    "'fields' needs to be specified for command")
+
             store = self._contact_store_for_api(api)
-            fields = self.pick_fields(command, *Contact.field_descriptors)
+            fields = self.pick_fields(
+                command['fields'], *Contact.field_descriptors)
             yield store.update_contact(command['key'], **fields)
         except (SandboxError, ContactError) as e:
             log.warning(str(e))
@@ -115,8 +120,18 @@ class ContactsResource(SandboxResource):
 
     @inlineCallbacks
     def handle_new(self, api, command):
-        contact = yield self._contact_store_for_api(api).new_contact(
-            **self.pick_fields(command, *Contact.field_descriptors))
+        try:
+            if 'fields' not in command:
+                raise SandboxError(
+                    "'fields' needs to be specified for command")
+
+            fields = self.pick_fields(command['fields'],
+                                      *Contact.field_descriptors)
+            contact_store = self._contact_store_for_api(api)
+            contact = yield contact_store.new_contact(**fields)
+        except (SandboxError, ContactError) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         returnValue(self.reply(
             command,
