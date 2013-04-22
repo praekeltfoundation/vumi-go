@@ -68,7 +68,7 @@ class StreamResource(BaseResource):
         # See #proxy_buffering at
         # http://nginx.org/en/docs/http/ngx_http_proxy_module.html
         resp_headers.addRawHeader('X-Accel-Buffering',
-            'yes' if self.proxy_buffering else 'no')
+                                  'yes' if self.proxy_buffering else 'no')
         # Twisted's Agent has trouble closing a connection when the server has
         # sent the HTTP headers but not the body, but sometimes we need to
         # close a connection when only the headers have been received.
@@ -84,7 +84,7 @@ class StreamResource(BaseResource):
 
     def setup_stream(self, request):
         return self.worker.register_client(self._rk, self.message_class,
-            self._callback)
+                                           self._callback)
 
     def teardown_stream(self, err):
         if not (err is None or err.trap(ConnectionDone)):
@@ -268,7 +268,7 @@ class MetricResource(BaseResource):
         store = http_api_metadata.get('metrics_store', self.DEFAULT_STORE_NAME)
         for name, value, agg_class in metrics:
             self.worker.publish_account_metric(user_account, store, name,
-                                                value, agg_class)
+                                               value, agg_class)
 
         request.finish()
 
@@ -326,10 +326,12 @@ class ConversationResource(resource.Resource):
             yield self.track_request(user_id)
             returnValue(stream_class(self.worker, self.conversation_key))
         returnValue(resource.ErrorPage(http.FORBIDDEN, 'Forbidden',
-                                        'Too many concurrent connections'))
+                                       'Too many concurrent connections'))
 
 
-class StreamingResource(resource.Resource):
+class AuthorizedResource(resource.Resource):
+
+    resource_class = ConversationResource
 
     def __init__(self, worker):
         resource.Resource.__init__(self)
@@ -340,13 +342,13 @@ class StreamingResource(resource.Resource):
 
     def getChild(self, conversation_key, request):
         if conversation_key:
-            res = ConversationResource(self.worker, conversation_key)
+            res = self.resource_class(self.worker, conversation_key)
             checker = ConversationAccessChecker(self.worker.vumi_api,
                                                 conversation_key)
             realm = ConversationRealm(res)
             p = portal.Portal(realm, [checker])
 
-            factory = BasicCredentialFactory("Conversation Stream")
+            factory = BasicCredentialFactory("Conversation Realm")
             protected_resource = HTTPAuthSessionWrapper(p, [factory])
 
             return protected_resource
