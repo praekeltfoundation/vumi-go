@@ -15,5 +15,5 @@ export PYTHONPATH=.
 # echo "=== Processing coverage data..."
 # coverage xml
 echo "=== Checking for PEP-8 violations..."
-pep8 --repeat vumi | tee pep8.txt
+pep8 --repeat go | grep -v '^go/base/migrations/' | tee pep8.txt
 echo "=== Done."
