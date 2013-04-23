@@ -121,11 +121,11 @@ class ContactsResource(SandboxResource):
     @inlineCallbacks
     def handle_new(self, api, command):
         try:
-            if 'fields' not in command:
+            if 'contact' not in command:
                 raise SandboxError(
-                    "'fields' needs to be specified for command")
+                    "'contact' needs to be specified for command")
 
-            fields = self.pick_fields(command['fields'],
+            fields = self.pick_fields(command['contact'],
                                       *Contact.field_descriptors)
             contact_store = self._contact_store_for_api(api)
             contact = yield contact_store.new_contact(**fields)
