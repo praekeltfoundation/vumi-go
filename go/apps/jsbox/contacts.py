@@ -6,7 +6,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi import log
 from vumi.application.sandbox import SandboxResource, SandboxError
 
-from go.vumitools.contact import Contact
+from go.vumitools.contact import Contact, ContactError
 
 
 class ContactsResource(SandboxResource):
@@ -33,7 +33,7 @@ class ContactsResource(SandboxResource):
                 command['delivery_class'],
                 command['addr'],
                 create=False)
-        except (SandboxError, RuntimeError) as e:
+        except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
@@ -54,7 +54,7 @@ class ContactsResource(SandboxResource):
                 command['delivery_class'],
                 command['addr'],
                 create=True)
-        except (SandboxError, RuntimeError) as e:
+        except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
@@ -63,12 +63,9 @@ class ContactsResource(SandboxResource):
             success=True,
             contact=contact.get_data()))
 
-    def _filter_contact_fields(self, command):
-        """
-        Returns only the fields of a command that are Contact model fields.
-        """
-        return dict((k, command[k]) for k in Contact.field_descriptors.keys()
-                    if k in command)
+    @staticmethod
+    def pick_fields(collection, *fields):
+        return dict((k, collection[k]) for k in fields if k in collection)
 
     @inlineCallbacks
     def handle_update(self, api, command):
@@ -76,21 +73,50 @@ class ContactsResource(SandboxResource):
             if 'key' not in command:
                 raise SandboxError("'key' needs to be specified for command")
 
-            contact = yield self._contact_store_for_api(api).update_contact(
-                command['key'], **self._filter_contact_fields(command))
-        except (SandboxError, RuntimeError) as e:
+            store = self._contact_store_for_api(api)
+            fields = self.pick_fields(command, *Contact.field_descriptors)
+            yield store.update_contact(command['key'], **fields)
+        except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        returnValue(self.reply(
-            command,
-            success=True,
-            contact=contact.get_data()))
+        returnValue(self.reply(command, success=True))
+
+    @inlineCallbacks
+    def _update_dynamic_field(self, field_name, api, command):
+        try:
+            if 'contact_key' not in command:
+                raise SandboxError(
+                    "'contact_key' needs to be specified for command")
+
+            if 'field' not in command:
+                raise SandboxError("'field' needs to be specified for command")
+
+            if 'value' not in command:
+                raise SandboxError("'value' needs to be specified for command")
+
+            store = self._contact_store_for_api(api)
+            contact = yield store.get_contact_by_key(command['contact_key'])
+
+            field = getattr(contact, field_name)
+            field[command['field']] = command['value']
+            yield contact.save()
+        except (SandboxError, ContactError) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        returnValue(self.reply(command, success=True))
+
+    def handle_update_extra(self, api, command):
+        return self._update_dynamic_field('extra', api, command)
+
+    def handle_update_subscription(self, api, command):
+        return self._update_dynamic_field('subscription', api, command)
 
     @inlineCallbacks
     def handle_new(self, api, command):
         contact = yield self._contact_store_for_api(api).new_contact(
-            **self._filter_contact_fields(command))
+            **self.pick_fields(command, *Contact.field_descriptors))
 
         returnValue(self.reply(
             command,
