@@ -128,6 +128,8 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             msisdn=u'+27831234567')
         reply = yield self.dispatch_command('get_or_create',
                                             addr=u'+27831234567')
+
+        self.check_reply(reply, created=False)
         self.check_contact_reply(
             reply,
             key=contact.key,
@@ -143,6 +145,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             msisdn=u'+27831234567')
         reply = yield self.dispatch_command('get_or_create',
                                             addr=u'+27831234567')
+        self.check_reply(reply, created=False)
         self.check_contact_reply(
             reply,
             key=contact.key,
@@ -155,6 +158,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         reply = yield self.dispatch_command('get_or_create',
                                             addr=u'+27831234567')
 
+        self.check_reply(reply, created=True)
         self.check_contact_fields(reply['contact']['key'],
                                   msisdn=u'+27831234567')
 
@@ -171,6 +175,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             addr=u'random',
             delivery_class=u'twitter')
 
+        self.check_reply(reply, created=False)
         self.check_contact_reply(
             reply,
             key=contact.key,

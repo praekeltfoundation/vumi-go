@@ -17,6 +17,10 @@ class ContactError(Exception):
     """Raised when an error occurs accessing or manipulating a Contact"""
 
 
+class ContactNotFoundError(Exception):
+    """Raised when a contact is not found"""
+
+
 class ContactGroup(Model):
     """A group of contacts"""
     # key is UUID
@@ -136,7 +140,8 @@ class ContactStore(PerAccountStore):
     def get_contact_by_key(self, key):
         contact = yield self.contacts.load(key)
         if contact is None:
-            raise ContactError("Contact with key '%s' not found." % key)
+            raise ContactNotFoundError(
+                "Contact with key '%s' not found." % key)
         returnValue(contact)
 
     def get_group(self, name):
@@ -251,39 +256,44 @@ class ContactStore(PerAccountStore):
         opt_out = yield opt_out_store.get_opt_out('msisdn', contact.msisdn)
         returnValue(opt_out)
 
+    def _contact_field_for_addr(self, delivery_class, addr):
+        # TODO: change when we have proper address types in vumi
+        field = {
+            'sms': {'msisdn': '+' + addr.lstrip('+')},
+            'ussd': {'msisdn': '+' + addr.lstrip('+')},
+            'gtalk': {'gtalk_id': addr.partition('/')[0]},
+            'twitter': {'twitter_handle': addr},
+        }.get(delivery_class)
+
+        if field is None:
+            raise ContactError(
+                "Unsupported transport_type %r" % delivery_class)
+
+        return field
+
+    def new_contact_for_addr(self, delivery_class, addr):
+        field = self._contact_field_for_addr(delivery_class, addr)
+        field.setdefault('msisdn', u'unknown')
+        return self.new_contact(**field)
+
     @Manager.calls_manager
     def contact_for_addr(self, delivery_class, addr, create=True):
         """
-        Returns a contact from a delivery class and address, or None if the
-        contact does not exist.
+        Returns a contact from a delivery class and address, raising a
+        ContactNotFound exception if the contact does not exist.
         """
-
-        # TODO: change when we have proper address types in vumi
-        if delivery_class in ('sms', 'ussd'):
-            addr = '+' + addr.lstrip('+')
-            contact_fields = {'msisdn': addr}
-            keys = yield self.contacts.search(msisdn=addr).get_keys()
-        elif delivery_class == 'gtalk':
-            addr = addr.partition('/')[0]
-            contact_fields = {'gtalk_id': addr, 'msisdn': u'unknown'}
-            keys = yield self.contacts.search(gtalk_id=addr).get_keys()
-        elif delivery_class == 'twitter':
-            contact_fields = {'twitter_handle': addr, 'msisdn': u'unknown'}
-            keys = yield self.contacts.search(twitter_handle=addr).get_keys()
-        else:
-            raise ContactError("Unsupported transport_type %r"
-                               % (delivery_class,))
+        field = self._contact_field_for_addr(delivery_class, addr)
+        keys = yield self.contacts.search(**field).get_keys()
 
         if keys:
             returnValue((yield self.contacts.load(keys[0])))
 
         if create:
             contact_id = uuid4().get_hex()
+            field.setdefault('msisdn', u'unknown')
             returnValue(self.contacts(
-                contact_id,
-                user_account=self.user_account_key,
-                **contact_fields))
+                contact_id, user_account=self.user_account_key, **field))
 
-        raise ContactError(
+        raise ContactNotFoundError(
             "Contact with address '%s' for delivery class '%s' not found."
             % (addr, delivery_class))
