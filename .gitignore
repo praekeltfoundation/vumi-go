@@ -19,7 +19,4 @@ distribute-0.6.10.tar.gz
 .DS_Store
 *.db
 /go/production_settings.py
-/setup_env/go_*.conf
-/setup_env/go_*.conf.disabled
-/setup_env/go_*.yaml
-/setup_env/go_*.sh
+/setup_env/build/
