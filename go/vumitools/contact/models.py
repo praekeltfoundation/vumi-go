@@ -114,6 +114,17 @@ class ContactStore(PerAccountStore):
         returnValue(contact)
 
     @Manager.calls_manager
+    def save_contact(self, key, **fields):
+        # ensure no duplicate kwarg when calling `self.contacts()`
+        fields.pop('user_account', None)
+
+        contact = self.contacts(
+            key, user_account=self.user_account_key, **fields)
+
+        yield contact.save()
+        returnValue(contact)
+
+    @Manager.calls_manager
     def new_group(self, name):
         group_id = uuid4().get_hex()
 

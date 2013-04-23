@@ -121,6 +121,19 @@ class TestContactStore(GoPersistenceMixin, TestCase):
             self.store.update_contact('123124'), ContactError)
 
     @inlineCallbacks
+    def test_save_contact(self):
+        contact = yield self.store.new_contact(
+            name=u'J Random', surname=u'Person', msisdn=u'27831234567')
+
+        yield self.store.save_contact(
+            contact.key, surname=u'Robot', msisdn=u'unknown')
+
+        dbcontact = yield self.store.get_contact_by_key(contact.key)
+        self.assertEqual(None, dbcontact.name)
+        self.assertEqual(u'Robot', dbcontact.surname)
+        self.assertEqual(u'unknown', dbcontact.msisdn)
+
+    @inlineCallbacks
     def test_add_contact_to_group(self):
         contact = yield self.store.new_contact(
             name=u'J Random', surname=u'Person', msisdn=u'27831234567')

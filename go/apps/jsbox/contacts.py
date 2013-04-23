@@ -134,3 +134,27 @@ class ContactsResource(SandboxResource):
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         returnValue(self.reply(command, success=True, key=contact.key))
+
+    @inlineCallbacks
+    def handle_save(self, api, command):
+        try:
+            if 'contact' not in command:
+                raise SandboxError(
+                    "'contact' needs to be specified for command")
+
+            if 'key' not in command['contact']:
+                raise SandboxError(
+                    "'key' needs to be specified for as a 'contact' field for "
+                    "command")
+
+            contact_store = self._contact_store_for_api(api)
+
+            # raise an exception if the contact does not exist
+            yield contact_store.get_contact_by_key(command['contact']['key'])
+
+            yield contact_store.save_contact(**command['contact'])
+        except (SandboxError, ContactError) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        returnValue(self.reply(command, success=True))
