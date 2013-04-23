@@ -1,0 +1,4 @@
+transport_name: command_dispatcher
+worker_names:
+{% for application in applications %}    - {{application}}_application
+{% endfor %}
