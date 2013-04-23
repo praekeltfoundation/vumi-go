@@ -13,6 +13,10 @@ from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.opt_out import OptOutStore
 
 
+class ContactError(Exception):
+    """Raised when an error occurs accessing or manipulating a Contact"""
+
+
 class ContactGroup(Model):
     """A group of contacts"""
     # key is UUID
@@ -101,8 +105,6 @@ class ContactStore(PerAccountStore):
     @Manager.calls_manager
     def update_contact(self, key, **fields):
         contact = yield self.get_contact_by_key(key)
-        if contact is None:
-            raise RuntimeError("Contact with key '%s' not found." % key)
 
         for field_name, field_value in fields.iteritems():
             if field_name in contact.field_descriptors:
@@ -130,8 +132,12 @@ class ContactStore(PerAccountStore):
         yield group.save()
         returnValue(group)
 
+    @Manager.calls_manager
     def get_contact_by_key(self, key):
-        return self.contacts.load(key)
+        contact = yield self.contacts.load(key)
+        if contact is None:
+            raise ContactError("Contact with key '%s' not found." % key)
+        returnValue(contact)
 
     def get_group(self, name):
         return self.groups.load(name)
@@ -246,7 +252,7 @@ class ContactStore(PerAccountStore):
         returnValue(opt_out)
 
     @Manager.calls_manager
-    def contact_for_addr(self, delivery_class, addr, create=False):
+    def contact_for_addr(self, delivery_class, addr, create=True):
         """
         Returns a contact from a delivery class and address, or None if the
         contact does not exist.
@@ -265,7 +271,7 @@ class ContactStore(PerAccountStore):
             contact_fields = {'twitter_handle': addr, 'msisdn': u'unknown'}
             keys = yield self.contacts.search(twitter_handle=addr).get_keys()
         else:
-            raise RuntimeError("Unsupported transport_type %r"
+            raise ContactError("Unsupported transport_type %r"
                                % (delivery_class,))
 
         if keys:
@@ -278,6 +284,6 @@ class ContactStore(PerAccountStore):
                 user_account=self.user_account_key,
                 **contact_fields))
 
-        raise RuntimeError(
+        raise ContactError(
             "Contact with address '%s' for delivery class '%s' not found."
             % (addr, delivery_class))
