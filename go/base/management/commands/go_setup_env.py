@@ -76,7 +76,7 @@ class Command(BaseCommand):
         make_option(
             '--dest-dir',
             dest='dest_dir',
-            default='setup_env',
+            default='setup_env/build/',
             help='Directory to write config files to.'),
         make_option(
             '--file-name-template',
