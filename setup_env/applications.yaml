@@ -43,6 +43,8 @@ survey:
     send_to:
       default:
         transport_name: "invalid broken transport"
+    vxpolls:
+      prefix: vxpolls
     middleware:
       - logging_mw: vumi.middleware.logging.LoggingMiddleware
 

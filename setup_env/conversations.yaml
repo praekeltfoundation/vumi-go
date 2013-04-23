@@ -4,6 +4,9 @@
   conversation_type: bulk_message
   subject: subject
   message: message
+  delivery_class: sms
+  delivery_tag_pool: longcode_tagpool
+  delivery_tag: longcode-10003
   metadata:
     foo: bar
 
@@ -13,6 +16,9 @@
   conversation_type: bulk_message
   subject: subject
   message: message
+  delivery_class: sms
+  delivery_tag_pool: longcode_tagpool
+  delivery_tag: longcode-10004
   metadata:
     foo: bar
 
@@ -22,6 +28,9 @@
   conversation_type: survey
   subject: subject
   message: message
+  delivery_class: ussd
+  delivery_tag_pool: ussd_tagpool
+  delivery_tag: '*120*10003#'
   metadata:
     foo: bar
     baz: zab
