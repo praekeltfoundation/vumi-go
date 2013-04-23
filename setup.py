@@ -31,8 +31,6 @@ def parse_requirements(filename):
     return install_requires, dependency_links
 
 install_requires, dependency_links = parse_requirements("requirements.pip")
-print install_requires
-print dependency_links
 
 setup(
     name="vumi-go",
