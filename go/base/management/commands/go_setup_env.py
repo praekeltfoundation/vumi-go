@@ -24,75 +24,89 @@ from go.vumitools.api import VumiApi
 
 # Force YAML to return unicode strings
 # See: http://stackoverflow.com/questions/2890146/
-SafeLoader.add_constructor(u'tag:yaml.org,2002:str',
-                            lambda self, node: self.construct_scalar(node))
+SafeLoader.add_constructor(
+    u'tag:yaml.org,2002:str', lambda self, node: self.construct_scalar(node))
 
 
 class Command(BaseCommand):
     help = "Bootstrap a Vumi Go environment, primarily intended for testing."
 
     LOCAL_OPTIONS = [
-        make_option('--config-file',
+        make_option(
+            '--config-file',
             dest='config_file',
             default=False,
             help='Config file telling us how to connect to Riak & Redis'),
-        make_option('--tagpool-file',
+        make_option(
+            '--tagpool-file',
             dest='tagpool_files',
             action='append',
             default=[],
             help='YAML file with tagpools to create.'),
-        make_option('--account-file',
+        make_option(
+            '--account-file',
             dest='account_files',
             action='append',
             default=[],
             help='YAML file with accounts to create.'),
-        make_option('--conversation-file',
+        make_option(
+            '--conversation-file',
             dest='conversation_files',
             action='append',
             default=[],
             help='YAML file with conversations to create.'),
-        make_option('--transport-file',
+        make_option(
+            '--transport-file',
             dest='transport_files',
             action='append',
             default=[],
             help='YAML file with transports to create.'),
-        make_option('--application-file',
+        make_option(
+            '--application-file',
             dest='application_files',
             action='append',
             default=[],
             help='YAML file with applications to create.'),
-        make_option('--contact-group-file',
+        make_option(
+            '--contact-group-file',
             dest='contact_group_files',
             action='append',
             default=[],
             help='YAML file with contact groups to create.'),
-        make_option('--dest-dir',
+        make_option(
+            '--dest-dir',
             dest='dest_dir',
-            default='setup_env',
+            default='setup_env/build/',
             help='Directory to write config files to.'),
-        make_option('--file-name-template',
+        make_option(
+            '--file-name-template',
             dest='file_name_template',
             default='go_%(file_name)s.%(suffix)s',
             help='Template to use when generating config files.'),
-        make_option('--skip-dispatcher-configs',
+        make_option(
+            '--skip-dispatcher-configs',
             dest='write_dispatcher_configs',
             default=True,
             action='store_false',
             help='Skip writing the dispatcher configs for transports.'),
-        make_option('--skip-supervisord',
+        make_option(
+            '--skip-supervisord',
             dest='write_supervisord_config',
             default=True,
             action='store_false',
             help='Skip writing the supervisord.conf file'),
-        make_option('--supervisord-host',
+        make_option(
+            '--supervisord-host',
             dest='supervisord_host',
             default='127.0.0.1',
             help='The host supervisord should bind to.'),
-        make_option('--supervisord-port',
+        make_option(
+            '--supervisord-port',
             dest='supervisord_port',
             default='7101',
             help='The port supervisord should listen on.'),
-        make_option('--skip-startup-script',
+        make_option(
+            '--skip-startup-script',
             dest='write_startup_script',
             default=True,
             action='store_false',
@@ -141,18 +155,22 @@ class Command(BaseCommand):
 
         if options['write_dispatcher_configs']:
             self.create_app_msg_dispatcher_config(self.application_names)
-            self.write_supervisor_config_file('application_message_dispatcher',
+            self.write_supervisor_config_file(
+                'application_message_dispatcher',
                 'vumi.dispatchers.base.BaseDispatchWorker')
             self.create_vumigo_router_config(self.transport_names)
-            self.write_supervisor_config_file('vumigo_router',
+            self.write_supervisor_config_file(
+                'vumigo_router',
                 'vumi.dispatchers.base.BaseDispatchWorker')
             self.create_command_dispatcher_config(self.application_names)
-            self.write_supervisor_config_file('command_dispatcher',
+            self.write_supervisor_config_file(
+                'command_dispatcher',
                 'go.vumitools.api_worker.CommandDispatcher')
             # For endpoint-based routing.
             self.create_routing_table_dispatcher_config(
                 self.application_names, self.transport_names)
-            self.write_supervisor_config_file('routing_table_dispatcher',
+            self.write_supervisor_config_file(
+                'routing_table_dispatcher',
                 'go.vumitools.routing.AccountRoutingTableDispatcher',
                 enabled=False)
 
@@ -205,8 +223,8 @@ class Command(BaseCommand):
         for pool_name, pool_data in pools.items():
             listed_tags = pool_data['tags']
             tags = (eval(listed_tags, {}, {})
-                        if isinstance(listed_tags, basestring)
-                        else listed_tags)
+                    if isinstance(listed_tags, basestring)
+                    else listed_tags)
             self.tagpool.declare_tags([(pool_name, tag) for tag in tags])
             self.tagpool.set_metadata(pool_name, pool_data['metadata'])
 
@@ -234,7 +252,8 @@ class Command(BaseCommand):
         for username, user_info in users.items():
 
             if User.objects.filter(username=username).exists():
-                self.stderr.write('User %s already exists. Skipping.\n' %
+                self.stderr.write(
+                    'User %s already exists. Skipping.\n' %
                     (username,))
                 continue
 
@@ -257,10 +276,10 @@ class Command(BaseCommand):
 
     def assign_tagpool(self, account, pool_name, max_keys):
         if pool_name not in self.tagpool.list_pools():
-            raise CommandError('Tagpool %s does not exist' %
-                                (pool_name,))
-        permission = self.api.account_store.tag_permissions(uuid4().hex,
-            tagpool=unicode(pool_name), max_keys=max_keys)
+            raise CommandError(
+                'Tagpool %s does not exist' % (pool_name,))
+        permission = self.api.account_store.tag_permissions(
+            uuid4().hex, tagpool=unicode(pool_name), max_keys=max_keys)
         permission.save()
 
         account.tagpools.add(permission)
@@ -367,8 +386,8 @@ class Command(BaseCommand):
                 'worker_name': worker_name,
             })
             self.write_worker_config_file(worker_name, config)
-            self.write_supervisor_config_file(worker_name,
-                application_info['class'])
+            self.write_supervisor_config_file(
+                worker_name, application_info['class'])
         return application_names
 
     def write_supervisor_config_file(self, program_name, worker_class,
@@ -390,9 +409,9 @@ class Command(BaseCommand):
                 "--vhost=%s" % self.config.get('vhost', '/develop'),
             ]))
             cp.set(section, "stdout_logfile",
-                "./logs/%(program_name)s_%(process_num)s.log")
+                   "./logs/%(program_name)s_%(process_num)s.log")
             cp.set(section, "stderr_logfile",
-                "./logs/%(program_name)s_%(process_num)s.log")
+                   "./logs/%(program_name)s_%(process_num)s.log")
             cp.write(fp)
         self.stdout.write('Wrote %s.\n' % (fn,))
 
@@ -401,8 +420,8 @@ class Command(BaseCommand):
         with self.open_file(fn, 'w') as fp:
             templ = 'application_message_dispatcher.yaml.template'
             data = self.render_template(templ, {
-                'exposed_names': ['%s_transport' % (app,) for
-                    app in applications],
+                'exposed_names': [
+                    '%s_transport' % (app,) for app in applications],
                 'conversation_mappings': dict([
                     (application, '%s_transport' % (application,)) for
                     application in applications]),

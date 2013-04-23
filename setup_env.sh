@@ -14,4 +14,4 @@ set -e
     --application-file=./setup_env/applications.yaml \
     --contact-group-file=./setup_env/contact_groups.yaml
 
-echo "Please run ./setup_env/go_startup_env.sh to complete setup."
+echo "Please run ./setup_env/build/go_startup_env.sh to complete setup."
