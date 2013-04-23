@@ -20,3 +20,5 @@ distribute-0.6.10.tar.gz
 *.db
 /go/production_settings.py
 /setup_env/build/
+/.tox/
+/test_results.xml
