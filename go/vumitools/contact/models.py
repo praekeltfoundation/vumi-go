@@ -104,22 +104,14 @@ class ContactStore(PerAccountStore):
 
     @Manager.calls_manager
     def update_contact(self, key, **fields):
+        # ensure user account can't be changed
+        fields.pop('user_account', None)
+
         contact = yield self.get_contact_by_key(key)
 
         for field_name, field_value in fields.iteritems():
             if field_name in contact.field_descriptors:
                 setattr(contact, field_name, field_value)
-
-        yield contact.save()
-        returnValue(contact)
-
-    @Manager.calls_manager
-    def save_contact(self, key, **fields):
-        # ensure no duplicate kwarg when calling `self.contacts()`
-        fields.pop('user_account', None)
-
-        contact = self.contacts(
-            key, user_account=self.user_account_key, **fields)
 
         yield contact.save()
         returnValue(contact)

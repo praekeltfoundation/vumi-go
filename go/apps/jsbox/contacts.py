@@ -4,6 +4,7 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi import log
+from vumi.persist.fields import ValidationError
 from vumi.application.sandbox import SandboxResource, SandboxError
 
 from go.vumitools.contact import Contact, ContactError
@@ -54,7 +55,7 @@ class ContactsResource(SandboxResource):
                 command['delivery_class'],
                 command['addr'],
                 create=True)
-        except (SandboxError, ContactError) as e:
+        except (ValidationError, SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
@@ -142,17 +143,26 @@ class ContactsResource(SandboxResource):
                 raise SandboxError(
                     "'contact' needs to be specified for command")
 
-            if 'key' not in command['contact']:
+            fields = command['contact']
+            if 'key' not in fields:
                 raise SandboxError(
                     "'key' needs to be specified for as a 'contact' field for "
                     "command")
 
-            contact_store = self._contact_store_for_api(api)
+            # ensure user account can't be changed
+            fields.pop('user_account', None)
 
             # raise an exception if the contact does not exist
-            yield contact_store.get_contact_by_key(command['contact']['key'])
+            key = fields.pop('key')
+            contact_store = self._contact_store_for_api(api)
+            yield contact_store.get_contact_by_key(key)
 
-            yield contact_store.save_contact(**command['contact'])
+            contact = contact_store.contacts(
+                key,
+                user_account=contact_store.user_account_key,
+                **fields)
+
+            yield contact.save()
         except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
