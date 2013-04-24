@@ -165,7 +165,8 @@ class ContactsResource(SandboxResource):
                 user_account=contact_store.user_account_key,
                 **fields)
 
-            map(contact.add_to_group, groups)
+            for group in groups:
+                contact.add_to_group(group)
 
             yield contact.save()
         except (SandboxError, ContactError) as e:
