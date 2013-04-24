@@ -18,9 +18,6 @@ from go.apps.surveys.views import _clear_empties
 from vxpolls.manager import PollManager
 
 
-redis = RedisManager.from_config(settings.VXPOLLS_REDIS_CONFIG)
-
-
 def link_poll_to_conversation(poll_name, poll_id, conversation):
     metadata = conversation.get_metadata(default={})
     vxpolls_metadata = metadata.setdefault('vxpolls', {})
@@ -52,6 +49,7 @@ def generate_poll_id(conversation, suffix):
 
 
 def get_poll_config(poll_id):
+    redis = RedisManager.from_config(settings.VXPOLLS_REDIS_CONFIG)
     pm = PollManager(redis, settings.VXPOLLS_PREFIX)
     config = pm.get_config(poll_id)
     config.update({
@@ -131,6 +129,7 @@ def new_survey(request, conversation_key):
         'poll_name': '',
     }
     if request.method == 'POST':
+        redis = RedisManager.from_config(settings.VXPOLLS_REDIS_CONFIG)
         pm = PollManager(redis, settings.VXPOLLS_PREFIX)
         post_data = request.POST.copy()
         form = forms.make_form(data=post_data, initial=initial_config)
