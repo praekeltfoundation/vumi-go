@@ -107,14 +107,19 @@ class TestContactStore(GoPersistenceMixin, TestCase):
     def test_update_contact(self):
         contact = yield self.store.new_contact(
             name=u'J Random', surname=u'Person', msisdn=u'27831234567')
+        contact.add_to_group(u'group-a')
+        contact.add_to_group(u'group-b')
+        yield contact.save()
 
-        updated_contact = yield self.store.update_contact(contact.key,
-                                                          surname=u'Jackal')
+        updated_contact = yield self.store.update_contact(
+            contact.key, surname=u'Jackal', groups=['group-a', u'group-c'])
         dbcontact = yield self.store.get_contact_by_key(contact.key)
 
         self.assertEqual(u'J Random', updated_contact.name)
         self.assertEqual(u'Jackal', updated_contact.surname)
         self.assertEqual(u'27831234567', updated_contact.msisdn)
+        self.assertEqual([u'group-a', u'group-b', u'group-c'],
+                         updated_contact.groups.keys())
         self.assert_models_equal(dbcontact, updated_contact)
 
     def test_update_contact_for_nonexistent_contact(self):
