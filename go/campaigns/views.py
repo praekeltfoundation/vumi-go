@@ -1,10 +1,10 @@
 from django.http import Http404
 from django.shortcuts import render, redirect
 
-from .forms import CampaignForm
+from .forms import CampaignGeneralForm, CampaignConfigurationForm
 
 
-def new(request):
+def details(request):
     """
     I guess we would actually use a form here.
 
@@ -16,10 +16,12 @@ def new(request):
     I'll create a form, but you guys will have to hook it up properly.
     """
 
-    form = CampaignForm()
+    form_general = CampaignGeneralForm()
+    form_config = CampaignConfigurationForm()
 
     
 
     return  render(request, 'campaigns/wizard_details.html', {
-        'form': form
+        'form_general': form_general,
+        'form_config': form_config
     })

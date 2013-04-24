@@ -171,7 +171,50 @@ body {
 }
 
 
-.campaigns form {
-  margin:2em 1em;
+.campaigns {
+
+  .actions {
+    text-align:right; // cancel, save draft, next step
+  }
+
+  form {
+    margin:2em 1em;
+
+    .control-label {
+      color:#000;
+      font-weight:bold;
+    }
+
+    .boxes {
+      text-align:center;
+    }
+
+    .title {
+      text-transform:uppercase;
+    }
+
+    .box {
+      background:#0fb5af;
+      color:#000;
+      font-size:16px;
+      padding:15px 0;
+      text-align:center;
+      .border-radius(5px);
+      margin-bottom:1em;
+      
+
+      label {
+        text-align:left;
+        text-indent:10%;
+
+      }
+
+      input, select {
+        width:auto;
+        max-width:100%;
+        min-width:80%;
+      }
+    }
+  }
 }
 
