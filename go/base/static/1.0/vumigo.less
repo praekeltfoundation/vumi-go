@@ -173,8 +173,20 @@ body {
 
 .campaigns {
 
+
+  .header a {
+    color:#878b8e;
+    font-weight:bold;
+    font-size:16px;
+    margin-right:10px;
+  }
+
   .actions {
     text-align:right; // cancel, save draft, next step
+
+    a:first-child {
+      margin-right:20px;
+    }
   }
 
   form {
@@ -183,6 +195,8 @@ body {
     .control-label {
       color:#000;
       font-weight:bold;
+
+
     }
 
     .boxes {
@@ -191,6 +205,10 @@ body {
 
     .title {
       text-transform:uppercase;
+
+      .tooltip {
+        text-transform:none;
+      }
     }
 
     .box {
@@ -206,7 +224,6 @@ body {
       label {
         text-align:left;
         text-indent:10%;
-
       }
 
       input, select {

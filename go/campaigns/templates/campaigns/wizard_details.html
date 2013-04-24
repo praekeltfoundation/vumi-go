@@ -29,10 +29,10 @@
         <label class="control-label">
             How would you like to reach and interact with users?
         </label>
-        <br>
 
         <div class="configuration">
             <div class="row-fluid title">
+                
                 <div class="span3">
                     Name
                 </div>
@@ -116,6 +116,15 @@
 <script type="text/javascript">
     $(function() {
         $('.icon-info-sign').tooltip();
-    });    
+    });
+
+    $('.configuration button').on('click', function() {
+
+        // find the template within it's parent, and add another one.
+        
+
+        return false;
+    });
+
 </script>
 {% endblock %}
