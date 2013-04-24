@@ -3,7 +3,8 @@ from twisted.trial.unittest import TestCase
 from vumi.tests.utils import UTCNearNow
 
 from go.vumitools.tests.utils import GoPersistenceMixin
-from go.vumitools.account.models import AccountStore, GoConnector
+from go.vumitools.account.models import (
+    AccountStore, GoConnector, GoConnectorError)
 from go.vumitools.account.old_models import AccountStoreVNone, AccountStoreV1
 
 
@@ -123,3 +124,13 @@ class GoConnectorTestCase(TestCase):
         self.assertEqual(c.ctype, GoConnector.TRANSPORT_TAG)
         self.assertEqual(c.tagpool, "tagpool_1")
         self.assertEqual(c.tagname, "tag_1")
+
+    def test_parse_unknown_ctype(self):
+        self.assertRaises(GoConnectorError, GoConnector.parse,
+                          "FOO:tagpool:tag")
+
+    def test_parse_bad_parts(self):
+        self.assertRaises(GoConnectorError, GoConnector.parse,
+                          "CONVERSATION:foo")  # one part
+        self.assertRaises(GoConnectorError, GoConnector.parse,
+                          "CONVERSATION:foo:bar:baz")  # three parts

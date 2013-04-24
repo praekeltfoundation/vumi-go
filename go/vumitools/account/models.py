@@ -130,6 +130,10 @@ class RoutingTableHelper(object):
         self.remove_entry(tag_conn, endpoint)
 
 
+class GoConnectorError(Exception):
+    """Raised when attempting to construct an invalid connector."""
+
+
 class GoConnector(object):
     """Container for Go routing table connector item."""
 
@@ -175,7 +179,14 @@ class GoConnector(object):
             cls.ROUTING_BLOCK: cls.for_routing_block,
             cls.TRANSPORT_TAG: cls.for_transport_tag,
         }
-        return constructors[ctype](*parts)
+        if ctype not in constructors:
+            raise GoConnectorError("Unknown connector type %r"
+                                   " found while parsing: %r" % (ctype, s))
+        try:
+            return constructors[ctype](*parts)
+        except TypeError:
+            raise GoConnectorError("Invalid connector of type %r: %r"
+                                   % (ctype, s))
 
 
 class AccountStore(object):
