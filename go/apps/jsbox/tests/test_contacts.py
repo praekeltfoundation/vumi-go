@@ -69,9 +69,11 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             self.assertEqual(fields[field_name], expected_value)
 
     @inlineCallbacks
-    def new_contact(self, groups=[], **fields):
+    def new_contact(self, **fields):
+        groups = fields.pop('groups', [])
         contact = yield self.contact_store.new_contact(**fields)
-        map(contact.add_to_group, groups)
+        for group in groups:
+            contact.add_to_group(group)
         yield contact.save()
         returnValue(contact)
 
