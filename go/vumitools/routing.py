@@ -8,6 +8,7 @@ from vumi.message import TransportEvent
 from vumi import log
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
+from go.vumitools.middleware import OptOutMiddleware
 
 
 class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
@@ -20,6 +21,8 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
     conversation_info = ConfigDict(
         "Conversation info for the tag attached to the message if any.")
     user_account_key = ConfigText("UserAccount key.")
+    opt_out_connector = ConfigText(
+        "Connector to publish opt-out messages on.", static=True)
 
 
 class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
@@ -68,11 +71,18 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         mapping = self.get_static_config().application_connector_mapping or {}
         return mapping.get(conversation_type, conversation_type)
 
+    def handle_opt_out(self, msg):
+        return self.publish_message(
+            msg, self.get_static_config().opt_out_connector, 'default')
+
     def process_inbound(self, config, msg, connector_name):
         log.debug("Processing inbound: %s" % (msg,))
         if not config.message_tag:
             log.warning("No tag found for inbound message: %s" % (msg,))
             return
+
+        if OptOutMiddleware.is_optout_message(msg):
+            return self.handle_opt_out(msg)
 
         target = self.find_target(config, msg, ':'.join(config.message_tag))
         if target is None:
