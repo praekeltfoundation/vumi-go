@@ -14,7 +14,7 @@ class ContactsResource(SandboxResource):
     Sandbox resource for accessing, creating and modifying contacts for
     a Go application.
 
-    See :class:``go.vumitools.contact.Contact`` for a look at the Contact model
+    See :class:`go.vumitools.contact.Contact` for a look at the Contact model
     and its fields.
     """
 
