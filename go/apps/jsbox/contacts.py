@@ -4,6 +4,7 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi import log
+from vumi.persist.fields import ValidationError
 from vumi.application.sandbox import SandboxResource, SandboxError
 
 from go.vumitools.contact import Contact, ContactError
@@ -54,7 +55,7 @@ class ContactsResource(SandboxResource):
                 command['delivery_class'],
                 command['addr'],
                 create=True)
-        except (SandboxError, ContactError) as e:
+        except (ValidationError, SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
@@ -73,8 +74,13 @@ class ContactsResource(SandboxResource):
             if 'key' not in command:
                 raise SandboxError("'key' needs to be specified for command")
 
+            if 'fields' not in command:
+                raise SandboxError(
+                    "'fields' needs to be specified for command")
+
             store = self._contact_store_for_api(api)
-            fields = self.pick_fields(command, *Contact.field_descriptors)
+            fields = self.pick_fields(
+                command['fields'], *Contact.field_descriptors)
             yield store.update_contact(command['key'], **fields)
         except (SandboxError, ContactError) as e:
             log.warning(str(e))
@@ -115,10 +121,50 @@ class ContactsResource(SandboxResource):
 
     @inlineCallbacks
     def handle_new(self, api, command):
-        contact = yield self._contact_store_for_api(api).new_contact(
-            **self.pick_fields(command, *Contact.field_descriptors))
+        try:
+            if 'contact' not in command:
+                raise SandboxError(
+                    "'contact' needs to be specified for command")
 
-        returnValue(self.reply(
-            command,
-            success=True,
-            contact=contact.get_data()))
+            fields = self.pick_fields(command['contact'],
+                                      *Contact.field_descriptors)
+            contact_store = self._contact_store_for_api(api)
+            contact = yield contact_store.new_contact(**fields)
+        except (SandboxError, ContactError) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        returnValue(self.reply(command, success=True, key=contact.key))
+
+    @inlineCallbacks
+    def handle_save(self, api, command):
+        try:
+            if 'contact' not in command:
+                raise SandboxError(
+                    "'contact' needs to be specified for command")
+
+            fields = command['contact']
+            if 'key' not in fields:
+                raise SandboxError(
+                    "'key' needs to be specified for as a 'contact' field for "
+                    "command")
+
+            # ensure user account can't be changed
+            fields.pop('user_account', None)
+
+            # raise an exception if the contact does not exist
+            key = fields.pop('key')
+            contact_store = self._contact_store_for_api(api)
+            yield contact_store.get_contact_by_key(key)
+
+            contact = contact_store.contacts(
+                key,
+                user_account=contact_store.user_account_key,
+                **fields)
+
+            yield contact.save()
+        except (SandboxError, ContactError) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        returnValue(self.reply(command, success=True))

@@ -19,3 +19,6 @@ distribute-0.6.10.tar.gz
 .DS_Store
 *.db
 /go/production_settings.py
+/setup_env/build/
+/.tox/
+/test_results.xml

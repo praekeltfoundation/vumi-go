@@ -1,0 +1,39 @@
+transport_names:
+  - vumigo_router
+
+exposed_names:
+{% for exposed_name in exposed_names %}  - {{exposed_name}}
+{% endfor %}
+
+upstream_transport: vumigo_router
+optout_transport: opt_out_transport
+
+router_class: go.vumitools.api_worker.GoApplicationRouter
+conversation_mappings:
+{% for application, transport_name in conversation_mappings.items %}  {{application}}: {{transport_name}}
+{% endfor %}
+
+redis_manager: &REDIS_MANAGER
+{{ redis_manager }}
+riak_manager: &RIAK_MANAGER
+{{ riak_manager }}
+
+# NOTE: the order is important
+middleware:
+  - optout_middleware: go.vumitools.middleware.OptOutMiddleware
+  - storing_middleware: vumi.middleware.message_storing.StoringMiddleware
+  - logging_middleware: vumi.middleware.logging.LoggingMiddleware
+
+storing_middleware:
+  redis_manager: *REDIS_MANAGER
+  riak_manager: *RIAK_MANAGER
+
+optout_middleware:
+  redis_manager: *REDIS_MANAGER
+  riak_manager: *RIAK_MANAGER
+  case_sensitive: False
+  optout_keywords:
+    - stop
+
+logging_middleware:
+  log_level: debug
