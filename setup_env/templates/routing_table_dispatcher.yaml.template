@@ -1,3 +1,4 @@
+worker_name: "routing_table_dispatcher"
 metrics_prefix: "routing_table_dispatcher"
 
 redis_manager: &REDIS_MANAGER
