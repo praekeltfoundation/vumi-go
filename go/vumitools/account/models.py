@@ -63,6 +63,21 @@ class UserAccount(Model):
 
 
 class RoutingTableHelper(object):
+    """Helper for dealing with routing table dictionaries.
+
+    Conceptually a routing table maps (source_connector, source_endpoint) pairs
+    to (destination_connector, destination_endpoint) pairs.
+
+    Internally this is implemented as a nested mapping::
+
+        source_connector ->
+            source_endpoint_1 -> [destination_connector, destination_endpoint]
+            source_endpoint_2 -> [..., ...]
+
+    in order to make storing the mapping as JSON easier (JSON keys cannot be
+    lists).
+    """
+
     def __init__(self, routing_table):
         self.routing_table = routing_table
 
