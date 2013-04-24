@@ -109,6 +109,32 @@ class RoutingTableHelper(object):
 
         return old_dest
 
+    def remove_connector(self, conn):
+        """Remove all references to the given connector.
+
+        Useful when the connector is going away for some reason.
+        """
+        # remove entries with connector as source
+        self.routing_table.pop(conn, None)
+
+        # remove entires with connector as destination
+        for src_conn, routes in self.routing_table.iteritems():
+            for src_endpoint, (dest_conn, dest_endpoint) in routes.items():
+                if dest_conn == conn:
+                    del routes[src_endpoint]
+            if not routes:
+                del self.routing_table[src_conn]
+
+    def remove_conversation(self, conv):
+        """Remove all entries linking to or from a given conversation.
+
+        Useful when arching a conversation to ensure it is no longer
+        present in the routing table.
+        """
+        conv_conn = str(GoConnector.for_conversation(conv.conversation_type,
+                                                     conv.key))
+        self.remove_connector(conv_conn)
+
     def add_oldstyle_conversation(self, conv, tag, outbound_only=False):
         """XXX: This can be removed when old-style conversations are gone."""
         conv_conn = str(GoConnector.for_conversation(conv.conversation_type,
@@ -117,17 +143,6 @@ class RoutingTableHelper(object):
         self.add_entry(conv_conn, "default", tag_conn, "default")
         if not outbound_only:
             self.add_entry(tag_conn, "default", conv_conn, "default")
-
-    def remove_oldstyle_conversation(self, conv):
-        """XXX: This can be removed when old-style conversations are gone."""
-        conv_conn = str(GoConnector.for_conversation(conv.conversation_type,
-                                                     conv.key))
-        routing_entry = self.remove_entry(conv_conn, "default")
-        if routing_entry is None:
-            return
-
-        tag_conn, endpoint = routing_entry
-        self.remove_entry(tag_conn, endpoint)
 
 
 class GoConnectorError(Exception):

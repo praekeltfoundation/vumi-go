@@ -262,7 +262,7 @@ class ConversationWrapper(object):
         user_account = yield self.c.user_account.get(self.api.manager)
         routing_table = yield self.user_api.get_routing_table(user_account)
         rt_helper = RoutingTableHelper(routing_table)
-        rt_helper.remove_oldstyle_conversation(self.c)
+        rt_helper.remove_conversation(self.c)
         yield user_account.save()
 
     @Manager.calls_manager
