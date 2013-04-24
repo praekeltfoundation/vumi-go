@@ -22,3 +22,4 @@ distribute-0.6.10.tar.gz
 /setup_env/build/
 /.tox/
 /test_results.xml
+/pep8.txt
