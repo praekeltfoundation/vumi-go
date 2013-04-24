@@ -4,10 +4,9 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi import log
-from vumi.persist.fields import ValidationError
 from vumi.application.sandbox import SandboxResource, SandboxError
 
-from go.vumitools.contact import Contact, ContactError
+from go.vumitools.contact import Contact, ContactError, ContactNotFoundError
 
 
 class ContactsResource(SandboxResource):
@@ -64,7 +63,7 @@ class ContactsResource(SandboxResource):
                 command['delivery_class'],
                 command['addr'],
                 create=False)
-        except (SandboxError, ContactError) as e:
+        except (SandboxError, ContactError, ContactNotFoundError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
@@ -85,17 +84,26 @@ class ContactsResource(SandboxResource):
         """
         try:
             self._parse_get(command)
-            contact = yield self._contact_store_for_api(api).contact_for_addr(
+            contact_store = yield self._contact_store_for_api(api)
+            contact = yield contact_store.contact_for_addr(
                 command['delivery_class'],
                 command['addr'],
-                create=True)
-        except (ValidationError, SandboxError, ContactError) as e:
+                create=False)
+            created = False
+        except ContactNotFoundError:
+            contact = yield contact_store.new_contact_for_addr(
+                command['delivery_class'],
+                command['addr'])
+            created = True
+        except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
+        yield contact.save()
         returnValue(self.reply(
             command,
             success=True,
+            created=created,
             contact=contact.get_data()))
 
     @staticmethod
@@ -137,7 +145,7 @@ class ContactsResource(SandboxResource):
             fields = self.pick_fields(
                 command['fields'], *Contact.field_descriptors)
             yield store.update_contact(command['key'], **fields)
-        except (SandboxError, ContactError) as e:
+        except (SandboxError, ContactError, ContactNotFoundError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
@@ -165,7 +173,7 @@ class ContactsResource(SandboxResource):
             field = getattr(contact, field_name)
             field[command['field']] = command['value']
             yield contact.save()
-        except (SandboxError, ContactError) as e:
+        except (SandboxError, ContactError, ContactNotFoundError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
@@ -277,7 +285,7 @@ class ContactsResource(SandboxResource):
                 contact.add_to_group(group)
 
             yield contact.save()
-        except (SandboxError, ContactError) as e:
+        except (SandboxError, ContactError, ContactNotFoundError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
