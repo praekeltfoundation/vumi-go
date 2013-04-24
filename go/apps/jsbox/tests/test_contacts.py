@@ -71,7 +71,8 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
     @inlineCallbacks
     def new_contact(self, groups=[], **fields):
         contact = yield self.contact_store.new_contact(**fields)
-        map(contact.add_to_group, groups)
+        for group in groups:
+            contact.add_to_group(group)
         yield contact.save()
         returnValue(contact)
 
