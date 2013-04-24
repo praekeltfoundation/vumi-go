@@ -281,8 +281,11 @@ VUMI_INSTALLED_APPS = {
     },
 }
 
-VXPOLLS_REDIS_CONFIG = {}
-VXPOLLS_PREFIX = 'vumigo'
+VXPOLLS_REDIS_CONFIG = {
+    'key_prefix': 'vumigo',
+    'db': 1
+}
+VXPOLLS_PREFIX = 'vxpolls'
 
 # Set this to enable Google Analytics
 GOOGLE_ANALYTICS_UA = None
