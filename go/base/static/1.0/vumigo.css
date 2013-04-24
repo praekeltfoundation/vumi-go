@@ -143,8 +143,17 @@ body {
 .span9 {
   padding-right: 20px;
 }
+.campaigns .header a {
+  color: #878b8e;
+  font-weight: bold;
+  font-size: 16px;
+  margin-right: 10px;
+}
 .campaigns .actions {
   text-align: right;
+}
+.campaigns .actions a:first-child {
+  margin-right: 20px;
 }
 .campaigns form {
   margin: 2em 1em;
@@ -158,6 +167,9 @@ body {
 }
 .campaigns form .title {
   text-transform: uppercase;
+}
+.campaigns form .title .tooltip {
+  text-transform: none;
 }
 .campaigns form .box {
   background: #0fb5af;
