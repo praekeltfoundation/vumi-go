@@ -109,6 +109,74 @@ class RoutingTableHelper(object):
 
         return old_dest
 
+    def add_oldstyle_conversation(self, conv, tag, outbound_only=False):
+        """XXX: This can be removed when old-style conversations are gone."""
+        conv_conn = str(GoConnector.for_conversation(conv.conversation_type,
+                                                     conv.key))
+        tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
+        self.add_entry(conv_conn, "default", tag_conn, "default")
+        if not outbound_only:
+            self.add_entry(tag_conn, "default", conv_conn, "default")
+
+    def remove_oldstyle_conversation(self, conv):
+        """XXX: This can be removed when old-style conversations are gone."""
+        conv_conn = str(GoConnector.for_conversation(conv.conversation_type,
+                                                     conv.key))
+        routing_entry = self.remove_entry(conv_conn, "default")
+        if routing_entry is None:
+            return
+
+        tag_conn, endpoint = routing_entry
+        self.remove_entry(tag_conn, endpoint)
+
+
+class GoConnector(object):
+    """Container for Go routing table connector item."""
+
+    # Types of connectors in Go routing tables
+
+    CONVERSATION = "CONVERSATION"
+    ROUTING_BLOCK = "ROUTING_BLOCK"
+    TRANSPORT_TAG = "TRANSPORT_TAG"
+
+    def __init__(self, ctype, names, parts):
+        self.ctype = ctype
+        self._names = names
+        self._parts = parts
+        self._attrs = dict(zip(self._names, self._parts))
+
+    def __str__(self):
+        return ":".join([self.ctype] + self._parts)
+
+    def __getattr__(self, name):
+        return self._attrs[name]
+
+    @classmethod
+    def for_conversation(cls, conv_type, conv_key):
+        return cls(cls.CONVERSATION, ["conv_type", "conv_key"],
+                   [conv_type, conv_key])
+
+    @classmethod
+    def for_routing_block(cls, rblock_type, rblock_key):
+        return cls(cls.ROUTING_BLOCK, ["rblock_type", "rblock_key"],
+                   [rblock_type, rblock_key])
+
+    @classmethod
+    def for_transport_tag(cls, tagpool, tagname):
+        return cls(cls.TRANSPORT_TAG, ["tagpool", "tagname"],
+                   [tagpool, tagname])
+
+    @classmethod
+    def parse(cls, s):
+        parts = s.split(":")
+        ctype, parts = parts[0], parts[1:]
+        constructors = {
+            cls.CONVERSATION: cls.for_conversation,
+            cls.ROUTING_BLOCK: cls.for_routing_block,
+            cls.TRANSPORT_TAG: cls.for_transport_tag,
+        }
+        return constructors[ctype](*parts)
+
 
 class AccountStore(object):
     def __init__(self, manager):

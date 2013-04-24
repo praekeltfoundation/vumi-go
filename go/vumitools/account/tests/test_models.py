@@ -3,7 +3,7 @@ from twisted.trial.unittest import TestCase
 from vumi.tests.utils import UTCNearNow
 
 from go.vumitools.tests.utils import GoPersistenceMixin
-from go.vumitools.account.models import AccountStore
+from go.vumitools.account.models import AccountStore, GoConnector
 from go.vumitools.account.old_models import AccountStoreVNone, AccountStoreV1
 
 
@@ -82,3 +82,44 @@ class UserAccountTestCase(GoPersistenceMixin, TestCase):
         self.assert_user_vnone(user_vnone)
         user = yield self.store.get_user(user_vnone.key)
         self.assert_user(user, tags=None, routing_table=None)
+
+
+class GoConnectorTestCase(TestCase):
+    def test_create_conversation_connector(self):
+        c = GoConnector.for_conversation("conv_type_1", "12345")
+        self.assertEqual(c.ctype, GoConnector.CONVERSATION)
+        self.assertEqual(c.conv_type, "conv_type_1")
+        self.assertEqual(c.conv_key, "12345")
+        self.assertEqual(str(c), "CONVERSATION:conv_type_1:12345")
+
+    def test_create_routing_block_connector(self):
+        c = GoConnector.for_routing_block("rb_type_1", "12345")
+        self.assertEqual(c.ctype, GoConnector.ROUTING_BLOCK)
+        self.assertEqual(c.rblock_type, "rb_type_1")
+        self.assertEqual(c.rblock_key, "12345")
+        self.assertEqual(str(c), "ROUTING_BLOCK:rb_type_1:12345")
+
+    def test_create_transport_tag_connector(self):
+        c = GoConnector.for_transport_tag("tagpool_1", "tag_1")
+        self.assertEqual(c.ctype, GoConnector.TRANSPORT_TAG)
+        self.assertEqual(c.tagpool, "tagpool_1")
+        self.assertEqual(c.tagname, "tag_1")
+        self.assertEqual(str(c), "TRANSPORT_TAG:tagpool_1:tag_1")
+
+    def test_parse_conversation_connector(self):
+        c = GoConnector.parse("CONVERSATION:conv_type_1:12345")
+        self.assertEqual(c.ctype, GoConnector.CONVERSATION)
+        self.assertEqual(c.conv_type, "conv_type_1")
+        self.assertEqual(c.conv_key, "12345")
+
+    def test_parse_routing_block_connector(self):
+        c = GoConnector.parse("ROUTING_BLOCK:rb_type_1:12345")
+        self.assertEqual(c.ctype, GoConnector.ROUTING_BLOCK)
+        self.assertEqual(c.rblock_type, "rb_type_1")
+        self.assertEqual(c.rblock_key, "12345")
+
+    def test_parse_transport_tag_connector(self):
+        c = GoConnector.parse("TRANSPORT_TAG:tagpool_1:tag_1")
+        self.assertEqual(c.ctype, GoConnector.TRANSPORT_TAG)
+        self.assertEqual(c.tagpool, "tagpool_1")
+        self.assertEqual(c.tagname, "tag_1")

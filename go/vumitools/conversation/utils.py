@@ -247,14 +247,8 @@ class ConversationWrapper(object):
         user_account = yield self.c.user_account.get(self.api.manager)
         routing_table = yield self.user_api.get_routing_table(user_account)
         rt_helper = RoutingTableHelper(routing_table)
-
-        conv_conn = self.c.get_routing_name()
-        tag_conn = "%s:%s" % tag
-
-        rt_helper.add_entry(conv_conn, "default", tag_conn, "default")
-        if not outbound_only:
-            rt_helper.add_entry(tag_conn, "default", conv_conn, "default")
-
+        rt_helper.add_oldstyle_conversation(self.c, tag,
+                                            outbound_only=outbound_only)
         yield user_account.save()
 
     @Manager.calls_manager
@@ -267,17 +261,8 @@ class ConversationWrapper(object):
         """
         user_account = yield self.c.user_account.get(self.api.manager)
         routing_table = yield self.user_api.get_routing_table(user_account)
-
-        conv_connector = "%s:%s" % (self.c.conversation_type, self.c.key)
-        routing_entry = routing_table.pop(conv_connector, None)
-        if routing_entry is None:
-            return
-
-        # XXX: This assumes symmetry, which is not guaranteed once we have
-        #      proper tools for managing routing tables.
-        for tag_connector, _endpoint in routing_entry.values():
-            routing_table.pop(tag_connector, None)
-
+        rt_helper = RoutingTableHelper(routing_table)
+        rt_helper.remove_oldstyle_conversation(self.c)
         yield user_account.save()
 
     @Manager.calls_manager

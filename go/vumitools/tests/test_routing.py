@@ -16,16 +16,19 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         user_account = yield self.mk_user(self.vumi_api, u'testuser')
         user_account.routing_table = {
             # Transport side
-            "pool1:1234": {"default": ["app1:conv1", "default"]},
-            "pool1:5678": {"default": ["app1:conv1", "other"]},
-            "pool1:9012": {"default": ["app2:conv2", "default"]},
+            "TRANSPORT_TAG:pool1:1234": {
+                "default": ["CONVERSATION:app1:conv1", "default"]},
+            "TRANSPORT_TAG:pool1:5678": {
+                "default": ["CONVERSATION:app1:conv1", "other"]},
+            "TRANSPORT_TAG:pool1:9012": {
+                "default": ["CONVERSATION:app2:conv2", "default"]},
             # Application side
-            "app1:conv1": {
-                "default": ["pool1:1234", "default"],
-                "other": ["pool1:5678", "default"],
+            "CONVERSATION:app1:conv1": {
+                "default": ["TRANSPORT_TAG:pool1:1234", "default"],
+                "other": ["TRANSPORT_TAG:pool1:5678", "default"],
             },
-            "app2:conv2": {
-                "default": ["pool1:9012", "default"],
+            "CONVERSATION:app2:conv2": {
+                "default": ["TRANSPORT_TAG:pool1:9012", "default"],
             },
         }
         yield user_account.save()
