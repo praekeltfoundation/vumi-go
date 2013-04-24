@@ -118,12 +118,17 @@ class RoutingTableHelper(object):
         self.routing_table.pop(conn, None)
 
         # remove entires with connector as destination
+        to_remove = []
         for src_conn, routes in self.routing_table.iteritems():
             for src_endpoint, (dest_conn, dest_endpoint) in routes.items():
                 if dest_conn == conn:
                     del routes[src_endpoint]
             if not routes:
-                del self.routing_table[src_conn]
+                # We can't modify this dict while iterating over it.
+                to_remove.append(src_conn)
+
+        for src_conn in to_remove:
+            del self.routing_table[src_conn]
 
     def remove_conversation(self, conv):
         """Remove all entries linking to or from a given conversation.
