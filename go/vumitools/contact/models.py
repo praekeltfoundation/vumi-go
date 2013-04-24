@@ -88,27 +88,36 @@ class ContactStore(PerAccountStore):
         self.groups = self.manager.proxy(ContactGroup)
 
     @Manager.calls_manager
-    def new_contact(self, groups=[], **fields):
+    def new_contact(self, **fields):
         contact_id = uuid4().get_hex()
+
+        # These are foreign keys.
+        groups = fields.pop('groups', [])
 
         contact = self.contacts(
             contact_id, user_account=self.user_account_key, **fields)
 
-        map(contact.add_to_group, groups)
+        for group in groups:
+            contact.add_to_group(group)
 
         yield contact.save()
         returnValue(contact)
 
     @Manager.calls_manager
-    def update_contact(self, key, groups=[], **fields):
+    def update_contact(self, key, **fields):
         # ensure user account can't be changed
         fields.pop('user_account', None)
+
+        # These are foreign keys.
+        groups = fields.pop('groups', [])
 
         contact = yield self.get_contact_by_key(key)
         for field_name, field_value in fields.iteritems():
             if field_name in contact.field_descriptors:
                 setattr(contact, field_name, field_value)
-        map(contact.add_to_group, groups)
+
+        for group in groups:
+            contact.add_to_group(group)
 
         yield contact.save()
         returnValue(contact)
