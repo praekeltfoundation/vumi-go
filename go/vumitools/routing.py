@@ -72,7 +72,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         return mapping.get(conversation_type, conversation_type)
 
     def handle_opt_out(self, msg):
-        return self.publish_message(
+        return self.publish_inbound(
             msg, self.get_static_config().opt_out_connector, 'default')
 
     def process_inbound(self, config, msg, connector_name):
