@@ -96,6 +96,7 @@ class ContactStore(PerAccountStore):
 
         contact = self.contacts(
             contact_id, user_account=self.user_account_key, **fields)
+
         for group in groups:
             contact.add_to_group(group)
 
@@ -107,11 +108,16 @@ class ContactStore(PerAccountStore):
         # ensure user account can't be changed
         fields.pop('user_account', None)
 
-        contact = yield self.get_contact_by_key(key)
+        # These are foreign keys.
+        groups = fields.pop('groups', [])
 
+        contact = yield self.get_contact_by_key(key)
         for field_name, field_value in fields.iteritems():
             if field_name in contact.field_descriptors:
                 setattr(contact, field_name, field_value)
+
+        for group in groups:
+            contact.add_to_group(group)
 
         yield contact.save()
         returnValue(contact)

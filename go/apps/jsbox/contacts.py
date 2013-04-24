@@ -162,6 +162,9 @@ class ContactsResource(SandboxResource):
             # ensure user account can't be changed
             fields.pop('user_account', None)
 
+            # These are foreign keys.
+            groups = fields.pop('groups', [])
+
             # raise an exception if the contact does not exist
             key = fields.pop('key')
             contact_store = self._contact_store_for_api(api)
@@ -171,6 +174,9 @@ class ContactsResource(SandboxResource):
                 key,
                 user_account=contact_store.user_account_key,
                 **fields)
+
+            for group in groups:
+                contact.add_to_group(group)
 
             yield contact.save()
         except (SandboxError, ContactError) as e:

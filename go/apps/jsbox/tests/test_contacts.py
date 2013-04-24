@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from mock import Mock
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
@@ -68,8 +68,14 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         for field_name, expected_value in expected_fields.iteritems():
             self.assertEqual(fields[field_name], expected_value)
 
+    @inlineCallbacks
     def new_contact(self, **fields):
-        return self.contact_store.new_contact(**fields)
+        groups = fields.pop('groups', [])
+        contact = yield self.contact_store.new_contact(**fields)
+        for group in groups:
+            contact.add_to_group(group)
+        yield contact.save()
+        returnValue(contact)
 
     @inlineCallbacks
     def test_handle_get(self):
@@ -210,17 +216,21 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         contact = yield self.new_contact(
             name=u'A Random',
             surname=u'Person',
-            msisdn=u'+27831234567')
+            msisdn=u'+27831234567',
+            groups=[u'group-a', u'group-b'])
 
-        reply = yield self.dispatch_command(
-            'update', key=contact.key, fields={'surname': u'Jackal'})
+        reply = yield self.dispatch_command('update', key=contact.key, fields={
+            'surname': u'Jackal',
+            'groups': [u'group-a', u'group-c'],
+        })
         self.check_reply(reply)
 
         self.check_contact_fields(
             contact.key,
             name=u'A Random',
             surname=u'Jackal',
-            msisdn=u'+27831234567')
+            msisdn=u'+27831234567',
+            groups=[u'group-a', u'group-b', u'group-c'])
 
     @inlineCallbacks
     def test_handle_update_parsing(self):
@@ -450,19 +460,22 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
     def test_handle_save_for_unicode_chars(self):
         contact = yield self.new_contact(
             surname=u'Jackal',
-            msisdn=u'+27831234567')
+            msisdn=u'+27831234567',
+            groups=[u'group-a', u'group-b'])
 
         reply = yield self.dispatch_command('save', contact={
             'key': contact.key,
             'surname': u'☃',
-            'msisdn': u'+27831234567'
+            'msisdn': u'+27831234567',
+            'groups': [u'group-a', u'group-c'],
         })
 
         self.check_contact_reply(reply)
         self.check_contact_fields(
             contact.key,
             surname=u'☃',
-            msisdn=u'+27831234567')
+            msisdn=u'+27831234567',
+            groups=[u'group-a', u'group-c'])
 
     def test_handle_save_for_nonexistent_contacts(self):
         return self.assert_bad_command('save', contact={'key': u'213123'})
