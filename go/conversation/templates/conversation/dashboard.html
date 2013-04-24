@@ -9,7 +9,7 @@
 
 
 {% block content_actions_left %}
-    <a href="{% url 'campaigns:new' %}" class="btn btn-primary">New Campaign</a>
+    <a href="{% url 'campaigns:details' %}" class="btn btn-primary">New Campaign</a>
 {% endblock %}
 
 {% block content_actions_right %}
@@ -28,7 +28,7 @@
     <div class="span3 sidebar">
 
         <ul class="nav nav-list">
-            <li class="active">
+            <li>
                 <a href="#">All campaigns</a>
                 <ul class="nav nav-list">
                     <li><a href="#">Running Smoothly</a></li>

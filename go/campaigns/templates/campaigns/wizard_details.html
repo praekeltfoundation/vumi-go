@@ -5,7 +5,7 @@
     <form id="frm-campaign" method="post" action="">
         {% csrf_token %}
         <fieldset>
-            {% for field in form.visible_fields %}
+            {% for field in form_general.visible_fields %}
             <div class="control-group{% if field.errors %} error{% endif %}">
                 <label class="control-label" for="id_{{ field.name }}">
                     {{ field.label }}
@@ -26,28 +26,96 @@
         </fieldset>
 
 
+        <label class="control-label">
+            How would you like to reach and interact with users?
+        </label>
+        <br>
 
-
-
-
-        <div class="row-fluid">
-            <div class="span3">
-                1
+        <div class="configuration">
+            <div class="row-fluid title">
+                <div class="span3">
+                    Name
+                </div>
+                <div class="span3">
+                    {{ form_config.countries.label }}
+                </div>
+                <div class="span3">
+                    {{ form_config.channels.label }}
+                    <a href="#" class="icon-info-sign"
+                        data-toggle="tooltip" 
+                        data-original-title="
+                            Short code: a 4 or 5 digit number, from which 
+                            SMS messages can be sent or received.
+                            Long code: a 10+ digit number, from which 
+                            SMS messages can be sent or received.">
+                    </a>
+                </div>
+                <div class="span3">
+                    {{ form_config.keyword.label }}
+                    <a href="#" class="icon-info-sign"
+                        data-toggle="tooltip" 
+                        data-original-title="When your number is being shared 
+                        by several people, a keyword will ensure that you 
+                        receive your users' messages. Eg: &quot;SMS 'drinks' 
+                        to 27925551234 to enter the competition.&quot;">
+                    </a>
+                    
+                </div>
             </div>
-            <div class="span3">
-                2
-            </div>
-            <div class="span3">
-                3
-            </div>
-            <div class="span3">
-                4
+
+            <div class="row-fluid boxes">
+                <div class="span3">
+                    <div class="box">
+                        Your campaign
+                    </div>
+                </div>
+
+                <div class="span3">
+
+                    <div class="box">
+                        <label for="id_{{ form_config.countries.name }}">
+                            {{ form_config.countries.label }}
+                        </label>
+
+                        {{ form_config.channels }}
+                    </div>
+                    
+                    <button class="btn btn-primary">Add country</button>
+                </div>
+
+                <div class="span3">
+                    <div class="box">
+                        {# these need to be populated by something? #}
+
+                        <label for="id_{{ form_config.keyword.name }}">
+                          {{ form_config.channels.label }}
+                        </label>
+
+                        {{ form_config.channels }}
+                    </div>
+
+                    <button class="btn btn-primary">Add channel</button>
+                </div>
+
+                <div class="span3">
+                    <div class="box">
+                        <label for="id_{{ form_config.keyword.name }}">
+                          {{ form_config.keyword.label }}
+                        </label>
+                        {{ form_config.keyword }}
+                    </div>
+                </div>
+
             </div>
         </div>
-
-
-
-
     </form>
 {% endblock %}
 
+
+{% block extrascript %}
+<script type="text/javascript">
+    $(function() {
+        $('.icon-info-sign').tooltip();
+    });    
+</script>
+{% endblock %}
