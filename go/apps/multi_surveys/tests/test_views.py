@@ -12,7 +12,8 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         self.setup_riak_fixtures()
         self.client = Client()
         self.client.login(username='username', password='password')
-        self.patch_settings(VXPOLLS_REDIS_CONFIG={'FAKE_REDIS': 'sure'})
+        self.patch_settings(
+            VXPOLLS_REDIS_CONFIG=self._persist_config['redis_manager'])
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
