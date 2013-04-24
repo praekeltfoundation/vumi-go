@@ -210,11 +210,10 @@ class GoPersistenceMixin(PersistenceMixin):
         returnValue(user)
 
 
-class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
-
-    use_riak = True
+class GoAppWorkerTestMixin(GoPersistenceMixin):
 
     def _worker_name(self):
+        # DummyApplicationWorker has no worker_name attr.
         return getattr(self.application_class, 'worker_name', 'unnamed')
 
     def _conversation_type(self):
@@ -225,17 +224,22 @@ class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
     def _command_rkey(self):
         return "%s.control" % (self._worker_name(),)
 
-    @inlineCallbacks
     def setup_tagpools(self):
-        yield self.vumi_api.tpm.declare_tags(
-           [(u"pool", u"tag1"), (u"pool", u"tag2")])
-        yield self.vumi_api.tpm.set_metadata(u"pool", {
+        return self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
+
+    @inlineCallbacks
+    def setup_tagpool(self, pool, tags, transport_name=None, permission=True):
+        tags = [(pool, tag) for tag in tags]
+        if transport_name is None:
+            transport_name = self.transport_name
+        yield self.vumi_api.tpm.declare_tags(tags)
+        yield self.vumi_api.tpm.set_metadata(pool, {
             "transport_type": self.transport_type,
-            "msg_options": {
-                "transport_name": self.transport_name,
-                },
-            })
-        yield self.add_tagpool_permission(u"pool")
+            "transport_name": transport_name,
+        })
+        if permission:
+            yield self.add_tagpool_permission(pool)
+        returnValue(tags)
 
     @inlineCallbacks
     def add_tagpool_permission(self, tagpool, max_keys=None):
@@ -259,23 +263,6 @@ class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
 
     def get_dispatched_app_events(self):
         return self._amqp.get_messages('vumi', 'vumi.event')
-
-    def publish_event(self, **kw):
-        event = TransportEvent(**kw)
-        d = self.dispatch(event, rkey=self.rkey('event'))
-        d.addCallback(lambda _result: event)
-        return d
-
-    @inlineCallbacks
-    def get_application(self, config, *args, **kw):
-        if 'worker_name' not in config:
-            config['worker_name'] = self._worker_name()
-        worker = yield super(AppWorkerTestCase, self).get_application(
-            config, *args, **kw)
-        if hasattr(worker, 'vumi_api'):
-            self._persist_riak_managers.append(worker.vumi_api.manager)
-            self._persist_redis_managers.append(worker.vumi_api.redis)
-        returnValue(worker)
 
     @inlineCallbacks
     def create_conversation(self, **kw):
@@ -306,3 +293,41 @@ class AppWorkerTestCase(GoPersistenceMixin, ApplicationTestCase):
                 name = name[len(assert_prefix):]
             values[name] = [v for _, v in metric.poll()]
         return values
+
+    def dispatch_to_conv(self, msg, conv):
+        conv.set_go_helper_metadata(msg['helper_metadata'])
+        return self.dispatch(msg)
+
+    def store_outbound_msg(self, msg, conv=None, batch_id=None):
+        if batch_id is None and conv is not None:
+            [batch_id] = conv.get_batch_keys()
+        return self.user_api.api.mdb.add_outbound_message(
+            msg, batch_id=batch_id)
+
+    def store_inbound_msg(self, msg, conv=None, batch_id=None):
+        if batch_id is None and conv is not None:
+            [batch_id] = conv.get_batch_keys()
+        return self.user_api.api.mdb.add_inbound_message(
+            msg, batch_id=batch_id)
+
+
+class AppWorkerTestCase(GoAppWorkerTestMixin, ApplicationTestCase):
+
+    use_riak = True
+
+    def publish_event(self, **kw):
+        event = TransportEvent(**kw)
+        d = self.dispatch(event, rkey=self.rkey('event'))
+        d.addCallback(lambda _result: event)
+        return d
+
+    @inlineCallbacks
+    def get_application(self, config, *args, **kw):
+        if 'worker_name' not in config:
+            config['worker_name'] = self._worker_name()
+        worker = yield super(AppWorkerTestCase, self).get_application(
+            config, *args, **kw)
+        if hasattr(worker, 'vumi_api'):
+            self._persist_riak_managers.append(worker.vumi_api.manager)
+            self._persist_redis_managers.append(worker.vumi_api.redis)
+        returnValue(worker)

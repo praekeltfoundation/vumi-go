@@ -5,6 +5,7 @@ from datetime import datetime
 
 from twisted.internet.defer import returnValue
 
+from vumi import log
 from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (
    Integer, Unicode, Timestamp, ManyToMany, Json, Boolean)
@@ -27,7 +28,7 @@ class UserAppPermission(Model):
 class UserAccount(Model):
     """A user account."""
 
-    VERSION = 1
+    VERSION = 2
     MIGRATOR = UserAccountMigrator
 
     # key is uuid
@@ -46,6 +47,11 @@ class UserAccount(Model):
     # has no legacy tags or conversations, so we start with an empty list and
     # skip the tag collection.
     tags = Json(default=[], null=True)
+    # `routing_table` is allowed to be null so that we can detect
+    # freshly-migrated accounts and populate the routing table from active
+    # conversations. A new account has no legacy conversations, so we start
+    # with an empty dict and skip the table building.
+    routing_table = Json(default={}, null=True)
 
     @Manager.calls_manager
     def has_tagpool_permission(self, tagpool):
@@ -54,6 +60,39 @@ class UserAccount(Model):
                 if tp.tagpool == tagpool:
                     returnValue(True)
         returnValue(False)
+
+
+class RoutingTableHelper(object):
+    def __init__(self, routing_table):
+        self.routing_table = routing_table
+
+    def lookup_target(self, src_conn, src_endpoint):
+        return self.routing_table.get(src_conn, {}).get(src_endpoint)
+
+    def add_entry(self, src_conn, src_endpoint, dst_conn, dst_endpoint):
+        connector_dict = self.routing_table.setdefault(src_conn, {})
+        if src_endpoint in connector_dict:
+            log.warning(
+                "Replacing routing entry for (%r, %r): was %r, now %r" % (
+                    src_conn, src_endpoint, connector_dict[src_endpoint],
+                    [dst_conn, dst_endpoint]))
+        connector_dict[src_endpoint] = [dst_conn, dst_endpoint]
+
+    def remove_entry(self, src_conn, src_endpoint):
+        connector_dict = self.routing_table.get(src_conn)
+        if connector_dict is None or src_endpoint not in connector_dict:
+            log.warning(
+                "Attempting to remove missing routing entry for (%r, %r)." % (
+                    src_conn, src_endpoint))
+            return None
+
+        old_dest = connector_dict.pop(src_endpoint)
+
+        if not connector_dict:
+            # This is the last entry for this connector
+            self.routing_table.pop(src_conn)
+
+        return old_dest
 
 
 class AccountStore(object):

@@ -1,40 +1,43 @@
-from twisted.internet.defer import inlineCallbacks
+import uuid
 
+from twisted.internet.defer import inlineCallbacks
 from vumi_wikipedia.tests import test_wikipedia
 
-from go.vumitools.tests.utils import GoPersistenceMixin
+from go.vumitools.tests.utils import GoAppWorkerTestMixin
 from go.apps.wikipedia.vumi_app import WikipediaApplication
 
 
-class WikipediaApplicationTestCase(GoPersistenceMixin,
+class WikipediaApplicationTestCase(GoAppWorkerTestMixin,
                                    test_wikipedia.WikipediaWorkerTestCase):
     application_class = WikipediaApplication
     use_riak = True
 
-    def setUp(self):
-        self.patch(WikipediaApplication, 'get_conversation_metadata',
-            lambda s, msg: {'send_from_tagpool': 'devnull',
-                            'send_from_tag': '100@devnull',
-                            })
-        self.patch(WikipediaApplication, 'get_tagpool_metadata',
-            lambda s, tp, key, default=None: {
-                'transport_name': 'devnull_transport',
-            })
-        return super(WikipediaApplicationTestCase, self).setUp()
-
     @inlineCallbacks
-    def tearDown(self):
-        # Ensure that for every test, SMS is going out via the tagpool
-        # as specified in the conversation metadata
-        for message in self._amqp.get_messages('vumi', 'sphex_sms.outbound'):
-            self.assertEqual(message['transport_name'], 'devnull_transport')
-            self.assertEqual(message['from_addr'], '100@devnull')
-        # All other 'normal' USSD traffic should continue over the existing
-        # tagpool / transport for this conversation.
-        for message in self.get_dispatched_messages():
-            self.assertEqual(message['transport_name'], self.transport_name)
+    def setUp(self):
+        yield super(WikipediaApplicationTestCase, self).setUp()
 
-        yield super(WikipediaApplicationTestCase, self).tearDown()
+        # Steal app's vumi_api
+        self.vumi_api = self.worker.vumi_api  # YOINK!
+        self._persist_riak_managers.append(self.vumi_api.manager)
+
+        # Create a test user account
+        self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
+        self.user_api = self.vumi_api.get_user_api(self.user_account.key)
+
+        # Add tags
+        yield self.setup_tagpools()
+
+        # Give a user access to a tagpool
+        self.user_api.api.account_store.tag_permissions(uuid.uuid4().hex,
+            tagpool=u"pool", max_keys=None)
+
+        self.conv = yield self.create_conversation(
+            delivery_tag_pool=u'pool', delivery_class=u'sms')
+
+    def mkmsg_in(self, *args, **kw):
+        msg = super(WikipediaApplicationTestCase, self).mkmsg_in(*args, **kw)
+        self.conv.set_go_helper_metadata(msg['helper_metadata'])
+        return msg
 
     def assert_metrics(self, expected_metrics):
         # We aren't collecting these.

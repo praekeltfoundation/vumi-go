@@ -20,7 +20,7 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
-from go.vumitools.account import AccountStore
+from go.vumitools.account import AccountStore, RoutingTableHelper
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.conversation.models import CONVERSATION_DRAFT
@@ -242,12 +242,130 @@ class VumiUserApi(object):
             user_account.tags = [list(tag) for tag in conv_tags]
 
     @Manager.calls_manager
-    def list_endpoints(self):
+    def list_endpoints(self, user_account=None):
         """Returns a set of endpoints owned by an account.
         """
-        user_account = yield self.get_user_account()
+        if user_account is None:
+            user_account = yield self.get_user_account()
         yield self._populate_tags(user_account)
         returnValue(set(tuple(tag) for tag in user_account.tags))
+
+    @Manager.calls_manager
+    def _get_conversation_for_batch(self, batch):
+        conv_keys = yield batch.backlinks.conversations(
+            self.conversation_store.manager)
+        conversations = []
+        for conv_key in conv_keys:
+            conv = yield self.get_wrapped_conversation(conv_key)
+            if conv.running():
+                conversations.append(conv)
+        if not conversations:
+            # No running conversations for this batch.
+            return
+
+        # We may have more than one conversation here.
+        if len(conversations) > 1:
+            log.warning('Multiple conversations found '
+                        'going with most recent: %r' % (conv_keys,))
+
+        conversation = sorted(conversations, reverse=True,
+                              key=lambda c: c.start_timestamp)[0]
+        returnValue(conversation)
+
+    @Manager.calls_manager
+    def _populate_routing_table(self, user_account):
+        """Build a routing table by looking at conversations.
+
+        This is quite expensive. Let's try to not do it very often.
+
+        NOTE: This assumes all conversations have symmetric routing. It almost
+        certainly breaks some stuff. Some way to manually fix broken things
+        later would be nice.
+        """
+        if user_account.routing_table is not None:
+            return
+
+        routing_table = {}
+        rt_helper = RoutingTableHelper(routing_table)
+
+        # Start by walking forward from tags owned by this account.
+        account_tags = yield self.list_endpoints(user_account)
+        for tag in account_tags:
+            tag_info = yield self.api.mdb.get_tag_info(tag)
+            account_key = user_account.key.decode('utf-8')
+            tag_info.metadata['user_account'] = account_key
+            yield tag_info.save()
+            if tag_info.current_batch.key is None:
+                continue
+            batch = yield tag_info.current_batch.get()
+            conv = yield self._get_conversation_for_batch(batch)
+            if conv is None:
+                continue
+
+            # If we get here, we have a conversation to set up routing for.
+
+            conv_conn = conv.get_routing_name()
+            tag_conn = "%s:%s" % tag
+            rt_helper.add_entry(conv_conn, "default", tag_conn, "default")
+            rt_helper.add_entry(tag_conn, "default", conv_conn, "default")
+
+        # XXX: Saving here could lead to a race condition if something else
+        # populates the routing table with some different data and saves before
+        # we do. This is unlikely enough that I'm happy ignoring it, given that
+        # we only build the routing table during account migration.
+        user_account.routing_table = routing_table
+        yield user_account.save()
+
+        # Check that we have routing set up for all our active conversations.
+        convs = yield self.active_conversations()
+        for conv in convs:
+            conv_conn = u':'.join([conv.conversation_type, conv.key])
+            if conv_conn not in routing_table:
+                log.warning(
+                    "No routing configured for conversation: %r" % (conv,))
+
+    @Manager.calls_manager
+    def get_routing_table(self, user_account=None):
+        if user_account is None:
+            user_account = yield self.get_user_account()
+        yield self._populate_routing_table(user_account)
+        returnValue(user_account.routing_table)
+
+    @Manager.calls_manager
+    def validate_routing_table(self, user_account=None):
+        """Check that the routing table on this account is valid.
+
+        Currently we just check account ownership of tags and conversations.
+
+        TODO: Cycle detection, if that's even possible. Maybe other stuff.
+        """
+        if user_account is None:
+            user_account = yield self.get_user_account()
+        routing_table = yield self.get_routing_table(user_account)
+        # We don't care about endpoints here, only connectors.
+        routing_connectors = set()
+        for src_conn, connector_dict in routing_table.iteritems():
+            routing_connectors.add(src_conn)
+            for dst_conn, _ in connector_dict.values():
+                routing_connectors.add(dst_conn)
+
+        # Checking tags is cheap and easy, so do that first.
+        for tag in user_account.tags:
+            tag_conn = u':'.join(tag)
+            if tag_conn in routing_connectors:
+                routing_connectors.remove(tag_conn)
+
+        # Now we run through active conversations to check those.
+        convs = yield self.active_conversations()
+        for conv in convs:
+            conv_conn = u':'.join([conv.conversation_type, conv.key])
+            if conv_conn in routing_connectors:
+                routing_connectors.remove(conv_conn)
+
+        if routing_connectors:
+            raise VumiError(
+                "Routing table contains illegal connector names: %s" % (
+                    routing_connectors,))
 
     @Manager.calls_manager
     def msg_options(self, tag, tagpool_metadata=None):
@@ -262,11 +380,21 @@ class VumiUserApi(object):
         # TODO: not sure whether to declare that tag names must always be
         #       valid from_addr values or whether to put in a mapping somewhere
         msg_options['from_addr'] = tag[1]
+        if 'transport_name' in tagpool_metadata:
+            msg_options['transport_name'] = tagpool_metadata['transport_name']
         msg_options.update(tagpool_metadata.get('msg_options', {}))
         TaggingMiddleware.add_tag_to_payload(msg_options, tag)
         DebitAccountMiddleware.add_user_to_payload(msg_options,
                                                    self.user_account_key)
         returnValue(msg_options)
+
+    @Manager.calls_manager
+    def _update_tag_data_for_acquire(self, user_account, tag):
+        user_account.tags.append(tag)
+        tag_info = yield self.api.mdb.get_tag_info(tag)
+        tag_info.metadata['user_account'] = user_account.key.decode('utf-8')
+        yield tag_info.save()
+        yield user_account.save()
 
     @Manager.calls_manager
     def acquire_tag(self, pool):
@@ -288,8 +416,7 @@ class VumiUserApi(object):
             returnValue(None)
         tag = yield self.api.tpm.acquire_tag(pool)
         if tag is not None:
-            user_account.tags.append(tag)
-            yield user_account.save()
+            yield self._update_tag_data_for_acquire(user_account, tag)
         returnValue(tag)
 
     @Manager.calls_manager
@@ -312,8 +439,7 @@ class VumiUserApi(object):
             returnValue(None)
         tag = yield self.api.tpm.acquire_specific_tag(tag)
         if tag is not None:
-            user_account.tags.append(tag)
-            yield user_account.save()
+            yield self._update_tag_data_for_acquire(user_account, tag)
         returnValue(tag)
 
     @Manager.calls_manager
@@ -335,7 +461,11 @@ class VumiUserApi(object):
             user_account.tags.remove(list(tag))
         except ValueError, e:
             log.error("Tag not allocated to account: %s" % (tag,), e)
-        yield user_account.save()
+        else:
+            tag_info = yield self.api.mdb.get_tag_info(tag)
+            del tag_info.metadata['user_account']
+            yield tag_info.save()
+            yield user_account.save()
         yield self.api.tpm.release_tag(tag)
 
 

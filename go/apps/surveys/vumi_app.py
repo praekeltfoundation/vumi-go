@@ -7,29 +7,32 @@ from vxpolls.manager import PollManager
 from vumi.message import TransportUserMessage
 from vumi import log
 
-from go.vumitools.app_worker import GoApplicationMixin
+from go.vumitools.app_worker import GoApplicationMixin, GoWorkerConfigMixin
+
+
+class SurveyConfig(PollApplication.CONFIG_CLASS, GoWorkerConfigMixin):
+    pass
 
 
 class SurveyApplication(PollApplication, GoApplicationMixin):
+    CONFIG_CLASS = SurveyConfig
 
     worker_name = 'survey_application'
-    SEND_TO_TAGS = frozenset(['default'])
 
     def validate_config(self):
-        self._go_validate_config()
         # vxpolls
         vxp_config = self.config.get('vxpolls', {})
         self.poll_prefix = vxp_config.get('prefix')
 
     @inlineCallbacks
     def setup_application(self):
-        yield self._go_setup_application()
+        yield self._go_setup_worker()
         self.pm = PollManager(self.redis, self.poll_prefix)
 
     @inlineCallbacks
     def teardown_application(self):
         yield self.pm.stop()
-        yield self._go_teardown_application()
+        yield self._go_teardown_worker()
 
     @inlineCallbacks
     def consume_user_message(self, message):
@@ -89,11 +92,10 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         # We reverse the to_addr & from_addr since we're faking input
         # from the client to start the survey.
         from_addr = msg_options.pop('from_addr')
+        conversation.set_go_helper_metadata(
+            msg_options.setdefault('helper_metadata', {}))
         msg = TransportUserMessage(from_addr=to_addr, to_addr=from_addr,
                 content='', **msg_options)
-
-        gmt = self.get_go_metadata(msg)
-        gmt.set_conversation_info(conversation)
 
         return self.consume_user_message(msg)
 
@@ -177,4 +179,5 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
                 log.warning('Unable to reply, message %s does not exist.' % (
                     in_reply_to))
         else:
-            yield self.send_to(to_addr, content, **msg_options)
+            yield self.send_to(
+                to_addr, content, endpoint='default', **msg_options)

@@ -9,8 +9,7 @@ from vumi.config import ConfigDict
 from vumi.application.sandbox import JsSandbox, SandboxResource
 from vumi import log
 
-from go.vumitools.app_worker import (
-    GoApplicationMixin, GoApplicationConfigMixin)
+from go.vumitools.app_worker import GoApplicationMixin, GoWorkerConfigMixin
 
 
 class ConversationConfigResource(SandboxResource):
@@ -27,7 +26,7 @@ class ConversationConfigResource(SandboxResource):
         return self.reply(command, value=value, success=True)
 
 
-class JsBoxConfig(JsSandbox.CONFIG_CLASS, GoApplicationConfigMixin):
+class JsBoxConfig(JsSandbox.CONFIG_CLASS, GoWorkerConfigMixin):
     jsbox_app_config = ConfigDict(
         "Custom configuration passed to the javascript code.", default={})
     jsbox = ConfigDict(
@@ -60,23 +59,19 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
     And those from :class:`vumi.application.sandbox.JsSandbox`.
     """
 
+    ALLOWED_ENDPOINTS = None
     CONFIG_CLASS = JsBoxConfig
-    SEND_TO_TAGS = frozenset(['default'])
     worker_name = 'jsbox_application'
-
-    def validate_config(self):
-        super(JsBoxApplication, self).validate_config()
-        self._go_validate_config()
 
     @inlineCallbacks
     def setup_application(self):
         yield super(JsBoxApplication, self).setup_application()
-        yield self._go_setup_application()
+        yield self._go_setup_worker()
 
     @inlineCallbacks
     def teardown_application(self):
         yield super(JsBoxApplication, self).teardown_application()
-        yield self._go_teardown_application()
+        yield self._go_teardown_worker()
 
     def conversation_for_api(self, api):
         return api.config.get_conversation()
