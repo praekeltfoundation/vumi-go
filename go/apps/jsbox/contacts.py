@@ -14,7 +14,7 @@ class ContactsResource(SandboxResource):
     Sandbox resource for accessing, creating and modifying contacts for
     a Go application.
 
-    See :class:`go.vumitools.contact.Contact` for a look at the Contact model
+    See :class:``go.vumitools.contact.Contact`` for a look at the Contact model
     and its fields.
     """
 
@@ -39,15 +39,40 @@ class ContactsResource(SandboxResource):
     def handle_get(self, api, command):
         """
         Accepts a delivery class and address and returns a contact's data, as
-        well as the success status of the operation (can be `true` or `false`).
+        well as the success flag of the operation (can be ``true`` or
+        ``false``).
 
         Command fields:
-            :param delivery_class: The type of channel used for the passed in
-            address. Can be one of the following types: `sms`, `ussd`,
-            `twitter`, `gtalk`
-            :param addr: The address to use to lookup of the contact.For
-            example, if `sms` was the delivery class, the address would look
-            something like `+27731112233`
+            - ``delivery_class``: the type of channel used for the passed in
+            address. Can be one of the following types: ``sms``, ``ussd``,
+            ``twitter``, ``gtalk``
+            - ``addr``: The address to use to lookup of the contact. For
+            example, if ``sms`` was the delivery class, the address would look
+            something like ``+27731112233``
+
+        Reply fields:
+            - ``success``: ``true`` if the operation was successful, otherwise
+            ``false``
+            - ``contact``: An object containing the contact's data. Looks
+            something like this:
+
+            .. code-block:: javascript
+                {
+                    'key': 'f953710a2472447591bd59e906dc2c26',
+                    'surname': 'Person',
+                    'user_account': 'test-0-user',
+                    'bbm_pin': null,
+                    'msisdn': '+27831234567',
+                    'created_at': '2013-04-24 14:01:41.803693',
+                    'gtalk_id': null,
+                    'dob': null,
+                    'groups': ['group-a', 'group-b'],
+                    'facebook_id': null,
+                    '$VERSION': None,
+                    'twitter_handle': null,
+                    'email_address': null,
+                    'name': 'A Random'
+                }
 
         Example:
         .. code-block:: javascript
@@ -79,8 +104,15 @@ class ContactsResource(SandboxResource):
     @inlineCallbacks
     def handle_get_or_create(self, api, command):
         """
-        Behaves the same as :method:handle_get, but creates the contact if it
-        does not yet exist.
+        Similar to :method:`handle_get`, but creates the contact if it does
+        not yet exist.
+
+        Reply fields:
+            - ``success``: ``true`` if the operation was successful, otherwise
+            ``false``
+            - ``contact``: An object containing the contact's data
+            - ``created``: ``true`` if a new contact was created, otherwise
+            ``false``
         """
         try:
             self._parse_get(command)
@@ -113,16 +145,19 @@ class ContactsResource(SandboxResource):
     @inlineCallbacks
     def handle_update(self, api, command):
         """
-        Updates the given fields of an existing contact and returns the success
-        status of the operation (can be `true` or `false`).
+        Updates the given fields of an existing contact.
 
-        **Note**: All subfields of a Dynamic field such as `extra` and
-        `subscription` are overwritten if specified as one of the fields to be
-        updated (see example below).
+        **Note**: All subfields of a Dynamic field such as ``extra`` and
+        ``subscription`` are overwritten if specified as one of the fields to
+        be updated.
 
-        Command field:
-            :param key: The contacts key
-            :param fields: The contact fields to be updated
+        Command fields:
+            - ``key``: The contacts key
+            - ``fields``: The contact fields to be updated
+
+        Reply fields:
+            - ``success``: ``true`` if the operation was successful, otherwise
+            ``false``
 
         Example:
         .. code-block:: javascript
@@ -181,13 +216,16 @@ class ContactsResource(SandboxResource):
 
     def handle_update_extra(self, api, command):
         """
-        Updates a single subfield of an existing contact's `extra` field and
-        returns the success status of the operation (can be `true` or `false`).
+        Updates a single subfield of an existing contact's ``extra`` field.
 
         Command field:
-            :param contact_key: The contact's key
-            :param field: The name of the subfield to be updated
-            :param value: The subfield's new value
+            - ``contact_key``: The contact's key
+            - ``field``: The name of the subfield to be updated
+            - ``value``: The subfield's new value
+
+        Reply fields:
+            - ``success``: ``true`` if the operation was successful, otherwise
+            ``false``
 
         Example:
         .. code-block:: javascript
@@ -200,14 +238,17 @@ class ContactsResource(SandboxResource):
 
     def handle_update_subscription(self, api, command):
         """
-        Updates a single subfield of an existing contact's `subscription` field
-        and returns the success status of the operation (can be `true` or
-        `false`).
+        Updates a single subfield of an existing contact's ``subscription``
+        field.
 
         Command field:
-            :param contact_key: The contact's key
-            :param field: The name of the subfield to be updated
-            :param value: The subfield's new value
+            - ``contact_key``: The contact's key
+            - ``field``: The name of the subfield to be updated
+            - ``value``: The subfield's new value
+
+        Reply fields:
+            - ``success``: ``true`` if the operation was successful, otherwise
+            ``false``
 
         Example:
         .. code-block:: javascript
@@ -221,12 +262,16 @@ class ContactsResource(SandboxResource):
     @inlineCallbacks
     def handle_new(self, api, command):
         """
-        Creates a new contacts with the given fields of an existing contact and
-        returns a the new contact's key and the success status of the
-        operation (can be `true` or `false`).
+        Creates a new contacts with the given fields of an existing contact.
 
-        Command field:
-            :param fields: The fields to be set for the new contact
+        Command fields:
+            - ``fields``: The fields to be set for the new contact
+
+        Reply fields:
+            - ``success``: ``true`` if the operation was successful, otherwise
+            ``false``
+            - ``key``: a string representing the newly created key identifying
+            the contact (for eg. f953710a2472447591bd59e906dc2c26)
 
         Example:
         .. code-block:: javascript
@@ -253,6 +298,33 @@ class ContactsResource(SandboxResource):
 
     @inlineCallbacks
     def handle_save(self, api, command):
+        """
+        Saves a contact's data, overwriting the contact's previous data. Use
+        with care. This operation only works for existing contacts. For
+        creating new contacts, use :method:`handle_new`.
+
+        Command fields:
+            - ``contact``: The contact's data. **Note**: ``key`` must be a
+            field in the contact data in order identify the contact.
+
+        Reply fields:
+            - ``success``: ``true`` if the operation was successful, otherwise
+            ``false``
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'contacts.save', {
+                    contact: {
+                        'key': 'f953710a2472447591bd59e906dc2c26',
+                        'surname': 'Person',
+                        'user_account': 'test-0-user',
+                        'msisdn': '+27831234567',
+                        'groups': ['group-a', 'group-b'],
+                        'name': 'A Random'
+                    }
+                }, function(reply) { api.log_info(reply.key); });
+        """
         try:
             if not isinstance(command.get('contact'), dict):
                 raise SandboxError(
