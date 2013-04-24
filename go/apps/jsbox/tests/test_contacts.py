@@ -329,3 +329,49 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         })
 
         self.check_contact_reply(reply)
+
+    @inlineCallbacks
+    def test_handle_save(self):
+        contact = yield self.new_contact(
+            name=u'A Random',
+            surname=u'Jackal',
+            msisdn=u'+27831234567',
+            extra={u'foo': u'bar', u'lorem': u'ipsum'})
+
+        reply = yield self.dispatch_command('save', contact={
+            'key': contact.key,
+            'surname': u'Robot',
+            'msisdn': u'unknown',
+            'extra': {u'baz': u'qux'}
+        })
+
+        self.check_contact_reply(reply)
+        self.check_contact_fields(contact.key, **{
+            'name': None,
+            'surname': u'Robot',
+            'msisdn': u'unknown',
+            'extras-baz': u'qux',
+        })
+
+    @inlineCallbacks
+    def test_handle_save_for_unicode_chars(self):
+        contact = yield self.new_contact(
+            surname=u'Jackal',
+            msisdn=u'+27831234567')
+
+        reply = yield self.dispatch_command('save', contact={
+            'key': contact.key,
+            'surname': u'☃',
+            'msisdn': u'+27831234567'
+        })
+
+        self.check_contact_reply(reply)
+        self.check_contact_fields(
+            contact.key,
+            surname=u'☃',
+            msisdn=u'+27831234567')
+
+    @inlineCallbacks
+    def test_handle_save_for_nonexistent_contacts(self):
+        reply = yield self.dispatch_command('save', contact={'key': u'213123'})
+        self.check_reply(reply, success=False)

@@ -104,6 +104,9 @@ class ContactStore(PerAccountStore):
 
     @Manager.calls_manager
     def update_contact(self, key, **fields):
+        # ensure user account can't be changed
+        fields.pop('user_account', None)
+
         contact = yield self.get_contact_by_key(key)
 
         for field_name, field_value in fields.iteritems():
