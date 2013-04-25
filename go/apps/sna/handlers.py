@@ -14,9 +14,9 @@ class SNAEventHandler(EventHandler):
 
     @inlineCallbacks
     def find_contact(self, account_key, msisdn):
+        contact_store = ContactStore(
+            self.dispatcher.vumi_api.manager, account_key)
         try:
-            contact_store = ContactStore(
-                self.dispatcher.vumi_api.manager, account_key)
             contact = yield contact_store.contact_for_addr('ussd', msisdn)
             returnValue(contact)
         except ContactError:
