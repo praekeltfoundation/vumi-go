@@ -17,7 +17,7 @@ class ContactError(Exception):
     """Raised when an error occurs accessing or manipulating a Contact"""
 
 
-class ContactNotFoundError(Exception):
+class ContactNotFoundError(ContactError):
     """Raised when a contact is not found"""
 
 

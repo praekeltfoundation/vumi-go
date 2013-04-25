@@ -36,7 +36,7 @@ class ContactsResource(SandboxResource):
                 command['delivery_class'],
                 command['addr'],
                 create=False)
-        except (SandboxError, ContactError, ContactNotFoundError) as e:
+        except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
@@ -95,7 +95,7 @@ class ContactsResource(SandboxResource):
             fields = self.pick_fields(
                 command['fields'], *Contact.field_descriptors)
             yield store.update_contact(command['key'], **fields)
-        except (SandboxError, ContactError, ContactNotFoundError) as e:
+        except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
@@ -123,7 +123,7 @@ class ContactsResource(SandboxResource):
             field = getattr(contact, field_name)
             field[command['field']] = command['value']
             yield contact.save()
-        except (SandboxError, ContactError, ContactNotFoundError) as e:
+        except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
@@ -187,7 +187,7 @@ class ContactsResource(SandboxResource):
                 contact.add_to_group(group)
 
             yield contact.save()
-        except (SandboxError, ContactError, ContactNotFoundError) as e:
+        except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
