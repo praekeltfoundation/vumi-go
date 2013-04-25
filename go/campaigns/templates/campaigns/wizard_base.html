@@ -24,5 +24,21 @@
 {% block content_actions_right %}
     <a href="{% url 'conversations:index' %}">Cancel</a>
     <button class="btn btn-primary" data-action="draft">Save draft</button>
-    <button class="btn btn-primary" data-action="next">Next step</button>
+    <button class="btn btn-primary" data-action="save">Next step</button>
+{% endblock %}
+
+
+{% block extrascript %}
+<script type="text/javascript">
+    
+    $(function() {
+        // these are the save draft and cancel buttons at the top.
+        $('.actions .right button').on('click', function() {
+            $frm = $('#frm-campaign');
+            $frm.prepend('<input type="hidden" name="action" value="' + $(this).attr('data-action') + '">');
+            $frm.submit();
+            return false;
+        });
+    });
+</script>
 {% endblock %}

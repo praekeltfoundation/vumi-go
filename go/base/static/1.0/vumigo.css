@@ -149,6 +149,9 @@ body {
   font-size: 16px;
   margin-right: 10px;
 }
+.campaigns .header a.active {
+  color: #000;
+}
 .campaigns .actions {
   text-align: right;
 }

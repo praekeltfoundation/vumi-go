@@ -110,12 +110,13 @@
 
 
 {% block extrascript %}
+{{ block.super }}
 <script type="text/javascript">
 
     $(function() {
 
         // highlight the breadcrumbs.
-        $('.actions a').eq(0).addClass('active');
+        $('.breadcrumbs a').eq(0).addClass('active');
 
         // activate the tooltips
         $('.icon-info-sign').tooltip();
@@ -130,24 +131,6 @@
             return false;
         });
 
-        $('.actions .right button').on('click', function() {
-
-            $frm = $('#frm-campaign');
-            $frm.prepend('<input type="hidden" name="action" value="' + $(this).attr('data-action') + '">');
-            $frm.submit();
-
-            return false;
-
-
-        });
-
-
-        // save draft, and next step should save the form
-        // cancel should just redirect?
-
-    })
-
-    
-
+    });
 </script>
 {% endblock %}
