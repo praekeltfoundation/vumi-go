@@ -10,7 +10,7 @@ urlpatterns = patterns('',
         name='message_bulk'),
     url(r'^message/(?P<campaign_key>[\w ]+)/conversation/$', 
         views.message_conversation, name='message_conversation'),
-#     url(r'^conversation/$', views.create, name='create'),
+
 #     url(r'^recipients/$', views.create, name='create'),
 #     url(r'^summary/$', views.create, name='create'),
 )
