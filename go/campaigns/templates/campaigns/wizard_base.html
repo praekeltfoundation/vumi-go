@@ -8,14 +8,13 @@
     campaigns
 {% endblock %}
 
-{% block content_title %}
-    New Campaign
-{% endblock %}
+
 
 {% block content_breadcrumbs %}
 <a href="{% url 'campaigns:details' %}">
     Details
 </a>
+{# these can't be links if this is a new object #}
 <a href="">Messages</a>
 <a href="">Recipients</a>
 <a href="">Preview &amp; Activate</a>
