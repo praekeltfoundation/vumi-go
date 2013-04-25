@@ -1,4 +1,4 @@
-{% extends "campaigns/wizard.html" %}
+{% extends "campaigns/wizard_base.html" %}
 
 
 {% block content_main %}
@@ -32,10 +32,7 @@
 
         <div class="configuration">
             <div class="row-fluid title">
-                
-                <div class="span3">
-                    Name
-                </div>
+                <div class="span3"></div>
                 <div class="span3">
                     {{ form_config.countries.label }}
                 </div>
@@ -114,17 +111,32 @@
 
 {% block extrascript %}
 <script type="text/javascript">
+
     $(function() {
+
+        // highlight the breadcrumbs.
+        $('.actions a').eq(0).addClass('active');
+
+        // activate the tooltips
         $('.icon-info-sign').tooltip();
-    });
+    
 
-    $('.configuration button').on('click', function() {
 
-        // find the template within it's parent, and add another one.
-        
+        $('.configuration button').on('click', function() {
+            // find the template within it's parent, and add another one.
+            // there's got to be a better way to do this, I'm not at all 
+            // sure if this should use jsplumbs.
 
-        return false;
-    });
+            return false;
+        });
+
+
+        // save draft, and next step should save the form
+        // cancel should just redirect?
+
+    })
+
+    
 
 </script>
 {% endblock %}
