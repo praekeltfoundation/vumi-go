@@ -19,9 +19,14 @@ def details(request):
     form_general = CampaignGeneralForm()
     form_config = CampaignConfigurationForm()
 
-    
-
-    return  render(request, 'campaigns/wizard_details.html', {
+    return  render(request, 'campaigns/wizard_1_details.html', {
         'form_general': form_general,
         'form_config': form_config
     })
+
+def messages(request, key):
+    pass
+
+    # is this for a conversation or bulk?
+    # determine that and redirect.
+

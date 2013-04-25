@@ -35,11 +35,11 @@
 
     <div class="row-fluid header">
         <div class="span12">
-            <div class="pull-left">
+            <div class="title pull-left">
                 <h1>{% block content_title %}Title{% endblock %}</h1>
             </div>
 
-            <div class="pull-right">
+            <div class="breadcrumbs pull-right">
                 {% block content_breadcrumbs %}
                 {% endblock %}
             </div>
@@ -47,11 +47,11 @@
     </div>
 
     <div class="row-fluid actions">
-        <div class="span3 sidebar">
+        <div class="span3 sidebar left">
             {% block content_actions_left %}
             {% endblock %}
         </div>
-        <div class="span9">
+        <div class="span9 right">
             {% block content_actions_right %}
             {% endblock %}
         </div>

@@ -13,14 +13,16 @@
 {% endblock %}
 
 {% block content_breadcrumbs %}
-<a href="{% url 'campaigns:details' %}">Details</a>
+<a href="{% url 'campaigns:details' %}">
+    Details
+</a>
 <a href="">Messages</a>
 <a href="">Recipients</a>
 <a href="">Preview &amp; Activate</a>
 {% endblock %}
 
 {% block content_actions_right %}
-    <a href="">Cancel</a>
+    <a href="{% url 'conversation:index' %}">Cancel</a>
     <button class="btn btn-primary">Save draft</button>
     <button class="btn btn-primary">Next step</button>
 {% endblock %}
