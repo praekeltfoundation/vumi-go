@@ -7,6 +7,7 @@ from vxpolls.manager import PollManager
 from vumi.message import TransportUserMessage
 from vumi import log
 
+from go.vumitools.contact import ContactError
 from go.vumitools.app_worker import GoApplicationMixin
 
 
@@ -41,8 +42,11 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         # If we've found a contact, grab it's dynamic-extra values
         # and update the participant with those before sending it
         # to the PollApplication
-        contact = yield self.get_contact_for_message(message)
-        if contact:
+        try:
+            contact = yield self.get_contact_for_message(message, create=False)
+        except ContactError:
+            pass
+        else:
             participant = yield self.pm.get_participant(
                 poll_id, message.user())
             config = yield self.pm.get_config(poll_id)
@@ -102,8 +106,12 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         # At the end of a session we want to store the user's responses
         # as dynamic values on the contact's record in the contact database.
         # This does that.
-        contact = yield self.get_contact_for_message(message)
-        if contact:
+
+        try:
+            contact = yield self.get_contact_for_message(message, create=False)
+        except ContactError:
+            pass
+        else:
             # Clear previous answers from this poll
             possible_labels = [q.get('label') for q in poll.questions]
             for label in possible_labels:

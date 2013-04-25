@@ -7,7 +7,6 @@ from vumi.blinkenlights.metrics import MetricManager, Metric, MAX
 from vumi.message import TransportEvent
 from vumi.config import IConfigData
 
-from go.vumitools.contact import ContactError
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.api_worker import GoMessageMetadata
 
@@ -194,7 +193,7 @@ class GoApplicationMixin(object):
         log.msg('Cache reconciled for %s' % (conversation_key,))
 
     @inlineCallbacks
-    def get_contact_for_message(self, message):
+    def get_contact_for_message(self, message, create=True):
         helper_metadata = message.get('helper_metadata', {})
 
         go_metadata = helper_metadata.get('go', {})
@@ -205,12 +204,9 @@ class GoApplicationMixin(object):
             user_api = self.get_user_api(account_key)
             conv = yield user_api.get_wrapped_conversation(conversation_key)
 
-            try:
-                contact = yield user_api.contact_store.contact_for_addr(
-                    conv.delivery_class, message.user())
-                returnValue(contact)
-            except ContactError:
-                returnValue(None)
+            contact = yield user_api.contact_store.contact_for_addr(
+                conv.delivery_class, message.user(), create=create)
+            returnValue(contact)
 
     @inlineCallbacks
     def get_conversation(self, batch_id, conversation_key):
