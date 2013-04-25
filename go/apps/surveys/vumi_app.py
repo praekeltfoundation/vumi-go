@@ -7,7 +7,6 @@ from vxpolls.manager import PollManager
 from vumi.message import TransportUserMessage
 from vumi import log
 
-from go.vumitools.contact import ContactError
 from go.vumitools.app_worker import GoApplicationMixin
 
 
@@ -39,52 +38,46 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         poll_id = 'poll-%s' % (go.get('conversation_key'),)
         helper_metadata['poll_id'] = poll_id
 
-        # If we've found a contact, grab it's dynamic-extra values
-        # and update the participant with those before sending it
-        # to the PollApplication
-        try:
-            contact = yield self.get_contact_for_message(message, create=False)
-        except ContactError:
-            pass
-        else:
-            participant = yield self.pm.get_participant(
-                poll_id, message.user())
-            config = yield self.pm.get_config(poll_id)
-            for key in config.get('include_labels', []):
-                value = contact.extra[key]
-                if value and key not in participant.labels:
-                    participant.set_label(key, value)
+        # Grab the contact's dynamic-extra values and update the participant
+        # with those before sending it to the PollApplication
+        contact = yield self.get_contact_for_message(message, create=True)
+        participant = yield self.pm.get_participant(
+            poll_id, message.user())
+        config = yield self.pm.get_config(poll_id)
+        for key in config.get('include_labels', []):
+            value = contact.extra[key]
+            if value and key not in participant.labels:
+                participant.set_label(key, value)
 
-            # NOTE:
-            #
-            # This is here because our SMS opt-out and our USSD opt-out's
-            # are not linked properly. Some bits and pieces are missing.
-            # The USSD opt-out happens through variables set in the
-            # contacts.extras[] dict, but the SMS is set in the contact_store.
-            # The USSD opt-out is fed back to the SMS/contact_store via
-            # the event handlers (specifically sna/handlers.py) and this
-            # hack links it the other way around again. We need the SMS
-            # contact_store opt-out status back to the participant's variables
-            # that vxpolls knows about.
-            #
-            # account_key = go.get('user_account')
-            # print 'account_key', account_key
-            # if account_key:
-            #     user_api = self.get_user_api(account_key)
-            #     contact_store = user_api.contact_store
-            #     is_opted_out = yield contact_store.contact_has_opted_out(
-            #         contact)
-            #     print 'participant', participant
-            #     if is_opted_out:
-            #         print '--- is opted out'
-            #         participant.set_label('opted_out', '2')
-            #         print 'opt-out set'
-            #         print participant.dump()
-            #     else:
-            #         print '--- is NOT opted out'
+        # NOTE:
+        #
+        # This is here because our SMS opt-out and our USSD opt-out's
+        # are not linked properly. Some bits and pieces are missing.
+        # The USSD opt-out happens through variables set in the
+        # contacts.extras[] dict, but the SMS is set in the contact_store.
+        # The USSD opt-out is fed back to the SMS/contact_store via
+        # the event handlers (specifically sna/handlers.py) and this
+        # hack links it the other way around again. We need the SMS
+        # contact_store opt-out status back to the participant's variables
+        # that vxpolls knows about.
+        #
+        # account_key = go.get('user_account')
+        # print 'account_key', account_key
+        # if account_key:
+        #     user_api = self.get_user_api(account_key)
+        #     contact_store = user_api.contact_store
+        #     is_opted_out = yield contact_store.contact_has_opted_out(
+        #         contact)
+        #     print 'participant', participant
+        #     if is_opted_out:
+        #         print '--- is opted out'
+        #         participant.set_label('opted_out', '2')
+        #         print 'opt-out set'
+        #         print participant.dump()
+        #     else:
+        #         print '--- is NOT opted out'
 
-            yield self.pm.save_participant(poll_id, participant)
-
+        yield self.pm.save_participant(poll_id, participant)
         yield super(SurveyApplication, self).consume_user_message(message)
 
     def start_survey(self, to_addr, conversation, **msg_options):
@@ -106,20 +99,16 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         # At the end of a session we want to store the user's responses
         # as dynamic values on the contact's record in the contact database.
         # This does that.
+        contact = yield self.get_contact_for_message(message, create=True)
 
-        try:
-            contact = yield self.get_contact_for_message(message, create=False)
-        except ContactError:
-            pass
-        else:
-            # Clear previous answers from this poll
-            possible_labels = [q.get('label') for q in poll.questions]
-            for label in possible_labels:
-                if (label is not None) and (label in contact.extra):
-                    del contact.extra[label]
+        # Clear previous answers from this poll
+        possible_labels = [q.get('label') for q in poll.questions]
+        for label in possible_labels:
+            if (label is not None) and (label in contact.extra):
+                del contact.extra[label]
 
-            contact.extra.update(participant.labels)
-            yield contact.save()
+        contact.extra.update(participant.labels)
+        yield contact.save()
 
         yield self.pm.save_participant(poll.poll_id, participant)
         yield self.trigger_event(message, 'survey_completed', {
