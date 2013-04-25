@@ -7,6 +7,7 @@ from vumi.blinkenlights.metrics import MetricManager, Metric, MAX
 from vumi.message import TransportEvent
 from vumi.config import IConfigData
 
+from go.vumitools.contact import ContactError
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.api_worker import GoMessageMetadata
 
@@ -203,10 +204,13 @@ class GoApplicationMixin(object):
         if account_key and conversation_key:
             user_api = self.get_user_api(account_key)
             conv = yield user_api.get_wrapped_conversation(conversation_key)
-            contact = yield user_api.contact_store.contact_for_addr(
-                conv.delivery_class, message.user())
 
-            returnValue(contact)
+            try:
+                contact = yield user_api.contact_store.contact_for_addr(
+                    conv.delivery_class, message.user())
+                returnValue(contact)
+            except ContactError:
+                returnValue(None)
 
     @inlineCallbacks
     def get_conversation(self, batch_id, conversation_key):
