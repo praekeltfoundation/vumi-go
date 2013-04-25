@@ -1,10 +1,12 @@
 from django.http import Http404
 from django.shortcuts import render, redirect
+from django.core.urlresolvers import reverse
+
 
 from .forms import CampaignGeneralForm, CampaignConfigurationForm
 
 
-def details(request):
+def details(request, key=None):
     """
     I guess we would actually use a form here.
 
@@ -15,9 +17,19 @@ def details(request):
 
     I'll create a form, but you guys will have to hook it up properly.
     """
-
     form_general = CampaignGeneralForm()
     form_config = CampaignConfigurationForm()
+
+    if request.POST:
+
+        action = request.POST.get('action')
+        if action == 'draft':
+            return redirect('conversations:index')
+            # save and go back to list.
+
+        # save and go to next step.
+        return redirect('campaigns:messages', args=['fakekeydawg'])
+
 
     return  render(request, 'campaigns/wizard_1_details.html', {
         'form_general': form_general,

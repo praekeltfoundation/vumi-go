@@ -130,6 +130,17 @@
             return false;
         });
 
+        $('.actions .right button').on('click', function() {
+
+            $frm = $('#frm-campaign');
+            $frm.prepend('<input type="hidden" name="action" value="' + $(this).attr('data-action') + '">');
+            $frm.submit();
+
+            return false;
+
+
+        });
+
 
         // save draft, and next step should save the form
         // cancel should just redirect?
