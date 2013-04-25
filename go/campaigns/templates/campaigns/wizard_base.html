@@ -23,6 +23,6 @@
 
 {% block content_actions_right %}
     <a href="{% url 'conversations:index' %}">Cancel</a>
-    <button class="btn btn-primary">Save draft</button>
-    <button class="btn btn-primary">Next step</button>
+    <button class="btn btn-primary" data-action="draft">Save draft</button>
+    <button class="btn btn-primary" data-action="next">Next step</button>
 {% endblock %}
