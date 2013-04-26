@@ -87,9 +87,16 @@ class Contact(Model):
 
 
 class ContactStore(PerAccountStore):
+    NONSETTABLE_CONTACT_FIELDS = ['$VERSION', 'user_account']
+
     def setup_proxies(self):
         self.contacts = self.manager.proxy(Contact)
         self.groups = self.manager.proxy(ContactGroup)
+
+    @classmethod
+    def settable_contact_fields(cls, **fields):
+        return dict((k, v) for k, v in fields.iteritems()
+                    if k not in cls.NONSETTABLE_CONTACT_FIELDS)
 
     @Manager.calls_manager
     def new_contact(self, **fields):
@@ -99,7 +106,8 @@ class ContactStore(PerAccountStore):
         groups = fields.pop('groups', [])
 
         contact = self.contacts(
-            contact_id, user_account=self.user_account_key, **fields)
+            contact_id, user_account=self.user_account_key,
+            **self.settable_contact_fields(**fields))
 
         for group in groups:
             contact.add_to_group(group)
@@ -109,11 +117,9 @@ class ContactStore(PerAccountStore):
 
     @Manager.calls_manager
     def update_contact(self, key, **fields):
-        # ensure user account can't be changed
-        fields.pop('user_account', None)
-
         # These are foreign keys.
         groups = fields.pop('groups', [])
+        fields = self.settable_contact_fields(**fields)
 
         contact = yield self.get_contact_by_key(key)
         for field_name, field_value in fields.iteritems():
@@ -267,18 +273,15 @@ class ContactStore(PerAccountStore):
 
     def _contact_field_for_addr(self, delivery_class, addr):
         # TODO: change when we have proper address types in vumi
-        field = {
-            'sms': {'msisdn': '+' + addr.lstrip('+')},
-            'ussd': {'msisdn': '+' + addr.lstrip('+')},
-            'gtalk': {'gtalk_id': addr.partition('/')[0]},
-            'twitter': {'twitter_handle': addr},
-        }.get(delivery_class)
-
-        if field is None:
+        if delivery_class in ('sms', 'ussd'):
+            return {'msisdn': '+' + addr.lstrip('+')}
+        elif delivery_class == 'gtalk':
+            return {'gtalk_id': addr.partition('/')[0]}
+        elif delivery_class == 'twitter':
+            return {'twitter_handle': addr}
+        else:
             raise ContactError(
                 "Unsupported transport_type %r" % delivery_class)
-
-        return field
 
     def new_contact_for_addr(self, delivery_class, addr):
         field = self._contact_field_for_addr(delivery_class, addr)
