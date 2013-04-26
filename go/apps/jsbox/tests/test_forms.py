@@ -1,4 +1,3 @@
-import mock
 
 from django.test import TestCase
 
@@ -63,10 +62,10 @@ class JsboxAppConfigFormsetTestCase(TestCase):
             'foo2': {'value': 'baz', 'source_url': 'http://example.com/2'},
         })
         self.assertEqual(initials, [
-           {'key': 'foo1', 'value': 'bar',
-            'source_url': 'http://example.com/1'},
-           {'key': 'foo2', 'value': 'baz',
-            'source_url': 'http://example.com/2'},
+            {'key': 'foo1', 'value': 'bar',
+             'source_url': 'http://example.com/1'},
+            {'key': 'foo2', 'value': 'baz',
+             'source_url': 'http://example.com/2'},
         ])
 
     def test_to_metadata(self):

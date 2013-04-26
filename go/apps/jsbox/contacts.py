@@ -6,7 +6,8 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi import log
 from vumi.application.sandbox import SandboxResource, SandboxError
 
-from go.vumitools.contact import Contact, ContactError
+from go.vumitools.contact import (
+    Contact, ContactStore, ContactError, ContactNotFoundError)
 
 
 class ContactsResource(SandboxResource):
@@ -22,15 +23,18 @@ class ContactsResource(SandboxResource):
         return self.app_worker.user_api_for_api(api).contact_store
 
     def _parse_get(self, command):
-        if 'addr' not in command:
-            raise SandboxError("'addr' needs to be specified for command")
+        if not isinstance(command.get('addr'), unicode):
+            raise SandboxError(
+                "'addr' needs to be specified and be a unicode string")
 
         if 'delivery_class' not in command:
             if 'delivery_class' in self.config:
                 command['delivery_class'] = self.config['delivery_class']
-            else:
-                raise SandboxError(
-                    "'delivery_class' needs to be specified for command")
+
+        if not isinstance(command.get('delivery_class'), unicode):
+            raise SandboxError(
+                "'delivery_class' needs to be specified and be a unicode "
+                "string")
 
     @inlineCallbacks
     def handle_get(self, api, command):
@@ -81,10 +85,17 @@ class ContactsResource(SandboxResource):
         """
         try:
             self._parse_get(command)
-            contact = yield self._contact_store_for_api(api).contact_for_addr(
+            contact_store = self._contact_store_for_api(api)
+            contact = yield contact_store.contact_for_addr(
                 command['delivery_class'],
                 command['addr'],
-                create=True)
+                create=False)
+            created = False
+        except ContactNotFoundError:
+            contact = yield contact_store.new_contact_for_addr(
+                command['delivery_class'],
+                command['addr'])
+            created = True
         except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
@@ -92,6 +103,7 @@ class ContactsResource(SandboxResource):
         returnValue(self.reply(
             command,
             success=True,
+            created=created,
             contact=contact.get_data()))
 
     @staticmethod
@@ -120,12 +132,14 @@ class ContactsResource(SandboxResource):
                 function(reply) { api.log_info(reply.success); });
         """
         try:
-            if 'key' not in command:
-                raise SandboxError("'key' needs to be specified for command")
-
-            if 'fields' not in command:
+            if not isinstance(command.get('key'), unicode):
                 raise SandboxError(
-                    "'fields' needs to be specified for command")
+                    "'key' needs to be specified and be a unicode string")
+
+            if not isinstance(command.get('fields'), dict):
+                raise SandboxError(
+                    "'fields' needs to be specified and be a dict of field "
+                    "name-values pairs")
 
             store = self._contact_store_for_api(api)
             fields = self.pick_fields(
@@ -140,15 +154,18 @@ class ContactsResource(SandboxResource):
     @inlineCallbacks
     def _update_dynamic_field(self, field_name, api, command):
         try:
-            if 'contact_key' not in command:
+            if not isinstance(command.get('contact_key'), unicode):
                 raise SandboxError(
-                    "'contact_key' needs to be specified for command")
+                    "'contact_key' needs to be specified and be a unicode "
+                    "string")
 
-            if 'field' not in command:
-                raise SandboxError("'field' needs to be specified for command")
+            if not isinstance(command.get('field'), unicode):
+                raise SandboxError(
+                    "'field' needs to be specified and be a unicode string")
 
-            if 'value' not in command:
-                raise SandboxError("'value' needs to be specified for command")
+            if command.get('value') is None:
+                raise SandboxError("'value' needs to be specified and be a "
+                                   "non-None value")
 
             store = self._contact_store_for_api(api)
             contact = yield store.get_contact_by_key(command['contact_key'])
@@ -219,11 +236,12 @@ class ContactsResource(SandboxResource):
                 function(reply) { api.log_info(reply.key); });
         """
         try:
-            if 'fields' not in command:
+            if not isinstance(command.get('contact'), dict):
                 raise SandboxError(
-                    "'fields' needs to be specified for command")
+                    "'contact' needs to be specified and be a dict of field "
+                    "name-value pairs")
 
-            fields = self.pick_fields(command['fields'],
+            fields = self.pick_fields(command['contact'],
                                       *Contact.field_descriptors)
             contact_store = self._contact_store_for_api(api)
             contact = yield contact_store.new_contact(**fields)
@@ -232,3 +250,41 @@ class ContactsResource(SandboxResource):
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         returnValue(self.reply(command, success=True, key=contact.key))
+
+    @inlineCallbacks
+    def handle_save(self, api, command):
+        try:
+            if not isinstance(command.get('contact'), dict):
+                raise SandboxError(
+                    "'contact' needs to be specified and be a dict of field "
+                    "name-value pairs")
+
+            fields = command['contact']
+            if not isinstance(fields.get('key'), unicode):
+                raise SandboxError(
+                    "'key' needs to be specified as a field in 'contact' and "
+                    "be a unicode string")
+
+            # These are foreign keys.
+            groups = fields.pop('groups', [])
+
+            key = fields.pop('key')
+            contact_store = self._contact_store_for_api(api)
+
+            # raise an exception if the contact does not exist
+            yield contact_store.get_contact_by_key(key)
+
+            contact = contact_store.contacts(
+                key,
+                user_account=contact_store.user_account_key,
+                **ContactStore.settable_contact_fields(**fields))
+
+            for group in groups:
+                contact.add_to_group(group)
+
+            yield contact.save()
+        except (SandboxError, ContactError) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        returnValue(self.reply(command, success=True))

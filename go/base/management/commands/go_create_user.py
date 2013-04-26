@@ -22,8 +22,8 @@ class Command(BaseCommand):
     ]
 
     option_list = BaseCommand.option_list + tuple([
-        make_option('--%s' % key, dest=key, help=help)
-            for key, help, _ in PARAMS
+        make_option('--%s' % key, dest=key, help=hlp)
+        for key, hlp, _ in PARAMS
     ])
 
     def handle(self, *args, **options):

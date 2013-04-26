@@ -1,5 +1,4 @@
 import csv
-import urllib
 from datetime import datetime
 from StringIO import StringIO
 
