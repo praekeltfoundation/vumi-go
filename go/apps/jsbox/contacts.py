@@ -4,10 +4,10 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi import log
-from vumi.persist.fields import ValidationError
 from vumi.application.sandbox import SandboxResource, SandboxError
 
-from go.vumitools.contact import Contact, ContactError
+from go.vumitools.contact import (
+    Contact, ContactStore, ContactError, ContactNotFoundError)
 
 
 class ContactsResource(SandboxResource):
@@ -54,17 +54,25 @@ class ContactsResource(SandboxResource):
     def handle_get_or_create(self, api, command):
         try:
             self._parse_get(command)
-            contact = yield self._contact_store_for_api(api).contact_for_addr(
+            contact_store = self._contact_store_for_api(api)
+            contact = yield contact_store.contact_for_addr(
                 command['delivery_class'],
                 command['addr'],
-                create=True)
-        except (ValidationError, SandboxError, ContactError) as e:
+                create=False)
+            created = False
+        except ContactNotFoundError:
+            contact = yield contact_store.new_contact_for_addr(
+                command['delivery_class'],
+                command['addr'])
+            created = True
+        except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
         returnValue(self.reply(
             command,
             success=True,
+            created=created,
             contact=contact.get_data()))
 
     @staticmethod
@@ -159,21 +167,19 @@ class ContactsResource(SandboxResource):
                     "'key' needs to be specified as a field in 'contact' and "
                     "be a unicode string")
 
-            # ensure user account can't be changed
-            fields.pop('user_account', None)
-
             # These are foreign keys.
             groups = fields.pop('groups', [])
 
-            # raise an exception if the contact does not exist
             key = fields.pop('key')
             contact_store = self._contact_store_for_api(api)
+
+            # raise an exception if the contact does not exist
             yield contact_store.get_contact_by_key(key)
 
             contact = contact_store.contacts(
                 key,
                 user_account=contact_store.user_account_key,
-                **fields)
+                **ContactStore.settable_contact_fields(**fields))
 
             for group in groups:
                 contact.add_to_group(group)
