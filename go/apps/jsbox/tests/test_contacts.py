@@ -149,6 +149,8 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             msisdn=u'+27831234567')
         reply = yield self.dispatch_command('get_or_create',
                                             addr=u'+27831234567')
+
+        self.check_reply(reply, created=False)
         self.check_contact_reply(
             reply,
             key=contact.key,
@@ -177,6 +179,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             msisdn=u'+27831234567')
         reply = yield self.dispatch_command('get_or_create',
                                             addr=u'+27831234567')
+        self.check_reply(reply, created=False)
         self.check_contact_reply(
             reply,
             key=contact.key,
@@ -188,7 +191,10 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
     def test_handle_get_or_create_for_nonexistent_contact(self):
         reply = yield self.dispatch_command('get_or_create',
                                             addr=u'+27831234567')
-        self.check_contact_reply(reply, msisdn=u'+27831234567')
+
+        self.check_reply(reply, created=True)
+        self.check_contact_fields(reply['contact']['key'],
+                                  msisdn=u'+27831234567')
 
     @inlineCallbacks
     def test_handle_get_or_create_for_overriden_delivery_class(self):
@@ -203,6 +209,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             addr=u'random',
             delivery_class=u'twitter')
 
+        self.check_reply(reply, created=False)
         self.check_contact_reply(
             reply,
             key=contact.key,
