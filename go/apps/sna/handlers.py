@@ -1,8 +1,8 @@
 # -*- test-case-name: go.apps.sna.test_handlers -*-
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from go.vumitools.opt_out import OptOutStore
-from go.vumitools.contact import ContactStore
+from go.vumitools.contact import ContactStore, ContactError
 from go.vumitools.handler import EventHandler
 
 from vumi import log
@@ -12,10 +12,15 @@ from vxpolls.manager import PollManager
 
 class SNAEventHandler(EventHandler):
 
+    @inlineCallbacks
     def find_contact(self, account_key, msisdn):
-        contact_store = ContactStore(self.dispatcher.vumi_api.manager,
-                                        account_key)
-        return contact_store.contact_for_addr('ussd', msisdn)
+        contact_store = ContactStore(
+            self.dispatcher.vumi_api.manager, account_key)
+        try:
+            contact = yield contact_store.contact_for_addr('ussd', msisdn)
+            returnValue(contact)
+        except ContactError:
+            returnValue(None)
 
 
 class USSDOptOutHandler(SNAEventHandler):

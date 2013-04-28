@@ -43,7 +43,7 @@ class SubscriptionApplication(GoApplicationWorker):
         conv = user_api.wrap_conversation((yield gmd.get_conversation()))
 
         contact = yield user_api.contact_store.contact_for_addr(
-            conv.delivery_class, message['from_addr'])
+            conv.delivery_class, message['from_addr'], create=True)
         # We're guaranteed to have a contact here, because we create one if we
         # can't find an existing one.
 
