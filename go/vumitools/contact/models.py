@@ -7,7 +7,7 @@ from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
-                                    Dynamic)
+                                 Dynamic)
 
 from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.opt_out import OptOutStore
@@ -298,7 +298,11 @@ class ContactStore(PerAccountStore):
         keys = yield self.contacts.search(**field).get_keys()
 
         if keys:
-            returnValue((yield self.contacts.load(keys[0])))
+            contacts = []
+            bunches = yield self.contacts.load_all_bunches(keys)
+            for bunch in bunches:
+                contacts.extend((yield bunch))
+            returnValue(max(contacts, key=lambda c: c.created_at))
 
         if create:
             contact_id = uuid4().get_hex()
