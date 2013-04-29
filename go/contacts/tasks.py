@@ -1,6 +1,7 @@
 import sys
 import traceback
 from StringIO import StringIO
+from zipfile import ZipFile
 
 from celery.task import task
 
@@ -83,8 +84,8 @@ def export_group_contacts(account_key, group_key, include_extra):
 
     # collect all names that we can export
     fields = ['name', 'surname', 'email_address', 'msisdn', 'dob',
-                    'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                    'created_at']
+              'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+              'created_at']
 
     # Collect the possible field names for this set of contacts, depending
     # the number of contacts found this could be potentially expensive.
@@ -95,14 +96,13 @@ def export_group_contacts(account_key, group_key, include_extra):
 
     # write the CSV header
     extra_fields = sorted(extra_fields)
-    writer.writerow(fields + ['extras-%s' % (key,)
-                                    for key in extra_fields])
+    writer.writerow(fields + ['extras-%s' % (key,) for key in extra_fields])
 
     # loop over the contacts and create the row populated with
     # the values of the selected fields.
     for contact in contacts:
         row = [unicode(getattr(contact, field, None) or '')
-                for field in fields]
+               for field in fields]
 
         if include_extra:
             row.extend([unicode(contact.extra[extra_field] or '')
@@ -110,12 +110,18 @@ def export_group_contacts(account_key, group_key, include_extra):
 
         writer.writerow(row)
 
-    email = EmailMessage('%s contacts export' % (group.name,),
-            'Please find the CSV data for %s contact(s) from '
-            'group "%s" attached.\n\n' % (
-            len(contact_keys), group.name),
+    zipio = StringIO()
+    with ZipFile(zipio, "a") as zip:
+        zip.writestr("contacts-export.csv", io.getvalue())
+
+    email = EmailMessage(
+        '%s contacts export' % (group.name,),
+        'Please find the CSV data for %s contact(s) from '
+        'group "%s" attached.\n\n' % (len(contact_keys), group.name),
         settings.DEFAULT_FROM_EMAIL, [user_profile.user.email])
-    email.attach('contacts-export.csv', io.getvalue(), 'text/csv')
+
+    zipio.seek(0)
+    email.attach('contacts-export.zip', zipio.read(), 'application/zip')
     email.send()
 
 
