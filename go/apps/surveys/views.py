@@ -23,10 +23,9 @@ from go.apps.surveys import forms
 from vxpolls.manager import PollManager
 
 
-redis = RedisManager.from_config(settings.VXPOLLS_REDIS_CONFIG)
-
-
 def get_poll_config(poll_id):
+    # FIXME: Do we really need this?
+    redis = RedisManager.from_config(settings.VXPOLLS_REDIS_CONFIG)
     pm = PollManager(redis, settings.VXPOLLS_PREFIX)
     config = pm.get_config(poll_id)
     config.update({

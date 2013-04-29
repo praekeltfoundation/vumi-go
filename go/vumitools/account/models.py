@@ -63,6 +63,21 @@ class UserAccount(Model):
 
 
 class RoutingTableHelper(object):
+    """Helper for dealing with routing table dictionaries.
+
+    Conceptually a routing table maps (source_connector, source_endpoint) pairs
+    to (destination_connector, destination_endpoint) pairs.
+
+    Internally this is implemented as a nested mapping::
+
+        source_connector ->
+            source_endpoint_1 -> [destination_connector, destination_endpoint]
+            source_endpoint_2 -> [..., ...]
+
+    in order to make storing the mapping as JSON easier (JSON keys cannot be
+    lists).
+    """
+
     def __init__(self, routing_table):
         self.routing_table = routing_table
 
@@ -93,6 +108,105 @@ class RoutingTableHelper(object):
             self.routing_table.pop(src_conn)
 
         return old_dest
+
+    def remove_connector(self, conn):
+        """Remove all references to the given connector.
+
+        Useful when the connector is going away for some reason.
+        """
+        # remove entries with connector as source
+        self.routing_table.pop(conn, None)
+
+        # remove entires with connector as destination
+        to_remove = []
+        for src_conn, routes in self.routing_table.iteritems():
+            for src_endpoint, (dest_conn, dest_endpoint) in routes.items():
+                if dest_conn == conn:
+                    del routes[src_endpoint]
+            if not routes:
+                # We can't modify this dict while iterating over it.
+                to_remove.append(src_conn)
+
+        for src_conn in to_remove:
+            del self.routing_table[src_conn]
+
+    def remove_conversation(self, conv):
+        """Remove all entries linking to or from a given conversation.
+
+        Useful when arching a conversation to ensure it is no longer
+        present in the routing table.
+        """
+        conv_conn = str(GoConnector.for_conversation(conv.conversation_type,
+                                                     conv.key))
+        self.remove_connector(conv_conn)
+
+    def add_oldstyle_conversation(self, conv, tag, outbound_only=False):
+        """XXX: This can be removed when old-style conversations are gone."""
+        conv_conn = str(GoConnector.for_conversation(conv.conversation_type,
+                                                     conv.key))
+        tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
+        self.add_entry(conv_conn, "default", tag_conn, "default")
+        if not outbound_only:
+            self.add_entry(tag_conn, "default", conv_conn, "default")
+
+
+class GoConnectorError(Exception):
+    """Raised when attempting to construct an invalid connector."""
+
+
+class GoConnector(object):
+    """Container for Go routing table connector item."""
+
+    # Types of connectors in Go routing tables
+
+    CONVERSATION = "CONVERSATION"
+    ROUTING_BLOCK = "ROUTING_BLOCK"
+    TRANSPORT_TAG = "TRANSPORT_TAG"
+
+    def __init__(self, ctype, names, parts):
+        self.ctype = ctype
+        self._names = names
+        self._parts = parts
+        self._attrs = dict(zip(self._names, self._parts))
+
+    def __str__(self):
+        return ":".join([self.ctype] + self._parts)
+
+    def __getattr__(self, name):
+        return self._attrs[name]
+
+    @classmethod
+    def for_conversation(cls, conv_type, conv_key):
+        return cls(cls.CONVERSATION, ["conv_type", "conv_key"],
+                   [conv_type, conv_key])
+
+    @classmethod
+    def for_routing_block(cls, rblock_type, rblock_key):
+        return cls(cls.ROUTING_BLOCK, ["rblock_type", "rblock_key"],
+                   [rblock_type, rblock_key])
+
+    @classmethod
+    def for_transport_tag(cls, tagpool, tagname):
+        return cls(cls.TRANSPORT_TAG, ["tagpool", "tagname"],
+                   [tagpool, tagname])
+
+    @classmethod
+    def parse(cls, s):
+        parts = s.split(":")
+        ctype, parts = parts[0], parts[1:]
+        constructors = {
+            cls.CONVERSATION: cls.for_conversation,
+            cls.ROUTING_BLOCK: cls.for_routing_block,
+            cls.TRANSPORT_TAG: cls.for_transport_tag,
+        }
+        if ctype not in constructors:
+            raise GoConnectorError("Unknown connector type %r"
+                                   " found while parsing: %r" % (ctype, s))
+        try:
+            return constructors[ctype](*parts)
+        except TypeError:
+            raise GoConnectorError("Invalid connector of type %r: %r"
+                                   % (ctype, s))
 
 
 class AccountStore(object):

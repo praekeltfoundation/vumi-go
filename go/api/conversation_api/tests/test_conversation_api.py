@@ -18,7 +18,6 @@ class ConversationApiTestCase(AppWorkerTestCase):
 
     use_riak = True
     application_class = ConversationApiWorker
-    timeout = 1
 
     @inlineCallbacks
     def setUp(self):

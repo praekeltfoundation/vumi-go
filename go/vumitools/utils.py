@@ -81,11 +81,14 @@ class MessageMetadataHelper(object):
             return None
         return conversation_info
 
-    def set_conversation_info(self, conversation_type, conversation_key,
-                              user_account):
+    def set_conversation_info(self, conversation_type, conversation_key):
         self._go_metadata.update({
             'conversation_type': conversation_type,
             'conversation_key': conversation_key,
+        })
+
+    def set_user_account(self, user_account):
+        self._go_metadata.update({
             'user_account': user_account,
         })
 

@@ -338,11 +338,11 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         conv = yield self._setup_routing_table_test_conv()
         routing_table = yield self.user_api.get_routing_table()
         self.assertEqual(routing_table, {
-            u':'.join([u'bulk_message', conv.key]): {
-                u'default': [u'pool1:5678', u'default']},
-            u'pool1:5678': {
+            u':'.join([u'CONVERSATION:bulk_message', conv.key]): {
+                u'default': [u'TRANSPORT_TAG:pool1:5678', u'default']},
+            u'TRANSPORT_TAG:pool1:5678': {
                 u'default': [
-                    u'bulk_message:%s' % conv.key, u'default']},
+                    u'CONVERSATION:bulk_message:%s' % conv.key, u'default']},
         })
 
         # TODO: This belongs in a different test.
@@ -363,10 +363,13 @@ class TestTxVumiUserApi(AppWorkerTestCase):
             routing_table = yield self.user_api.get_routing_table()
         self.assertEqual(lc.messages(), [])
         self.assertEqual(routing_table, {
-            u':'.join(['bulk_message', conv.key]): {
-                'default': [u'pool1:5678', u'default']},
-            u'pool1:5678': {
-                u'default': [u':'.join(['bulk_message', conv.key]), 'default'],
+            u':'.join(['CONVERSATION:bulk_message', conv.key]): {
+                'default': [u'TRANSPORT_TAG:pool1:5678', u'default']},
+            u'TRANSPORT_TAG:pool1:5678': {
+                u'default': [
+                    u':'.join(['CONVERSATION:bulk_message', conv.key]),
+                    'default'
+                ],
             },
         })
 
@@ -393,10 +396,13 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         self.assertEqual(len(lc.messages()), 1)
         self.assertTrue(conv2.key in lc.messages()[0])
         self.assertEqual(routing_table, {
-            u':'.join(['bulk_message', conv.key]): {
-                'default': [u'pool1:5678', u'default']},
-            u'pool1:5678': {
-                u'default': [u':'.join(['bulk_message', conv.key]), 'default'],
+            u':'.join(['CONVERSATION:bulk_message', conv.key]): {
+                'default': [u'TRANSPORT_TAG:pool1:5678', u'default']},
+            u'TRANSPORT_TAG:pool1:5678': {
+                u'default': [
+                    u':'.join(['CONVERSATION:bulk_message', conv.key]),
+                    'default'
+                ],
             },
         })
 
@@ -411,10 +417,13 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         conv = yield self._setup_routing_table_test_conv()
         user = yield self.user_api.get_user_account()
         user.routing_table = {
-            u':'.join(['bulk_message', conv.key]): {
-                'default': [u'pool1:5678', u'default']},
-            u'badpool:bad': {
-                u'default': [u':'.join(['bulk_message', conv.key]), 'default'],
+            u':'.join(['CONVERSATION:bulk_message', conv.key]): {
+                'default': [u'TRANSPORT_TAG:pool1:5678', u'default']},
+            u'TRANSPORT_TAG:badpool:bad': {
+                u'default': [
+                    u':'.join(['CONVERSATION:bulk_message', conv.key]),
+                    'default'
+                ],
             },
         }
         try:
@@ -428,51 +437,57 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         conv = yield self._setup_routing_table_test_conv()
         user = yield self.user_api.get_user_account()
         user.routing_table = {
-            u':'.join(['bulk_message', conv.key]): {
-                'default': [u'badpool:bad', u'default']},
-            u'pool1:5678': {
-                u'default': [u':'.join(['bulk_message', conv.key]), 'default'],
+            u':'.join(['CONVERSATION:bulk_message', conv.key]): {
+                'default': [u'TRANSPORT_TAG:badpool:bad', u'default']},
+            u'TRANSPORT_TAG:pool1:5678': {
+                u'default': [
+                    u':'.join(['CONVERSATION:bulk_message', conv.key]),
+                    'default'
+                ],
             },
         }
         try:
             yield self.user_api.validate_routing_table(user)
             self.fail("Expected VumiError, got no exception.")
         except VumiError as e:
-            self.assertTrue('badpool:bad' in str(e))
+            self.assertTrue('TRANSPORT_TAG:badpool:bad' in str(e))
 
     @inlineCallbacks
     def test_routing_table_invalid_src_conn_conv(self):
         conv = yield self._setup_routing_table_test_conv()
         user = yield self.user_api.get_user_account()
         user.routing_table = {
-            u'bulk_message:badkey': {
-                'default': [u'pool1:5678', u'default']},
-            u'pool1:5678': {
-                u'default': [u':'.join(['bulk_message', conv.key]), 'default'],
+            u'CONVERSATION:bulk_message:badkey': {
+                'default': [u'TRANSPORT_TAG:pool1:5678', u'default']},
+            u'TRANSPORT_TAG:pool1:5678': {
+                u'default': [
+                    u':'.join(['CONVERSATION:bulk_message', conv.key]),
+                    'default'
+                ],
             },
         }
         try:
             yield self.user_api.validate_routing_table(user)
             self.fail("Expected VumiError, got no exception.")
         except VumiError as e:
-            self.assertTrue('bulk_message:badkey' in str(e))
+            self.assertTrue('CONVERSATION:bulk_message:badkey' in str(e))
 
     @inlineCallbacks
     def test_routing_table_invalid_dst_conn_conv(self):
         conv = yield self._setup_routing_table_test_conv()
         user = yield self.user_api.get_user_account()
         user.routing_table = {
-            u':'.join(['bulk_message', conv.key]): {
-                'default': [u'pool1:5678', u'default']},
-            u'pool1:5678': {
-                u'default': [u'bulk_message:badkey', 'default'],
+            u':'.join(['CONVERSATION:bulk_message', conv.key]): {
+                'default': [u'TRANSPORT_TAG:pool1:5678', u'default']},
+            u'TRANSPORT_TAG:pool1:5678': {
+                u'default': [u'CONVERSATION:bulk_message:badkey', 'default'],
             },
         }
         try:
             yield self.user_api.validate_routing_table(user)
             self.fail("Expected VumiError, got no exception.")
         except VumiError as e:
-            self.assertTrue('bulk_message:badkey' in str(e))
+            self.assertTrue('CONVERSATION:bulk_message:badkey' in str(e))
 
 
 class TestVumiUserApi(TestTxVumiUserApi):

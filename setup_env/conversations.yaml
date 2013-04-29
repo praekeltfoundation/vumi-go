@@ -1,0 +1,161 @@
+-
+  key: conversation1
+  account: user1@example.org
+  conversation_type: bulk_message
+  name: name
+  delivery_class: sms
+  delivery_tag_pool: longcode_tagpool
+  delivery_tag: longcode-10003
+  config:
+    message: message
+    foo: bar
+
+-
+  key: conversation2
+  account: user2@example.org
+  conversation_type: bulk_message
+  name: name
+  delivery_class: sms
+  delivery_tag_pool: longcode_tagpool
+  delivery_tag: longcode-10004
+  config:
+    message: message
+    foo: bar
+
+-
+  key: conversation3
+  account: user2@example.org
+  conversation_type: survey
+  name: name
+  delivery_class: ussd
+  delivery_tag_pool: ussd_tagpool
+  delivery_tag: '*120*10003#'
+  config:
+    foo: bar
+    baz: zab
+
+-
+  key: conversation4
+  start: true
+  account: user1@example.org
+  conversation_type: wikipedia_ussd
+  name: Wikipedia USSD connection
+  delivery_class: ussd
+  delivery_tag_pool: ussd_tagpool
+  delivery_tag: '*120*10001#'
+  config:
+    send_from_tagpool: longcode_tagpool
+    send_from_tag: longcode-10001
+
+-
+  key: conversation5
+  start: true
+  account: user1@example.org
+  conversation_type: wikipedia_sms
+  name: Wikipedia SMS connection
+  delivery_class: sms
+  delivery_tag_pool: longcode_tagpool
+  delivery_tag: longcode-10001
+
+-
+  key: conversation6
+  start: true
+  account: user1@example.org
+  conversation_type: jsbox
+  name: JavaScript App
+  delivery_class: ussd
+  delivery_tag_pool: ussd_tagpool
+  delivery_tag: '*120*10002#'
+  config:
+    jsbox_app_config:
+      config:
+        source_url: "source URL goes here"
+        value: ''
+    jsbox:
+      source_url: "source URL goes here"
+      javascript: |
+        api.on_inbound_message = function (cmd) {
+
+            var msg = cmd.msg;
+
+            api.request("outbound.reply_to", {
+                content: "Echoing: " + msg.content,
+                in_reply_to: msg.message_id,
+                continue_session: false
+            });
+
+            api.request("outbound.send_to_tag", {
+              to_addr: msg.from_addr,
+              content: "sent to tag",
+              tagpool: "longcode_tagpool",
+              tag: "longcode-10002"
+            });
+
+            api.done();
+        };
+
+-
+  key: conversation7
+  start: true
+  account: user1@example.org
+  conversation_type: bulk_message
+  name: Messages sent from JSBox
+  delivery_class: sms
+  delivery_tag_pool: longcode_tagpool
+  delivery_tag: 'longcode-10002'
+  config:
+    message: "Collection of messages sent from JSBox"
+
+-
+  key: conversation8
+  start: true
+  account: user1@example.org
+  conversation_type: subscription
+  name: Subscription for seq send
+  delivery_class: sms
+  delivery_tag_pool: longcode_tagpool_2
+  delivery_tag: 'longcode-20001'
+  config:
+    handlers:
+      -
+        keyword: sub
+        campaign_name: conv8
+        operation: subscribe
+        reply_copy: "subscribed"
+      -
+        keyword: unsub
+        campaign_name: conv8
+        operation: unsubscribe
+        reply_copy: "unsubscribed"
+
+-
+  key: conversation9
+  start: true
+  account: user1@example.org
+  conversation_type: sequential_send
+  name: Sequential send
+  delivery_class: sms
+  delivery_tag_pool: longcode_tagpool_2
+  delivery_tag: 'longcode-20001'
+  config:
+    schedule:
+      recurring: daily
+      time: '12:00:00'
+    messages:
+      - 'foo'
+      - 'bar'
+
+-
+  key: conversation10
+  start: true
+  account: user1@example.org
+  conversation_type: http_api
+  name: HTTP API
+  delivery_class: sms
+  delivery_tag_pool: longcode_tagpool
+  delivery_tag: longcode-10003
+  config:
+    http_api:
+      api_tokens:
+        - token1
+        - token2

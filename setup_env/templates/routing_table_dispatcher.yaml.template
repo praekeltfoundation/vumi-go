@@ -1,0 +1,39 @@
+worker_name: "routing_table_dispatcher"
+metrics_prefix: "routing_table_dispatcher"
+
+redis_manager: &REDIS_MANAGER
+{{ redis_manager }}
+riak_manager: &RIAK_MANAGER
+{{ riak_manager }}
+
+receive_inbound_connectors:
+{% for transport_name in transport_names %}  - {{transport_name}}
+{% endfor %}
+
+receive_outbound_connectors:
+{% for application_name in application_names %}  - {{application_name}}
+{% endfor %}
+
+application_connector_mapping:
+{% for application, transport_name in conversation_mappings.items %}  {{application}}: {{transport_name}}
+{% endfor %}
+
+# NOTE: the order is important
+middleware:
+  - optout_middleware: go.vumitools.middleware.OptOutMiddleware
+  - storing_middleware: vumi.middleware.message_storing.StoringMiddleware
+  - logging_middleware: vumi.middleware.logging.LoggingMiddleware
+
+storing_middleware:
+  redis_manager: *REDIS_MANAGER
+  riak_manager: *RIAK_MANAGER
+
+optout_middleware:
+  redis_manager: *REDIS_MANAGER
+  riak_manager: *RIAK_MANAGER
+  case_sensitive: False
+  optout_keywords:
+    - stop
+
+logging_middleware:
+  log_level: debug

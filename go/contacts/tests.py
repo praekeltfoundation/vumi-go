@@ -8,9 +8,9 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.core import mail
 
+from go.vumitools.contact import ContactError
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.contacts.parsers.base import FieldNormalizer
-from go.vumitools.contact import ContactError
 
 
 TEST_GROUP_NAME = u"Test Group"
@@ -387,26 +387,6 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.client.get(people_url, {
             'q': 'name:%s' % (self.contact.name,)
         })
-
-    def test_contact_for_addr(self):
-        sms_contact = self.mkcontact(msisdn=u'+270000000')
-        twitter_contact = self.mkcontact(twitter_handle=u'@someone')
-        gtalk_contact = self.mkcontact(gtalk_id=u'gtalk@host.com')
-
-        self.assertEqual(
-            self.contact_store.contact_for_addr('sms', u'+270000000').key,
-            sms_contact.key)
-        self.assertEqual(
-            self.contact_store.contact_for_addr('ussd', u'+270000000').key,
-            sms_contact.key)
-        self.assertEqual(
-            self.contact_store.contact_for_addr('twitter', u'@someone').key,
-            twitter_contact.key)
-        self.assertEqual(
-            self.contact_store.contact_for_addr('gtalk',
-                u'gtalk@host.com').key, gtalk_contact.key)
-        self.assertRaisesRegexp(ContactError, 'Unsupported transport_type',
-            self.contact_store.contact_for_addr, u'unknown', u'unknown')
 
 
 class GroupsTestCase(DjangoGoApplicationTestCase):

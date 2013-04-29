@@ -81,8 +81,6 @@ class DjangoTokenManagerTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(response.status_code, 404)
 
 
-
-
 def callback_for_test(arg, kwarg='kwarg'):
     """
     This is just here to so the test_generate_callback has an actual

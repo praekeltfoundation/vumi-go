@@ -223,7 +223,6 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             'new_user_count': [1]},
             metrics)
 
-
     @inlineCallbacks
     def test_surveys_in_succession_demo_mode(self):
         self.app.is_demo = True
