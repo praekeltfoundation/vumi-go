@@ -15,14 +15,14 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
                                           GoWorkerConfigMixin):
     application_connector_mapping = ConfigDict(
         "Mapping from conversation_type to connector name.", static=True)
+    opt_out_connector = ConfigText(
+        "Connector to publish opt-out messages on.", static=True)
     message_tag = ConfigList("Tag for the message, if any.")
     tagpool_metadata = ConfigDict(
         "Tagpool metadata for the tag attached to the message if any.")
     conversation_info = ConfigDict(
         "Conversation info for the tag attached to the message if any.")
     user_account_key = ConfigText("UserAccount key.")
-    opt_out_connector = ConfigText(
-        "Connector to publish opt-out messages on.", static=True)
 
 
 class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
@@ -81,6 +81,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             log.warning("No tag found for inbound message: %s" % (msg,))
             return
 
+        msg_mdh = self.get_metadata_helper(msg)
+        msg_mdh.set_user_account(config.user_account_key)
+
         if OptOutMiddleware.is_optout_message(msg):
             return self.handle_opt_out(msg)
 
@@ -92,9 +95,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         target_conn, endpoint = target
         conv_type, conv_key = target_conn.split(':', 1)
-        msg_mdh = self.get_metadata_helper(msg)
-        msg_mdh.set_conversation_info(
-            conv_type, conv_key, config.user_account_key)
+        msg_mdh.set_conversation_info(conv_type, conv_key)
 
         conv_connector = self.get_application_connector(conv_type)
         return self.publish_inbound(msg, conv_connector, endpoint)

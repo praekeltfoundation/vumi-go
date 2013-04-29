@@ -108,7 +108,9 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.get_dispatcher()
         tag = ("pool1", "1234")
         msg = self.with_tag(self.mkmsg_in(), tag)
-        msg['helper_metadata']['go'] = {}
+        msg['helper_metadata']['go'] = {
+            'user_account': self.user_account_key,
+        }
         msg['helper_metadata']['optout'] = {'optout': True}
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'optout.inbound')
