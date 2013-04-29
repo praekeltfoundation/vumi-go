@@ -9,6 +9,7 @@ from vumi import log
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
 from go.vumitools.middleware import OptOutMiddleware
+from go.vumitools.account import GoConnector
 
 
 class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
@@ -87,18 +88,20 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         if OptOutMiddleware.is_optout_message(msg):
             return self.handle_opt_out(msg)
 
-        target = self.find_target(config, msg, ':'.join(config.message_tag))
+        src_conn = str(GoConnector.for_transport_tag(config.message_tag[0],
+                                                     config.message_tag[1]))
+        target = self.find_target(config, msg, src_conn)
         if target is None:
             log.debug("No target found for message from '%s': %s" % (
                 connector_name, msg))
             return
 
-        target_conn, endpoint = target
-        conv_type, conv_key = target_conn.split(':', 1)
-        msg_mdh.set_conversation_info(conv_type, conv_key)
+        conn = GoConnector.parse(target[0])
+        assert conn.ctype == conn.CONVERSATION
+        msg_mdh.set_conversation_info(conn.conv_type, conn.conv_key)
 
-        conv_connector = self.get_application_connector(conv_type)
-        return self.publish_inbound(msg, conv_connector, endpoint)
+        conv_connector = self.get_application_connector(conn.conv_type)
+        return self.publish_inbound(msg, conv_connector, target[1])
 
     def process_outbound(self, config, msg, connector_name):
         log.debug("Processing outbound: %s" % (msg,))
@@ -107,16 +110,18 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 "No conversation info found for outbound message: %s" % (msg,))
             return
 
-        conv_conn = ':'.join([config.conversation_info['conversation_type'],
-                              config.conversation_info['conversation_key']])
+        conv_conn = str(GoConnector.for_conversation(
+            config.conversation_info['conversation_type'],
+            config.conversation_info['conversation_key']))
         target = self.find_target(config, msg, conv_conn)
         if target is None:
             log.debug("No target found for message from '%s': %s" % (
                 connector_name, msg))
             return
 
-        target_conn, endpoint = target
-        tag = target_conn.split(':', 1)
+        conn = GoConnector.parse(target[0])
+        assert conn.ctype == conn.TRANSPORT_TAG
+        tag = [conn.tagpool, conn.tagname]
         msg['helper_metadata'].setdefault('tag', {})['tag'] = tag
 
         def publish_cb(tagpool_metadata):
@@ -125,7 +130,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 log.warning("No transport_name for tag: (%r, %r)" % tag)
                 return
 
-            return self.publish_outbound(msg, transport_name, endpoint)
+            return self.publish_outbound(msg, transport_name, target[1])
 
         d = self.vumi_api.tpm.get_metadata(tag[0])
         d.addCallback(publish_cb)

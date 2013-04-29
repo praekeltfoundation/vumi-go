@@ -20,7 +20,7 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
-from go.vumitools.account import AccountStore, RoutingTableHelper
+from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.conversation.models import CONVERSATION_DRAFT
@@ -301,13 +301,8 @@ class VumiUserApi(object):
             conv = yield self._get_conversation_for_batch(batch)
             if conv is None:
                 continue
-
             # If we get here, we have a conversation to set up routing for.
-
-            conv_conn = conv.get_routing_name()
-            tag_conn = "%s:%s" % tag
-            rt_helper.add_entry(conv_conn, "default", tag_conn, "default")
-            rt_helper.add_entry(tag_conn, "default", conv_conn, "default")
+            rt_helper.add_oldstyle_conversation(conv, tag)
 
         # XXX: Saving here could lead to a race condition if something else
         # populates the routing table with some different data and saves before
@@ -319,7 +314,8 @@ class VumiUserApi(object):
         # Check that we have routing set up for all our active conversations.
         convs = yield self.active_conversations()
         for conv in convs:
-            conv_conn = u':'.join([conv.conversation_type, conv.key])
+            conv_conn = str(GoConnector.for_conversation(
+                conv.conversation_type, conv.key))
             if conv_conn not in routing_table:
                 log.warning(
                     "No routing configured for conversation: %r" % (conv,))
@@ -351,14 +347,15 @@ class VumiUserApi(object):
 
         # Checking tags is cheap and easy, so do that first.
         for tag in user_account.tags:
-            tag_conn = u':'.join(tag)
+            tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
             if tag_conn in routing_connectors:
                 routing_connectors.remove(tag_conn)
 
         # Now we run through active conversations to check those.
         convs = yield self.active_conversations()
         for conv in convs:
-            conv_conn = u':'.join([conv.conversation_type, conv.key])
+            conv_conn = str(GoConnector.for_conversation(conv.conversation_type,
+                                                         conv.key))
             if conv_conn in routing_connectors:
                 routing_connectors.remove(conv_conn)
 
