@@ -1,5 +1,8 @@
+from datetime import date
+
 from django.test.client import Client
 from django.core.urlresolvers import reverse
+from django.core import mail
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
@@ -158,3 +161,40 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.subject, 'Test Conversation')
+
+    def test_aggregates(self):
+        self.put_sample_messages_in_conversation(self.user_api,
+            self.conv_key, 10, start_timestamp=date(2012, 1, 1),
+            time_multiplier=12)
+        response = self.client.get(reverse('survey:aggregates', kwargs={
+            'conversation_key': self.conv_key
+            }), {'direction': 'inbound'})
+        self.assertEqual(response.content, '\r\n'.join([
+            '2011-12-28,2',
+            '2011-12-29,2',
+            '2011-12-30,2',
+            '2011-12-31,2',
+            '2012-01-01,2',
+            '',  # csv ends with a blank line
+            ]))
+
+    def test_export_messages(self):
+        self.put_sample_messages_in_conversation(self.user_api,
+            self.conv_key, 10, start_timestamp=date(2012, 1, 1),
+            time_multiplier=12)
+        conv_url = reverse('survey:show', kwargs={
+            'conversation_key': self.conv_key,
+            })
+        response = self.client.post(conv_url, {
+            '_export_conversation_messages': True,
+            })
+        self.assertRedirects(response, conv_url)
+        [email] = mail.outbox
+        self.assertEqual(email.recipients(), [self.user.email])
+        self.assertTrue(self.conversation.subject in email.subject)
+        self.assertTrue(self.conversation.subject in email.body)
+        [(file_name, content, mime_type)] = email.attachments
+        self.assertEqual(file_name, 'messages-export.csv')
+        # 1 header, 10 sent, 10 received, 1 trailing newline == 22
+        self.assertEqual(22, len(content.split('\n')))
+        self.assertEqual(mime_type, 'text/csv')
