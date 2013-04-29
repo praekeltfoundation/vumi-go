@@ -7,7 +7,8 @@ from twisted.trial.unittest import TestCase
 
 from go.vumitools.tests.utils import model_eq, GoPersistenceMixin
 from go.vumitools.account import AccountStore
-from go.vumitools.contact import ContactStore, ContactError
+from go.vumitools.contact import (
+    ContactStore, ContactError, ContactNotFoundError)
 from go.vumitools.opt_out import OptOutStore
 
 
@@ -46,7 +47,7 @@ class TestContactStore(GoPersistenceMixin, TestCase):
 
     def test_get_contact_by_key_for_nonexistent_contact(self):
         return self.assertFailure(
-            self.store.get_contact_by_key(u'123'), ContactError)
+            self.store.get_contact_by_key(u'123'), ContactNotFoundError)
 
     @inlineCallbacks
     def test_new_group(self):
@@ -123,7 +124,7 @@ class TestContactStore(GoPersistenceMixin, TestCase):
 
     def test_update_contact_for_nonexistent_contact(self):
         return self.assertFailure(
-            self.store.update_contact('123124'), ContactError)
+            self.store.update_contact('123124'), ContactNotFoundError)
 
     @inlineCallbacks
     def test_add_contact_to_group(self):
@@ -186,6 +187,26 @@ class TestContactStore(GoPersistenceMixin, TestCase):
         self.assertEqual(count, 1)
 
     @inlineCallbacks
+    def test_new_contact_for_addr(self):
+        @inlineCallbacks
+        def check_new_contact_for_addr(deliv_class, addr, **kw):
+            contact = yield self.store.new_contact_for_addr(deliv_class, addr)
+            self.assertEqual(contact.user_account.key, self.account.key)
+            for field, expected_value in kw.iteritems():
+                self.assertEqual(getattr(contact, field), expected_value)
+
+        yield check_new_contact_for_addr('sms', u'+27831234567',
+                                         msisdn=u'+27831234567')
+        yield check_new_contact_for_addr('ussd', u'+27831234567',
+                                          msisdn=u'+27831234567')
+        yield check_new_contact_for_addr('gtalk', u'random@gmail.com',
+                                          gtalk_id=u'random@gmail.com',
+                                          msisdn=u'unknown')
+        yield check_new_contact_for_addr('twitter', u'random',
+                                         twitter_handle=u'random',
+                                         msisdn=u'unknown')
+
+    @inlineCallbacks
     def test_contact_for_addr(self):
         @inlineCallbacks
         def check_contact_for_addr(delivery_class, addr, expected_contact):
@@ -212,14 +233,13 @@ class TestContactStore(GoPersistenceMixin, TestCase):
     def test_contact_for_addr_for_nonexistent_contacts(self):
         return self.assertFailure(
             self.store.contact_for_addr('sms', u'27831234567', create=False),
-            ContactError)
+            ContactNotFoundError)
 
     @inlineCallbacks
     def test_contact_for_addr_for_contact_creation(self):
         @inlineCallbacks
         def check_contact_for_addr(deliv_class, addr, **kw):
-            contact = yield self.store.contact_for_addr(
-                deliv_class, addr)
+            contact = yield self.store.contact_for_addr(deliv_class, addr)
             self.assertEqual(contact.user_account.key, self.account.key)
             for field, expected_value in kw.iteritems():
                 self.assertEqual(getattr(contact, field), expected_value)
