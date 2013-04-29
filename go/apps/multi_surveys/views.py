@@ -1,6 +1,9 @@
+import csv
 from datetime import datetime
+from StringIO import StringIO
 
 from django.conf import settings
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.urlresolvers import reverse
@@ -319,3 +322,13 @@ def show(request, conversation_key):
     return render(request, 'multi_surveys/show.html', {
         'conversation': conversation,
     })
+
+
+@login_required
+def download_aggregates(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
+    direction = request.GET.get('direction', 'inbound')
+    sio = StringIO()
+    writer = csv.writer(sio)
+    writer.writerows(conversation.get_aggregate_count(direction))
+    return HttpResponse(sio.getvalue(), content_type='text/csv; charset=utf-8')
