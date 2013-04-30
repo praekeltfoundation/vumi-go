@@ -115,6 +115,8 @@ class SequentialSendApplication(GoApplicationWorker):
         batch_id = conv.get_batch_keys()[0]
         tag = (conv.c.delivery_tag_pool, conv.c.delivery_tag)
         message_options = yield conv.make_message_options(tag)
+        conv.set_go_helper_metadata(
+            message_options.setdefault('helper_metadata', {}))
 
         for contacts in (yield conv.get_opted_in_contact_bunches()):
             for contact in (yield contacts):
