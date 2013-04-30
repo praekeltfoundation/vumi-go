@@ -100,21 +100,15 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def reply_to(self, msg, content, continue_session=True, **kw):
-        session_event = (None if continue_session
-                            else TransportUserMessage.SESSION_CLOSE)
         reply = TransportUserMessage(
             to_addr=msg['from_addr'],
             from_addr=msg['to_addr'],
             group=msg['group'],
-            in_reply_to=msg['message_id'],
             content=content,
-            session_event=session_event,
             transport_name=msg['transport_name'],
             transport_type=msg['transport_type'],
-            transport_metadata=msg['transport_metadata'],
-            helper_metadata=msg['helper_metadata'],
             **kw)
-        yield self.dispatch(reply)
+        yield self.dispatch_to_conv(reply, self.conversation)
         returnValue(reply)
 
     @inlineCallbacks
