@@ -14,10 +14,8 @@ class OptOutApplication(GoApplicationWorker):
     @inlineCallbacks
     def consume_user_message(self, message):
 
-        gmt = self.get_go_metadata(message)
-        account_key = yield gmt.get_account_key()
-
-        if account_key is None:
+        msg_mdh = self.get_metadata_helper(message)
+        if not msg_mdh.has_user_account():
             # We don't have an account to opt out of.
             # Since this can only happen for redirected messages, assume we
             # aren't dealing with an API.
@@ -26,6 +24,7 @@ class OptOutApplication(GoApplicationWorker):
                 "to a specific service, please try again later.")
             return
 
+        account_key = yield msg_mdh.get_account_key()
         opt_out_store = OptOutStore(self.manager, account_key)
         from_addr = message.get("from_addr")
         # Note: for now we are hardcoding addr_type as 'msisdn'

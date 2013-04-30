@@ -11,7 +11,7 @@ from vumi.utils import load_class_by_string
 from vumi import log
 
 from go.vumitools.api import VumiApi, VumiApiCommand, VumiApiEvent
-from go.vumitools.utils import GoMessageMetadata
+from go.vumitools.utils import OldGoMessageMetadata
 from go.vumitools.middleware import OptOutMiddleware
 
 
@@ -188,7 +188,7 @@ class GoApplicationRouter(BaseDispatchRouter):
 
     @inlineCallbacks
     def find_application_for_msg(self, msg):
-        md = GoMessageMetadata(self.vumi_api, msg)
+        md = OldGoMessageMetadata(self.vumi_api, msg)
         conversation_info = yield md.get_conversation_info()
         if conversation_info:
             conversation_key, conversation_type = conversation_info

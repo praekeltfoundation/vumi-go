@@ -62,8 +62,7 @@ class TestSubscriptionApplication(AppWorkerTestCase):
     def dispatch_from(self, contact, *args, **kw):
         kw['from_addr'] = contact.msisdn
         msg = self.mkmsg_in(*args, **kw)
-        TaggingMiddleware.add_tag_to_msg(msg, ('pool', 'tag1'))
-        return self.dispatch(msg)
+        return self.dispatch_to_conv(msg, self.conv)
 
     def set_subscription(self, contact, subscribed, unsubscribed):
         for campaign_name in subscribed:

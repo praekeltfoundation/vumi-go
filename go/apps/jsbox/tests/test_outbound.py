@@ -66,7 +66,8 @@ class TestGoOutboundResource(TestCase):
                 "Sending outbound message to '6789' via tag ('pool1', '1234'),"
                 " content: 'bar'"])
         self.assert_reply(reply, cmd, True)
-        self.assert_sent('6789', 'bar', {'opt1': 'bar'})
+        self.assert_sent(
+            '6789', 'bar', {'endpoint': 'pool1:1234', 'opt1': 'bar'})
 
     def test_send_to_tag_unacquired(self):
         return self.assert_fails("Tag ('foo', '12345') not held by account",
