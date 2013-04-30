@@ -120,8 +120,7 @@ def export_group_contacts(account_key, group_key, include_extra):
         'group "%s" attached.\n\n' % (len(contact_keys), group.name),
         settings.DEFAULT_FROM_EMAIL, [user_profile.user.email])
 
-    zipio.seek(0)
-    email.attach('contacts-export.zip', zipio.read(), 'application/zip')
+    email.attach('contacts-export.zip', zipio.getvalue(), 'application/zip')
     email.send()
 
 
