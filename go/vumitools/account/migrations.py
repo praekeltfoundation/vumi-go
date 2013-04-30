@@ -20,3 +20,16 @@ class UserAccountMigrator(ModelMigrator):
         mdata.set_value('event_handler_config', old_ehconfig or [])
 
         return mdata
+
+    def migrate_from_1(self, mdata):
+        # Copy stuff that hasn't changed between versions
+        mdata.copy_values(
+            'username', 'created_at', 'msisdn', 'confirm_start_conversation',
+            'tags', 'event_handler_config')
+        mdata.copy_indexes('tagpools_bin', 'applications_bin')
+
+        # Add stuff that's new in this version
+        mdata.set_value('$VERSION', 2)
+        mdata.set_value('routing_table', None)  # We populate this later
+
+        return mdata

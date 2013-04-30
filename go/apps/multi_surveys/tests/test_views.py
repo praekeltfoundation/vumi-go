@@ -123,6 +123,7 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         [contact] = self.get_contacts_for_conversation(conversation)
         msg_options = {
             "transport_type": "sms",
+            "transport_name": self.transport_name,
             "from_addr": "default10001",
             "helper_metadata": {
                 "tag": {"tag": list(tag)},

@@ -8,13 +8,12 @@ from twisted.web import http
 from twisted.web.server import NOT_DONE_YET
 
 from vumi.utils import http_request_full
-from vumi.middleware.tagger import TaggingMiddleware
 from vumi.message import TransportUserMessage, TransportEvent
 from vumi.tests.utils import MockHttpServer
 from vumi.transports.vumi_bridge.client import StreamingClient
 
 from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.api import VumiApi, VumiApiCommand
+from go.vumitools.api import VumiApiCommand
 
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
 from go.apps.http_api.resource import ConversationResource, StreamResource
@@ -40,31 +39,25 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.url = 'http://%s:%s%s' % (
             self.addr.host, self.addr.port, self.config['web_path'])
 
-        # get the router to test
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
+        self.vumi_api = yield self.app.vumi_api
         self.account = yield self.mk_user(self.vumi_api, u'user')
         self.user_api = self.vumi_api.get_user_api(self.account.key)
 
         yield self.setup_tagpools()
 
-        self.conversation = yield self.create_conversation()
-        self.conversation.c.delivery_tag_pool = u'pool'
-        self.tag = yield self.conversation.acquire_tag()
-
-        self.batch_id = yield self.vumi_api.mdb.batch_start(
-            [self.tag], user_account=unicode(self.account.key))
-        self.conversation.batches.add_key(self.batch_id)
-        self.conversation.set_metadata({
+        conv_metadata = {
             'http_api': {
                 'api_tokens': [
                     'token-1',
                     'token-2',
                     'token-3',
                 ],
-                'metrics_store': 'metrics_store'
+                'metrics_store': 'metrics_store',
             }
-        })
-        yield self.conversation.save()
+        }
+        self.conversation = yield self.create_conversation(
+            delivery_tag_pool=u'pool', metadata=conv_metadata)
+        yield self.start_conversation(self.conversation)
 
         self.auth_headers = {
             'Authorization': ['Basic ' + base64.b64encode('%s:%s' % (
@@ -87,11 +80,6 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.push_calls.put(request)
         return NOT_DONE_YET
 
-    def dispatch_with_tag(self, msg, tag=None):
-        if tag:
-            TaggingMiddleware.add_tag_to_msg(msg, tag)
-        return self.dispatch(msg)
-
     @inlineCallbacks
     def pull_message(self, count=1):
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
@@ -104,9 +92,9 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         received_messages = []
         for msg_id in range(count):
-            sent_msg = self.mkmsg_in(
-                content='in %s' % (msg_id,), message_id=str(msg_id))
-            yield self.dispatch_with_tag(sent_msg, self.tag)
+            sent_msg = self.mkmsg_in(content='in %s' % (msg_id,),
+                                        message_id=str(msg_id))
+            yield self.dispatch_to_conv(sent_msg, self.conversation)
             recv_msg = yield messages.get()
             received_messages.append(recv_msg)
 
@@ -145,10 +133,10 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             Headers(self.auth_headers))
 
         msg1 = self.mkmsg_in(content='in 1', message_id='1')
-        yield self.dispatch_with_tag(msg1, self.tag)
+        yield self.dispatch_to_conv(msg1, self.conversation)
 
         msg2 = self.mkmsg_in(content='in 2', message_id='2')
-        yield self.dispatch_with_tag(msg2, self.tag)
+        yield self.dispatch_to_conv(msg2, self.conversation)
 
         rm1 = yield messages.get()
         rm2 = yield messages.get()
@@ -170,14 +158,12 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                                             Headers(self.auth_headers))
 
         msg1 = self.mkmsg_out(content='in 1', message_id='1')
-        yield self.vumi_api.mdb.add_outbound_message(
-            msg1, batch_id=self.batch_id)
+        yield self.store_outbound_msg(msg1, self.conversation)
         ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
         yield self.dispatch_event(ack1)
 
         msg2 = self.mkmsg_out(content='in 1', message_id='2')
-        yield self.vumi_api.mdb.add_outbound_message(
-            msg2, batch_id=self.batch_id)
+        yield self.store_outbound_msg(msg2, self.conversation)
         ack2 = self.mkmsg_ack(user_message_id=msg2['message_id'])
         yield self.dispatch_event(ack2)
 
@@ -240,17 +226,16 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(sent_msg['to_addr'], sent_msg['to_addr'])
         self.assertEqual(sent_msg['helper_metadata'], {
             'go': {
+                'conversation_key': self.conversation.key,
+                'conversation_type': 'http_api',
                 'user_account': self.account.key,
             },
-            'tag': {
-                'tag': list(self.tag),
-            }
         })
         # We do not respect the message_id that's been given.
         self.assertNotEqual(sent_msg['message_id'], msg['message_id'])
         self.assertEqual(sent_msg['message_id'], put_msg['message_id'])
         self.assertEqual(sent_msg['to_addr'], msg['to_addr'])
-        self.assertEqual(sent_msg['from_addr'], self.tag[1])
+        self.assertEqual(sent_msg['from_addr'], 'tag1')
 
     @inlineCallbacks
     def test_invalid_in_reply_to(self):
@@ -267,8 +252,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_in_reply_to(self):
         inbound_msg = self.mkmsg_in(content='in 1', message_id='1')
-        yield self.vumi_api.mdb.add_inbound_message(
-            inbound_msg, batch_id=self.batch_id)
+        yield self.store_inbound_msg(inbound_msg, self.conversation)
 
         msg = {
             'content': 'foo',
@@ -288,18 +272,17 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(sent_msg['to_addr'], sent_msg['to_addr'])
         self.assertEqual(sent_msg['helper_metadata'], {
             'go': {
+                'conversation_key': self.conversation.key,
+                'conversation_type': 'http_api',
                 'user_account': self.account.key,
             },
-            'tag': {
-                'tag': list(self.tag),
-            }
         })
         # We do not respect the message_id that's been given.
         self.assertNotEqual(sent_msg['message_id'], msg['message_id'])
         self.assertNotEqual(sent_msg['session_event'], msg['session_event'])
         self.assertEqual(sent_msg['message_id'], put_msg['message_id'])
         self.assertEqual(sent_msg['to_addr'], inbound_msg['from_addr'])
-        self.assertEqual(sent_msg['from_addr'], self.tag[1])
+        self.assertEqual(sent_msg['from_addr'], '9292')
 
     @inlineCallbacks
     def test_metric_publishing(self):
@@ -332,7 +315,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         for i in range(concurrency):
             msg = self.mkmsg_in(content='in %s' % (i,), message_id='%s' % (i,))
-            yield self.dispatch_with_tag(msg, self.tag)
+            yield self.dispatch_to_conv(msg, self.conversation)
             received = yield queue.get()
             self.assertEqual(msg['message_id'], received['message_id'])
 
@@ -349,7 +332,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     def test_backlog_on_connect(self):
         for i in range(10):
             msg = self.mkmsg_in(content='in %s' % (i,), message_id=str(i))
-            yield self.dispatch_with_tag(msg, self.tag)
+            yield self.dispatch_to_conv(msg, self.conversation)
 
         queue = DeferredQueue()
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
@@ -372,7 +355,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(response.delivered_body, '0')
 
         msg = self.mkmsg_in(content='in 1', message_id='1')
-        yield self.dispatch_with_tag(msg, self.tag)
+        yield self.dispatch_to_conv(msg, self.conversation)
 
         queue = DeferredQueue()
         stream_url = '%s/%s/messages.json' % (self.url, self.conversation.key)
@@ -406,7 +389,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.conversation.save()
 
         msg = self.mkmsg_in(content='in 1', message_id='1')
-        msg_d = self.dispatch_with_tag(msg, self.tag)
+        msg_d = self.dispatch_to_conv(msg, self.conversation)
 
         req = yield self.push_calls.get()
         posted_json_data = req.content.read()
@@ -428,8 +411,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.conversation.save()
 
         msg1 = self.mkmsg_out(content='in 1', message_id='1')
-        yield self.vumi_api.mdb.add_outbound_message(
-            msg1, batch_id=self.batch_id)
+        yield self.store_outbound_msg(msg1, self.conversation)
         ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
         event_d = self.dispatch_event(ack1)
 

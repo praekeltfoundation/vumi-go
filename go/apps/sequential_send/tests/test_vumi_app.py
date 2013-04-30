@@ -250,8 +250,18 @@ class TestSequentialSendApplication(AppWorkerTestCase):
                               key=lambda m: m['to_addr'])
         self.assertEqual(msg1['content'], 'foo')
         self.assertEqual(msg1['to_addr'], contact1.msisdn)
+        self.assertEqual(msg1['helper_metadata']['go'], {
+            'user_account': self.user_account.key,
+            'conversation_type': 'sequential_send',
+            'conversation_key': conv.key,
+        })
         self.assertEqual(msg2['content'], 'foo')
         self.assertEqual(msg2['to_addr'], contact2.msisdn)
+        self.assertEqual(msg2['helper_metadata']['go'], {
+            'user_account': self.user_account.key,
+            'conversation_type': 'sequential_send',
+            'conversation_key': conv.key,
+        })
 
         # Send to previous two contacts and a new third contact.
         contact3 = yield self.create_contact(name=u'Third',
@@ -288,3 +298,14 @@ class TestSequentialSendApplication(AppWorkerTestCase):
                 u'messages_sent': [0],
                 u'messages_received': [0],
                 }, metrics)
+
+    @inlineCallbacks
+    def test_routing_table_setup(self):
+        conv = yield self.create_conversation(delivery_tag=u'tag1')
+        rt = yield self.user_api.get_routing_table()
+        self.assertEqual(len(rt), 0)
+        yield self.user_api.acquire_specific_tag((u'pool', u'tag1'))
+        yield self.start_conversation(
+            conv, no_batch_tag=True, acquire_tag=False)
+        rt = yield self.user_api.get_routing_table()
+        self.assertEqual(len(rt), 1)
