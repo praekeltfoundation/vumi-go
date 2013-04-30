@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from os import path
 from StringIO import StringIO
+from zipfile import ZipFile
 
 from django.conf import settings
 from django.test import TestCase
@@ -571,17 +572,22 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(
             '1 contact(s) from group "%s" attached' % (self.group.name,)
             in email.body)
-        self.assertEqual(file_name, 'contacts-export.csv')
-        [header, contact, _] = contents.split('\r\n')
+        self.assertEqual(file_name, 'contacts-export.zip')
 
-        self.assertEqual(header,
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('contacts-export.csv', 'r').read()
+
+        [header, contact, _] = csv_contents.split('\r\n')
+
+        self.assertEqual(
+            header,
             ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
-                'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                'created_at', 'extras-bar', 'extras-foo']))
+                      'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                      'created_at', 'extras-bar', 'extras-foo']))
 
         self.assertTrue(contact.endswith('baz,bar'))
         self.assertTrue(contents)
-        self.assertEqual(mime_type, 'text/csv')
+        self.assertEqual(mime_type, 'application/zip')
 
 
 class SmartGroupsTestCase(DjangoGoApplicationTestCase):
@@ -788,15 +794,20 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
         [email] = mail.outbox
         [(file_name, contents, mime_type)] = email.attachments
 
+        self.assertEqual(file_name, 'contacts-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('contacts-export.csv', 'r').read()
+
         self.assertEqual(email.recipients(), [self.user.email])
         self.assertTrue(
             '%s contacts export' % (group.name,) in email.subject)
         self.assertTrue(
             '%s contact(s) from group "%s" attached' % (
                 len(contacts), group.name) in email.body)
-        self.assertEqual(file_name, 'contacts-export.csv')
-        self.assertTrue(contents)
-        self.assertEqual(mime_type, 'text/csv')
+        self.assertEqual(file_name, 'contacts-export.zip')
+        self.assertTrue(csv_contents)
+        self.assertEqual(mime_type, 'application/zip')
 
 
 class TestFieldNormalizer(TestCase):
