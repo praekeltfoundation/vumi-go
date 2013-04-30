@@ -144,6 +144,7 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
         self.assertEqual(send_msg_command['command'], 'send_message')
         self.assertEqual(send_msg_command['kwargs'], {
             'command_data': {
+                'conversation_key': self.conversation.key,
                 'batch_id': (yield self.conversation.get_latest_batch_key()),
                 'content': 'english sms',
                 'to_addr': self.contact.msisdn,
