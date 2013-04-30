@@ -45,8 +45,9 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
     def get_dispatcher(self, **config_extras):
         config = {
             "receive_inbound_connectors": ["sphex"],
-            "receive_outbound_connectors": ["app1", "app2"],
+            "receive_outbound_connectors": ["app1", "app2", "optout"],
             "metrics_prefix": "foo",
+            "opt_out_connector": "optout",
         }
         config.update(config_extras)
         dispatcher = yield self.get_worker(
@@ -104,6 +105,21 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assertEqual(
             [self.with_conv(msg, 'app2', 'conv2')],
             self.get_dispatched_inbound('app2'))
+
+    @inlineCallbacks
+    def test_opt_out_message_routing(self):
+        yield self.get_dispatcher()
+        tag = ("pool1", "1234")
+        msg = self.with_tag(self.mkmsg_in(), tag)
+        msg['helper_metadata']['go'] = {
+            'user_account': self.user_account_key,
+        }
+        msg['helper_metadata']['optout'] = {'optout': True}
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used('sphex.inbound', 'optout.inbound')
+        self.assertEqual(
+            [self.with_tag(msg, tag)],
+            self.get_dispatched_inbound('optout'))
 
     @inlineCallbacks
     def test_outbound_message_routing(self):

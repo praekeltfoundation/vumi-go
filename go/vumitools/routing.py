@@ -8,6 +8,7 @@ from vumi.message import TransportEvent
 from vumi import log
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
+from go.vumitools.middleware import OptOutMiddleware
 from go.vumitools.account import GoConnector
 
 
@@ -15,6 +16,8 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
                                           GoWorkerConfigMixin):
     application_connector_mapping = ConfigDict(
         "Mapping from conversation_type to connector name.", static=True)
+    opt_out_connector = ConfigText(
+        "Connector to publish opt-out messages on.", static=True)
     message_tag = ConfigList("Tag for the message, if any.")
     tagpool_metadata = ConfigDict(
         "Tagpool metadata for the tag attached to the message if any.")
@@ -69,11 +72,21 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         mapping = self.get_static_config().application_connector_mapping or {}
         return mapping.get(conversation_type, conversation_type)
 
+    def handle_opt_out(self, msg):
+        return self.publish_inbound(
+            msg, self.get_static_config().opt_out_connector, 'default')
+
     def process_inbound(self, config, msg, connector_name):
         log.debug("Processing inbound: %s" % (msg,))
         if not config.message_tag:
             log.warning("No tag found for inbound message: %s" % (msg,))
             return
+
+        msg_mdh = self.get_metadata_helper(msg)
+        msg_mdh.set_user_account(config.user_account_key)
+
+        if OptOutMiddleware.is_optout_message(msg):
+            return self.handle_opt_out(msg)
 
         src_conn = str(GoConnector.for_transport_tag(config.message_tag[0],
                                                      config.message_tag[1]))
@@ -85,9 +98,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         conn = GoConnector.parse(target[0])
         assert conn.ctype == conn.CONVERSATION
-        msg_mdh = self.get_metadata_helper(msg)
-        msg_mdh.set_conversation_info(
-            conn.conv_type, conn.conv_key, config.user_account_key)
+        msg_mdh.set_conversation_info(conn.conv_type, conn.conv_key)
 
         conv_connector = self.get_application_connector(conn.conv_type)
         return self.publish_inbound(msg, conv_connector, target[1])

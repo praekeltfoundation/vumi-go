@@ -354,8 +354,8 @@ class VumiUserApi(object):
         # Now we run through active conversations to check those.
         convs = yield self.active_conversations()
         for conv in convs:
-            conv_conn = str(GoConnector.for_conversation(conv.conversation_type,
-                                                         conv.key))
+            conv_conn = str(GoConnector.for_conversation(
+                conv.conversation_type, conv.key))
             if conv_conn in routing_connectors:
                 routing_connectors.remove(conv_conn)
 

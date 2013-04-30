@@ -1,12 +1,10 @@
-import os.path
 from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
 
 from go.base.utils import vumi_api_for_user
-from go.contacts.parsers import ContactFileParser, ContactParserException
-from go.contacts.parsers.base import FieldNormalizer
+from go.contacts.parsers import ContactFileParser
 
 
 class Command(BaseCommand):

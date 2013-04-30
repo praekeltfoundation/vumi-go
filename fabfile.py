@@ -1,6 +1,5 @@
 from fabric.api import cd, sudo, env
 
-env.hosts = ['ubuntu@vumi.praekelt.com']
 env.path = '/var/praekelt/vumi-go'
 
 
@@ -8,7 +7,7 @@ def deploy_go():
     with cd(env.path):
         sudo('git pull', user='vumi')
         _venv_command('./ve/bin/django-admin.py collectstatic --pythonpath=. '
-                        '--settings=go.settings --noinput')
+                      '--settings=go.settings --noinput')
 
 
 def deploy_vumi():
@@ -18,7 +17,7 @@ def deploy_vumi():
 
 def restart_celery():
     with cd(env.path):
-        supervisorctl('restart vumi_web:celery')
+        supervisorctl('restart vumi_celery:celery')
 
 
 def restart_gunicorn():

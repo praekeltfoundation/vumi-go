@@ -15,9 +15,9 @@ class BulkMessageApplication(GoApplicationWorker):
     Application that accepts 'send message' commands and does exactly that.
     """
     worker_name = 'bulk_message_application'
-    max_ack_window = 10000
-    max_ack_wait = 10
-    monitor_interval = 1
+    max_ack_window = 100
+    max_ack_wait = 100
+    monitor_interval = 20
     monitor_window_cleanup = True
 
     @inlineCallbacks
