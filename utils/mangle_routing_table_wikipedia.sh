@@ -8,7 +8,7 @@ fi
 
 email_address="$1"
 ussd_conv="CONVERSATION:wikipedia_ussd:$2"
-sms_conv="TRANSPORT_TAG:wikipedia_sms:$3"
+sms_conv="CONVERSATION:wikipedia_sms:$3"
 
 . $(dirname $0)/mangle_routing_table_utils.sh
 
