@@ -13,8 +13,6 @@ from django.template import Context, Template
 
 from optparse import make_option
 
-# from foo import create_tagpool, create_user, create_transport
-
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.riak_manager import RiakManager
 from vumi.components import TagpoolManager

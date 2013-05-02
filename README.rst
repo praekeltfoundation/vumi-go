@@ -115,6 +115,36 @@ The configuration for the XMPP transport should have the following parameters::
          tagname_pattern: '.*'
          msg_template: {}
 
+For you to be able to use this account for messaging you will need to add
+it to the `tagpools.yaml` file. Do this by adding the following below
+`ussd_tagpool` under `pools`::
+
+    xmpp_tagpool:
+      tags:
+        - xmpp@example.org # change this
+      metadata:
+        display_name: "Google Talk"
+        delivery_class: gtalk
+        transport_type: xmpp
+        user_selects_tag: true
+        server_initiated: true
+        client_initiated: true
+        transport_name: <name of your transport> # change this
+        msg_options: {}
+
+Next update the Tagpool Manager with this new configuration::
+
+    (ve)$ ./go-admin.sh go_setup_env \
+            --config-file=./setup_env/config.yaml \
+            --tagpool-file=./setup_env/tagpools.yaml
+
+And give your account access to this new tagpool::
+
+    (ve)$ ./go-admin go_assign_tagpool \
+            --email-address=user1@example.org \
+            --tagpool=xmpp_tagpool \
+            --max-keys=0
+
 .. _Redis: http://redis.io
 .. _RabbitMQ: http://rabbitmq.com
 .. _Riak: http://wiki.basho.com/Riak.html
