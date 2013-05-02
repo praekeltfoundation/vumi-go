@@ -373,8 +373,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         })
 
         self.assertEqual(
-            set(['+27000000001']),
-            set((yield get_contacts())))
+            ['+27000000001'],
+            (yield get_contacts()))
 
     @inlineCallbacks
     def test_get_inbound_throughput(self):
