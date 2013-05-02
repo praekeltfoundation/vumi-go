@@ -15,43 +15,108 @@ Other stuff that's required:
 
 After installing Riak_, you will need to edit the `/etc/riak/app.config` file: set the storage backend to `eleveldb` instead of `bitcask`, and enable `riak_search`.
 
-To ease local development we are using GTalk, you will need at least one GTalk account available to run Vumi Go.
+.. note::
+    There is a Vagrantfile in the Vumi_ repository that can be used for Vumi Go as well.
 
-To configure you GTalk addresses, edit the file `config/tagpools.yaml` and find the `xmpp` section and change the lines that say::
 
-    tags:
-      - 's.dehaan@gmail.com'
+Bootstrapping a development environment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-And replace that with your available GTalk address(es)::
+After having installed the dependencies with pip and ensuring that Redis_,
+Riak_ and RabbitMQ_ are running execute the following command:
 
-    tags:
-      - 'some-account@gmail.com'
+::
 
-After that, ensure that Redis_ is running and run::
+    (ve)$ ./setup_env.sh
 
-    (ve)$ PYTHONPATH=. python ve/src/vumi/vumi/scripts/vumi_tagpools.py -c config/tagpools.yaml create-pool xmpp
+This will generate all the necessary config files for running a set of
+standard applications and Telnet transports emulating a USSD and SMS
+connection.
 
-This populates Redis_ with the account information Vumi Go needs in order to bind messaging accounts to actual conversations.
+To start some sample conversations such as Wikipedia execute the
+following command::
 
-Next update the file `config/gtalk_transports.yaml` and replace the 2 `user@xmpp.org` entries with whatever GTalk address you are using.
+    (ve)$ ./setup_env/build/go_startup_env.sh
 
-When that's done fire up supervisord::
+Next start everything using Supervisord_::
 
-    (ve)$ supervisord
-    (ve)$ supervisorctl status
+    (ve)$ supervisord -c setup_env/build/go_supervisord.conf
+    (ve)$ supervisorctl -c setup_env/build/go_supervisord.conf
 
-If everything's running and you've gotten this far then things look good :)
+Now you should be able to login to the Vumi UI at http://localhost:8000 using
+the account details as specified in `setup_env/accounts.yaml`.
 
-Final steps are:
+The default accounts created are:
 
-#. Run `./go-admin.sh syncdb --noinput --migrate` to populate the sqlite db for the Django webapp.
-#. Run `./go-admin.sh go_create_user` and enter the necessary details.
-#. Run `./go-admin.sh go_assign_tagpool --email-address=... --tagpool=xmpp --max-keys=0`
-#. Run `./go-admin.sh go_manage_credit --email-address=... --add-credit=1000`
-#. Run `./go-admin.sh go_manage_application --email-address=... --application-module=go.apps.bulk_message`
-#. Run `./go-admin.sh go_manage_application --email-address=... --application-module=go.apps.surveys`
-#. Run `./go-admin.sh runserver` and log in at `http://localhost:8000`
+================= ==========
+    Username       Password
+================= ==========
+user1@example.org password
+user2@example.org password
+================= ==========
+
+By default the Wikipedia USSD service is configured to be running on
+localhost 8081.
+
+::
+
+    $ telnet localhost 8081
+    Trying 127.0.0.1...
+    Connected to localhost.
+    Escape character is '^]'.
+    Please provide "to_addr":
+    *120*10001#
+    Please provide "from_addr":
+    simon
+    [Sending all messages to: *120*10001# and from: simon]
+    What would you like to search Wikipedia for?
+    ...
+
+The SMS delivery part uses 'longcode-10001' as the virtual address and
+the outbound SMSes as part of the USSD Wikipedia are sent to that address.
+
+
+Using GTalk as a transport for testing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To ease local development we often use GTalk. You will need at least two
+Gtalk addresses, one will be used for the Vumi transport the other you
+will need to use with your normal Gtalk client to interact with the service.
+
+Start the XMPP transport with the following command::
+
+    (ve)$ twistd -n vumi_worker \
+    >      --worker-class=vumi.transports.xmpp.XMPPTransport
+    >      --config=path/to/xmpp-config.yaml
+
+The configuration for the XMPP transport should have the following parameters::
+
+    transport_name: <desired transport name> # change this
+    username: <your username> # change this
+    password: <your password> # change this
+    host: talk.google.com
+    port: 5222
+    status: chat
+    status_message: Vumi Go!
+
+    middleware:
+        - logging_mw: vumi.middleware.logging.LoggingMiddleware
+        - gtalk_tagging_mw: vumi.middleware.tagger.TaggingMiddleware
+
+    logging_mw:
+        log_level: debug
+
+    gtalk_tagging_mw:
+       incoming:
+         addr_pattern: '^(.+\@.+)/?.*$'
+         tagpool_template: 'xmpp'
+         tagname_template: '\1'
+       outgoing:
+         tagname_pattern: '.*'
+         msg_template: {}
 
 .. _Redis: http://redis.io
 .. _RabbitMQ: http://rabbitmq.com
 .. _Riak: http://wiki.basho.com/Riak.html
+.. _Vumi: https://github.com/praekelt/vumi
+.. _Supervisord: http://www.supervisord.org
