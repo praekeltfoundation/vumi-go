@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 
-from twisted.trial.unittest import SkipTest
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import TransportMessage
@@ -8,6 +7,7 @@ from vumi.application.tests.test_base import DummyApplicationWorker
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApi
+from go.vumitools.opt_out import OptOutStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.exceptions import ConversationSendError
 
@@ -333,11 +333,48 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         yield self.assertFailure(self.conv.acquire_tag(),
                                  ConversationSendError)
 
-    def test_get_opted_in_contacts(self):
-        raise SkipTest("Waiting for API to stabilize")
+    @inlineCallbacks
+    def test_get_opted_in_contact_bunches(self):
+        contact_store = self.user_api.contact_store
+        opt_out_store = OptOutStore.from_user_account(self.user)
 
-    def test_get_opted_in_addresses(self):
-        raise SkipTest("Waiting for API to stabilize")
+        @inlineCallbacks
+        def get_contacts():
+            bunches = yield self.conv.get_opted_in_contact_bunches()
+            contacts = []
+            for bunch in bunches:
+                contacts.extend((yield bunch))
+            returnValue([c.msisdn for c in contacts])
+
+        self.assertEqual(
+            [],
+            (yield get_contacts()))
+
+        group = yield self.user_api.contact_store.new_group(u'a group')
+        self.conv.add_group(group)
+        yield self.conv.save()
+
+        contact1 = yield contact_store.new_contact(msisdn=u'+27000000001')
+        contact1.add_to_group(group)
+        yield contact1.save()
+
+        contact2 = yield contact_store.new_contact(msisdn=u'+27000000002')
+        contact2.add_to_group(group)
+        yield contact2.save()
+
+        yield group.save()
+
+        self.assertEqual(
+            set(['+27000000001', '+27000000002']),
+            set((yield get_contacts())))
+
+        yield opt_out_store.new_opt_out(u'msisdn', contact2.msisdn, {
+            'message_id': u'some-message-id',
+        })
+
+        self.assertEqual(
+            set(['+27000000001']),
+            set((yield get_contacts())))
 
     @inlineCallbacks
     def test_get_inbound_throughput(self):
