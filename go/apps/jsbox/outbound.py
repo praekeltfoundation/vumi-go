@@ -17,14 +17,19 @@ class GoOutboundResource(SandboxResource):
     """
 
     def _handle_reply(self, api, command, reply_func):
-        if 'content' not in command:
+        if not isinstance(command.get('content'), unicode):
             return succeed(self.reply(
                 command, success=False,
                 reason=u"'content' must be given in replies."))
-        if 'in_reply_to' not in command:
+        if not isinstance(command.get('in_reply_to'), unicode):
             return succeed(self.reply(
                 command, success=False,
                 reason=u"'in_reply_to' must be given in replies."))
+        if command.get('continue_session', True) not in (True, False):
+            return succeed(self.reply(
+                command, success=False,
+                reason=u"'continue_session' must be either true or false"
+                " if given"))
         orig_msg = api.get_inbound_message(command['in_reply_to'])
         if orig_msg is None:
             return succeed(self.reply(
@@ -124,7 +129,8 @@ class GoOutboundResource(SandboxResource):
         tag = (command.get('tagpool'), command.get('tag'))
         content = command.get('content')
         to_addr = command.get('to_addr')
-        if None in (tag[0], tag[1], content, to_addr):
+        if any(not isinstance(u, unicode)
+               for u in (tag[0], tag[1], content, to_addr)):
             returnValue(self.reply(
                 command, success=False,
                 reason="Tag, content or to_addr not specified"))
