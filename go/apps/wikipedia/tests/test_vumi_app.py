@@ -1,48 +1,68 @@
-import uuid
-
 from twisted.internet.defer import inlineCallbacks
-from vumi_wikipedia.tests import test_wikipedia
+from vumi_wikipedia.tests import test_wikipedia as tw
+from vumi_wikipedia.tests.test_wikipedia_api import (
+    FakeHTTPTestCaseMixin, WIKIPEDIA_RESPONSES)
 
-from go.vumitools.tests.utils import GoAppWorkerTestMixin
+from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.wikipedia.vumi_app import WikipediaApplication
 
 
-class WikipediaApplicationTestCase(GoAppWorkerTestMixin,
-                                   test_wikipedia.WikipediaWorkerTestCase):
+class TestWikipediaApplication(AppWorkerTestCase, FakeHTTPTestCaseMixin):
     application_class = WikipediaApplication
-    use_riak = True
+    transport_type = u'ussd'
 
     @inlineCallbacks
     def setUp(self):
-        yield super(WikipediaApplicationTestCase, self).setUp()
+        super(TestWikipediaApplication, self).setUp()
+        yield self.start_webserver(WIKIPEDIA_RESPONSES)
+
+        self.config = self.mk_config({})
+        self.app = yield self.get_application(self.config)
 
         # Steal app's vumi_api
-        self.vumi_api = self.worker.vumi_api  # YOINK!
-        self._persist_riak_managers.append(self.vumi_api.manager)
+        self.vumi_api = self.app.vumi_api  # YOINK!
 
         # Create a test user account
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
-
-        # Add tags
         yield self.setup_tagpools()
 
-        # Give a user access to a tagpool
-        self.user_api.api.account_store.tag_permissions(uuid.uuid4().hex,
-            tagpool=u"pool", max_keys=None)
+    @inlineCallbacks
+    def tearDown(self):
+        yield self.stop_webserver()
+        yield super(TestWikipediaApplication, self).tearDown()
 
+    @inlineCallbacks
+    def setup_conv(self, config={}):
+        config.setdefault('api_url', self.url)
         self.conv = yield self.create_conversation(
-            delivery_tag_pool=u'pool', delivery_class=u'sms')
+            delivery_tag_pool=u'pool', delivery_class=self.transport_type,
+            metadata=config)
+        yield self.start_conversation(self.conv)
 
-    def mkmsg_in(self, *args, **kw):
-        msg = super(WikipediaApplicationTestCase, self).mkmsg_in(*args, **kw)
-        self.conv.set_go_helper_metadata(msg['helper_metadata'])
-        return msg
+    def get_outbound_msgs(self, endpoint):
+        return [m for m in self.get_dispatched_outbound()
+                if m['routing_metadata']['endpoint_name'] == endpoint]
 
-    def assert_metrics(self, expected_metrics):
-        # We aren't collecting these.
-        pass
+    @inlineCallbacks
+    def assert_response(self, text, expected, session_event=None):
+        yield self.dispatch_to_conv(
+            self.mkmsg_in(text, session_event=session_event), self.conv)
+        self.assertEqual(
+            expected, self.get_outbound_msgs('default')[-1]['content'])
 
-    def test_no_metrics_prefix(self):
-        # This isn't supported.
-        pass
+    def start_session(self):
+        return self.assert_response(
+            None, 'What would you like to search Wikipedia for?')
+
+    @inlineCallbacks
+    def test_happy_flow(self):
+        yield self.setup_conv()
+        yield self.start_session()
+        yield self.assert_response('cthulhu', tw.CTHULHU_RESULTS)
+        yield self.assert_response('1', tw.CTHULHU_SECTIONS)
+        yield self.assert_response('2', tw.CTHULHU_USSD)
+
+        [sms_msg] = self.get_outbound_msgs('sms_content')
+        self.assertEqual(tw.CTHULHU_SMS, sms_msg['content'])
+        self.assertEqual('+41791234567', sms_msg['to_addr'])
