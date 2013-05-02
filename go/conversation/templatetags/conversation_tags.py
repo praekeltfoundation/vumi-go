@@ -130,7 +130,7 @@ def get_contact_for_message(user_api, message, direction='inbound'):
           message['transport_type'])
     user = message.user() if direction == 'inbound' else message['to_addr']
     return user_api.contact_store.contact_for_addr(
-        delivery_class, unicode(user))
+        delivery_class, unicode(user), create=True)
 
 
 @register.assignment_tag

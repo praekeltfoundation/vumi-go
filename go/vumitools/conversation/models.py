@@ -14,12 +14,6 @@ from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.contact import ContactGroup
 
 
-CONVERSATION_TYPES = [
-    ('bulk_message', 'Send Bulk SMS and track replies'),
-    ('survey', 'Interactive Survey'),
-    ('multi_survey', 'Multi-stage Interactive Survey'),
-]
-
 CONVERSATION_DRAFT = 'draft'
 CONVERSATION_RUNNING = 'running'
 CONVERSATION_FINISHED = 'finished'
@@ -84,6 +78,9 @@ class Conversation(Model):
         """
         addrs = [contact.addr_for(self.delivery_class) for contact in contacts]
         return [addr for addr in addrs if addr]
+
+    def get_routing_name(self):
+        return ':'.join((self.conversation_type, self.key))
 
 
 class ConversationStore(PerAccountStore):

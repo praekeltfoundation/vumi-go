@@ -10,7 +10,8 @@ from vumi.persist.model import Manager
 
 from go.vumitools.exceptions import ConversationSendError
 from go.vumitools.opt_out import OptOutStore
-from go.vumitools.utils import GoMessageMetadata
+from go.vumitools.utils import MessageMetadataHelper
+from go.vumitools.account import RoutingTableHelper
 
 
 class ConversationWrapper(object):
@@ -28,6 +29,9 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def get_tagpool_metadata(self, key, default=None):
+        if self.delivery_tag_pool is None:
+            returnValue({})
+
         if self._tagpool_metadata is None:
             self._tagpool_metadata = yield self.api.tpm.get_metadata(
                 self.delivery_tag_pool)
@@ -37,6 +41,7 @@ class ConversationWrapper(object):
     def end_conversation(self):
         self.c.end_timestamp = datetime.utcnow()
         yield self.c.save()
+        yield self._remove_from_routing_table()
         yield self._release_batches()
 
     @Manager.calls_manager
@@ -130,7 +135,8 @@ class ConversationWrapper(object):
         status = yield self.get_progress_status()
         if status['sent'] == 0:
             returnValue(0)
-        returnValue(int(status['ack'] / float(status['sent']) * 100))
+        sent_to_network = status['ack'] + status['nack']
+        returnValue(int(sent_to_network / float(status['sent']) * 100))
 
     @Manager.calls_manager
     def get_groups(self):
@@ -148,6 +154,15 @@ class ConversationWrapper(object):
         msg_options = yield self.user_api.msg_options(
             tag, self._tagpool_metadata)
         returnValue(msg_options)
+
+    def set_go_helper_metadata(self, helper_metadata=None):
+        if helper_metadata is None:
+            helper_metadata = {}
+        go_metadata = helper_metadata.setdefault('go', {})
+        go_metadata['user_account'] = self.user_account.key
+        go_metadata['conversation_type'] = self.conversation_type
+        go_metadata['conversation_key'] = self.key
+        return helper_metadata
 
     @Manager.calls_manager
     def start(self, no_batch_tag=False, batch_id=None, acquire_tag=True,
@@ -199,6 +214,12 @@ class ConversationWrapper(object):
                 tag = yield self.acquire_existing_tag()
             batch_tags = [] if no_batch_tag else [tag]
             batch_id = yield self.start_batch(*batch_tags)
+            # FIXME: We only want to set up routing if we haven't done it
+            #        already. We assume that being passed a batch id means it's
+            #        already happened. This will go away once we have a better
+            #        conversation model.
+            outbound_only = not acquire_tag  # XXX: Hack for seq send.
+            yield self._add_to_routing_table(tag, outbound_only=outbound_only)
 
         msg_options = yield self.make_message_options(tag)
 
@@ -214,6 +235,35 @@ class ConversationWrapper(object):
         if batch_id not in self.get_batch_keys():
             self.c.batches.add_key(batch_id)
         yield self.c.save()
+
+    @Manager.calls_manager
+    def _add_to_routing_table(self, tag, outbound_only=False):
+        """Add routing entries for this conversation.
+
+        XXX: This is temporary. It will go away once we have a proper routing
+        setup UI, even if we still have unmigrated user accounts with no
+        routing tables.
+        """
+        user_account = yield self.c.user_account.get(self.api.manager)
+        routing_table = yield self.user_api.get_routing_table(user_account)
+        rt_helper = RoutingTableHelper(routing_table)
+        rt_helper.add_oldstyle_conversation(self.c, tag,
+                                            outbound_only=outbound_only)
+        yield user_account.save()
+
+    @Manager.calls_manager
+    def _remove_from_routing_table(self):
+        """Remove routing entries for this conversation.
+
+        XXX: This is probably temporary. Removing routing for ended
+        conversations is probably a good idea, but we may have to do it in a
+        completely different way.
+        """
+        user_account = yield self.c.user_account.get(self.api.manager)
+        routing_table = yield self.user_api.get_routing_table(user_account)
+        rt_helper = RoutingTableHelper(routing_table)
+        rt_helper.remove_conversation(self.c)
+        yield user_account.save()
 
     @Manager.calls_manager
     def send_token_url(self, token_url, msisdn, **extra_params):
@@ -233,6 +283,10 @@ class ConversationWrapper(object):
         helper_metadata = msg_options.setdefault('helper_metadata', {})
         go_metadata = helper_metadata.setdefault('go', {})
         go_metadata['sensitive'] = True
+
+        # We need to have routing set up so that we can send the message with
+        # the token in it.
+        yield self._add_to_routing_table(tag)
 
         yield self.dispatch_command('send_message', command_data={
             "batch_id": batch_id,
@@ -376,8 +430,8 @@ class ConversationWrapper(object):
         for message in messages:
             # vumi message is an attribute on the inbound message object
             msg = message.msg
-            msg_metadata = GoMessageMetadata(self.api, msg)
-            if not msg_metadata.is_sensitive():
+            msg_mdh = MessageMetadataHelper(self.api, msg)
+            if not msg_mdh.is_sensitive():
                 collection.append(msg)
             elif include_sensitive:
                 scrubbed_msg = scrubber(msg)

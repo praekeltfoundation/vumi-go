@@ -17,6 +17,7 @@ from go.contacts.forms import (
 from go.contacts import tasks, utils
 from go.contacts.parsers import ContactFileParser, ContactParserException
 from go.contacts.parsers.base import FieldNormalizer
+from go.vumitools.contact import ContactError
 
 
 def _query_to_kwargs(query):
@@ -400,8 +401,9 @@ def _people(request):
 @login_required
 def person(request, person_key):
     contact_store = request.user_api.contact_store
-    contact = contact_store.get_contact_by_key(person_key)
-    if contact is None:
+    try:
+        contact = contact_store.get_contact_by_key(person_key)
+    except ContactError:
         raise Http404
     groups = contact_store.list_groups()
     if request.method == 'POST':

@@ -21,7 +21,8 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.setup_riak_fixtures()
         self.client = Client()
         self.client.login(username='username', password='password')
-        self.patch_settings(VXPOLLS_REDIS_CONFIG={'FAKE_REDIS': 'sure'})
+        self.patch_settings(
+            VXPOLLS_REDIS_CONFIG=self._persist_config['redis_manager'])
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
@@ -134,6 +135,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         [contact] = self.get_contacts_for_conversation(conversation)
         msg_options = {
             "transport_type": "sms",
+            "transport_name": self.transport_name,
             "from_addr": "default10001",
             "helper_metadata": {
                 "tag": {"tag": list(tag)},
@@ -372,6 +374,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(reply_to_cmd['command'], 'send_message')
         self.assertEqual(reply_to_cmd['kwargs']['command_data'], {
             'batch_id': conversation.get_latest_batch_key(),
+            'conversation_key': conversation.key,
             'content': 'foo',
             'to_addr': msg['from_addr'],
             'msg_options': msg_options,

@@ -12,17 +12,15 @@ Fabric==1.2.2
 celery==2.5.3
 django-celery==2.4.2
 django-celery-email
--e git+git://github.com/praekelt/vumi@develop#egg=vumi
--e git+git://github.com/praekelt/vxpolls.git@develop#egg=vxpolls
+https://github.com/praekelt/vumi/tarball/develop#egg=vumi-dev
+https://github.com/praekelt/vxpolls/tarball/develop#egg=vxpolls-dev
 Markdown==2.1.1
 django-registration==0.8
-# django_compressor==1.1.2 on Pypi has a bug, install from GitHub
-# until a new version has been published to pypi
--e git+git://github.com/jezdez/django_compressor@236e0d711#egg=compressor
 lesscpy==0.9h
 xlrd==0.8.0
--e git+git://github.com/earle/django-bootstrap.git@9ec5697#egg=bootstrap
--e git+git://github.com/praekelt/vumi-wikipedia@develop#egg=vumi-wikipedia
+# -e git+git://github.com/earle/django-bootstrap.git@9ec5697#egg=bootstrap
+https://github.com/earle/django-bootstrap/tarball/master#egg=django-bootstrap-dev
+https://github.com/praekelt/vumi-wikipedia/tarball/develop#egg=vumi-wikipedia-dev
 requests==0.14.2
 mock==1.0.1
 raven>=2.0,<3.0

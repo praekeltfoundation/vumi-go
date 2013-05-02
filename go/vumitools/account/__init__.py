@@ -1,9 +1,10 @@
 from go.vumitools.account.models import (
-    UserTagPermission, UserAppPermission, UserAccount,
-    AccountStore, PerAccountStore)
+    UserTagPermission, UserAppPermission, UserAccount, RoutingTableHelper,
+    AccountStore, PerAccountStore, GoConnector)
 
 
 __all__ = [
     'UserTagPermission', 'UserAppPermission', 'UserAccount',
-    'AccountStore', 'PerAccountStore',
+    'RoutingTableHelper', 'AccountStore', 'PerAccountStore',
+    'GoConnector',
     ]

@@ -5,10 +5,10 @@ from vumi import log
 from vumi.application import ApplicationWorker
 from vumi.blinkenlights.metrics import MetricManager, Metric, MAX
 from vumi.message import TransportEvent
-from vumi.config import IConfigData
+from vumi.config import IConfigData, ConfigText, ConfigDict
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
-from go.vumitools.api_worker import GoMessageMetadata
+from go.vumitools.utils import MessageMetadataHelper
 
 
 class OneShotMetricManager(MetricManager):
@@ -42,51 +42,75 @@ class GoApplicationConfigData(object):
         return self.config_dict.has_key(field_name)
 
 
-class GoApplicationConfigMixin(object):
+class GoWorkerConfigMixin(object):
+    worker_name = ConfigText(
+        "Name of this worker.", required=True, static=True)
+    metrics_prefix = ConfigText(
+        "Metric name prefix.", required=True, static=True)
+    riak_manager = ConfigDict("Riak config.", static=True)
+    redis_manager = ConfigDict("Redis config.", static=True)
+
+    api_routing = ConfigDict("AMQP config for API commands.", static=True)
+    app_event_routing = ConfigDict("AMQP config for app events.", static=True)
+
     def get_conversation(self):
         return self._config_data.conv
 
 
-class GoApplicationMixin(object):
+class GoWorkerMixin(object):
+    redis = None
+    manager = None
+    control_consumer = None
 
-    def _go_validate_config(self):
-        self.worker_name = self.config.get('worker_name', self.worker_name)
-        self.api_routing_config = VumiApiCommand.default_routing_config()
-        self.api_routing_config.update(self.config.get('api_routing', {}))
-        self.app_event_routing_config = VumiApiEvent.default_routing_config()
-        self.app_event_routing_config.update(
-            self.config.get('app_event_routing', {}))
-        self.control_consumer = None
-        # This is now mandatory, so you need to provide it even if the app
-        # doesn't do metrics.
-        self.metrics_prefix = self.config['metrics_prefix']
+    def _go_setup_vumi_api(self, config):
+        api_config = {
+            'riak_manager': config.riak_manager,
+            'redis_manager': config.redis_manager,
+            }
+        d = VumiApi.from_config_async(api_config, self._amqp_client)
 
-    @inlineCallbacks
-    def _go_setup_application(self):
-        self.vumi_api = yield VumiApi.from_config_async(
-            self.config, self._amqp_client)
-        self._metrics_conversations = set()
-        self._cache_recon_conversations = set()
+        def cb(vumi_api):
+            self.vumi_api = vumi_api
+            self.redis = vumi_api.redis
+            self.manager = vumi_api.manager
+        return d.addCallback(cb)
 
-        # In case we need these.
-        self.redis = self.vumi_api.redis
-        self.manager = self.vumi_api.manager
-
-        self.app_event_publisher = yield self.publish_to(
-            self.app_event_routing_config['routing_key'])
-
-        self.metrics = yield self.start_publisher(
-            OneShotMetricManager, self.metrics_prefix)
-
-        self.control_consumer = yield self.consume(
+    def _go_setup_command_consumer(self, config):
+        api_routing_config = VumiApiCommand.default_routing_config()
+        if config.api_routing:
+            api_routing_config.update(config.api_routing)
+        d = self.consume(
             '%s.control' % (self.worker_name,),
             self.consume_control_command,
-            exchange_name=self.api_routing_config['exchange'],
-            exchange_type=self.api_routing_config['exchange_type'],
+            exchange_name=api_routing_config['exchange'],
+            exchange_type=api_routing_config['exchange_type'],
             message_class=VumiApiCommand)
+        return d.addCallback(lambda r: setattr(self, 'control_consumer', r))
+
+    def _go_setup_event_publisher(self, config):
+        app_event_routing_config = VumiApiEvent.default_routing_config()
+        if config.app_event_routing:
+            app_event_routing_config.update(config.app_event_routing)
+        d = self.publish_to(app_event_routing_config['routing_key'])
+        return d.addCallback(lambda r: setattr(self, 'app_event_publisher', r))
 
     @inlineCallbacks
-    def _go_teardown_application(self):
+    def _go_setup_worker(self):
+        self._metrics_conversations = set()
+        self._cache_recon_conversations = set()
+        config = self.get_static_config()
+        if config.worker_name is not None:
+            self.worker_name = config.worker_name
+
+        self.metrics = yield self.start_publisher(
+            OneShotMetricManager, config.metrics_prefix)
+
+        yield self._go_setup_vumi_api(config)
+        yield self._go_setup_event_publisher(config)
+        yield self._go_setup_command_consumer(config)
+
+    @inlineCallbacks
+    def _go_teardown_worker(self):
         # Sometimes something else closes our Redis connection.
         if self.redis is not None:
             yield self.redis.close_manager()
@@ -107,8 +131,8 @@ class GoApplicationMixin(object):
         if isinstance(msg, TransportEvent):
             msg = yield self.find_message_for_event(msg)
 
-        metadata = self.get_go_metadata(msg)
-        conversation = yield metadata.get_conversation()
+        msg_mdh = self.get_metadata_helper(msg)
+        conversation = yield msg_mdh.get_conversation()
 
         returnValue(self.get_config_for_conversation(conversation))
 
@@ -193,7 +217,7 @@ class GoApplicationMixin(object):
         log.msg('Cache reconciled for %s' % (conversation_key,))
 
     @inlineCallbacks
-    def get_contact_for_message(self, message):
+    def get_contact_for_message(self, message, create=True):
         helper_metadata = message.get('helper_metadata', {})
 
         go_metadata = helper_metadata.get('go', {})
@@ -203,10 +227,25 @@ class GoApplicationMixin(object):
         if account_key and conversation_key:
             user_api = self.get_user_api(account_key)
             conv = yield user_api.get_wrapped_conversation(conversation_key)
-            contact = yield user_api.contact_store.contact_for_addr(
-                conv.delivery_class, message.user())
 
+            contact = yield user_api.contact_store.contact_for_addr(
+                conv.delivery_class, message.user(), create=create)
             returnValue(contact)
+
+    @inlineCallbacks
+    def get_user_account(self, batch_id):
+        batch = yield self.vumi_api.mdb.get_batch(batch_id)
+        if batch is None:
+            log.error('Cannot find batch for batch_id %s' % (batch_id,))
+            return
+
+        user_account_key = batch.metadata["user_account"]
+        if user_account_key is None:
+            log.error("No account key in batch metadata: %r" % (batch,))
+            return
+
+        user_account = yield self.vumi_api.get_user_account(user_account_key)
+        returnValue(user_account)
 
     @inlineCallbacks
     def get_conversation(self, batch_id, conversation_key):
@@ -224,8 +263,8 @@ class GoApplicationMixin(object):
         conv = yield user_api.get_wrapped_conversation(conversation_key)
         returnValue(conv)
 
-    def get_go_metadata(self, msg):
-        return GoMessageMetadata(self.vumi_api, msg)
+    def get_metadata_helper(self, msg):
+        return MessageMetadataHelper(self.vumi_api, msg)
 
     @inlineCallbacks
     def find_outboundmessage_for_event(self, event):
@@ -246,19 +285,15 @@ class GoApplicationMixin(object):
         if outbound_message:
             returnValue(outbound_message.msg)
 
-    @inlineCallbacks
     def event_for_message(self, message, event_type, content):
-        gmt = self.get_go_metadata(message)
-        account_key = yield gmt.get_account_key()
-        conversation_key, conversation_type = yield gmt.get_conversation_info()
-        event = VumiApiEvent.event(account_key, conversation_key,
-                                    event_type, content)
-        returnValue(event)
+        msg_mdh = self.get_metadata_helper(message)
+        return VumiApiEvent.event(msg_mdh.get_account_key(),
+                                  msg_mdh.get_conversation_key(),
+                                  event_type, content)
 
-    @inlineCallbacks
     def trigger_event(self, message, event_type, content):
-        event = yield self.event_for_message(message, event_type, content)
-        yield self.publish_app_event(event)
+        event = self.event_for_message(message, event_type, content)
+        return self.publish_app_event(event)
 
     def publish_app_event(self, event):
         self.app_event_publisher.publish_message(event)
@@ -301,6 +336,20 @@ class GoApplicationMixin(object):
         self.publish_conversation_metric(
             conversation, 'messages_received', received)
 
+    def add_conv_to_msg_options(self, conv, msg_options):
+        helper_metadata = msg_options.setdefault('helper_metadata', {})
+        conv.set_go_helper_metadata(helper_metadata)
+        return msg_options
+
+
+class GoApplicationMixin(GoWorkerMixin):
+    # TODO: Move some stuff to here.
+    pass
+
+
+class GoApplicationConfig(ApplicationWorker.CONFIG_CLASS, GoWorkerConfigMixin):
+    pass
+
 
 class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):
     """
@@ -313,14 +362,20 @@ class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):
         The name of this worker, used for receiving control messages.
 
     """
+    CONFIG_CLASS = GoApplicationConfig
 
     worker_name = None
 
-    def validate_config(self):
-        return self._go_validate_config()
-
     def setup_application(self):
-        return self._go_setup_application()
+        return self._go_setup_worker()
 
     def teardown_application(self):
-        return self._go_teardown_application()
+        return self._go_teardown_worker()
+
+    def _publish_message(self, message, endpoint_name=None):
+        if not self.get_metadata_helper(message).get_conversation_info:
+            log.error(
+                "Conversation metadata missing for message for %s: %s" % (
+                    type(self).__name__, message))
+        return super(GoApplicationWorker, self)._publish_message(
+            message, endpoint_name)

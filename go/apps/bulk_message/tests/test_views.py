@@ -99,6 +99,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         [contact] = self.get_contacts_for_conversation(conversation)
         msg_options = {
             "transport_type": "sms",
+            "transport_name": self.transport_name,
             "from_addr": "default10001",
             "helper_metadata": {
                 "tag": {"tag": list(tag)},
@@ -356,6 +357,7 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         [contact] = self.get_contacts_for_conversation(conversation)
         msg_options = {
             "transport_type": "sms",
+            "transport_name": self.transport_name,
             "from_addr": "default10001",
             "helper_metadata": {
                 "tag": {
@@ -445,6 +447,7 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
 
         msg_options = {
             "transport_type": "sms",
+            "transport_name": self.transport_name,
             "from_addr": "default10001",
             "helper_metadata": {
                 "tag": {"tag": list(tag)},
@@ -491,12 +494,16 @@ class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
         return self.user_api.wrap_conversation(conv)
 
     def test_actions_on_inbound_only(self):
-        self.put_sample_messages_in_conversation(self.user_api,
+        messages = self.put_sample_messages_in_conversation(self.user_api,
                                                     self.conv_key, 1)
+        [msg_in, msg_out, ack, dr] = messages[0]
+
         response = self.client.get(reverse('bulk_message:show', kwargs={
             'conversation_key': self.conv_key
             }), {'direction': 'inbound'})
         self.assertContains(response, 'Reply')
+        self.assertContains(response, 'href="#reply-%s"' % (
+            msg_in['message_id'],))
 
         response = self.client.get(reverse('bulk_message:show', kwargs={
             'conversation_key': self.conv_key
@@ -529,6 +536,7 @@ class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(reply_to_cmd['command'], 'send_message')
         self.assertEqual(reply_to_cmd['kwargs']['command_data'], {
             'batch_id': conversation.get_latest_batch_key(),
+            'conversation_key': conversation.key,
             'content': 'foo',
             'to_addr': msg['from_addr'],
             'msg_options': msg_options,

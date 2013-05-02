@@ -1,6 +1,9 @@
+import csv
 from datetime import datetime
+from StringIO import StringIO
 
 from django.conf import settings
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.urlresolvers import reverse
@@ -16,9 +19,6 @@ from go.apps.surveys import forms
 from go.apps.surveys.views import _clear_empties
 
 from vxpolls.manager import PollManager
-
-
-redis = RedisManager.from_config(settings.VXPOLLS_REDIS_CONFIG)
 
 
 def link_poll_to_conversation(poll_name, poll_id, conversation):
@@ -52,6 +52,7 @@ def generate_poll_id(conversation, suffix):
 
 
 def get_poll_config(poll_id):
+    redis = RedisManager.from_config(settings.VXPOLLS_REDIS_CONFIG)
     pm = PollManager(redis, settings.VXPOLLS_PREFIX)
     config = pm.get_config(poll_id)
     config.update({
@@ -131,6 +132,7 @@ def new_survey(request, conversation_key):
         'poll_name': '',
     }
     if request.method == 'POST':
+        redis = RedisManager.from_config(settings.VXPOLLS_REDIS_CONFIG)
         pm = PollManager(redis, settings.VXPOLLS_PREFIX)
         post_data = request.POST.copy()
         form = forms.make_form(data=post_data, initial=initial_config)
@@ -320,3 +322,13 @@ def show(request, conversation_key):
     return render(request, 'multi_surveys/show.html', {
         'conversation': conversation,
     })
+
+
+@login_required
+def download_aggregates(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
+    direction = request.GET.get('direction', 'inbound')
+    sio = StringIO()
+    writer = csv.writer(sio)
+    writer.writerows(conversation.get_aggregate_count(direction))
+    return HttpResponse(sio.getvalue(), content_type='text/csv; charset=utf-8')

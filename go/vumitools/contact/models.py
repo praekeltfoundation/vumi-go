@@ -7,10 +7,18 @@ from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (Unicode, ManyToMany, ForeignKey, Timestamp,
-                                    Dynamic)
+                                 Dynamic)
 
 from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.opt_out import OptOutStore
+
+
+class ContactError(Exception):
+    """Raised when an error occurs accessing or manipulating a Contact"""
+
+
+class ContactNotFoundError(ContactError):
+    """Raised when a contact is not found"""
 
 
 class ContactGroup(Model):
@@ -79,9 +87,16 @@ class Contact(Model):
 
 
 class ContactStore(PerAccountStore):
+    NONSETTABLE_CONTACT_FIELDS = ['$VERSION', 'user_account']
+
     def setup_proxies(self):
         self.contacts = self.manager.proxy(Contact)
         self.groups = self.manager.proxy(ContactGroup)
+
+    @classmethod
+    def settable_contact_fields(cls, **fields):
+        return dict((k, v) for k, v in fields.iteritems()
+                    if k not in cls.NONSETTABLE_CONTACT_FIELDS)
 
     @Manager.calls_manager
     def new_contact(self, **fields):
@@ -91,7 +106,26 @@ class ContactStore(PerAccountStore):
         groups = fields.pop('groups', [])
 
         contact = self.contacts(
-            contact_id, user_account=self.user_account_key, **fields)
+            contact_id, user_account=self.user_account_key,
+            **self.settable_contact_fields(**fields))
+
+        for group in groups:
+            contact.add_to_group(group)
+
+        yield contact.save()
+        returnValue(contact)
+
+    @Manager.calls_manager
+    def update_contact(self, key, **fields):
+        # These are foreign keys.
+        groups = fields.pop('groups', [])
+        fields = self.settable_contact_fields(**fields)
+
+        contact = yield self.get_contact_by_key(key)
+        for field_name, field_value in fields.iteritems():
+            if field_name in contact.field_descriptors:
+                setattr(contact, field_name, field_value)
+
         for group in groups:
             contact.add_to_group(group)
 
@@ -117,8 +151,13 @@ class ContactStore(PerAccountStore):
         yield group.save()
         returnValue(group)
 
+    @Manager.calls_manager
     def get_contact_by_key(self, key):
-        return self.contacts.load(key)
+        contact = yield self.contacts.load(key)
+        if contact is None:
+            raise ContactNotFoundError(
+                "Contact with key '%s' not found." % key)
+        returnValue(contact)
 
     def get_group(self, name):
         return self.groups.load(name)
@@ -232,39 +271,49 @@ class ContactStore(PerAccountStore):
         opt_out = yield opt_out_store.get_opt_out('msisdn', contact.msisdn)
         returnValue(opt_out)
 
-    @Manager.calls_manager
-    def contact_for_addr(self, delivery_class, addr):
+    def _contact_field_for_addr(self, delivery_class, addr):
+        # TODO: change when we have proper address types in vumi
         if delivery_class in ('sms', 'ussd'):
-            addr = '+' + addr.lstrip('+')
-            keys = yield self.contacts.search(msisdn=addr).get_keys()
-            if keys:
-                contact = yield self.contacts.load(keys[0])
-                returnValue(contact)
-            contact_id = uuid4().get_hex()
-            returnValue(self.contacts(contact_id,
-                                      user_account=self.user_account_key,
-                                      msisdn=addr))
+            return {'msisdn': '+' + addr.lstrip('+')}
         elif delivery_class == 'gtalk':
-            addr = addr.partition('/')[0]
-            keys = yield self.contacts.search(gtalk_id=addr).get_keys()
-            if keys:
-                contact = yield self.contacts.load(keys[0])
-                returnValue(contact)
-            contact_id = uuid4().get_hex()
-            contact = self.contacts(contact_id,
-                                    user_account=self.user_account_key,
-                                    gtalk_id=addr, msisdn=u'unknown')
-            returnValue(contact)
+            return {'gtalk_id': addr.partition('/')[0]}
         elif delivery_class == 'twitter':
-            keys = yield self.contacts.search(twitter_handle=addr).get_keys()
-            if keys:
-                contact = yield self.contacts.load(keys[0])
-                returnValue(contact)
-            contact_id = uuid4().get_hex()
-            contact = self.contacts(contact_id,
-                                    user_account=self.user_account_key,
-                                    twitter_handle=addr, msisdn=u'unknown')
-            returnValue(contact)
+            return {'twitter_handle': addr}
         else:
-            raise RuntimeError("Unsupported transport_type %r"
-                               % (delivery_class,))
+            raise ContactError(
+                "Unsupported transport_type %r" % delivery_class)
+
+    def new_contact_for_addr(self, delivery_class, addr):
+        field = self._contact_field_for_addr(delivery_class, addr)
+        field.setdefault('msisdn', u'unknown')
+        return self.new_contact(**field)
+
+    @Manager.calls_manager
+    def contact_for_addr(self, delivery_class, addr, create=True):
+        """
+        Returns a contact from a delivery class and address, raising a
+        ContactNotFound exception if the contact does not exist.
+        """
+        field = self._contact_field_for_addr(delivery_class, addr)
+        keys = yield self.contacts.search(**field).get_keys()
+
+        if keys:
+            contacts = []
+            bunches = yield self.contacts.load_all_bunches(keys)
+            for bunch in bunches:
+                contacts.extend((yield bunch))
+            # All the matches we get back may have been deleted from Riak,
+            # if that's the case then just continue and create if that's
+            # been requested.
+            if contacts:
+                returnValue(max(contacts, key=lambda c: c.created_at))
+
+        if create:
+            contact_id = uuid4().get_hex()
+            field.setdefault('msisdn', u'unknown')
+            returnValue(self.contacts(
+                contact_id, user_account=self.user_account_key, **field))
+
+        raise ContactNotFoundError(
+            "Contact with address '%s' for delivery class '%s' not found."
+            % (addr, delivery_class))

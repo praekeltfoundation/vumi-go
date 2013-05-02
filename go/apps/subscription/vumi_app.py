@@ -12,13 +12,13 @@ class SubscriptionApplication(GoApplicationWorker):
     """
     Application that recognises keywords and fires events.
     """
-    SEND_TO_TAGS = frozenset(['default'])
     worker_name = 'subscription_application'
 
     @inlineCallbacks
     def send_message(self, batch_id, to_addr, content, msg_options):
         # TODO: Update
-        msg = yield self.send_to(to_addr, content, **msg_options)
+        msg = yield self.send_to(
+            to_addr, content, endpoint='default', **msg_options)
         yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=batch_id)
         log.info('Stored outbound %s' % (msg,))
 
@@ -38,12 +38,12 @@ class SubscriptionApplication(GoApplicationWorker):
 
     @inlineCallbacks
     def consume_user_message(self, message):
-        gmd = self.get_go_metadata(message)
-        user_api = self.get_user_api((yield gmd.get_account_key()))
-        conv = user_api.wrap_conversation((yield gmd.get_conversation()))
+        msg_mdh = self.get_metadata_helper(message)
+        user_api = self.get_user_api(msg_mdh.get_account_key())
+        conv = yield msg_mdh.get_conversation()
 
         contact = yield user_api.contact_store.contact_for_addr(
-            conv.delivery_class, message['from_addr'])
+            conv.delivery_class, message['from_addr'], create=True)
         # We're guaranteed to have a contact here, because we create one if we
         # can't find an existing one.
 

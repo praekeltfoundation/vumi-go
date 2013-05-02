@@ -1,0 +1,11 @@
+-
+  key: group1
+  name: group1
+  account: user1@example.org
+  contacts_csv: setup_env/contacts.csv
+
+-
+  key: group2
+  name: group2
+  account: user2@example.org
+  contacts_csv: setup_env/contacts.csv

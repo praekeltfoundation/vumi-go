@@ -9,10 +9,9 @@ from vumi.utils import http_request_full
 from vumi.transports.httprpc import httprpc
 from vumi import log
 
-from go.vumitools.api import VumiApi
 from go.vumitools.app_worker import GoApplicationWorker
-from go.apps.http_api.resource import (StreamingResource, MessageStream,
-                                        EventStream)
+from go.apps.http_api.resource import (AuthorizedResource, MessageStream,
+                                       EventStream)
 
 
 class StreamingClientManager(object):
@@ -72,7 +71,6 @@ class StreamingHTTPWorker(GoApplicationWorker):
         Defaults to '/health/'
     """
     worker_name = 'http_api_worker'
-    SEND_TO_TAGS = frozenset(['default'])
 
     def validate_config(self):
         super(StreamingHTTPWorker, self).validate_config()
@@ -88,12 +86,11 @@ class StreamingHTTPWorker(GoApplicationWorker):
         # in using any of the helper functions at this point.
         self._event_handlers = {}
         self._session_handlers = {}
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
         self.client_manager = StreamingClientManager(
             self.redis.sub_manager('http_api:message_cache'))
 
         self.webserver = self.start_web_resources([
-            (StreamingResource(self), self.web_path),
+            (AuthorizedResource(self), self.web_path),
             (httprpc.HttpRpcHealthResource(self), self.health_path),
         ], self.web_port)
 
@@ -124,19 +121,39 @@ class StreamingHTTPWorker(GoApplicationWorker):
                  (conversation_key,))
 
     @inlineCallbacks
+    def process_command_send_message(self, *args, **kwargs):
+        command_data = kwargs['command_data']
+        log.info('Processing send_message: %s' % kwargs)
+        to_addr = command_data['to_addr']
+        content = command_data['content']
+        msg_options = command_data['msg_options']
+        in_reply_to = msg_options.pop('in_reply_to', None)
+        if in_reply_to:
+            msg = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
+            if msg:
+                # We can't override transport_name in reply_to(), so we set it
+                # on the message we're replying to.
+                msg['transport_name'] = msg_options['transport_name']
+                yield self.reply_to(msg, content)
+            else:
+                log.warning('Unable to reply, message %s does not exist.' % (
+                    in_reply_to))
+        else:
+            yield self.send_to(to_addr, content, **msg_options)
+
+    @inlineCallbacks
     def consume_user_message(self, message):
-        md = self.get_go_metadata(message)
-        account_key = yield md.get_account_key()
-        raw_conv = yield md.get_conversation()
-        if raw_conv is None:
+        msg_mdh = self.get_metadata_helper(message)
+        user_api = msg_mdh.get_user_api()
+        conv_key = msg_mdh.get_conversation_key()
+        conversation = yield user_api.get_wrapped_conversation(conv_key)
+        if conversation is None:
             log.warning("Cannot find conversation for message: %r" % (
                 message,))
             return
 
-        user_api = self.get_user_api(account_key)
-        conversation = user_api.wrap_conversation(raw_conv)
         push_message_url = self.get_api_metadata(conversation,
-            'push_message_url')
+                                                 'push_message_url')
         if push_message_url:
             resp = yield self.push(push_message_url, message)
             if resp.code != http.OK:
@@ -179,7 +196,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
 
     def get_health_response(self):
         return str(sum([len(callbacks) for callbacks in
-                    self.client_manager.clients.values()]))
+                   self.client_manager.clients.values()]))
 
     @inlineCallbacks
     def teardown_application(self):
