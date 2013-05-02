@@ -7,6 +7,7 @@ from celery.task import task
 
 from django.conf import settings
 from django.core.mail import send_mail, EmailMessage
+from django.core.files.storage import default_storage
 from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
 
@@ -157,6 +158,8 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
                 'user': user_profile.user,
             }), settings.DEFAULT_FROM_EMAIL, [user_profile.user.email],
             fail_silently=False)
+
+        default_storage.delete(file_path)
 
     except:
         # Clean up if something went wrong, either everything is written
