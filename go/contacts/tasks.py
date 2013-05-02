@@ -186,5 +186,4 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
                 'support+contact-import@vumi.org',
             ], fail_silently=False)
     finally:
-        if default_storage.exists(file_path):
-            default_storage.delete(file_path)
+        default_storage.delete(file_path)

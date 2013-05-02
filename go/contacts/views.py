@@ -175,8 +175,7 @@ def _static_group(request, contact_store, group):
 
             except (ContactParserException,):
                 messages.error(request, 'Something is wrong with the file')
-                if default_storage.exists(file_path):
-                    default_storage.delete(file_path)
+                default_storage.delete(file_path)
 
         else:
             upload_contacts_form = UploadContactsForm(request.POST,
@@ -214,8 +213,7 @@ def _static_group(request, contact_store, group):
         except (ValueError, ContactParserException):
             messages.error(request, 'Something is wrong with the file')
             utils.clear_file_hints_from_session(request)
-            if default_storage.exists(file_path):
-                default_storage.delete(file_path)
+            default_storage.delete(file_path)
 
     selected_letter = request.GET.get('l', 'a')
     query = request.GET.get('q', '')
