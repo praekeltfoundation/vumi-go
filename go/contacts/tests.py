@@ -9,6 +9,7 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.core import mail
 
+from django.core.files.storage import default_storage
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.contacts.parsers.base import FieldNormalizer
 
@@ -139,6 +140,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
 
         self.specify_columns(group_key=group.key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_contact_upload_into_existing_group(self):
         self.clear_groups()
@@ -154,6 +156,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(len(group.backlinks.contacts()), 0)
         self.specify_columns()
         self.assertEqual(len(group.backlinks.contacts()), 3)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_uploading_unicode_chars_in_csv(self):
         self.clear_groups()
@@ -171,6 +174,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(len(group.backlinks.contacts()), 3)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_uploading_windows_linebreaks_in_csv(self):
         self.clear_groups()
@@ -206,6 +210,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(len(group.backlinks.contacts()), 2)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_uploading_unicode_chars_in_csv_into_new_group(self):
         self.clear_groups()
@@ -225,6 +230,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(len(group.backlinks.contacts()), 3)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_contact_upload_from_group_page(self):
 
@@ -267,6 +273,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(len(list(self.group.backlinks.contacts())), 3)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_graceful_error_handling_on_upload_failure(self):
         group_url = reverse('contacts:group', kwargs={
@@ -283,9 +290,9 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
             'file': wrong_file
         })
 
-        response = self.specify_columns()
-        self.assertEqual(response.status_code, 200)
+        response = self.client.get(group_url)
         self.assertContains(response, 'Something is wrong with the file')
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_contact_upload_failure(self):
         self.assertEqual(len(self.contact_store.list_groups()), 1)
@@ -296,6 +303,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertContains(response, 'Something went wrong with the upload')
         self.assertEqual(len(self.contact_store.list_groups()), 1)
         self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_contact_parsing_failure(self):
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
@@ -319,6 +327,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(len(contacts), 0)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('went wrong' in mail.outbox[0].subject)
+        self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_normalization(self):
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
