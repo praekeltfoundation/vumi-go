@@ -363,6 +363,8 @@ PIPELINE_JS = {
         'source_filenames': (
             'js/src/go.js',
             'js/src/campaigns/campaigns.js',
+            'js/src/campaigns/setup/setup.js',
+            'js/src/campaigns/setup/interactive.js',
             'js/src/tables/tables.js',
         ),
         'output_filename': 'export/go.js'
