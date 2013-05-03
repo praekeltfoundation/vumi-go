@@ -5,7 +5,7 @@ from go.campaigns.forms import CampaignGeneralForm, CampaignConfigurationForm
 
 def details(request, key=None):
     """
-    NOTE: This is a fake implementation, it's not based on anything
+    TODO: This is a fake implementation, it's not based on anything
     other than displaying the views and perhaps formulating
     some kind of workflow.
 
