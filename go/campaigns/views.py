@@ -6,14 +6,10 @@ from .forms import CampaignGeneralForm, CampaignConfigurationForm
 
 def details(request, key=None):
     """
-    I guess we would actually use a form here.
-
-    But I don't know how this hooks up with the models;
-    So... I'm going to maybe fake it?
-
-    Ok. I won't.
-
-    I'll create a form, but you guys will have to hook it up properly.
+    NOTE: This is a fake implementation, it's not based on anything
+    other than displaything the views and perhaps formulating
+    some kind of workflow.
+    
     """
     form_general = CampaignGeneralForm()
     form_config = CampaignConfigurationForm()
