@@ -33,7 +33,7 @@
     $(function() {
         // these are the save draft and cancel buttons at the top.
         $('.actions .right button').on('click', function() {
-            $frm = $('#frm-campaign');
+            var $frm = $('#frm-campaign');
             $frm.prepend('<input type="hidden" name="action" value="' + $(this).attr('data-action') + '">');
             $frm.submit();
             return false;
