@@ -215,29 +215,6 @@ def _static_group(request, contact_store, group):
             utils.clear_file_hints_from_session(request)
             default_storage.delete(file_path)
 
-    # selected_letter = request.GET.get('l', 'a')
-    # query = request.GET.get('q', '')
-    # if query:
-    #     if ':' in query:
-    #         query_kwargs = _query_to_kwargs(request.GET.get('q'))
-    #     else:
-    #         query_kwargs = _query_to_kwargs('name:%s' % query)
-
-    #     limit = int(request.GET.get('limit', 100))
-    #     keys = contact_store.contacts.search(**query_kwargs).get_keys()
-    #     if limit:
-    #         messages.info(request,
-    #             'Showing up to %s random contacts matching your query' % (
-    #                 limit,))
-    #         keys = keys[:limit]
-
-    #     selected_contacts = []
-    #     for contact_bunch in contact_store.contacts.load_all_bunches(keys):
-    #         selected_contacts.extend(contact_bunch)
-    # else:
-    #     selected_contacts = contact_store.filter_contacts_on_surname(
-    #         selected_letter, group=group)
-
     query = request.GET.get('q', '')
     if query:
         if not ':' in query:
