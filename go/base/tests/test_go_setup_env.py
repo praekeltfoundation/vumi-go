@@ -301,13 +301,15 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
     def test_create_webui_supervisord_conf(self):
         fake_file = FakeFile()
         self.command.open_file = Mock(side_effect=[fake_file])
+        self.command.webapp_bind = '[::]:8000'
         self.command.create_webui_supervisord_conf()
         fake_file.seek(0)
         webui_cp = ConfigParser()
         webui_cp.readfp(fake_file)
         self.assertTrue(webui_cp.has_section('program:webui'))
         webui_command = webui_cp.get('program:webui', 'command')
-        self.assertEqual('./go-admin.sh runserver --noreload', webui_command)
+        self.assertEqual('./go-admin.sh runserver [::]:8000 --noreload',
+                         webui_command)
 
     def test_group_loading(self):
         self.command.setup_tagpools(self.tagpool_file.name)

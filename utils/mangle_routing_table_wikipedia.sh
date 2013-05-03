@@ -7,8 +7,8 @@ if [ $# -ne 3 ]; then
 fi
 
 email_address="$1"
-ussd_conv="wikipedia_ussd:$2"
-sms_conv="wikipedia_sms:$3"
+ussd_conv="CONVERSATION:wikipedia_ussd:$2"
+sms_conv="CONVERSATION:wikipedia_sms:$3"
 
 . $(dirname $0)/mangle_routing_table_utils.sh
 

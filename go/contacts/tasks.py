@@ -1,11 +1,13 @@
 import sys
 import traceback
 from StringIO import StringIO
+from zipfile import ZipFile
 
 from celery.task import task
 
 from django.conf import settings
 from django.core.mail import send_mail, EmailMessage
+from django.core.files.storage import default_storage
 from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
 
@@ -83,8 +85,8 @@ def export_group_contacts(account_key, group_key, include_extra):
 
     # collect all names that we can export
     fields = ['name', 'surname', 'email_address', 'msisdn', 'dob',
-                    'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                    'created_at']
+              'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+              'created_at']
 
     # Collect the possible field names for this set of contacts, depending
     # the number of contacts found this could be potentially expensive.
@@ -95,14 +97,13 @@ def export_group_contacts(account_key, group_key, include_extra):
 
     # write the CSV header
     extra_fields = sorted(extra_fields)
-    writer.writerow(fields + ['extras-%s' % (key,)
-                                    for key in extra_fields])
+    writer.writerow(fields + ['extras-%s' % (key,) for key in extra_fields])
 
     # loop over the contacts and create the row populated with
     # the values of the selected fields.
     for contact in contacts:
         row = [unicode(getattr(contact, field, None) or '')
-                for field in fields]
+               for field in fields]
 
         if include_extra:
             row.extend([unicode(contact.extra[extra_field] or '')
@@ -110,18 +111,23 @@ def export_group_contacts(account_key, group_key, include_extra):
 
         writer.writerow(row)
 
-    email = EmailMessage('%s contacts export' % (group.name,),
-            'Please find the CSV data for %s contact(s) from '
-            'group "%s" attached.\n\n' % (
-            len(contact_keys), group.name),
+    zipio = StringIO()
+    with ZipFile(zipio, "a") as zip:
+        zip.writestr("contacts-export.csv", io.getvalue())
+
+    email = EmailMessage(
+        '%s contacts export' % (group.name,),
+        'Please find the CSV data for %s contact(s) from '
+        'group "%s" attached.\n\n' % (len(contact_keys), group.name),
         settings.DEFAULT_FROM_EMAIL, [user_profile.user.email])
-    email.attach('contacts-export.csv', io.getvalue(), 'text/csv')
+
+    email.attach('contacts-export.zip', zipio.getvalue(), 'application/zip')
     email.send()
 
 
 @task(ignore_result=True)
 def import_contacts_file(account_key, group_key, file_name, file_path,
-                            fields, has_header):
+                         fields, has_header):
     api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
     group = contact_store.get_group(group_key)
@@ -135,8 +141,7 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
     try:
         extension, parser = ContactFileParser.get_parser(file_name)
 
-        contact_dictionaries = parser.parse_file(file_path, fields,
-            has_header)
+        contact_dictionaries = parser.parse_file(file_path, fields, has_header)
         for counter, contact_dictionary in enumerate(contact_dictionaries):
 
             # Make sure we set this group they're being uploaded in to
@@ -145,7 +150,8 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
             contact = contact_store.new_contact(**contact_dictionary)
             written_contacts.append(contact)
 
-        send_mail('Contact import completed successfully.',
+        send_mail(
+            'Contact import completed successfully.',
             render_to_string('contacts/import_completed_mail.txt', {
                 'count': counter,
                 'group': group,
@@ -161,7 +167,8 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
 
         exc_type, exc_value, exc_traceback = sys.exc_info()
 
-        send_mail('Something went wrong while importing the contacts.',
+        send_mail(
+            'Something went wrong while importing the contacts.',
             render_to_string('contacts/import_failed_mail.txt', {
                 'user': user_profile.user,
                 'group_key': group_key,
@@ -178,3 +185,5 @@ def import_contacts_file(account_key, group_key, file_name, file_path,
                 user_profile.user.email,
                 'support+contact-import@vumi.org',
             ], fail_silently=False)
+    finally:
+        default_storage.delete(file_path)

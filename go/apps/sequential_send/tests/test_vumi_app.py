@@ -250,8 +250,18 @@ class TestSequentialSendApplication(AppWorkerTestCase):
                               key=lambda m: m['to_addr'])
         self.assertEqual(msg1['content'], 'foo')
         self.assertEqual(msg1['to_addr'], contact1.msisdn)
+        self.assertEqual(msg1['helper_metadata']['go'], {
+            'user_account': self.user_account.key,
+            'conversation_type': 'sequential_send',
+            'conversation_key': conv.key,
+        })
         self.assertEqual(msg2['content'], 'foo')
         self.assertEqual(msg2['to_addr'], contact2.msisdn)
+        self.assertEqual(msg2['helper_metadata']['go'], {
+            'user_account': self.user_account.key,
+            'conversation_type': 'sequential_send',
+            'conversation_key': conv.key,
+        })
 
         # Send to previous two contacts and a new third contact.
         contact3 = yield self.create_contact(name=u'Third',

@@ -106,6 +106,11 @@ class Command(BaseCommand):
             default='7101',
             help='The port supervisord should listen on.'),
         make_option(
+            '--webapp-bind',
+            dest='webapp_bind',
+            default='127.0.0.1:8000',
+            help='The host:addr that the Django webapp should bind to.'),
+        make_option(
             '--skip-startup-script',
             dest='write_startup_script',
             default=True,
@@ -127,6 +132,7 @@ class Command(BaseCommand):
         self.dest_dir = options['dest_dir']
         self.supervisord_host = options['supervisord_host']
         self.supervisord_port = options['supervisord_port']
+        self.webapp_bind = options['webapp_bind']
 
         self.contact_group_info = []
         self.conversation_info = []
@@ -500,7 +506,9 @@ class Command(BaseCommand):
             fp.write(self.auto_gen_warning)
             cp = ConfigParser()
             cp.add_section(section)
-            cp.set(section, "command", "./go-admin.sh runserver --noreload")
+            cp.set(
+                section, "command", "./go-admin.sh runserver %s --noreload" % (
+                    self.webapp_bind,))
             cp.set(section, "stdout_logfile",
                    "./logs/%(program_name)s_%(process_num)s.log")
             cp.set(section, "stderr_logfile",

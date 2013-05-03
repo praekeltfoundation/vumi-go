@@ -127,7 +127,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         def publish_cb(tagpool_metadata):
             transport_name = tagpool_metadata.get('transport_name')
             if transport_name is None:
-                log.warning("No transport_name for tag: (%r, %r)" % tag)
+                log.warning("No transport_name for tag: %r" % (tag,))
                 return
 
             return self.publish_outbound(msg, transport_name, target[1])
