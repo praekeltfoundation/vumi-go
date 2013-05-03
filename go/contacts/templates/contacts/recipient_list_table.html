@@ -38,11 +38,7 @@
             {% if query %}
                 No contacts match <strong>{{ query }}</strong>
             {% else %}
-                {% if selected_letter %}
-                    No contact surnames start with the letter <strong>{{selected_letter|upper}}</strong>
-                {% else %}
-                    You don't have any people yet.
-                {% endif %}
+                You don't have any people yet.
             {% endif %}
             </td>
         </tr>
