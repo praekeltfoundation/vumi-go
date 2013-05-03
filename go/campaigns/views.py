@@ -1,8 +1,7 @@
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 
-
 from go.campaigns.forms import CampaignGeneralForm, CampaignConfigurationForm
-
 
 def details(request, key=None):
     """
@@ -41,5 +40,7 @@ def message_bulk(request, campaign_key):
 def message_conversation(request, campaign_key):
     # is this for a conversation or bulk?
     # determine that and redirect.
-
     return render(request, 'campaigns/wizard_2_conversation.html')
+
+def todo(request):
+    return HttpResponse('TODO')
