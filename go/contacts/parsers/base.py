@@ -222,8 +222,8 @@ class ContactFileParser(object):
         field_map = dict(fields)
         # We're expecting a generator so loop over it and save as contacts
         # in the contact_store, normalizing anything we need to
-        data_dictionaries = self.read_data_from_file(file_path, field_names,
-            has_header)
+        data_dictionaries = self.read_data_from_file(
+            file_path, field_names, has_header)
         for data_dictionary in data_dictionaries:
 
             # Populate this with whatever we'll be sending to the
@@ -233,10 +233,10 @@ class ContactFileParser(object):
                 value = self.normalizer.normalize(field_map[key], value)
                 if not isinstance(value, basestring):
                     value = unicode(str(value), self.ENCODING,
-                        self.ENCODING_ERRORS)
+                                    self.ENCODING_ERRORS)
                 elif isinstance(value, str):
                     value = unicode(value, self.ENCODING,
-                        self.ENCODING_ERRORS)
+                                    self.ENCODING_ERRORS)
 
                 if value is None or value == '':
                     continue

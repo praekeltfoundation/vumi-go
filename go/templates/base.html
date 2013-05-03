@@ -76,28 +76,9 @@
         </form>
     </div>
 
-    {# javascript time -- old #}
-    <!---
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/tooltip.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/transition.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/collapse.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-dropdown.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-modal.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-popover.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-alert.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-typeahead.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-tab.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-button.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/jquery.timePicker.min.js"></script>
 
-    <script src="{{ STATIC_URL }}js/libs/jquery.validate.js"></script>
-    <script src="{{ STATIC_URL }}js/script.js"></script> #{ script.js? }
-
-    -->
-
-    {# javascript time -- new #}
-
-    {% compressed_js 'all' %}
+    {% compressed_js 'lib' %}
+    {% compressed_js 'go' %}
 
     {% block extrascript %}
     {% endblock %}

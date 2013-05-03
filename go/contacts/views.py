@@ -5,6 +5,7 @@ from urllib import urlencode
 from django.http import Http404
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
+from django.core.files.storage import default_storage
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -128,18 +129,19 @@ def _static_group(request, contact_store, group):
         elif '_export_group_contacts' in request.POST:
             tasks.export_group_contacts.delay(
                 request.user_api.user_account_key, group.key, True)
-            messages.info(request, 'The export is scheduled and should '
-                                    'complete within a few minutes.')
+            messages.info(request,
+                          'The export is scheduled and should '
+                          'complete within a few minutes.')
             return redirect(_group_url(group.key))
         elif '_delete_group_contacts' in request.POST:
             tasks.delete_group_contacts.delay(
                 request.user_api.user_account_key, group.key)
             messages.info(request,
-                "The group's contacts will be deleted shortly.")
+                          "The group's contacts will be deleted shortly.")
             return redirect(_group_url(group.key))
         elif '_delete_group' in request.POST:
             tasks.delete_group.delay(request.user_api.user_account_key,
-                group.key)
+                                     group.key)
             messages.info(request, 'The group will be deleted shortly.')
             return redirect(reverse('contacts:index'))
         elif '_complete_contact_upload' in request.POST:
@@ -154,28 +156,30 @@ def _static_group(request, contact_store, group):
                 # by looping over the expect n number of `column-n` keys being
                 # posted
                 field_names = [request.POST.get('column-%s' % i) for i in
-                                range(len(sample_row))]
+                               range(len(sample_row))]
                 normalizers = [request.POST.get('normalize-%s' % i, '')
-                                for i in range(len(sample_row))]
+                               for i in range(len(sample_row))]
                 fields = zip(field_names, normalizers)
 
                 tasks.import_contacts_file.delay(
                     request.user_api.user_account_key, group.key, file_name,
                     file_path, fields, has_header)
 
-                messages.info(request, 'The contacts are being imported. '
-                    'We will notify you via email when the import has '
-                    'been completed')
+                messages.info(
+                    request, 'The contacts are being imported. '
+                             'We will notify you via email when the import '
+                             'has been completed')
 
                 utils.clear_file_hints_from_session(request)
                 return redirect(_group_url(group.key))
 
             except (ContactParserException,):
                 messages.error(request, 'Something is wrong with the file')
+                default_storage.delete(file_path)
 
         else:
             upload_contacts_form = UploadContactsForm(request.POST,
-                                                        request.FILES)
+                                                      request.FILES)
             if upload_contacts_form.is_valid():
                 file_object = upload_contacts_form.cleaned_data['file']
                 file_name, file_path = utils.store_temporarily(file_object)
@@ -209,6 +213,7 @@ def _static_group(request, contact_store, group):
         except (ValueError, ContactParserException):
             messages.error(request, 'Something is wrong with the file')
             utils.clear_file_hints_from_session(request)
+            default_storage.delete(file_path)
 
     # selected_letter = request.GET.get('l', 'a')
     # query = request.GET.get('q', '')
@@ -256,7 +261,7 @@ def _static_group(request, contact_store, group):
         'query': request.GET.get('q'),
         'selected_contacts': selected_contacts,
         'member_count': contact_store.count_contacts_for_group(group),
-        })
+    })
 
     return render(request, 'contacts/group_detail.html', context)
 
@@ -275,31 +280,32 @@ def _smart_group(request, contact_store, group):
         tasks.export_group_contacts.delay(
             request.user_api.user_account_key, group.key, True)
         messages.info(request, 'The export is scheduled and should '
-                                'complete within a few minutes.')
+                               'complete within a few minutes.')
         return redirect(_group_url(group.key))
     elif '_delete_group_contacts' in request.POST:
         tasks.delete_group_contacts.delay(request.user_api.user_account_key,
-            group.key)
+                                          group.key)
         messages.info(request, "The group's contacts will be deleted shortly.")
         return redirect(_group_url(group.key))
     elif '_delete_group' in request.POST:
         tasks.delete_group.delay(request.user_api.user_account_key,
-            group.key)
+                                 group.key)
         messages.info(request, 'The group will be deleted shortly.')
         return redirect(reverse('contacts:index'))
     else:
         smart_group_form = SmartGroupForm({
             'name': group.name,
             'query': group.query,
-            })
+        })
 
     keys = contact_store.contacts.raw_search(group.query).get_keys()
     member_count = len(keys)
     limit = int(request.GET.get('limit', 100))
     if limit:
-        messages.info(request,
-                'Showing up to %s random contacts matching your query' % (
-                    limit,))
+        messages.info(
+            request,
+            'Showing up to %s random contacts matching your query' % (
+                limit,))
         keys = keys[:limit]
     selected_contacts = []
     for contacts in contact_store.contacts.load_all_bunches(keys):
@@ -349,7 +355,7 @@ def _people(request):
 
             if group is None:
                 messages.error(request, 'Please select a group or provide '
-                    'a new group name.')
+                                        'a new group name.')
             else:
                 file_object = upload_contacts_form.cleaned_data['file']
                 file_name, file_path = utils.store_temporarily(file_object)
@@ -395,7 +401,7 @@ def _people(request):
         'upload_contacts_form': upload_contacts_form,
         'select_contact_group_form': select_contact_group_form,
         'smart_group_form': smart_group_form,
-        })
+    })
 
 
 @login_required
@@ -463,7 +469,8 @@ def new_person(request):
             return redirect(reverse('contacts:person', kwargs={
                 'person_key': contact.key}))
         else:
-            messages.add_message(request, messages.ERROR,
+            messages.add_message(
+                request, messages.ERROR,
                 'Please correct the problem below.')
     else:
         form = ContactForm(groups=groups)
