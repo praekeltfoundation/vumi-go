@@ -382,7 +382,6 @@ def _people(request):
     else:
         keys = contact_store.list_contacts()
 
-
     limit = int(request.GET.get('limit', 100))
     if limit:
         messages.info(request,
