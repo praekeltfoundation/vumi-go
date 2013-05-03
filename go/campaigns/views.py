@@ -13,8 +13,7 @@ def details(request, key=None):
     form_general = CampaignGeneralForm()
     form_config = CampaignConfigurationForm()
 
-    if request.POST:
-
+    if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'draft':
             return redirect('conversations:index')
