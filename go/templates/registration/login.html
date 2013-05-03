@@ -5,8 +5,6 @@
 <form action="{% url 'auth_login' %}" method="post" class="auth-login">
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ next }}">
-
-    <input type="hidden" name="next" value="{{ next }}">
     <fieldset>
         <p>
             <input type="text" class="input-large email required" id="signin-input-email" name="username" placeholder="Email Address">
