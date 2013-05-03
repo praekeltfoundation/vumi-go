@@ -1,14 +1,9 @@
 {% extends "app.html" %}
-{% load go_tags %}
 {% load url from future %}
-
-
 
 {% block content_extraclass %}
     campaigns
 {% endblock %}
-
-
 
 {% block content_breadcrumbs %}
 <a href="{% url 'campaigns:details' %}">
