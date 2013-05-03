@@ -23,12 +23,12 @@ class NewWikipediaConversationView(NewConversationView):
 
         conversation_data = {
             'name': form.cleaned_data['subject'],
+            'description': form.cleaned_data['message'],
             'delivery_class': form.cleaned_data['delivery_class'],
             'delivery_tag_pool': form.cleaned_data['delivery_tag_pool'],
             'config': {
                 u'send_from_tagpool': form.cleaned_data['send_from_tagpool'],
                 u'send_from_tag': form.cleaned_data['send_from_tag'],
-                u'content': form.cleaned_data['message'],
                 },
             }
 

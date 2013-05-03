@@ -51,8 +51,8 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
                 })
 
         self.assertNotContains(
-            search('bulk_message'), conversation.config['content'])
-        self.assertContains(search('survey'), conversation.config['content'])
+            search('bulk_message'), conversation.description)
+        self.assertContains(search('survey'), conversation.description)
 
     def test_index_search_on_status(self):
         conversation = self.get_wrapped_conv()
@@ -64,25 +64,25 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
                 })
 
         # it should be draft
-        self.assertContains(search('draft'), conversation.config['content'])
+        self.assertContains(search('draft'), conversation.description)
         self.assertNotContains(
-            search('running'), conversation.config['content'])
+            search('running'), conversation.description)
         self.assertNotContains(
-            search('finished'), conversation.config['content'])
+            search('finished'), conversation.description)
 
         # now it should be running
         conversation.start()
-        self.assertNotContains(search('draft'), conversation.config['content'])
-        self.assertContains(search('running'), conversation.config['content'])
+        self.assertNotContains(search('draft'), conversation.description)
+        self.assertContains(search('running'), conversation.description)
         self.assertNotContains(
-            search('finished'), conversation.config['content'])
+            search('finished'), conversation.description)
 
         # now it shouldn't be
         conversation.end_conversation()
-        self.assertNotContains(search('draft'), conversation.config['content'])
+        self.assertNotContains(search('draft'), conversation.description)
         self.assertNotContains(
-            search('running'), conversation.config['content'])
-        self.assertContains(search('finished'), conversation.config['content'])
+            search('running'), conversation.description)
+        self.assertContains(search('finished'), conversation.description)
 
     def test_received_messages(self):
         """
@@ -141,7 +141,7 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         for i in range(12):
             self.conv_store.new_conversation(
                 conversation_type=u'bulk_message',
-                name=self.TEST_CONVERSATION_NAME, config={u'content': u""},
+                name=self.TEST_CONVERSATION_NAME, description=u"", config={},
                 delivery_class=u"sms", delivery_tag_pool=u"longcode")
         response = self.client.get(reverse('conversations:index'))
         # CONVERSATIONS_PER_PAGE = 12
@@ -156,7 +156,7 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         for i in range(12):
             self.conv_store.new_conversation(
                 conversation_type=u'bulk_message',
-                name=self.TEST_CONVERSATION_NAME, config={u'content': u''},
+                name=self.TEST_CONVERSATION_NAME, description=u"", config={},
                 delivery_class=u"sms", delivery_tag_pool=u"longcode")
         response = self.client.get(reverse('conversations:index'), {
             'query': self.TEST_CONVERSATION_NAME,

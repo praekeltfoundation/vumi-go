@@ -399,7 +399,7 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
             }), full_token))
 
         self.assertContains(response, conversation.name)
-        self.assertContains(response, conversation.config['content'])
+        self.assertContains(response, conversation.description)
 
     def test_confirmation_post(self):
         conversation = self.user_api.get_wrapped_conversation(self.conv_key)
@@ -428,7 +428,7 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
             })
 
         self.assertContains(response, conversation.name)
-        self.assertContains(response, conversation.config['content'])
+        self.assertContains(response, conversation.description)
         self.assertContains(response, "Conversation confirmed")
         self.assertContains(response, "Conversation started succesfully!")
 

@@ -28,11 +28,12 @@ class WikipediaTestCase(DjangoGoApplicationTestCase):
         })
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
         conversation = self.get_latest_conversation()
+        self.assertEqual(conversation.name, 'the subject')
+        self.assertEqual(conversation.description, 'the message')
         self.assertEqual(conversation.delivery_class, 'sms')
         self.assertEqual(conversation.delivery_tag_pool, 'longcode')
         self.assertEqual(conversation.delivery_tag, None)
         self.assertEqual(conversation.config, {
-            'content': 'the message',
             'send_from_tagpool': 'devnull',
             'send_from_tag': '10017@devnull',
             })

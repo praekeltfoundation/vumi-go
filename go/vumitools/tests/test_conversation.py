@@ -47,10 +47,11 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
         self.assertEqual([], conversations)
 
         conv = yield self.conv_store.new_conversation(
-            u'bulk_message', u'subject', {u'content': u'message'})
+            u'bulk_message', u'subject', {u'foo': u'bar'})
         self.assertEqual(u'bulk_message', conv.conversation_type)
         self.assertEqual(u'subject', conv.name)
-        self.assertEqual({u'content': u'message'}, conv.config)
+        self.assertEqual(u'', conv.description)
+        self.assertEqual({u'foo': u'bar'}, conv.config)
         self.assertEqual([], conv.batches.keys())
 
         dbconv = yield self.conv_store.get_conversation_by_key(conv.key)
@@ -71,7 +72,8 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
 
         self.assertEqual(u'bulk_message', dbconv.conversation_type)
         self.assertEqual(u'subject', dbconv.name)
-        self.assertEqual({u'content': u'message'}, dbconv.config)
+        self.assertEqual(u'message', dbconv.description)
+        self.assertEqual({}, dbconv.config)
         self.assertEqual([], dbconv.batches.keys())
 
 

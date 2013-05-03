@@ -26,12 +26,12 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         })
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
         conversation = self.get_latest_conversation()
+        self.assertEqual(conversation.name, 'the subject')
+        self.assertEqual(conversation.description, 'the message')
         self.assertEqual(conversation.delivery_class, 'sms')
         self.assertEqual(conversation.delivery_tag_pool, 'longcode')
         self.assertEqual(conversation.delivery_tag, None)
-        self.assertEqual(conversation.config, {
-            'content': 'the message',
-            })
+        self.assertEqual(conversation.config, {})
         self.assertRedirects(response, reverse('jsbox:edit', kwargs={
             'conversation_key': conversation.key,
         }))
@@ -54,7 +54,6 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, reverse('jsbox:people', kwargs=kwargs))
         conversation = self.get_latest_conversation()
         self.assertEqual(conversation.config, {
-            'content': 'Test message',
             'jsbox': {
                     'javascript': 'x = 1;',
                     'source_url': '',

@@ -100,9 +100,10 @@ class NewConversationView(ConversationView):
 
         conversation_data = {
             'name': form.cleaned_data['subject'],
+            'description': form.cleaned_data['message'],
             'delivery_class': form.cleaned_data['delivery_class'],
             'delivery_tag_pool': form.cleaned_data['delivery_tag_pool'],
-            'config': {u'content': form.cleaned_data['message']},
+            'config': {},
             }
 
         tag_info = form.cleaned_data['delivery_tag_pool'].partition(':')

@@ -14,10 +14,9 @@ class ConversationMigrator(ModelMigrator):
         # Add stuff that's new in this version
         mdata.set_value('$VERSION', 1)
         mdata.set_value('name', mdata.old_data['subject'])
+        mdata.set_value('description', mdata.old_data['message'])
 
-        config = (mdata.old_data['metadata'] or {}).copy()
-        config['content'] = mdata.old_data['message']
-        mdata.set_value('config', config)
+        mdata.set_value('config', mdata.old_data['metadata'] or {})
 
         # We don't use the constants here because they may change or disappear
         # underneath us in the future.

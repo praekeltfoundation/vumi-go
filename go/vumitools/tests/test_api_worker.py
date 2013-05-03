@@ -168,8 +168,8 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
         yield self.add_tagpool_permission(u"pool")
 
         conversation = yield self.create_conversation(
-            conversation_type=u'bulk_message', config={u'content': u'message'},
-            delivery_tag_pool=u'pool', delivery_class=u'sms')
+            conversation_type=u'bulk_message', description=u'message',
+            config={}, delivery_tag_pool=u'pool', delivery_class=u'sms')
 
         yield conversation.start()
 
@@ -241,7 +241,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         self.user_api = self.vumi_api.get_user_api(self.account.key)
         self.conversation = (
             yield self.user_api.conversation_store.new_conversation(
-                u'bulk_message', u'subject', {u'content': u'message'}))
+                u'bulk_message', u'subject', {}))
 
     @inlineCallbacks
     def test_tag_retrieval_and_message_dispatching(self):
