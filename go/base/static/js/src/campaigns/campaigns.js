@@ -1,0 +1,2 @@
+(function(exports) {
+})(go.campaigns = {});
