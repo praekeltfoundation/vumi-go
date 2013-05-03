@@ -10,33 +10,31 @@ class CampaignGeneralForm(forms.Form):
         )
 
     name = forms.CharField(label="Campaign name", max_length=100)
-    type = forms.ChoiceField(label="Which kind of campaign would you like?", 
+    type = forms.ChoiceField(label="Which kind of campaign would you like?",
                              widget=forms.Select(), choices=TYPE_CHOICES)
+
 
 class CampaignConfigurationForm(forms.Form):
 
     COUNTRY_CHOICES = (
-            ('*', 'All Countries'),
-            ('.ke', 'Kenya'),
-            ('.za', 'South Africa'),
-        )
+        ('*', 'All Countries'),
+        ('.ke', 'Kenya'),
+        ('.za', 'South Africa'),
+    )
 
     CHANNEL_CHOICES = (
-            ('ussd', 'USSD'),
-            ('gtalk', 'Google Talk'),
-        )
+        ('ussd', 'USSD'),
+        ('gtalk', 'Google Talk'),
+    )
 
     # more than likely a many to many field, or something similair in the riak
     # world. Whom I kidding, this is probably just a modelform?
-    countries = forms.MultipleChoiceField(label="Destinations", 
-                                          widget=forms.Select(), 
+    countries = forms.MultipleChoiceField(label="Destinations",
+                                          widget=forms.Select(),
                                           choices=COUNTRY_CHOICES)
-    
-    channels = forms.MultipleChoiceField(label="Channels", 
-                                         widget=forms.Select(), 
+
+    channels = forms.MultipleChoiceField(label="Channels",
+                                         widget=forms.Select(),
                                          choices=CHANNEL_CHOICES)
 
     keyword = forms.CharField(label="Keyword", max_length=100)
-
-
-    
