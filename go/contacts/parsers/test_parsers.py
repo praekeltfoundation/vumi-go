@@ -10,18 +10,25 @@ from go.contacts.parsers.xls_parser import XLSFileParser
 
 
 class ParserTestCase(TestCase):
+    def setUp(self):
+        self._fixture_paths = []
+        self.parser = self.PARSER_CLASS()
+
+    def tearDown(self):
+        for fpath in self._fixture_paths:
+            default_storage.delete(fpath)
 
     def fixture(self, fixture_name):
         fixture_path = path.join(settings.PROJECT_ROOT, 'base', 'fixtures',
             fixture_name)
         content_file = ContentFile(open(fixture_path, 'r').read())
-        return default_storage.save('tmp/%s' % (fixture_name,), content_file)
+        fpath = default_storage.save('tmp/%s' % (fixture_name,), content_file)
+        self._fixture_paths.append(fpath)
+        return fpath
 
 
 class CSVParserTestCase(ParserTestCase):
-
-    def setUp(self):
-        self.parser = CSVFileParser()
+    PARSER_CLASS = CSVFileParser
 
     def test_guess_headers_and_row_without_headers(self):
         csv_file = self.fixture('sample-contacts.csv')
@@ -84,9 +91,7 @@ class CSVParserTestCase(ParserTestCase):
 
 
 class XLSParserTestCase(ParserTestCase):
-
-    def setUp(self):
-        self.parser = XLSFileParser()
+    PARSER_CLASS = XLSFileParser
 
     def test_guess_headers_and_row_without_headers(self):
         xls_file = self.fixture('sample-contacts.xls')
