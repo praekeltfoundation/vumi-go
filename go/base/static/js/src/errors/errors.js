@@ -19,6 +19,8 @@
     return NewError;
   };
 
+  // We set the [[Prototype]] to Error.prototype so that we can do this with
+  // all our errors: `e instanceof Error`
   GoError.prototype = _.extend(Object.create(Error.prototype), {
     name: 'GoError',
     toString: function() {
