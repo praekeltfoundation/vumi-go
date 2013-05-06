@@ -3,9 +3,9 @@ describe("go.errors", function() {
     var GoError = go.errors.GoError;
 
     it("should allow prototype chained sub-error creation", function() {
-      var SubError = GoError.suberror('SubError')
-        , SubSubError = SubError.suberror('SubSubError')
-        , fn = function() { throw new SubSubError(); };
+      var SubError = GoError.suberror('SubError'),
+          SubSubError = SubError.suberror('SubSubError'),
+          fn = function() { throw new SubSubError(); };
 
       assert.Throw(fn, Error);
       assert.Throw(fn, GoError);
