@@ -125,14 +125,10 @@
         // activate the tooltips
         $('.icon-info-sign').tooltip();
     
+        $('.configuration button').on('click', function(e) {
+            e.preventDefault();
 
-
-        $('.configuration button').on('click', function() {
-            // find the template within it's parent, and add another one.
-            // there's got to be a better way to do this, I'm not at all 
-            // sure if this should use jsplumbs.
-
-            return false;
+            // TODO find the template within it's parent, and add another one
         });
 
     });
