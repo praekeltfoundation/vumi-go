@@ -355,7 +355,7 @@ def _people(request):
         if not ':' in query:
             query = 'name:%s' % (query,)
 
-            keys = contact_store.contacts.raw_search(query).get_keys()
+        keys = contact_store.contacts.raw_search(query).get_keys()
     else:
         keys = contact_store.list_contacts()
 
