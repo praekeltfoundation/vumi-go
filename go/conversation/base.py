@@ -332,7 +332,6 @@ class ShowConversationView(ConversationView):
             else:
                 messages.error(request,
                     'Something went wrong. Please try again.')
-                print form.errors
         return self.redirect_to('show', conversation_key=conversation.key)
 
 
