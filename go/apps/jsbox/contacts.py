@@ -69,7 +69,7 @@ class ContactsResource(SandboxResource):
                     'dob': null,
                     'groups': ['group-a', 'group-b'],
                     'facebook_id': null,
-                    '$VERSION': None,
+                    '$VERSION': null,
                     'twitter_handle': null,
                     'email_address': null,
                     'name': 'A Random'
