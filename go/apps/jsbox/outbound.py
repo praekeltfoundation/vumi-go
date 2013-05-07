@@ -23,9 +23,12 @@ class GoOutboundResource(SandboxResource):
         return succeed(self._mkfail(command, reason))
 
     def _handle_reply(self, api, command, reply_func):
-        if not isinstance(command.get('content'), unicode):
+        if not 'content' in command:
             return self._mkfaild(
                 command, reason=u"'content' must be given in replies.")
+        if not isinstance(command['content'], (unicode, type(None))):
+            return self._mkfaild(
+                command, reason=u"'content' must be unicode or null.")
         if not isinstance(command.get('in_reply_to'), unicode):
             return self._mkfaild(
                 command, reason=u"'in_reply_to' must be given in replies.")

@@ -103,10 +103,30 @@ class TestGoOutboundResource(ResourceTestCaseBase):
             msg, 'Reply!', continue_session=True,
             helper_metadata={'orig': 'data', 'new': 'foo'})
 
+    @inlineCallbacks
+    def test_reply_to_with_null_content(self):
+        msg = self.mkmsg_in(content='Hello')
+        msg_reply = msg.reply(None, continue_session=False)
+        self.app_worker.conversation.set_go_helper_metadata = (
+            lambda md: md)
+
+        reply = yield self.dispatch_command(
+            'reply_to', content=msg_reply['content'],
+            continue_session=False, in_reply_to=msg['message_id'])
+
+        self.check_reply(reply)
+        self.app_worker.reply_to.assert_called_once_with(
+            msg, None, continue_session=False, helper_metadata={})
+
     def test_reply_to_fails_with_no_content(self):
         return self.assert_cmd_fails(
             "'content' must be given in replies.",
             'reply_to', in_reply_to=u'unknown')
+
+    def test_reply_to_fails_with_bad_content(self):
+        return self.assert_cmd_fails(
+            "'content' must be unicode or null.",
+            'reply_to', content=5, in_reply_to=u'unknown')
 
     def test_reply_to_fails_with_no_in_reply_to(self):
         return self.assert_cmd_fails(
