@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect
 
 from go.campaigns.forms import CampaignGeneralForm, CampaignConfigurationForm
 
+
 def details(request, key=None):
     """
     TODO: This is a fake implementation, it's not based on anything
@@ -19,7 +20,7 @@ def details(request, key=None):
             return redirect('conversations:index')
             # save and go back to list.
 
-        # save and go to next step.
+        # TODO save and go to next step.
         return redirect('campaigns:message', campaign_key='fakekeydawg')
 
     return render(request, 'campaigns/wizard_1_details.html', {
@@ -40,6 +41,7 @@ def message_conversation(request, campaign_key):
     # is this for a conversation or bulk?
     # determine that and redirect.
     return render(request, 'campaigns/wizard_2_conversation.html')
+
 
 def todo(request):
     return HttpResponse('TODO')
