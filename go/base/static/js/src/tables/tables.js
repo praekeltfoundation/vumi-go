@@ -4,9 +4,7 @@
         $table = $(selector);
 
         $table.find('input[type="checkbox"]').click(function(e) {
-
             e.stopPropagation();
-
             $this = $(this);
             $tbody = $table.find('tbody');
             $checkboxes = $tbody.find('input[type="checkbox"]');
