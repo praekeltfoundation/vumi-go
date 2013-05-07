@@ -14,8 +14,13 @@ describe("go.errors", function() {
     });
 
     it("should stringify errors", function() {
+      var SubError = GoError.suberror('SubError');
+
       assert.equal('' + new GoError('Aaah!'), '[GoError: Aaah!]');
       assert.equal('' + new GoError(), '[GoError]');
+
+      assert.equal('' + new SubError('Aaah!'), '[SubError: Aaah!]');
+      assert.equal('' + new SubError(), '[SubError]');
     });
 
     it("should use a default message if no message is provided", function() {

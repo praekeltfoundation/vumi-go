@@ -5,16 +5,17 @@
 
   // Creates a sub-error constructor from 'this' error constructor
   GoError.suberror = function(name, message) {
-    var NewError = function() { GoError.call(this); };
+    var NewError = function(message) { GoError.call(this, message); };
 
     // provides the 'e instanceof SomeError' magic we need
-    NewError.prototype = Object.create(this.prototype);
+    var proto = Object.create(this.prototype);
+
+    proto.name = name;
+    if (message) { proto.message = message; }
+    NewError.prototype = proto;
 
     // allow further sub-error creation
     NewError.suberror = GoError.suberror;
-
-    NewError.name = name;
-    if (message) { NewError.prototype.message = message; }
 
     return NewError;
   };
