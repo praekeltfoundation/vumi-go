@@ -1,7 +1,7 @@
 {% extends "app.html" %}
 {% load url from future %}
 
-{% block main %}
+{% block content_main %}
     <div class="row">
         <div class="span12">
             <div id="welcome">
@@ -78,16 +78,17 @@
 
 {% endblock %}
 
-{% block extra_js %}
-    <script type="text/javascript">
-      $(document).ready(function(){
-          $('#frm-new-group').validate();
-          $('#frm-upload-contacts').validate();
-          $('#recMatchFrm').modal('show');
-      });
-    </script>
-    <link type="text/css" href="{{ STATIC_URL }}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
-    <link type="text/css" href="{{ STATIC_URL }}css/jquery-ui-timepicker.css" rel="stylesheet" />
+{% block extrascript %}
+{{ block.super }}
+<script type="text/javascript">
+    $(document).ready(function(){
+        $('#frm-new-group').validate();
+        $('#frm-upload-contacts').validate();
+        $('#recMatchFrm').modal('show');
+    });
+</script>
+<link type="text/css" href="{{ STATIC_URL }}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
+<link type="text/css" href="{{ STATIC_URL }}css/jquery-ui-timepicker.css" rel="stylesheet" />
 {% endblock %}
 
 {% block modals %}
