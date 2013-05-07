@@ -48,8 +48,8 @@ class GoOutboundResource(SandboxResource):
         d = reply_func(orig_msg, content, continue_session=continue_session,
                        helper_metadata=helper_metadata)
         d.addCallback(lambda r: self.reply(command, success=True))
-        d.addErrback(lambda f: self.reply(command, success=False,
-                                          reason=unicode(f.getErrorMessage())))
+        d.addErrback(lambda f: self._mkfail(command,
+                                            unicode(f.getErrorMessage())))
         return d
 
     def handle_reply_to(self, api, command):
