@@ -26,6 +26,8 @@ class TestContactStore(GoPersistenceMixin, TestCase):
         self.account_alt = yield self.mk_user(self, u'other_user')
         self.store = ContactStore.from_user_account(self.account)
         self.store_alt = ContactStore.from_user_account(self.account_alt)
+        yield self.store.contacts.enable_search()
+        yield self.store_alt.contacts.enable_search()
 
     def tearDown(self):
         return self._persist_tearDown()
@@ -177,7 +179,6 @@ class TestContactStore(GoPersistenceMixin, TestCase):
 
     @inlineCallbacks
     def test_count_contacts_for_smart_group(self):
-        yield self.store.contacts.enable_search()
         group = yield self.store.new_smart_group(u'test group',
                                                  u'surname:"Foo 1"')
         for i in range(2):
