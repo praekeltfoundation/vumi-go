@@ -16,25 +16,28 @@ class GoOutboundResource(SandboxResource):
     messages via given tags.
     """
 
+    def _mkfail(self, command, reason):
+        return self.reply(command, success=False, reason=reason)
+
+    def _mkfaild(self, command, reason):
+        return succeed(self._mkfail(command, reason))
+
     def _handle_reply(self, api, command, reply_func):
         if not isinstance(command.get('content'), unicode):
-            return succeed(self.reply(
-                command, success=False,
-                reason=u"'content' must be given in replies."))
+            return self._mkfaild(
+                command, reason=u"'content' must be given in replies.")
         if not isinstance(command.get('in_reply_to'), unicode):
-            return succeed(self.reply(
-                command, success=False,
-                reason=u"'in_reply_to' must be given in replies."))
+            return self._mkfaild(
+                command, reason=u"'in_reply_to' must be given in replies.")
         if command.get('continue_session', True) not in (True, False):
-            return succeed(self.reply(
-                command, success=False,
-                reason=u"'continue_session' must be either true or false"
-                " if given"))
+            return self._mkfaild(
+                command, reason=u"'continue_session' must be either true or"
+                " false if given")
         orig_msg = api.get_inbound_message(command['in_reply_to'])
         if orig_msg is None:
-            return succeed(self.reply(
-                command, success=False, reason=u"Could not find original"
-                " message with id: %r" % command['in_reply_to']))
+            return self._mkfaild(
+                command, reason=u"Could not find original message with id: %r"
+                % command['in_reply_to'])
 
         content = command['content']
         continue_session = command.get('continue_session', True)
@@ -131,18 +134,16 @@ class GoOutboundResource(SandboxResource):
         to_addr = command.get('to_addr')
         if any(not isinstance(u, unicode)
                for u in (tag[0], tag[1], content, to_addr)):
-            returnValue(self.reply(
-                command, success=False,
-                reason="Tag, content or to_addr not specified"))
+            returnValue(self._mkfail(
+                command, reason="Tag, content or to_addr not specified"))
         log.info("Sending outbound message to %r via tag %r, content: %r" %
                  (to_addr, tag, content))
 
         user_api = self.app_worker.user_api_for_api(api)
         tags = yield user_api.list_endpoints()
         if tag not in tags:
-            returnValue(self.reply(command, success=False,
-                                   reason="Tag %r not held by account"
-                                   % (tag,)))
+            returnValue(self._mkfail(
+                command, reason="Tag %r not held by account" % (tag,)))
         msg_options = yield user_api.msg_options(tag)
         conv = self.app_worker.conversation_for_api(api)
         self.app_worker.add_conv_to_msg_options(conv, msg_options)
