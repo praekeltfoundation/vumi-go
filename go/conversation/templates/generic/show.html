@@ -29,3 +29,7 @@
     {% show_conversation_messages conversation direction=request.GET.direction page=request.GET.p query=request.GET.q token=request.GET.token %}
 
 {% endblock %}
+
+{% block extrascript %}
+    {# {% include "conversation/includes/charts.html" %} #}
+{% endblock %}
