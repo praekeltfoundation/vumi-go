@@ -1,13 +1,9 @@
-import string
-
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User, Permission
-from django import template
 from django.core.paginator import Paginator
 
 from go.base.tests.utils import VumiGoDjangoTestCase
-from go.base.templatetags import go_tags
 from go.base import utils
 
 
@@ -48,26 +44,6 @@ class AuthenticationTestCase(VumiGoDjangoTestCase):
 class FakeTemplateToken(object):
     def __init__(self, contents):
         self.contents = contents
-
-
-class GoTemplateTagsTestCase(VumiGoDjangoTestCase):
-    USE_RIAK = False
-
-    def test_load_alphabet(self):
-
-        token = FakeTemplateToken('load_alphabet as alphabet')
-        node = go_tags.load_alphabet('bogus', token)
-        context = {}
-        output = node.render(context)
-        self.assertEqual(output, '')
-        self.assertEqual(node.var_name, 'alphabet')
-        self.assertEqual(context['alphabet'], string.ascii_lowercase)
-
-    def test_load_alphabet_value_error(self):
-        self.assertRaises(template.TemplateSyntaxError, go_tags.load_alphabet,
-            'bogus', FakeTemplateToken('load_alphabet'))
-        self.assertRaises(template.TemplateSyntaxError, go_tags.load_alphabet,
-            'bogus', FakeTemplateToken('load_alphabet as'))
 
 
 class UtilsTestCase(VumiGoDjangoTestCase):

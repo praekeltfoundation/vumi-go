@@ -1,0 +1,51 @@
+{% extends "contacts/base.html" %}
+{% load url from future %}
+
+
+{% block content_title %}
+    <a href="{% url 'contacts:people' %}">Recipients</a>
+    &raquo;
+    {% if contact %}
+        {{ contact }}
+    {% else %}
+        New recipient
+    {% endif %}
+{% endblock %}
+
+{% block content_actions_left %}
+{% endblock %}
+
+{% block content_actions_right %}
+{% endblock %}
+
+
+{% block content_main_list %}
+    <form id="frm-person" method="post" action="" class="form-horizontal">
+        {% csrf_token %}
+        <fieldset>
+            {% for field in form.visible_fields %}
+            <div class="control-group{% if field.errors %} error{% endif %}">
+                
+                <label class="control-label" for="id_{{ field.name }}">
+                    {{ field.label }}
+                </label>
+                <div class="controls">
+                    {{ field }}
+                    <span class="help-inline">
+                        {% if field.errors %}
+                            {{ field.errors|join:" " }}
+                        {% endif %}
+                        {% if field.help_text %}
+                            ({{ field.help_text }})
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save changes</button>
+            </div>
+        </fieldset>
+    </form>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "app.html" %}
+{% load url from future %}
+
+
+
+{% block content_extraclass %}
+    contacts
+{% endblock %}
+
+{% block content_title %}
+    <a href="{% url 'contacts:people' %}">Recipients</a>
+{% endblock %}
+
+{% block content_actions_left %}
+{% endblock %}
+
+{% block content_breadcrumbs %}
+{% endblock %}
+
+{% block content_actions_right %}
+{% endblock %}
+
+
+{% block content_main %}
+    <div class="row-fluid">
+        <div class="span3 sidebar">
+
+            <div class="nav nav-list extra-actions">
+                <a href="{% url 'contacts:new_person' %}">New recipient...</a>
+            </div>
+
+            <ul class="nav nav-list">
+                <li><a href="{% url 'contacts:people' %}">All recipients</a></li>
+                <li><a href="#">Smart groups</a></li>
+                <li><a href="{% url 'contacts:groups' %}">Groups</a></li>
+            </ul>
+
+        </div>
+        <div class="span9">
+            {% include "base/includes/messages.html" %}
+        </div>
+        <div class="span9">
+            {% block content_main_list %}
+            {% endblock %}
+        </div>
+    </div>
+{% endblock %}
+

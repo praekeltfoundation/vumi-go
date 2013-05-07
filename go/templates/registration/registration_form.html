@@ -23,7 +23,8 @@
     </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block extrascript %}
+    {{ block.super }}
     <script>
         $(document).ready(function(){
             $("#registration-form").validate();

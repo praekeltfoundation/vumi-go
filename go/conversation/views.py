@@ -64,7 +64,7 @@ def index(request):
         'conversation_type': conversation_type,
         })
 
-    return render(request, 'conversation/index.html', {
+    return render(request, 'conversation/dashboard.html', {
         'conversations': conversations,
         'paginator': paginator,
         'pagination_params': pagination_params,

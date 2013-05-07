@@ -1,0 +1,81 @@
+{% extends "contacts/base.html" %}
+{% load url from future %}
+
+
+{% block content_title %}
+<a href="{% url 'contacts:groups' %}">Groups</a>
+{% endblock %}
+
+
+{% block content_actions_left %}
+<button class="btn btn-primary" data-toggle="modal" data-target="#newGroup">New group</button>
+{% endblock %}
+
+
+{% block content_breadcrumbs %}
+<form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
+    <input type="text" id="search-filter-input" name="query" value="{{query|default:''}}" placeholder="Find Groups..." class="input-large search-query">
+    <button type="submit" id="search-filter-btn" class="btn">Search</button>
+</form>
+{% endblock %}
+
+
+
+{% block content_actions_right %}
+{% endblock %}
+
+
+{% block content_main_list %}
+<table class="table table-bordered table-awesome" data-table-id="groups">
+    <thead>
+        <tr>
+            <th><input type="checkbox"></th>
+            <th>Name</th>
+            <th>No. of recipients</th>
+            <th>Date created</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for group in page.object_list %}
+        <tr data-url="{% url 'contacts:group' group_key=group.key %}">
+            <td>
+                <input type="checkbox">
+            </td>
+            <td>
+                {{ group.name }}
+            </td>
+            <td>
+                {{ group.backlinks.contacts|length }}
+            </td>
+            <td>
+            </td>
+        </tr>
+    {% empty %}
+        <tr>
+            <td colspan="4">
+            {% if query %}
+                No group names match <strong>{{query}}</strong>
+            {% else %}
+                You don't have any groups yet.
+            {% endif %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% include "base/includes/pagination.html" %}
+{% endblock %}
+
+
+{% block extrascript %}
+{{ block.super }}
+<script type="text/javascript">
+    $(function() {
+        go.tables.init('.table-awesome');
+    });
+</script>
+{% endblock %}
+
+{% block modals %}
+    {% include "contacts/includes/tools.html" %}
+{% endblock %}
