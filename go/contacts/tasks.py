@@ -112,8 +112,9 @@ def export_group_contacts(account_key, group_key, include_extra):
         writer.writerow(row)
 
     zipio = StringIO()
-    with ZipFile(zipio, "a") as zip:
-        zip.writestr("contacts-export.csv", io.getvalue())
+    zf = ZipFile(zipio, "a")
+    zf.writestr("contacts-export.csv", io.getvalue())
+    zf.close()
 
     email = EmailMessage(
         '%s contacts export' % (group.name,),
