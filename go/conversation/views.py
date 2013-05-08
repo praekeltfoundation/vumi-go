@@ -35,11 +35,11 @@ def index(request):
 
     if conversation_type:
         conversations = [c for c in conversations
-                            if c.conversation_type == conversation_type]
+                         if c.conversation_type == conversation_type]
 
     if query:
         conversations = [c for c in conversations
-                            if query.lower() in c.subject.lower()]
+                         if query.lower() in c.name.lower()]
 
     # sort with newest first
     conversations = sorted(conversations, key=lambda c: c.created_at,

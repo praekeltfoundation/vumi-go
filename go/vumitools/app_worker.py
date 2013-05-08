@@ -32,12 +32,12 @@ class GoApplicationConfigData(object):
         self.conv = conversation
 
     def get(self, field_name, default):
-        if self.conv.metadata and field_name in self.conv.metadata:
-            return self.conv.metadata[field_name]
+        if self.conv.config and field_name in self.conv.config:
+            return self.conv.config[field_name]
         return self.config_dict.get(field_name, default)
 
     def has_key(self, field_name):
-        if self.conv.metadata and field_name in self.conv.metadata:
+        if self.conv.config and field_name in self.conv.config:
             return True
         return self.config_dict.has_key(field_name)
 
