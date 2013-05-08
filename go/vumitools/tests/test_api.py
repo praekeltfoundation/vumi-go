@@ -207,7 +207,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
             u"pool1", [u"1234", u"5678", u"9012"])
         yield self.user_api.acquire_specific_tag(tag2)
         yield self.user_api.new_conversation(
-            u'bulk_message', u'subject', u'message', delivery_class=u'sms',
+            u'bulk_message', u'name', u'desc', {}, delivery_class=u'sms',
             delivery_tag_pool=tag1[0], delivery_tag=tag1[1])
         endpoints = yield self.user_api.list_conversation_endpoints()
         self.assertEqual(endpoints, set([tag1]))
@@ -226,7 +226,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
             u"pool1", [u"1234", u"5678", u"9012"])
         yield self.user_api.acquire_specific_tag(tag1)
         conv = yield self.user_api.new_conversation(
-            u'bulk_message', u'subject', u'message', delivery_class=u'sms',
+            u'bulk_message', u'name', u'desc', {}, delivery_class=u'sms',
             delivery_tag_pool=tag1[0], delivery_tag=tag1[1])
         conv = self.user_api.wrap_conversation(conv)
         # We don't want to actually send commands here.
@@ -325,7 +325,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
             u"pool1", [u"1234", u"5678", u"9012"])
         yield self.user_api.acquire_specific_tag(tag1)
         conv = yield self.user_api.new_conversation(
-            u'bulk_message', u'subject', u'message', delivery_class=u'sms',
+            u'bulk_message', u'name', u'desc', {}, delivery_class=u'sms',
             delivery_tag_pool=tag2[0], delivery_tag=tag2[1])
         conv = self.user_api.wrap_conversation(conv)
         # We don't want to actually send commands here.
@@ -377,7 +377,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     def test_get_routing_table_migration_missing_entry(self):
         conv = yield self._setup_routing_table_test_conv()
         conv2 = yield self.user_api.new_conversation(
-            u'bulk_message', u'subject', u'message', delivery_class=u'sms',
+            u'bulk_message', u'name', u'desc', {}, delivery_class=u'sms',
             delivery_tag_pool=u'pool1', delivery_tag=u'9012')
         conv2 = self.user_api.wrap_conversation(conv2)
         # We don't want to actually send commands here.

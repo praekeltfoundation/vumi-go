@@ -241,7 +241,7 @@ class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
         self.user_api = self.vumi_api.get_user_api(self.account.key)
         self.conversation = (
             yield self.user_api.conversation_store.new_conversation(
-                u'bulk_message', u'subject', {}))
+                u'bulk_message', u'name', u'desc', {}))
 
     @inlineCallbacks
     def test_tag_retrieval_and_message_dispatching(self):

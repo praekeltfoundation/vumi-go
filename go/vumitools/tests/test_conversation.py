@@ -47,10 +47,10 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
         self.assertEqual([], conversations)
 
         conv = yield self.conv_store.new_conversation(
-            u'bulk_message', u'subject', {u'foo': u'bar'})
+            u'bulk_message', u'name', u'desc', {u'foo': u'bar'})
         self.assertEqual(u'bulk_message', conv.conversation_type)
-        self.assertEqual(u'subject', conv.name)
-        self.assertEqual(u'', conv.description)
+        self.assertEqual(u'name', conv.name)
+        self.assertEqual(u'desc', conv.description)
         self.assertEqual({u'foo': u'bar'}, conv.config)
         self.assertEqual([], conv.batches.keys())
 
@@ -63,11 +63,12 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
         self.assertEqual([], conversations)
 
         conv = yield self.conv_store.new_conversation(
-            u'bulk_message', u'Zoë destroyer of Ascii', {u'foo': u'bar'})
+            u'bulk_message', u'Zoë destroyer of Ascii', u'Return of Zoë!',
+            {u'foo': u'Zoë again.'})
         self.assertEqual(u'bulk_message', conv.conversation_type)
         self.assertEqual(u'Zoë destroyer of Ascii', conv.name)
-        self.assertEqual(u'', conv.description)
-        self.assertEqual({u'foo': u'bar'}, conv.config)
+        self.assertEqual(u'Return of Zoë!', conv.description)
+        self.assertEqual({u'foo': u'Zoë again.'}, conv.config)
         self.assertEqual([], conv.batches.keys())
 
         dbconv = yield self.conv_store.get_conversation_by_key(conv.key)

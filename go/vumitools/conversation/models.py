@@ -107,7 +107,7 @@ class ConversationStore(PerAccountStore):
         return self.conversations.load(key)
 
     @Manager.calls_manager
-    def new_conversation(self, conversation_type, name, config,
+    def new_conversation(self, conversation_type, name, description, config,
                          start_timestamp=None, **fields):
         conversation_id = uuid4().get_hex()
         start_timestamp = start_timestamp or datetime.utcnow()
@@ -117,9 +117,9 @@ class ConversationStore(PerAccountStore):
 
         conversation = self.conversations(
             conversation_id, user_account=self.user_account_key,
-            conversation_type=conversation_type,
-            name=name, config=config, start_timestamp=start_timestamp,
-            **fields)
+            conversation_type=conversation_type, name=name,
+            description=description, config=config,
+            start_timestamp=start_timestamp, **fields)
 
         for group in groups:
             conversation.add_group(group)
