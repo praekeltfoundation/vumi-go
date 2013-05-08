@@ -58,6 +58,22 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
         self.assert_models_equal(conv, dbconv)
 
     @inlineCallbacks
+    def test_new_conversation_unicode(self):
+        conversations = yield self.conv_store.list_conversations()
+        self.assertEqual([], conversations)
+
+        conv = yield self.conv_store.new_conversation(
+            u'bulk_message', u'Zoë destroyer of Ascii', {u'foo': u'bar'})
+        self.assertEqual(u'bulk_message', conv.conversation_type)
+        self.assertEqual(u'Zoë destroyer of Ascii', conv.name)
+        self.assertEqual(u'', conv.description)
+        self.assertEqual({u'foo': u'bar'}, conv.config)
+        self.assertEqual([], conv.batches.keys())
+
+        dbconv = yield self.conv_store.get_conversation_by_key(conv.key)
+        self.assert_models_equal(conv, dbconv)
+
+    @inlineCallbacks
     def test_get_old_conversation(self):
         conversation_id = uuid4().get_hex()
 
