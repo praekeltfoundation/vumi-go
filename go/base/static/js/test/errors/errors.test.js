@@ -3,8 +3,8 @@ describe("go.errors", function() {
     var GoError = go.errors.GoError;
 
     it("should allow prototype chained sub-error creation", function() {
-      var SubError = GoError.suberror('SubError'),
-          SubSubError = SubError.suberror('SubSubError'),
+      var SubError = GoError.subtype('SubError'),
+          SubSubError = SubError.subtype('SubSubError'),
           fn = function() { throw new SubSubError(); };
 
       assert.throws(fn, Error);
@@ -14,7 +14,7 @@ describe("go.errors", function() {
     });
 
     it("should stringify errors", function() {
-      var SubError = GoError.suberror('SubError');
+      var SubError = GoError.subtype('SubError');
 
       assert.equal('' + new GoError('Aaah!'), '[GoError: Aaah!]');
       assert.equal('' + new GoError(), '[GoError]');
@@ -24,7 +24,7 @@ describe("go.errors", function() {
     });
 
     it("should use a default message if no message is provided", function() {
-      var SubError = GoError.suberror('SubError', 'Aaah!');
+      var SubError = GoError.subtype('SubError', 'Aaah!');
       assert.equal(new GoError().message, '');
       assert.equal(new SubError().message, 'Aaah!');
     });

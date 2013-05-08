@@ -9,7 +9,7 @@
   };
 
   // Creates a sub-error constructor from 'this' error constructor
-  GoError.suberror = function(name, message) {
+  GoError.subtype = function(name, message) {
     var NewError = function(message) { GoError.call(this, message); };
 
     // provides the 'e instanceof SomeError' magic we need
@@ -20,7 +20,7 @@
     NewError.prototype = proto;
 
     // allow further sub-error creation
-    NewError.suberror = GoError.suberror;
+    NewError.subtype = GoError.subtype;
 
     return NewError;
   };
