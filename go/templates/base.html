@@ -1,5 +1,6 @@
 {% load compressed %}
 {% load url from future %}
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -33,7 +34,7 @@
         </p>
         <![endif]-->
 
-        {% block header %}
+        {% block navigation %}
         {% endblock %}
 
         {% block content %}
@@ -44,6 +45,7 @@
         <div class="footer">
             <p>&copy; 2012 <a href="http://praekelt.com">Praekelt Group</a>. <a href="mailto:hello@vumi.org">Contact</a>. <a href="https://github.com/praekelt/vumi">Github</a></p>
         </div>
+
         {% endblock %}
     </div>
 
@@ -52,7 +54,7 @@
 
 
 
-    {# don't know where this fits in just yet. #}
+    {# FIXME don't know where this fits in just yet. #}
     <div class="modal hide fade" id="newConv">
         <div class="modal-header">
            <a class="close" data-dismiss="modal">×</a>
@@ -74,39 +76,11 @@
         </form>
     </div>
 
-    {# javascript time -- old #}
-    <!---
 
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/tooltip.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/transition.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/collapse.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-dropdown.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-modal.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-popover.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-alert.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-typeahead.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-tab.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/bootstrap/bootstrap-button.js"></script>
-    <script src="{{ STATIC_URL }}js/libs/jquery.timePicker.min.js"></script>
+    {% compressed_js 'lib' %}
+    {% compressed_js 'go' %}
 
-    <script src="{{ STATIC_URL }}js/libs/jquery.validate.js"></script>
-    <script src="{{ STATIC_URL }}js/script.js"></script> #{ script.js? }
-
-    -->
-
-    {# javascript time -- new #}
-
-    {% compressed_js 'all' %}
-
-    <!--
-    <script src="js/lib/jquery.jsPlumb-1.3.16-all-min.js"></script>
-    <script src="js/lib/jquery.tablesorter.min.js"></script>
-    <script src="js/lib/jquery.tablesorter.widgets.min.js"></script>
-    <script src="js/lib/prettyCheckable.js"></script>
-    -->
-
-
-
-
+    {% block extrascript %}
+    {% endblock %}
 </body>
 </html>

@@ -157,6 +157,8 @@ INSTALLED_APPS = (
     'go.conversation',
     'go.contacts',
     'go.account',
+    'go.campaigns',
+
     'vxpolls.djdashboard',
     'registration',
     'bootstrap',
@@ -346,14 +348,27 @@ PIPELINE_CSS = {
 }
 
 PIPELINE_JS = {
-    'all': {
+    'lib': {
         'source_filenames': (
-            'js/jquery-1.9.1.min.js',
+            'js/vendor/jquery-1.9.1.js',
+            'js/vendor/lodash.underscore-1.2.1.js',
+            'js/vendor/backbone-1.0.0.js',
+            'js/vendor/jquery.jsPlumb-1.3.16.js',
+            'js/vendor/jquery.ui-1.8.23.js',
             'bootstrap/js/bootstrap.min.js',
-            'js/jquery-ui-1.8.11.custom.min.js',
-
-            'js/go.table.js',
         ),
-        'output_filename': 'export/all.js'
+        'output_filename': 'export/lib.js'
+    },
+    'go': {
+        'source_filenames': (
+            'js/src/go.js',
+            'js/src/errors/errors.js',
+            'js/src/utils/utils.js',
+            'js/src/campaigns/campaigns.js',
+            'js/src/campaigns/setup/setup.js',
+            'js/src/campaigns/setup/interactive.js',
+            'js/src/tables/tables.js',
+        ),
+        'output_filename': 'export/go.js'
     },
 }
