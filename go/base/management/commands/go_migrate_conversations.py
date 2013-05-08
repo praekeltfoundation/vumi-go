@@ -59,8 +59,8 @@ class Command(BaseCommand):
             for conv_key in conversations:
                 self.outln(u'  Migrating conversation: %s' % (conv_key,))
                 conv = user_api.get_wrapped_conversation(conv_key)
-                self.outln(u'    - [%s] migrated' % (conv.name,))
                 conv.save()
+                self.outln(u'    - [%s] migrated' % (conv.name,))
 
     def handle(self, *usernames, **options):
         users = self.find_accounts(*usernames)
