@@ -362,6 +362,8 @@ PIPELINE_JS = {
     'go': {
         'source_filenames': (
             'js/src/go.js',
+            'js/src/errors/errors.js',
+            'js/src/utils/utils.js',
             'js/src/campaigns/campaigns.js',
             'js/src/campaigns/setup/setup.js',
             'js/src/campaigns/setup/interactive.js',
