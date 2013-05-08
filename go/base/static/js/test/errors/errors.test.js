@@ -7,10 +7,10 @@ describe("go.errors", function() {
           SubSubError = SubError.suberror('SubSubError'),
           fn = function() { throw new SubSubError(); };
 
-      assert.Throw(fn, Error);
-      assert.Throw(fn, GoError);
-      assert.Throw(fn, SubError);
-      assert.Throw(fn, SubSubError);
+      assert.throws(fn, Error);
+      assert.throws(fn, GoError);
+      assert.throws(fn, SubError);
+      assert.throws(fn, SubSubError);
     });
 
     it("should stringify errors", function() {
