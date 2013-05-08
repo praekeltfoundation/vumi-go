@@ -1,3 +1,8 @@
+// go.errors
+// =========
+//
+// Error infrastructure for Go
+
 (function(exports) {
   var GoError = exports.GoError = function(message) {
     if (message) { this.message = message; }
