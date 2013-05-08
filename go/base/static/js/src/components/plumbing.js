@@ -4,48 +4,59 @@
 // Components for the plumbing views in Go
 
 (function(exports) {
-  // Dispatches jsPlumb events to the views associated to the events. 
+  // Thrown when errors occur whilst interacting with a plumbing component
+  var PlumbError = go.errors.GoError.suberror('PlumbError');
+
+  // Dispatches jsPlumb events to the subscribed views
   //
   // Options
   //   - plumb: jsPlumb instance
-  exports.PlumbEventDispatcher = function(options) {
+  //   - views: a list of initial views to add
+  var PlumbEventDispatcher = exports.PlumbEventDispatcher = function(options) {
     var self = this;
-    options = _.defaults(options || {}, {plumb: jsPlumb});
+
+    options = _.defaults(options || {}, {plumb: jsPlumb, views: []});
     this.plumb = options.plumb;
 
-    this.hosts = new PlumbHostInterface(this);
+    this._views = {};
+    options.views.map(this.subscribe);
+
     this.plumb.bind('jsPlumbConnection', function(e) {
-      var source = e.sourceView = self.hosts.get(e.source)
-        , target = e.targetView = self.hosts.get(e.target);
+      var source = e.sourceHost = self.get(e.source),
+          target = e.targetHost = self.get(e.target);
 
       source.trigger('plumb:connect', e);
       target.trigger('plumb:connect', e);
     });
   };
 
-  // Interface for PlumbEventDispatcher for manipulating hosts
-  // (hosts == elements that host connectable plumb endpoints)
-  var PlumbHostInterface = function(dispatcher) {
-    this.dispatcher = dispatcher;
-    this._hosts = {};
-  };
+  PlumbEventDispatcher.prototype = {
+    // Get all views
+    getAll: function() { return _.values(this._views); },
 
-  PlumbHostInterface.prototype = {
-    // Get all hosts
-    all: function() { return _.values(this._hosts); },
+    // Get a view by a selector, element or jquery wrapped element
+    get: function(viewOrEl) {
+      var view = this._views[go.utils.idOf(viewOrEl)];
 
-    // Get a host by a selector, element or jquery wrapped element
-    get: function(el) {
-      var id = $(el).attr('id');
-      return id
-        ? this._hosts[id]
-        : null;
+      if (!view) {
+        throw new PlumbError(viewOrEl + " not found for dispatcher"); }
+
+      return view;
     },
 
-    // Add a view as a new host
-    add: function(view) {
-      this._hosts[view.$el.attr('id')] = view;
-      return view;
+    // Subscribe a view
+    subscribe: function(view) {
+      if (!(view instanceof Backbone.View)) {
+        throw new PlumbError(view + " is not a Backbone view"); }
+  
+      this._views[go.utils.idOf(view)] = view;
+      return this;
+    },
+
+    // Unsubscribe a view by a view, selector, element or jquery wrapped element
+    unsubscribe: function(viewOrEl) {
+      delete this._views[go.utils.idOf(viewOrEl)];
+      return this;
     }
   };
 })(go.components.plumbing = {});
