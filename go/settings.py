@@ -354,7 +354,7 @@ PIPELINE_JS = {
             'js/vendor/lodash.underscore-1.2.1.js',
             'js/vendor/backbone-1.0.0.js',
             'js/vendor/jquery.jsPlumb-1.3.16.js',
-            'js/vendor/jquery.ui-1.8.23.js',
+            'js/vendor/jquery.ui-1.10.3.js',
             'bootstrap/js/bootstrap.min.js',
         ),
         'output_filename': 'export/lib.js'
