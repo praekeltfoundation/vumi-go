@@ -27,7 +27,7 @@ class Conversation(Model):
     MIGRATOR = ConversationMigrator
 
     user_account = ForeignKey(UserAccount)
-    name = Unicode(max_length=255)
+    name = Unicode(max_length=255, index=True)
     description = Unicode(default=u'')
     conversation_type = Unicode(index=True)
     config = Json(default=dict)
