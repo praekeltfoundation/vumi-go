@@ -5,7 +5,7 @@
 
 (function(exports) {
   // Thrown when errors occur whilst interacting with a plumbing component
-  var PlumbError = go.errors.GoError.suberror('PlumbError');
+  var PlumbError = go.errors.GoError.subtype('PlumbError');
 
   // Dispatches jsPlumb events to the subscribed views
   //
@@ -35,11 +35,11 @@
     getAll: function() { return _.values(this._views); },
 
     // Get a view by a selector, element or jquery wrapped element
-    get: function(viewOrEl) {
-      var view = this._views[go.utils.idOf(viewOrEl)];
+    get: function(el) {
+      var view = this._views[go.utils.idOf(el)];
 
       if (!view) {
-        throw new PlumbError(viewOrEl + " not found for dispatcher"); }
+        throw new PlumbError(el + " not found for dispatcher"); }
 
       return view;
     },
