@@ -1,0 +1,40 @@
+{% extends "app.html" %}
+{% load url from future %}
+
+{% block content_extraclass %}
+    campaigns
+{% endblock %}
+
+{% block content_breadcrumbs %}
+<a href="{% url 'campaigns:details' %}">
+    Details
+</a>
+{# these can't be links if this is a new object #}
+<a href="">Messages</a>
+<a href="">Recipients</a>
+<a href="">Preview &amp; Activate</a>
+{% endblock %}
+
+{% block content_actions_right %}
+    <a href="{% url 'conversations:index' %}">Cancel</a>
+    <button class="btn btn-primary" data-action="draft">Save draft</button>
+    <button class="btn btn-primary" data-action="save">Next step</button>
+{% endblock %}
+
+
+{% block extrascript %}
+<script type="text/javascript">
+    
+    $(function() {
+        // these are the save draft and cancel buttons at the top.
+        $('.actions .right button').on('click', function(e) {
+            e.preventDefault();
+
+            var $frm = $('#frm-campaign');
+            $frm.prepend('<input type="hidden" name="action" value="' + $(this).attr('data-action') + '">');
+            $frm.submit();
+        });
+    });
+</script>
+{% endblock %}
+

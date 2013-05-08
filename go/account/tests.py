@@ -112,6 +112,10 @@ class AccountTestCase(DjangoGoApplicationTestCase):
             user_account = profile.get_user_account()
             self.assertEqual(user_account.msisdn, None)
 
+    @staticmethod
+    def extract_notification_messages(response):
+        return [m.message for m in list(response.context['messages'])]
+
     def test_confirm_start_conversation(self):
         response = self.client.post(reverse('account:index'), {
             'name': 'foo',
@@ -124,9 +128,12 @@ class AccountTestCase(DjangoGoApplicationTestCase):
             })
         token_url = response.context['token_url']
         response = self.client.get(reverse('account:index'))
-        self.assertContains(response,
+
+        notifications = self.extract_notification_messages(response)
+        self.assertTrue(
             'Please confirm this change by clicking on the link that was '
-            'just sent to your mailbox.')
+            'just sent to your mailbox.' in notifications)
+
         profile = User.objects.get(pk=self.user.pk).get_profile()
         user_account = profile.get_user_account()
         self.assertFalse(user_account.confirm_start_conversation)
@@ -135,7 +142,8 @@ class AccountTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(token_url in email.body)
 
         response = self.confirm(token_url)
-        self.assertContains(response, 'Your details are being updated')
+        notifications = self.extract_notification_messages(response)
+        self.assertTrue('Your details are being updated' in notifications)
 
         profile = User.objects.get(pk=self.user.pk).get_profile()
         user_account = profile.get_user_account()
@@ -157,7 +165,8 @@ class AccountTestCase(DjangoGoApplicationTestCase):
         self.assertNotEqual(user_account.email_summary, 'daily')
 
         response = self.confirm(token_url)
-        self.assertContains(response, 'Your details are being updated')
+        notifications = self.extract_notification_messages(response)
+        self.assertTrue('Your details are being updated' in notifications)
 
         user_account = self.user.get_profile().get_user_account()
         self.assertEqual(user_account.email_summary, 'daily')

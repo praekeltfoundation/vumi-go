@@ -1,11 +1,13 @@
 {% extends "app.html" %}
 
-{% block extra_header %}
+{% block extrahead %}
+{{ block.super }}
 <link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
 <link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
 {% endblock %}
 
-{% block extra_js %}
+{% block extrascript %}
+{{ block.super }}
 <script>
     $(document).ready(function(){
         $("#conversation").validate();
@@ -16,7 +18,7 @@
 
 {% endblock %}
 
-{% block main %}
+{% block content_main %}
 <form name="conversation" id="conversation" method="post" action="">
     {% csrf_token %}
     <div class="row">
