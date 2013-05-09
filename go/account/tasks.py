@@ -7,8 +7,9 @@ from go.account.utils import send_user_account_summary
 
 @task(ignore_result=True)
 def update_account_details(user_id, first_name=None, last_name=None,
-    new_password=None, email_address=None, msisdn=None,
-    confirm_start_conversation=None, email_summary=None):
+                           new_password=None, email_address=None, msisdn=None,
+                           confirm_start_conversation=None,
+                           email_summary=None):
     user = User.objects.get(pk=user_id)
     profile = user.get_profile()
     account = profile.get_user_account()

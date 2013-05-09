@@ -109,10 +109,8 @@ class StreamingHTTPWorker(GoApplicationWorker):
     def unregister_client(self, conversation_key, callback):
         self.client_manager.stop(conversation_key, callback)
 
-    def get_api_metadata(self, conversation, key):
-        metadata = conversation.get_metadata(default={})
-        http_api_metadata = metadata.get('http_api', {})
-        return http_api_metadata.get(key)
+    def get_api_config(self, conversation, key):
+        return conversation.config.get('http_api', {}).get(key)
 
     def process_command_start(self, batch_id, conversation_type,
                               conversation_key, msg_options,
@@ -152,8 +150,8 @@ class StreamingHTTPWorker(GoApplicationWorker):
                 message,))
             return
 
-        push_message_url = self.get_api_metadata(conversation,
-                                                 'push_message_url')
+        push_message_url = self.get_api_config(conversation,
+                                               'push_message_url')
         if push_message_url:
             resp = yield self.push(push_message_url, message)
             if resp.code != http.OK:
@@ -179,7 +177,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
         mr = conversations.index_lookup('batches', batch.key)
         [conv_key] = yield mr.get_keys()
         conversation = yield user_api.get_wrapped_conversation(conv_key)
-        push_event_url = self.get_api_metadata(conversation, 'push_event_url')
+        push_event_url = self.get_api_config(conversation, 'push_event_url')
         if push_event_url:
             resp = yield self.push(push_event_url, event)
             if resp.code != http.OK:
