@@ -8,7 +8,9 @@ class ConversationMigrator(ModelMigrator):
         mdata.copy_values(
             'conversation_type',
             'start_timestamp', 'end_timestamp', 'created_at',
-            'delivery_class', 'delivery_tag_pool', 'delivery_tag')
+            'delivery_class', 'delivery_tag_pool')
+        # Sometimes we don't have a delivery_tag field.
+        mdata.set_value('delivery_tag', mdata.old_data.get('delivery_tag', None))
         mdata.copy_indexes('user_account_bin', 'groups_bin', 'batches_bin')
 
         # Add stuff that's new in this version
@@ -16,7 +18,7 @@ class ConversationMigrator(ModelMigrator):
         mdata.set_value('name', mdata.old_data['subject'])
         mdata.set_value('description', mdata.old_data['message'])
 
-        mdata.set_value('config', mdata.old_data['metadata'] or {})
+        mdata.set_value('config', mdata.old_data.get('metadata', None) or {})
 
         # We don't use the constants here because they may change or disappear
         # underneath us in the future.
