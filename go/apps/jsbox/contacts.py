@@ -79,7 +79,7 @@ class ContactsResource(SandboxResource):
         .. code-block:: javascript
             api.request(
                 'contacts.get',
-                {deliver_class: 'sms', addr: '+27731112233'},
+                {delivery_class: 'sms', addr: '+27731112233'},
                 function(reply) { api.log_info(reply.contact.name); });
         """
         try:
@@ -163,7 +163,8 @@ class ContactsResource(SandboxResource):
         .. code-block:: javascript
             api.request(
                 'contacts.update',
-                {key: '123abc', surname: 'Jones', extra: {location: 'CPT'}},
+                {key: '123abc',
+                 fields: {surname: 'Jones', extra: {location: 'CPT'}}},
                 function(reply) { api.log_info(reply.success); });
         """
         try:
