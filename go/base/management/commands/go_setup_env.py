@@ -342,8 +342,8 @@ class Command(BaseCommand):
             conv = user_api.conversation_store.conversations(
                 conversation_key, user_account=user_api.user_account_key,
                 conversation_type=unicode(conv_info.pop('conversation_type')),
-                subject=unicode(conv_info.pop('subject')),
-                message=unicode(conv_info.pop('message')),
+                name=unicode(conv_info.pop('name')),
+                config=conv_info.pop('config', {}),
                 start_timestamp=timestamp, **conv_info)
             conv.save()
             self.stdout.write('Conversation %s created\n' % (conv.key,))

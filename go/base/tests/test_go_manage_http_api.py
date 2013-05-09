@@ -63,7 +63,7 @@ class GoManageHttpAPICommandTestCase(DjangoGoApplicationTestCase):
             self.command.stdout.getvalue().startswith('Created token'))
 
     def test_remove_token(self):
-        self.conversation.set_metadata({
+        self.conversation.set_config({
             'http_api': {
                 'api_tokens': ['token'],
             }

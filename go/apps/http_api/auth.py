@@ -35,9 +35,8 @@ class ConversationAccessChecker(object):
             conversation = yield user_api.get_wrapped_conversation(
                 self.conversation_key)
             if conversation is not None:
-                metadata = conversation.get_metadata(default={})
-                http_api_metadata = metadata.get('http_api', {})
-                tokens = http_api_metadata.get('api_tokens', [])
+                tokens = conversation.config.get('http_api', {}).get(
+                    'api_tokens', [])
                 if token in tokens:
                     returnValue(username)
         raise error.UnauthorizedLogin()
