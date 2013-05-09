@@ -60,24 +60,24 @@ class ConversationConfigResource(BaseResource):
     @inlineCallbacks
     def handle_jsbox(self, request, command, conversation):
         if command == 'postcommit':
-            metadata = conversation.get_metadata()
+            conv_config = conversation.get_config()
 
             # update the config blocks
-            jsbox_app_config_md = metadata.get('jsbox_app_config', {})
-            for key, config_section in jsbox_app_config_md.items():
-                yield self.update_jsbox_metadata('value', config_section)
+            jsbox_app_config = conv_config.get('jsbox_app_config', {})
+            for key, config_section in jsbox_app_config.items():
+                yield self.update_jsbox_config('value', config_section)
 
             # update the application code
-            jsbox_md = metadata.get('jsbox', {})
-            yield self.update_jsbox_metadata('javascript', jsbox_md)
+            jsbox_md = conv_config.get('jsbox', {})
+            yield self.update_jsbox_config('javascript', jsbox_md)
 
-            conversation.set_metadata(metadata)
+            conversation.set_config(conv_config)
             yield conversation.save()
         else:
             request.setResponseCode(http.BAD_REQUEST)
 
     @inlineCallbacks
-    def update_jsbox_metadata(self, key, config_section):
+    def update_jsbox_config(self, key, config_section):
         src_url = config_section.get('source_url')
         if src_url:
             response = yield self.load_source_from_url(src_url,
