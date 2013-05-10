@@ -98,9 +98,8 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
                 'key': 'conversation-key-1',
                 'account': 'user1@go.com',
                 'conversation_type': 'survey',
-                'subject': 'foo',
-                'message': 'bar',
-                'metadata': {
+                'name': 'foo',
+                'config': {
                     'foo': 'bar',
                 }
             },
@@ -108,10 +107,10 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
                 'key': 'conversation-key-2',
                 'account': 'user2@go.com',
                 'conversation_type': 'bulk_message',
-                'subject': 'oof',
-                'message': 'rab',
-                'metadata': {
+                'name': 'oof',
+                'config': {
                     'oof': 'rab',
+                    'message': 'rab',
                 }
             },
         ])
@@ -206,15 +205,13 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
 
         self.assertEqual(conv1.key, 'conversation-key-1')
         self.assertEqual(conv1.conversation_type, 'survey')
-        self.assertEqual(conv1.subject, 'foo')
-        self.assertEqual(conv1.message, 'bar')
-        self.assertEqual(conv1.metadata, {'foo': 'bar'})
+        self.assertEqual(conv1.name, 'foo')
+        self.assertEqual(conv1.config, {'foo': 'bar'})
 
         self.assertEqual(conv2.key, 'conversation-key-2')
         self.assertEqual(conv2.conversation_type, 'bulk_message')
-        self.assertEqual(conv2.subject, 'oof')
-        self.assertEqual(conv2.message, 'rab')
-        self.assertEqual(conv2.metadata, {'oof': 'rab'})
+        self.assertEqual(conv2.name, 'oof')
+        self.assertEqual(conv2.config, {'message': 'rab', 'oof': 'rab'})
 
         self.assertTrue('Conversation conversation-key-1 created' in
                             self.command.stdout.getvalue())

@@ -160,7 +160,7 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(reverse('multi_survey:show', kwargs={
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.subject, 'Test Conversation')
+        self.assertEqual(conversation.name, 'Test Conversation')
 
     def test_aggregates(self):
         self.put_sample_messages_in_conversation(self.user_api,
@@ -191,8 +191,8 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, conv_url)
         [email] = mail.outbox
         self.assertEqual(email.recipients(), [self.user.email])
-        self.assertTrue(self.conversation.subject in email.subject)
-        self.assertTrue(self.conversation.subject in email.body)
+        self.assertTrue(self.conversation.name in email.subject)
+        self.assertTrue(self.conversation.name in email.body)
         [(file_name, content, mime_type)] = email.attachments
         self.assertEqual(file_name, 'messages-export.csv')
         # 1 header, 10 sent, 10 received, 1 trailing newline == 22

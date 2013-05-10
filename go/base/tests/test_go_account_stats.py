@@ -5,7 +5,6 @@ from datetime import datetime
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.management.commands import go_account_stats
-from go.base.utils import vumi_api_for_user
 
 
 class GoAccountStatsCommandTestCase(DjangoGoApplicationTestCase):
@@ -13,23 +12,11 @@ class GoAccountStatsCommandTestCase(DjangoGoApplicationTestCase):
     def setUp(self):
         super(GoAccountStatsCommandTestCase, self).setUp()
         self.user = self.mk_django_user()
+        self.setup_user_api(self.user)
 
-        self.user_api = vumi_api_for_user(self.user)
-        self.add_tagpool_permission(u"longcode")
         self.message_store = self.api.mdb
 
-        def mkconv(*args, **kwargs):
-            options = {
-                'delivery_class': u'sms',
-                'delivery_tag_pool': u'longcode',
-            }
-            options.update(kwargs)
-            return self.user_api.wrap_conversation(
-                self.user_api.conversation_store.new_conversation(
-                    *args, **options))
-
-        self.active_conv = mkconv(u'bulk_message', u'active', u'content',)
-        self.active_conv.start()
+        self.active_conv = self.mkstartedconv(name=u'active')
 
         [batch_key] = self.active_conv.batches.keys()
         for i in range(10):
@@ -39,19 +26,26 @@ class GoAccountStatsCommandTestCase(DjangoGoApplicationTestCase):
             self.message_store.add_outbound_message(msg.reply('thanks'),
                 batch_id=batch_key)
 
-        self.inactive_conv = mkconv(u'bulk_message', u'inactive', u'content',
-            end_timestamp=datetime.now())
-        self.inactive_conv.start()
+        self.inactive_conv = self.mkstartedconv(name=u'inactive')
+        self.inactive_conv.end_conversation()
         self.assertTrue(self.inactive_conv.ended())
 
-        self.unicode_conv = mkconv(u'bulk_message', u'Zoë destroyer of Ascii',
-            u'content', end_timestamp=datetime.now())
-        self.unicode_conv.start()
+        self.unicode_conv = self.mkstartedconv(name=u'Zoë destroyer of Ascii')
+        self.unicode_conv.end_conversation()
         self.assertTrue(self.unicode_conv.ended())
 
         self.command = go_account_stats.Command()
         self.command.stdout = StringIO()
         self.command.stderr = StringIO()
+
+    def mkstartedconv(self, **kwargs):
+        kwargs.update({
+            u'delivery_class': u'sms',
+            u'delivery_tag_pool': u'longcode',
+            })
+        conv = self.user_api.wrap_conversation(self.mkconversation(**kwargs))
+        conv.start()
+        return conv
 
     def test_command_summary(self):
         self.command.handle()

@@ -109,10 +109,8 @@ class StreamingHTTPWorker(GoApplicationWorker):
     def unregister_client(self, conversation_key, callback):
         self.client_manager.stop(conversation_key, callback)
 
-    def get_api_metadata(self, conversation, key):
-        metadata = conversation.get_metadata(default={})
-        http_api_metadata = metadata.get('http_api', {})
-        return http_api_metadata.get(key)
+    def get_api_config(self, conversation, key):
+        return conversation.config.get('http_api', {}).get(key)
 
     def process_command_start(self, batch_id, conversation_type,
                               conversation_key, msg_options,
@@ -152,8 +150,8 @@ class StreamingHTTPWorker(GoApplicationWorker):
                 message,))
             return
 
-        push_message_url = self.get_api_metadata(conversation,
-                                                 'push_message_url')
+        push_message_url = self.get_api_config(conversation,
+                                               'push_message_url')
         if push_message_url:
             resp = yield self.push(push_message_url, message)
             if resp.code != http.OK:
@@ -172,14 +170,24 @@ class StreamingHTTPWorker(GoApplicationWorker):
         if outbound_message is None:
             log.warning('Unable to find message %s for event %s.' % (
                 event['user_message_id'], event['event_id']))
-        batch = yield outbound_message.batch.get()
-        account_key = batch.metadata['user_account']
-        user_api = self.get_user_api(account_key)
-        conversations = user_api.conversation_store.conversations
-        mr = conversations.index_lookup('batches', batch.key)
-        [conv_key] = yield mr.get_keys()
+
+        msg_md = outbound_message.msg['helper_metadata']
+        # First, try look up the things we need in the message metadata.
+        account_key = msg_md.get('go', {}).get('user_account')
+        if account_key is not None:
+            user_api = self.get_user_api(account_key)
+            conv_key = msg_md['go'].get('conversation_key')
+        else:
+            # Fall back to looking up by batch. (Ugh.)
+            # TODO: This can probably just be removed.
+            batch = yield outbound_message.batch.get()
+            account_key = batch.metadata['user_account']
+            user_api = self.get_user_api(account_key)
+            conversations = user_api.conversation_store.conversations
+            mr = conversations.index_lookup('batches', batch.key)
+            [conv_key] = yield mr.get_keys()
         conversation = yield user_api.get_wrapped_conversation(conv_key)
-        push_event_url = self.get_api_metadata(conversation, 'push_event_url')
+        push_event_url = self.get_api_config(conversation, 'push_event_url')
         if push_event_url:
             resp = yield self.push(push_event_url, event)
             if resp.code != http.OK:
