@@ -10,7 +10,7 @@
         <h3>3. Send Message</h3>
         <br><a name="step3" id="step3"></a>
         <p>
-            You are about to start the conversation <strong>"{{conversation.subject}}"</strong>. 
+            You are about to start the conversation <strong>"{{conversation.name}}"</strong>. 
             This needs to be confirmed before it will actually go live.
             The confirmation request will be sent via SMS to {{user_profile.msisdn}}.
         </p>
@@ -20,7 +20,7 @@
                     <th colspan="4">Message:</th>
                 </tr>
                 <tr>
-                    <td colspan="4">{{conversation.message}}</td>
+                    <td colspan="4">{{conversation.description}}</td>
                 </tr>
             </thead>
         </table>

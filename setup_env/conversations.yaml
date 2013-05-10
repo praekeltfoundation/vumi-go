@@ -2,36 +2,35 @@
   key: conversation1
   account: user1@example.org
   conversation_type: bulk_message
-  subject: subject
-  message: message
+  name: name
   delivery_class: sms
   delivery_tag_pool: longcode_tagpool
   delivery_tag: longcode-10003
-  metadata:
+  config:
+    message: message
     foo: bar
 
 -
   key: conversation2
   account: user2@example.org
   conversation_type: bulk_message
-  subject: subject
-  message: message
+  name: name
   delivery_class: sms
   delivery_tag_pool: longcode_tagpool
   delivery_tag: longcode-10004
-  metadata:
+  config:
+    message: message
     foo: bar
 
 -
   key: conversation3
   account: user2@example.org
   conversation_type: survey
-  subject: subject
-  message: message
+  name: name
   delivery_class: ussd
   delivery_tag_pool: ussd_tagpool
   delivery_tag: '*120*10003#'
-  metadata:
+  config:
     foo: bar
     baz: zab
 
@@ -40,12 +39,11 @@
   start: true
   account: user1@example.org
   conversation_type: wikipedia_ussd
-  subject: Wikipedia USSD connection
-  message: this is the Wikipedia USSD connection
+  name: Wikipedia USSD connection
   delivery_class: ussd
   delivery_tag_pool: ussd_tagpool
   delivery_tag: '*120*10001#'
-  metadata:
+  config:
     send_from_tagpool: longcode_tagpool
     send_from_tag: longcode-10001
 
@@ -54,8 +52,7 @@
   start: true
   account: user1@example.org
   conversation_type: wikipedia_sms
-  subject: Wikipedia SMS connection
-  message: this is the Wikipedia SMS connection
+  name: Wikipedia SMS connection
   delivery_class: sms
   delivery_tag_pool: longcode_tagpool
   delivery_tag: longcode-10001
@@ -65,12 +62,11 @@
   start: true
   account: user1@example.org
   conversation_type: jsbox
-  subject: JavaScript App
-  message: "Sample JS App, listens on USSD and replies via SMS."
+  name: JavaScript App
   delivery_class: ussd
   delivery_tag_pool: ussd_tagpool
   delivery_tag: '*120*10002#'
-  metadata:
+  config:
     jsbox_app_config:
       config:
         source_url: "source URL goes here"
@@ -103,23 +99,23 @@
   start: true
   account: user1@example.org
   conversation_type: bulk_message
-  subject: Messages sent from JSBox
-  message: "Collection of messages sent from JSBox"
+  name: Messages sent from JSBox
   delivery_class: sms
   delivery_tag_pool: longcode_tagpool
   delivery_tag: 'longcode-10002'
+  config:
+    message: "Collection of messages sent from JSBox"
 
 -
   key: conversation8
   start: true
   account: user1@example.org
   conversation_type: subscription
-  subject: Subscription for seq send
-  message: "Subscription for seq send"
+  name: Subscription for seq send
   delivery_class: sms
   delivery_tag_pool: longcode_tagpool_2
   delivery_tag: 'longcode-20001'
-  metadata:
+  config:
     handlers:
       -
         keyword: sub
@@ -137,12 +133,11 @@
   start: true
   account: user1@example.org
   conversation_type: sequential_send
-  subject: Sequential send
-  message: "Sequential send"
+  name: Sequential send
   delivery_class: sms
   delivery_tag_pool: longcode_tagpool_2
   delivery_tag: 'longcode-20001'
-  metadata:
+  config:
     schedule:
       recurring: daily
       time: '12:00:00'
@@ -155,12 +150,11 @@
   start: true
   account: user1@example.org
   conversation_type: http_api
-  subject: HTTP API
-  message: Sample HTTP API
+  name: HTTP API
   delivery_class: sms
   delivery_tag_pool: longcode_tagpool
   delivery_tag: longcode-10003
-  metadata:
+  config:
     http_api:
       api_tokens:
         - token1

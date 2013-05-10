@@ -14,7 +14,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
     TEST_GROUP_NAME = u"Test Group"
     TEST_CONTACT_NAME = u"Name"
     TEST_CONTACT_SURNAME = u"Surname"
-    TEST_SUBJECT = u"Test Conversation"
+    TEST_CONVERSATION_NAME = u"Test Conversation"
     TEST_CONVERSATION_TYPE = u'bulk_message'
     TEST_CONVERSATION_PARAMS = None
     TEST_START_PARAMS = None
@@ -53,11 +53,12 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         # And a conversation
         params = {
             'conversation_type': self.TEST_CONVERSATION_TYPE,
-            'subject': self.TEST_SUBJECT,
-            'message': u"Test message",
+            'name': self.TEST_CONVERSATION_NAME,
+            'description': u"Test message",
             'delivery_class': u"sms",
             'delivery_tag_pool': u"longcode",
             'groups': [self.group_key],
+            'config': {},
             }
         if self.TEST_CONVERSATION_PARAMS:
             params.update(self.TEST_CONVERSATION_PARAMS)
@@ -67,8 +68,9 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
     def mkconversation(self, **kwargs):
         defaults = {
             'conversation_type': u'bulk_message',
-            'subject': u'subject',
-            'message': u'hello world'
+            'name': u'subject',
+            'description': u'hello world',
+            'config': {},
         }
         defaults.update(kwargs)
         return self.conv_store.new_conversation(**defaults)
@@ -201,7 +203,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
 
     def add_tagpool_permission(self, tagpool, max_keys=None):
         permission = self.user_api.api.account_store.tag_permissions(
-           uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
+            uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
         permission.save()
         account = self.user_api.get_user_account()
         account.tagpools.add(permission)

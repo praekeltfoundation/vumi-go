@@ -29,7 +29,9 @@ class HttpApiTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(conversation.delivery_class, 'sms')
         self.assertEqual(conversation.delivery_tag_pool, 'longcode')
         self.assertEqual(conversation.delivery_tag, None)
-        self.assertEqual(conversation.metadata, None)
+        self.assertEqual(conversation.name, 'the subject')
+        self.assertEqual(conversation.description, 'the message')
+        self.assertEqual(conversation.config, {})
         self.assertRedirects(response, reverse('http_api:people', kwargs={
             'conversation_key': conversation.key,
         }))
