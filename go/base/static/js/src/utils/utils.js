@@ -1,6 +1,13 @@
 (function(exports) {
   var GoError = go.errors.GoError;
 
+  exports.Extendable = function () {};
+
+  // Backbone has an internal `extend()` function which it assigns to its
+  // structures. We need this function, so we arbitrarily choose
+  // `Backbone.Model`, since it has the `extend()` function we are looking for.
+  exports.Extendable.extend = Backbone.Model.extend;
+
   // Get an element id from a Backbone view, selector, element or jquery
   // wrapped element
   exports.idOf = function(viewOrEl) {

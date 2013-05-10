@@ -27,9 +27,9 @@ class OldGoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
         return self._persist_tearDown()
 
     def create_conversation(self, conversation_type=u'bulk_message',
-                            subject=u'subject', message=u'message'):
+                            name=u'name', description=u'desc', config={}):
         return self.user_api.conversation_store.new_conversation(
-            conversation_type, subject, message)
+            conversation_type, name, description, config)
 
     @inlineCallbacks
     def tag_conversation(self, conversation, tag):

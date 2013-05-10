@@ -31,8 +31,19 @@ def restart_gunicorn():
             supervisorctl('restart vumi_web:goui_%s' % (i,))
 
 
+def update_nodejs_modules():
+    """
+    Update the Node.js modules that the JS sandbox depends on.
+    """
+    npm_install("vumigo_v01")
+
+
 def supervisorctl(command):
     return sudo('supervisorctl %s' % (command,))
+
+
+def npm_install(package):
+    return sudo('npm install --global %s' % (package,))
 
 
 def _venv_command(command, user='vumi'):

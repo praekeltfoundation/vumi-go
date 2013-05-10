@@ -105,7 +105,7 @@ class Command(BaseCommand):
             conversations = [c for c in conversations if not c.ended()]
         for index, conversation in enumerate(conversations):
             self.out(u'%s. %s (%s) [%s]\n' % (index,
-                conversation.subject, conversation.created_at,
+                conversation.name, conversation.created_at,
                 conversation.key))
 
     def handle_stats(self, user, api, options):
@@ -121,7 +121,7 @@ class Command(BaseCommand):
         conv_key = options[0]
         conversation = api.get_wrapped_conversation(conv_key)
         message_store = api.api.mdb
-        self.out(u'Conversation: %s\n' % (conversation.subject,))
+        self.out(u'Conversation: %s\n' % (conversation.name,))
 
         for batch_key in conversation.batches.keys():
             self.do_batch_key(message_store, batch_key)

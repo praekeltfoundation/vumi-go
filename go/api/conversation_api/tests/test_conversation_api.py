@@ -60,7 +60,7 @@ class ConversationApiTestCase(AppWorkerTestCase):
         self.batch_id = yield self.vumi_api.mdb.batch_start(
             [self.tag], user_account=unicode(self.account.key))
         self.conversation.batches.add_key(self.batch_id)
-        self.conversation.set_metadata({
+        self.conversation.set_config({
             'jsbox_app_config': {
                 'config': {
                     'source_url': 'http://configsourcecode/',
@@ -141,12 +141,12 @@ class ConversationApiTestCase(AppWorkerTestCase):
         self.assertEqual(kwargs, {'method': 'GET'})
         conv = yield self.user_api.get_wrapped_conversation(
             self.conversation.key)
-        md = conv.get_metadata()
-        self.assertEqual(md['jsbox'], {
+        conv_config = conv.get_config()
+        self.assertEqual(conv_config['jsbox'], {
             'source_url': 'http://sourcecode/',
             'javascript': 'javascript!',
         })
-        self.assertEqual(md['jsbox_app_config'], {
+        self.assertEqual(conv_config['jsbox_app_config'], {
             'config': {
                 'source_url': 'http://configsourcecode/',
                 'value': 'javascript!'
