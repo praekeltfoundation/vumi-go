@@ -188,26 +188,32 @@ class ContactsResource(SandboxResource):
         returnValue(self.reply(command, success=True))
 
     @inlineCallbacks
-    def _update_dynamic_field(self, field_name, api, command):
+    def _update_dynamic_fields(self, dynamic_field_name, api, command):
         try:
             if not isinstance(command.get('key'), unicode):
                 raise SandboxError(
                     "'key' needs to be specified and be a unicode "
                     "string")
 
-            if not isinstance(command.get('field'), unicode):
+            if not isinstance(command.get('fields'), dict):
                 raise SandboxError(
-                    "'field' needs to be specified and be a unicode string")
+                    "'fields' needs to be specified and be a dict of field "
+                    "name-values pairs")
 
-            if command.get('value') is None:
-                raise SandboxError("'value' needs to be specified and be a "
-                                   "non-None value")
+            fields = command['fields']
+            if any(not isinstance(k, unicode) for k in fields.keys()):
+                raise SandboxError("All field names need to be unicode")
+
+            if any(not isinstance(v, unicode) for v in fields.values()):
+                raise SandboxError("All field values need to be unicode")
 
             store = self._contact_store_for_api(api)
             contact = yield store.get_contact_by_key(command['key'])
 
-            field = getattr(contact, field_name)
-            field[command['field']] = command['value']
+            dynamic_field = getattr(contact, dynamic_field_name)
+            for k, v in fields.iteritems():
+                dynamic_field[k] = v
+
             yield contact.save()
         except (SandboxError, ContactError) as e:
             log.warning(str(e))
@@ -215,14 +221,13 @@ class ContactsResource(SandboxResource):
 
         returnValue(self.reply(command, success=True))
 
-    def handle_update_extra(self, api, command):
+    def handle_update_extras(self, api, command):
         """
-        Updates a single subfield of an existing contact's ``extra`` field.
+        Updates subfields of an existing contact's ``extra`` field.
 
         Command field:
             - ``key``: The contact's key
-            - ``field``: The name of the subfield to be updated
-            - ``value``: The subfield's new value
+            - ``fields``: The extra fields to be updated
 
         Reply fields:
             - ``success``: ``true`` if the operation was successful, otherwise
@@ -231,21 +236,19 @@ class ContactsResource(SandboxResource):
         Example:
         .. code-block:: javascript
             api.request(
-                'contacts.update_extra',
+                'contacts.update_extras',
                 {key: '123abc', field: 'surname', value: 'Jones'},
                 function(reply) { api.log_info(reply.success); });
         """
-        return self._update_dynamic_field('extra', api, command)
+        return self._update_dynamic_fields('extra', api, command)
 
-    def handle_update_subscription(self, api, command):
+    def handle_update_subscriptions(self, api, command):
         """
-        Updates a single subfield of an existing contact's ``subscription``
-        field.
+        Updates subfields of an existing contact's ``subscription`` field.
 
         Command field:
             - ``key``: The contact's key
-            - ``field``: The name of the subfield to be updated
-            - ``value``: The subfield's new value
+            - ``fields``: The subscription fields to be updated
 
         Reply fields:
             - ``success``: ``true`` if the operation was successful, otherwise
@@ -254,11 +257,11 @@ class ContactsResource(SandboxResource):
         Example:
         .. code-block:: javascript
             api.request(
-                'contacts.update_subscription',
+                'contacts.update_subscriptions',
                 {key: '123abc', field: 'foo', value: 'bar'},
                 function(reply) { api.log_info(reply.success); });
         """
-        return self._update_dynamic_field('subscription', api, command)
+        return self._update_dynamic_fields('subscription', api, command)
 
     @inlineCallbacks
     def handle_new(self, api, command):

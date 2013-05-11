@@ -271,53 +271,48 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         return self.assert_bad_command('update', key='213123', fields={})
 
     @inlineCallbacks
-    def test_handle_update_extra(self):
+    def test_handle_update_extras(self):
         contact = yield self.new_contact(
             msisdn=u'+27831234567',
-            extra={'foo': u'bar', 'lorem': u'ipsum'})
+            extra={'a': u'1', 'b': u'2', 'c': u'3'})
 
         reply = yield self.dispatch_command(
-            'update_extra',
+            'update_extras',
             key=contact.key,
-            field='foo',
-            value=u'larp')
+            fields={'a': u'one', 'c': u'three', 'd': u'four'})
         self.check_reply(reply)
 
         self.check_contact_fields(contact.key, **{
             'msisdn': u'+27831234567',
-            'extras-foo': u'larp',
-            'extras-lorem': u'ipsum',
+            'extras-a': u'one',
+            'extras-b': u'2',
+            'extras-c': u'three',
+            'extras-d': u'four',
         })
 
     @inlineCallbacks
-    def test_handle_update_extra_parsing(self):
+    def test_handle_update_extras_parsing(self):
         contact = yield self.new_contact(
             name=u'A Random',
             surname=u'Person',
             msisdn=u'+27831234567')
 
-        yield self.assert_bad_command('update_extra')
+        yield self.assert_bad_command('update_extras')
         yield self.assert_bad_command(
-            'update_extra', key=None, field=u'location', value=u'CPT')
+            'update_extras', key=None, fields={'location': u'CPT'})
         yield self.assert_bad_command(
-            'update_extra', key=contact.key, field=2, value=u'CPT')
-        yield self.assert_bad_command(
-            'update_extra',
-            key=contact.key,
-            field=u'location',
-            value=None)
+            'update_extras', key=contact.key, fields={'location': None})
 
     @inlineCallbacks
-    def test_handle_update_extra_for_unicode_chars(self):
+    def test_handle_update_extras_for_unicode_chars(self):
         contact = yield self.new_contact(
             msisdn=u'+27831234567',
-            extra={'foo': u'bar', 'lorem': u'ipsum'})
+            extra={u'foo': u'bar', u'lorem': u'ipsum'})
 
         reply = yield self.dispatch_command(
-            'update_extra',
+            'update_extras',
             key=contact.key,
-            field='foo',
-            value=u'☃')
+            fields={'foo': u'☃'})
         self.check_reply(reply)
 
         self.check_contact_fields(contact.key, **{
@@ -326,67 +321,57 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             'extras-lorem': u'ipsum',
         })
 
-    def test_handle_update_extra_for_nonexistent_contacts(self):
+    def test_handle_update_extras_for_nonexistent_contacts(self):
         return self.assert_bad_command(
-            'update_extra',
+            'update_extras',
             key='213123',
-            field='foo',
-            value=u'bar')
+            fields={'foo': u'bar'})
 
     @inlineCallbacks
-    def test_handle_update_subscription(self):
+    def test_handle_update_subscriptions(self):
         contact = yield self.new_contact(
             msisdn=u'+27831234567',
-            subscription={'foo': u'bar', 'lorem': u'ipsum'})
+            subscription={'a': u'1', 'b': u'2', 'c': u'3'})
 
         reply = yield self.dispatch_command(
-            'update_subscription',
+            'update_subscriptions',
             key=contact.key,
-            field='foo',
-            value=u'larp')
+            fields={'a': u'one', 'c': u'three', 'd': u'four'})
         self.check_reply(reply)
 
         self.check_contact_fields(contact.key, **{
             'msisdn': u'+27831234567',
-            'subscription-foo': u'larp',
-            'subscription-lorem': u'ipsum',
+            'subscription-a': u'one',
+            'subscription-b': u'2',
+            'subscription-c': u'three',
+            'subscription-d': u'four',
         })
 
     @inlineCallbacks
-    def test_handle_update_subscription_parsing(self):
+    def test_handle_update_subscriptions_parsing(self):
         contact = yield self.new_contact(
             name=u'A Random',
             surname=u'Person',
             msisdn=u'+27831234567')
 
-        yield self.assert_bad_command('update_subscription')
+        yield self.assert_bad_command('update_subscriptions')
         yield self.assert_bad_command(
-            'update_subscription',
-            key=None,
-            field=u'foo',
-            value=u'bar')
+            'update_subscriptions', key=None, fields={'location': u'CPT'})
         yield self.assert_bad_command(
-            'update_subscription',
+            'update_subscriptions',
             key=contact.key,
-            field=2,
-            value=u'bar')
-        yield self.assert_bad_command(
-            'update_subscription',
-            key=contact.key,
-            field=u'foo',
-            value=None)
+            fields={'location': None})
 
     @inlineCallbacks
-    def test_handle_update_subscription_for_unicode_chars(self):
+    def test_handle_update_subscriptions_for_unicode_chars(self):
         contact = yield self.new_contact(
             msisdn=u'+27831234567',
-            subscription={'foo': u'bar', 'lorem': u'ipsum'})
+            subscription={u'foo': u'bar', u'lorem': u'ipsum'})
 
         reply = yield self.dispatch_command(
-            'update_subscription',
+            'update_subscriptions',
             key=contact.key,
-            field='foo',
-            value=u'☃')
+            fields={'foo': u'☃'})
         self.check_reply(reply)
 
         self.check_contact_fields(contact.key, **{
@@ -395,12 +380,11 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             'subscription-lorem': u'ipsum',
         })
 
-    def test_handle_update_subscription_for_nonexistent_contacts(self):
+    def test_handle_update_subscriptions_for_nonexistent_contacts(self):
         return self.assert_bad_command(
-            'update_subscription',
-            key='21312',
-            field='foo',
-            value=u'bar')
+            'update_subscriptions',
+            key='213123',
+            fields={'foo': u'bar'})
 
     @inlineCallbacks
     def test_handle_new(self):
