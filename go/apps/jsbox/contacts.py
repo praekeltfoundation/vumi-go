@@ -51,9 +51,8 @@ class ContactsResource(SandboxResource):
             example, if ``sms`` was the delivery class, the address would look
             something like ``+27731112233``
 
-        Reply fields:
-            - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``
+        Success reply fields:
+            - ``success``: set to ``true``
             - ``contact``: An object containing the contact's data. Looks
             something like this:
 
@@ -74,6 +73,10 @@ class ContactsResource(SandboxResource):
                     'email_address': null,
                     'name': 'A Random'
                 }
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
 
         Example:
         .. code-block:: javascript
@@ -108,12 +111,15 @@ class ContactsResource(SandboxResource):
         Similar to :method:`handle_get`, but creates the contact if it does
         not yet exist.
 
-        Reply fields:
-            - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``
+        Success reply fields:
+            - ``success``: set to ``true``
             - ``contact``: An object containing the contact's data
             - ``created``: ``true`` if a new contact was created, otherwise
             ``false``
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
         """
         try:
             self._parse_get(command)
@@ -155,9 +161,13 @@ class ContactsResource(SandboxResource):
             - ``key``: The contacts key
             - ``fields``: The contact fields to be updated
 
-        Reply fields:
-            - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``contact``: An object containing the contact's data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
 
         Example:
         .. code-block:: javascript
@@ -180,12 +190,15 @@ class ContactsResource(SandboxResource):
             store = self._contact_store_for_api(api)
             fields = self.pick_fields(
                 command['fields'], *Contact.field_descriptors)
-            yield store.update_contact(command['key'], **fields)
+            contact = yield store.update_contact(command['key'], **fields)
         except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        returnValue(self.reply(command, success=True))
+        returnValue(self.reply(
+            command,
+            success=True,
+            contact=contact.get_data()))
 
     @inlineCallbacks
     def _update_dynamic_fields(self, dynamic_field_name, api, command):
@@ -219,7 +232,10 @@ class ContactsResource(SandboxResource):
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        returnValue(self.reply(command, success=True))
+        returnValue(self.reply(
+            command,
+            success=True,
+            contact=contact.get_data()))
 
     def handle_update_extras(self, api, command):
         """
@@ -229,9 +245,13 @@ class ContactsResource(SandboxResource):
             - ``key``: The contact's key
             - ``fields``: The extra fields to be updated
 
-        Reply fields:
-            - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``contact``: An object containing the contact's data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
 
         Example:
         .. code-block:: javascript
@@ -250,9 +270,13 @@ class ContactsResource(SandboxResource):
             - ``key``: The contact's key
             - ``fields``: The subscription fields to be updated
 
-        Reply fields:
-            - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``contact``: An object containing the contact's data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
 
         Example:
         .. code-block:: javascript
@@ -271,11 +295,13 @@ class ContactsResource(SandboxResource):
         Command fields:
             - ``fields``: The fields to be set for the new contact
 
-        Reply fields:
-            - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``
-            - ``key``: a string representing the newly created key identifying
-            the contact (for eg. f953710a2472447591bd59e906dc2c26)
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``contact``: An object containing the contact's data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
 
         Example:
         .. code-block:: javascript
@@ -298,7 +324,10 @@ class ContactsResource(SandboxResource):
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        returnValue(self.reply(command, success=True, key=contact.key))
+        returnValue(self.reply(
+            command,
+            success=True,
+            contact=contact.get_data()))
 
     @inlineCallbacks
     def handle_save(self, api, command):
@@ -311,9 +340,13 @@ class ContactsResource(SandboxResource):
             - ``contact``: The contact's data. **Note**: ``key`` must be a
             field in the contact data in order identify the contact.
 
-        Reply fields:
-            - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``contact``: An object containing the contact's data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
 
         Example:
         .. code-block:: javascript
@@ -363,4 +396,7 @@ class ContactsResource(SandboxResource):
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        returnValue(self.reply(command, success=True))
+        returnValue(self.reply(
+            command,
+            success=True,
+            contact=contact.get_data()))
