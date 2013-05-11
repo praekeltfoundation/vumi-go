@@ -405,6 +405,8 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
     def test_confirmation_post(self):
         conversation = self.user_api.get_wrapped_conversation(self.conv_key)
 
+        self.assertTrue(u'CONVERSATION:bulk_message:%s' % (self.conv_key,)
+                        not in self.user_api.get_routing_table())
         # we're faking this here, this would normally have happened when
         # the confirmation SMS was sent out.
         tag = conversation.acquire_tag()
@@ -432,6 +434,9 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertContains(response, conversation.description)
         self.assertContains(response, "Conversation confirmed")
         self.assertContains(response, "Conversation started succesfully!")
+
+        self.assertTrue(u'CONVERSATION:bulk_message:%s' % (self.conv_key,)
+                        in self.user_api.get_routing_table())
 
         # reload the conversation because batches are cached.
         conversation = self.user_api.get_wrapped_conversation(conversation.key)
