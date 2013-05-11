@@ -237,7 +237,7 @@ class ContactsResource(SandboxResource):
         .. code-block:: javascript
             api.request(
                 'contacts.update_extras',
-                {key: '123abc', field: 'surname', value: 'Jones'},
+                {fields: {location: 'CPT', beer: 'Whale Tail Ale'}},
                 function(reply) { api.log_info(reply.success); });
         """
         return self._update_dynamic_fields('extra', api, command)
@@ -258,7 +258,7 @@ class ContactsResource(SandboxResource):
         .. code-block:: javascript
             api.request(
                 'contacts.update_subscriptions',
-                {key: '123abc', field: 'foo', value: 'bar'},
+                {fields: {a: 'one', b: 'two'}},
                 function(reply) { api.log_info(reply.success); });
         """
         return self._update_dynamic_fields('subscription', api, command)
