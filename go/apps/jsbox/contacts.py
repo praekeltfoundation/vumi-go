@@ -190,9 +190,9 @@ class ContactsResource(SandboxResource):
     @inlineCallbacks
     def _update_dynamic_field(self, field_name, api, command):
         try:
-            if not isinstance(command.get('contact_key'), unicode):
+            if not isinstance(command.get('key'), unicode):
                 raise SandboxError(
-                    "'contact_key' needs to be specified and be a unicode "
+                    "'key' needs to be specified and be a unicode "
                     "string")
 
             if not isinstance(command.get('field'), unicode):
@@ -204,7 +204,7 @@ class ContactsResource(SandboxResource):
                                    "non-None value")
 
             store = self._contact_store_for_api(api)
-            contact = yield store.get_contact_by_key(command['contact_key'])
+            contact = yield store.get_contact_by_key(command['key'])
 
             field = getattr(contact, field_name)
             field[command['field']] = command['value']
@@ -220,7 +220,7 @@ class ContactsResource(SandboxResource):
         Updates a single subfield of an existing contact's ``extra`` field.
 
         Command field:
-            - ``contact_key``: The contact's key
+            - ``key``: The contact's key
             - ``field``: The name of the subfield to be updated
             - ``value``: The subfield's new value
 
@@ -232,7 +232,7 @@ class ContactsResource(SandboxResource):
         .. code-block:: javascript
             api.request(
                 'contacts.update_extra',
-                {contact_key: '123abc', field: 'surname', value: 'Jones'},
+                {key: '123abc', field: 'surname', value: 'Jones'},
                 function(reply) { api.log_info(reply.success); });
         """
         return self._update_dynamic_field('extra', api, command)
@@ -243,7 +243,7 @@ class ContactsResource(SandboxResource):
         field.
 
         Command field:
-            - ``contact_key``: The contact's key
+            - ``key``: The contact's key
             - ``field``: The name of the subfield to be updated
             - ``value``: The subfield's new value
 
@@ -255,7 +255,7 @@ class ContactsResource(SandboxResource):
         .. code-block:: javascript
             api.request(
                 'contacts.update_subscription',
-                {contact_key: '123abc', field: 'foo', value: 'bar'},
+                {key: '123abc', field: 'foo', value: 'bar'},
                 function(reply) { api.log_info(reply.success); });
         """
         return self._update_dynamic_field('subscription', api, command)

@@ -278,7 +278,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
         reply = yield self.dispatch_command(
             'update_extra',
-            contact_key=contact.key,
+            key=contact.key,
             field='foo',
             value=u'larp')
         self.check_reply(reply)
@@ -298,12 +298,12 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
         yield self.assert_bad_command('update_extra')
         yield self.assert_bad_command(
-            'update_extra', contact_key=None, field=u'location', value=u'CPT')
+            'update_extra', key=None, field=u'location', value=u'CPT')
         yield self.assert_bad_command(
-            'update_extra', contact_key=contact.key, field=2, value=u'CPT')
+            'update_extra', key=contact.key, field=2, value=u'CPT')
         yield self.assert_bad_command(
             'update_extra',
-            contact_key=contact.key,
+            key=contact.key,
             field=u'location',
             value=None)
 
@@ -315,7 +315,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
         reply = yield self.dispatch_command(
             'update_extra',
-            contact_key=contact.key,
+            key=contact.key,
             field='foo',
             value=u'☃')
         self.check_reply(reply)
@@ -329,7 +329,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
     def test_handle_update_extra_for_nonexistent_contacts(self):
         return self.assert_bad_command(
             'update_extra',
-            contact_key='213123',
+            key='213123',
             field='foo',
             value=u'bar')
 
@@ -341,7 +341,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
         reply = yield self.dispatch_command(
             'update_subscription',
-            contact_key=contact.key,
+            key=contact.key,
             field='foo',
             value=u'larp')
         self.check_reply(reply)
@@ -362,17 +362,17 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
         yield self.assert_bad_command('update_subscription')
         yield self.assert_bad_command(
             'update_subscription',
-            contact_key=None,
+            key=None,
             field=u'foo',
             value=u'bar')
         yield self.assert_bad_command(
             'update_subscription',
-            contact_key=contact.key,
+            key=contact.key,
             field=2,
             value=u'bar')
         yield self.assert_bad_command(
             'update_subscription',
-            contact_key=contact.key,
+            key=contact.key,
             field=u'foo',
             value=None)
 
@@ -384,7 +384,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
         reply = yield self.dispatch_command(
             'update_subscription',
-            contact_key=contact.key,
+            key=contact.key,
             field='foo',
             value=u'☃')
         self.check_reply(reply)
@@ -398,7 +398,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
     def test_handle_update_subscription_for_nonexistent_contacts(self):
         return self.assert_bad_command(
             'update_subscription',
-            contact_key='21312',
+            key='21312',
             field='foo',
             value=u'bar')
 
