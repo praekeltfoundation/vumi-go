@@ -1,3 +1,6 @@
+// go.tables
+// =========
+
 (function(exports) {
 
     var init = function(selector) {
