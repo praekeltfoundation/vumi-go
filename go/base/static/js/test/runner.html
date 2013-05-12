@@ -22,18 +22,15 @@
     <script src="../vendor/backbone-1.0.0.js"></script>
 
     <script src="../src/go.js"></script>
-    <script src="../src/errors/errors.js"></script>
-    <script src="../src/utils/utils.js"></script>
-    <script src="../src/components/components.js"></script>
-    <script src="../src/components/plumbing.js"></script>
-    <script src="../src/campaigns/campaigns.js"></script>
-    <script src="../src/campaigns/setup/setup.js"></script>
-    <script src="../src/campaigns/setup/interactive.js"></script>
+    <script src="../src/errors.js"></script>
+    <script src="../src/utils.js"></script>
+    <script src="../src/campaign/campaign.js"></script>
+    <script src="../src/campaign/interactive.js"></script>
+    <script src="../src/components/plumbing.test.js"></script>
+    <script src="../src/campaigns/interactive.test.js"></script>
 
-    <script src="errors/errors.test.js"></script>
-    <script src="utils/utils.test.js"></script>
-    <script src="components/plumbing.test.js"></script>
-    <script src="campaigns/setup/interactive.test.js"></script>
+    <script src="tests/errors.test.js"></script>
+    <script src="tests/utils.test.js"></script>
     <script>
       if (window.mochaPhantomJS) { mochaPhantomJS.run(); }
       else { mocha.run(); }

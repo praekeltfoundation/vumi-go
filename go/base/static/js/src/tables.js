@@ -1,3 +1,6 @@
+// go.tables
+// =========
+
 (function(exports) {
 
     var init = function(selector) {
@@ -30,11 +33,11 @@
                 // I'm sharing a loop to check for both of these
                 // states, once the condition is met I can just
                 // abort the loop.
-                if (allChecked == false && oneChecked == true) {
+                if (!allChecked && oneChecked) {
                     return false;
                 }
             });
-            $table.find('thead input[type="checkbox"]').prop('checked', allChecked)
+            $table.find('thead input[type="checkbox"]').prop('checked', allChecked);
 
             // toggle the buttons associated with this table;
             // association happens via data-table-id
@@ -47,7 +50,7 @@
             var url = $(this).parents('tr').attr('data-url');
             if (url.length) window.location = url;
         });
-    }
+    };
 
     exports.init = init;
 
