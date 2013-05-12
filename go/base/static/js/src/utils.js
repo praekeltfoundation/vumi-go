@@ -14,6 +14,13 @@
   // `Backbone.Model`, since it has the `extend()` function we are looking for.
   exports.Extendable.extend = Backbone.Model.extend;
 
+  var _extend = Backbone.Model.extend;
+
+  exports.Extendable.extend = function() {
+    Array.prototype.unshift.call(arguments, {});
+    return _extend.call(this, _.extend.apply(this, arguments));
+  };
+
   // Get an element id from a Backbone view, selector, element or jquery
   // wrapped element
   exports.idOf = function(viewOrEl) {
@@ -27,6 +34,5 @@
 
       id = $el.attr('id');
       if (!id) { throw new GoError(viewOrEl + " has no id"); }
-      return id;
   };
 })(go.utils = {});
