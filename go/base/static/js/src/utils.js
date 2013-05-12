@@ -3,13 +3,10 @@
 // Utilities and helpers for Go
 
 (function(exports) {
-<<<<<<< HEAD:go/base/static/js/src/utils/utils.js
   var GoError = go.errors.GoError;
 
-=======
   // Acts as a 'base' for class-like objects which can be extended (with the
   // prototype chain set up automatically)
->>>>>>> feature/issue-255-client-side-code-needs-to-be-reorganised:go/base/static/js/src/utils.js
   exports.Extendable = function () {};
 
   // Backbone has an internal `extend()` function which it assigns to its
