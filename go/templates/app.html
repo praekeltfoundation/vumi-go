@@ -4,7 +4,9 @@
 {% block navigation %}
 <nav class="main-nav navbar clearfix">
     <div class="pull-left">
-        <a class="brand" href="/">Go</a>
+        <a class="brand" href="/">
+            <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi" class="logo">
+        </a>
         
         <ul class="nav">
           <li><a href="{% url 'conversations:index' %}">Dashboard</a></li>
