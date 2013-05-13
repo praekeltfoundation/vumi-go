@@ -441,7 +441,7 @@ def new_person(request):
         form = ContactForm(request.POST, groups=groups)
         if form.is_valid():
             contact = contact_store.new_contact(**form.cleaned_data)
-            messages.add_message(request, messages.INFO, 'Recipient created')
+            messages.add_message(request, messages.INFO, 'Contact created')
             return redirect(reverse('contacts:person', kwargs={
                 'person_key': contact.key}))
         else:
