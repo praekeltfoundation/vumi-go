@@ -8,6 +8,6 @@ urlpatterns = patterns('',
         name='message_bulk'),
     url(r'^message/(?P<campaign_key>\w+)/conversation/$',
         views.message_conversation, name='message_conversation'),
-    url(r'^recipients/$', views.todo, name='recipients'),
+    url(r'^contacts/$', views.todo, name='contacts'),
     url(r'^summary/$', views.todo, name='summary'),
 )
