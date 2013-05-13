@@ -1,6 +1,5 @@
 // go.errors
 // =========
-//
 // Error infrastructure for Go
 
 (function(exports) {
