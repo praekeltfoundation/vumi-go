@@ -26,13 +26,7 @@
         // highlight the breadcrumbs.
         $('.breadcrumbs a').eq(1).addClass('active');
 
-
-        $textarea = $('#frm-campaign textarea')
-        var composer = new go.campaign.bulkMessage.TextareaView({
-            $textarea: $textarea
-        });
-        $textarea.after(composer.render().el);
-
+        new go.campaign.bulkMessage.TextareaView({el: $('#frm-campaign textarea')});
     });
 </script>
 {% endblock %}
