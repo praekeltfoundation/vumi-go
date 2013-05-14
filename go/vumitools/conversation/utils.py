@@ -293,10 +293,11 @@ class ConversationWrapper(object):
         yield self.dispatch_command('send_message', command_data={
             "batch_id": batch_id,
             "to_addr": msisdn,
+            "conversation_key": self.c.key,
             "msg_options": msg_options,
-            "content": "Please visit %s to start your conversation." % (
-                        token_url,),
-            })
+            "content": ("Please visit %s to start your conversation." %
+                        (token_url,)),
+        })
         self.c.batches.add_key(batch_id)
         yield self.c.save()
 

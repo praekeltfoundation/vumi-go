@@ -360,3 +360,17 @@ class TestSurveyApplication(AppWorkerTestCase):
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
         self.assertEqual(sent_msg['transport_name'], 'smpp_transport')
+
+    @inlineCallbacks
+    def test_closing_menu_if_unavailable(self):
+        poll_id = 'poll-%s' % (self.conversation.key,)
+        config = yield self.pm.get_config(poll_id)
+        self.assertEqual(config, {})  # incomplete or empty
+
+        msg = self.mkmsg_in()
+        msg['helper_metadata']['poll_id'] = poll_id
+        yield self.dispatch_to_conv(msg, self.conversation)
+        [reply] = yield self.wait_for_dispatched_messages(1)
+        self.assertTrue('Service Unavailable' in reply['content'])
+        self.assertEqual(reply['session_event'],
+                         TransportUserMessage.SESSION_CLOSE)

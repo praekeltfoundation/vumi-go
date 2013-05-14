@@ -378,6 +378,7 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
             command_data={
                 'batch_id': batch.key,
                 'msg_options': msg_options,
+                'conversation_key': conversation.key,
                 'content':
                     'Please visit http://%s%s to start your conversation.' % (
                     site.domain, reverse('token', kwargs={'token': 'abcdef'})),
