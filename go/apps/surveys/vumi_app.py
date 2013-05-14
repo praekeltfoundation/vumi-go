@@ -46,6 +46,14 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         contact = yield self.get_contact_for_message(message, create=True)
         participant = yield self.pm.get_participant(
             poll_id, message.user())
+
+        poll = yield self.pm.get_poll_for_participant(poll_id, participant)
+        if poll is None:
+            yield self.reply_to(
+                message, 'Service Unavailable. Please try again later.',
+                continue_session=False)
+            return
+
         config = yield self.pm.get_config(poll_id)
         for key in config.get('include_labels', []):
             value = contact.extra[key]
