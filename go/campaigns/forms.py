@@ -41,5 +41,4 @@ class CampaignConfigurationForm(forms.Form):
 
 
 class CampaignBulkMessageForm(forms.Form):
-    # pass
     message = forms.CharField(label="Bulk message text", widget=forms.Textarea)

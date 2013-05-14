@@ -1,8 +1,8 @@
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 
-from go.campaigns.forms import CampaignGeneralForm, \
-    CampaignConfigurationForm, CampaignBulkMessageForm
+from go.campaigns.forms import (
+    CampaignGeneralForm, CampaignConfigurationForm, CampaignBulkMessageForm)
 
 
 def details(request, campaign_key=None):
