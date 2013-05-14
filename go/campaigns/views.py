@@ -38,6 +38,15 @@ def message(request, campaign_key):
 def message_bulk(request, campaign_key):
     """The simpler of the two messages."""
     form = CampaignBulkMessageForm()
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'draft':
+            return redirect('conversations:index')
+            # save and go back to list.
+
+        # TODO save and go to next step.
+        return redirect('campaigns:contacts', campaign_key='fakekeydawg')
+
     return render(request, 'campaigns/wizard_2_message_bulk.html', {
         'form': form
         })
@@ -49,5 +58,5 @@ def message_conversation(request, campaign_key):
     return render(request, 'campaigns/wizard_2_conversation.html')
 
 
-def todo(request):
+def todo(request, campaign_key):
     return HttpResponse('TODO')

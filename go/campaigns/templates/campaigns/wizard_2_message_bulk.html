@@ -8,7 +8,7 @@
 
 <div class="row">
     <div class="span12">
-        <form id="frm-campaign-bulk-message" method="post" action="">
+        <form id="frm-campaign" method="post" action="">
             {% csrf_token %}
             {{ form.as_p }}
     </div>
@@ -27,7 +27,7 @@
         $('.breadcrumbs a').eq(1).addClass('active');
 
 
-        $textarea = $('#frm-campaign-bulk-message textarea')
+        $textarea = $('#frm-campaign textarea')
         var composer = new go.campaign.bulkMessage.TextareaView({
             $textarea: $textarea
         });
