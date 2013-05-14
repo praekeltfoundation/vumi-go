@@ -1,10 +1,12 @@
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 
-from go.campaigns.forms import CampaignGeneralForm, CampaignConfigurationForm
+from go.campaigns.forms import (CampaignGeneralForm, CampaignConfigurationForm,
+    CampaignBulkMessageForm)
 
 
-def details(request, key=None):
+
+def details(request, campaign_key=None):
     """
     TODO: This is a fake implementation, it's not based on anything
     other than displaying the views and perhaps formulating
@@ -34,7 +36,11 @@ def message(request, campaign_key):
 
 
 def message_bulk(request, campaign_key):
-    return render(request, 'campaigns/wizard_2_message_bulk.html')
+    """The simpler of the two messages."""
+    form = CampaignBulkMessageForm()
+    return render(request, 'campaigns/wizard_2_message_bulk.html', {
+        'form': form
+        })
 
 
 def message_conversation(request, campaign_key):

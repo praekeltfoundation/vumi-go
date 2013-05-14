@@ -1,6 +1,8 @@
 from django import forms
 
 
+
+
 class CampaignGeneralForm(forms.Form):
 
     TYPE_CHOICES = (
@@ -38,3 +40,7 @@ class CampaignConfigurationForm(forms.Form):
                                          choices=CHANNEL_CHOICES)
 
     keyword = forms.CharField(label="Keyword", max_length=100)
+
+class CampaignBulkMessageForm(forms.Form):
+    # pass
+    message = forms.CharField(label="Bulk message text", widget=forms.Textarea)
