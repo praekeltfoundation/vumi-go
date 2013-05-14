@@ -5,28 +5,9 @@
 {% endblock %}
 
 {% block content_main %}
-    <form id="frm-campaign" method="post" action="">
-        {% csrf_token %}
-        <fieldset>
-            {% for field in form_general.visible_fields %}
-            <div class="control-group{% if field.errors %} error{% endif %}">
-                <label class="control-label" for="id_{{ field.name }}">
-                    {{ field.label }}
-                </label>
-                <div class="controls">
-                    {{ field }}
-                    <span class="help-inline">
-                        {% if field.errors %}
-                            {{ field.errors|join:" " }}
-                        {% endif %}
-                        {% if field.help_text %}
-                            ({{ field.help_text }})
-                        {% endif %}
-                    </span>
-                </div>
-            </div>
-            {% endfor %}
-        </fieldset>
+    
+    
+
 
 {% endblock %}
 
