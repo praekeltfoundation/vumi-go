@@ -5,7 +5,7 @@
 (function(exports) {
 
     var TextareaView = Backbone.View.extend({
-        SMS_TOTAL_CHARS: 160,
+        SMS_MAX_CHARS: 160,
 
         events: {
             'keyup': 'render'
@@ -17,11 +17,12 @@
         render: function() {
             var $p = this.$el.next();
             if (!$p.hasClass('textarea-char-count')) {
-                $p = this.$el.after('<p class="textarea-char-count"/>');
+                $p = $('<p class="textarea-char-count"/>');
+                this.$el.after($p);
             }
-            var totalChars = this.$el.val().length;
-            var totalSMS = Math.ceil(totalChars / this.SMS_TOTAL_CHARS);
-            $p.html(totalChars + ' characters used<br>' + totalSMS + ' smses');
+            this.totalChars = this.$el.text().length;
+            this.totalSMS = Math.ceil(this.totalChars / this.SMS_MAX_CHARS);
+            $p.html(this.totalChars + ' characters used<br>' + this.totalSMS + ' smses');
 
             return this;
         }
