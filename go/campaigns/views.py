@@ -32,6 +32,8 @@ def details(request, campaign_key=None):
 
 
 def message(request, campaign_key):
+    # is this for a conversation or bulk?
+    # determine that and redirect.
     return redirect('campaigns:message_bulk', campaign_key=campaign_key)
 
 
@@ -53,8 +55,6 @@ def message_bulk(request, campaign_key):
 
 
 def message_conversation(request, campaign_key):
-    # is this for a conversation or bulk?
-    # determine that and redirect.
     return render(request, 'campaigns/wizard_2_conversation.html')
 
 
