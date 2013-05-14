@@ -8,7 +8,7 @@
 
 <div class="row">
     <div class="span12">
-        <form id="frm-campaign" method="post" action="">
+        <form id="frm-campaign-bulk-message" method="post" action="">
             {% csrf_token %}
             {{ form.as_p }}
     </div>
@@ -25,6 +25,14 @@
     $(function() {
         // highlight the breadcrumbs.
         $('.breadcrumbs a').eq(1).addClass('active');
+
+
+        $textarea = $('#frm-campaign-bulk-message textarea')
+        var composer = new go.campaign.bulkMessage.TextareaView({
+            $textarea: $textarea
+        });
+        $textarea.after(composer.render().el);
+
     });
 </script>
 {% endblock %}
