@@ -109,3 +109,12 @@ class UnicodeCSVWriter(object):
 def configured_conversation_types():
     return dict((a['namespace'], a['display_name'])
                 for a in settings.VUMI_INSTALLED_APPS.itervalues())
+
+
+def get_conversation_definition(conversation_type):
+    # HACK: Assume 'namespace' is 'conversation_type'.
+    for module, data in settings.VUMI_INSTALLED_APPS.iteritems():
+        if data['namespace'] == conversation_type:
+            app_pkg = __import__(module, fromlist=['definition'])
+            return app_pkg.definition.ConversationDefinition
+    raise Exception("Can't find conversation_type: %s" % (conversation_type,))

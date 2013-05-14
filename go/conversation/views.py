@@ -5,6 +5,8 @@ from django.shortcuts import render
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from go.conversation.forms import ConversationSearchForm
+from go.base.utils import get_conversation_definition, conversation_or_404
+from go.conversation.conversation_views import ConversationViewFinder
 
 
 CONVERSATIONS_PER_PAGE = 12
@@ -72,3 +74,11 @@ def index(request):
         'query': query,
         'search_form': search_form,
     })
+
+
+@login_required
+def conversation(request, conversation_key, path_suffix):
+    conv = conversation_or_404(request.user_api, conversation_key)
+    conv_def = get_conversation_definition(conv.conversation_type)
+    finder = ConversationViewFinder(conv_def(conv))
+    return finder.get_view(path_suffix)(request, conv)
