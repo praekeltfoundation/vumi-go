@@ -1,15 +1,13 @@
 from django import forms
 
 
-
-
 class CampaignGeneralForm(forms.Form):
 
     TYPE_CHOICES = (
-            ('', 'Select campaign type'),
-            ('B', 'Bulk Message'),
-            ('C', 'Conversation'),
-        )
+        ('', 'Select campaign type'),
+        ('B', 'Bulk Message'),
+        ('C', 'Conversation'),
+    )
 
     name = forms.CharField(label="Campaign name", max_length=100)
     type = forms.ChoiceField(label="Which kind of campaign would you like?",
@@ -40,6 +38,7 @@ class CampaignConfigurationForm(forms.Form):
                                          choices=CHANNEL_CHOICES)
 
     keyword = forms.CharField(label="Keyword", max_length=100)
+
 
 class CampaignBulkMessageForm(forms.Form):
     # pass

@@ -1,9 +1,8 @@
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 
-from go.campaigns.forms import (CampaignGeneralForm, CampaignConfigurationForm,
-    CampaignBulkMessageForm)
-
+from go.campaigns.forms import CampaignGeneralForm, \
+    CampaignConfigurationForm, CampaignBulkMessageForm
 
 
 def details(request, campaign_key=None):
@@ -19,8 +18,8 @@ def details(request, campaign_key=None):
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'draft':
-            return redirect('conversations:index')
             # save and go back to list.
+            return redirect('conversations:index')
 
         # TODO save and go to next step.
         return redirect('campaigns:message', campaign_key='fakekeydawg')
@@ -43,15 +42,15 @@ def message_bulk(request, campaign_key):
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'draft':
-            return redirect('conversations:index')
             # save and go back to list.
+            return redirect('conversations:index')
 
         # TODO save and go to next step.
         return redirect('campaigns:contacts', campaign_key='fakekeydawg')
 
     return render(request, 'campaigns/wizard_2_message_bulk.html', {
         'form': form
-        })
+    })
 
 
 def message_conversation(request, campaign_key):
