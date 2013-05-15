@@ -20,17 +20,15 @@
   // Class-like object on which events can be bound and emitted
   exports.Eventable = exports.Extendable.extend(Backbone.Events, {
     events: {},
-    constructor: function() { this.bindEvents(); },
-    bindEvents: function() {
-      // bind events
-      var self = this,
-          events = this.events;
-          
-      for (var e in events) { this.on(e, this[events[e]].bind(this)); }
-    }
+    constructor: function() { exports.delegateEvents(this, this.events); }
   });
 
-  // Pop a value from a collection
+  // Binds events to callbacks on an Eventable or Backbone Model/View instance
+  exports.delegateEvents = function(that, events) {
+      for (var e in events) { that.on(e, that[events[e]].bind(that)); }
+  };
+
+  // Pop a property off an object
   exports.pop = function(collection, key) {
     var value = collection[key];
     delete collection[key];

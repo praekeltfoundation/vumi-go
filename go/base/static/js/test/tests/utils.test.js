@@ -42,8 +42,9 @@ describe("go.utils", function() {
     });
   });
 
-  describe(".Eventable", function() {
-    var Eventable = go.utils.Eventable;
+  describe(".delegateEvents", function() {
+    var Eventable = go.utils.Eventable,
+        delegateEvents = go.utils.delegateEvents;
 
     it("should call callbacks when their events are emitted", function(done) {
       var Thing,
@@ -53,7 +54,6 @@ describe("go.utils", function() {
           maybeDone = function() { aCalled && bCalled && done(); };
       
       Thing = Eventable.extend({
-        events: {'event-a': 'a', 'event-b': 'b'},
         a: function() {
           aCalled = true;
           maybeDone();
@@ -65,6 +65,7 @@ describe("go.utils", function() {
       });
 
       thing = new Thing();
+      delegateEvents(thing, {'event-a': 'a', 'event-b': 'b'});
       thing.trigger('event-a');
       thing.trigger('event-b');
     });
@@ -74,7 +75,6 @@ describe("go.utils", function() {
           thing;
       
       Thing = Eventable.extend({
-        events: {'event': 'callback'},
         callback: function() {
           assert.equal(this, thing);
           done();
@@ -82,6 +82,7 @@ describe("go.utils", function() {
       });
 
       thing = new Thing();
+      delegateEvents(thing, {'event': 'callback'});
       thing.trigger('event');
     });
   });
