@@ -20,7 +20,9 @@ describe("go.utils", function() {
     });
 
     it("should default to a parent's constructor", function() {
-      var Parent, Child;
+      var Parent,
+          Child;
+
       Parent = Extendable.extend({
         constructor: function (name) { this.name = name; }
       });
@@ -28,20 +30,35 @@ describe("go.utils", function() {
 
       assert.equal(new Child('foo').name, 'foo');
     });
-
-    it("should provide a reference to parent prototype", function() {
-      var Parent, Child;
-      Parent = Extendable.extend({
-        constructor: function (name) { this.name = name; }
-      });
-      Child = Parent.extend({
-        constructor: function (name) { this.parent.constructor(name); }
-      });
-
-      assert.equal(new Child('foo').name, 'foo');
-    });
   });
 
+  describe("._super_", function() {
+    var Extendable = go.utils.Extendable,
+        _super_ = go.utils._super_;
+
+    it("should provide the 'super' prototype", function() {
+      var Parent = Extendable.extend(),
+          Child = Parent.extend();
+
+      assert.equal(_super_(new Child()), Parent.prototype);
+    });
+
+    it("should provide a property on the 'super' prototype", function() {
+      var Parent = Extendable.extend({prop: 23}),
+          Child = Parent.extend({prop: 22});
+
+      assert.equal(_super_(new Child(), 'prop'), 23);
+    });
+
+    it("should provide binded versions of the 'super' prototype's functions",
+       function() {
+      var Parent = Extendable.extend({fn: function() { return this; }}),
+          Child = Parent.extend({fn: function() { return 22; }}),
+          child = new Child();
+
+      assert.equal(_super_(child, 'fn')(), child);
+    });
+  });
   describe(".delegateEvents", function() {
     var Eventable = go.utils.Eventable,
         delegateEvents = go.utils.delegateEvents;
@@ -84,22 +101,6 @@ describe("go.utils", function() {
       thing = new Thing();
       delegateEvents(thing, {'event': 'callback'});
       thing.trigger('event');
-    });
-  });
-
-  describe(".pop", function() {
-    var pop = go.utils.pop;
-
-    it("should pop a property off an object", function() {
-      var obj = {a: 'one', b: 'two'};
-      assert.equal(pop(obj, 'a'), 'one');
-      assert.deepEqual(obj, {b: 'two'});
-    });
-
-    it("should handle non-existent properties without breaking", function() {
-      var obj = {a: 'one'};
-      assert.equal(pop({a: 'one'}, 'b'), undefined);
-      assert.deepEqual(obj, {a: 'one'});
     });
   });
 });

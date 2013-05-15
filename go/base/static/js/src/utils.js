@@ -13,7 +13,7 @@
   var extend = Backbone.Model.extend;
 
   exports.Extendable.extend = function() {
-    Array.prototype.unshift.call(arguments, {parent: this.prototype});
+    Array.prototype.unshift.call(arguments, {});
     return extend.call(this, _.extend.apply(this, arguments));
   };
 
@@ -23,15 +23,26 @@
     constructor: function() { exports.delegateEvents(this, this.events); }
   });
 
+  // Returns the internal prototype ([[Prototype]]) of the instance's internal
+  // prototype (One step up in the prototype chain, and thus the 'super'
+  // prototype).
+  //
+  // If `propName` is specified, a property on 'super' prototype is returned.
+  // If the property is a function, the function is bound to the instance.
+  exports._super_ = function(that, propName) {
+    var proto = Object.getPrototypeOf(Object.getPrototypeOf(that)),
+        prop;
+
+    if (!propName) { return proto; }
+
+    prop = proto[propName];
+    return typeof prop === "function"
+      ? prop.bind(that)
+      : prop;
+  };
+
   // Binds events to callbacks on an Eventable or Backbone Model/View instance
   exports.delegateEvents = function(that, events) {
       for (var e in events) { that.on(e, that[events[e]].bind(that)); }
-  };
-
-  // Pop a property off an object
-  exports.pop = function(collection, key) {
-    var value = collection[key];
-    delete collection[key];
-    return value;
   };
 })(go.utils = {});
