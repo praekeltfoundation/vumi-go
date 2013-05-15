@@ -7,11 +7,17 @@
 {% block content_main %}
 <div class="row-fluid">
     <div class="span12">
-        <h3>Select contacts</h3>
-        {% include "contacts/group_list_table.html" %}
+        <div class="indent">
+            <h3>Select contacts</h3>
+            {% include "contacts/group_list_table.html" %}
+            <input type="button" class="btn" value="Upload contacts...">
+        </div>
     </div>
-
 </div>
+{% endblock %}
+
+{% block modals %}
+    {{ block.super }}
 {% endblock %}
 
 
