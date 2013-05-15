@@ -1,4 +1,5 @@
 import csv
+from datetime import datetime
 from StringIO import StringIO
 
 from django.views.generic import TemplateView
@@ -54,6 +55,50 @@ class ConversationView(TemplateView):
         if self.conversation_views.conversation_initiator == 'client':
             return 'start'
         return 'people'
+
+
+class NewConversationView(ConversationView):
+    """
+    This is a special case, and is therefore handled differently.
+    """
+    view_name = 'new'
+
+    def get(self, request, conversation_type):
+        # We used to put the time in the form, but that's a silly thing to do.
+        # Especially since we now ignore it anyway.
+        form = self.make_conversation_form(request.user_api, initial={})
+        return self.render_to_response({'form': form})
+
+    def post(self, request, conversation_type):
+        form = self.make_conversation_form(request.user_api, request.POST)
+        if not form.is_valid():
+            return self.render_to_response({'form': form})
+
+        conversation_data = {
+            'name': form.cleaned_data['subject'],
+            'description': form.cleaned_data['message'],
+            'delivery_class': form.cleaned_data['delivery_class'],
+            'delivery_tag_pool': form.cleaned_data['delivery_tag_pool'],
+            'config': {},
+        }
+
+        tag_info = form.cleaned_data['delivery_tag_pool'].partition(':')
+        conversation_data['delivery_tag_pool'] = tag_info[0]
+        if tag_info[2]:
+            conversation_data['delivery_tag'] = tag_info[2]
+
+        # Ignoring start time, because we don't actually do anything with it.
+        conversation_data['start_timestamp'] = datetime.utcnow()
+
+        conversation = request.user_api.new_conversation(
+            conversation_type, **conversation_data)
+        messages.add_message(request, messages.INFO, '%s Created' % (
+            self.conversation_views.conversation_display_name,))
+
+        next_view = self.get_next_view(conversation)
+        if self.conversation_views.edit_conversation_forms is not None:
+            next_view = 'edit'
+        return self.redirect_to(next_view, conversation_key=conversation.key)
 
 
 class PeopleConversationView(ConversationView):
@@ -533,3 +578,6 @@ class ConversationViewFinder(object):
             raise Http404
         return self.path_suffix_mapping[path_suffix].as_view(
             conversation_views=self)
+
+    def get_new_conversation_view(self):
+        return NewConversationView.as_view(conversation_views=self)

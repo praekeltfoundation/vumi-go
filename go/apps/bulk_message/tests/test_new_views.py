@@ -24,47 +24,50 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.client = Client()
         self.client.login(username='username', password='password')
 
-    def get_view_url(self, view):
+    def get_view_url(self, view, conv_key=None):
+        if conv_key is None:
+            conv_key = self.conv_key
         conv_def = get_conversation_definition(self.TEST_CONVERSATION_TYPE)
         finder = ConversationViewFinder(conv_def(None))
-        return finder.get_view_url(view, conversation_key=self.conv_key)
+        return finder.get_view_url(view, conversation_key=conv_key)
+
+    def get_new_view_url(self):
+        return reverse('conversations:new_conversation', kwargs={
+            'conversation_type': 'bulk_message'})
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
         return self.user_api.wrap_conversation(conv)
 
-    # FIXME: New conversation form.
     def run_new_conversation(self, selected_option, pool, tag):
         # render the form
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        response = self.client.get(reverse('bulk_message:new'))
+        response = self.client.get(self.get_new_view_url())
         self.assertEqual(response.status_code, 200)
         # post the form
-        response = self.client.post(reverse('bulk_message:new'), {
+        response = self.client.post(self.get_new_view_url(), {
             'subject': 'the subject',
             'message': 'the message',
             'delivery_class': 'sms',
             'delivery_tag_pool': selected_option,
         })
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
-        conversation = self.get_latest_conversation()
-        self.assertEqual(conversation.delivery_class, 'sms')
-        self.assertEqual(conversation.delivery_tag_pool, pool)
-        self.assertEqual(conversation.delivery_tag, tag)
-        self.assertRedirects(response, reverse('bulk_message:people', kwargs={
-            'conversation_key': conversation.key,
-        }))
+        conv = self.get_latest_conversation()
+        self.assertEqual(conv.delivery_class, 'sms')
+        self.assertEqual(conv.delivery_tag_pool, pool)
+        self.assertEqual(conv.delivery_tag, tag)
+        self.assertRedirects(response, self.get_view_url('people', conv.key))
 
-    # def test_new_conversation(self):
-    #     """test the creation of a new conversation"""
-    #     self.run_new_conversation('longcode:', 'longcode', None)
+    def test_new_conversation(self):
+        """test the creation of a new conversation"""
+        self.run_new_conversation('longcode:', 'longcode', None)
 
-    # def test_new_conversation_with_user_selected_tags(self):
-    #     tp_meta = self.api.tpm.get_metadata('longcode')
-    #     tp_meta['user_selects_tag'] = True
-    #     self.api.tpm.set_metadata(u'longcode', tp_meta)
-    #     self.run_new_conversation(u'longcode:default10001', u'longcode',
-    #                               u'default10001')
+    def test_new_conversation_with_user_selected_tags(self):
+        tp_meta = self.api.tpm.get_metadata('longcode')
+        tp_meta['user_selects_tag'] = True
+        self.api.tpm.set_metadata(u'longcode', tp_meta)
+        self.run_new_conversation(u'longcode:default10001', u'longcode',
+                                  u'default10001')
 
     def test_end(self):
         """
