@@ -59,6 +59,19 @@ describe("go.components.plumbing", function() {
 
       endpointA.connect(endpointB);
     });
+
+    it("should allow endpoints to be subscribed", function() {
+      var endpointC = new PlumbEndpoint({id: 'c', host: hostA, attr: 'target'});
+      dispatcher.subscribe(endpointC);
+
+      assert.deepEqual(dispatcher._endpoints,
+                       {a: endpointA, b: endpointB, c: endpointC});
+    });
+
+    it("should allow endpoints to be unsubscribed", function() {
+      dispatcher.unsubscribe('b');
+      assert.deepEqual(dispatcher._endpoints, {a: endpointA});
+    });
   });
 
   describe(".PlumbEndpoint", function() {

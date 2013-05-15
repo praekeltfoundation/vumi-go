@@ -10,10 +10,7 @@
       pop = go.utils.pop,
       _super_ = go.utils._super_;
 
-  // Thrown when errors occur whilst interacting with a plumbing component
-  var PlumbError = go.errors.GoError.subtype('PlumbError');
-
-  // Dispatches jsPlumb events to the subscribed endpoints
+  // Dispatches jsPlumb events to the subscribed `PlumbEndpoint`s
   //
   // Options
   //   - plumb: jsPlumb instance
@@ -48,10 +45,6 @@
 
     // Subscribe an endpoint
     subscribe: function(endpoint) {
-      if (!(endpoint instanceof PlumbEndpoint)) {
-        throw new PlumbError(endpoint + " is not a PlumbEndpoint");
-      }
-  
       this._endpoints[endpoint.id] = endpoint;
       return this;
     },
