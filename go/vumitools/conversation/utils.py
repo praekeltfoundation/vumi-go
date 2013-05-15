@@ -200,6 +200,7 @@ class ConversationWrapper(object):
                     #       If for some reason this does happen then at least
                     #       this will blow up.
                     [tag] = batch.tags
+                    yield self._add_to_routing_table(tag)
                     break
             else:
                 raise ConversationSendError('Unable to find batch for %s' % (
