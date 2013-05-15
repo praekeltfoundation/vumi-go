@@ -36,7 +36,7 @@ setup(
     name="vumi-go",
     version="0.0.1",
     url='http://github.com/praekelt/vumi-go',
-    # license = 'BSD',
+    license='BSD',
     description="Vumi Go",
     long_description=open('README.rst', 'r').read(),
     author='Praekelt Foundation',
@@ -46,11 +46,17 @@ setup(
     dependency_links=dependency_links,
     classifiers=[
         'Development Status :: 4 - Beta',
-        'Intended Audience :: Private Developers',
-        # 'License :: OSI Approved :: BSD License',
-        'Operating System :: OS Independent',
+        'Environment :: Web Environment',
+        'Framework :: Django',
+        'Framework :: Twisted',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: BSD License',
+        'Operating System :: POSIX',
         'Programming Language :: Python',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-        'Topic :: System :: Networking'
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
+        'Topic :: Communications',
+        'Topic :: Internet',
+        'Topic :: System :: Networking',
     ]
 )

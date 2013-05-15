@@ -30,6 +30,14 @@ describe("go.utils", function() {
 
       assert.equal(new Child('foo').name, 'foo');
     });
+
+    it("should accept multiple object arguments", function() {
+      var Thing = Extendable.extend({'a': 'one'}, {'b': 'two'}),
+          thing = new Thing();
+
+      assert.equal(thing.a, 'one');
+      assert.equal(thing.b, 'two');
+    });
   });
 
   describe("._super_", function() {
