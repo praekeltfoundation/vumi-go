@@ -1,0 +1,38 @@
+{% load url from future %}
+<table class="table table-bordered table-awesome" data-table-id="groups">
+    <thead>
+        <tr>
+            <th><input type="checkbox"></th>
+            <th>Name</th>
+            <th>No. of contacts</th>
+            <th>Date created</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for group in page.object_list %}
+        <tr data-url="{% url 'contacts:group' group_key=group.key %}">
+            <td>
+                <input type="checkbox">
+            </td>
+            <td>
+                {{ group.name }}
+            </td>
+            <td>
+                {{ group.backlinks.contacts|length }}
+            </td>
+            <td>
+            </td>
+        </tr>
+    {% empty %}
+        <tr>
+            <td colspan="4">
+            {% if query %}
+                No group names match <strong>{{query}}</strong>
+            {% else %}
+                You don't have any groups yet.
+            {% endif %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
