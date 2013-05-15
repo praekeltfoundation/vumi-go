@@ -371,7 +371,7 @@ def _people(request):
         selected_contacts.extend(contact_bunch)
 
     smart_group_form = SmartGroupForm(initial={'query': query})
-    return render(request, 'contacts/recipient_list.html', {
+    return render(request, 'contacts/contact_list.html', {
         'query': request.GET.get('q'),
         'selected_contacts': selected_contacts,
         'upload_contacts_form': upload_contacts_form,
@@ -426,7 +426,7 @@ def person(request, person_key):
     if contact_store.contact_has_opted_out(contact):
         messages.error(request, 'This contact has opted out.')
 
-    return render(request, 'contacts/recipient_detail.html', {
+    return render(request, 'contacts/contact_detail.html', {
         'contact': contact,
         'contact_extra_items': contact.extra.items(),
         'form': form,
@@ -441,7 +441,7 @@ def new_person(request):
         form = ContactForm(request.POST, groups=groups)
         if form.is_valid():
             contact = contact_store.new_contact(**form.cleaned_data)
-            messages.add_message(request, messages.INFO, 'Recipient created')
+            messages.add_message(request, messages.INFO, 'Contact created')
             return redirect(reverse('contacts:person', kwargs={
                 'person_key': contact.key}))
         else:
@@ -450,6 +450,6 @@ def new_person(request):
                 'Please correct the problem below.')
     else:
         form = ContactForm(groups=groups)
-    return render(request, 'contacts/recipient_detail.html', {
+    return render(request, 'contacts/contact_detail.html', {
         'form': form,
     })

@@ -8,7 +8,6 @@
 {% endblock %}
 
 {% block content_title %}
-    <a href="{% url 'contacts:people' %}">Recipients</a>
 {% endblock %}
 
 {% block content_actions_left %}
@@ -26,11 +25,11 @@
         <div class="span3 sidebar">
 
             <div class="nav nav-list extra-actions">
-                <a href="{% url 'contacts:new_person' %}">New recipient...</a>
+                <a href="{% url 'contacts:new_person' %}">New contact...</a>
             </div>
 
             <ul class="nav nav-list">
-                <li><a href="{% url 'contacts:people' %}">All recipients</a></li>
+                <li><a href="{% url 'contacts:people' %}">All contacts</a></li>
                 <li><a href="#">Smart groups</a></li>
                 <li><a href="{% url 'contacts:groups' %}">Groups</a></li>
             </ul>
