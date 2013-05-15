@@ -1,4 +1,5 @@
-
+from StringIO import StringIO
+from zipfile import ZipFile
 
 from celery.task import task
 
@@ -68,7 +69,7 @@ def export_conversation_messages(account_key, conversation_key):
                             for fn in field_names])
 
     zipio = StringIO()
-    zf = ZipfFile(zipio, "a")
+    zf = ZipFile(zipio, "a")
     zf.writestr("messages-export.csv", io.getvalue())
     zf.close()
 
