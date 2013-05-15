@@ -23,6 +23,11 @@
     constructor: function() { exports.delegateEvents(this, this.events); }
   });
 
+  // Binds events to callbacks on an Eventable or Backbone Model/View instance
+  exports.delegateEvents = function(that, events) {
+      for (var e in events) { that.on(e, that[events[e]].bind(that)); }
+  };
+
   // Returns the internal prototype ([[Prototype]]) of the instance's internal
   // prototype (One step up in the prototype chain, and thus the 'super'
   // prototype).
@@ -39,10 +44,5 @@
     return typeof prop === "function"
       ? prop.bind(that)
       : prop;
-  };
-
-  // Binds events to callbacks on an Eventable or Backbone Model/View instance
-  exports.delegateEvents = function(that, events) {
-      for (var e in events) { that.on(e, that[events[e]].bind(that)); }
   };
 })(go.utils = {});
