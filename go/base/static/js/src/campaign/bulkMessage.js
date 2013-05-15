@@ -20,7 +20,7 @@
                 $p = $('<p class="textarea-char-count"/>');
                 this.$el.after($p);
             }
-            this.totalChars = this.$el.text().length;
+            this.totalChars = this.$el.val().length;
             this.totalSMS = Math.ceil(this.totalChars / this.SMS_MAX_CHARS);
             $p.html(this.totalChars + ' characters used<br>' + this.totalSMS + ' smses');
 
