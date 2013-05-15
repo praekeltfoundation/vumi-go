@@ -67,6 +67,7 @@ describe("go.utils", function() {
       assert.equal(_super_(child, 'fn')(), child);
     });
   });
+
   describe(".delegateEvents", function() {
     var Eventable = go.utils.Eventable,
         delegateEvents = go.utils.delegateEvents;
