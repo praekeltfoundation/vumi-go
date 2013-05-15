@@ -1,17 +1,16 @@
 {% extends "campaigns/wizard_base.html" %}
 
 {% block content_title %}
-    Bulk Messages
+    Contacts
 {% endblock %}
 
 {% block content_main %}
-<div class="row">
+<div class="row-fluid">
     <div class="span12">
-        <form id="frm-campaign" method="post" action="">
-            {% csrf_token %}
-            {{ form.as_p }}
-        </form>
+        <h3>Select contacts</h3>
+        {% include "contacts/group_list_table.html" %}
     </div>
+
 </div>
 {% endblock %}
 
@@ -21,8 +20,7 @@
 <script type="text/javascript">
     $(function() {
         // highlight the breadcrumbs.
-        $('.breadcrumbs a').eq(1).addClass('active');
-        new go.campaign.bulkMessage.TextareaView({el: $('#frm-campaign textarea')});
+        $('.breadcrumbs a').eq(2).addClass('active');
     });
 </script>
 {% endblock %}
