@@ -3,12 +3,12 @@
 
 
 {% block content_title %}
-    <a href="{% url 'contacts:people' %}">Recipients</a>
+    <a href="{% url 'contacts:people' %}">Contacts</a>
     &raquo;
     {% if contact %}
         {{ contact }}
     {% else %}
-        New recipient
+        New contact
     {% endif %}
 {% endblock %}
 
