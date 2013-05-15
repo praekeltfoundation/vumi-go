@@ -1,4 +1,6 @@
 from datetime import date
+from zipfile import ZipFile
+from StringIO import StringIO
 
 from django.test.client import Client
 from django.core import mail
@@ -283,11 +285,15 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(email.recipients(), [self.user.email])
         self.assertTrue(self.conversation.name in email.subject)
         self.assertTrue(self.conversation.name in email.body)
-        [(file_name, content, mime_type)] = email.attachments
-        self.assertEqual(file_name, 'messages-export.csv')
+        [(file_name, contents, mime_type)] = email.attachments
+        self.assertEqual(file_name, 'messages-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('messages-export.csv', 'r').read()
+
         # 1 header, 10 sent, 10 received, 1 trailing newline == 22
-        self.assertEqual(22, len(content.split('\n')))
-        self.assertEqual(mime_type, 'text/csv')
+        self.assertEqual(22, len(csv_contents.split('\n')))
+        self.assertEqual(mime_type, 'application/zip')
 
 
 class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
