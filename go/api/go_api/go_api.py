@@ -29,14 +29,8 @@ class ConversationType(Dict):
         }
         super(ConversationType, self).__init__(*args, **kw)
 
-
-class GoApiServer(JSONRPC):
-    def __init__(self, username, vumi_api):
-        JSONRPC.__init__(self)
-        self.username = username
-        self.vumi_api = vumi_api
-
-    def _format_conversation(self, conv):
+    @classmethod
+    def format_conversation(cls, conv):
         return {
             'key': conv.key,
             'name': conv.name,
@@ -44,8 +38,38 @@ class GoApiServer(JSONRPC):
             'conversation_type': conv.conversation_type,
         }
 
+
+class CampaignType(Dict):
+    def __init__(self, *args, **kw):
+        kw['required_fields'] = {
+            'key': Unicode(),
+            'name': Unicode(),
+        }
+        super(CampaignType, self).__init__(*args, **kw)
+
+    @classmethod
+    def format_campaign(cls, campaign):
+        return {
+            'key': campaign["key"],
+            'name': campaign["name"],
+        }
+
+
+class GoApiServer(JSONRPC):
+    def __init__(self, username, vumi_api):
+        JSONRPC.__init__(self)
+        self.username = username
+        self.vumi_api = vumi_api
+
     def _format_conversation_list(self, convs):
-        return [self._format_conversation(c) for c in convs]
+        return [ConversationType.format_conversation(c) for c in convs]
+
+    @signature(returns=List("List of campaigns",
+                            item_type=CampaignType()))
+    def jsonrpc_campaigns(self):
+        """List the campaigns a user has access to."""
+        # TODO: add dummy campaign for user_account_key
+        return []
 
     @signature(campaign_key=Unicode("Campaign key."),
                returns=List("List of conversations.",
