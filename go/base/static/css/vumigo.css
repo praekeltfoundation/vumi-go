@@ -2,6 +2,9 @@ body {
   background: #2f3436;
   color: #c1c1c1;
 }
+.main-container {
+  min-width: 650px;
+}
 .footer {
   margin: 1em;
 }
@@ -113,7 +116,7 @@ body {
   margin-left: -5px !important;
   height: 100%;
 }
-.content .actions .sidebar button {
+.content .actions .sidebar .btn {
   margin-left: -5px;
   padding-left: 20px;
   padding-right: 20px;
