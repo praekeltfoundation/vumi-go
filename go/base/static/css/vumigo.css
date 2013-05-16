@@ -2,7 +2,7 @@ body {
   background: #2f3436;
   color: #c1c1c1;
 }
-.container-fluid {
+.main-container {
   min-width: 650px;
 }
 .footer {
