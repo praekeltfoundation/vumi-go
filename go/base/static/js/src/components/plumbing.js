@@ -79,6 +79,11 @@
       this.target = null;
 
       options.params.uuid = this.id;
+      _.extend(options.params, {
+        uuid: this.id,
+        isSource: true,
+        isTarget: true
+      });
       this.raw = jsPlumb.addEndpoint(this.host.$el, options.params);
     },
 
