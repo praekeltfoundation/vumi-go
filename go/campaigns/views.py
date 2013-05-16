@@ -1,6 +1,5 @@
 from urllib import urlencode
 
-from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -37,12 +36,13 @@ def details(request, campaign_key=None):
                 return redirect('conversations:index')
 
             # TODO save and go to next step.
-            return redirect('campaigns:message',
+            return redirect('campaigns:messages',
                             campaign_key=conversation.key)
 
     return render(request, 'campaigns/wizard_1_details.html', {
         'form_general': form_general,
-        'form_config': form_config
+        'form_config': form_config,
+        'campaign_key': campaign_key
     })
 
 
@@ -52,6 +52,22 @@ def message(request, campaign_key):
     # determine that and redirect.
     conversation = conversation_or_404(request.user_api, campaign_key)
     return redirect('campaigns:message_bulk', campaign_key=campaign_key)
+
+
+@login_required
+def message_conversation(request, campaign_key):
+    """Conversations that are difficult:
+        1. Talking to your parents about sex.
+        2. When your wife complains that you've peed on the toilet seat
+            infront of your inlaws.
+        3. People who tell you immigration is a problem... When you're an
+            immigrant.
+
+        Conversations that are VERY difficult:
+        1. This one.
+    """
+    conversation = conversation_or_404(request.user_api, campaign_key)
+    return render(request, 'campaigns/wizard_2_conversation.html')
 
 
 @login_required
@@ -69,13 +85,23 @@ def message_bulk(request, campaign_key):
         return redirect('campaigns:contacts', campaign_key=conversation.key)
 
     return render(request, 'campaigns/wizard_2_message_bulk.html', {
-        'form': form
+        'form': form,
+        'campaign_key': campaign_key
     })
 
 
 @login_required
 def contacts(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'draft':
+            # save and go back to list.
+            return redirect('conversations:index')
+
+        # TODO save and go to next step.
+        return redirect('campaigns:preview', campaign_key=conversation.key)
+
     groups = sorted(request.user_api.list_groups(),
                     key=lambda group: group.created_at,
                     reverse=True)
@@ -99,14 +125,20 @@ def contacts(request, campaign_key):
         'paginator': paginator,
         'page': page,
         'pagination_params': pagination_params,
+        'campaign_key': campaign_key,
     })
 
 
-@login_required
-def message_conversation(request, campaign_key):
+def preview(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
-    return render(request, 'campaigns/wizard_2_conversation.html')
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'start':
+            # 3.2.1.ignition!
+            # (Start the conversation)
+            return redirect('conversations:index')
 
-
-def todo(request, campaign_key):
-    return HttpResponse('TODO')
+    return render(request, 'campaigns/wizard_4_preview.html', {
+        'conversation': conversation,
+        'campaign_key': campaign_key
+    })

@@ -1,0 +1,85 @@
+{% extends "campaigns/wizard_base.html" %}
+{% load url from future %}
+
+{% block content_title %}
+    Preview &amp; Activate
+{% endblock %}
+
+{% block content_actions_right %}
+    <a href="{% url 'conversations:index' %}">Cancel</a>
+    <button class="btn btn-primary" data-action="start">Start</button>
+    {# TODO: Maybe this shouldn't post and simply go to another a view? #}
+{% endblock %}
+
+{% block content_main %}
+<div class="row-fluid indent">
+    <div class="span8">
+        
+        <h4 class="control-label">
+            <a href="{% url 'campaigns:details' campaign_key %}">
+                Details 
+                <button class="btn btn-primary btn-mini">Edit</button>
+            </a>
+        </h4>
+
+        <p>
+            NAME<br>
+            {{ conversation.name }}
+        </p>
+        <p>
+            TYPE<br>
+            {# TODO: conversation type. #}
+        </p>
+        
+        <p>
+            CHANNELS<br>
+            {# TODO: Channel summary #}
+        </p>
+
+        <hr>
+        <h4 class="control-label">
+            <a href="{% url 'campaigns:message' campaign_key %}">
+                Messages
+                <button class="btn btn-primary btn-mini">Edit</button>
+            </a>
+        </h4>
+
+        <p class="message">
+            {# TODO: Messages #}
+            Lorem ipsum sit dolar asdiosa
+        </p>
+
+
+        <hr>
+        <h4 class="control-label">
+            <a href="{% url 'campaigns:contacts' campaign_key %}">
+                Contacts
+                <button class="btn btn-primary btn-mini">Edit</button>
+            </a>
+        </h4>
+        <p class="message">
+            {# TODO: List of groups contacts #}
+            <ol>
+                <li>Sausage (168)</li>
+                <li>Ship (10)</li>
+                <li>Round-a-bout (5)</li>
+            </ol>
+        </p>
+
+    </div>
+    <div class="span4">
+        {# TODO: realtime phone device. #}
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extrascript %}
+{{ block.super }}
+<script type="text/javascript">
+    $(function() {
+        // highlight the breadcrumbs.
+        $('.breadcrumbs a').eq(3).addClass('active');
+    });
+</script>
+{% endblock %}
