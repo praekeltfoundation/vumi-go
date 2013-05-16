@@ -18,10 +18,12 @@ class CampaignConfigurationForm(forms.Form):
 
     COUNTRY_CHOICES = (
         ('.za', 'South Africa'),
+        ('.ke', 'Kenya'),
     )
 
     CHANNEL_CHOICES = (
         ('ussd', 'USSD'),
+        ('sms', 'SMS'),
     )
 
     # more than likely a many to many field, or something similair in the riak

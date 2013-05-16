@@ -1,5 +1,9 @@
+from urllib import urlencode
+
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from go.campaigns.forms import (
     CampaignGeneralForm, CampaignConfigurationForm, CampaignBulkMessageForm)
@@ -53,8 +57,32 @@ def message_bulk(request, campaign_key):
     })
 
 
+@login_required
 def contacts(request, campaign_key):
-    return render(request, 'campaigns/wizard_3_contacts.html')
+    groups = sorted(request.user_api.list_groups(),
+                    key=lambda group: group.created_at,
+                    reverse=True)
+
+    query = request.GET.get('query', '')
+    p = request.GET.get('p', 1)
+
+    paginator = Paginator(groups, 15)
+    try:
+        page = paginator.page(p)
+    except PageNotAnInteger:
+        page = paginator.page(1)
+    except EmptyPage:
+        page = paginator.page(paginator.num_pages)
+
+    pagination_params = urlencode({
+        'query': query,
+    })
+
+    return render(request, 'campaigns/wizard_3_contacts.html', {
+        'paginator': paginator,
+        'page': page,
+        'pagination_params': pagination_params,
+    })
 
 
 def message_conversation(request, campaign_key):
