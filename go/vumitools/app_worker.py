@@ -9,6 +9,8 @@ from vumi.config import IConfigData, ConfigText, ConfigDict
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.utils import MessageMetadataHelper
+from go.vumitools.conversation.models import (
+    CONVERSATION_STARTING, CONVERSATION_STOPPING)
 
 
 class OneShotMetricManager(MetricManager):
@@ -155,6 +157,33 @@ class GoWorkerMixin(object):
 
     @inlineCallbacks
     def process_command_start(self, user_account_key, conversation_key):
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        status = conv.get_status()
+        if status != CONVERSATION_STARTING:
+            log.warning(
+                "Trying to start conversation '%s' for user '%s' with invalid "
+                "status: %s" % (conversation_key, user_account_key, status))
+            return
+        conv.set_status_started()
+        yield conv.save()
+
+    @inlineCallbacks
+    def process_command_stop(self, user_account_key, conversation_key):
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        status = conv.get_status()
+        if status != CONVERSATION_STOPPING:
+            log.warning(
+                "Trying to stop conversation '%s' for user '%s' with invalid "
+                "status: %s" % (conversation_key, user_account_key, status))
+            return
+        conv.set_status_stopped()
+        yield conv.save()
+
+    def process_command_initial_action_hack(self, *args, **kwargs):
+        # HACK: This lets us do whatever we used to do when we got a `start'
+        # message without having horrible app-specific view logic.
+        # TODO: Remove this when we've decoupled the various conversation
+        # actions from the lifecycle.
         pass
 
     @inlineCallbacks
@@ -236,21 +265,9 @@ class GoWorkerMixin(object):
                 conv.delivery_class, message.user(), create=create)
             returnValue(contact)
 
-    @inlineCallbacks
-    def get_conversation(self, batch_id, conversation_key):
-        batch = yield self.vumi_api.mdb.get_batch(batch_id)
-        if batch is None:
-            log.error('Cannot find batch for batch_id %s' % (batch_id,))
-            return
-
-        user_account_key = batch.metadata["user_account"]
-        if user_account_key is None:
-            log.error("No account key in batch metadata: %r" % (batch,))
-            return
-
+    def get_conversation(self, user_account_key, conversation_key):
         user_api = self.get_user_api(user_account_key)
-        conv = yield user_api.get_wrapped_conversation(conversation_key)
-        returnValue(conv)
+        return user_api.get_wrapped_conversation(conversation_key)
 
     def get_metadata_helper(self, msg):
         return MessageMetadataHelper(self.vumi_api, msg)

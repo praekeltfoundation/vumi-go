@@ -138,11 +138,12 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
     @inlineCallbacks
     def test_handle_event_default(self):
         yield self.send_event(self.contact.msisdn)
-        [start_cmd, send_msg_command] = self.get_dispatcher_commands()
+        [start_cmd, hack_cmd, send_msg_cmd] = self.get_dispatcher_commands()
 
         self.assertEqual(start_cmd['command'], 'start')
-        self.assertEqual(send_msg_command['command'], 'send_message')
-        self.assertEqual(send_msg_command['kwargs'], {
+        self.assertEqual(hack_cmd['command'], 'initial_action_hack')
+        self.assertEqual(send_msg_cmd['command'], 'send_message')
+        self.assertEqual(send_msg_cmd['kwargs'], {
             'command_data': {
                 'conversation_key': self.conversation.key,
                 'batch_id': (yield self.conversation.get_latest_batch_key()),
@@ -157,7 +158,7 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
         self.contact.extra['language'] = u'1'
         yield self.contact.save()
         yield self.send_event(self.contact.msisdn)
-        [command] = self.get_dispatcher_commands()[1:]
+        [command] = self.get_dispatcher_commands()[2:]
 
         data = command['kwargs']['command_data']
         self.assertEqual(data['content'], 'english sms')
@@ -167,7 +168,7 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
         self.contact.extra['language'] = u'2'
         yield self.contact.save()
         yield self.send_event(self.contact.msisdn)
-        [command] = self.get_dispatcher_commands()[1:]
+        [command] = self.get_dispatcher_commands()[2:]
 
         data = command['kwargs']['command_data']
         self.assertEqual(data['content'], 'swahili sms')

@@ -220,7 +220,8 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
     def put_sample_messages_in_conversation(self, user_api, conversation_key,
                                             message_count,
                                             content_generator=None,
-                                            start_date=None, time_multiplier=10):
+                                            start_date=None,
+                                            time_multiplier=10):
         now = start_date or datetime.now().date()
         conversation = user_api.get_wrapped_conversation(conversation_key)
         conversation.start()

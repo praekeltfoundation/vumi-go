@@ -56,8 +56,9 @@ class GoStartConversationTestCase(DjangoGoApplicationTestCase):
         [(pool, tag)] = conversation.get_tags()
         self.assertEqual(pool, 'longcode')
         self.assertTrue(tag)
-        [command] = sender.outbox
-        self.assertEqual(command['command'], 'start')
+        [start_command, hack_command] = sender.outbox
+        self.assertEqual(start_command['command'], 'start')
+        self.assertEqual(hack_command['command'], 'initial_action_hack')
 
     @patch('go.vumitools.api.SyncMessageSender')
     def test_restart_conversation(self, SyncMessageSender):
