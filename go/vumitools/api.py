@@ -272,7 +272,7 @@ class VumiUserApi(object):
                         'going with most recent: %r' % (conv_keys,))
 
         conversation = sorted(conversations, reverse=True,
-                              key=lambda c: c.start_timestamp)[0]
+                              key=lambda c: c.created_at)[0]
         returnValue(conversation)
 
     @Manager.calls_manager
@@ -667,6 +667,15 @@ class VumiApiCommand(Message):
                                  # JSON.
             'kwargs': kwargs,
         })
+
+    @classmethod
+    def conversation_command(cls, worker_name, command_name, user_account_key,
+                             conversation_key, *args, **kwargs):
+        kwargs.update({
+            'user_account_key': user_account_key,
+            'conversation_key': conversation_key,
+        })
+        return cls.command(worker_name, command_name, *args, **kwargs)
 
 
 class VumiApiEvent(Message):

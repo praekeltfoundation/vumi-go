@@ -164,8 +164,8 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(conversation.name, 'Test Conversation')
 
     def test_aggregates(self):
-        self.put_sample_messages_in_conversation(self.user_api,
-            self.conv_key, 10, start_timestamp=date(2012, 1, 1),
+        self.put_sample_messages_in_conversation(
+            self.user_api, self.conv_key, 10, start_date=date(2012, 1, 1),
             time_multiplier=12)
         response = self.client.get(reverse('survey:aggregates', kwargs={
             'conversation_key': self.conv_key
@@ -180,8 +180,8 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
             ]))
 
     def test_export_messages(self):
-        self.put_sample_messages_in_conversation(self.user_api,
-            self.conv_key, 10, start_timestamp=date(2012, 1, 1),
+        self.put_sample_messages_in_conversation(
+            self.user_api, self.conv_key, 10, start_date=date(2012, 1, 1),
             time_multiplier=12)
         conv_url = reverse('survey:show', kwargs={
             'conversation_key': self.conv_key,

@@ -39,7 +39,7 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def end_conversation(self):
-        self.c.end_timestamp = datetime.utcnow()
+        self.c.set_status_stopped()
         self.c.set_status_finished()
         yield self.c.save()
         yield self._remove_from_routing_table()

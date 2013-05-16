@@ -154,13 +154,17 @@ class GoWorkerMixin(object):
             return self.process_unknown_cmd(cmd_method_name, *args, **kwargs)
 
     @inlineCallbacks
+    def process_command_start(self, user_account_key, conversation_key):
+        pass
+
+    @inlineCallbacks
     def process_command_collect_metrics(self, conversation_key,
                                         user_account_key):
         key_tuple = (conversation_key, user_account_key)
         if key_tuple in self._metrics_conversations:
             log.info("Ignoring conversation %s for user %s because the "
                      "previous collection run is still going." % (
-                        conversation_key, user_account_key))
+                         conversation_key, user_account_key))
             return
         self._metrics_conversations.add(key_tuple)
         user_api = self.get_user_api(user_account_key)
@@ -174,7 +178,7 @@ class GoWorkerMixin(object):
         if key_tuple in self._cache_recon_conversations:
             log.info("Ignoring conversation %s for user %s because the "
                      "previous cache recon run is still going." % (
-                        conversation_key, user_account_key))
+                         conversation_key, user_account_key))
             return
         self._cache_recon_conversations.add(key_tuple)
         user_api = self.get_user_api(user_account_key)
@@ -231,21 +235,6 @@ class GoWorkerMixin(object):
             contact = yield user_api.contact_store.contact_for_addr(
                 conv.delivery_class, message.user(), create=create)
             returnValue(contact)
-
-    @inlineCallbacks
-    def get_user_account(self, batch_id):
-        batch = yield self.vumi_api.mdb.get_batch(batch_id)
-        if batch is None:
-            log.error('Cannot find batch for batch_id %s' % (batch_id,))
-            return
-
-        user_account_key = batch.metadata["user_account"]
-        if user_account_key is None:
-            log.error("No account key in batch metadata: %r" % (batch,))
-            return
-
-        user_account = yield self.vumi_api.get_user_account(user_account_key)
-        returnValue(user_account)
 
     @inlineCallbacks
     def get_conversation(self, batch_id, conversation_key):

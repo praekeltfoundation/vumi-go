@@ -10,7 +10,8 @@ from twisted.python.monkey import MonkeyPatcher
 from twisted.internet.defer import inlineCallbacks, returnValue
 from celery.app import app_or_default
 
-from vumi.persist.fields import ForeignKeyProxy, ManyToManyProxy, DynamicProxy
+from vumi.persist.fields import (
+    ForeignKeyProxy, ManyToManyProxy, DynamicProxy, ListProxy)
 from vumi.message import TransportEvent
 from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import PersistenceMixin
@@ -29,6 +30,8 @@ def field_eq(f1, f2):
         return f1.key == f2.key
     if isinstance(f1, DynamicProxy) and isinstance(f2, DynamicProxy):
         return f1.items() == f2.items()
+    if isinstance(f1, ListProxy) and isinstance(f2, ListProxy):
+        return list(f1) == list(f2)
     return False
 
 

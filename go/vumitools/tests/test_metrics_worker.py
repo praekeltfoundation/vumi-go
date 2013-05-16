@@ -54,7 +54,6 @@ class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
         return conv.save()
 
     def end_conv(self, conv):
-        conv.end_timestamp = datetime.utcnow()
         conv.set_status_finished()
         return conv.save()
 
