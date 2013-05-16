@@ -29,8 +29,7 @@ class AuthenticationTestCase(VumiGoDjangoTestCase):
     def test_login(self):
         self.client.login(username=self.user.username, password='password')
         response = self.client.get(reverse('conversations:index'))
-        self.assertContains(response, '%s %s' % (self.user.first_name,
-            self.user.last_name),)
+        self.assertContains(response, 'Dashboard')
 
     def test_logged_out(self):
         """test logout & redirect after logout"""
