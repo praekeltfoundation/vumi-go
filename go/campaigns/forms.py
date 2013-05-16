@@ -4,9 +4,8 @@ from django import forms
 class CampaignGeneralForm(forms.Form):
 
     TYPE_CHOICES = (
-        ('', 'Select campaign type'),
-        ('B', 'Bulk Message'),
-        ('D', 'Dialogue'),
+        ('bulk_message', 'Bulk Message'),
+        ('survey', 'Dialogue'),
     )
 
     name = forms.CharField(label="Campaign name", max_length=100)

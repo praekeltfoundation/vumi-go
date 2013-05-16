@@ -4,11 +4,13 @@ from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.contrib import messages
 
 from go.campaigns.forms import (
     CampaignGeneralForm, CampaignConfigurationForm, CampaignBulkMessageForm)
 
 
+@login_required
 def details(request, campaign_key=None):
     """
     TODO: This is a fake implementation, it's not based on anything
@@ -20,13 +22,22 @@ def details(request, campaign_key=None):
     form_config = CampaignConfigurationForm()
 
     if request.method == 'POST':
-        action = request.POST.get('action')
-        if action == 'draft':
-            # save and go back to list.
-            return redirect('conversations:index')
+        form = CampaignGeneralForm(request.POST)
+        if form.is_valid():
+            conversation_type = form.cleaned_data['type']
+            conversation = request.user_api.new_conversation(
+                conversation_type, name=form.cleaned_data['name'],
+                description=u'', config={})
+            messages.info(request, 'Conversation created successfully.')
 
-        # TODO save and go to next step.
-        return redirect('campaigns:message', campaign_key='fakekeydawg')
+            action = request.POST.get('action')
+            if action == 'draft':
+                # save and go back to list.
+                return redirect('conversations:index')
+
+            # TODO save and go to next step.
+            return redirect('campaigns:message',
+                            campaign_key=conversation.key)
 
     return render(request, 'campaigns/wizard_1_details.html', {
         'form_general': form_general,
@@ -34,12 +45,14 @@ def details(request, campaign_key=None):
     })
 
 
+@login_required
 def message(request, campaign_key):
     # is this for a conversation or bulk?
     # determine that and redirect.
     return redirect('campaigns:message_bulk', campaign_key=campaign_key)
 
 
+@login_required
 def message_bulk(request, campaign_key):
     """The simpler of the two messages."""
     form = CampaignBulkMessageForm()
@@ -85,6 +98,7 @@ def contacts(request, campaign_key):
     })
 
 
+@login_required
 def message_conversation(request, campaign_key):
     return render(request, 'campaigns/wizard_2_conversation.html')
 
