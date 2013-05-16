@@ -57,29 +57,34 @@
                         <th><input type="checkbox"></th>
                         <th>Campaigns</th>
                         <th>Status</th>
-                        <th>Channel</th>
+                        <!-- TODO: We don't have a backend that provides a friendly name for this yet. -->
+                        <!-- <th>Channel</th> -->
                         <th>Interactions</th>
-                        <th>In Last</th>
+                        <!-- TODO: We're not storing this timestamp yet -->
+                        <!-- <th>In Last</th> -->
+                        <!-- TODO: We're only storing the created_at value :\ -->
                         <th>Last Edited</th>
                         <th></th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% if conversation %}
+                    {% if conversations %}
                         {% for conversation in page.object_list %}
-
-                        {# TODO: Hook up correct values. #}
                         <tr>
                             <td><input type="checkbox"></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td><a href="">Messages</a></td>
-                            <td><a href="">Report</a></td>
+                            <td>
+                                <a href="{{conversation.get_absolute_url}}">
+                                    {{conversation.name}}
+                                </a>
+                            </td>
+                            <td>{{conversation.get_status}}</td>
+                            <!-- <td></td> -->
+                            <td>{{ conversation.count_replies|add:conversation.count_sent_messages }} </td>
+                            <!-- <td></td> -->
+                            <td>{{conversation.created_at}}</td>
+                            <td><a href="{% url 'todo' %}">Messages</a></td>
+                            <td><a href="{% url 'todo' %}">Report</a></td>
                         </tr>
                         {% endfor %}
                     {% else %}
