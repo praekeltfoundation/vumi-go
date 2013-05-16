@@ -1,18 +1,19 @@
 {% extends "app.html" %}
 {% load url from future %}
 
-{% block content_extraclass %}
-    campaigns
-{% endblock %}
+{% block content_extraclass %}campaigns{% endblock %}
 
 {% block content_breadcrumbs %}
-<a href="{% url 'campaigns:details' %}">
-    Details
-</a>
-{# these can't be links if this is a new object #}
-<a href="">Messages</a>
-<a href="">Contacts</a>
-<a href="">Preview &amp; Activate</a>
+    <a href="{% url 'campaigns:details' campaign_key %}">Details</a>
+    {% if not campaign_key %}
+        <a href="#">Messages</a>
+        <a href="#">Contacts</a>
+        <a href="#">Preview &amp; Activate</a>
+    {% else %}
+        <a href="{% url 'campaigns:message' campaign_key %}">Messages</a>
+        <a href="{% url 'campaigns:contacts' campaign_key %}">Contacts</a>
+        <a href="{% url 'campaigns:preview' campaign_key %}">Preview &amp; Activate</a>
+    {% endif %}
 {% endblock %}
 
 {% block content_actions_right %}
@@ -32,7 +33,7 @@
             var $frm = $('#frm-campaign');
             $frm.prepend('<input type="hidden" name="action" value="' + $(this).attr('data-action') + '">');
             $frm.submit();
-        });
+        });    
     });
 </script>
 {% endblock %}

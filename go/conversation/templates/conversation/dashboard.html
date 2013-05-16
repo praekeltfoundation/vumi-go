@@ -76,13 +76,9 @@
                 <tbody>
                     {% if conversations %}
                         {% for conversation in page.object_list %}
-                        <tr>
+                        <tr data-url="{{ conversation.get_absolute_url }}">
                             <td><input type="checkbox"></td>
-                            <td>
-                                <a href="{{conversation.get_absolute_url}}">
-                                    {{ conversation.name }}
-                                </a>
-                            </td>
+                            <td>{{ conversation.name }}</td>
                             <td>{{ conversation.get_status|capfirst }}</td>
                             <!-- <td></td> -->
                             <td>{{ conversation.count_replies|add:conversation.count_sent_messages }} </td>
@@ -112,4 +108,12 @@
             </table>
         </div>
     </div>
+{% endblock %}
+
+{% block extrascript %}
+<script type="text/javascript">
+$(function() {
+    go.tables.init('.table-awesome');
+});
+</script>
 {% endblock %}
