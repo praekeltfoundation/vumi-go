@@ -4,9 +4,8 @@ from django import forms
 class CampaignGeneralForm(forms.Form):
 
     TYPE_CHOICES = (
-        ('', 'Select campaign type'),
-        ('B', 'Bulk Message'),
-        ('C', 'Conversation'),
+        ('bulk_message', 'Bulk Message'),
+        ('survey', 'Dialogue'),
     )
 
     name = forms.CharField(label="Campaign name", max_length=100)
@@ -18,10 +17,12 @@ class CampaignConfigurationForm(forms.Form):
 
     COUNTRY_CHOICES = (
         ('.za', 'South Africa'),
+        ('.ke', 'Kenya'),
     )
 
     CHANNEL_CHOICES = (
         ('ussd', 'USSD'),
+        ('sms', 'SMS'),
     )
 
     # more than likely a many to many field, or something similair in the riak
