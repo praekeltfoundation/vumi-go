@@ -49,7 +49,8 @@ def message_bulk(request, campaign_key):
         return redirect('campaigns:contacts', campaign_key=campaign_key)
 
     return render(request, 'campaigns/wizard_2_message_bulk.html', {
-        'form': form
+        'form': form,
+        'campaign_key': campaign_key
     })
 
 
@@ -66,8 +67,12 @@ def contacts(request, campaign_key):
 
         return redirect('campaigns:preview', campaign_key=campaign_key)
 
-    return render(request, 'campaigns/wizard_3_contacts.html')
+    return render(request, 'campaigns/wizard_3_contacts.html', {
+        'campaign_key': campaign_key
+    })
 
 
 def preview(request, campaign_key):
-    return render(request, 'campaigns/wizard_4_preview.html')
+    return render(request, 'campaigns/wizard_4_preview.html', {
+        'campaign_key': campaign_key
+    })

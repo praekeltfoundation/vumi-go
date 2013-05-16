@@ -203,3 +203,7 @@ body {
   max-width: 100%;
   min-width: 80%;
 }
+.campaigns h4 {
+  color: black;
+  font-size: 20px;
+}

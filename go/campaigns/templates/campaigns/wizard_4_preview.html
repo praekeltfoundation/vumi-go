@@ -1,16 +1,28 @@
 {% extends "campaigns/wizard_base.html" %}
+{% load url from future %}
 
 {% block content_title %}
     Preview &amp; Activate
 {% endblock %}
 
+{% block content_actions_right %}
+    <a href="{% url 'conversations:index' %}">Cancel</a>
+    <button class="btn btn-primary" data-action="start">Start</button>
+{% endblock %}
+
 {% block content_main %}
-<div class="row">
-    <div class="span12">
-        <form id="frm-campaign" class="indent" method="post" action="">
-            {# TODO #}
-            Stuff will come here.
-        </form>
+<div class="row-fluid indent">
+    <div class="span8">
+        
+        <h4><a href="">Details</a></h4>
+
+        <h4>Messages</h4>
+
+
+        <h4>Contacts</h4>
+    </div>
+    <div class="span4">
+        asdsa
     </div>
 </div>
 {% endblock %}
@@ -21,7 +33,7 @@
 <script type="text/javascript">
     $(function() {
         // highlight the breadcrumbs.
-        $('.breadcrumbs a').eq(4).addClass('active');
+        $('.breadcrumbs a').eq(3).addClass('active');
     });
 </script>
 {% endblock %}
