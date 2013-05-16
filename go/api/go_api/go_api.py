@@ -3,17 +3,19 @@
 
 """JSON RPC API for Vumi Go front-end and others."""
 
-from txjsonrpc.web.jsonrpc import JSONRPC
-from txjsonrpc.jsonrpc import addIntrospection
-from twisted.internet.defer import inlineCallbacks
 from twisted.application import strports
+from twisted.internet.defer import inlineCallbacks
 
-from vumi.worker import BaseWorker
+from txjsonrpc.jsonrpc import addIntrospection
+from txjsonrpc.web.jsonrpc import JSONRPC
+
 from vumi.config import ConfigDict, ConfigText
 from vumi.rpc import signature, Unicode, List, Dict
-from vumi.utils import build_web_site
 from vumi.transports.httprpc import httprpc
+from vumi.utils import build_web_site
+from vumi.worker import BaseWorker
 
+from go.api.go_api.auth import protect_resource
 from go.vumitools.api import VumiApi
 
 
@@ -83,8 +85,9 @@ class GoApiWorker(BaseWorker):
         vumi_api = yield VumiApi.from_config_async(config)
         rpc = GoApiServer(vumi_api)
         addIntrospection(rpc)
+        protected_rpc = protect_resource(rpc)
         site = build_web_site([
-            (config.web_path, rpc),
+            (config.web_path, protected_rpc),
             (config.health_path, httprpc.HttpRpcHealthResource(self)),
         ])
         self.addService(strports.service(config.twisted_endpoint, site))
