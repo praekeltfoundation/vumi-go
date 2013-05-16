@@ -22,7 +22,7 @@ def details(request, campaign_key=None):
             return redirect('conversations:index')
 
         # TODO save and go to next step.
-        return redirect('campaigns:message', campaign_key='fakekeydawg')
+        return redirect('campaigns:messages', campaign_key='fakekeydawg')
 
     return render(request, 'campaigns/wizard_1_details.html', {
         'form_general': form_general,

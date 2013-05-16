@@ -166,9 +166,13 @@ body {
 .campaigns .actions a:first-child {
   margin-right: 20px;
 }
-.campaigns form .control-label {
+.campaigns .control-label {
   color: #000;
   font-weight: bold;
+}
+.campaigns .control-label a:link,
+.campaigns .control-label a:visited {
+  color: #000;
 }
 .campaigns form .boxes {
   text-align: center;
@@ -202,8 +206,4 @@ body {
   width: auto;
   max-width: 100%;
   min-width: 80%;
-}
-.campaigns h4 {
-  color: black;
-  font-size: 20px;
 }

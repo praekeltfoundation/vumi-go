@@ -14,12 +14,21 @@
 <div class="row-fluid indent">
     <div class="span8">
         
-        <h4><a href="{% url 'campaigns:details' %}">Details</a></h4>
-
-        <h4>Messages</h4>
-
-
-        <h4>Contacts</h4>
+        <h4 class="control-label">
+            <a href="{% url 'campaigns:details' campaign_key %}">
+                Details
+            </a>
+        </h4>
+        <h4 class="control-label">
+            <a href="{% url 'campaigns:messages' campaign_key %}">
+                Messages
+            </a>
+        </h4>
+        <h4 class="control-label">
+            <a href="{% url 'campaigns:contacts' campaign_key %}">
+                Contacts
+            </a>
+        </h4>
     </div>
     <div class="span4">
         asdsa
