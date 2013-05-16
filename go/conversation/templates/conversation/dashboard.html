@@ -20,7 +20,7 @@
     </div>
 
     <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
-        <input type="text" class="search-query" placeholder="Search" name="{{ search_form.query.name }}" value="{{ search_form.query.value }}">
+        <input type="text" class="search-query" placeholder="Search" name="{{ search_form.query.name }}" value="{{ search_form.query.value|default:"" }}">
         <button type="submit" class="btn" id="search-filter-btn">Search</button>
     </form>
 {% endblock %}
