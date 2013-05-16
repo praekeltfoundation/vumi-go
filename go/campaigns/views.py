@@ -46,20 +46,28 @@ def message_bulk(request, campaign_key):
             return redirect('conversations:index')
 
         # TODO save and go to next step.
-        return redirect('campaigns:contacts', campaign_key='fakekeydawg')
+        return redirect('campaigns:contacts', campaign_key=campaign_key)
 
     return render(request, 'campaigns/wizard_2_message_bulk.html', {
         'form': form
     })
 
 
-def contacts(request, campaign_key):
-    return render(request, 'campaigns/wizard_3_contacts.html')
-
-
 def message_conversation(request, campaign_key):
     return render(request, 'campaigns/wizard_2_conversation.html')
 
 
-def todo(request, campaign_key):
-    return HttpResponse('TODO')
+def contacts(request, campaign_key):
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'draft':
+            # save and go back to list.
+            return redirect('campaigns:index')
+
+        return redirect('campaigns:preview', campaign_key=campaign_key)
+
+    return render(request, 'campaigns/wizard_3_contacts.html')
+
+
+def preview(request, campaign_key):
+    return render(request, 'campaigns/wizard_4_preview.html')

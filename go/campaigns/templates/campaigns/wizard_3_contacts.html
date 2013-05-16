@@ -9,7 +9,11 @@
     <div class="span12">
         <div class="indent">
             <h3>Select contacts</h3>
-            {% include "contacts/group_list_table.html" %}
+            <form id="frm-campaign" method="post" action="">
+                {% csrf_token %}
+                {% include "contacts/group_list_table.html" %}
+                {% include "base/includes/pagination.html" %}
+            </form>
             <button class="btn btn-primary" data-toggle="modal" data-target="#uplContacts">
                 <i class="icon-plus icon-white"></i> Upload contacts...
             </button>
