@@ -18,13 +18,12 @@ class CampaignConfigurationForm(forms.Form):
 
     COUNTRY_CHOICES = (
         ('*', 'All Countries'),
-        ('.ke', 'Kenya'),
         ('.za', 'South Africa'),
     )
 
     CHANNEL_CHOICES = (
         ('ussd', 'USSD'),
-        ('gtalk', 'Google Talk'),
+        ('sms', 'SMS longcode'),
     )
 
     # more than likely a many to many field, or something similair in the riak
