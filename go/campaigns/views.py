@@ -8,6 +8,7 @@ from django.contrib import messages
 
 from go.campaigns.forms import (
     CampaignGeneralForm, CampaignConfigurationForm, CampaignBulkMessageForm)
+from go.base.utils import conversation_or_404
 
 
 @login_required
@@ -49,12 +50,14 @@ def details(request, campaign_key=None):
 def message(request, campaign_key):
     # is this for a conversation or bulk?
     # determine that and redirect.
+    conversation = conversation_or_404(request.user_api, campaign_key)
     return redirect('campaigns:message_bulk', campaign_key=campaign_key)
 
 
 @login_required
 def message_bulk(request, campaign_key):
     """The simpler of the two messages."""
+    conversation = conversation_or_404(request.user_api, campaign_key)
     form = CampaignBulkMessageForm()
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -63,7 +66,7 @@ def message_bulk(request, campaign_key):
             return redirect('conversations:index')
 
         # TODO save and go to next step.
-        return redirect('campaigns:contacts', campaign_key='fakekeydawg')
+        return redirect('campaigns:contacts', campaign_key=conversation.key)
 
     return render(request, 'campaigns/wizard_2_message_bulk.html', {
         'form': form
@@ -72,6 +75,7 @@ def message_bulk(request, campaign_key):
 
 @login_required
 def contacts(request, campaign_key):
+    conversation = conversation_or_404(request.user_api, campaign_key)
     groups = sorted(request.user_api.list_groups(),
                     key=lambda group: group.created_at,
                     reverse=True)
@@ -100,6 +104,7 @@ def contacts(request, campaign_key):
 
 @login_required
 def message_conversation(request, campaign_key):
+    conversation = conversation_or_404(request.user_api, campaign_key)
     return render(request, 'campaigns/wizard_2_conversation.html')
 
 
