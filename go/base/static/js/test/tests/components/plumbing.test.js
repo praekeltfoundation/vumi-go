@@ -1,106 +1,103 @@
 describe("go.components.plumbing", function() {
+  var PlumbEndpoint = go.components.plumbing.PlumbEndpoint,
+      PlumbError = go.components.plumbing.PlumbError,
+      nodeA,
+      nodeB,
+      hostA,
+      hostB,
+      endpointA,
+      endpointB;
+
+  beforeEach(function() {
+    $('body').append("<div class='dummy'></div>");
+    $('.dummy').html("<div id='host-a'></div><div id='host-b'></div>");
+
+    nodeA = new Backbone.Model({id: 'node-a'});
+    nodeB = new Backbone.Model({id: 'node-b'});
+
+    hostA = new Backbone.View({el: '.dummy #host-a', model: nodeA});
+    hostB = new Backbone.View({el: '.dummy #host-b', model: nodeB});
+
+    endpointA = new PlumbEndpoint({id: 'a', host: hostA, attr: 'target'});
+    endpointB = new PlumbEndpoint({id: 'b', host: hostB, attr: 'target'});
+  });
+
+  afterEach(function() {
+    $('.dummy').remove();
+    jsPlumb.unbind();
+  });
+
   describe(".PlumbEventDispatcher", function() {
     var PlumbEventDispatcher = go.components.plumbing.PlumbEventDispatcher,
-        PlumbError = go.components.plumbing.PlumbError,
-        dispatcher,
-        plumb,
-        v1,
-        v2;
+        dispatcher;
 
     beforeEach(function() {
-      $('body').append("<div class='dummy'></div>");
-      $('.dummy').html("<div id='v1'></div><div id='v2'></div>");
-
       dispatcher = new PlumbEventDispatcher();
-      plumb = dispatcher.plumb;
-
-      v1 = new Backbone.View({el: '.dummy #v1'});
-      v2 = new Backbone.View({el: '.dummy #v2'});
-
-      dispatcher.subscribe(v1);
-      dispatcher.subscribe(v2);
+      dispatcher.subscribe(endpointA);
+      dispatcher.subscribe(endpointB);
     });
 
-    afterEach(function() { $('body').remove('.dummy'); });
+    it("should dispatch 'plumb:connect' events to the involved endpoints",
+       function(done) {
+      var aConnected = false,
+          bConnected = false,
+          maybeDone = function() { aConnected && bConnected && done(); };
 
-    it("should dispatch 'plumb:connect' events to views", function(done) {
-      var v1Connected = false,
-          v2Connected = false,
-          maybeDone = function() { v1Connected && v2Connected && done(); };
-
-      v1.on('plumb:connect', function(e) {
-        assert.equal(e.sourceHost, v1);
-        assert.equal(e.targetHost, v2);
-        v1Connected = true;
+      endpointA.on('plumb:connect', function(e) {
+        assert.equal(e.sourceEndpoint, endpointA);
+        assert.equal(e.targetEndpoint, endpointB);
+        aConnected = true;
         maybeDone();
       });
 
-      v2.on('plumb:connect', function(e) {
-        assert.equal(e.sourceHost, v1);
-        assert.equal(e.targetHost, v2);
-        v2Connected = true;
+      endpointB.on('plumb:connect', function(e) {
+        assert.equal(e.sourceEndpoint, endpointA);
+        assert.equal(e.targetEndpoint, endpointB);
+        bConnected = true;
         maybeDone();
       });
 
-      plumb.connect({source: 'v1', target: 'v2', scope: '.dummy'});
+      endpointA.connect(endpointB);
     });
 
-    describe(".getAll", function() {
-      it("should return all the dispatcher's views", function() {
-        assert.deepEqual(dispatcher.getAll(), [v1, v2]);
-        assert.deepEqual((new PlumbEventDispatcher()).getAll(),[]);
-      });
+    it("should allow endpoints to be subscribed", function() {
+      var endpointC = new PlumbEndpoint({id: 'c', host: hostA, attr: 'target'});
+      dispatcher.subscribe(endpointC);
+
+      assert.deepEqual(
+        dispatcher._endpoints,
+        {a: endpointA, b: endpointB, c: endpointC});
     });
 
-    describe(".get", function() {
-      it("should get the view", function() {
-        assert.equal(dispatcher.get('.dummy #v1'), v1);
+    it("should allow endpoints to be unsubscribed", function() {
+      dispatcher.unsubscribe('b');
+      assert.deepEqual(dispatcher._endpoints, {a: endpointA});
+    });
+  });
+
+  describe(".PlumbEndpoint", function() {
+    it("should set the endpoint's target correctly on 'plumb:connect' events",
+       function(done) {
+      endpointA.on('plumb:connect', function(e) {
+        assert.equal(endpointA.target, endpointB);
+        assert.equal(nodeA.get('target'), nodeB.id);
+        done();
       });
 
-      it("should get the view from an element", function() {
-        assert.equal(dispatcher.get($('.dummy #v1').get(0)), v1);
-      });
-
-      it("should get the view from a jquery wrapped element", function() {
-        assert.equal(dispatcher.get($('.dummy #v1')), v1);
-      });
-
-      it("should thrown an error if the view is not found", function() {
-        $('.dummy').append("<div id='v'></div>");
-        assert.throws(function() { dispatcher.get('.dummy #v'); }, PlumbError);
-      });
+      endpointA.trigger(
+        'plumb:connect',
+        {sourceEndpoint: endpointA, targetEndpoint: endpointB});
     });
 
-    describe(".subscribe", function() {
-      it("should add a view to the dispatcher", function() {
-        $('.dummy').append("<div id='v'></div>");
-        var v = new Backbone.View({el: '.dummy #v'});
+    describe(".connect", function() {
+      it("should connect one endpoint to another", function(done) {
+        jsPlumb.bind('jsPlumbConnection', function(e) {
+          assert.equal(e.sourceEndpoint, endpointA.raw);
+          assert.equal(e.targetEndpoint, endpointB.raw);
+          done();
+        });
 
-        assert.equal(dispatcher, dispatcher.subscribe(v));
-        assert.propertyVal(dispatcher._views, 'v', v);
-      });
-    });
-
-    describe(".unsubscribe", function() {
-      it("should remove a view", function() {
-        assert.equal(dispatcher, dispatcher.unsubscribe(v1));
-        assert.deepEqual(dispatcher.getAll(), [v2]);
-      });
-
-      it("should remove a view given its selector", function() {
-        assert.equal(dispatcher, dispatcher.unsubscribe('.dummy #v1'));
-        assert.deepEqual(dispatcher.getAll(), [v2]);
-      });
-
-      it("should remove a view given its element", function() {
-        var el = $('.dummy #v1').get(0);
-        assert.equal(dispatcher, dispatcher.unsubscribe(el));
-        assert.deepEqual(dispatcher.getAll(), [v2]);
-      });
-
-      it("should remove a view given its jquery wrapped element", function() {
-        assert.equal(dispatcher, dispatcher.unsubscribe($('.dummy #v1')));
-        assert.deepEqual(dispatcher.getAll(), [v2]);
+        endpointA.connect(endpointB);
       });
     });
   });

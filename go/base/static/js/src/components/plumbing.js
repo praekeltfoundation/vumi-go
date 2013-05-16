@@ -4,59 +4,96 @@
 // Components for the plumbing views in Go
 
 (function(exports) {
-  // Thrown when errors occur whilst interacting with a plumbing component
-  var PlumbError = go.errors.GoError.subtype('PlumbError');
+  var Extendable = go.utils.Extendable,
+      Eventable = go.utils.Eventable,
+      delegateEvents = go.utils.delegateEvents,
+      pop = go.utils.pop,
+      parent = go.utils.parent;
 
-  // Dispatches jsPlumb events to the subscribed views
+  // Dispatches jsPlumb events to the subscribed `PlumbEndpoint`s
   //
   // Options
   //   - plumb: jsPlumb instance
-  //   - views: a list of initial views to add
-  var PlumbEventDispatcher = exports.PlumbEventDispatcher = function(options) {
-    var self = this;
+  //   - endpoints: a list of initial endpoints to add
+  exports.PlumbEventDispatcher = Extendable.extend({
+    constructor: function(options) {
+      var self = this;
 
-    options = _.defaults(options || {}, {plumb: jsPlumb, views: []});
-    this.plumb = options.plumb;
+      options = _.defaults(options || {}, {endpoints: []});
+      this.plumb = options.plumb;
 
-    this._views = {};
-    options.views.map(this.subscribe);
+      this._endpoints = {};
+      options.endpoints.map(this.subscribe);
 
-    this.plumb.bind('jsPlumbConnection', function(e) {
-      var source = e.sourceHost = self.get(e.source),
-          target = e.targetHost = self.get(e.target);
+      jsPlumb.bind('jsPlumbConnection', function(e) {
+        var source = e.sourceHost = self.get(e.sourceEndpoint.getUuid()),
+            target = e.targetHost = self.get(e.targetEndpoint.getUuid());
 
-      source.trigger('plumb:connect', e);
-      target.trigger('plumb:connect', e);
-    });
-  };
+        // Overwrite the jsPlumb endpoint objects with our PlumbEndpoint
+        // objects (if we needed access to the jsPlumb objects, they would
+        // be accessible from our PlumbEndpoint objects)
+        e.sourceEndpoint = source;
+        e.targetEndpoint = target;
 
-  PlumbEventDispatcher.prototype = {
-    // Get all views
-    getAll: function() { return _.values(this._views); },
-
-    // Get a view by a selector, element or jquery wrapped element
-    get: function(el) {
-      var view = this._views[go.utils.idOf(el)];
-
-      if (!view) {
-        throw new PlumbError(el + " not found for dispatcher"); }
-
-      return view;
+        source.trigger('plumb:connect', e);
+        target.trigger('plumb:connect', e);
+      });
     },
 
-    // Subscribe a view
-    subscribe: function(view) {
-      if (!(view instanceof Backbone.View)) {
-        throw new PlumbError(view + " is not a Backbone view"); }
-  
-      this._views[go.utils.idOf(view)] = view;
+    // Get a subscribed endpoint by its id
+    get: function(id) { return this._endpoints[id]; },
+
+    // Subscribe an endpoint
+    subscribe: function(endpoint) {
+      this._endpoints[endpoint.id] = endpoint;
       return this;
     },
 
-    // Unsubscribe a view by a view, selector, element or jquery wrapped element
-    unsubscribe: function(viewOrEl) {
-      delete this._views[go.utils.idOf(viewOrEl)];
+    // Unsubscribe an endpoint
+    unsubscribe: function(id) {
+      delete this._endpoints[id];
       return this;
     }
-  };
+  });
+
+  // A wrapper for jsPlumb Endpoints to make them work nicer with Backbone
+  // Models and Views.
+  //
+  // Options
+  //   - id: The endpoint's id
+  //   - host: The view to which this endpoint is to be attached
+  //   - attr: The hosts's model attribute associated to this endpoint. This
+  //   attribute is set to the id of the target endpoint's host's model once
+  //   the target is set
+  //   - [params]: jsPlumb Endpoint params
+  var PlumbEndpoint = exports.PlumbEndpoint = Eventable.extend({
+    events: {'plumb:connect': 'connected'},
+
+    constructor: function(options) {
+      parent(this, 'constructor')();
+      _.defaults(options, {params: {}});
+
+      this.host = options.host;
+      this.attr = options.attr;
+      this.id = options.id;
+      this.target = null;
+
+      options.params.uuid = this.id;
+      this.raw = jsPlumb.addEndpoint(this.host.$el, options.params);
+    },
+
+    setTarget: function(target) {
+      this.target = target;
+      this.host.model.set(this.attr, target.host.model.id);
+    },
+
+    connected: function(e) {
+      if (this === e.sourceEndpoint) { this.setTarget(e.targetEndpoint); }
+    },
+
+    // connect `this` endpoint to another endpoint
+    connect: function(endpoint) {
+      return jsPlumb.connect({source: this.raw, target: endpoint.raw});
+    }
+  });
 })(go.components.plumbing = {});

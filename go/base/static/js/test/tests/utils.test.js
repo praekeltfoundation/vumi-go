@@ -20,7 +20,9 @@ describe("go.utils", function() {
     });
 
     it("should default to a parent's constructor", function() {
-      var Parent, Child;
+      var Parent,
+          Child;
+
       Parent = Extendable.extend({
         constructor: function (name) { this.name = name; }
       });
@@ -35,6 +37,79 @@ describe("go.utils", function() {
 
       assert.equal(thing.a, 'one');
       assert.equal(thing.b, 'two');
+    });
+  });
+
+  describe(".parent", function() {
+    var Extendable = go.utils.Extendable,
+        parent = go.utils.parent;
+
+    it("should provide the 'super' prototype", function() {
+      var Parent = Extendable.extend(),
+          Child = Parent.extend();
+
+      assert.equal(parent(new Child()), Parent.prototype);
+    });
+
+    it("should provide a property on the 'super' prototype", function() {
+      var Parent = Extendable.extend({prop: 23}),
+          Child = Parent.extend({prop: 22});
+
+      assert.equal(parent(new Child(), 'prop'), 23);
+    });
+
+    it("should provide binded versions of the 'super' prototype's functions",
+       function() {
+      var Parent = Extendable.extend({fn: function() { return this; }}),
+          Child = Parent.extend({fn: function() { return 22; }}),
+          child = new Child();
+
+      assert.equal(parent(child, 'fn')(), child);
+    });
+  });
+
+  describe(".delegateEvents", function() {
+    var Eventable = go.utils.Eventable,
+        delegateEvents = go.utils.delegateEvents;
+
+    it("should call callbacks when their events are emitted", function(done) {
+      var Thing,
+          thing,
+          aCalled = false,
+          bCalled = false,
+          maybeDone = function() { aCalled && bCalled && done(); };
+      
+      Thing = Eventable.extend({
+        a: function() {
+          aCalled = true;
+          maybeDone();
+        },
+        b: function() {
+          bCalled = true;
+          maybeDone();
+        }
+      });
+
+      thing = new Thing();
+      delegateEvents(thing, {'event-a': 'a', 'event-b': 'b'});
+      thing.trigger('event-a');
+      thing.trigger('event-b');
+    });
+
+    it("should bind callbacks to the Eventable instance", function(done) {
+      var Thing,
+          thing;
+      
+      Thing = Eventable.extend({
+        callback: function() {
+          assert.equal(this, thing);
+          done();
+        }
+      });
+
+      thing = new Thing();
+      delegateEvents(thing, {'event': 'callback'});
+      thing.trigger('event');
     });
   });
 });
