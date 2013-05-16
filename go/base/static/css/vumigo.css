@@ -114,7 +114,7 @@ body {
   box-sizing: content-box;
   border-left: 5px #15191a solid;
   margin-left: -5px !important;
-  display: block;
+  height: 100%;
 }
 .content .actions .sidebar .btn {
   margin-left: -5px;

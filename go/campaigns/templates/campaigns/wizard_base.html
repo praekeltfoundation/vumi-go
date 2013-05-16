@@ -1,15 +1,11 @@
 {% extends "app.html" %}
 {% load url from future %}
 
-{% block content_extraclass %}
-    campaigns
-{% endblock %}
+{% block content_extraclass %}campaigns{% endblock %}
 
 {% block content_breadcrumbs %}
-<a href="{% url 'campaigns:details' %}">
-    Details
-</a>
-{# these can't be links if this is a new object #}
+<a href="{% url 'campaigns:details' %}">Details</a>
+{# TODO: these can't be links if this is a new object #}
 <a href="">Messages</a>
 <a href="">Contacts</a>
 <a href="">Preview &amp; Activate</a>
