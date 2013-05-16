@@ -1,0 +1,96 @@
+<script type="text/html" id="tmpl_widget">          
+    <div class="header">
+        <span>Message <%=id%></span>
+        <% if (!editMode) { %>
+        <button type="button" class="btn btn-mini btn-primary">Edit</button>
+        <div class="sprite sprite-ico-del"></div>
+        <div class="sprite sprite-ico-drag"></div>                  
+        <% } else { %>
+        <button type="button" class="btn btn-mini btn-primary">Save</button>
+        <button type="button" class="btn btn-mini btn-primary">Cancel</button>
+        <div class="sprite sprite-ico-del"></div>
+        <% } %>
+
+
+    </div>
+    <div class="dragend sprite sprite-ico-dragend"></div>
+    <div class="widget-inner">
+        <% if (!editMode) { %>
+        <div class="caption"><%=message%></div>
+        
+        <% } else { %>
+        <form>
+            <span>Type of message</span>
+            <select class="selectpicker span12">
+              <option>Recipients select one option from a list</option>
+              <option>Recipients can reply with their own text</option>
+              <option>Display text only (Recipients can't answer)</option>
+           </select>
+           <span>Your message</span>
+           <div class="right">
+            <span>100 characters left</span>
+           </div>
+           <textarea rows="3" class="span12">What is your favourite drink?</textarea>
+           <% if (tails) { %>
+           <span>Recipients&rsquo; answer</span>
+           <ul class="answers">
+            <% for (var i = 0; i < tails.length; i++) { %>
+                <% if (tails[i].text) { %>
+                <li><span><%=(i+1)%></span><input type="text" value="<%=tails[i].text%>"></li>
+                <% } else { %>
+                <li><span>Recipients reply with their own text.</span>
+                <% } %>
+            <% } %>
+           </ul>
+           <button type="button" class="btn btn-mini btn-primary answer-btn">Add another answer</button>
+           <% } %>
+        </form>
+        <% } %>
+    </div>
+    
+    <% if (!editMode) { %>
+    <div class="widget-content">
+        <% if (tails) { %>
+        <ul class="feedback">
+            <% for (var i = 0; i < tails.length; i++) { %>
+                <% if (tails[i].text) { %>
+            <li><span><%=(i+1)%></span><span><%=tails[i].text%></span><div class="dragstart sprite sprite-ico-dragstart"></div></li>
+                <% } else { %>
+            <li><span>Recipients reply with their &nbsp;<br/>own text.</span><div class="dragstart sprite sprite-ico-dragstart"></div></li>
+                <% } %>
+            <% } %>
+        </ul>
+        <% } else { %>
+        <ul class="feedback end">
+            <li><span>Recipients can&rsquo;t answer.</span></li>
+            <li class="end"><span>Campaign ends</span><div class="end-box"></div></li>
+        </ul>
+        <% } %>
+    </div>
+    <% } %>
+</script>
+
+
+<div class="row-fluid">
+    <div class="span12 tool" style="height:900px;">
+        <div class="wrapper" style="height:900px;" class="clearfix">
+            <section class="viewport" style="height:900px;">  
+                <section class="stage">
+                
+                    <div id="overlay"></div>
+                
+                    <div id="connections" class="connections"></div>
+                    
+                    <!--Start Widgets-->
+                    <div id="widgets" class="widgets"></div>
+                    <!--End Widgets-->
+                    
+                    <div class="rows">
+                        <!--Add new Widget Button-->
+                        <div class="sprite sprite-ico-add add-btn" style="left:670px; top:155px;"></div>
+                    </div>
+                </section>
+            </section>  
+        </div>
+    </div>
+</div>

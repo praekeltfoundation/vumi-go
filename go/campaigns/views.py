@@ -36,7 +36,7 @@ def details(request, campaign_key=None):
                 return redirect('conversations:index')
 
             # TODO save and go to next step.
-            return redirect('campaigns:messages',
+            return redirect('campaigns:message',
                             campaign_key=conversation.key)
 
     return render(request, 'campaigns/wizard_1_details.html', {
@@ -51,7 +51,7 @@ def message(request, campaign_key):
     # is this for a conversation or bulk?
     # determine that and redirect.
     conversation = conversation_or_404(request.user_api, campaign_key)
-    return redirect('campaigns:message_bulk', campaign_key=campaign_key)
+    return redirect('campaigns:message_conversation')
 
 
 @login_required
@@ -67,7 +67,9 @@ def message_conversation(request, campaign_key):
         1. This one.
     """
     conversation = conversation_or_404(request.user_api, campaign_key)
-    return render(request, 'campaigns/wizard_2_conversation.html')
+    return render(request, 'campaigns/wizard_2_conversation.html', {
+        'campaign_key': campaign_key
+    })
 
 
 @login_required
