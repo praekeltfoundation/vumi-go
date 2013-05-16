@@ -77,7 +77,7 @@
   var ContentStatePreviewer = StatePreviewer.extend({});
 
   // `EDIT` mode for `CONTENT` states
-  var ContentStateEditor = StpreviewateEditor.extend({});
+  var ContentStateEditor = StateEditor.extend({});
 
   // Mappings from state types to their respective set of modes
   var DialogueStateViewModes = {
