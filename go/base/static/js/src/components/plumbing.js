@@ -7,7 +7,6 @@
   var Extendable = go.utils.Extendable,
       Eventable = go.utils.Eventable,
       delegateEvents = go.utils.delegateEvents,
-      pop = go.utils.pop,
       parent = go.utils.parent;
 
   // Dispatches jsPlumb events to the subscribed `PlumbEndpoint`s
