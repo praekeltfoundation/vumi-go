@@ -2,12 +2,13 @@
 {% load conversation_tags %}
 {% load url from future %}
 
-{% block extra_header %}
+{% block extrahead %}
+    {{ block.super }}
     <link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
     <link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
 {% endblock %}
 
-{% block main %}
+{% block content_main %}
     <div class="row">
         <div class="span12">
             <div id="welcome">
@@ -29,6 +30,6 @@
 
 {% endblock %}
 
-{% block extra_js %}
+{% block extrascript %}
     {# {% include "conversation/includes/charts.html" %} #}
 {% endblock %}

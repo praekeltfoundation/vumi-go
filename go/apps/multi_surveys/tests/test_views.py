@@ -92,7 +92,6 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
             return self.client.get(reverse('multi_survey:people', kwargs={
                 'conversation_key': conversation.key,
                 }))
-
         self.assertContains(get_people_page(u'pool1'), 'Survey Recipients')
         self.assertNotContains(get_people_page(u'pool2'), 'Survey Recipients')
 

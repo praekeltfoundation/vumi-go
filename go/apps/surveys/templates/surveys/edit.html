@@ -1,12 +1,13 @@
 {% extends "app.html" %}
 {% load url from future %}
 
-{% block extra_header %}
+{% block extrahead %}
+    {{ block.super }}
     <link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
     <link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
 {% endblock %}
 
-{% block main %}
+{% block content_main %}
     <div class="row">
         <div class="span12">
             <div id="welcome">
@@ -24,7 +25,7 @@
             <form name="conversation" class="form-horizontal" id="conversation" method="post" action="">
                 <fieldset>
                     {% include "surveys/includes/contents.html" %}
-                    <div class="control-group>"
+                    <div class="control-group">
                         <label class="control-label">&nbsp;</label>
                         <div class="controls">
                             <input type="submit" name="_save_contents" value="Save and add another question" class="btn btn-primary" />
