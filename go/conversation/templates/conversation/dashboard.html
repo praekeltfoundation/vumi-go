@@ -19,7 +19,7 @@
     </div>
 
     <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
-        <input type="text" class="search-query" placeholder="Search" name="{{ search_form.query.name }}" value="">
+        <input type="text" class="search-query" placeholder="Search" name="{{ search_form.query.name }}" value="{{ search_form.query.value }}">
         <button type="submit" class="btn" id="search-filter-btn">Search</button>
     </form>
 {% endblock %}
@@ -48,36 +48,54 @@
 
         </div>
         <div class="span9">
-            {% if conversations %}
-                <div class="row-fluid">
-                    <div class="span12">
-                        {% include "base/includes/messages.html" %}
-                    </div>
-                </div>
-                
-                <div class="row-fluid">
-                    {% for conversation in page.object_list %}
-                        {% include "conversation/includes/conversation-box.html" %}
-                        {% if forloop.counter|divisibleby:"3" %}
-                            </div>
-                            <div class="row">
-                        {% endif %}
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="row">
-                    <div class="span12">
-                        <div id="welcome">
-                            <div class="pull-right start-button shadow">
-                            <h1><a data-toggle="modal" href="#newConv" tite="New Conversation"><i class="icon-plus"></i></a></h1></div>
-                            <h1>Hey {{user_profile}}, you must be new here.</h1>
-                            <h2><a href="#newConv" class="start">Start Your First Conversation</a></h2>
-                        </div>
-                    </div>
-                </div>
 
-            {% endif %}
-            {% include "base/includes/pagination.html" %}
+            {% include "base/includes/messages.html" %}
+
+            <table class="table table-bordered table-awesome" data-table-id="conversations">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox"></th>
+                        <th>Campaigns</th>
+                        <th>Status</th>
+                        <th>Channel</th>
+                        <th>Interactions</th>
+                        <th>In Last</th>
+                        <th>Last Edited</th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+                    {% if conversation %}
+                        {% for conversation in page.object_list %}
+
+                        {# TODO: Hook up correct values. #}
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td><a href="">Messages</a></td>
+                            <td><a href="">Report</a></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="9">
+                        {% if query %}
+                            No contacts match <strong>{{ query }}</strong>
+                        {% else %}
+                            You don't have any conversations yet.
+                        {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
         </div>
     </div>
 {% endblock %}
