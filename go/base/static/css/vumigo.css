@@ -94,9 +94,10 @@ body {
   font-weight: bold;
   padding: 0 12px;
   margin: 0;
+  color: #000;
 }
 .content .header h1 a {
-  color: #2f3436;
+  color: #000;
 }
 .content .header .pull-right {
   text-align: right;
@@ -173,6 +174,9 @@ body {
 .campaigns .control-label a:link,
 .campaigns .control-label a:visited {
   color: #000;
+}
+.campaigns .control-label a:hover {
+  text-decoration: none;
 }
 .campaigns form .boxes {
   text-align: center;

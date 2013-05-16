@@ -6,13 +6,13 @@
 {% block content_breadcrumbs %}
     <a href="{% url 'campaigns:details' campaign_key %}">Details</a>
     {% if not campaign_key %}
-    <a href="#">Messages</a>
-    <a href="#">Contacts</a>
-    <a href="#">Preview &amp; Activate</a>
+        <a href="#">Messages</a>
+        <a href="#">Contacts</a>
+        <a href="#">Preview &amp; Activate</a>
     {% else %}
-    <a href="{% url 'campaigns:messages' campaign_key %}">Messages</a>
-    <a href="{% url 'campaigns:messages' campaign_key %}">Contacts</a>
-    <a href="{% url 'campaigns:messages' campaign_key %}">Preview &amp; Activate</a>
+        <a href="{% url 'campaigns:messages' campaign_key %}">Messages</a>
+        <a href="{% url 'campaigns:messages' campaign_key %}">Contacts</a>
+        <a href="{% url 'campaigns:messages' campaign_key %}">Preview &amp; Activate</a>
     {% endif %}
 {% endblock %}
 
