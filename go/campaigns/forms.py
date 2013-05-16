@@ -6,7 +6,7 @@ class CampaignGeneralForm(forms.Form):
     TYPE_CHOICES = (
         ('', 'Select campaign type'),
         ('B', 'Bulk Message'),
-        ('C', 'Conversation'),
+        ('D', 'Dialogue'),
     )
 
     name = forms.CharField(label="Campaign name", max_length=100)
