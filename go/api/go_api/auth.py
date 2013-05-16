@@ -12,12 +12,16 @@ from twisted.web.guard import HTTPAuthSessionWrapper, BasicCredentialFactory
 class GoUserRealm(object):
     implements(portal.IRealm)
 
-    def __init__(self, resource):
-        self.resource = resource
+    def __init__(self, resource_for_user):
+        self._resource_for_user = resource_for_user
+
+    def resource_for_user(self, user):
+        raise NotImplementedError()
 
     def requestAvatar(self, user, mind, *interfaces):
         if resource.IResource in interfaces:
-            return (resource.IResource, self.resource, lambda: None)
+            return (resource.IResource, self._resource_for_user(user),
+                    lambda: None)
         raise NotImplementedError()
 
 
@@ -39,19 +43,17 @@ class GoUserSessionAccessChecker(object):
         if credentials.username != self.EXPECTED_USERNAME:
             raise error.UnauthorizedLogin()
         session_id = credentials.password
-        username = yield self.vumi_api.username_for_session(session_id)
-        if username:
-            returnValue(username)
+        user = yield self.vumi_api.username_for_session(session_id)
+        if user:
+            returnValue(user)
         raise error.UnauthorizedLogin()
 
 
-def protect_resource(self, resource, vumi_api):
-    checkers = [
-        GoUserSessionAccessChecker(vumi_api),
-    ]
-    realm = GoUserRealm(resource)
-    p = portal.Portal(realm, checkers)
-
-    factory = BasicCredentialFactory("Vumi Go Realm")
-    protected_resource = HTTPAuthSessionWrapper(p, [factory])
-    return protected_resource
+class GoUserAuthSessionWrapper(HTTPAuthSessionWrapper):
+    def __init__(self, realm, vumi_api):
+        checkers = [
+            GoUserSessionAccessChecker(vumi_api),
+        ]
+        p = portal.Portal(realm, checkers)
+        factory = BasicCredentialFactory("Vumi Go API")
+        super(GoUserAuthSessionWrapper, self).__init__(p, [factory])

@@ -15,7 +15,7 @@ from vumi.transports.httprpc import httprpc
 from vumi.utils import build_web_site
 from vumi.worker import BaseWorker
 
-from go.api.go_api.auth import protect_resource
+from go.api.go_api.auth import GoUserRealm, GoUserAuthSessionWrapper
 from go.vumitools.api import VumiApi
 
 
@@ -31,8 +31,9 @@ class ConversationType(Dict):
 
 
 class GoApiServer(JSONRPC):
-    def __init__(self, vumi_api):
+    def __init__(self, username, vumi_api):
         JSONRPC.__init__(self)
+        self.username = username
         self.vumi_api = vumi_api
 
     def _format_conversation(self, conv):
@@ -75,19 +76,19 @@ class GoApiWorker(BaseWorker):
         riak_manager = ConfigDict(
             "Riak client configuration.", default={}, static=True)
 
+    def _rpc_resource_for_user(self, username):
+        rpc = GoApiServer(username, self.vumi_api)
+        addIntrospection(rpc)
+        return rpc
+
     @inlineCallbacks
     def setup_worker(self):
-        # TODO: figure out how to hook up auth and make it available to RPC
-        # username: ???
-        # password: session_id
-
         config = self.get_static_config()
-        vumi_api = yield VumiApi.from_config_async(config)
-        rpc = GoApiServer(vumi_api)
-        addIntrospection(rpc)
-        protected_rpc = protect_resource(rpc)
+        self.vumi_api = yield VumiApi.from_config_async(config)
+        self.realm = GoUserRealm(self._rpc_resource_for_user)
         site = build_web_site([
-            (config.web_path, protected_rpc),
+            (config.web_path, GoUserAuthSessionWrapper(self.realm,
+                                                       self.vumi_api)),
             (config.health_path, httprpc.HttpRpcHealthResource(self)),
         ])
         self.addService(strports.service(config.twisted_endpoint, site))
