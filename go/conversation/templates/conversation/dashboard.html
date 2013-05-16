@@ -30,19 +30,23 @@
 
             <ul class="nav nav-list">
                 <li>
-                    <a href="#">All campaigns</a>
+                    <a href="{% url 'conversations:index' %}">All campaigns</a>
                     <ul class="nav nav-list">
-                        <li><a href="#">Running Smoothly</a></li>
-                        <li><a href="#">Offline</a></li>
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=running">Running Smoothly</a></li>
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=finished">Offline</a></li>
+                        <!-- TODO: we don't have a backend service for this yet -->
+                        <!--
                         <li><a href="#">Some problems</a></li>
                         <li><a href="#">Paused</a></li>
-                        <li><a href="#">Drafts</a></li>
+                        -->
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=draft">Drafts</a></li>
                     </ul>
                 </li>
 
-                <li><a href="#">Archived Campagins</a></li>
-
-                <li><a href="#">All Channels</a></li>
+                <!-- TODO: we don't have a clear backend definition yet of what archived means -->
+                <!-- <li><a href="#">Archived Campaigns</a></li> -->
+                <!-- TODO: we won't have a backend service that exposes available transports -->
+                <!-- <li><a href="#">All Channels</a></li> -->
 
             </ul>
 
@@ -60,7 +64,7 @@
                         <!-- TODO: We don't have a backend that provides a friendly name for this yet. -->
                         <!-- <th>Channel</th> -->
                         <th>Interactions</th>
-                        <!-- TODO: We're not storing this timestamp yet -->
+                        <!-- TODO: We don't have a backend service yet for this value -->
                         <!-- <th>In Last</th> -->
                         <!-- TODO: We're only storing the created_at value :\ -->
                         <th>Last Edited</th>
@@ -87,6 +91,9 @@
                             <td><a href="{% url 'todo' %}">Report</a></td>
                         </tr>
                         {% endfor %}
+                        <tr colspan="9">
+                            {% include "base/includes/pagination.html" %}
+                        </tr>
                     {% else %}
                     <tr>
                         <td colspan="9">
