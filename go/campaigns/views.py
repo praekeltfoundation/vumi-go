@@ -67,6 +67,16 @@ def message_conversation(request, campaign_key):
         1. This one.
     """
     conversation = conversation_or_404(request.user_api, campaign_key)
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'draft':
+            # save and go back to list.
+            return redirect('conversations:index')
+
+        # TODO save and go to next step.
+        return redirect('campaigns:contacts', campaign_key=conversation.key)
+
+    
     return render(request, 'campaigns/wizard_2_conversation.html', {
         'campaign_key': campaign_key
     })
