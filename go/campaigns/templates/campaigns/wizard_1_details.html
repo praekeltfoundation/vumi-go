@@ -43,24 +43,24 @@
                 <div class="span3">
                     {{ form_config.channels.label }}
                     <a href="#" class="icon-info-sign"
-                        data-toggle="tooltip" 
+                        data-toggle="tooltip"
                         data-original-title="
-                            Short code: a 4 or 5 digit number, from which 
+                            Short code: a 4 or 5 digit number, from which
                             SMS messages can be sent or received.
-                            Long code: a 10+ digit number, from which 
+                            Long code: a 10+ digit number, from which
                             SMS messages can be sent or received.">
                     </a>
                 </div>
                 <div class="span3">
                     {{ form_config.keyword.label }}
                     <a href="#" class="icon-info-sign"
-                        data-toggle="tooltip" 
-                        data-original-title="When your number is being shared 
-                        by several people, a keyword will ensure that you 
-                        receive your users' messages. Eg: &quot;SMS 'drinks' 
+                        data-toggle="tooltip"
+                        data-original-title="When your number is being shared
+                        by several people, a keyword will ensure that you
+                        receive your users' messages. Eg: &quot;SMS 'drinks'
                         to 27925551234 to enter the competition.&quot;">
                     </a>
-                    
+
                 </div>
             </div>
 
@@ -78,9 +78,9 @@
                             {{ form_config.countries.label }}
                         </label>
 
-                        {{ form_config.channels }}
+                        {{ form_config.countries }}
                     </div>
-                    
+
                     <button class="btn btn-primary">Add country</button>
                 </div>
 
@@ -124,7 +124,7 @@
 
         // activate the tooltips
         $('.icon-info-sign').tooltip();
-    
+
         $('.configuration button').on('click', function(e) {
             e.preventDefault();
 
