@@ -65,26 +65,25 @@
   //   - attr: The hosts's model attribute associated to this endpoint. This
   //   attribute is set to the id of the target endpoint's host's model once
   //   the target is set
-  //   - [params]: jsPlumb Endpoint params
+  //   - [jsPlumb Endpoint params]
   var PlumbEndpoint = exports.PlumbEndpoint = Eventable.extend({
     events: {'plumb:connect': 'connected'},
 
     constructor: function(options) {
       parent(this, 'constructor')();
-      _.defaults(options, {params: {}});
 
+      this.id = options.id;
       this.host = options.host;
       this.attr = options.attr;
-      this.id = options.id;
       this.target = null;
 
-      options.params.uuid = this.id;
-      _.extend(options.params, {
+      var plumbParams = _.extend(_.omit(options, 'id', 'host', 'attr'), {
         uuid: this.id,
         isSource: true,
         isTarget: true
       });
-      this.raw = jsPlumb.addEndpoint(this.host.$el, options.params);
+      
+      this.raw = jsPlumb.addEndpoint(this.host.$el, plumbParams);
     },
 
     setTarget: function(target) {
