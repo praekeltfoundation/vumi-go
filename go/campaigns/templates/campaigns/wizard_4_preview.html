@@ -8,6 +8,7 @@
 {% block content_actions_right %}
     <a href="{% url 'conversations:index' %}">Cancel</a>
     <button class="btn btn-primary" data-action="start">Start</button>
+    {# Maybe this shouldn't post and simply go to another a view? #}
 {% endblock %}
 
 {% block content_main %}
@@ -21,16 +22,23 @@
             </a>
         </h4>
 
-        Campaign name<br>
-        {# TODO: Campaign name #}
-        Campaign type<br>
-        {# TODO: Campaign type #}
-        Channels<br>
-        {# TODO: Channel summary #}
+        <p>
+            NAME<br>
+            {{ conversation.name }}
+        </p>
+        <p>
+            TYPE<br>
+            {# TODO: conversation type. #}
+        </p>
+        
+        <p>
+            CHANNELS<br>
+            {# TODO: Channel summary #}
+        </p>
 
         <hr>
         <h4 class="control-label">
-            <a href="{% url 'campaigns:messages' campaign_key %}">
+            <a href="{% url 'campaigns:message' campaign_key %}">
                 Messages
                 <button class="btn btn-primary btn-mini">Edit</button>
             </a>
@@ -41,6 +49,7 @@
             Lorem ipsum sit dolar asdiosa
         </p>
 
+
         <hr>
         <h4 class="control-label">
             <a href="{% url 'campaigns:contacts' campaign_key %}">
@@ -48,10 +57,13 @@
                 <button class="btn btn-primary btn-mini">Edit</button>
             </a>
         </h4>
-
         <p class="message">
-            {# TODO: List of groups #}
-            Lorem ipsum sit dolar asdiosa
+            {# TODO: List of groups contacts #}
+            <ol>
+                <li>Sausage (168)</li>
+                <li>Ship (10)</li>
+                <li>Round-a-bout (5)</li>
+            </ol>
         </p>
 
     </div>
