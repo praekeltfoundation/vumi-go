@@ -1,5 +1,4 @@
 import csv
-from datetime import datetime
 from StringIO import StringIO
 
 from django.views.generic import TemplateView
@@ -15,8 +14,7 @@ from django.conf.urls.defaults import url, patterns
 from django.conf import settings
 from django.http import HttpResponse
 
-from go.vumitools.conversation.models import (
-    CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_STOPPED)
+from go.vumitools.conversation.models import CONVERSATION_DRAFT
 from go.vumitools.exceptions import ConversationSendError
 from go.base.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConversationForm, ConversationGroupForm,
@@ -296,15 +294,15 @@ class ShowConversationView(ConversationView):
             'is_editable': (self.edit_conversation_forms is not None),
             'user_api': request.user_api,
             }
-        status = conversation.get_status()
         templ = lambda name: self.get_template_name('includes/%s' % (name,))
 
-        if status == CONVERSATION_STOPPED:
+        if conversation.archived():
             # HACK: This assumes "stopped" and "archived" are equivalent.
             params['button_template'] = templ('ended-button')
-        elif status == CONVERSATION_RUNNING:
+        elif conversation.running():
             params['button_template'] = templ('end-button')
-        elif status == CONVERSATION_DRAFT:
+        else:
+            # TODO: Figure out better state management.
             params['button_template'] = templ('next-button')
             params['next_url'] = self.get_view_url(
                 self.get_next_view(conversation),

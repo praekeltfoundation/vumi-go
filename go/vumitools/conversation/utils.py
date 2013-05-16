@@ -39,9 +39,15 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def end_conversation(self):
-        self.c.set_status_stopped()
+        # TODO: `stop' and `archive' should be different operations.
+        self.c.set_status_stopping()
         self.c.set_status_finished()
         yield self.c.save()
+
+        yield self.dispatch_command('stop',
+                                    user_account_key=self.c.user_account.key,
+                                    conversation_key=self.c.key)
+
         yield self._remove_from_routing_table()
         yield self._release_batches()
 
