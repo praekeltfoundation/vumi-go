@@ -53,6 +53,10 @@ def message_bulk(request, campaign_key):
     })
 
 
+def contacts(request, campaign_key):
+    return render(request, 'campaigns/wizard_3_contacts.html')
+
+
 def message_conversation(request, campaign_key):
     return render(request, 'campaigns/wizard_2_conversation.html')
 
