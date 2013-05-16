@@ -76,8 +76,8 @@
                 <tbody>
                     {% if conversations %}
                         {% for conversation in page.object_list %}
-                        <tr>
-                            <td data-url="{{ conversation.get_absolute_url }}"><input type="checkbox"></td>
+                        <tr data-url="{{ conversation.get_absolute_url }}">
+                            <td><input type="checkbox"></td>
                             <td>{{ conversation.name }}</td>
                             <td>{{ conversation.get_status|capfirst }}</td>
                             <!-- <td></td> -->
@@ -108,4 +108,12 @@
             </table>
         </div>
     </div>
+{% endblock %}
+
+{% block extrascript %}
+<script type="text/javascript">
+$(function() {
+    go.tables.init('.table-awesome');
+});
+</script>
 {% endblock %}

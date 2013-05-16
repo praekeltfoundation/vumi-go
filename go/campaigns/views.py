@@ -1,6 +1,5 @@
 from urllib import urlencode
 
-from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -37,7 +36,7 @@ def details(request, campaign_key=None):
                 return redirect('conversations:index')
 
             # TODO save and go to next step.
-            return redirect('campaigns:message',
+            return redirect('campaigns:messages',
                             campaign_key=conversation.key)
 
     return render(request, 'campaigns/wizard_1_details.html', {
@@ -94,7 +93,6 @@ def message_bulk(request, campaign_key):
 @login_required
 def contacts(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
-
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'draft':
@@ -127,7 +125,7 @@ def contacts(request, campaign_key):
         'paginator': paginator,
         'page': page,
         'pagination_params': pagination_params,
-        'campaign_key': campaign_key
+        'campaign_key': campaign_key,
     })
 
 
