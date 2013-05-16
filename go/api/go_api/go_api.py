@@ -3,13 +3,13 @@
 
 """JSON RPC API for Vumi Go front-end and others."""
 
-from twisted.application import strports
+from twisted.application.internet import StreamServerEndpointService
 from twisted.internet.defer import inlineCallbacks
 
 from txjsonrpc.jsonrpc import addIntrospection
 from txjsonrpc.web.jsonrpc import JSONRPC
 
-from vumi.config import ConfigDict, ConfigText
+from vumi.config import ConfigDict, ConfigText, ConfigServerEndpoint
 from vumi.rpc import signature, Unicode, List, Dict
 from vumi.transports.httprpc import httprpc
 from vumi.utils import build_web_site
@@ -64,7 +64,7 @@ class GoApiWorker(BaseWorker):
     class CONFIG_CLASS(BaseWorker.CONFIG_CLASS):
         worker_name = ConfigText(
             "Name of this Go API worker.", required=True, static=True)
-        twisted_endpoint = ConfigText(
+        twisted_endpoint = ConfigServerEndpoint(
             "Twisted endpoint to listen on.", required=True, static=True)
         web_path = ConfigText(
             "The path to serve this resource on.", required=True, static=True)
@@ -91,7 +91,8 @@ class GoApiWorker(BaseWorker):
                                                        self.vumi_api)),
             (config.health_path, httprpc.HttpRpcHealthResource(self)),
         ])
-        self.addService(strports.service(config.twisted_endpoint, site))
+        self.addService(
+            StreamServerEndpointService(config.twisted_endpoint, site))
 
     def teardown_worker(self):
         pass
