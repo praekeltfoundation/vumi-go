@@ -34,7 +34,7 @@
   //
   // If `propName` is specified, a property on 'super' prototype is returned.
   // If the property is a function, the function is bound to the instance.
-  exports._super_ = function(that, propName) {
+  exports.parent = function(that, propName) {
     var proto = Object.getPrototypeOf(Object.getPrototypeOf(that)),
         prop;
 

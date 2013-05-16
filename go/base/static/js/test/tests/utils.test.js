@@ -40,22 +40,22 @@ describe("go.utils", function() {
     });
   });
 
-  describe("._super_", function() {
+  describe(".parent", function() {
     var Extendable = go.utils.Extendable,
-        _super_ = go.utils._super_;
+        parent = go.utils.parent;
 
     it("should provide the 'super' prototype", function() {
       var Parent = Extendable.extend(),
           Child = Parent.extend();
 
-      assert.equal(_super_(new Child()), Parent.prototype);
+      assert.equal(parent(new Child()), Parent.prototype);
     });
 
     it("should provide a property on the 'super' prototype", function() {
       var Parent = Extendable.extend({prop: 23}),
           Child = Parent.extend({prop: 22});
 
-      assert.equal(_super_(new Child(), 'prop'), 23);
+      assert.equal(parent(new Child(), 'prop'), 23);
     });
 
     it("should provide binded versions of the 'super' prototype's functions",
@@ -64,7 +64,7 @@ describe("go.utils", function() {
           Child = Parent.extend({fn: function() { return 22; }}),
           child = new Child();
 
-      assert.equal(_super_(child, 'fn')(), child);
+      assert.equal(parent(child, 'fn')(), child);
     });
   });
 

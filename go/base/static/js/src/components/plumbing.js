@@ -8,7 +8,7 @@
       Eventable = go.utils.Eventable,
       delegateEvents = go.utils.delegateEvents,
       pop = go.utils.pop,
-      _super_ = go.utils._super_;
+      parent = go.utils.parent;
 
   // Dispatches jsPlumb events to the subscribed `PlumbEndpoint`s
   //
@@ -70,7 +70,7 @@
     events: {'plumb:connect': 'connected'},
 
     constructor: function(options) {
-      _super_(this, 'constructor')();
+      parent(this, 'constructor')();
       _.defaults(options, {params: {}});
 
       this.host = options.host;
