@@ -36,11 +36,11 @@
 
         <div class="configuration">
             <div class="row-fluid title">
-                <div class="span3"></div>
-                <div class="span3">
+                <div class="span4"></div>
+                <div class="span4">
                     {{ form_config.countries.label }}
                 </div>
-                <div class="span3">
+                <div class="span4">
                     {{ form_config.channels.label }}
                     <a href="#" class="icon-info-sign"
                         data-toggle="tooltip" 
@@ -51,6 +51,7 @@
                             SMS messages can be sent or received.">
                     </a>
                 </div>
+                <!-- TODO: Return after demo. 
                 <div class="span3">
                     {{ form_config.keyword.label }}
                     <a href="#" class="icon-info-sign"
@@ -62,16 +63,17 @@
                     </a>
                     
                 </div>
+                 -->
             </div>
 
             <div class="row-fluid boxes">
-                <div class="span3">
+                <div class="span4">
                     <div class="box">
                         Your campaign
                     </div>
                 </div>
 
-                <div class="span3">
+                <div class="span4">
 
                     <div class="box">
                         <label for="id_{{ form_config.countries.name }}">
@@ -84,7 +86,7 @@
                     <button class="btn btn-primary">Add country</button>
                 </div>
 
-                <div class="span3">
+                <div class="span4">
                     <div class="box">
                         {# these need to be populated by something? #}
 
@@ -98,6 +100,7 @@
                     <button class="btn btn-primary">Add channel</button>
                 </div>
 
+                <!-- TODO: Return after demo.
                 <div class="span3">
                     <div class="box">
                         <label for="id_{{ form_config.keyword.name }}">
@@ -106,6 +109,7 @@
                         {{ form_config.keyword }}
                     </div>
                 </div>
+                 -->
 
             </div>
         </div>
