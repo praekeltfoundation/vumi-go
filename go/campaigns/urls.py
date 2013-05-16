@@ -3,6 +3,7 @@ from go.campaigns import views
 
 urlpatterns = patterns('',
     url(r'^details/$', views.details, name='details'),
+    url(r'^details/(?P<campaign_key>\w+)/$', views.details, name='details'),
     url(r'^message/(?P<campaign_key>\w+)/$', views.message, name='message'),
     url(r'^message/(?P<campaign_key>\w+)/bulk/$', views.message_bulk,
         name='message_bulk'),

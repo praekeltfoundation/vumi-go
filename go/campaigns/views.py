@@ -26,7 +26,8 @@ def details(request, campaign_key=None):
 
     return render(request, 'campaigns/wizard_1_details.html', {
         'form_general': form_general,
-        'form_config': form_config
+        'form_config': form_config,
+        'campaign_key': campaign_key
     })
 
 
