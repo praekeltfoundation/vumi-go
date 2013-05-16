@@ -1,5 +1,6 @@
 {% extends "app.html" %}
 {% load url from future %}
+{% load humanize %}
 
 
 {% block content_extraclass %}dashboard{% endblock %}
@@ -82,11 +83,11 @@
                                     {{conversation.name}}
                                 </a>
                             </td>
-                            <td>{{conversation.get_status}}</td>
+                            <td>{{conversation.get_status|capfirst}}</td>
                             <!-- <td></td> -->
                             <td>{{ conversation.count_replies|add:conversation.count_sent_messages }} </td>
                             <!-- <td></td> -->
-                            <td>{{conversation.created_at}}</td>
+                            <td>{{conversation.created_at|naturaltime}}</td>
                             <td><a href="{% url 'todo' %}">Messages</a></td>
                             <td><a href="{% url 'todo' %}">Report</a></td>
                         </tr>
