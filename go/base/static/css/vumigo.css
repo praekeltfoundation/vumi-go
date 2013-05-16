@@ -124,6 +124,9 @@ body {
 .content .navbar-search {
   margin: 0;
 }
+.content .indent {
+  margin: 2em 1em;
+}
 .content .sidebar .nav-list a {
   color: #2f3436;
 }
@@ -162,9 +165,6 @@ body {
 }
 .campaigns .actions a:first-child {
   margin-right: 20px;
-}
-.campaigns form {
-  margin: 2em 1em;
 }
 .campaigns form .control-label {
   color: #000;

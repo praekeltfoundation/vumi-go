@@ -6,7 +6,7 @@
 
 
 {% block content_main %}
-    <form id="frm-campaign" method="post" action="">
+    <form id="frm-campaign" class="indent" method="post" action="">
         {% csrf_token %}
         <fieldset>
             {% for field in form_general.visible_fields %}
