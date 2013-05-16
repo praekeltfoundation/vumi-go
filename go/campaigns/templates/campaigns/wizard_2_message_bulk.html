@@ -5,17 +5,14 @@
 {% endblock %}
 
 {% block content_main %}
-
 <div class="row">
     <div class="span12">
-        <form id="frm-campaign" method="post" action="">
+        <form id="frm-campaign" class="indent" method="post" action="">
             {% csrf_token %}
             {{ form.as_p }}
+        </form>
     </div>
 </div>
-    
-
-
 {% endblock %}
 
 

@@ -1,0 +1,36 @@
+{% extends "campaigns/wizard_base.html" %}
+
+{% block content_title %}
+    Contacts
+{% endblock %}
+
+{% block content_main %}
+<div class="row-fluid">
+    <div class="span12">
+        <div class="indent">
+            <h3>Select contacts</h3>
+            {% include "contacts/group_list_table.html" %}
+            <button class="btn btn-primary" data-toggle="modal" data-target="#uplContacts">
+                <i class="icon-plus icon-white"></i> Upload contacts...
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+    {{ block.super }}
+
+    {% include "contacts/includes/tools.html" %}
+{% endblock %}
+
+
+{% block extrascript %}
+{{ block.super }}
+<script type="text/javascript">
+    $(function() {
+        // highlight the breadcrumbs.
+        $('.breadcrumbs a').eq(2).addClass('active');
+    });
+</script>
+{% endblock %}
