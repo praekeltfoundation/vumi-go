@@ -14,10 +14,10 @@
 {% block content_main %}
 <div class="row-fluid indent">
     <div class="span8">
-        
+
         <h4 class="control-label">
             <a href="{% url 'campaigns:details' campaign_key %}">
-                Details 
+                Details
                 <button class="btn btn-primary btn-mini">Edit</button>
             </a>
         </h4>
@@ -28,12 +28,15 @@
         </p>
         <p>
             TYPE<br>
-            {# TODO: conversation type. #}
+            {{ conversation.type }}
         </p>
-        
+
         <p>
             CHANNELS<br>
-            {# TODO: Channel summary #}
+            <!-- TODO:  update the routing table metadata helpers to
+                        be able to answer questions like this.
+            -->
+            USSD
         </p>
 
         <hr>
@@ -45,8 +48,7 @@
         </h4>
 
         <p class="message">
-            {# TODO: Messages #}
-            Lorem ipsum sit dolar asdiosa
+            {{ conversation.description }}
         </p>
 
 
