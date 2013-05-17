@@ -116,24 +116,15 @@
 {% endblock %}
 
 
-{% block extrascript %}
-{{ block.super }}
-<script type="text/javascript">
+{% block ondomready %}
+    {{ block.super }}
 
-    $(function() {
+    // activate the tooltips
+    $('.icon-info-sign').tooltip();
 
-        // highlight the breadcrumbs.
-        $('.breadcrumbs a').eq(0).addClass('active');
+    $('.configuration button').on('click', function(e) {
+        e.preventDefault();
 
-        // activate the tooltips
-        $('.icon-info-sign').tooltip();
-
-        $('.configuration button').on('click', function(e) {
-            e.preventDefault();
-
-            // TODO find the template within it's parent, and add another one
-        });
-
+        // TODO find the template within it's parent, and add another one
     });
-</script>
 {% endblock %}

@@ -1,5 +1,5 @@
 {% load url from future %}
-<table class="table table-bordered table-awesome" data-table-id="groups">
+<table class="table table-bordered table-manage-data" data-table-id="groups">
     <thead>
         <tr>
             <th><input type="checkbox"></th>
@@ -12,7 +12,7 @@
     {% for group in page.object_list %}
         <tr data-url="{% url 'contacts:group' group_key=group.key %}">
             <td>
-                <input type="checkbox">
+                <input type="checkbox" name="group" value="{{ group.key }}">
             </td>
             <td>
                 {{ group.name }}
@@ -22,6 +22,7 @@
                 {{ group.backlinks.contacts|length }}
             </td>
             <td>
+                {# TODO: group date created #}
             </td>
         </tr>
     {% empty %}

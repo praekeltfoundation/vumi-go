@@ -721,7 +721,9 @@ class ConversationWrapper(object):
         return self.get_tagpool_metadata('client_initiated', False)
 
     def get_absolute_url(self):
-        return u'/app/%s/%s/' % (self.conversation_type, self.key)
+        # TODO: Change this back, to original.
+        #return u'/app/%s/%s/' % (self.conversation_type, self.key)
+        return u'/campaigns/details/%s/' % self.key
 
     def get_contact_keys(self):
         """

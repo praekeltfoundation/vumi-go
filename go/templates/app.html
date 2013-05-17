@@ -63,3 +63,16 @@
     {% endblock %}
 </div>
 {% endblock %}
+
+
+{% block extrascript %}
+<script type="text/javascript">
+    $(function() {
+
+        go.utils.highlightActiveLinks();
+
+        {% block ondomready %}
+        {% endblock %}
+    });
+</script>
+{% endblock %}

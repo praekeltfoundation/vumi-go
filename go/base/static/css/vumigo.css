@@ -131,7 +131,7 @@ body {
 .content .sidebar .nav-list a {
   color: #2f3436;
 }
-.content .sidebar .nav-list .active > a {
+.content .sidebar .nav-list .active {
   color: #fff;
   background: #b41c30;
   border-left: 5px #6f0f1c solid;
@@ -210,4 +210,16 @@ body {
   width: auto;
   max-width: 100%;
   min-width: 80%;
+}
+.table-manage-data {
+  margin-top: 1em;
+}
+.table-manage-data tr {
+  cursor: pointer;
+}
+.table-manage-data tr:hover {
+  background: #eee;
+}
+.table-manage-data td {
+  color: #2f3436;
 }
