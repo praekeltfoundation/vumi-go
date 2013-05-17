@@ -56,9 +56,9 @@ class CampaignType(Dict):
 
 
 class GoApiServer(JSONRPC):
-    def __init__(self, username, vumi_api):
+    def __init__(self, user_account_key, vumi_api):
         JSONRPC.__init__(self)
-        self.username = username
+        self.user_account_key = user_account_key
         self.vumi_api = vumi_api
 
     def _format_conversation_list(self, convs):
@@ -68,8 +68,10 @@ class GoApiServer(JSONRPC):
                             item_type=CampaignType()))
     def jsonrpc_campaigns(self):
         """List the campaigns a user has access to."""
-        # TODO: add dummy campaign for user_account_key
-        return []
+        return [CampaignType.format_campaign({
+            'key': self.user_account_key,
+            'name': "Your Campaign",
+        })]
 
     @signature(campaign_key=Unicode("Campaign key."),
                returns=List("List of conversations.",

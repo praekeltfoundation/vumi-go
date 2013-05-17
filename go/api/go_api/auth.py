@@ -15,9 +15,6 @@ class GoUserRealm(object):
     def __init__(self, resource_for_user):
         self._resource_for_user = resource_for_user
 
-    def resource_for_user(self, user):
-        raise NotImplementedError()
-
     def requestAvatar(self, user, mind, *interfaces):
         if resource.IResource in interfaces:
             return (resource.IResource, self._resource_for_user(user),
@@ -35,17 +32,18 @@ class GoUserSessionAccessChecker(object):
 
     EXPECTED_USERNAME = "session"
 
-    def __init__(self, vumi_api):
-        self.vumi_api = vumi_api
+    def __init__(self, session_manager):
+        self.session_manager = session_manager
 
     @inlineCallbacks
     def requestAvatarId(self, credentials):
         if credentials.username != self.EXPECTED_USERNAME:
             raise error.UnauthorizedLogin()
         session_id = credentials.password
-        user = yield self.vumi_api.username_for_session(session_id)
-        if user:
-            returnValue(user)
+        user_account_key = (
+            yield self.session_manager.get_user_account_key(session_id))
+        if user_account_key:
+            returnValue(user_account_key)
         raise error.UnauthorizedLogin()
 
 
