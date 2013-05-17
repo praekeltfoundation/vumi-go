@@ -51,7 +51,8 @@ def message(request, campaign_key):
     # is this for a conversation or bulk?
     # determine that and redirect.
     conversation = conversation_or_404(request.user_api, campaign_key)
-    return redirect('campaigns:message_conversation')
+    return redirect('campaigns:message_conversation',
+                    campaign_key=conversation.key)
 
 
 @login_required
@@ -76,7 +77,7 @@ def message_conversation(request, campaign_key):
         # TODO save and go to next step.
         return redirect('campaigns:contacts', campaign_key=conversation.key)
 
-    
+
     return render(request, 'campaigns/wizard_2_conversation.html', {
         'campaign_key': campaign_key
     })
