@@ -13,7 +13,7 @@
 
 {% block content_main %}
 <div class="row-fluid indent">
-    <div class="span8">
+    <div class="span4">
         
         <h4 class="control-label">
             <a href="{% url 'campaigns:details' campaign_key %}">
@@ -67,8 +67,8 @@
         </p>
 
     </div>
-    <div class="span4">
-        {# TODO: realtime phone device. #}
+    <div class="span8">
+        {% include 'campaigns/phone.html' %}
     </div>
 </div>
 {% endblock %}
