@@ -15,8 +15,8 @@
 
 {% block content_actions_right %}
     <div class="button pull-left">
-        <button class="btn">Copy</button>
-        <button class="btn">Archive</button>
+        <button class="btn" disabled="disabled" data-table-id="conversations">Copy</button>
+        <button class="btn" disabled="disabled" data-table-id="conversations">Archive</button>
     </div>
 
     <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
@@ -104,7 +104,7 @@
                         {% if query %}
                             No contacts match <strong>{{ query }}</strong>
                         {% else %}
-                            You don't have any conversations yet.
+                            No conversations.
                         {% endif %}
                         </td>
                     </tr>
