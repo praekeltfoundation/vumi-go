@@ -6,11 +6,9 @@
 
     var TextareaView = Backbone.View.extend({
         SMS_MAX_CHARS: 160,
-
         events: {
             'keyup': 'render'
         },
-
         initialize: function() {
             _.bindAll(this, 'render');
         },
