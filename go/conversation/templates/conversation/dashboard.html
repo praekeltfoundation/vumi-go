@@ -70,22 +70,27 @@
                         <!-- TODO: We're only storing the created_at value :\ -->
                         <th>Last Edited</th>
                         <th></th>
-                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% if conversations %}
                         {% for conversation in page.object_list %}
                         <tr data-url="{{ conversation.get_absolute_url }}">
-                            <td><input type="checkbox"></td>
+                            <td><input type="checkbox" value="{{ conversation.key }}"></td>
                             <td>{{ conversation.name }}</td>
                             <td>{{ conversation.get_status|capfirst }}</td>
                             <!-- <td></td> -->
                             <td>{{ conversation.count_replies|add:conversation.count_sent_messages }} </td>
                             <!-- <td></td> -->
                             <td>{{ conversation.created_at|naturaltime }}</td>
-                            <td><a href="{% url 'todo' %}">Messages</a></td>
-                            <td><a href="{% url 'todo' %}">Report</a></td>
+                            <td>
+                                <a href="{% url 'todo' %}" class="btn btn-mini">
+                                    Messages
+                                </a>
+                                <a href="{% url 'todo' %}" class="btn btn-mini">
+                                    Report
+                                </a>
+                            </td>
                         </tr>
                         {% endfor %}
                         {% if paginator.num_pages > 1 %}
