@@ -1,4 +1,5 @@
 import requests
+from urlparse import urlparse
 
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
@@ -22,5 +23,12 @@ class JsboxConversationViews(ConversationViews):
 @csrf_exempt
 def cross_domain_xhr(request):
     url = request.POST.get('url', None)
-    r = requests.get(url)
+
+    parse_result = urlparse(url)
+    if parse_result.username:
+        auth = (parse_result.username, parse_result.password)
+    else:
+        auth = None
+
+    r = requests.get(url, auth=auth)
     return HttpResponse(r.text, status=r.status_code)
