@@ -37,6 +37,17 @@ class SessionManager(object):
         return self.manager.get(self._session_key(session_key))
 
     @Manager.calls_manager
+    def get_user_account_key(self, session_key):
+        """Returns the user_account_key for the session if it exists.
+
+        Otherwise returns None.
+        """
+        session = self.get_session(session_key)
+        if session:
+            returnValue(session.get(GO_USER_ACCOUNT_KEY))
+        return None
+
+    @Manager.calls_manager
     def create_session(self, session_key, session_data, expire_seconds):
         """Attempts to create the given session entry. Returns False
            if the attempt to create the session fails and True otherwise.
