@@ -16,13 +16,8 @@
 {% endblock %}
 
 
-{% block extrascript %}
-{{ block.super }}
-<script type="text/javascript">
-    $(function() {
-        // highlight the breadcrumbs.
-        $('.breadcrumbs a').eq(1).addClass('active');
-        new go.campaign.bulkMessage.TextareaView({el: $('#frm-campaign textarea')});
-    });
-</script>
+{% block domready %}
+    {{ block.super }}
+    $('.breadcrumbs a').eq(1).addClass('active');
+    new go.campaign.bulkMessage.TextareaView({el: $('#frm-campaign textarea')});
 {% endblock %}

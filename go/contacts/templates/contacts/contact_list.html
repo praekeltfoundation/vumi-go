@@ -35,11 +35,9 @@
 {% endblock %}
 
 
-{% block extrascript %}
+{% block ondomready %}
     {{ block.super }}
-    <script type="text/javascript">
-        go.tables.init('.table-manage-data');
-    </script>
+    go.tables.init('.table-manage-data');
 {% endblock %}
 
 {% block modals %}

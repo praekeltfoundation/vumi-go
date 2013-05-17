@@ -74,12 +74,8 @@
 {% endblock %}
 
 
-{% block extrascript %}
-{{ block.super }}
-<script type="text/javascript">
-    $(function() {
-        // highlight the breadcrumbs.
-        $('.breadcrumbs a').eq(3).addClass('active');
-    });
-</script>
+{% block ondomready %}
+    {{ block.super }}
+    // highlight the breadcrumbs.
+    $('.breadcrumbs a').eq(3).addClass('active');
 {% endblock %}
