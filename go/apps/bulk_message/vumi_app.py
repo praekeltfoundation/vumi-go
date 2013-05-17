@@ -66,9 +66,6 @@ class BulkMessageApplication(GoApplicationWorker):
             'msg_options': msg_options,
             })
 
-    def process_command_initial_action_hack(self, *args, **kwargs):
-        return self.process_command_bulk_send(*args, **kwargs)
-
     @inlineCallbacks
     def process_command_bulk_send(self, user_account_key, conversation_key,
                                   batch_id, msg_options, is_client_initiated,
@@ -154,3 +151,10 @@ class BulkMessageApplication(GoApplicationWorker):
     def collect_metrics(self, user_api, conversation_key):
         conv = yield user_api.get_wrapped_conversation(conversation_key)
         yield self.collect_message_metrics(conv)
+
+    def process_command_initial_action_hack(self, *args, **kwargs):
+        # HACK: This lets us do whatever we used to do when we got a `start'
+        # message without having horrible app-specific view logic.
+        # TODO: Remove this when we've decoupled the various conversation
+        # actions from the lifecycle.
+        return self.process_command_bulk_send(*args, **kwargs)

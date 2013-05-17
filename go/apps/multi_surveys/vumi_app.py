@@ -133,10 +133,9 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
         return self.consume_user_message(msg)
 
     @inlineCallbacks
-    def process_command_initial_action_hack(self, user_account_key,
-                                            conversation_key, batch_id,
-                                            msg_options, is_client_initiated,
-                                            **extra_params):
+    def process_command_send_survey(self, user_account_key, conversation_key,
+                                    batch_id, msg_options, is_client_initiated,
+                                    **extra_params):
 
         if is_client_initiated:
             log.debug('Conversation %r is client initiated, no need to notify '
@@ -149,3 +148,10 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
             for contact in (yield contacts):
                 to_addr = contact.addr_for(conv.delivery_class)
                 yield self.start_survey(to_addr, conv, **msg_options)
+
+    def process_command_initial_action_hack(self, *args, **kwargs):
+        # HACK: This lets us do whatever we used to do when we got a `start'
+        # message without having horrible app-specific view logic.
+        # TODO: Remove this when we've decoupled the various conversation
+        # actions from the lifecycle.
+        return self.process_command_send_survey(*args, **kwargs)
