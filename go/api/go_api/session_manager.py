@@ -9,6 +9,8 @@ from twisted.internet.defer import returnValue
 
 from vumi.persist.redis_base import Manager
 
+GO_USER_ACCOUNT_KEY = '_go_user_account_key'
+
 
 class SessionManager(object):
     """A manager for sessions.
