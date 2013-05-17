@@ -61,11 +61,15 @@
         </h4>
         <p class="message">
             {# TODO: List of groups contacts #}
-            <ol>
-                <li>Sausage (168)</li>
-                <li>Ship (10)</li>
-                <li>Round-a-bout (5)</li>
-            </ol>
+            {% if groups %}
+                <ol>
+                {% for group, member_count in groups.items %}
+                    <li>{{group}} ({{member_count}} member{{member_count|pluralize}})</li>
+                {% endfor %}
+                </ol>
+            {% else %}
+                You have not specified any contacts.
+            {% endif %}
         </p>
 
     </div>

@@ -112,6 +112,11 @@ def contacts(request, campaign_key):
             # save and go back to list.
             return redirect('conversations:index')
 
+        group_keys = request.POST.getlist('group')
+        for group_key in group_keys:
+            conversation.add_group(group_key)
+        conversation.save()
+
         # TODO save and go to next step.
         return redirect('campaigns:preview', campaign_key=conversation.key)
 
@@ -151,7 +156,13 @@ def preview(request, campaign_key):
             # (Start the conversation)
             return redirect('conversations:index')
 
+    print conversation.get_groups()
+    contact_store = request.user_api.contact_store
+    groups = dict((group.name, contact_store.count_contacts_for_group(group))
+                    for group in conversation.get_groups())
+
     return render(request, 'campaigns/wizard_4_preview.html', {
         'conversation': conversation,
-        'campaign_key': campaign_key
+        'campaign_key': campaign_key,
+        'groups': groups,
     })
