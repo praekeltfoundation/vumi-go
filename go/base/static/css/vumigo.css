@@ -211,3 +211,12 @@ body {
   max-width: 100%;
   min-width: 80%;
 }
+.table-manage-data tr {
+  cursor: pointer;
+}
+.table-manage-data tr:hover {
+  background: #eee;
+}
+.table-manage-data td {
+  color: #000;
+}

@@ -56,7 +56,7 @@
 
             {% include "base/includes/messages.html" %}
 
-            <table class="table table-bordered table-awesome" data-table-id="conversations">
+            <table class="table table-manage-data" data-table-id="conversations">
                 <thead>
                     <tr>
                         <th><input type="checkbox"></th>
@@ -118,7 +118,7 @@
 {% block extrascript %}
 <script type="text/javascript">
 $(function() {
-    go.tables.init('.table-awesome');
+    go.tables.init('.table-manage-data');
 });
 </script>
 {% endblock %}
