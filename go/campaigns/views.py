@@ -156,10 +156,9 @@ def preview(request, campaign_key):
             # (Start the conversation)
             return redirect('conversations:index')
 
-    print conversation.get_groups()
     contact_store = request.user_api.contact_store
     groups = dict((group.name, contact_store.count_contacts_for_group(group))
-                    for group in conversation.get_groups())
+                  for group in conversation.get_groups())
 
     return render(request, 'campaigns/wizard_4_preview.html', {
         'conversation': conversation,
