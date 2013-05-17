@@ -131,6 +131,10 @@ body {
 .content .sidebar .nav-list a {
   color: #2f3436;
 }
+.content .sidebar .nav-list a:hover {
+  color: #000;
+  background: none;
+}
 .content .sidebar .nav-list .active {
   color: #fff;
   background: #b41c30;
@@ -216,9 +220,6 @@ body {
 }
 .table-manage-data tr {
   cursor: pointer;
-}
-.table-manage-data tr:hover {
-  background: #eee;
 }
 .table-manage-data td {
   color: #2f3436;
