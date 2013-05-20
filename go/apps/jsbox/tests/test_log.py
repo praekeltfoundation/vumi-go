@@ -4,8 +4,9 @@ import json
 
 from mock import Mock
 from twisted.trial.unittest import TestCase
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
+from vumi.tests.utils import LogCatcher
 from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
 
@@ -110,7 +111,10 @@ class TestGoLoggingResource(ResourceTestCaseBase, GoPersistenceMixin):
 
     @inlineCallbacks
     def test_handle_info(self):
-        reply = yield self.dispatch_command('info', msg=u'Info message')
+        with LogCatcher() as lc:
+            reply = yield self.dispatch_command('info', msg=u'Info message')
+            msgs = lc.messages()
+        self.assertEqual(msgs, ['Info message'])
         self.check_reply(reply)
         logs = yield self.redis.lrange("campaign-1:conv-1", 0, -1)
         self.assertEqual(logs, ["Info message"])
