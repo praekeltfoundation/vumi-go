@@ -388,6 +388,8 @@ class ContactsResource(SandboxResource):
                 user_account=contact_store.user_account_key,
                 **ContactStore.settable_contact_fields(**fields))
 
+            # since we are basically creating a 'new' contact with the same
+            # key, we can be sure that the old groups were removed
             for group in groups:
                 contact.add_to_group(group)
 
