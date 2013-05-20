@@ -51,7 +51,8 @@
 
             <form method="post" action="" class="indent" id="frm-message"> 
                 {% csrf_token %}
-                {{ form.as_p }}
+                <h4>Send message to recipient</h4>
+                <p>{{ form.message }}</p>
                 <input type="submit" class="btn btn-primary" value="Send">
 
 
