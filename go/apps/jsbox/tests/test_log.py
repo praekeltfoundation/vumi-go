@@ -10,23 +10,40 @@ from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
 
 from go.apps.jsbox.log import LogManager, GoLoggingResource
+from go.vumitools.tests.utils import GoPersistenceMixin
 
 
-class TestLogManager(TestCase):
+class TestTxLogManager(TestCase, GoPersistenceMixin):
+    @inlineCallbacks
     def setUp(self):
-        pass
+        super(TestTxLogManager, self).setUp()
+        yield self._persist_setUp()
+        self.redis = yield self.get_redis_manager()
+
+    @inlineCallbacks
+    def tearDown(self):
+        yield super(TestTxLogManager, self).tearDown()
+        yield self._persist_tearDown()
 
     def log_manager(self, max_logs=None):
         return LogManager(self.redis, max_logs)
 
+    @inlineCallbacks
     def test_add_log(self):
-        pass
+        lm = self.log_manager()
+        yield lm.add_log("campaign-1", "conv-1", "Hello info!")
+        logs = yield self.redis.lrange("campaign-1:conv-1", 0, -1)
+        self.assertEqual(logs, ["Hello info!"])
 
     def test_add_log_trims(self):
         pass
 
     def test_get_logs(self):
         pass
+
+
+class TestLogManager(TestTxLogManager):
+    sync_persistence = True
 
 
 class StubbedAppWorker(DummyAppWorker):
@@ -38,14 +55,28 @@ class StubbedAppWorker(DummyAppWorker):
         return self.conversation
 
 
-class TestGoLoggingResource(ResourceTestCaseBase):
+class TestGoLoggingResource(ResourceTestCaseBase, GoPersistenceMixin):
     app_worker_cls = StubbedAppWorker
     resource_cls = GoLoggingResource
 
     @inlineCallbacks
     def setUp(self):
         super(TestGoLoggingResource, self).setUp()
-        yield self.create_resource({})
+        yield self._persist_setUp()
+        self.redis = yield self.get_redis_manager()
+        yield self.create_resource({
+            'redis_manager': {
+                'FAKE_REDIS': self.redis,
+                'key_prefix': self.redis._key_prefix,
+            }
+        })
+        self.conversation = Mock(key="conv-1", user_account_key="campaign-1")
+        self.resource.app_worker.conversation = self.conversation
+
+    @inlineCallbacks
+    def tearDown(self):
+        yield super(TestGoLoggingResource, self).tearDown()
+        yield self._persist_tearDown()
 
     def check_reply(self, reply, **kw):
         kw.setdefault('success', True)
@@ -69,4 +100,5 @@ class TestGoLoggingResource(ResourceTestCaseBase):
 
     @inlineCallbacks
     def test_handle_info_failure(self):
-        self.assert_bad_command('info', 'Logging expects a value for msg')
+        yield self.assert_bad_command(
+            'info', u'Logging expects a value for msg.')
