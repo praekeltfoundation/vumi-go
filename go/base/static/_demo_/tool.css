@@ -4,6 +4,9 @@
 /*-----------------------------
 General Layout
 -----------------------------*/
+.tool {
+	height:1800px;
+}
 .wrapper {
 	min-height: 100%;
 	position: relative;
@@ -27,6 +30,7 @@ ViewPort
 	overflow: hidden;
 	width: 100%;
 	z-index: 1;
+	zoom:.68;
 }
 
 .viewport * {
