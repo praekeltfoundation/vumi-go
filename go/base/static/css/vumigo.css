@@ -143,6 +143,9 @@ body {
   font-weight: bold;
   margin-left: -20px;
 }
+.content .sidebar .nav-list a.active:hover {
+  background: #b41c30;
+}
 .content .sidebar .extra-actions {
   margin-bottom: 1em;
 }
