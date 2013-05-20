@@ -148,8 +148,8 @@
   // Main components
   // ---------------
 
-  // The main view containing `PlumbStateView`s. Acts as a controller for
-  // the `PlumbStateView`s and their backing `PlumbStateModel`s.
+  // The main view containing state views. Acts as a controller for the state
+  // views and their backing models.
   //
   // Options
   //   - [states]: A list of initial state views to add
