@@ -1,0 +1,84 @@
+{% extends "app.html" %}
+{% load url from future %}
+
+
+{% block content_extraclass %}campaigns{% endblock %}
+
+{% block content_title %}{{ conversation.name }} messages{% endblock %}
+
+
+
+{% block content_actions_left %}
+{% endblock %}
+
+{% block content_actions_right %}
+    <div class="button pull-left">
+        <button class="btn" disabled="disabled" data-table-id="messages">Export CSV</button>
+        <button class="btn" disabled="disabled" data-table-id="messages">Delete</button>
+    </div>
+
+    <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
+        <input type="text" class="search-query" placeholder="Search" name="{{ search_form.query.name }}" value="{{ search_form.query.value|default:"" }}">
+        <button type="submit" class="btn" id="search-filter-btn">Search</button>
+    </form>
+{% endblock %}
+
+{% block content_main %}
+    <div class="row-fluid">
+        <div class="span3 sidebar">
+
+            <ul class="nav nav-list">
+                <li>
+                    <a href="{% url 'campaigns:incoming_list' conversation.key %}" class="active">All messages</a>
+                </li>
+            </ul>
+
+        </div>
+        <div class="span9">
+
+            {% include "base/includes/messages.html" %}
+
+            <table class="table table-manage-data" data-table-id="messages">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox"></th>
+                        <th>Contact</th>
+                        <th>Messages Per Thread</th>
+                        <th>Messages</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for message in message_list %}
+                    <tr data-url="{{ conversation.get_absolute_url }}">
+                        <td><input type="checkbox" value="{{ conversation.key }}"></td>
+                        <td>{{ message.contact }}</td>
+                        <td>{{ message.threads }}</td>
+                        <td>{{ message.messages }}</td>
+                        <td>{{ message.date }}</td>
+                    </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5">
+                            {% if query %}
+                                No contacts match <strong>{{ query }}</strong>
+                            {% else %}
+                                No messages
+                            {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    {% if paginator.num_pages > 1 %}
+                    <tr colspan="5">
+                        {% include "base/includes/pagination.html" %}
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block ondomready %}
+    go.tables.init('.table-manage-data');
+{% endblock %}

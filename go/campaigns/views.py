@@ -146,7 +146,7 @@ def contacts(request, campaign_key):
         'campaign_key': campaign_key,
     })
 
-
+@login_required
 def preview(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
     if request.method == 'POST':
@@ -164,4 +164,19 @@ def preview(request, campaign_key):
         'conversation': conversation,
         'campaign_key': campaign_key,
         'groups': groups,
+    })
+
+
+@login_required
+def incoming_list(request, campaign_key):
+    conversation = conversation_or_404(request.user_api, campaign_key)
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'start':
+            # 3.2.1.ignition!
+            # (Start the conversation)
+            return redirect('conversations:index')
+
+    return render(request, 'campaigns/incoming_list.html', {
+        'conversation': conversation,
     })
