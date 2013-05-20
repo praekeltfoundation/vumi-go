@@ -31,6 +31,12 @@
   // [jsPlumb Endpoint params]
   exports.EndpointView = Backbone.View.extend({
     initialize: function(options) {
+      _.bindAll(
+        this,
+        'onConnection',
+        'onDisconnection',
+        'render');
+
       this.host = options.host;
       this.attr = options.attr;
 
@@ -44,6 +50,17 @@
       // Give the view the actual element jsPlumb uses so we can register UI
       // events and interact with the element directly
       this.setElement(this.raw.canvas);
+
+      this.on('connection', this.onConnection);
+      this.on('disconnection', this.onDisconnection);
+    },
+
+    onConnection: function(e) {
+      if (this === e.source) { this.model.set('targetId', e.target.model.id); }
+    },
+
+    onDisconnection : function(e) {
+      if (this === e.source) { this.model.set('targetId', null); }
     }
   });
 
@@ -148,8 +165,8 @@
   // Main components
   // ---------------
 
-  // The main view containing state views. Acts as a controller for the state
-  // views and their backing models.
+  // The main view containing state views. Delegates interactions between
+  // the states and their endpoints.
   //
   // Options
   //   - [states]: A list of initial state views to add
@@ -177,15 +194,22 @@
       jsPlumb.bind('connectionDetached', this.onDisconnection);
     },
 
+    _delegateEvent: function(source, target, type, params) {
+        params = _.extend(params || {}, {source: source, target: target});
+        source.trigger(type, params);
+        target.trigger(type, params);
+    },
+
     onConnection: function(e) {
       var sourceId = e.sourceEndpoint.getUuid(),
           targetId = e.targetEndpoint.getUuid(),
           source = this.endpoints[sourceId],
-          target = this.endpoints[targetId];
+          target = this.endpoints[targetId],
+          event;
 
       if (source && target) { 
         this.connections[pairId(sourceId, targetId)] = e.connection;
-        source.model.set('targetId', targetId);
+        this._delegateEvent(source, target, 'connection');
       }
     },
 
@@ -193,11 +217,12 @@
       var sourceId = e.sourceEndpoint.getUuid(),
           targetId = e.targetEndpoint.getUuid(),
           source = this.endpoints[sourceId],
-          target = this.endpoints[targetId];
+          target = this.endpoints[targetId],
+          event;
 
       if (source && target) { 
         delete this.connections[pairId(sourceId, targetId)];
-        source.model.set('targetId', null);
+        this._delegateEvent(source, target, 'disconnection');
       }
     },
 

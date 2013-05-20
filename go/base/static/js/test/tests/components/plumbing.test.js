@@ -7,13 +7,21 @@ describe("go.components.plumbing", function() {
       EndpointCollection = plumbing.EndpointCollection,
       EndpointView = plumbing.EndpointView;
 
-  var stateModelA,
-      stateModelB,
-      stateViewA,
-      stateViewB,
+  var stateA,
+      stateB,
       plumbView;
 
+  var endpointA1,
+      endpointA2,
+      endpointA3,
+      endpointB1,
+      endpointB2,
+      endpointB3;
+
   beforeEach(function() {
+    var stateModelA,
+        stateModelB;
+
     $('body').append("<div class='dummy'></div>");
     $('.dummy').html("<div id='state-a'></div><div id='state-b'></div>");
 
@@ -24,9 +32,9 @@ describe("go.components.plumbing", function() {
         {id: 'endpoint-a2'},
         {id: 'endpoint-a3'}]
     });
-    stateViewA = new StateView({
+    stateA = new StateView({
       el: '.dummy #state-a',
-      model: stateModelA
+      model: stateModelA 
     });
 
     stateModelB = new StateModel({
@@ -36,13 +44,21 @@ describe("go.components.plumbing", function() {
         {id: 'endpoint-b2'},
         {id: 'endpoint-b3'}]
     });
-    stateViewB = new StateView({
+    stateB = new StateView({
       el: '.dummy #state-b',
       model: stateModelB
     });
 
-    plumbView = new PlumbView({states: [stateViewA, stateViewB]});
+    plumbView = new PlumbView({states: [stateA, stateB]});
     plumbView.render();
+
+    endpointA1 = stateA.endpoints['endpoint-a1'];
+    endpointA2 = stateA.endpoints['endpoint-a2'];
+    endpointA3 = stateA.endpoints['endpoint-a3'];
+
+    endpointB1 = stateB.endpoints['endpoint-b1'];
+    endpointB2 = stateB.endpoints['endpoint-b2'];
+    endpointB3 = stateB.endpoints['endpoint-b3'];
   });
 
   afterEach(function() {
@@ -50,21 +66,52 @@ describe("go.components.plumbing", function() {
     jsPlumb.unbind();
   });
 
+  describe(".EndpointView", function() {
+    describe("on connection events", function() {
+      it("should set the model's target", function(done) {
+        endpointA1.on('connection', function() {
+          assert.equal(
+            endpointA1.model.get('targetId'),
+            endpointB1.model.id);
+
+          done();
+        });
+
+        endpointA1.trigger(
+          'connection',
+          {source: endpointA1, target: endpointB1});
+      });
+    });
+
+    describe("on disconnection events", function() {
+      it("should set the model's target", function(done) {
+        endpointA1.on('disconnection', function() {
+          assert.equal(endpointA1.model.get('targetId'), null);
+          done();
+        });
+
+        endpointA1.trigger(
+          'disconnection',
+          {source: endpointA1, target: endpointB1});
+      });
+    });
+  });
+
   describe(".StateModel", function() {
-    afterEach(function() { stateModelA.off('change'); });
+    afterEach(function() { stateA.model.off('change'); });
 
     it("should react to endpoint collection changes", function(done) {
-      stateModelA.on('change', function(model, options) {
+      stateA.model.on('change', function(model, options) {
         assert.propertyVal(options, 'option', 'value');
         done();
       });
 
-      stateModelA.get('endpoints').add({id: 'endpoint-a4'}, {option: 'value'});
+      stateA.model.get('endpoints').add({id: 'endpoint-a4'}, {option: 'value'});
     });
 
     describe(".parse", function() {
       it("should parse 'endpoints' attr as a collection", function() {
-        var attrs = stateModelA.parse({
+        var attrs = stateA.model.parse({
           id: 'state-a',
           endpoints: [
             {id: 'endpoint-a1'},
@@ -81,22 +128,22 @@ describe("go.components.plumbing", function() {
   describe(".StateView", function() {
     describe(".render", function() {
       it("should remove 'dead' endpoints", function() {
-        stateModelA.get('endpoints').remove('endpoint-a2');
-        stateViewA.render();
+        stateA.model.get('endpoints').remove('endpoint-a2');
+        stateA.render();
 
         // assert that the model that was removed no longer has a view
-        assert.notProperty(stateViewA.endpoints, 'endpoint-a2');
+        assert.notProperty(stateA.endpoints, 'endpoint-a2');
       });
 
       it("should add 'new' endpoints", function() {
-        var a4 = new EndpointModel({id: 'endpoint-a4'});
+        var endpointA4 = new EndpointModel({id: 'endpoint-a4'});
 
-        stateModelA.get('endpoints').add(a4);
-        stateViewA.render();
+        stateA.model.get('endpoints').add(endpointA4);
+        stateA.render();
 
         // assert that the new model now has a corresponding view
-        assert.property(stateViewA.endpoints, 'endpoint-a4');
-        assert.equal(stateViewA.endpoints['endpoint-a4'].model, a4);
+        assert.property(stateA.endpoints, 'endpoint-a4');
+        assert.equal(stateA.endpoints['endpoint-a4'].model, endpointA4);
       });
     });
   });
@@ -109,10 +156,7 @@ describe("go.components.plumbing", function() {
 
     var assertConnection = function(assertionFn) {
       onConnection(assertionFn);
-
-      plumbView.connect(
-        stateViewA.endpoints['endpoint-a1'],
-        stateViewB.endpoints['endpoint-b1']);
+      plumbView.connect(endpointA1, endpointB1);
     };
 
     var assertDisconnection = function(assertionFn) {
@@ -132,18 +176,32 @@ describe("go.components.plumbing", function() {
     beforeEach(function() {
       connection = function(){};
       disconnection = function(){};
+
       jsPlumb.bind('connection', function(e) { connection(e); });
       jsPlumb.bind('connectionDetached', function(e) { disconnection(e); });
     });
 
-    describe('on connection events', function() {
-      it("should link the source and target model", function(done) {
-        assertConnection(function() {
-          var endpointA = stateModelA.get('endpoints').get('endpoint-a1');
-          assert.equal(endpointA.get('targetId'), 'endpoint-b1');
+    describe("on connection events", function() {
+      it("should emit connection events on the involved endpoints",
+         function(done) {
+        var emissions = {a1: false, b1: false},
+            maybeDone = function() { emissions.a1 && emissions.b1 && done(); };
 
-          done();
+        endpointA1.on('connection', function(e) {
+          assert.equal(endpointA1, e.source);
+          assert.equal(endpointB1, e.target);
+          emissions.a1 = true;
+          maybeDone();
         });
+
+        endpointB1.on('connection', function(e) {
+          assert.equal(endpointA1, e.source);
+          assert.equal(endpointB1, e.target);
+          emissions.b1 = true;
+          maybeDone();
+        });
+
+        plumbView.connect(endpointA1, endpointB1);
       });
 
       it("should add the new connection to the view's connection lookup",
@@ -152,16 +210,16 @@ describe("go.components.plumbing", function() {
           assert.deepEqual(
             plumbView.connections,
             {'endpoint-a1-endpoint-b1': e.connection});
-
           done();
         });
       });
     });
 
-    describe('on disconnection events', function() {
+    describe("on disconnection events", function() {
+      /*
       it("should unlink the source and target model", function(done) {
         assertDisconnection(function() {
-          var endpointA = stateModelA
+          var endpointA = stateA.model
             .get('endpoints')
             .get('endpoint-a1');
 
@@ -170,6 +228,7 @@ describe("go.components.plumbing", function() {
           done();
         });
       });
+      */
 
       it("should remove the connection from the view's connection lookup",
          function(done) {
@@ -183,53 +242,48 @@ describe("go.components.plumbing", function() {
       });
     });
 
-    describe('.connect', function() {
+    describe(".connect", function() {
       it("should connect two endpoints together", function(done) {
         assertConnection(function(e) {
-          assert.equal(
-            stateViewA.endpoints['endpoint-a1'].raw,
-            e.sourceEndpoint);
-
-          assert.equal(
-            stateViewB.endpoints['endpoint-b1'].raw,
-            e.targetEndpoint);
+          assert.equal(endpointA1.raw, e.sourceEndpoint);
+          assert.equal(endpointB1.raw, e.targetEndpoint);
 
           done();
         });
       });
     });
 
-    describe('.disconnect', function() {
+    describe(".disconnect", function() {
       it("should disconnect two endpoints from each other", function(done) {
         assertDisconnection(function(e) {
-          assert.equal(
-            stateViewA.endpoints['endpoint-a1'].raw,
-            e.sourceEndpoint);
-
-          assert.equal(
-            stateViewB.endpoints['endpoint-b1'].raw,
-            e.targetEndpoint);
+          assert.equal(endpointA1.raw, e.sourceEndpoint);
+          assert.equal(endpointB1.raw, e.targetEndpoint);
 
           done();
         });
       });
     });
 
-    describe('.render', function() {
+    describe(".render", function() {
       beforeEach(function(done) {
         var connectionCount = 2;
 
-        // Ensure connections are made from a1 to b1 and b1 to b2 before
+        // Ensure connections are made from endpointA1 to endpointB1 and endpointB1 to endpointB2 before
         // running render tests
         onConnection(function() { --connectionCount || done(); });
 
-        plumbView.connect(
-          stateViewA.endpoints['endpoint-a1'],
-          stateViewB.endpoints['endpoint-b1']);
+        stateA.model
+          .get('endpoints')
+          .get('endpoint-a1')
+          .set('targetId', 'endpoint-b1');
 
-        plumbView.connect(
-          stateViewA.endpoints['endpoint-a2'],
-          stateViewB.endpoints['endpoint-b2']);
+        stateA.model
+          .get('endpoints')
+          .get('endpoint-a2')
+          .set('targetId', 'endpoint-b2');
+
+        plumbView.connect(endpointA1, endpointB1);
+        plumbView.connect(endpointA2, endpointB2);
       });
 
       afterEach(function() { jsPlumb.detachAllConnections(); });
@@ -238,19 +292,14 @@ describe("go.components.plumbing", function() {
         assert.property(plumbView.connections, 'endpoint-a1-endpoint-b1');
         assert.property(plumbView.connections, 'endpoint-a2-endpoint-b2');
 
-        stateModelA
+        stateA.model
           .get('endpoints')
           .get('endpoint-a1')
           .set('targetId', null);
 
         onDisconnection(function(e) {
-          assert.equal(
-            stateViewA.endpoints['endpoint-a1'].raw,
-            e.sourceEndpoint);
-
-          assert.equal(
-            stateViewB.endpoints['endpoint-b1'].raw,
-            e.targetEndpoint);
+          assert.equal(endpointA1.raw, e.sourceEndpoint);
+          assert.equal(endpointB1.raw, e.targetEndpoint);
 
           assert.notProperty(plumbView.connections, 'endpoint-a1-endpoint-b1');
           assert.property(plumbView.connections, 'endpoint-a2-endpoint-b2');
@@ -265,20 +314,14 @@ describe("go.components.plumbing", function() {
         assert.property(plumbView.connections, 'endpoint-a1-endpoint-b1');
         assert.property(plumbView.connections, 'endpoint-a2-endpoint-b2');
 
-        stateModelA
+        stateA.model
           .get('endpoints')
           .get('endpoint-a3')
           .set('targetId', 'endpoint-b3');
 
         onConnection(function(e) {
-          assert.equal(
-            stateViewA.endpoints['endpoint-a3'].raw,
-            e.sourceEndpoint);
-
-          assert.equal(
-            stateViewB.endpoints['endpoint-b3'].raw,
-            e.targetEndpoint);
-
+          assert.equal(endpointA3.raw, e.sourceEndpoint);
+          assert.equal(endpointB3.raw, e.targetEndpoint);
           assert.property(plumbView.connections, 'endpoint-a3-endpoint-b3');
 
           done();
