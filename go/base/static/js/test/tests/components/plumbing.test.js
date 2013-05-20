@@ -67,9 +67,9 @@ describe("go.components.plumbing", function() {
   });
 
   describe(".EndpointView", function() {
-    describe("on connection events", function() {
+    describe("on 'connect'", function() {
       it("should set the model's target", function(done) {
-        endpointA1.on('connection', function() {
+        endpointA1.on('connect', function() {
           assert.equal(
             endpointA1.model.get('targetId'),
             endpointB1.model.id);
@@ -78,20 +78,20 @@ describe("go.components.plumbing", function() {
         });
 
         endpointA1.trigger(
-          'connection',
+          'connect',
           {source: endpointA1, target: endpointB1});
       });
     });
 
-    describe("on disconnection events", function() {
+    describe("on 'disconnect'", function() {
       it("should set the model's target", function(done) {
-        endpointA1.on('disconnection', function() {
+        endpointA1.on('disconnect', function() {
           assert.equal(endpointA1.model.get('targetId'), null);
           done();
         });
 
         endpointA1.trigger(
-          'disconnection',
+          'disconnect',
           {source: endpointA1, target: endpointB1});
       });
     });
@@ -181,7 +181,7 @@ describe("go.components.plumbing", function() {
       jsPlumb.bind('connectionDetached', function(e) { disconnection(e); });
     });
 
-    describe("on connection events", function() {
+    describe("on 'connection' jsPlumb events", function() {
       it("should emit connection events on the involved endpoints",
          function(done) {
         var emissions = {a1: false, b1: false},
@@ -215,7 +215,7 @@ describe("go.components.plumbing", function() {
       });
     });
 
-    describe("on disconnection events", function() {
+    describe("on 'connectionDetached' jsPlumb events", function() {
       /*
       it("should unlink the source and target model", function(done) {
         assertDisconnection(function() {

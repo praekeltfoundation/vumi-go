@@ -33,8 +33,8 @@
     initialize: function(options) {
       _.bindAll(
         this,
-        'onConnection',
-        'onDisconnection',
+        'onConnect',
+        'onDisconnect',
         'render');
 
       this.host = options.host;
@@ -51,15 +51,15 @@
       // events and interact with the element directly
       this.setElement(this.raw.canvas);
 
-      this.on('connection', this.onConnection);
-      this.on('disconnection', this.onDisconnection);
+      this.on('connect', this.onConnect);
+      this.on('disconnect', this.onDisconnect);
     },
 
-    onConnection: function(e) {
+    onConnect: function(e) {
       if (this === e.source) { this.model.set('targetId', e.target.model.id); }
     },
 
-    onDisconnection : function(e) {
+    onDisconnect: function(e) {
       if (this === e.source) { this.model.set('targetId', null); }
     }
   });
