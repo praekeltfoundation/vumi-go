@@ -68,6 +68,8 @@ class ConversationMigrator(ModelMigrator):
             status = u'stopped'
         elif mdata.old_data['status'] == u'running':
             status = u'running'
+        elif mdata.old_data['status'] == u'draft':
+            status = u'stopped'
 
         mdata.set_value('status', status, index='status_bin')
         mdata.set_value('archive_status', archive_status,

@@ -55,7 +55,7 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
         self.assertEqual({u'foo': u'bar'}, conv.config)
         self.assertEqual([], conv.batches.keys())
         self.assertEqual(u'active', conv.archive_status)
-        self.assertEqual(u'draft', conv.status)
+        self.assertEqual(u'stopped', conv.status)
 
         dbconv = yield self.conv_store.get_conversation_by_key(conv.key)
         self.assert_models_equal(conv, dbconv)
@@ -74,7 +74,7 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
         self.assertEqual({u'foo': u'Zoë again.'}, conv.config)
         self.assertEqual([], conv.batches.keys())
         self.assertEqual(u'active', conv.archive_status)
-        self.assertEqual(u'draft', conv.status)
+        self.assertEqual(u'stopped', conv.status)
 
         dbconv = yield self.conv_store.get_conversation_by_key(conv.key)
         self.assert_models_equal(conv, dbconv)
@@ -98,7 +98,7 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
         self.assertEqual({}, dbconv.config)
         self.assertEqual([], dbconv.batches.keys())
         self.assertEqual(u'active', dbconv.archive_status)
-        self.assertEqual(u'draft', dbconv.status)
+        self.assertEqual(u'stopped', dbconv.status)
 
     @inlineCallbacks
     def test_get_conversation_v1(self):
@@ -119,7 +119,7 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
         self.assertEqual({}, dbconv.config)
         self.assertEqual([], dbconv.batches.keys())
         self.assertEqual(u'active', dbconv.archive_status)
-        self.assertEqual(u'draft', dbconv.status)
+        self.assertEqual(u'stopped', dbconv.status)
 
 
 class TestConversationStoreSync(TestConversationStore):

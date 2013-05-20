@@ -23,7 +23,6 @@ from vumi import log
 from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
-from go.vumitools.conversation.models import CONVERSATION_DRAFT
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
 from go.vumitools.middleware import DebitAccountMiddleware
@@ -163,9 +162,9 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def draft_conversations(self):
+        # TODO: Get rid of this once the old UI finally goes away.
         conversations = yield self.active_conversations()
-        returnValue([c for c in conversations
-                        if c.get_status() == CONVERSATION_DRAFT])
+        returnValue([c for c in conversations if c.is_draft()])
 
     @Manager.calls_manager
     def tagpools(self):

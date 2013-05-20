@@ -18,7 +18,6 @@ from go.vumitools.conversation.migrators import ConversationMigrator
 CONVERSATION_ACTIVE = u'active'
 CONVERSATION_ARCHIVED = u'archived'
 
-CONVERSATION_DRAFT = u'draft'
 CONVERSATION_STARTING = u'starting'
 CONVERSATION_RUNNING = u'running'
 CONVERSATION_STOPPING = u'stopping'
@@ -42,7 +41,7 @@ class Conversation(Model):
     archived_at = Timestamp(null=True, index=True)
 
     archive_status = Unicode(default=CONVERSATION_ACTIVE, index=True)
-    status = Unicode(default=CONVERSATION_DRAFT, index=True)
+    status = Unicode(default=CONVERSATION_STOPPED, index=True)
 
     groups = ManyToMany(ContactGroup)
     batches = ManyToMany(Batch)
@@ -58,22 +57,25 @@ class Conversation(Model):
         return self.archive_status == CONVERSATION_ARCHIVED
 
     def ended(self):
+        # TODO: Get rid of this once the old UI finally goes away.
         return self.archived()
 
     def running(self):
         return self.status == CONVERSATION_RUNNING
+
+    def is_draft(self):
+        # TODO: Get rid of this once the old UI finally goes away.
+        return self.active() and self.status == CONVERSATION_STOPPED
 
     def get_status(self):
         """Get the status of this conversation.
 
         Possible values are:
 
-          * CONVERSATION_DRAFT
           * CONVERSATION_STARTING
           * CONVERSATION_RUNNING
           * CONVERSATION_STOPPING
           * CONVERSATION_STOPPED
-          * CONVERSATION_FINISHED
 
         :rtype: str
 
@@ -165,7 +167,7 @@ class ConversationStore(PerAccountStore):
         keys = yield self.conversations.index_lookup(
             'archive_status', CONVERSATION_ACTIVE).get_keys()
         keys.extend((yield self.conversations.index_lookup(
-            'status', CONVERSATION_DRAFT).get_keys()))
+            'status', 'draft').get_keys()))  # No more constant for this.
         keys.extend((yield self.conversations.index_lookup(
             'status', CONVERSATION_RUNNING).get_keys()))
         returnValue(list(set(keys)))  # Dedupe.

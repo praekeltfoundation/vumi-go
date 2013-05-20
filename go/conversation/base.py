@@ -14,7 +14,6 @@ from django.conf.urls.defaults import url, patterns
 from django.conf import settings
 from django.http import HttpResponse
 
-from go.vumitools.conversation.models import CONVERSATION_DRAFT
 from go.vumitools.exceptions import ConversationSendError
 from go.base.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConversationForm, ConversationGroupForm,
@@ -72,7 +71,7 @@ class ConversationView(TemplateView):
         return self.conversation_form(*args, **kw)
 
     def get_next_view(self, conversation):
-        if conversation.get_status() != CONVERSATION_DRAFT:
+        if not conversation.is_draft():
             return 'show'
         if self.conversation_initiator == 'client':
             return 'start'

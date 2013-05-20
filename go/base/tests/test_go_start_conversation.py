@@ -47,7 +47,8 @@ class GoStartConversationTestCase(DjangoGoApplicationTestCase):
         SyncMessageSender.return_value = sender
         conversation = self.get_conversation()
         self.assertEqual(conversation.get_tags(), [])
-        self.assertEqual(conversation.get_status(), 'draft')
+        self.assertEqual(conversation.archive_status, 'active')
+        self.assertEqual(conversation.get_status(), 'stopped')
         self.command.handle(email_address=self.user.username,
             conversation_key=conversation.key)
         # reload b/c DB changed
