@@ -112,6 +112,8 @@ class TestGoLoggingResource(ResourceTestCaseBase, GoPersistenceMixin):
     def test_handle_info(self):
         reply = yield self.dispatch_command('info', msg=u'Info message')
         self.check_reply(reply)
+        logs = yield self.redis.lrange("campaign-1:conv-1", 0, -1)
+        self.assertEqual(logs, ["Info message"])
 
     @inlineCallbacks
     def test_handle_info_failure(self):
