@@ -354,7 +354,7 @@ PIPELINE_JS = {
             'js/vendor/jquery-1.9.1.js',
             'js/vendor/lodash.underscore-1.2.1.js',
             'js/vendor/backbone-1.0.0.js',
-            'js/vendor/jquery.jsPlumb-1.3.16.js',
+            'js/vendor/jquery.jsPlumb-1.4.1.js',
             'js/vendor/jquery.ui-1.10.3.js',
             'bootstrap/js/bootstrap.min.js',
         ),
