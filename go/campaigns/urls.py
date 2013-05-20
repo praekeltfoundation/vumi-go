@@ -15,6 +15,6 @@ urlpatterns = patterns('',
     url(r'^preview/(?P<campaign_key>\w+)/$', views.preview, name='preview'),
     url(r'^incoming/(?P<campaign_key>\w+)/$', views.incoming_list,
         name='incoming_list'),
-    url(r'^incoming/(?P<campaign_key>\w+)/(?P<msisdn>\d+)/$',
+    url(r'^incoming/(?P<campaign_key>\w+)/(?P<contact_key>\w+)/$',
         views.incoming_detail, name='incoming_detail'),
 )

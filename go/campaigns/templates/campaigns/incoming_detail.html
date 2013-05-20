@@ -1,0 +1,66 @@
+{% extends "app.html" %}
+{% load url from future %}
+
+
+{% block content_extraclass %}campaigns{% endblock %}
+
+{# TODO, title #}
+{% block content_title %}
+    <a href="{% url 'campaigns:incoming_list' conversation.key %}">Messages</a>
+    &raquo;
+    {{ contact.msisdn }}
+{% endblock %}
+
+{% block content_actions_left %}
+{% endblock %}
+
+{% block content_actions_right %}
+{% endblock %}
+
+{% block content_main %}
+    <div class="row-fluid">
+        <div class="span12">
+
+            {% include "base/includes/messages.html" %}
+            
+            <div class="indent">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Sender</th>
+                            <th>Messages</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {# TODO fill in messages. #}
+                        {% for message in message_list %}
+                        <tr data-url="{{ message.get_absolute_url }}">
+                            <td>{{ message.contact }}</td>
+                            <td>{{ message.messages }}</td>
+                        </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="2">
+                                    No messages
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <form method="post" action="" class="indent" id="frm-message"> 
+                {% csrf_token %}
+                {{ form.as_p }}
+                <input type="submit" class="btn btn-primary" value="Send">
+
+
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block ondomready %}
+    {{ block.super }}
+    new go.campaign.bulkMessage.TextareaView({el: $('#frm-message textarea')});
+{% endblock %}
