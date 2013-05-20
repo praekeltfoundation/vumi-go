@@ -16,5 +16,5 @@ urlpatterns = patterns('',
     url(r'^incoming/(?P<campaign_key>\w+)/$', views.incoming_list,
         name='incoming_list'),
     url(r'^incoming/(?P<campaign_key>\w+)/(?P<msisdn>\d+)/$',
-        'go.base.views.todo', name='incoming_detail'),
+        views.incoming_detail, name='incoming_detail'),
 )
