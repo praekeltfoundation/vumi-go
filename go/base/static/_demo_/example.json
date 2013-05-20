@@ -1,30 +1,86 @@
 {
     "nodes": [{
-            "id": 123,
-            "position": [0, 0],
-            "message": "Are you sure?",
+            "id": 0,
+            "position": [-0.1, -0.2],
+            "message": "Welcome to MAMA. To give U the best information possible we need to ask U a few questions. Are U pregnant, or do U have a baby?",
             "tails": [{
-                    "node_id": 48,
-                    "text": "Yes"
-                }, {
-                    "node_id": 99,
-                    "text": "Yes maybe"
+                    "node_id": 1,
+                    "text": "Pregnant"
+                }, 
+                {
+                    "node_id": 2,
+                    "text": "Baby"
                 }
             ]
-        }, {
-            "id": 99,
-            "position": [1, 0],
-            "message": "How sure?",
-            "tails": [{
-                    "node_id": 48,
-                    "text": null
-                }
+        }, 
+        {
+            "id": 1,
+            "position": [0.8, -0.3],
+            "message": "In what month is your baby due?",
+            "tails": [
+                {"node_id": 3, "text": "Jan"},
+                {"node_id": 3, "text": "Feb"},
+                {"node_id": 3, "text": "March"},
+                {"node_id": 3, "text": "April"},
+                {"node_id": 3, "text": "May"},
+                {"node_id": 3, "text": "June"},
+                {"node_id": 3, "text": "July"},
+                {"node_id": 3, "text": "Aug"},
+                {"node_id": 3, "text": "Sep"},
+                {"node_id": 3, "text": "Oct"},
+                {"node_id": 3, "text": "Nov"},
+                {"node_id": 3, "text": "Dec"},
+                {"node_id": 10, "text": "Don't know"}
+
             ]
-        }, {
-            "id": 48,
-            "position": [1, 1],
-            "type": "message",
-            "message": "Thank you for being sure.",
+        }, 
+        {
+            "id": 2,
+            "position": [-0.05, 1],
+            "message": "How many months old is your baby?",
+            "tails": [
+                {"node_id": 3, "text": "1"},
+                {"node_id": 3, "text": "2"},
+                {"node_id": 3, "text": "3"},
+                {"node_id": 3, "text": "4"},
+                {"node_id": 3, "text": "5"},
+                {"node_id": 3, "text": "6"},
+                {"node_id": 3, "text": "7"},
+                {"node_id": 3, "text": "8"},
+                {"node_id": 3, "text": "9"},
+                {"node_id": 3, "text": "10"},
+                {"node_id": 3, "text": "11"},
+                {"node_id": 20, "text": "More than 11"}
+            ]
+        },
+        {
+            "id": 3,
+            "position": [1.6, 1.8],
+            "message": "Your quiz can include info on HIV. Would you like that?",
+            "tails": [
+                {"node_id": 4, "text": "Yes"},
+                {"node_id": 4, "text": "No"}
+            ]
+        },
+        {
+            "id": 4,
+            "position": [2, 2.8],
+            "message": "We can send you sms's to remind you to take the next quiz. Would you like that?",
+            "tails": null
+        },
+
+        
+
+        {
+            "id": 20,
+            "position": [0.8, 3],
+            "message": "Sorry, the MAMA quizzes are aimed at mothers of younger babies. You can visit askmama.mobi to read useful info, and meet other moms. Stay well.",
+            "tails": null
+        },
+        {
+            "id": 10,
+            "position": [2, -0.3],
+            "message": "To sign up, we need to know which month. Please go to the clinic to find out, and dial us again.",
             "tails": null
         }
     ]
