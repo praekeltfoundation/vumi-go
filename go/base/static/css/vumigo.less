@@ -6,7 +6,9 @@ body {
   color: #c1c1c1;
 }
 
-.container {
+.main-container {
+  // prevent wrapping.
+  min-width:650px;
 }
 
 .footer {
@@ -110,8 +112,9 @@ body {
       
       padding:0 12px;
       margin:0;
+      color:#000;
 
-      a { color:#2f3436; }
+      a { color:#000; }
     }
 
     .pull-right {
@@ -132,7 +135,7 @@ body {
       margin-left:-5px !important;
       height:100%;
 
-      button {
+      .btn {
         margin-left:-5px;
         padding-left:20px;
         padding-right:20px;
@@ -143,13 +146,22 @@ body {
   .navbar-search {
     margin:0;
   }
+
+  .indent {
+    margin:2em 1em;
+  }
 }
 
 .content .sidebar .nav-list {
 
   a { color:#2f3436; }
 
-  .active > a {
+  a:hover {
+    color:#000;
+    background:none;
+  }
+
+  .active {
     color:#fff;
     background:#b41c30;
     border-left:5px #6f0f1c solid;
@@ -177,7 +189,6 @@ body {
 
 .campaigns {
 
-
   .header a {
     color:#878b8e;
     font-weight:bold;
@@ -196,16 +207,20 @@ body {
     }
   }
 
-  form {
-    margin:2em 1em;
-
-    .control-label {
+  .control-label {
       color:#000;
       font-weight:bold;
 
+      a:link, a:visited {
+        color:#000;
+      }
+      a:hover {
+        text-decoration:none;
+      }
+  }
 
-    }
 
+  form {
     .boxes {
       text-align:center;
     }
@@ -219,7 +234,7 @@ body {
     }
 
     .box {
-      background:#0fb5af;
+      background:#d2d0c7;
       color:#000;
       font-size:16px;
       padding:15px 0;
@@ -241,4 +256,19 @@ body {
     }
   }
 }
+
+.table-manage-data {
+
+  margin-top:1em;
+
+  tr {
+    cursor:pointer;
+  }
+
+  td {
+    color:#2f3436;
+  }
+  
+}
+
 

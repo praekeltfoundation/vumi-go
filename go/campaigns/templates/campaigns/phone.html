@@ -1,0 +1,126 @@
+{# TODO: Make this "real" #}
+
+
+<style type="text/css">
+/*-----------------------------
+Phone Styling
+-----------------------------*/
+.phone{
+    position:relative;
+    width:365px;
+    background:#2f3436;
+    -webkit-border-radius: 15px;
+    border-radius: 15px;
+    height:585px;
+    border:solid 4px #535e62;
+}
+.phone .speaker{
+    background:#1b1f20;
+    border-radius:15px;
+    -webkit-border-radius: 15px;
+    width:15px;
+    height:15px;
+    position:absolute;
+    top:15px;
+    left:182px;
+}
+
+.phone .inner{
+    position:relative;
+    margin:40px 20px;
+}
+.phone .titlebar{
+    color:#fff;
+    font-weight:bold;
+    text-transform:uppercase;
+    height:30px;
+}
+
+.phone .screen{
+    position:relative;
+    width:91%;
+    background:#9ec0bf;
+    border-radius:10px;
+    -webkit-border-radius: 10px;
+    border:solid 3px #50545c;
+    padding:10px;
+    margin-bottom:15px;
+}
+.phone .screen p {
+    padding:8px;
+    font-weight:bold;
+    font-size:18px;
+    color:#000;
+}
+.phone .sprite-phone-button{
+    margin:5px 0 0 48px;
+}
+
+.phone .keypad{
+    margin-top:10px;
+}
+.phone .keypad button{
+    font-weight:bold;
+    font-size:14px;
+    float:left;
+    width:103px;
+    margin-top:5px;
+    margin-left:5px;
+}
+
+.phone .mic{
+    background:#1b1f20;
+    border-radius:5px;
+    -webkit-border-radius: 5px;
+    width:5px;
+    height:5px;
+    position:absolute;
+    bottom:15px;
+    left:182px;
+}
+.left {float:left; }
+.right {float: right; }
+
+</style>
+
+
+
+<div class="phone">
+    <div class="speaker"></div>
+    <div class="inner">
+        <div class="titlebar">
+            <div class="left">Message 1</div>
+            <div class="right"><button type="button" class="btn btn-primary btn-mini">Edit</button></div>
+        </div>
+        <div class="screen">
+            <p>What is your favourite drink?</p>
+            <p>1 = Tea</p>
+            <p>2 = Coffee</p>
+            <p>3 = Gin</p>
+        </div>
+        <div class="clearfix">
+            <div class="left">
+                <button type="button" class="btn btn-large btn-danger">Cancel</button>
+            </div>
+            <div class="right">
+                <button type="button" class="btn btn-large btn-success">Send</button>
+            </div>
+        </div>
+        
+        <div class="keypad">
+            <button type="button" class="btn btn-large">1</button>
+            <button type="button" class="btn btn-large">2 a b c</button>
+            <button type="button" class="btn btn-large">3 d e f</button>
+            <button type="button" class="btn btn-large">4 g h i</button>
+            <button type="button" class="btn btn-large">5 j k l</button>
+            <button type="button" class="btn btn-large">6 m n o</button>
+            <button type="button" class="btn btn-large">7 p q r s</button>
+            <button type="button" class="btn btn-large">8 t u v</button>
+            <button type="button" class="btn btn-large">9 w x y z</button>
+            <button type="button" class="btn btn-large">*</button>
+            <button type="button" class="btn btn-large">0 +</button>
+            <button type="button" class="btn btn-large">#</button>
+        </div>
+    </div>
+    <div class="mic"></div>
+</div>
