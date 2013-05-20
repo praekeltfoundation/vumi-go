@@ -35,11 +35,26 @@ class TestTxLogManager(TestCase, GoPersistenceMixin):
         logs = yield self.redis.lrange("campaign-1:conv-1", 0, -1)
         self.assertEqual(logs, ["Hello info!"])
 
+    @inlineCallbacks
     def test_add_log_trims(self):
-        pass
+        lm = self.log_manager(max_logs=10)
+        for i in range(10):
+            yield lm.add_log("campaign-1", "conv-1", "%d" % i)
+        logs = yield self.redis.lrange("campaign-1:conv-1", 0, -1)
+        self.assertEqual(list(reversed(logs)), ["%d" % i for i in range(10)])
 
+        yield lm.add_log("campaign-1", "conv-1", "10")
+        logs = yield self.redis.lrange("campaign-1:conv-1", 0, -1)
+        self.assertEqual(list(reversed(logs)),
+                         ["%d" % i for i in range(1, 11)])
+
+    @inlineCallbacks
     def test_get_logs(self):
-        pass
+        lm = self.log_manager()
+        for i in range(3):
+            yield self.redis.lpush("campaign-1:conv-1", str(i))
+        logs = yield lm.get_logs("campaign-1", "conv-1")
+        self.assertEqual(logs, ['2', '1', '0'])
 
 
 class TestLogManager(TestTxLogManager):
