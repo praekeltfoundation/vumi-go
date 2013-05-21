@@ -1,0 +1,87 @@
+{% extends "campaigns/wizard_base.html" %}
+{% load url from future %}
+
+{% block content_title %}
+    Preview &amp; Activate
+{% endblock %}
+
+{% block content_actions_right %}
+    <a href="{% url 'conversations:index' %}">Cancel</a>
+    <button class="btn btn-primary" data-action="start">Start</button>
+    {# TODO: Maybe this shouldn't post and simply go to another a view? #}
+{% endblock %}
+
+{% block content_main %}
+<div class="row-fluid indent">
+    <div class="span7">
+
+        <h4 class="control-label">
+            <a href="{% url 'campaigns:details' campaign_key %}">
+                Details
+                <button class="btn btn-primary btn-mini">Edit</button>
+            </a>
+        </h4>
+
+        <p>
+            NAME<br>
+            {{ conversation.name }}
+        </p>
+        <p>
+            TYPE<br>
+            {{ conversation.type }}
+        </p>
+
+        <p>
+            CHANNELS<br>
+            <!-- TODO:  update the routing table metadata helpers to
+                        be able to answer questions like this.
+            -->
+            USSD
+        </p>
+
+        <hr>
+        <h4 class="control-label">
+            <a href="{% url 'campaigns:message' campaign_key %}">
+                Messages
+                <button class="btn btn-primary btn-mini">Edit</button>
+            </a>
+        </h4>
+
+        <p class="message">
+            {{ conversation.description }}
+        </p>
+
+
+        <hr>
+        <h4 class="control-label">
+            <a href="{% url 'campaigns:contacts' campaign_key %}">
+                Contacts
+                <button class="btn btn-primary btn-mini">Edit</button>
+            </a>
+        </h4>
+        <p class="message">
+            {# TODO: List of groups contacts #}
+            {% if groups %}
+                <ol>
+                {% for group, member_count in groups.items %}
+                    <li>{{group}} ({{member_count}} member{{member_count|pluralize}})</li>
+                {% endfor %}
+                </ol>
+            {% else %}
+                You have not specified any contacts.
+            {% endif %}
+        </p>
+
+    </div>
+    <div class="span4">
+        {% include 'campaigns/phone.html' %}
+    </div>
+</div>
+{% endblock %}
+
+
+{% block ondomready %}
+    {{ block.super }}
+    // highlight the breadcrumbs.
+    $('.breadcrumbs a').eq(3).addClass('active');
+{% endblock %}

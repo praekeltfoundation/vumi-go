@@ -5,27 +5,19 @@
 {% endblock %}
 
 {% block content_main %}
-
 <div class="row">
     <div class="span12">
-        <form id="frm-campaign" method="post" action="">
+        <form id="frm-campaign" class="indent" method="post" action="">
             {% csrf_token %}
             {{ form.as_p }}
+        </form>
     </div>
 </div>
-    
-
-
 {% endblock %}
 
 
-{% block extrascript %}
-{{ block.super }}
-<script type="text/javascript">
-    $(function() {
-        // highlight the breadcrumbs.
-        $('.breadcrumbs a').eq(1).addClass('active');
-        new go.campaign.bulkMessage.TextareaView({el: $('#frm-campaign textarea')});
-    });
-</script>
+{% block domready %}
+    {{ block.super }}
+    $('.breadcrumbs a').eq(1).addClass('active');
+    new go.campaign.bulkMessage.TextareaView({el: $('#frm-campaign textarea')});
 {% endblock %}

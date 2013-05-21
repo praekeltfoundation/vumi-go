@@ -2,6 +2,9 @@ body {
   background: #2f3436;
   color: #c1c1c1;
 }
+.main-container {
+  min-width: 650px;
+}
 .footer {
   margin: 1em;
 }
@@ -91,9 +94,10 @@ body {
   font-weight: bold;
   padding: 0 12px;
   margin: 0;
+  color: #000;
 }
 .content .header h1 a {
-  color: #2f3436;
+  color: #000;
 }
 .content .header .pull-right {
   text-align: right;
@@ -113,7 +117,7 @@ body {
   margin-left: -5px !important;
   height: 100%;
 }
-.content .actions .sidebar button {
+.content .actions .sidebar .btn {
   margin-left: -5px;
   padding-left: 20px;
   padding-right: 20px;
@@ -121,16 +125,26 @@ body {
 .content .navbar-search {
   margin: 0;
 }
+.content .indent {
+  margin: 2em 1em;
+}
 .content .sidebar .nav-list a {
   color: #2f3436;
 }
-.content .sidebar .nav-list .active > a {
+.content .sidebar .nav-list a:hover {
+  color: #000;
+  background: none;
+}
+.content .sidebar .nav-list .active {
   color: #fff;
   background: #b41c30;
   border-left: 5px #6f0f1c solid;
   text-shadow: none;
   font-weight: bold;
   margin-left: -20px;
+}
+.content .sidebar .nav-list a.active:hover {
+  background: #b41c30;
 }
 .content .sidebar .extra-actions {
   margin-bottom: 1em;
@@ -160,12 +174,16 @@ body {
 .campaigns .actions a:first-child {
   margin-right: 20px;
 }
-.campaigns form {
-  margin: 2em 1em;
-}
-.campaigns form .control-label {
+.campaigns .control-label {
   color: #000;
   font-weight: bold;
+}
+.campaigns .control-label a:link,
+.campaigns .control-label a:visited {
+  color: #000;
+}
+.campaigns .control-label a:hover {
+  text-decoration: none;
 }
 .campaigns form .boxes {
   text-align: center;
@@ -177,7 +195,7 @@ body {
   text-transform: none;
 }
 .campaigns form .box {
-  background: #0fb5af;
+  background: #d2d0c7;
   color: #000;
   font-size: 16px;
   padding: 15px 0;
@@ -199,4 +217,13 @@ body {
   width: auto;
   max-width: 100%;
   min-width: 80%;
+}
+.table-manage-data {
+  margin-top: 1em;
+}
+.table-manage-data tr {
+  cursor: pointer;
+}
+.table-manage-data td {
+  color: #2f3436;
 }

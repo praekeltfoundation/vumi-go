@@ -1,6 +1,6 @@
 {% load url from future %}
 
-<table class="table table-bordered table-awesome" data-table-id="people">
+<table class="table table-bordered table-manage-data" data-table-id="people">
     <thead>
     <tr>
         <th><input type="checkbox"></th>
@@ -15,7 +15,7 @@
     {% for contact in selected_contacts %}
          <tr data-url="{% url 'contacts:person' contact.key %}">
             <td>
-                <input type="checkbox">
+                <input type="checkbox" name="contact" value="{{ contact.key }}">
             </td>
             <td>
                 {{ contact.msisdn }}
@@ -30,6 +30,7 @@
                 {{ contact.email }}
             </td>
             <td>
+                {# TODO: Show groups #}
             </td>
          </tr>
     {% empty %}

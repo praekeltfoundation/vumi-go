@@ -51,8 +51,8 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
                 })
 
         self.assertNotContains(
-            search('bulk_message'), conversation.description)
-        self.assertContains(search('survey'), conversation.description)
+            search('bulk_message'), conversation.key)
+        self.assertContains(search('survey'), conversation.key)
 
     def test_index_search_on_status(self):
         conversation = self.get_wrapped_conv()
@@ -64,25 +64,25 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
                 })
 
         # it should be draft
-        self.assertContains(search('draft'), conversation.description)
+        self.assertContains(search('draft'), conversation.key)
         self.assertNotContains(
-            search('running'), conversation.description)
+            search('running'), conversation.key)
         self.assertNotContains(
-            search('finished'), conversation.description)
+            search('finished'), conversation.key)
 
         # now it should be running
         conversation.start()
-        self.assertNotContains(search('draft'), conversation.description)
-        self.assertContains(search('running'), conversation.description)
+        self.assertNotContains(search('draft'), conversation.key)
+        self.assertContains(search('running'), conversation.key)
         self.assertNotContains(
-            search('finished'), conversation.description)
+            search('finished'), conversation.key)
 
         # now it shouldn't be
         conversation.end_conversation()
-        self.assertNotContains(search('draft'), conversation.description)
+        self.assertNotContains(search('draft'), conversation.key)
         self.assertNotContains(
-            search('running'), conversation.description)
-        self.assertContains(search('finished'), conversation.description)
+            search('running'), conversation.key)
+        self.assertContains(search('finished'), conversation.key)
 
     def test_received_messages(self):
         """
@@ -165,13 +165,6 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
             'conversation_status': 'draft',
             })
 
-        qs_parts = ("?p=1&amp;query=Test+Conversation" +
-                    "&amp;conversation_status=draft" +
-                    "&amp;conversation_type=bulk_message").split("&amp;")
-        for part in qs_parts:
-            # twice, once for the page back link and once for
-            # the numbered link.
-            self.assertContains(response, part, count=2)
         self.assertNotContains(response, '?p=2')
 
     def test_scrub_tokens(self):
