@@ -27,9 +27,15 @@
 
   // View which wraps a jsPlumb Endpoint to make it work nicer with Backbone
   //
-  // Options - host: The view to which this endpoint is to be attached -
-  // [jsPlumb Endpoint params]
+  // Options:
+  // - host: The view to which this endpoint is to be attached
   exports.EndpointView = Backbone.View.extend({
+    // Default params passed to jsPlumb when creating the jsPlumb endpoint
+    plumbDefaults: {
+      isSource: true,
+      isTarget: true
+    },
+
     initialize: function(options) {
       _.bindAll(
         this,
@@ -40,12 +46,8 @@
       this.host = options.host;
       this.attr = options.attr;
 
-      var plumbParams = _.extend(
-        _.omit(options, 'host'),
-        {uuid: this.model.id, isSource: true, isTarget: true});
-
       // Keep a reference to the 'raw' jsPlumb endpoint
-      this.raw = jsPlumb.addEndpoint(this.host.$el, plumbParams);
+      this.raw = jsPlumb.addEndpoint(this.host.$el, this.plumbParams(options));
 
       // Give the view the actual element jsPlumb uses so we can register UI
       // events and interact with the element directly
@@ -53,6 +55,13 @@
 
       this.on('connect', this.onConnect);
       this.on('disconnect', this.onDisconnect);
+    },
+
+    // Makes the plumb params passed to jsPlumb when creating the endpoint.
+    // Override when extending `EndpointView` to specialise what params are
+    // passed to jsPlumb
+    plumbParams: function(options) {
+      return _.defaults({uuid: this.model.id}, this.plumbDefaults);
     },
 
     onConnect: function(e) {
@@ -99,17 +108,10 @@
     }
   });
 
-  // Options:
-  //   - endpointOptions: The default options to pass to each newly created
-  //   endpoint view
-  //   - Backbone options
   exports.StateView = Backbone.View.extend({
     // Can be overriden when extending `StateView` to specialise the endpoint
     // view type
     EndpointView: exports.EndpointView,
-
-    // The default endpoint options given to each endpoint
-    endpointOptions: {},
 
     initialize: function(options) {
       _.bindAll(
@@ -119,24 +121,16 @@
         'render');
 
       this.endpoints = {};
-
-      this.endpointOptions = _.defaults(
-        {host: this},
-        options.endpointOptions || {},
-        this.endpointOptions);
-
       this.model.on('change', this.render);
     },
 
     addEndpoint: function(id) {
-      var model = this.model.get('endpoints').get(id),
-          options = _.clone(this.endpointOptions);
+      var model = this.model.get('endpoints').get(id);
 
       if (!model) throw new PlumbError(
         "StateView instance's model has no endpoint with id '" + id + "'");
 
-      options.model = model;
-      this.endpoints[id] = new this.EndpointView(options);
+      this.endpoints[id] = new this.EndpointView({host: this, model: model});
     },
 
     removeEndpoint: function(id) {
