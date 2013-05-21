@@ -62,6 +62,7 @@ describe("go.components.plumbing", function() {
   });
 
   afterEach(function() {
+    Backbone.Relational.store.reset();
     $('.dummy').remove();
     jsPlumb.unbind();
   });
@@ -71,8 +72,8 @@ describe("go.components.plumbing", function() {
       it("should set the model's target", function(done) {
         endpointA1.on('connect', function() {
           assert.equal(
-            endpointA1.model.get('targetId'),
-            endpointB1.model.id);
+            endpointA1.model.get('target'),
+            endpointB1.model);
 
           done();
         });
@@ -84,9 +85,9 @@ describe("go.components.plumbing", function() {
     });
 
     describe("on 'disconnect'", function() {
-      it("should set the model's target", function(done) {
+      it("should unset the model's target", function(done) {
         endpointA1.on('disconnect', function() {
-          assert.equal(endpointA1.model.get('targetId'), null);
+          assert(!endpointA1.model.has('target'));
           done();
         });
 
@@ -98,30 +99,24 @@ describe("go.components.plumbing", function() {
   });
 
   describe(".StateModel", function() {
-    afterEach(function() { stateA.model.off('change'); });
-
     it("should react to endpoint collection changes", function(done) {
-      stateA.model.on('change', function(model, options) {
-        assert.propertyVal(options, 'option', 'value');
-        done();
+      var added = false,
+          removed = false,
+          maybeDone = function() { added && removed && done(); };
+
+      stateA.model.on('add:endpoints', function(model) {
+        added = true;
+        maybeDone();
       });
 
-      stateA.model.get('endpoints').add({id: 'endpoint-a4'}, {option: 'value'});
-    });
-
-    describe(".parse", function() {
-      it("should parse 'endpoints' attr as a collection", function() {
-        var attrs = stateA.model.parse({
-          id: 'state-a',
-          endpoints: [
-            {id: 'endpoint-a1'},
-            {id: 'endpoint-a2'}]
-        });
-
-        assert.instanceOf(attrs.endpoints, EndpointCollection);
-        assert.equal(attrs.endpoints.at(0).id, 'endpoint-a1');
-        assert.equal(attrs.endpoints.at(1).id, 'endpoint-a2');
+      stateA.model.on('remove:endpoints', function(model) {
+        removed = true;
+        maybeDone();
       });
+
+      stateA.model.get('endpoints').add({id: 'endpoint-a4'});
+
+      stateA.model.get('endpoints').remove('endpoint-a4');
     });
   });
 
@@ -254,19 +249,19 @@ describe("go.components.plumbing", function() {
       beforeEach(function(done) {
         var connectionCount = 2;
 
-        // Ensure connections are made from endpointA1 to endpointB1 and endpointB1 to endpointB2 before
+        // Ensure connections are made from a1 to b1 and a2 to b2 before
         // running render tests
         onConnection(function() { --connectionCount || done(); });
 
         stateA.model
           .get('endpoints')
           .get('endpoint-a1')
-          .set('targetId', 'endpoint-b1');
+          .set('target', endpointB1.model);
 
         stateA.model
           .get('endpoints')
           .get('endpoint-a2')
-          .set('targetId', 'endpoint-b2');
+          .set('target', endpointB2.model);
 
         plumbView.connect(endpointA1, endpointB1);
         plumbView.connect(endpointA2, endpointB2);
@@ -281,7 +276,7 @@ describe("go.components.plumbing", function() {
         stateA.model
           .get('endpoints')
           .get('endpoint-a1')
-          .set('targetId', null);
+          .unset('target');
 
         onDisconnection(function(e) {
           assert.equal(endpointA1.raw, e.sourceEndpoint);
@@ -303,7 +298,7 @@ describe("go.components.plumbing", function() {
         stateA.model
           .get('endpoints')
           .get('endpoint-a3')
-          .set('targetId', 'endpoint-b3');
+          .set('target', endpointB3.model);
 
         onConnection(function(e) {
           assert.equal(endpointA3.raw, e.sourceEndpoint);
