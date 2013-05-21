@@ -62,6 +62,7 @@ describe("go.components.plumbing", function() {
   });
 
   afterEach(function() {
+    Backbone.Relational.store.reset();
     $('.dummy').remove();
     jsPlumb.unbind();
   });
@@ -98,30 +99,24 @@ describe("go.components.plumbing", function() {
   });
 
   describe(".StateModel", function() {
-    afterEach(function() { stateA.model.off('change'); });
-
     it("should react to endpoint collection changes", function(done) {
-      stateA.model.on('change', function(model, options) {
-        assert.propertyVal(options, 'option', 'value');
-        done();
+      var added = false,
+          removed = false,
+          maybeDone = function() { added && removed && done(); };
+
+      stateA.model.on('add:endpoints', function(model) {
+        added = true;
+        maybeDone();
       });
 
-      stateA.model.get('endpoints').add({id: 'endpoint-a4'}, {option: 'value'});
-    });
-
-    describe(".parse", function() {
-      it("should parse 'endpoints' attr as a collection", function() {
-        var attrs = stateA.model.parse({
-          id: 'state-a',
-          endpoints: [
-            {id: 'endpoint-a1'},
-            {id: 'endpoint-a2'}]
-        });
-
-        assert.instanceOf(attrs.endpoints, EndpointCollection);
-        assert.equal(attrs.endpoints.at(0).id, 'endpoint-a1');
-        assert.equal(attrs.endpoints.at(1).id, 'endpoint-a2');
+      stateA.model.on('remove:endpoints', function(model) {
+        removed = true;
+        maybeDone();
       });
+
+      stateA.model.get('endpoints').add({id: 'endpoint-a4'});
+
+      stateA.model.get('endpoints').remove('endpoint-a4');
     });
   });
 

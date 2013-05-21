@@ -15,7 +15,7 @@
   // ---------
   // Placeholders attached to a state that allow states to be connected
   
-  exports.EndpointModel = Backbone.Model.extend({
+  exports.EndpointModel = Backbone.RelationalModel.extend({
     initialize: function() {
       if (!this.has('targetId')) { this.set('targetId', null); }
     }
@@ -77,35 +77,13 @@
   // ------
   // States/nodes/things that host endpoints to connect them to each other
 
-  exports.StateModel = Backbone.Model.extend({
-    // Can be overriden when extending `StateModel` to specialise the endpoint
-    // model type
-    EndpointCollection: exports.EndpointCollection,
-
-    constructor: function(attrs, options) {
-      // Force the model to parse when initialized so the 'endpoints' attribute
-      // of the model can be parsed correctly as an endpoint collection
-      options = _.extend(options || {}, {parse: true});
-
-      parent(this, 'constructor')(attrs, options);
-    },
-
-    parseEndpoints: function(data) {
-      var endpoints = new this.EndpointCollection(data || []);
-
-      // Make the model aware of changes to the endpoint collection
-      endpoints.on('all', function(event, model, collection, options) {
-        this.trigger('change', this, options);
-      }.bind(this));
-
-      return endpoints;
-    },
-
-    parse: function(response, options) {
-      var attrs = parent(this, 'parse')(response, options);
-      attrs.endpoints = this.parseEndpoints(attrs.endpoints);
-      return attrs;
-    }
+  exports.StateModel = Backbone.RelationalModel.extend({
+    relations: [{
+      type: Backbone.HasMany,
+      key: 'endpoints',
+      relatedModel: exports.EndpointModel,
+      collectionType: exports.EndpointCollection
+    }]
   });
 
   exports.StateView = Backbone.View.extend({
