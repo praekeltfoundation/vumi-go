@@ -23,7 +23,6 @@ from vumi import log
 from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
-from go.vumitools.conversation.models import CONVERSATION_DRAFT
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
 from go.vumitools.middleware import DebitAccountMiddleware
@@ -163,9 +162,9 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def draft_conversations(self):
+        # TODO: Get rid of this once the old UI finally goes away.
         conversations = yield self.active_conversations()
-        returnValue([c for c in conversations
-                        if c.get_status() == CONVERSATION_DRAFT])
+        returnValue([c for c in conversations if c.is_draft()])
 
     @Manager.calls_manager
     def tagpools(self):
@@ -272,7 +271,7 @@ class VumiUserApi(object):
                         'going with most recent: %r' % (conv_keys,))
 
         conversation = sorted(conversations, reverse=True,
-                              key=lambda c: c.start_timestamp)[0]
+                              key=lambda c: c.created_at)[0]
         returnValue(conversation)
 
     @Manager.calls_manager
@@ -667,6 +666,15 @@ class VumiApiCommand(Message):
                                  # JSON.
             'kwargs': kwargs,
         })
+
+    @classmethod
+    def conversation_command(cls, worker_name, command_name, user_account_key,
+                             conversation_key, *args, **kwargs):
+        kwargs.update({
+            'user_account_key': user_account_key,
+            'conversation_key': conversation_key,
+        })
+        return cls.command(worker_name, command_name, *args, **kwargs)
 
 
 class VumiApiEvent(Message):

@@ -37,9 +37,6 @@ class NewWikipediaConversationView(NewConversationView):
         if tag_info[2]:
             conversation_data['delivery_tag'] = tag_info[2]
 
-        # Ignoring start time, because we don't actually do anything with it.
-        conversation_data['start_timestamp'] = datetime.utcnow()
-
         conversation = request.user_api.new_conversation(
             self.conversation_type, **conversation_data)
         messages.info(request,

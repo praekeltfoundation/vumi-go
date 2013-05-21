@@ -119,7 +119,7 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
             'conversation_key': self.conv_key}))
 
         conversation = self.get_wrapped_conv()
-        [cmd] = self.fetch_cmds(consumer)
+        [start_cmd, hack_cmd] = self.fetch_cmds(consumer)
         [batch] = conversation.get_batches()
         [tag] = list(batch.tags)
         [contact] = self.get_contacts_for_conversation(conversation)
@@ -133,14 +133,17 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
                 },
             }
 
-        self.assertEqual(cmd, VumiApiCommand.command(
-            '%s_application' % (conversation.conversation_type,), 'start',
-            conversation_type=conversation.conversation_type,
-            conversation_key=conversation.key,
-            is_client_initiated=conversation.is_client_initiated(),
-            batch_id=batch.key,
-            msg_options=msg_options
-            ))
+        self.assertEqual(start_cmd, VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,), 'start',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key))
+        self.assertEqual(hack_cmd, VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,),
+                'initial_action_hack',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key,
+                is_client_initiated=conversation.is_client_initiated(),
+                batch_id=batch.key, msg_options=msg_options))
 
     def test_send_fails(self):
         """
@@ -166,8 +169,8 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(conversation.name, 'Test Conversation')
 
     def test_aggregates(self):
-        self.put_sample_messages_in_conversation(self.user_api,
-            self.conv_key, 10, start_timestamp=date(2012, 1, 1),
+        self.put_sample_messages_in_conversation(
+            self.user_api, self.conv_key, 10, start_date=date(2012, 1, 1),
             time_multiplier=12)
         response = self.client.get(reverse('survey:aggregates', kwargs={
             'conversation_key': self.conv_key
@@ -182,8 +185,8 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
             ]))
 
     def test_export_messages(self):
-        self.put_sample_messages_in_conversation(self.user_api,
-            self.conv_key, 10, start_timestamp=date(2012, 1, 1),
+        self.put_sample_messages_in_conversation(
+            self.user_api, self.conv_key, 10, start_date=date(2012, 1, 1),
             time_multiplier=12)
         conv_url = reverse('survey:show', kwargs={
             'conversation_key': self.conv_key,

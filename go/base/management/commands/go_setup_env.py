@@ -319,7 +319,6 @@ class Command(BaseCommand):
             conv_info.pop('start', None)  # Don't pass to conversation.
             user = User.objects.get(username=conv_info.pop('account'))
             user_api = vumi_api_for_user(user)
-            timestamp = conv_info.pop('start_timestamp', datetime.utcnow())
             conversation_key = conv_info.pop('key')
             if user_api.get_wrapped_conversation(conversation_key):
                 self.stderr.write(
@@ -331,8 +330,7 @@ class Command(BaseCommand):
                 conversation_key, user_account=user_api.user_account_key,
                 conversation_type=unicode(conv_info.pop('conversation_type')),
                 name=unicode(conv_info.pop('name')),
-                config=conv_info.pop('config', {}),
-                start_timestamp=timestamp, **conv_info)
+                config=conv_info.pop('config', {}), **conv_info)
             conv.save()
             self.stdout.write('Conversation %s created\n' % (conv.key,))
 
