@@ -313,8 +313,8 @@ class VumiUserApi(object):
         user_account.routing_table = routing_table
         yield user_account.save()
 
-        # Check that we have routing set up for all our active conversations.
-        convs = yield self.active_conversations()
+        # Check that we have routing set up for all our running conversations.
+        convs = yield self.running_conversations()
         for conv in convs:
             conv_conn = str(GoConnector.for_conversation(
                 conv.conversation_type, conv.key))

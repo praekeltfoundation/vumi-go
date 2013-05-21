@@ -53,7 +53,7 @@ class GoStartConversationTestCase(DjangoGoApplicationTestCase):
             conversation_key=conversation.key)
         # reload b/c DB changed
         conversation = self.get_conversation()
-        self.assertEqual(conversation.get_status(), 'running')
+        self.assertEqual(conversation.get_status(), 'starting')
         [(pool, tag)] = conversation.get_tags()
         self.assertEqual(pool, 'longcode')
         self.assertTrue(tag)
@@ -67,6 +67,11 @@ class GoStartConversationTestCase(DjangoGoApplicationTestCase):
         SyncMessageSender.return_value = sender
         conversation = self.get_conversation()
         conversation.start()
+
+        # Set the status manually, because it's in `starting', not `running'
+        conversation.set_status_started()
+        conversation.save()
+
         self.assertRaisesRegexp(
             CommandError, 'Conversation already started',
             self.command.handle, email_address=self.user.username,

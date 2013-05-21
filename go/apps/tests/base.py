@@ -225,6 +225,11 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         now = start_date or datetime.now().date()
         conversation = user_api.get_wrapped_conversation(conversation_key)
         conversation.start()
+
+        # Set the status manually, because it's in `starting', not `running'
+        conversation.set_status_started()
+        conversation.save()
+
         batch_key = conversation.get_latest_batch_key()
 
         messages = []

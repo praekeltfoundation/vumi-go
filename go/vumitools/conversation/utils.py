@@ -229,6 +229,11 @@ class ConversationWrapper(object):
             outbound_only = not acquire_tag  # XXX: Hack for seq send.
             yield self._add_to_routing_table(tag, outbound_only=outbound_only)
 
+        if batch_id not in self.get_batch_keys():
+            self.c.batches.add_key(batch_id)
+        self.c.set_status_starting()
+        yield self.c.save()
+
         yield self.dispatch_command('start',
                                     user_account_key=self.c.user_account.key,
                                     conversation_key=self.c.key)
@@ -243,11 +248,6 @@ class ConversationWrapper(object):
                                     msg_options=msg_options,
                                     is_client_initiated=is_client_initiated,
                                     **extra_params)
-
-        if batch_id not in self.get_batch_keys():
-            self.c.batches.add_key(batch_id)
-        self.c.set_status_started()
-        yield self.c.save()
 
     @Manager.calls_manager
     def _add_to_routing_table(self, tag, outbound_only=False):
