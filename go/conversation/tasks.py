@@ -1,4 +1,5 @@
 from StringIO import StringIO
+from zipfile import ZipFile
 
 from celery.task import task
 
@@ -67,12 +68,17 @@ def export_conversation_messages(account_key, conversation_key):
         writer.writerow([unicode(message.payload.get(fn) or '')
                             for fn in field_names])
 
+    zipio = StringIO()
+    zf = ZipFile(zipio, "a")
+    zf.writestr("messages-export.csv", io.getvalue())
+    zf.close()
+
     email = EmailMessage(
-        'Conversation message export: %s' % (conversation.subject,),
+        'Conversation message export: %s' % (conversation.name,),
         'Please find the messages of the conversation %s attached.\n' % (
-            conversation.subject),
+            conversation.name),
         settings.DEFAULT_FROM_EMAIL, [user_profile.user.email])
-    email.attach('messages-export.csv', io.getvalue(), 'text/csv')
+    email.attach('messages-export.zip', zipio.getvalue(), 'application/zip')
     email.send()
 
 

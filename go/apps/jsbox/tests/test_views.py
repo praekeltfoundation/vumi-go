@@ -3,6 +3,8 @@ from django.core.urlresolvers import reverse
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 
+from mock import patch, Mock
+
 
 class JsBoxTestCase(DjangoGoApplicationTestCase):
 
@@ -26,10 +28,12 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         })
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
         conversation = self.get_latest_conversation()
+        self.assertEqual(conversation.name, 'the subject')
+        self.assertEqual(conversation.description, 'the message')
         self.assertEqual(conversation.delivery_class, 'sms')
         self.assertEqual(conversation.delivery_tag_pool, 'longcode')
         self.assertEqual(conversation.delivery_tag, None)
-        self.assertEqual(conversation.metadata, None)
+        self.assertEqual(conversation.config, {})
         self.assertRedirects(response, reverse('jsbox:edit', kwargs={
             'conversation_key': conversation.key,
         }))
@@ -51,10 +55,52 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         })
         self.assertRedirects(response, reverse('jsbox:people', kwargs=kwargs))
         conversation = self.get_latest_conversation()
-        self.assertEqual(conversation.metadata, {
+        self.assertEqual(conversation.config, {
             'jsbox': {
                     'javascript': 'x = 1;',
                     'source_url': '',
             },
             'jsbox_app_config': {},
         })
+
+    @patch('requests.get')
+    def test_cross_domain_xhr(self, mocked_get):
+        mocked_get.return_value = Mock(text='foo', status_code=200)
+        response = self.client.post(
+            reverse('jsbox:cross_domain_xhr'),
+            {'url': 'http://domain.com'})
+        [call] = mocked_get.call_args_list
+        args, kwargs = call
+        self.assertEqual(args, ('http://domain.com',))
+        self.assertEqual(kwargs, {'auth': None})
+        self.assertTrue(mocked_get.called)
+        self.assertEqual(response.content, 'foo')
+        self.assertEqual(response.status_code, 200)
+
+    @patch('requests.get')
+    def test_basic_auth_cross_domain_xhr(self, mocked_get):
+        mocked_get.return_value = Mock(text='foo', status_code=200)
+        response = self.client.post(
+            reverse('jsbox:cross_domain_xhr'),
+            {'url': 'http://username:password@domain.com'})
+        [call] = mocked_get.call_args_list
+        args, kwargs = call
+        self.assertEqual(args, ('http://domain.com',))
+        self.assertEqual(kwargs, {'auth': ('username', 'password')})
+        self.assertTrue(mocked_get.called)
+        self.assertEqual(response.content, 'foo')
+        self.assertEqual(response.status_code, 200)
+
+    @patch('requests.get')
+    def test_basic_auth_cross_domain_xhr_with_https_and_port(self, mocked_get):
+        mocked_get.return_value = Mock(text='foo', status_code=200)
+        response = self.client.post(
+            reverse('jsbox:cross_domain_xhr'),
+            {'url': 'https://username:password@domain.com:443/foo'})
+        [call] = mocked_get.call_args_list
+        args, kwargs = call
+        self.assertEqual(args, ('https://domain.com:443/foo',))
+        self.assertEqual(kwargs, {'auth': ('username', 'password')})
+        self.assertTrue(mocked_get.called)
+        self.assertEqual(response.content, 'foo')
+        self.assertEqual(response.status_code, 200)

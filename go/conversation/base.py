@@ -98,13 +98,13 @@ class NewConversationView(ConversationView):
         if not form.is_valid():
             return self.render_to_response({'form': form})
 
-        copy_keys = [
-            'subject',
-            'message',
-            'delivery_class',
-            'delivery_tag_pool',
-            ]
-        conversation_data = dict((k, form.cleaned_data[k]) for k in copy_keys)
+        conversation_data = {
+            'name': form.cleaned_data['subject'],
+            'description': form.cleaned_data['message'],
+            'delivery_class': form.cleaned_data['delivery_class'],
+            'delivery_tag_pool': form.cleaned_data['delivery_tag_pool'],
+            'config': {},
+            }
 
         tag_info = form.cleaned_data['delivery_tag_pool'].partition(':')
         conversation_data['delivery_tag_pool'] = tag_info[0]
@@ -332,7 +332,6 @@ class ShowConversationView(ConversationView):
             else:
                 messages.error(request,
                     'Something went wrong. Please try again.')
-                print form.errors
         return self.redirect_to('show', conversation_key=conversation.key)
 
 
@@ -392,8 +391,8 @@ class EditConversationView(ConversationView):
         return form(prefix=key, initial=data)
 
     def make_forms(self, conversation):
-        metadata = conversation.get_metadata(default={})
-        return [self.make_form(key, edit_form, metadata)
+        config = conversation.get_config()
+        return [self.make_form(key, edit_form, config)
                 for key, edit_form in self.edit_conversation_forms]
 
     def process_form(self, form):
@@ -402,7 +401,7 @@ class EditConversationView(ConversationView):
         return form.cleaned_data
 
     def process_forms(self, request, conversation):
-        metadata = conversation.get_metadata(default={})
+        config = conversation.get_config()
         edit_forms_with_keys = [
             (key, edit_form_cls(request.POST, prefix=key))
             for key, edit_form_cls in self.edit_conversation_forms]
@@ -412,8 +411,8 @@ class EditConversationView(ConversationView):
             # Is this a good idea?
             if not edit_form.is_valid():
                 return self._render_forms(request, conversation, edit_forms)
-            metadata[key] = self.process_form(edit_form)
-        conversation.set_metadata(metadata)
+            config[key] = self.process_form(edit_form)
+        conversation.set_config(config)
         conversation.save()
 
 

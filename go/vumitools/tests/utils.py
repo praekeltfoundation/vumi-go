@@ -266,12 +266,15 @@ class GoAppWorkerTestMixin(GoPersistenceMixin):
 
     @inlineCallbacks
     def create_conversation(self, **kw):
-        conv_type = (kw.pop('conversation_type', None)
-                        or self._conversation_type())
-        subject = kw.pop('subject', u'Subject')
-        message = kw.pop('message', u'Message')
+        conv_type = kw.pop('conversation_type', None)
+        if conv_type is None:
+            conv_type = self._conversation_type()
+        name = kw.pop('name', u'Subject')
+        description = kw.pop('description', u'')
+        config = kw.pop('config', {})
+        self.assertTrue(isinstance(config, dict))
         conversation = yield self.user_api.new_conversation(
-            conv_type, subject, message, **kw)
+            conv_type, name, description, config, **kw)
         returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks

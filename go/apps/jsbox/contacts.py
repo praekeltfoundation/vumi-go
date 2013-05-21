@@ -51,9 +51,8 @@ class ContactsResource(SandboxResource):
             example, if ``sms`` was the delivery class, the address would look
             something like ``+27731112233``
 
-        Reply fields:
-            - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``
+        Success reply fields:
+            - ``success``: set to ``true``
             - ``contact``: An object containing the contact's data. Looks
             something like this:
 
@@ -75,11 +74,15 @@ class ContactsResource(SandboxResource):
                     'name': 'A Random'
                 }
 
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
         Example:
         .. code-block:: javascript
             api.request(
                 'contacts.get',
-                {deliver_class: 'sms', addr: '+27731112233'},
+                {delivery_class: 'sms', addr: '+27731112233'},
                 function(reply) { api.log_info(reply.contact.name); });
         """
         try:
@@ -108,12 +111,15 @@ class ContactsResource(SandboxResource):
         Similar to :method:`handle_get`, but creates the contact if it does
         not yet exist.
 
-        Reply fields:
-            - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``
+        Success reply fields:
+            - ``success``: set to ``true``
             - ``contact``: An object containing the contact's data
             - ``created``: ``true`` if a new contact was created, otherwise
             ``false``
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
         """
         try:
             self._parse_get(command)
@@ -155,15 +161,20 @@ class ContactsResource(SandboxResource):
             - ``key``: The contacts key
             - ``fields``: The contact fields to be updated
 
-        Reply fields:
-            - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``contact``: An object containing the contact's data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
 
         Example:
         .. code-block:: javascript
             api.request(
                 'contacts.update',
-                {key: '123abc', surname: 'Jones', extra: {location: 'CPT'}},
+                {key: '123abc',
+                 fields: {surname: 'Jones', extra: {location: 'CPT'}}},
                 function(reply) { api.log_info(reply.success); });
         """
         try:
@@ -179,85 +190,102 @@ class ContactsResource(SandboxResource):
             store = self._contact_store_for_api(api)
             fields = self.pick_fields(
                 command['fields'], *Contact.field_descriptors)
-            yield store.update_contact(command['key'], **fields)
+            contact = yield store.update_contact(command['key'], **fields)
         except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        returnValue(self.reply(command, success=True))
+        returnValue(self.reply(
+            command,
+            success=True,
+            contact=contact.get_data()))
 
     @inlineCallbacks
-    def _update_dynamic_field(self, field_name, api, command):
+    def _update_dynamic_fields(self, dynamic_field_name, api, command):
         try:
-            if not isinstance(command.get('contact_key'), unicode):
+            if not isinstance(command.get('key'), unicode):
                 raise SandboxError(
-                    "'contact_key' needs to be specified and be a unicode "
+                    "'key' needs to be specified and be a unicode "
                     "string")
 
-            if not isinstance(command.get('field'), unicode):
+            if not isinstance(command.get('fields'), dict):
                 raise SandboxError(
-                    "'field' needs to be specified and be a unicode string")
+                    "'fields' needs to be specified and be a dict of field "
+                    "name-values pairs")
 
-            if command.get('value') is None:
-                raise SandboxError("'value' needs to be specified and be a "
-                                   "non-None value")
+            fields = command['fields']
+            if any(not isinstance(k, unicode) for k in fields.keys()):
+                raise SandboxError("All field names need to be unicode")
+
+            if any(not isinstance(v, unicode) for v in fields.values()):
+                raise SandboxError("All field values need to be unicode")
 
             store = self._contact_store_for_api(api)
-            contact = yield store.get_contact_by_key(command['contact_key'])
+            contact = yield store.get_contact_by_key(command['key'])
 
-            field = getattr(contact, field_name)
-            field[command['field']] = command['value']
+            dynamic_field = getattr(contact, dynamic_field_name)
+            for k, v in fields.iteritems():
+                dynamic_field[k] = v
+
             yield contact.save()
         except (SandboxError, ContactError) as e:
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        returnValue(self.reply(command, success=True))
+        returnValue(self.reply(
+            command,
+            success=True,
+            contact=contact.get_data()))
 
-    def handle_update_extra(self, api, command):
+    def handle_update_extras(self, api, command):
         """
-        Updates a single subfield of an existing contact's ``extra`` field.
+        Updates subfields of an existing contact's ``extra`` field.
 
         Command field:
-            - ``contact_key``: The contact's key
-            - ``field``: The name of the subfield to be updated
-            - ``value``: The subfield's new value
+            - ``key``: The contact's key
+            - ``fields``: The extra fields to be updated
 
-        Reply fields:
-            - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``contact``: An object containing the contact's data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
 
         Example:
         .. code-block:: javascript
             api.request(
-                'contacts.update_extra',
-                {contact_key: '123abc', field: 'surname', value: 'Jones'},
+                'contacts.update_extras',
+                {fields: {location: 'CPT', beer: 'Whale Tail Ale'}},
                 function(reply) { api.log_info(reply.success); });
         """
-        return self._update_dynamic_field('extra', api, command)
+        return self._update_dynamic_fields('extra', api, command)
 
-    def handle_update_subscription(self, api, command):
+    def handle_update_subscriptions(self, api, command):
         """
-        Updates a single subfield of an existing contact's ``subscription``
-        field.
+        Updates subfields of an existing contact's ``subscription`` field.
 
         Command field:
-            - ``contact_key``: The contact's key
-            - ``field``: The name of the subfield to be updated
-            - ``value``: The subfield's new value
+            - ``key``: The contact's key
+            - ``fields``: The subscription fields to be updated
 
-        Reply fields:
-            - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``contact``: An object containing the contact's data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
 
         Example:
         .. code-block:: javascript
             api.request(
-                'contacts.update_subscription',
-                {contact_key: '123abc', field: 'foo', value: 'bar'},
+                'contacts.update_subscriptions',
+                {fields: {a: 'one', b: 'two'}},
                 function(reply) { api.log_info(reply.success); });
         """
-        return self._update_dynamic_field('subscription', api, command)
+        return self._update_dynamic_fields('subscription', api, command)
 
     @inlineCallbacks
     def handle_new(self, api, command):
@@ -265,19 +293,21 @@ class ContactsResource(SandboxResource):
         Creates a new contacts with the given fields of an existing contact.
 
         Command fields:
-            - ``fields``: The fields to be set for the new contact
+            - ``contact``: The contact data to initialise the new contact with.
 
-        Reply fields:
-            - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``
-            - ``key``: a string representing the newly created key identifying
-            the contact (for eg. f953710a2472447591bd59e906dc2c26)
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``contact``: An object containing the contact's data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
 
         Example:
         .. code-block:: javascript
             api.request(
                 'contacts.new',
-                {fields: {surname: 'Jones', extra: {location: 'CPT'}}},
+                {contact: {surname: 'Jones', extra: {location: 'CPT'}}},
                 function(reply) { api.log_info(reply.key); });
         """
         try:
@@ -294,7 +324,10 @@ class ContactsResource(SandboxResource):
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        returnValue(self.reply(command, success=True, key=contact.key))
+        returnValue(self.reply(
+            command,
+            success=True,
+            contact=contact.get_data()))
 
     @inlineCallbacks
     def handle_save(self, api, command):
@@ -307,9 +340,13 @@ class ContactsResource(SandboxResource):
             - ``contact``: The contact's data. **Note**: ``key`` must be a
             field in the contact data in order identify the contact.
 
-        Reply fields:
-            - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``contact``: An object containing the contact's data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
 
         Example:
         .. code-block:: javascript
@@ -351,6 +388,8 @@ class ContactsResource(SandboxResource):
                 user_account=contact_store.user_account_key,
                 **ContactStore.settable_contact_fields(**fields))
 
+            # since we are basically creating a 'new' contact with the same
+            # key, we can be sure that the old groups were removed
             for group in groups:
                 contact.add_to_group(group)
 
@@ -359,4 +398,7 @@ class ContactsResource(SandboxResource):
             log.warning(str(e))
             returnValue(self.reply(command, success=False, reason=unicode(e)))
 
-        returnValue(self.reply(command, success=True))
+        returnValue(self.reply(
+            command,
+            success=True,
+            contact=contact.get_data()))

@@ -1,4 +1,6 @@
 from datetime import date
+from zipfile import ZipFile
+from StringIO import StringIO
 
 from django.test.client import Client
 from django.core import mail
@@ -158,7 +160,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(reverse('bulk_message:show', kwargs={
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
-        self.assertEqual(conversation.subject, self.TEST_SUBJECT)
+        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
 
     def test_show_cached_message_pagination(self):
         # Create 21 inbound & 21 outbound messages, since we have
@@ -281,13 +283,17 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, conv_url)
         [email] = mail.outbox
         self.assertEqual(email.recipients(), [self.user.email])
-        self.assertTrue(self.conversation.subject in email.subject)
-        self.assertTrue(self.conversation.subject in email.body)
-        [(file_name, content, mime_type)] = email.attachments
-        self.assertEqual(file_name, 'messages-export.csv')
+        self.assertTrue(self.conversation.name in email.subject)
+        self.assertTrue(self.conversation.name in email.body)
+        [(file_name, contents, mime_type)] = email.attachments
+        self.assertEqual(file_name, 'messages-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('messages-export.csv', 'r').read()
+
         # 1 header, 10 sent, 10 received, 1 trailing newline == 22
-        self.assertEqual(22, len(content.split('\n')))
-        self.assertEqual(mime_type, 'text/csv')
+        self.assertEqual(22, len(csv_contents.split('\n')))
+        self.assertEqual(mime_type, 'application/zip')
 
 
 class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
@@ -378,6 +384,7 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
             command_data={
                 'batch_id': batch.key,
                 'msg_options': msg_options,
+                'conversation_key': conversation.key,
                 'content':
                     'Please visit http://%s%s to start your conversation.' % (
                     site.domain, reverse('token', kwargs={'token': 'abcdef'})),
@@ -398,12 +405,14 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
                 'conversation_key': conversation.key,
             }), full_token))
 
-        self.assertContains(response, conversation.subject)
-        self.assertContains(response, conversation.message)
+        self.assertContains(response, conversation.name)
+        self.assertContains(response, conversation.description)
 
     def test_confirmation_post(self):
         conversation = self.user_api.get_wrapped_conversation(self.conv_key)
 
+        self.assertTrue(u'CONVERSATION:bulk_message:%s' % (self.conv_key,)
+                        not in self.user_api.get_routing_table())
         # we're faking this here, this would normally have happened when
         # the confirmation SMS was sent out.
         tag = conversation.acquire_tag()
@@ -427,10 +436,13 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
                 'token': full_token,
             })
 
-        self.assertContains(response, conversation.subject)
-        self.assertContains(response, conversation.message)
+        self.assertContains(response, conversation.name)
+        self.assertContains(response, conversation.description)
         self.assertContains(response, "Conversation confirmed")
         self.assertContains(response, "Conversation started succesfully!")
+
+        self.assertTrue(u'CONVERSATION:bulk_message:%s' % (self.conv_key,)
+                        in self.user_api.get_routing_table())
 
         # reload the conversation because batches are cached.
         conversation = self.user_api.get_wrapped_conversation(conversation.key)
