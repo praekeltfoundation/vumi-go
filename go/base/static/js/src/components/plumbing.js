@@ -16,9 +16,12 @@
   // Placeholders attached to a state that allow states to be connected
   
   exports.EndpointModel = Backbone.RelationalModel.extend({
-    initialize: function() {
-      if (!this.has('targetId')) { this.set('targetId', null); }
-    }
+    relations: [{
+      type: Backbone.HasOne,
+      key: 'target',
+      includeInJSON: 'id',
+      relatedModel: 'go.components.plumbing.EndpointModel'
+    }]
   });
 
   exports.EndpointCollection = Backbone.Collection.extend({
@@ -65,12 +68,11 @@
     },
 
     onConnect: function(e) {
-      if (this === e.source) { this.model.set('targetId', e.target.model.id); }
+      if (this === e.source) { this.model.set('target', e.target.model); }
     },
 
     onDisconnect: function(e) {
-      if (this === e.source) { this.model.set('targetId', null); }
-    }
+      if (this === e.source) { this.model.unset('target'); } }
   });
 
   // States
@@ -81,8 +83,8 @@
     relations: [{
       type: Backbone.HasMany,
       key: 'endpoints',
-      relatedModel: exports.EndpointModel,
-      collectionType: exports.EndpointCollection
+      relatedModel: 'go.components.plumbing.EndpointModel',
+      collectionType: 'go.components.plumbing.EndpointCollection'
     }]
   });
 
@@ -230,16 +232,17 @@
       // Get endpoints that are connected according to their models
       connectedEndpoints = {};
       _.values(endpoints).forEach(function(source) {
-         var sourceId = source.model.id,
-             targetId = source.model.get('targetId'),
-             target;
+        var targetModel = source.model.get('target'),
+            connectionId,
+            target;
 
-         if (!targetId) { return; }
+        if (!targetModel) { return; }
 
-         target = endpoints[targetId];
-         if (target) {
-           connectedEndpoints[pairId(sourceId, targetId)] = [source, target];
-         }
+        target = endpoints[targetModel.id];
+        if (target) {
+          connectionId = pairId(source.model.id, targetModel.id);
+          connectedEndpoints[connectionId] = [source, target];
+        }
       });
 
       connectionIds = _.keys(this.connections);
