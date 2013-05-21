@@ -67,19 +67,19 @@ class BulkMessageApplication(GoApplicationWorker):
             })
 
     @inlineCallbacks
-    def process_command_start(self, batch_id, conversation_type,
-                              conversation_key, msg_options,
-                              is_client_initiated, **extra_params):
+    def process_command_bulk_send(self, user_account_key, conversation_key,
+                                  batch_id, msg_options, is_client_initiated,
+                                  **extra_params):
 
         if is_client_initiated:
             log.warning('Trying to start a client initiated conversation '
                 'on a bulk message send.')
             return
 
-        conv = yield self.get_conversation(batch_id, conversation_key)
+        conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:
-            log.warning('Cannot find conversation for batch_id: %s '
-                'and conversation_key: %s' % (batch_id, conversation_key))
+            log.warning("Cannot find conversation '%s' for user '%s'." % (
+                    user_account_key, conversation_key))
             return
 
         to_addresses = []
@@ -120,16 +120,15 @@ class BulkMessageApplication(GoApplicationWorker):
             yield self.window_manager.remove_key(window_id, flight_key)
 
     @inlineCallbacks
-    def process_command_send_message(self, *args, **kwargs):
+    def process_command_send_message(self, user_account_key, conversation_key,
+                                     **kwargs):
+        conv = yield self.get_conversation(user_account_key, conversation_key)
         command_data = kwargs['command_data']
         log.info('Processing send_message: %s' % kwargs)
-        batch_id = command_data['batch_id']
-        conversation_key = command_data['conversation_key']
         to_addr = command_data['to_addr']
         content = command_data['content']
         msg_options = command_data['msg_options']
         in_reply_to = msg_options.pop('in_reply_to', None)
-        conv = yield self.get_conversation(batch_id, conversation_key)
         self.add_conv_to_msg_options(conv, msg_options)
         if in_reply_to:
             msg = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
@@ -152,3 +151,10 @@ class BulkMessageApplication(GoApplicationWorker):
     def collect_metrics(self, user_api, conversation_key):
         conv = yield user_api.get_wrapped_conversation(conversation_key)
         yield self.collect_message_metrics(conv)
+
+    def process_command_initial_action_hack(self, *args, **kwargs):
+        # HACK: This lets us do whatever we used to do when we got a `start'
+        # message without having horrible app-specific view logic.
+        # TODO: Remove this when we've decoupled the various conversation
+        # actions from the lifecycle.
+        return self.process_command_bulk_send(*args, **kwargs)

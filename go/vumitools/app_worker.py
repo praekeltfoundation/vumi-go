@@ -9,6 +9,8 @@ from vumi.config import IConfigData, ConfigText, ConfigDict
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.utils import MessageMetadataHelper
+from go.vumitools.conversation.models import (
+    CONVERSATION_STARTING, CONVERSATION_STOPPING)
 
 
 class OneShotMetricManager(MetricManager):
@@ -154,13 +156,44 @@ class GoWorkerMixin(object):
             return self.process_unknown_cmd(cmd_method_name, *args, **kwargs)
 
     @inlineCallbacks
+    def process_command_start(self, user_account_key, conversation_key):
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        status = conv.get_status()
+        if status != CONVERSATION_STARTING:
+            log.warning(
+                "Trying to start conversation '%s' for user '%s' with invalid "
+                "status: %s" % (conversation_key, user_account_key, status))
+            return
+        conv.set_status_started()
+        yield conv.save()
+
+    @inlineCallbacks
+    def process_command_stop(self, user_account_key, conversation_key):
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        status = conv.get_status()
+        if status != CONVERSATION_STOPPING:
+            log.warning(
+                "Trying to stop conversation '%s' for user '%s' with invalid "
+                "status: %s" % (conversation_key, user_account_key, status))
+            return
+        conv.set_status_stopped()
+        yield conv.save()
+
+    def process_command_initial_action_hack(self, *args, **kwargs):
+        # HACK: This lets us do whatever we used to do when we got a `start'
+        # message without having horrible app-specific view logic.
+        # TODO: Remove this when we've decoupled the various conversation
+        # actions from the lifecycle.
+        pass
+
+    @inlineCallbacks
     def process_command_collect_metrics(self, conversation_key,
                                         user_account_key):
         key_tuple = (conversation_key, user_account_key)
         if key_tuple in self._metrics_conversations:
             log.info("Ignoring conversation %s for user %s because the "
                      "previous collection run is still going." % (
-                        conversation_key, user_account_key))
+                         conversation_key, user_account_key))
             return
         self._metrics_conversations.add(key_tuple)
         user_api = self.get_user_api(user_account_key)
@@ -174,7 +207,7 @@ class GoWorkerMixin(object):
         if key_tuple in self._cache_recon_conversations:
             log.info("Ignoring conversation %s for user %s because the "
                      "previous cache recon run is still going." % (
-                        conversation_key, user_account_key))
+                         conversation_key, user_account_key))
             return
         self._cache_recon_conversations.add(key_tuple)
         user_api = self.get_user_api(user_account_key)
@@ -232,36 +265,9 @@ class GoWorkerMixin(object):
                 conv.delivery_class, message.user(), create=create)
             returnValue(contact)
 
-    @inlineCallbacks
-    def get_user_account(self, batch_id):
-        batch = yield self.vumi_api.mdb.get_batch(batch_id)
-        if batch is None:
-            log.error('Cannot find batch for batch_id %s' % (batch_id,))
-            return
-
-        user_account_key = batch.metadata["user_account"]
-        if user_account_key is None:
-            log.error("No account key in batch metadata: %r" % (batch,))
-            return
-
-        user_account = yield self.vumi_api.get_user_account(user_account_key)
-        returnValue(user_account)
-
-    @inlineCallbacks
-    def get_conversation(self, batch_id, conversation_key):
-        batch = yield self.vumi_api.mdb.get_batch(batch_id)
-        if batch is None:
-            log.error('Cannot find batch for batch_id %s' % (batch_id,))
-            return
-
-        user_account_key = batch.metadata["user_account"]
-        if user_account_key is None:
-            log.error("No account key in batch metadata: %r" % (batch,))
-            return
-
+    def get_conversation(self, user_account_key, conversation_key):
         user_api = self.get_user_api(user_account_key)
-        conv = yield user_api.get_wrapped_conversation(conversation_key)
-        returnValue(conv)
+        return user_api.get_wrapped_conversation(conversation_key)
 
     def get_metadata_helper(self, msg):
         return MessageMetadataHelper(self.vumi_api, msg)

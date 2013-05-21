@@ -22,13 +22,6 @@ class SubscriptionApplication(GoApplicationWorker):
         yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=batch_id)
         log.info('Stored outbound %s' % (msg,))
 
-    def process_command_start(self, batch_id, conversation_type,
-                              conversation_key, msg_options,
-                              is_client_initiated, **extra_params):
-        if not is_client_initiated:
-            log.warning('Trying to start a server initiated conversation '
-                        'on a subscription handler.')
-
     def handlers_for_content(self, conv, content):
         words = (content or '').strip().split() + ['']
         keyword = words[0].lower()

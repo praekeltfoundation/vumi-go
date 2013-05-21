@@ -136,13 +136,13 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_start(self):
-        # We need to wait for process_command_start() to finish completely.
-        # Since it runs in response to an async command, we need to wrap it in
-        # something that fires a deferred at the appropriate time.
-        pcs_d = Deferred()
-        pcs = self.app.process_command_start
-        pcs_wrapper = lambda *args, **kw: pcs(*args, **kw).chainDeferred(pcs_d)
-        self.app.process_command_start = pcs_wrapper
+        # We need to wait for process_command_send_survey() to finish
+        # completely. Since it runs in response to an async command, we need to
+        # wrap it in something that fires a deferred at the appropriate time.
+        pcss_d = Deferred()
+        pcss = self.app.process_command_send_survey
+        pcss_wrapper = lambda *a, **kw: pcss(*a, **kw).chainDeferred(pcss_d)
+        self.app.process_command_send_survey = pcss_wrapper
 
         self.contact1 = yield self.create_contact(name=u'First',
             surname=u'Contact', msisdn=u'+27831234567', groups=[self.group])
@@ -153,7 +153,7 @@ class TestSurveyApplication(AppWorkerTestCase):
             yield self.start_conversation(self.conversation)
             self.assertEqual(log.errors, [])
 
-        yield pcs_d
+        yield pcss_d
         [msg1, msg2] = self.get_dispatched_messages()
         self.assertEqual(msg1['content'], self.default_questions[0]['copy'])
         self.assertEqual(msg2['content'], self.default_questions[0]['copy'])
