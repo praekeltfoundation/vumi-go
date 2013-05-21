@@ -216,20 +216,6 @@ describe("go.components.plumbing", function() {
     });
 
     describe("on 'connectionDetached' jsPlumb events", function() {
-      /*
-      it("should unlink the source and target model", function(done) {
-        assertDisconnection(function() {
-          var endpointA = stateA.model
-            .get('endpoints')
-            .get('endpoint-a1');
-
-          assert.isNull(endpointA.get('targetId'));
-
-          done();
-        });
-      });
-      */
-
       it("should remove the connection from the view's connection lookup",
          function(done) {
         assertDisconnection(function() {
