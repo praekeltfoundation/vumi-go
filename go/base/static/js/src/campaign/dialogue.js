@@ -3,36 +3,19 @@
 // Models, Views and other stuff for the dialogue screen
   
 (function(exports) {
-  var Extendable = go.utils.Extendable;
-
-  // Main Controller and View
-  // ------------------------
-  
-  // Controls the dialogue setup screen
-  exports.DialogueController = Extendable.extend({
-    // Options
-    //   - states: initial states to add
-    constructor: function(options) {
-    },
-    addState: function(state) {}
-  });
-
-  // The view for the dialogue screen
-  var DialogueView = Backbone.View.extend({});
+  var plumbing = go.components.plumbing;
 
   // State Models
   // ------------
   //
-  // States types:
+  // State types:
   //   - MENU: the user chooses an option from a menu
   //   - CONTENT: the user enters text
   //   - END:  the user is displayed a message, but cannot respond (thus ending
   //   the session).
 
   // Model for a dialogue state.
-  var DialogueStateModel = Backbone.Model.extend({
-    reset: function(typeName) {}
-  });
+  var DialogueStateModel = plumbing.StateModel.extend({});
 
   // Collection of `StateModel`s
   var DialogueStateCollection = Backbone.Collection.extend({
@@ -45,10 +28,10 @@
   // States view modes:
   //   - EDIT: Allows the user to make changes to the dialogue state
   //   - PREVIEW: A 'read-only' preview of the dialogue state
-  
+
   // View corresponding to `StateModel`s. Dynamically switches between modes
   // (`EDIT` and `PREVIEW`) and state types (`CONTENT`, `TEXT` and `END`).
-  var DialogueStateView = Backbone.View.extend({
+  var DialogueStateView = plumbing.StateView.extend({
     initialize: function() {},
     // Reset the view and set it to a new state type
     reset: function(type) {},
@@ -60,10 +43,10 @@
     edit: function() {}
   });
 
-  // Base 'mode' for `DialogueStateViews`. Each mode proxies a dialogue view's
-  // render calls and events, acting according to the mode type (for eg,
-  // `EDIT`) and state type (for eg, `CONTENT`).
-  var DialogueStateViewMode = Extendable.extend({
+  // Base 'mode' for `DialogueStateViews`. Each mode acts as a 'delegate view',
+  // targeting a dialogue view's element and acting according to the mode type
+  // (for eg, `EDIT`) and state type (for eg, `CONTENT`).
+  var DialogueStateViewMode = Backbone.View.extend({
     constructor: function(view) { this.view = view; }
   });
 
@@ -83,4 +66,24 @@
   var DialogueStateViewModes = {
     CONTENT: {EDIT: ContentStateEditor, PREVIEW: ContentStatePreviewer}
   };
+
+  // Main Controller and View
+  // ------------------------
+
+  // The main model for the dialogue screen. Should be the structure which
+  // interacts with the api. Contains the collection of dialogue state models
+  // and keeps track of the initial state (state0).
+  exports.DialogueModel = Backbone.RelationalModel.extend({
+    relations: [{
+      type: Backbone.HasMany,
+      key: 'states',
+      relatedModel: 'go.campaign.dialogue.DialogueStateModel',
+      collectionType: 'go.campaign.dialogue.DialogueStateCollection'
+    }]
+  });
+  
+  // The main view containing all the dialogue states
+  exports.DialogueView = plumbing.PlumbView.extend({
+    model: exports.DialogueModel
+  });
 })(go.campaign.dialogue = {});
