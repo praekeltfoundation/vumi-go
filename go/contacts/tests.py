@@ -359,23 +359,6 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(all([contact.extra['float'] == '2.0' for contact in
                         contacts]))
 
-    def test_contact_letter_filter(self):
-        people_url = reverse('contacts:people')
-        first_letter = TEST_CONTACT_SURNAME[0]
-
-        # Assert that our name doesn't start with our "fail" case.
-        self.assertNotEqual(first_letter.lower(), 'z')
-
-        response = self.client.get(group_url(self.group_key), {'l': 'z'})
-        self.assertContains(response, 'No contact surnames start with '
-                                      'the letter')
-
-        response = self.client.get(people_url, {'l': 'z'})
-        self.assertContains(response, 'No contact surnames start with '
-                                      'the letter')
-        response = self.client.get(people_url, {'l': first_letter})
-        self.assertContains(response, person_url(self.contact_key))
-
     def test_contact_querying(self):
         people_url = reverse('contacts:people')
 
@@ -383,7 +366,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(people_url, {
             'q': 'this should not match',
         })
-        self.assertContains(response, 'No contact match')
+        self.assertContains(response, 'No contacts match')
 
         # test match
         response = self.client.get(people_url, {
@@ -454,7 +437,7 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(group_url(self.group_key), {
             'q': 'this should not match',
         })
-        self.assertContains(response, 'No contact match')
+        self.assertContains(response, 'No contacts match')
 
         # test match name
         response = self.client.get(group_url(self.group_key), {
@@ -483,24 +466,6 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         # since that uses Django's internal messages framework which cleared
         # during rendering.
         self.assertNotContains(no_limit, 'alert-success')
-
-    def test_group_contact_filter_by_letter(self):
-        first_letter = TEST_CONTACT_SURNAME[0]
-
-        # Assert that our name doesn't start with our "fail" case.
-        self.assertNotEqual(first_letter.lower(), 'z')
-
-        response = self.client.get(group_url(self.group_key), {'l': 'z'})
-        self.assertContains(response, 'No contact surnames start with '
-                                      'the letter')
-
-        response = self.client.get(group_url(self.group_key),
-                                   {'l': first_letter.upper()})
-        self.assertContains(response, person_url(self.contact_key))
-
-        response = self.client.get(group_url(self.group_key),
-                                   {'l': first_letter.lower()})
-        self.assertContains(response, person_url(self.contact_key))
 
     def test_group_deletion(self):
         # Create a contact in the group

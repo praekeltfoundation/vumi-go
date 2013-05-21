@@ -1,0 +1,120 @@
+{% extends "app.html" %}
+{% load url from future %}
+{% load humanize %}
+
+
+{% block content_extraclass %}dashboard{% endblock %}
+
+{% block content_title %}Dashboard{% endblock %}
+
+
+
+{% block content_actions_left %}
+    <a href="{% url 'campaigns:details' %}" class="btn btn-primary">New Campaign</a>
+{% endblock %}
+
+{% block content_actions_right %}
+    <div class="button pull-left">
+        <button class="btn" disabled="disabled" data-table-id="conversations">Copy</button>
+        <button class="btn" disabled="disabled" data-table-id="conversations">Archive</button>
+    </div>
+
+    <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
+        <input type="text" class="search-query" placeholder="Search" name="{{ search_form.query.name }}" value="{{ search_form.query.value|default:"" }}">
+        <button type="submit" class="btn" id="search-filter-btn">Search</button>
+    </form>
+{% endblock %}
+
+{% block content_main %}
+    <div class="row-fluid">
+        <div class="span3 sidebar">
+
+            <ul class="nav nav-list">
+                <li>
+                    <a href="{% url 'conversations:index' %}">All campaigns</a>
+                    <ul class="nav nav-list">
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=running">Running Smoothly</a></li>
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=finished">Offline</a></li>
+                        <!-- TODO: we don't have a backend service for this yet -->
+                        <!--
+                        <li><a href="#">Some problems</a></li>
+                        <li><a href="#">Paused</a></li>
+                        -->
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=draft">Drafts</a></li>
+                    </ul>
+                </li>
+
+                <!-- TODO: we don't have a clear backend definition yet of what archived means -->
+                <!-- <li><a href="#">Archived Campaigns</a></li> -->
+                <!-- TODO: we won't have a backend service that exposes available transports -->
+                <!-- <li><a href="#">All Channels</a></li> -->
+
+            </ul>
+
+        </div>
+        <div class="span9">
+
+            {% include "base/includes/messages.html" %}
+
+            <table class="table table-manage-data" data-table-id="conversations">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox"></th>
+                        <th>Campaigns</th>
+                        <th>Status</th>
+                        <!-- TODO: We don't have a backend that provides a friendly name for this yet. -->
+                        <!-- <th>Channel</th> -->
+                        <th>Interactions</th>
+                        <!-- TODO: We don't have a backend service yet for this value -->
+                        <!-- <th>In Last</th> -->
+                        <!-- TODO: We're only storing the created_at value :\ -->
+                        <th>Last Edited</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if conversations %}
+                        {% for conversation in page.object_list %}
+                        <tr data-url="{{ conversation.get_absolute_url }}">
+                            <td><input type="checkbox" value="{{ conversation.key }}"></td>
+                            <td>{{ conversation.name }}</td>
+                            <td>{{ conversation.get_status|capfirst }}</td>
+                            <!-- <td></td> -->
+                            <td>{{ conversation.count_replies|add:conversation.count_sent_messages }} </td>
+                            <!-- <td></td> -->
+                            <td>{{ conversation.created_at|naturaltime }}</td>
+                            <td>
+                                <a href="{% url 'todo' %}" class="btn btn-mini">
+                                    Messages
+                                </a>
+                                <a href="{% url 'todo' %}" class="btn btn-mini">
+                                    Report
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if paginator.num_pages > 1 %}
+                        <tr colspan="9">
+                            {% include "base/includes/pagination.html" %}
+                        </tr>
+                        {% endif %}
+                    {% else %}
+                    <tr>
+                        <td colspan="9">
+                        {% if query %}
+                            No contacts match <strong>{{ query }}</strong>
+                        {% else %}
+                            No conversations.
+                        {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block ondomready %}
+    go.tables.init('.table-manage-data');
+{% endblock %}

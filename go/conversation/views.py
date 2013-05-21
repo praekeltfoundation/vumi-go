@@ -45,11 +45,6 @@ def index(request):
     conversations = sorted(conversations, key=lambda c: c.created_at,
                             reverse=True)
 
-    # We want to pad with None to a multiple of the conversation size.
-    last_page_size = len(conversations) % CONVERSATIONS_PER_PAGE
-    padding = [None] * (CONVERSATIONS_PER_PAGE - last_page_size)
-    conversations += padding
-
     paginator = Paginator(conversations, CONVERSATIONS_PER_PAGE)
     try:
         page = paginator.page(request.GET.get('p', 1))
@@ -64,7 +59,7 @@ def index(request):
         'conversation_type': conversation_type,
         })
 
-    return render(request, 'conversation/index.html', {
+    return render(request, 'conversation/dashboard.html', {
         'conversations': conversations,
         'paginator': paginator,
         'pagination_params': pagination_params,

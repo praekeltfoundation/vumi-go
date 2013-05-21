@@ -1,0 +1,130 @@
+{% extends "campaigns/wizard_base.html" %}
+
+{% block content_title %}
+    New Campaign
+{% endblock %}
+
+
+{% block content_main %}
+    <form id="frm-campaign" class="indent" method="post" action="">
+        {% csrf_token %}
+        <fieldset>
+            {% for field in form_general.visible_fields %}
+            <div class="control-group{% if field.errors %} error{% endif %}">
+                <label class="control-label" for="id_{{ field.name }}">
+                    {{ field.label }}
+                </label>
+                <div class="controls">
+                    {{ field }}
+                    <span class="help-inline">
+                        {% if field.errors %}
+                            {{ field.errors|join:" " }}
+                        {% endif %}
+                        {% if field.help_text %}
+                            ({{ field.help_text }})
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </fieldset>
+
+
+        <label class="control-label">
+            How would you like to reach and interact with users?
+        </label>
+
+        <div class="configuration">
+            <div class="row-fluid title">
+                <div class="span4"></div>
+                <div class="span4">
+                    {{ form_config.countries.label }}
+                </div>
+                <div class="span4">
+                    {{ form_config.channels.label }}
+                    <a href="#" class="icon-info-sign"
+                        data-toggle="tooltip"
+                        data-original-title="
+                            Short code: a 4 or 5 digit number, from which
+                            SMS messages can be sent or received.
+                            Long code: a 10+ digit number, from which
+                            SMS messages can be sent or received.">
+                    </a>
+                </div>
+                <!-- TODO: Return after demo. 
+                <div class="span3">
+                    {{ form_config.keyword.label }}
+                    <a href="#" class="icon-info-sign"
+                        data-toggle="tooltip"
+                        data-original-title="When your number is being shared
+                        by several people, a keyword will ensure that you
+                        receive your users' messages. Eg: &quot;SMS 'drinks'
+                        to 27925551234 to enter the competition.&quot;">
+                    </a>
+                </div>
+                -->
+            </div>
+
+            <div class="row-fluid boxes">
+                <div class="span4">
+                    <div class="box">
+                        Your campaign
+                    </div>
+                </div>
+
+                <div class="span4">
+
+                    <div class="box">
+                        <label for="id_{{ form_config.countries.name }}">
+                            {{ form_config.countries.label }}
+                        </label>
+
+                        {{ form_config.countries }}
+                    </div>
+
+                    <button class="btn btn-primary">Add country</button>
+                </div>
+
+                <div class="span4">
+                    <div class="box">
+                        {# these need to be populated by something? #}
+
+                        <label for="id_{{ form_config.keyword.name }}">
+                          {{ form_config.channels.label }}
+                        </label>
+
+                        {{ form_config.channels }}
+                    </div>
+
+                    <button class="btn btn-primary">Add channel</button>
+                </div>
+
+
+                <!-- TODO: Return after demo.
+                <div class="span3">
+                    <div class="box">
+                        <label for="id_{{ form_config.keyword.name }}">
+                          {{ form_config.keyword.label }}
+                        </label>
+                        {{ form_config.keyword }}
+                    </div>
+                </div>
+                -->
+            </div>
+        </div>
+    </form>
+{% endblock %}
+
+
+{% block ondomready %}
+    {{ block.super }}
+
+    // activate the tooltips
+    $('.icon-info-sign').tooltip();
+
+    $('.configuration button').on('click', function(e) {
+        e.preventDefault();
+
+        // TODO find the template within it's parent, and add another one
+    });
+{% endblock %}

@@ -144,6 +144,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.flatpages',
     'django.contrib.markup',
+    'django.contrib.humanize',
     # Uncomment the next line to enable the admin:
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
@@ -157,11 +158,14 @@ INSTALLED_APPS = (
     'go.conversation',
     'go.contacts',
     'go.account',
+    'go.campaigns',
+
     'vxpolls.djdashboard',
     'registration',
     'bootstrap',
     'raven.contrib.django',
     'debug_toolbar',
+    'pipeline',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -181,6 +185,9 @@ DEBUG_TOOLBAR_CONFIG = {
     'INTERCEPT_REDIRECTS': False,
     'ENABLE_STACKTRACES': True,
 }
+
+
+
 
 
 # A sample logging configuration. The only tangible logging
@@ -326,3 +333,44 @@ DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 # from django.core.urlresolvers import reverse
 
 # LOGIN_REDIRECT_URL = reverse('home')
+
+# PIPELINES CONFIGURATION
+
+STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
+
+PIPELINE_CSS = {
+    'all': {
+        'source_filenames': (
+            'bootstrap/css/bootstrap.min.css',
+            'css/vumigo.css',
+        ),
+        'output_filename': 'export/all.css',
+    },
+}
+
+PIPELINE_JS = {
+    'lib': {
+        'source_filenames': (
+            'js/vendor/jquery-1.9.1.js',
+            'js/vendor/lodash.underscore-1.2.1.js',
+            'js/vendor/backbone-1.0.0.js',
+            'js/vendor/backbone-relational-0.8.5.js',
+            'js/vendor/jquery.jsPlumb-1.4.1.js',
+            'js/vendor/jquery.ui-1.10.3.js',
+            'bootstrap/js/bootstrap.min.js',
+        ),
+        'output_filename': 'export/lib.js'
+    },
+    'go': {
+        'source_filenames': (
+            'js/src/go.js',
+            'js/src/utils.js',
+            'js/src/errors.js',
+            'js/src/tables.js',
+            'js/src/campaign/campaign.js',
+            'js/src/campaign/interactive.js',
+            'js/src/campaign/bulkMessage.js',
+        ),
+        'output_filename': 'export/go.js'
+    },
+}
