@@ -83,8 +83,8 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
     def get_config(self, msg):
         return self.get_message_config(msg)
 
-    def process_command_start(self, batch_id, conversation_type,
-                              conversation_key, msg_options,
-                              is_client_initiated, **extra_params):
+    def process_command_start(self, user_account_key, conversation_key):
         log.info("Starting javascript sandbox conversation (key: %r)." %
                  (conversation_key,))
+        return super(JsBoxApplication, self).process_command_start(
+            user_account_key, conversation_key)

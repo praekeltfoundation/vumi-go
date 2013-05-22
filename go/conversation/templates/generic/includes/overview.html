@@ -9,7 +9,7 @@
                 </form>
             {% endif %}
         </div>
-        <span class="label label-info">{{conversation.start_timestamp|date:"d F Y"}}</span>
+        <span class="label label-info">{{conversation.created_at|date:"d F Y"}}</span>
         <span class="label">{{conversation.delivery_class_description}}</span>
 
         {% for group in conversation.get_groups %}

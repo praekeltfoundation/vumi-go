@@ -2,7 +2,7 @@
     <div class="span12">
         <div class="pull-right">
            {% if conversation.ended %}
-                <h4 class="btn btn-info"><i class="icon-ok icon-white"></i> Conversation ended on {{conversation.end_date|date:"d F Y"}}</h4>
+                <h4 class="btn btn-info"><i class="icon-ok icon-white"></i> Conversation ended on {{conversation.archived_at|date:"d F Y"}}</h4>
             {% else %}
                 <form id="conversation-end" name="conversation-end" method="post" action="{{ conversation.get_absolute_url }}end/">
                      <a href="{{conversation.get_absolute_url}}edit/" class="btn btn-success"><i class="icon-edit icon-white"></i> Edit Conversation</a>
@@ -11,7 +11,7 @@
                 </form>
             {% endif %}
         </div>
-        <span class="label label-info">{{conversation.start_timestamp|date:"d F Y"}}</span> 
+        <span class="label label-info">{{conversation.created_at|date:"d F Y"}}</span> 
         <span class="label">{{conversation.delivery_class_description}}</span> 
 
         {% for group in conversation.get_groups %}

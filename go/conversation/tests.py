@@ -72,6 +72,10 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
 
         # now it should be running
         conversation.start()
+        # Set the status manually, because it's in `starting', not `running'
+        conversation = self.get_wrapped_conv()
+        conversation.set_status_started()
+        conversation.save()
         self.assertNotContains(search('draft'), conversation.description)
         self.assertContains(search('running'), conversation.description)
         self.assertNotContains(

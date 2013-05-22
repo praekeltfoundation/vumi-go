@@ -76,3 +76,76 @@ class ConversationVNone(Model):
         """
         addrs = [contact.addr_for(self.delivery_class) for contact in contacts]
         return [addr for addr in addrs if addr]
+
+
+class ConversationV1(Model):
+    """A conversation with an audience"""
+
+    VERSION = 1
+
+    bucket = 'conversation'
+
+    user_account = ForeignKey(UserAccount)
+    name = Unicode(max_length=255)
+    description = Unicode(default=u'')
+    conversation_type = Unicode(index=True)
+    config = Json(default=dict)
+
+    created_at = Timestamp(default=datetime.utcnow, index=True)
+    start_timestamp = Timestamp(index=True)
+    end_timestamp = Timestamp(null=True, index=True)
+    status = Unicode(default=CONVERSATION_DRAFT, index=True)
+
+    groups = ManyToMany(ContactGroup)
+    batches = ManyToMany(Batch)
+
+    delivery_class = Unicode(null=True)
+    delivery_tag_pool = Unicode(null=True)
+    delivery_tag = Unicode(null=True)
+
+    def started(self):
+        return self.running() or self.ended()
+
+    def ended(self):
+        return self.status == CONVERSATION_FINISHED
+
+    def running(self):
+        return self.status == CONVERSATION_RUNNING
+
+    def get_status(self):
+        """
+        Get the status of this conversation
+
+        :rtype: str, (CONVERSATION_FINISHED, CONVERSATION_RUNNING, or
+            CONVERSATION_DRAFT)
+
+        """
+        return self.status
+
+    # The following are to keep the implementation of this stuff in the model
+    # rather than potentially multiple external places.
+    def set_status_started(self):
+        self.status = CONVERSATION_RUNNING
+
+    def set_status_finished(self):
+        self.status = CONVERSATION_FINISHED
+
+    def add_group(self, group):
+        if isinstance(group, ContactGroup):
+            self.groups.add(group)
+        else:
+            self.groups.add_key(group)
+
+    def __unicode__(self):
+        return self.name
+
+    def get_contacts_addresses(self, contacts):
+        """
+        Get the contacts assigned to this group with an address attribute
+        that is appropriate for this conversation's delivery_class
+        """
+        addrs = [contact.addr_for(self.delivery_class) for contact in contacts]
+        return [addr for addr in addrs if addr]
+
+    def get_routing_name(self):
+        return ':'.join((self.conversation_type, self.key))

@@ -94,10 +94,13 @@ def send_one_off_reply(account_key, conversation_key, in_reply_to, content):
     [tag] = conversation.get_tags()
     msg_options = conversation.make_message_options(tag)
     msg_options['in_reply_to'] = in_reply_to
-    conversation.dispatch_command('send_message', command_data={
-        "batch_id": conversation.get_latest_batch_key(),
-        "conversation_key": conversation.key,
-        "to_addr": inbound_message['from_addr'],
-        "content": content,
-        "msg_options": msg_options,
-        })
+    conversation.dispatch_command(
+        'send_message', account_key, conversation_key,
+        command_data={
+            "batch_id": conversation.get_latest_batch_key(),
+            "conversation_key": conversation.key,
+            "to_addr": inbound_message['from_addr'],
+            "content": content,
+            "msg_options": msg_options,
+       }
+    )

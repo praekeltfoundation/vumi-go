@@ -103,10 +103,12 @@ class USSDMenuCompletionHandler(SNAEventHandler):
         [tag] = yield conversation.get_tags()
         msg_options = yield conversation.make_message_options(tag)
 
-        yield conversation.dispatch_command('send_message', command_data={
-            'conversation_key': conversation.key,
-            'batch_id': batch_id,
-            'to_addr': from_addr,
-            'content': content,
-            'msg_options': msg_options,
-        })
+        yield conversation.dispatch_command(
+            'send_message', account_key, conversation.key,
+            command_data={
+                'batch_id': batch_id,
+                'to_addr': from_addr,
+                'content': content,
+                'msg_options': msg_options,
+            }
+        )
