@@ -64,14 +64,18 @@ class SubscriptionApplication(GoApplicationWorker):
     @inlineCallbacks
     def process_command_send_message(self, account_key, conversation_key,
                                      **kwargs):
+        # FIXME: Fix whatever needs updating here?
         # TODO: Update
+        conv = yield self.get_conversation(user_account_key, conversation_key)
         command_data = kwargs['command_data']
         log.info('Processing send_message: %s' % kwargs)
+        msg_options = command_data['msg_options']
+        self.add_conv_to_msg_options(conv, msg_options)
         yield self.send_message(
                 command_data['batch_id'],
                 command_data['to_addr'],
                 command_data['content'],
-                command_data['msg_options'])
+                msg_options)
 
     @inlineCallbacks
     def collect_metrics(self, user_api, conversation_key):

@@ -120,11 +120,13 @@ class StreamingHTTPWorker(GoApplicationWorker):
 
     @inlineCallbacks
     def process_command_send_message(self, account_key, conversation_key, **kwargs):
+        conv = yield self.get_conversation(user_account_key, conversation_key)
         command_data = kwargs['command_data']
         log.info('Processing send_message: %s' % kwargs)
         to_addr = command_data['to_addr']
         content = command_data['content']
         msg_options = command_data['msg_options']
+        self.add_conv_to_msg_options(conv, msg_options)
         in_reply_to = msg_options.pop('in_reply_to', None)
         if in_reply_to:
             msg = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
