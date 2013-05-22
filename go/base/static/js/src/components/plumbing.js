@@ -177,8 +177,7 @@
       var sourceId = e.sourceEndpoint.getUuid(),
           targetId = e.targetEndpoint.getUuid(),
           source = this.endpoints[sourceId],
-          target = this.endpoints[targetId],
-          event;
+          target = this.endpoints[targetId];
 
       if (source && target) { 
         this.connections[pairId(sourceId, targetId)] = e.connection;
@@ -190,8 +189,7 @@
       var sourceId = e.sourceEndpoint.getUuid(),
           targetId = e.targetEndpoint.getUuid(),
           source = this.endpoints[sourceId],
-          target = this.endpoints[targetId],
-          event;
+          target = this.endpoints[targetId];
 
       if (source && target) { 
         delete this.connections[pairId(sourceId, targetId)];
@@ -218,19 +216,14 @@
     },
 
     render: function() {
-      var endpoints,
-          connectionIds,
-          connectedEndpointIds,
-          connectedEndpoints;
-
       this.states.forEach(function(s) { s.render(); });
 
       // Update the endpoint lookup
-      endpoints = this.endpoints = merge.apply(
+      var endpoints = this.endpoints = merge.apply(
         this, this.states.map(function(s) { return s.endpoints; }));
 
       // Get endpoints that are connected according to their models
-      connectedEndpoints = {};
+      var connectedEndpoints = {};
       _.values(endpoints).forEach(function(source) {
         var targetModel = source.model.get('target'),
             connectionId,
@@ -245,8 +238,8 @@
         }
       });
 
-      connectionIds = _.keys(this.connections);
-      connectedEndpointIds = _.keys(connectedEndpoints);
+      var connectionIds = _.keys(this.connections);
+      var connectedEndpointIds = _.keys(connectedEndpoints);
 
       // Remove 'dead' connections
       // (connections that are still drawn, but aren't connected according to
