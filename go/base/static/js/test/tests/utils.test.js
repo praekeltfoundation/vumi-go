@@ -1,40 +1,59 @@
 describe("go.utils", function() {
-  var Extendable = go.utils.Extendable;
+  describe(".merge", function() {
+    var merge = go.utils.merge;
 
-  describe(".Extendable", function() {
-    it("should set up the prototype chain correctly", function() {
+    it("should merge objects together into a single object", function() {
+      assert.deepEqual(
+        merge({a: 1}, {b: 2, c: 3}, {d: 4}),
+        {a: 1, b: 2, c: 3, d: 4});
+
+      assert.deepEqual(
+        merge({a: 1}, {}, {d: 4}),
+        {a: 1, d: 4});
+
+      assert.deepEqual(
+        merge({a: 1}, {b: 2}, {a: 'one'}),
+        {a: 'one', b: 2});
+    });
+
+    it("should not modify any of the passed in objects", function() {
+      var a = {a: 1},
+          b = {b: 2},
+          c = {c: 3};
+
+      merge(a, b, c);
+
+      assert.deepEqual(a, {a: 1});
+      assert.deepEqual(b, {b: 2});
+      assert.deepEqual(c, {c: 3});
+    });
+  });
+
+  describe(".parent", function() {
+    var Extendable = go.components.structures.Extendable,
+        parent = go.utils.parent;
+
+    it("should provide the 'super' prototype", function() {
       var Parent = Extendable.extend(),
           Child = Parent.extend();
 
-       var child = new Child();
-       assert.instanceOf(child, Parent);
-       assert.instanceOf(child, Child);
+      assert.equal(parent(new Child()), Parent.prototype);
     });
 
-    it("should use a constructor function if specified", function() {
-      var Thing = Extendable.extend({
-        constructor: function (name) { this.name = name; }
-      });
+    it("should provide a property on the 'super' prototype", function() {
+      var Parent = Extendable.extend({prop: 23}),
+          Child = Parent.extend({prop: 22});
 
-      assert.equal(new Thing('foo').name, 'foo');
+      assert.equal(parent(new Child(), 'prop'), 23);
     });
 
-    it("should default to a parent's constructor", function() {
-      var Parent, Child;
-      Parent = Extendable.extend({
-        constructor: function (name) { this.name = name; }
-      });
-      Child = Parent.extend();
+    it("should provide binded versions of the 'super' prototype's functions",
+       function() {
+      var Parent = Extendable.extend({fn: function() { return this; }}),
+          Child = Parent.extend({fn: function() { return 22; }}),
+          child = new Child();
 
-      assert.equal(new Child('foo').name, 'foo');
-    });
-
-    it("should accept multiple object arguments", function() {
-      var Thing = Extendable.extend({'a': 'one'}, {'b': 'two'}),
-          thing = new Thing();
-
-      assert.equal(thing.a, 'one');
-      assert.equal(thing.b, 'two');
+      assert.equal(parent(child, 'fn')(), child);
     });
   });
 });
