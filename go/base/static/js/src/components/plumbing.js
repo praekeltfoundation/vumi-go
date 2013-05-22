@@ -50,7 +50,7 @@
       this.attr = options.attr;
 
       // Keep a reference to the 'raw' jsPlumb endpoint
-      this.raw = jsPlumb.addEndpoint(this.host.$el, this.plumbParams());
+      this.raw = jsPlumb.addEndpoint(this.host.$el, this.plumbParams(options));
 
       // Give the view the actual element jsPlumb uses so we can register UI
       // events and interact with the element directly
@@ -63,7 +63,7 @@
     // Makes the plumb params passed to jsPlumb when creating the endpoint.
     // Override when extending `EndpointView` to specialise what params are
     // passed to jsPlumb
-    plumbParams: function() {
+    plumbParams: function(options) {
       return _.defaults({uuid: this.model.id}, this.plumbDefaults);
     },
 
@@ -72,10 +72,7 @@
     },
 
     onDisconnect: function(e) {
-      if (this === e.source) { this.model.unset('target'); }
-    },
-
-    destroy: function() { if (this.raw) { jsPlumb.deleteEndpoint(this.raw); }}
+      if (this === e.source) { this.model.unset('target'); } }
   });
 
   // States
@@ -92,69 +89,49 @@
   });
 
   exports.StateView = Backbone.View.extend({
-    // Mappings from attributes representing endpoints collections on the state
-    // view's model to the corresponding endpoint views. Override when
-    // extending `StateView` to specialise the endpoint types.
-    endpointTypes: {endpoints: exports.EndpointView},
+    // Can be overriden when extending `StateView` to specialise the endpoint
+    // view type
+    EndpointView: exports.EndpointView,
 
     initialize: function(options) {
       _.bindAll(
         this,
         'addEndpoint',
         'removeEndpoint',
-        'refreshEndpoints',
         'render');
 
-      // Keeps track of endpoints by their type
-      var endpointsByType = this.endpointsByType = {};
-
-      _.keys(this.endpointTypes).forEach(function(type) {
-        endpointsByType[type] = {};
-      });
-
-      // Keeps track of all the endpoint views (regardless of type)
       this.endpoints = {};
-
       this.model.on('change', this.render);
     },
 
-    addEndpoint: function(type, id) {
-      var model = this.model.get(type).get(id);
+    addEndpoint: function(id) {
+      var model = this.model.get('endpoints').get(id);
 
       if (!model) throw new PlumbError(
-        "StateView instance's model has no endpoint collection of type '"
-          + type + "' with id '" + id + "'");
+        "StateView instance's model has no endpoint with id '" + id + "'");
 
-      var view = new this.endpointTypes[type]({host: this, model: model});
-      this.endpointsByType[type][id] = this.endpoints[id] = view;
+      this.endpoints[id] = new this.EndpointView({host: this, model: model});
     },
 
-    removeEndpoint: function(type, id) {
-      this.endpointsByType[type][id].destroy();
-      delete this.endpointsByType[type][id];
+    removeEndpoint: function(id) {
+      jsPlumb.deleteEndpoint(this.endpoints.raw);
       delete this.endpoints[id];
     },
 
-    refreshEndpoints: function(type) {
-      var self = this,
-          modelEndpoints = this.model.get(type),
+    render: function() {
+      var modelEndpoints = this.model.get('endpoints'),
           modelEndpointIds = modelEndpoints.map(function(e) { return e.id; }),
-          viewEndpointIds = _.keys(this.endpointsByType[type]);
+          viewEndpointIds = _.keys(this.endpoints);
 
        // Remove 'dead' endpoints
        // (endpoint views with models that no longer exist)
        _.difference(viewEndpointIds, modelEndpointIds)
-        .forEach(function(id) { self.removeEndpoint(type, id); });
+        .forEach(this.removeEndpoint);
 
        // Add 'new' endpoints
        // (endpoint models with no corresponding views)
        _.difference(modelEndpointIds, viewEndpointIds)
-        .forEach(function(id) { self.addEndpoint(type, id); });
-    },
-
-    render: function() {
-      _.keys(this.endpointTypes)
-       .forEach(this.refreshEndpoints);
+        .forEach(this.addEndpoint);
     }
   });
 
@@ -200,7 +177,8 @@
       var sourceId = e.sourceEndpoint.getUuid(),
           targetId = e.targetEndpoint.getUuid(),
           source = this.endpoints[sourceId],
-          target = this.endpoints[targetId];
+          target = this.endpoints[targetId],
+          event;
 
       if (source && target) { 
         this.connections[pairId(sourceId, targetId)] = e.connection;
@@ -212,7 +190,8 @@
       var sourceId = e.sourceEndpoint.getUuid(),
           targetId = e.targetEndpoint.getUuid(),
           source = this.endpoints[sourceId],
-          target = this.endpoints[targetId];
+          target = this.endpoints[targetId],
+          event;
 
       if (source && target) { 
         delete this.connections[pairId(sourceId, targetId)];
@@ -238,26 +217,36 @@
       this.render();
     },
 
-    refreshConnections: function() {
-      var self = this,
-          endpoints = this.endpoints;
+    render: function() {
+      var endpoints,
+          connectionIds,
+          connectedEndpointIds,
+          connectedEndpoints;
+
+      this.states.forEach(function(s) { s.render(); });
+
+      // Update the endpoint lookup
+      endpoints = this.endpoints = merge.apply(
+        this, this.states.map(function(s) { return s.endpoints; }));
 
       // Get endpoints that are connected according to their models
-      var connectedEndpoints = {};
+      connectedEndpoints = {};
       _.values(endpoints).forEach(function(source) {
-        var targetModel = source.model.get('target');
+        var targetModel = source.model.get('target'),
+            connectionId,
+            target;
 
         if (!targetModel) { return; }
 
-        var target = endpoints[targetModel.id];
+        target = endpoints[targetModel.id];
         if (target) {
-          var connectionId = pairId(source.model.id, targetModel.id);
+          connectionId = pairId(source.model.id, targetModel.id);
           connectedEndpoints[connectionId] = [source, target];
         }
       });
 
-      var connectionIds = _.keys(this.connections);
-      var connectedEndpointIds = _.keys(connectedEndpoints);
+      connectionIds = _.keys(this.connections);
+      connectedEndpointIds = _.keys(connectedEndpoints);
 
       // Remove 'dead' connections
       // (connections that are still drawn, but aren't connected according to
@@ -270,20 +259,9 @@
       // endpoint models)
       _.difference(connectedEndpointIds, connectionIds)
        .forEach(function(id) {
-         var pair = connectedEndpoints[id];
-         self.connect(pair[0], pair[1]); 
-       });
-    },
-
-    refreshEndpoints: function() {
-      this.endpoints = merge.apply(
-        this, this.states.map(function(s) { return s.endpoints; }));
-    },
-
-    render: function() {
-      this.states.forEach(function(s) { s.render(); });
-      this.refreshEndpoints();
-      this.refreshConnections();
+         var endpoints = connectedEndpoints[id];
+         this.connect(endpoints[0], endpoints[1]); 
+       }.bind(this));
     }
   });
 })(go.components.plumbing = {});
