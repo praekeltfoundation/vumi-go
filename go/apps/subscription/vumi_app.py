@@ -62,7 +62,8 @@ class SubscriptionApplication(GoApplicationWorker):
         return self.vumi_api.mdb.add_event(event)
 
     @inlineCallbacks
-    def process_command_send_message(self, *args, **kwargs):
+    def process_command_send_message(self, account_key, conversation_key,
+                                     **kwargs):
         # TODO: Update
         command_data = kwargs['command_data']
         log.info('Processing send_message: %s' % kwargs)
