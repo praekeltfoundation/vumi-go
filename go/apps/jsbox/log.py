@@ -1,6 +1,9 @@
 # -*- test-case-name: go.apps.jsbox.tests.test_log -*-
 # -*- coding: utf-8 -*-
 
+import logging
+import datetime
+
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi import log
@@ -29,9 +32,11 @@ class LogManager(object):
         return ":".join([campaign_key, conversation_key])
 
     @Manager.calls_manager
-    def add_log(self, campaign_key, conversation_key, msg):
+    def add_log(self, campaign_key, conversation_key, msg, level):
+        ts = datetime.datetime.utcnow().isoformat()
+        full_msg = "[%s, %s] %s" % (ts, logging.getLevelName(level), msg)
         conv_key = self._conv_key(campaign_key, conversation_key)
-        yield self.redis.lpush(conv_key, msg)
+        yield self.redis.lpush(conv_key, full_msg)
         yield self.redis.ltrim(conv_key, 0, self.max_logs_per_conversation)
 
     @Manager.calls_manager
@@ -51,6 +56,7 @@ class GoLoggingResource(LoggingResource):
 
     @inlineCallbacks
     def setup(self):
+        super(GoLoggingResource, self).setup()
         redis_config = self.config.get('redis_manager', {})
         max_logs_per_conversation = self.config.get(
             'max_logs_per_conversation')
@@ -58,34 +64,12 @@ class GoLoggingResource(LoggingResource):
         self.log_manager = LogManager(redis, max_logs_per_conversation)
 
     @inlineCallbacks
-    def handle_info(self, api, command):
-        """
-        Logs a message at the INFO level.
-
-        Command fields:
-            - ``msg``: the message to log.
-
-        Success reply fields:
-            - ``success``: set to ``true``
-
-        Example:
-        .. code-block:: javascript
-            api.request(
-                'log.info',
-                {msg: 'Logging this message.'},
-                function(reply) {
-                    // reply.success is true here
-                });
-        """
-        if 'msg' not in command:
-            returnValue(self.reply(command, success=False,
-                                   reason="Logging expects a value for msg."))
-        msg = str(command['msg'])
-        log.info(msg)
+    def log(self, api, msg, level):
+        log.msg(msg, logLevel=level)
 
         conv = self.app_worker.conversation_for_api(api)
         campaign_key = conv.user_account_key
         conversation_key = conv.key
 
-        yield self.log_manager.add_log(campaign_key, conversation_key, msg)
-        returnValue(self.reply(command, success=True))
+        yield self.log_manager.add_log(campaign_key, conversation_key,
+                                       msg, level)
