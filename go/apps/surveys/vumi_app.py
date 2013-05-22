@@ -150,13 +150,18 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
                 yield self.start_survey(to_addr, conv, **msg_options)
 
     @inlineCallbacks
-    def process_command_send_message(self, *args, **kwargs):
+    def process_command_send_message(self, user_account_key, conversation_key,
+                                     **kwargs):
+        command_data = kwargs.pop('command_data')
+        if kwargs:
+            log.info("Received unexpected command args: %s" % (kwargs,))
+        conv = yield self.get_conversation(user_account_key, conversation_key)
         log.info('Processing send_message: %s' % kwargs)
-        command_data = kwargs['command_data']
         to_addr = command_data['to_addr']
         content = command_data['content']
         msg_options = command_data['msg_options']
         in_reply_to = msg_options.pop('in_reply_to', None)
+        self.add_conv_to_msg_options(conv, msg_options)
         if in_reply_to:
             msg = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
             if msg:
