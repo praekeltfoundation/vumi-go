@@ -119,7 +119,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
                  (conversation_key,))
 
     @inlineCallbacks
-    def process_command_send_message(self, *args, **kwargs):
+    def process_command_send_message(self, account_key, conversation_key, **kwargs):
         command_data = kwargs['command_data']
         log.info('Processing send_message: %s' % kwargs)
         to_addr = command_data['to_addr']
