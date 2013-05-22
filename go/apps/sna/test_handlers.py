@@ -145,7 +145,6 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
         self.assertEqual(send_msg_cmd['command'], 'send_message')
         self.assertEqual(send_msg_cmd['kwargs'], {
             'command_data': {
-                'conversation_key': self.conversation.key,
                 'batch_id': (yield self.conversation.get_latest_batch_key()),
                 'content': 'english sms',
                 'to_addr': self.contact.msisdn,
@@ -160,6 +159,9 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
         yield self.send_event(self.contact.msisdn)
         [command] = self.get_dispatcher_commands()[2:]
 
+        self.assertEqual(command['args'],
+                         [self.conversation.user_account.key,
+                          self.conversation.key])
         data = command['kwargs']['command_data']
         self.assertEqual(data['content'], 'english sms')
 
@@ -170,5 +172,8 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
         yield self.send_event(self.contact.msisdn)
         [command] = self.get_dispatcher_commands()[2:]
 
+        self.assertEqual(command['args'],
+                         [self.conversation.user_account.key,
+                          self.conversation.key])
         data = command['kwargs']['command_data']
         self.assertEqual(data['content'], 'swahili sms')

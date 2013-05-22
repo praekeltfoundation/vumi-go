@@ -221,7 +221,6 @@ class TestSequentialSendApplication(AppWorkerTestCase):
 
         [c1, c2] = yield self.app.get_conversations(
             [[batch_id1, conv1.key], [batch_id2, conv2.key]])
-        print c1, c2
 
         self.assertEqual(sorted([c1.key, c2.key]),
                          sorted([conv1.key, conv2.key]))

@@ -547,6 +547,9 @@ class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(reply_to_cmd['worker_name'],
                             'bulk_message_application')
         self.assertEqual(reply_to_cmd['command'], 'send_message')
+        self.assertEqual(reply_to_cmd['args'],
+                         [self.conversation.user_account.key,
+                          self.conversation.key])
         self.assertEqual(reply_to_cmd['kwargs']['command_data'], {
             'batch_id': conversation.get_latest_batch_key(),
             'conversation_key': conversation.key,
