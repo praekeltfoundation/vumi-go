@@ -106,7 +106,6 @@ class USSDMenuCompletionHandler(SNAEventHandler):
         yield conversation.dispatch_command(
             'send_message', account_key, conversation.key,
             command_data={
-                'conversation_key': conversation.key,
                 'batch_id': batch_id,
                 'to_addr': from_addr,
                 'content': content,
