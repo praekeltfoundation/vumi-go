@@ -92,7 +92,9 @@
     create: function(model) { return new Backbone.View({model: model}); },
 
     add: function(id) {
-      Lookup.prototype.add.call(this, id, this.create(this.models.get(id)));
+      var view = this.create(this.models.get(id));
+      Lookup.prototype.add.call(this, id, view);
+      view.render();
     },
 
     remove: function(id) {
@@ -102,19 +104,6 @@
     },
 
     render: function() {
-      var modelIds = this._modelIds(),
-          viewIds = this.keys();
-
-      // Remove 'dead' views
-      // (views with models that no longer exist)
-      _.difference(viewIds, modelIds)
-       .forEach(this.remove);
-
-      // Add 'new' view
-      // (models with no corresponding views)
-      _.difference(modelIds, viewIds)
-       .forEach(this.add);
-
       this.values().forEach(function(v) { v.render(); });
     }
   });

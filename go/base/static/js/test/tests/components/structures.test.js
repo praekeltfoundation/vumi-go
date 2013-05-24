@@ -167,6 +167,13 @@ describe("go.components.structures", function() {
 
         views.add('d');
       });
+
+      it("should render the added view",
+         function() {
+        models.add({id: 'd'});
+        views.add('d');
+        assert(views.get('d').rendered);
+      });
     });
 
     describe(".remove", function() {
@@ -199,31 +206,8 @@ describe("go.components.structures", function() {
     });
 
     describe(".render()", function() {
-      beforeEach(function() {
-        // stop the view collection from automatically rendering when a model is
-        // added/removed from the model collection
-        models.off('add');
-        models.off('remove');
-      });
-
-      it("should remove 'dead' views", function() {
-        models.remove('c');
-
-        assert.deepEqual(views.keys(), ['a', 'b', 'c']);
-        views.render();
-        assert.deepEqual(views.keys(), ['a', 'b']);
-      });
-
-      it("should add 'new' views", function() {
-        models.add({id: 'd'});
-
-        assert.deepEqual(views.keys(), ['a', 'b', 'c']);
-        views.render();
-        assert.deepEqual(views.keys(), ['a', 'b', 'c', 'd']);
-      });
-
       it("should render all the views in the collection", function() {
-        views.values().forEach(function(v) { assert(!v.rendered); });
+        views.values().forEach(function(v) { v.rendered = false; });
         views.render();
         views.values().forEach(function(v) { assert(v.rendered); });
       });
