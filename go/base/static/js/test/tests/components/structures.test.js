@@ -77,10 +77,6 @@ describe("go.components.structures", function() {
       it("should get a value by its key", function() {
         assert.equal(lookup.get('a'), 1);
       });
-
-      it("return null if the key does not exist", function() {
-        assert.equal(lookup.get('d'), null);
-      });
     });
 
     describe(".add", function() {
@@ -181,7 +177,7 @@ describe("go.components.structures", function() {
          function() {
         var viewC = views.get('c');
         assert.equal(views.remove('c'), viewC);
-        assert.equal(views.get('c'), null);
+        assert.isUndefined(views.get('c'));
       });
 
       it("should emit a 'remove' event", function(done) {

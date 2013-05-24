@@ -42,7 +42,7 @@
     values: function() { return _.values(this._items); },
     items: function() { return _.clone(this._items); },
 
-    get: function(key) { return this._items[key] || null; },
+    get: function(key) { return this._items[key]; },
 
     add: function(key, value) {
       this._items[key] = value;
