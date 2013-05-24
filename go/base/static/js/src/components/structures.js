@@ -75,14 +75,16 @@
   //   - 'remove' (id, view) - Emitted when a view is removed
   exports.ViewCollection = Lookup.extend({
     constructor: function(collection) {
+      var self = this;
+
       Lookup.prototype.constructor.call(this);
       _.bindAll(this);
 
       this.models = collection;
       this._modelIds().forEach(this.add);
 
-      this.models.on('add', this.render);
-      this.models.on('remove', this.render);
+      this.models.on('add', function(m) { self.add(m.id); });
+      this.models.on('remove', function(m) { self.remove(m.id); });
     },
 
     _modelId: function(m) { return m.id; },

@@ -138,6 +138,28 @@ describe("go.components.structures", function() {
       views = new ToyViewCollection(models);
     });
 
+    describe("on 'add' collection events", function(done) {
+      it("should add a corresponding view", function(done) {
+        models.on('add', function() {
+          assert.equal(views.get('d').model, models.get('d'));
+          done();
+        });
+
+        models.add({id: 'd'});
+      });
+    });
+
+    describe("on 'remove' collection events", function(done) {
+      it("should remove the corresponding view", function(done) {
+        models.on('remove', function() {
+          assert.isUndefined(views.get('c'));
+          done();
+        });
+
+        models.remove('c');
+      });
+    });
+
     describe(".add", function() {
       beforeEach(function() {
         // stop the view collection from automatically adding a view when a
