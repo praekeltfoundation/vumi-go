@@ -1,0 +1,73 @@
+{% load url from future %}
+<div class="row">
+    <div class="span12">
+        <h3>Messages from {{inbound_uniques_count}} unique people.</h3>
+        <p>
+            Averaging {{conversation.get_inbound_throughput}} messages
+            per minute inbound and {{conversation.get_outbound_throughput}} messages
+            per minute outbound.
+        </p>
+        <div class="pull-right">
+            <div class="btn-group">
+                <a class="btn btn-success" href="#"><i class="icon-user white"></i> Conversation Actions</a>
+                <a class="btn btn-success dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    <li><a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=inbound"><i class="icon-download"></i> Download Received Stats</a></li>
+                    <li><a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=outbound"><i class="icon-download"></i> Download Sent Stats</a></li>
+                    <li><a data-toggle="modal" href="#expMessagesFrm"><i class="icon-envelope"></i> Export Messages</a></li>
+                    <li><a href="{{ conversation.get_absolute_url }}jslogs"><i class="icon-list"></i> View Sandbox Logs</a></li>
+                </ul>
+            </div>
+        </div>
+        <form class="form-search">
+            <input type="text" name="q" size="40" placeholder="Search ..." value="{{query|default:""}}" class="input-medium search-query">
+            <input type="hidden" name="direction" value="{{message_direction}}"/>
+            <button type="submit" class="btn">Search</button>
+        </form>
+    </div>
+</div>
+<div class="tabbable padtop">
+    <ul class="nav nav-tabs">
+        <li {% ifequal message_direction 'inbound' %}class="active"{% endifequal %}>
+            <a href="?direction=inbound">
+                {% ifequal message_direction 'inbound' %}<strong>{% endifequal %}
+                {{inbound_message_paginator.count}} Received
+                {% ifequal message_direction 'inbound' %}</strong>{% endifequal %}
+            </a>
+        </li>
+        <li {% ifequal message_direction 'outbound' %}class="active"{% endifequal %}>
+            <a href="?direction=outbound">
+                {% ifequal message_direction 'outbound' %}<strong>{% endifequal %}
+                {{outbound_message_paginator.count}} Sent
+                {% ifequal message_direction 'outbound' %}</strong>{% endifequal %}
+            </a>
+        </li>
+    </ul>
+    <div class="tab-content" id="message-page">
+        {% if message_page.paginator.num_pages %}
+            {% include "generic/includes/message-list.html" %}
+        {% else %}
+            {% include "generic/includes/message-load-results.html" %}
+        {% endif %}
+    </div>
+</div>
+
+<div class="modal hide fade" id="expMessagesFrm">
+    <div class="modal-header">
+        <a class="close" data-dismiss="modal">×</a>
+        <h3>Schedule CSV Export of Messages</h3>
+    </div>
+    <form method="post" action="" class="form-horizontal">
+        {% csrf_token %}
+        <div class="modal-body">
+            <p><span class="help-block">
+              The file is potentially quite large and as a result the export 
+              will be done in the background. When completed the results will 
+              be sent to you as a CSV file attached to an email.
+            </span><br/></p>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" name="_export_conversation_messages" class="btn btn-primary" data-loading-text="uploading...">Schedule Export</button>
+        </div>
+    </form>
+</div><!--/expContactFrm-->
