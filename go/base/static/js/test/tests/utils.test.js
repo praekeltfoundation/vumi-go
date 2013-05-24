@@ -28,32 +28,4 @@ describe("go.utils", function() {
       assert.deepEqual(c, {c: 3});
     });
   });
-
-  describe(".parent", function() {
-    var Extendable = go.components.structures.Extendable,
-        parent = go.utils.parent;
-
-    it("should provide the 'super' prototype", function() {
-      var Parent = Extendable.extend(),
-          Child = Parent.extend();
-
-      assert.equal(parent(new Child()), Parent.prototype);
-    });
-
-    it("should provide a property on the 'super' prototype", function() {
-      var Parent = Extendable.extend({prop: 23}),
-          Child = Parent.extend({prop: 22});
-
-      assert.equal(parent(new Child(), 'prop'), 23);
-    });
-
-    it("should provide binded versions of the 'super' prototype's functions",
-       function() {
-      var Parent = Extendable.extend({fn: function() { return this; }}),
-          Child = Parent.extend({fn: function() { return 22; }}),
-          child = new Child();
-
-      assert.equal(parent(child, 'fn')(), child);
-    });
-  });
 });
