@@ -54,7 +54,7 @@ def jsbox_logs(request, conversation_key):
     log_manager = LogManager(redis)
     logs = log_manager.get_logs(campaign_key, conversation_key)
     logs = list(reversed(logs))
-    return render_to_response("jsbox_logs.html", {
+    return render_to_response("jsbox/jsbox_logs.html", {
         "conversation": conversation,
         "logs": logs,
     })

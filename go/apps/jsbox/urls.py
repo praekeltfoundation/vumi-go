@@ -7,5 +7,6 @@ urlpatterns = JsboxConversationViews().get_urlpatterns()
 
 urlpatterns += patterns('',
     url(r'^cross-domain-xhr/$', cross_domain_xhr, name="cross_domain_xhr"),
-    url(r'^(?P<conversation_key>\w+)/jslogs/$', jsbox_logs, name="jsbox_logs"),
+    url(r'^(?P<conversation_key>\w+)/jsbox_logs/$', jsbox_logs,
+        name="jsbox_logs"),
 )

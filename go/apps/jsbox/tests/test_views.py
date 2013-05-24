@@ -5,11 +5,14 @@ from django.core.urlresolvers import reverse
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.apps.jsbox.log import LogManager
+from go.apps.jsbox.views import JsboxConversationViews
 
 from mock import patch, Mock
 
 
 class JsBoxTestCase(DjangoGoApplicationTestCase):
+
+    VIEWS_CLASS = JsboxConversationViews
 
     def setUp(self):
         super(JsBoxTestCase, self).setUp()
@@ -40,6 +43,15 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, reverse('jsbox:edit', kwargs={
             'conversation_key': conversation.key,
         }))
+
+    def test_show_conversation(self):
+        [conversation_key] = self.conv_store.list_conversations()
+        kwargs = {'conversation_key': conversation_key}
+        response = self.client.get(reverse('jsbox:show', kwargs=kwargs))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "View Sandbox Logs")
+        self.assertContains(response,
+                            reverse('jsbox:jsbox_logs', kwargs=kwargs))
 
     def test_edit_conversation(self):
         # render the form
