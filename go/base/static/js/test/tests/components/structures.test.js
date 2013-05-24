@@ -117,4 +117,103 @@ describe("go.components.structures", function() {
       });
     });
   });
+
+  describe(".ViewCollection", function() {
+    var ViewCollection = structures.ViewCollection,
+        models,
+        views;
+
+    var ToyView = Backbone.View.extend({
+      initialize: function() { this.rendered = false; },
+      render: function() { this.rendered = true; }
+    });
+
+    var ToyViewCollection = ViewCollection.extend({
+      create: function(model) { return new ToyView({model: model}); }
+    });
+
+    beforeEach(function() {
+      models = new Backbone.Collection([{id: 'a'}, {id: 'b'}, {id: 'c'}]);
+      views = new ToyViewCollection(models);
+    });
+
+    describe(".add", function() {
+      beforeEach(function() {
+        // stop the view collection from automatically adding a view when a
+        // model is added to the model collection
+        models.off('add');
+      });
+
+      it("should add a view corresponding to the model with the passed in id",
+         function() {
+        models.add({id: 'd'});
+        views.add('d');
+        assert.equal(views.get('d').model, models.get('d'));
+      });
+
+      it("should emit an 'add' event", function(done) {
+        models.add({id: 'd'});
+
+        views.on('add', function(id, view) {
+          assert.equal(id, 'd');
+          assert.equal(view, views.get('d'));
+          done();
+        });
+
+        views.add('d');
+      });
+    });
+
+    describe(".remove", function() {
+      it("should remove the view with the model with the passed in id",
+         function() {
+           var viewC = views.get('c');
+           assert.equal(views.remove('c'), viewC);
+           assert.equal(views.get('c'), null);
+      });
+
+      it("should emit a 'remove' event", function(done) {
+        var viewC = views.get('c');
+
+        views.on('remove', function(id, view) {
+          assert.equal(id, 'c');
+          assert.equal(view, viewC);
+          done();
+        });
+
+        views.remove('c');
+      });
+    });
+
+    describe(".render()", function() {
+      beforeEach(function() {
+        // stop the view collection from automatically rendering when a model is
+        // added/removed from the model collection
+        models.off('add');
+        models.off('remove');
+      });
+
+      it("should remove 'dead' views", function() {
+        models.remove('c');
+
+        assert.deepEqual(views.keys(), ['a', 'b', 'c']);
+        views.render();
+        assert.deepEqual(views.keys(), ['a', 'b']);
+      });
+
+      it("should add 'new' views", function() {
+        models.add({id: 'd'});
+
+        assert.deepEqual(views.keys(), ['a', 'b', 'c']);
+        views.render();
+        assert.deepEqual(views.keys(), ['a', 'b', 'c', 'd']);
+      });
+
+      it("should render all the views in the collection", function() {
+        views.values().forEach(function(v) { assert(!v.rendered); });
+        views.render();
+        views.values().forEach(function(v) { assert(v.rendered); });
+      });
+    });
+  });
 });
