@@ -81,14 +81,13 @@
       _.bindAll(this);
 
       this.models = collection;
-      this._modelIds().forEach(this.add);
+      this.models
+        .map(function(m) { return m.id; })
+        .forEach(this.add);
 
       this.models.on('add', function(m) { self.add(m.id); });
       this.models.on('remove', function(m) { self.remove(m.id); });
     },
-
-    _modelId: function(m) { return m.id; },
-    _modelIds: function(m) { return this.models.map(this._modelId); },
 
     // Override to specialise how the view is created
     create: function(model) { return new Backbone.View({model: model}); },
