@@ -1,7 +1,10 @@
+import logging
+
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.apps.jsbox.log import LogManager
 
 from mock import patch, Mock
 
@@ -104,3 +107,24 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(mocked_get.called)
         self.assertEqual(response.content, 'foo')
         self.assertEqual(response.status_code, 200)
+
+    def test_jsbox_logs(self):
+        campaign_key = self.user_api.user_account_key
+        [conversation_key] = self.conv_store.list_conversations()
+        log_manager = LogManager(self.user_api.api.redis.sub_manager(
+            "jsbox_logs_store"))
+        for i in range(10):
+            log_manager.add_log(campaign_key, conversation_key,
+                                "test %d" % i, logging.INFO)
+        kwargs = {'conversation_key': conversation_key}
+        response = self.client.get(reverse('jsbox:jsbox_logs', kwargs=kwargs))
+        self.assertEqual(response.status_code, 200)
+        for i in range(10):
+            self.assertContains(response, "INFO] test %d" % i)
+
+    def test_jsbox_empty_logs(self):
+        [conversation_key] = self.conv_store.list_conversations()
+        kwargs = {'conversation_key': conversation_key}
+        response = self.client.get(reverse('jsbox:jsbox_logs', kwargs=kwargs))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No logs yet.")

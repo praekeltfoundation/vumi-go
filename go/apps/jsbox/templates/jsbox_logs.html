@@ -19,12 +19,16 @@
             <div id="logs">
                 <table>
                   <thead>
-                    <th><td>Log Level</td><td>Log Message</td></th>
+                    <th><td>Logs</td></th>
                   </thead>
                   <tbody>
-                    {% for log_level, log_msg in logs %}
-                    <tr><td>{{ log_level }}</td><td>{{ log_msg }}</td></tr>
+                  {% if logs %}
+                    {% for msg in logs %}
+                      <tr><td>{{ msg }}</td></tr>
                     {% endfor %}
+                  {% else %}
+                    <tr><td>No logs yet.</td></tr>
+                  {% endif %}
                   </tbody>
                 </table>
             </div>
