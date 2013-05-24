@@ -3,7 +3,8 @@
 // Reusable, generic structures for Go
 
 (function(exports) {
-  var merge = go.utils.merge;
+  var merge = go.utils.merge,
+      GoError = go.errors.GoError;
 
   // Acts as a 'base' for class-like objects which can be extended (with the
   // prototype chain set up automatically)
@@ -81,25 +82,31 @@
       _.bindAll(this);
 
       this.models = collection;
-      this.models
-        .map(function(m) { return m.id; })
-        .forEach(this.add);
+      this.models.each(this._add);
 
-      this.models.on('add', function(m) { self.add(m.id); });
-      this.models.on('remove', function(m) { self.remove(m.id); });
+      this.models.on('add', this._add);
+      this.models.on('remove', this._remove);
     },
 
     // Override to specialise how the view is created
     create: function(model) { return new Backbone.View({model: model}); },
 
-    add: function(id) {
-      var view = this.create(this.models.get(id));
-      Lookup.prototype.add.call(this, id, view);
+    add: function() {
+      throw new GoError("ViewCollections cannot be added to externally");
+    },
+
+    remove: function() {
+      throw new GoError("ViewCollections cannot be removed from externally");
+    },
+
+    _add: function(model) {
+      var view = this.create(model);
+      Lookup.prototype.add.call(this, model.id, view);
       view.render();
     },
 
-    remove: function(id) {
-      var view = Lookup.prototype.remove.call(this, id);
+    _remove: function(model) {
+      var view = Lookup.prototype.remove.call(this, model.id);
       if (view && typeof view.destroy === 'function') { view.destroy(); }
       return view;
     },

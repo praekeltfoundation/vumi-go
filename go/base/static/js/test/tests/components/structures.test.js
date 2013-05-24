@@ -138,8 +138,8 @@ describe("go.components.structures", function() {
       views = new ToyViewCollection(models);
     });
 
-    describe("on 'add' collection events", function(done) {
-      it("should add a corresponding view", function(done) {
+    describe("on 'add' collection events", function() {
+      it("should add a view corresponding to the model", function(done) {
         models.on('add', function() {
           assert.equal(views.get('d').model, models.get('d'));
           done();
@@ -147,9 +147,28 @@ describe("go.components.structures", function() {
 
         models.add({id: 'd'});
       });
+
+      it("should emit an 'add' event", function(done) {
+        views.on('add', function(id, view) {
+          assert.equal(id, 'd');
+          assert.equal(view, views.get('d'));
+          done();
+        });
+
+        models.add({id: 'd'});
+      });
+
+      it("should render the added view", function(done) {
+        models.on('add', function() {
+          assert(views.get('d').rendered);
+          done();
+        });
+
+        models.add({id: 'd'});
+      });
     });
 
-    describe("on 'remove' collection events", function(done) {
+    describe("on 'remove' collection events", function() {
       it("should remove the corresponding view", function(done) {
         models.on('remove', function() {
           assert.isUndefined(views.get('c'));
@@ -157,49 +176,6 @@ describe("go.components.structures", function() {
         });
 
         models.remove('c');
-      });
-    });
-
-    describe(".add", function() {
-      beforeEach(function() {
-        // stop the view collection from automatically adding a view when a
-        // model is added to the model collection
-        models.off('add');
-      });
-
-      it("should add a view corresponding to the model with the passed in id",
-         function() {
-        models.add({id: 'd'});
-        views.add('d');
-        assert.equal(views.get('d').model, models.get('d'));
-      });
-
-      it("should emit an 'add' event", function(done) {
-        models.add({id: 'd'});
-
-        views.on('add', function(id, view) {
-          assert.equal(id, 'd');
-          assert.equal(view, views.get('d'));
-          done();
-        });
-
-        views.add('d');
-      });
-
-      it("should render the added view",
-         function() {
-        models.add({id: 'd'});
-        views.add('d');
-        assert(views.get('d').rendered);
-      });
-    });
-
-    describe(".remove", function() {
-      it("should remove the view with the model with the passed in id",
-         function() {
-        var viewC = views.get('c');
-        assert.equal(views.remove('c'), viewC);
-        assert.isUndefined(views.get('c'));
       });
 
       it("should emit a 'remove' event", function(done) {
@@ -211,15 +187,19 @@ describe("go.components.structures", function() {
           done();
         });
 
-        views.remove('c');
+        models.remove('c');
       });
 
-      it("should call the view's destroy() function if it exists", function() {
+      it("should call the view's destroy() function if it exists",
+         function(done) {
         var viewC = views.get('c');
 
-        assert(!viewC.destroyed);
-        views.remove('c');
-        assert(viewC.destroyed);
+        models.on('remove', function() {
+          assert(viewC.destroyed);
+          done();
+        });
+
+        models.remove('c');
       });
     });
 
