@@ -124,7 +124,12 @@ describe("go.components.structures", function() {
         views;
 
     var ToyView = Backbone.View.extend({
-      initialize: function() { this.rendered = false; },
+      initialize: function() {
+        this.rendered = false;
+        this.destroyed = false;
+      },
+
+      destroy: function() { this.destroyed = true; },
       render: function() { this.rendered = true; }
     });
 
@@ -167,9 +172,9 @@ describe("go.components.structures", function() {
     describe(".remove", function() {
       it("should remove the view with the model with the passed in id",
          function() {
-           var viewC = views.get('c');
-           assert.equal(views.remove('c'), viewC);
-           assert.equal(views.get('c'), null);
+        var viewC = views.get('c');
+        assert.equal(views.remove('c'), viewC);
+        assert.equal(views.get('c'), null);
       });
 
       it("should emit a 'remove' event", function(done) {
@@ -182,6 +187,14 @@ describe("go.components.structures", function() {
         });
 
         views.remove('c');
+      });
+
+      it("should call the view's destroy() function if it exists", function() {
+        var viewC = views.get('c');
+
+        assert(!viewC.destroyed);
+        views.remove('c');
+        assert(viewC.destroyed);
       });
     });
 
