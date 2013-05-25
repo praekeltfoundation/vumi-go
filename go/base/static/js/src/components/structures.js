@@ -70,6 +70,7 @@
   // abstract structure.
   var ProtectedLookup = exports.ProtectedLookup = Lookup.extend({
     _add: Lookup.prototype.add,
+
     _remove: Lookup.prototype.remove,
 
     add: function() {
