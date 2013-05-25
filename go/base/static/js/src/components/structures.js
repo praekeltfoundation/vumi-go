@@ -76,8 +76,6 @@
   //   - 'remove' (id, view) - Emitted when a view is removed
   exports.ViewCollection = Lookup.extend({
     constructor: function(collection) {
-      var self = this;
-
       Lookup.prototype.constructor.call(this);
       _.bindAll(this);
 
