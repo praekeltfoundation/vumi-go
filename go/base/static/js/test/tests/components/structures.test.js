@@ -136,7 +136,7 @@ describe("go.components.structures", function() {
 
     describe(".subscribe", function() {
       it("should add all the lookup's items to the group", function() {
-        group.subscribe('c', new Lookup({g: 7, h: 8}));
+        assert.equal(group.subscribe('c', new Lookup({g: 7, h: 8})), group);
         assert.equal(group.get('g'), 7);
         assert.equal(group.get('h'), 8);
       });
@@ -176,7 +176,7 @@ describe("go.components.structures", function() {
 
     describe(".unsubscribe", function() {
       it("should remove all the lookup's items from the group", function() {
-        group.unsubscribe('b');
+        assert.equal(group.unsubscribe('b'), lookupB);
         assert(!group.has('d'));
         assert(!group.has('e'));
         assert(!group.has('f'));

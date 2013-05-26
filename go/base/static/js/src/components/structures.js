@@ -115,6 +115,7 @@
       lookup.on('remove', this._remove, this);
 
       this.members._add(key, lookup);
+      return this;
     },
 
     unsubscribe: function(key) {
@@ -125,6 +126,7 @@
       lookup.off('remove', this._remove, this);
 
       this.members._remove(key);
+      return lookup;
     }
   });
 
