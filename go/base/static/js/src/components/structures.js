@@ -94,7 +94,6 @@
   exports.LookupGroup = ProtectedLookup.extend({
     constructor: function(lookups) {
       Lookup.prototype.constructor.call(this);
-      _.bindAll(this, '_add', '_remove');
 
       // Having the members lookup as protected might feel a bit wierd, since
       // we need to access its protected methods externally. However, this
@@ -112,18 +111,18 @@
       var items = lookup.items();
       for (var k in items) { this._add(k, items[k]); }
 
-      lookup.on('add', this._add);
-      lookup.on('remove', this._remove);
+      lookup.on('add', this._add, this);
+      lookup.on('remove', this._remove, this);
 
       this.members._add(key, lookup);
     },
 
     unsubscribe: function(key) {
       var lookup = this.members.get(key);
-      lookup.keys().forEach(this._remove);
+      lookup.keys().forEach(this._remove, this);
 
-      lookup.off('add', this._add);
-      lookup.off('remove', this._remove);
+      lookup.off('add', this._add, this);
+      lookup.off('remove', this._remove, this);
 
       this.members._remove(key);
     }
@@ -145,13 +144,12 @@
   exports.ViewCollection = ProtectedLookup.extend({
     constructor: function(collection) {
       Lookup.prototype.constructor.call(this);
-      _.bindAll(this, '_add', '_remove');
 
       this.models = collection;
-      this.models.each(this._add);
+      this.models.each(this._add, this);
 
-      this.models.on('add', this._add);
-      this.models.on('remove', this._remove);
+      this.models.on('add', this._add, this);
+      this.models.on('remove', this._remove, this);
     },
 
     // Override to specialise how the view is created
