@@ -55,14 +55,14 @@
   // the initial state (`state0`).
   exports.StateMachineModel = Backbone.RelationalModel.extend({
     relations: [{
-        type: Backbone.HasMany,
-        key: 'states',
-        relatedModel: 'go.components.states.StateModel'
-      }, {
-        type: Backbone.HasOne,
-        key: 'state0',
-        includeInJSON: 'id',
-        relatedModel: 'go.components.states.StateModel'
-      }]
+      type: Backbone.HasMany,
+      key: 'states',
+      relatedModel: 'go.components.states.StateModel'
+    }, {
+      type: Backbone.HasOne,
+      key: 'state0',
+      includeInJSON: 'id',
+      relatedModel: 'go.components.states.StateModel'
+    }]
   });
 })(go.components.states = {});
