@@ -79,13 +79,12 @@
 
     constructor: function(collection) {
       Lookup.prototype.constructor.call(this);
-      _.bindAll(this);
 
       this.models = collection;
-      this.models.each(this._add);
+      this.models.each(function(m) { this._add(m, {render: false}); }, this);
 
-      this.models.on('add', this._add, {render: false});
-      this.models.on('remove', this._remove, {render: false});
+      this.models.on('add', this._add, this);
+      this.models.on('remove', this._remove, this);
     },
 
     // Override to specialise how the view is created
