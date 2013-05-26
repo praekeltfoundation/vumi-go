@@ -75,6 +75,8 @@
   //   - 'add' (id, view) - Emitted when a view is added
   //   - 'remove' (id, view) - Emitted when a view is removed
   exports.ViewCollection = Lookup.extend({
+    addDefaults: {render: true},
+
     constructor: function(collection) {
       Lookup.prototype.constructor.call(this);
       _.bindAll(this);
@@ -82,8 +84,8 @@
       this.models = collection;
       this.models.each(this._add);
 
-      this.models.on('add', this._add);
-      this.models.on('remove', this._remove);
+      this.models.on('add', this._add, {render: false});
+      this.models.on('remove', this._remove, {render: false});
     },
 
     // Override to specialise how the view is created
@@ -97,10 +99,11 @@
       throw new GoError("ViewCollections cannot be removed from externally");
     },
 
-    _add: function(model) {
+    _add: function(model, options) {
+      _.defaults(options, this.addDefaults);
       var view = this.create(model);
       Lookup.prototype.add.call(this, model.id, view);
-      view.render();
+      if (options.render) { view.render(); }
     },
 
     _remove: function(model) {
