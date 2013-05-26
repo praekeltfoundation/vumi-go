@@ -61,6 +61,7 @@
       }, {
         type: Backbone.HasOne,
         key: 'state0',
+        includeInJSON: 'id',
         relatedModel: 'go.components.states.StateModel'
       }]
   });
