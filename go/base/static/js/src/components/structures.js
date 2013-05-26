@@ -142,11 +142,13 @@
   //   - 'add' (id, view) - Emitted when a view is added
   //   - 'remove' (id, view) - Emitted when a view is removed
   exports.ViewCollection = ProtectedLookup.extend({
+    addDefaults: {render: true},
+
     constructor: function(collection) {
       Lookup.prototype.constructor.call(this);
 
       this.models = collection;
-      this.models.each(this._add, this);
+      this.models.each(function(m) { this._add(m, {render: false}); }, this);
 
       this.models.on('add', this._add, this);
       this.models.on('remove', this._remove, this);
@@ -155,10 +157,11 @@
     // Override to specialise how the view is created
     create: function(model) { return new Backbone.View({model: model}); },
 
-    _add: function(model) {
+    _add: function(model, options) {
+      _.defaults(options, this.addDefaults);
       var view = this.create(model);
-      ProtectedLookup.prototype._add.call(this, model.id, view);
-      view.render();
+      Lookup.prototype.add.call(this, model.id, view);
+      if (options.render) { view.render(); }
     },
 
     _remove: function(model) {
