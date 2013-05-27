@@ -70,7 +70,7 @@ class GoApiServer(JSONRPC):
         """List the campaigns a user has access to."""
         return [CampaignType.format_campaign({
             'key': self.user_account_key,
-            'name': "Your Campaign",
+            'name': u"Your Campaign",
         })]
 
     @signature(campaign_key=Unicode("Campaign key."),
@@ -107,16 +107,22 @@ class GoApiWorker(BaseWorker):
         addIntrospection(rpc)
         return rpc
 
+    def get_health_response(self):
+        return "OK"
+
     @inlineCallbacks
     def setup_worker(self):
         config = self.get_static_config()
-        self.vumi_api = yield VumiApi.from_config_async(config)
+        self.vumi_api = yield VumiApi.from_config_async({
+            'redis_manager': config.redis_manager,
+            'riak_manager': config.riak_manager,
+        })
         self.realm = GoUserRealm(self._rpc_resource_for_user)
-        site = build_web_site([
-            (config.web_path, GoUserAuthSessionWrapper(self.realm,
-                                                       self.vumi_api)),
-            (config.health_path, httprpc.HttpRpcHealthResource(self)),
-        ])
+        site = build_web_site({
+            config.web_path: GoUserAuthSessionWrapper(
+                self.realm, self.vumi_api),
+            config.health_path: httprpc.HttpRpcHealthResource(self),
+        })
         self.addService(
             StreamServerEndpointService(config.twisted_endpoint, site))
 
