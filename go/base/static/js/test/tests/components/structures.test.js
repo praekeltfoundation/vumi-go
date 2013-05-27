@@ -2,7 +2,7 @@ describe("go.components.structures", function() {
   var structures = go.components.structures;
 
   describe(".Extendable", function() {
-    var Extendable = go.components.structures.Extendable;
+    var Extendable = structures.Extendable;
 
     it("should set up the prototype chain correctly", function() {
       var Parent = Extendable.extend(),
@@ -62,6 +62,13 @@ describe("go.components.structures", function() {
       });
     });
 
+    describe(".has", function() {
+      it("should determine whether an item exists in the lookup", function() {
+        assert.deepEqual(lookup.has('a'), true);
+        assert.deepEqual(lookup.has('d'), false);
+      });
+    });
+
     describe(".items", function() {
       it("should get a shallow copy of the lookup's items", function() {
         var items = lookup.items();
@@ -110,6 +117,100 @@ describe("go.components.structures", function() {
         });
 
         lookup.remove('c');
+      });
+    });
+  });
+
+  describe(".LookupGroup", function() {
+    var Lookup = structures.Lookup,
+        LookupGroup = structures.LookupGroup,
+        lookupA,
+        lookupB,
+        group;
+
+    beforeEach(function() {
+      lookupA = new Lookup({a: 1, b: 2, c: 3});
+      lookupB = new Lookup({d: 4, e: 5, f: 6});
+      group = new LookupGroup({'a': lookupA, 'b': lookupB});
+    });
+
+    describe(".subscribe", function() {
+      it("should add all the lookup's items to the group", function() {
+        assert.equal(group.subscribe('c', new Lookup({g: 7, h: 8})), group);
+        assert.equal(group.get('g'), 7);
+        assert.equal(group.get('h'), 8);
+      });
+
+      it("should bind the lookup's adds to the groups own adds",
+         function(done) {
+        var lookupC = new Lookup({g: 7, h: 8});
+        group.subscribe('c', lookupC);
+
+        lookupC.on('add', function(key, value) {
+          assert.equal(group.get('i'), 9);
+          done();
+        });
+
+        lookupC.add('i', 9);
+      });
+
+      it("should bind the lookup's removes to the groups own removes",
+         function(done) {
+        var lookupC = new Lookup({g: 7, h: 8});
+        group.subscribe('c', lookupC);
+
+        lookupC.on('remove', function(key, value) {
+          assert(!group.has('g'));
+          done();
+        });
+
+        lookupC.remove('g');
+      });
+
+      it("should add lookup to the group's member lookup", function() {
+        var lookupC = new Lookup({g: 7, h: 8});
+        group.subscribe('c', lookupC);
+        assert.equal(group.members.get('c'), lookupC);
+      });
+    });
+
+    describe(".unsubscribe", function() {
+      it("should remove all the lookup's items from the group", function() {
+        assert.equal(group.unsubscribe('b'), lookupB);
+        assert(!group.has('d'));
+        assert(!group.has('e'));
+        assert(!group.has('f'));
+      });
+
+      it("should unbind the lookup's adds from the groups own adds",
+         function(done) {
+        group.unsubscribe('b');
+
+        lookupB.on('add', function(key, value) {
+          assert(!group.has('i'));
+          done();
+        });
+
+        lookupB.add('i', 9);
+      });
+
+      it("should unbind the lookup's removes from the groups own removes",
+         function(done) {
+        group.unsubscribe('b');
+        group.subscribe('c', new Lookup({d: 'four'}));
+
+        lookupB.on('remove', function(key, value) {
+          // assert that the item is still there
+          assert.equal(group.get('d'), 'four');
+          done();
+        });
+
+        lookupB.remove('d');
+      });
+
+      it("should remove the lookup from the group's member lookup", function() {
+        group.unsubscribe('b');
+        assert(!group.members.has('b'));
       });
     });
   });
