@@ -40,8 +40,12 @@
     },
 
     keys: function() { return _.keys(this._items); },
+
     values: function() { return _.values(this._items); },
+
     items: function() { return _.clone(this._items); },
+
+    has: function(k) { return _.has(this._items, k); },
 
     get: function(key) { return this._items[key]; },
 
@@ -61,6 +65,71 @@
     }
   });
 
+  // A protected form of a lookup who's collection of items can only be
+  // added/removed from internally. Intended to be used as an extendable,
+  // abstract structure.
+  var ProtectedLookup = exports.ProtectedLookup = Lookup.extend({
+    _add: Lookup.prototype.add,
+
+    _remove: Lookup.prototype.remove,
+
+    add: function() {
+      throw new GoError("ProtectedLookups cannot be added to externally");
+    },
+
+    remove: function() {
+      throw new GoError("ProtectedLookups cannot be removed from externally");
+    }
+  });
+
+  // A self-maintained, 'flattened' collection of all the items of lookups
+  // subscribed to it.
+  //
+  // Arguments:
+  //   - lookups: key-lookup pairs for the initial members to subscribe.
+  //
+  // Events emitted:
+  //   - 'add' (key, value) - Emitted when an item is added
+  //   - 'remove' (key, value) - Emitted when an item is removed
+  exports.LookupGroup = ProtectedLookup.extend({
+    constructor: function(lookups) {
+      Lookup.prototype.constructor.call(this);
+
+      // Having the members lookup as protected might feel a bit wierd, since
+      // we need to access its protected methods externally. However, this
+      // allows places that use a `LookupGroup` to check things directly
+      // on the members lookup, for eg: `lookup.members.has(k)`, instead of us
+      // needing to bloat `LookupGroup` with methods to proxy access to the
+      // lookup methods.
+      this.members = new ProtectedLookup();
+
+      lookups = lookups || {};
+      for (var k in lookups) { this.subscribe(k, lookups[k]); }
+    },
+
+    subscribe: function(key, lookup) {
+      var items = lookup.items();
+      for (var k in items) { this._add(k, items[k]); }
+
+      lookup.on('add', this._add, this);
+      lookup.on('remove', this._remove, this);
+
+      this.members._add(key, lookup);
+      return this;
+    },
+
+    unsubscribe: function(key) {
+      var lookup = this.members.get(key);
+      lookup.keys().forEach(this._remove, this);
+
+      lookup.off('add', this._add, this);
+      lookup.off('remove', this._remove, this);
+
+      this.members._remove(key);
+      return lookup;
+    }
+  });
+
   // Accepts a collection of models and maintains a corresponding collection of
   // views. New views are created when models are added to the collection, old
   // views are removed when models are removed from the collection. Views can
@@ -74,7 +143,7 @@
   // Events emitted:
   //   - 'add' (id, view) - Emitted when a view is added
   //   - 'remove' (id, view) - Emitted when a view is removed
-  exports.ViewCollection = Lookup.extend({
+  exports.ViewCollection = ProtectedLookup.extend({
     addDefaults: {render: true},
 
     constructor: function(collection) {
@@ -90,23 +159,15 @@
     // Override to specialise how the view is created
     create: function(model) { return new Backbone.View({model: model}); },
 
-    add: function() {
-      throw new GoError("ViewCollections cannot be added to externally");
-    },
-
-    remove: function() {
-      throw new GoError("ViewCollections cannot be removed from externally");
-    },
-
     _add: function(model, options) {
-      _.defaults(options, this.addDefaults);
       var view = this.create(model);
-      Lookup.prototype.add.call(this, model.id, view);
+      ProtectedLookup.prototype._add.call(this, model.id, view);
+      view.render();
       if (options.render) { view.render(); }
     },
 
     _remove: function(model) {
-      var view = Lookup.prototype.remove.call(this, model.id);
+      var view = ProtectedLookup.prototype._remove.call(this, model.id);
       if (view && typeof view.destroy === 'function') { view.destroy(); }
       return view;
     },
