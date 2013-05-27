@@ -1,4 +1,5 @@
 from StringIO import StringIO
+from zipfile import ZipFile
 
 from celery.task import task
 
@@ -67,12 +68,17 @@ def export_conversation_messages(account_key, conversation_key):
         writer.writerow([unicode(message.payload.get(fn) or '')
                             for fn in field_names])
 
+    zipio = StringIO()
+    zf = ZipFile(zipio, "a")
+    zf.writestr("messages-export.csv", io.getvalue())
+    zf.close()
+
     email = EmailMessage(
         'Conversation message export: %s' % (conversation.name,),
         'Please find the messages of the conversation %s attached.\n' % (
             conversation.name),
         settings.DEFAULT_FROM_EMAIL, [user_profile.user.email])
-    email.attach('messages-export.csv', io.getvalue(), 'text/csv')
+    email.attach('messages-export.zip', zipio.getvalue(), 'application/zip')
     email.send()
 
 
@@ -88,10 +94,13 @@ def send_one_off_reply(account_key, conversation_key, in_reply_to, content):
     [tag] = conversation.get_tags()
     msg_options = conversation.make_message_options(tag)
     msg_options['in_reply_to'] = in_reply_to
-    conversation.dispatch_command('send_message', command_data={
-        "batch_id": conversation.get_latest_batch_key(),
-        "conversation_key": conversation.key,
-        "to_addr": inbound_message['from_addr'],
-        "content": content,
-        "msg_options": msg_options,
-        })
+    conversation.dispatch_command(
+        'send_message', account_key, conversation_key,
+        command_data={
+            "batch_id": conversation.get_latest_batch_key(),
+            "conversation_key": conversation.key,
+            "to_addr": inbound_message['from_addr'],
+            "content": content,
+            "msg_options": msg_options,
+       }
+    )

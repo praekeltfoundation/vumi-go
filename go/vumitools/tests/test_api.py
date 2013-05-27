@@ -331,6 +331,11 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         # We don't want to actually send commands here.
         conv.dispatch_command = lambda *args, **kw: None
         yield conv.start()
+
+        # Set the status manually, because it's in `starting', not `running'
+        conv.set_status_started()
+        yield conv.save()
+
         returnValue(conv)
 
     @inlineCallbacks
@@ -383,6 +388,11 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         # We don't want to actually send commands here.
         conv2.dispatch_command = lambda *args, **kw: None
         yield conv2.start()
+
+        # Set the status manually, because it's in `starting', not `running'
+        conv2.set_status_started()
+        yield conv2.save()
+
         # Release the tag, but keep the conv running.
         yield self.user_api.release_tag((u'pool1', u'9012'))
 

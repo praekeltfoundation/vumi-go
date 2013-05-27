@@ -90,16 +90,18 @@ class SubscriptionTestCase(DjangoGoApplicationTestCase):
                 },
             }
 
-        [cmd] = self.get_api_commands_sent()
-        expected_cmd = VumiApiCommand.command(
-            '%s_application' % (conversation.conversation_type,), 'start',
-            batch_id=batch.key,
-            msg_options=msg_options,
-            conversation_type=conversation.conversation_type,
-            conversation_key=conversation.key,
-            is_client_initiated=conversation.is_client_initiated(),
-            )
-        self.assertEqual(cmd, expected_cmd)
+        [start_cmd, hack_cmd] = self.get_api_commands_sent()
+        self.assertEqual(start_cmd, VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,), 'start',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key))
+        self.assertEqual(hack_cmd, VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,),
+                'initial_action_hack',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key,
+                is_client_initiated=conversation.is_client_initiated(),
+                batch_id=batch.key, msg_options=msg_options))
 
     def test_send_fails(self):
         """

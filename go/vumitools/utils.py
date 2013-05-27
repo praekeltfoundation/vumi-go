@@ -255,7 +255,7 @@ class OldGoMessageMetadata(object):
             log.warning('Multiple conversations found '
                         'going with most recent: %r' % (conv_keys,))
         conversation = sorted(conversations, reverse=True,
-                              key=lambda c: c.start_timestamp)[0]
+                              key=lambda c: c.created_at)[0]
 
         self._go_metadata['conversation_key'] = conversation.key
         self._go_metadata['conversation_type'] = conversation.conversation_type

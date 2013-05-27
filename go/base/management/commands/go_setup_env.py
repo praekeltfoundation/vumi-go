@@ -13,8 +13,6 @@ from django.template import Context, Template
 
 from optparse import make_option
 
-# from foo import create_tagpool, create_user, create_transport
-
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.riak_manager import RiakManager
 from vumi.components import TagpoolManager
@@ -160,25 +158,15 @@ class Command(BaseCommand):
                 self.create_application_configs(application_file))
 
         if options['write_dispatcher_configs']:
-            self.create_app_msg_dispatcher_config(self.application_names)
-            self.write_supervisor_config_file(
-                'application_message_dispatcher',
-                'vumi.dispatchers.base.BaseDispatchWorker')
-            self.create_vumigo_router_config(self.transport_names)
-            self.write_supervisor_config_file(
-                'vumigo_router',
-                'vumi.dispatchers.base.BaseDispatchWorker')
             self.create_command_dispatcher_config(self.application_names)
             self.write_supervisor_config_file(
                 'command_dispatcher',
                 'go.vumitools.api_worker.CommandDispatcher')
-            # For endpoint-based routing.
             self.create_routing_table_dispatcher_config(
                 self.application_names, self.transport_names)
             self.write_supervisor_config_file(
                 'routing_table_dispatcher',
-                'go.vumitools.routing.AccountRoutingTableDispatcher',
-                enabled=False)
+                'go.vumitools.routing.AccountRoutingTableDispatcher')
 
         if options['write_supervisord_config']:
             self.write_supervisord_conf()
@@ -331,7 +319,6 @@ class Command(BaseCommand):
             conv_info.pop('start', None)  # Don't pass to conversation.
             user = User.objects.get(username=conv_info.pop('account'))
             user_api = vumi_api_for_user(user)
-            timestamp = conv_info.pop('start_timestamp', datetime.utcnow())
             conversation_key = conv_info.pop('key')
             if user_api.get_wrapped_conversation(conversation_key):
                 self.stderr.write(
@@ -343,8 +330,7 @@ class Command(BaseCommand):
                 conversation_key, user_account=user_api.user_account_key,
                 conversation_type=unicode(conv_info.pop('conversation_type')),
                 name=unicode(conv_info.pop('name')),
-                config=conv_info.pop('config', {}),
-                start_timestamp=timestamp, **conv_info)
+                config=conv_info.pop('config', {}), **conv_info)
             conv.save()
             self.stdout.write('Conversation %s created\n' % (conv.key,))
 
@@ -419,38 +405,6 @@ class Command(BaseCommand):
             cp.set(section, "stderr_logfile",
                    "./logs/%(program_name)s_%(process_num)s.log")
             cp.write(fp)
-        self.stdout.write('Wrote %s.\n' % (fn,))
-
-    def create_app_msg_dispatcher_config(self, applications):
-        fn = self.mk_filename('application_message_dispatcher', 'yaml')
-        with self.open_file(fn, 'w') as fp:
-            templ = 'application_message_dispatcher.yaml.template'
-            data = self.render_template(templ, {
-                'exposed_names': [
-                    '%s_transport' % (app,) for app in applications],
-                'conversation_mappings': dict([
-                    (application, '%s_transport' % (application,)) for
-                    application in applications]),
-                'redis_manager': self.dump_yaml_block(
-                    self.config['redis_manager'], 1),
-                'riak_manager': self.dump_yaml_block(
-                    self.config['riak_manager'], 1),
-            })
-            fp.write(self.auto_gen_warning)
-            fp.write(data)
-
-        self.stdout.write('Wrote %s.\n' % (fn,))
-
-    def create_vumigo_router_config(self, transport_names):
-        fn = self.mk_filename('vumigo_router', 'yaml')
-        with self.open_file(fn, 'w') as fp:
-            templ = 'vumigo_router.yaml.template'
-            data = self.render_template(templ, {
-                'transport_names': transport_names,
-            })
-            fp.write(self.auto_gen_warning)
-            fp.write(data)
-
         self.stdout.write('Wrote %s.\n' % (fn,))
 
     def create_command_dispatcher_config(self, applications):
