@@ -124,7 +124,9 @@ class TestGoLoggingResource(ResourceTestCaseBase, GoPersistenceMixin,
                 'key_prefix': self.parent_redis.get_key_prefix(),
             }
         })
-        self.conversation = Mock(key="conv-1", user_account_key="campaign-1")
+
+        self.user_account = Mock(key="campaign-1")
+        self.conversation = Mock(key="conv-1", user_account=self.user_account)
         self.resource.app_worker.conversation = self.conversation
 
     @inlineCallbacks
