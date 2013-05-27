@@ -50,8 +50,7 @@ def cross_domain_xhr(request):
 def jsbox_logs(request, conversation_key):
     campaign_key = request.user_api.user_account_key
     conversation = conversation_or_404(request.user_api, conversation_key)
-    redis = request.user_api.api.redis.sub_manager("jsbox_logs_store")
-    log_manager = LogManager(redis)
+    log_manager = LogManager(request.user_api.api.redis)
     logs = log_manager.get_logs(campaign_key, conversation_key)
     logs = list(reversed(logs))
     return render_to_response("jsbox/jsbox_logs.html", {

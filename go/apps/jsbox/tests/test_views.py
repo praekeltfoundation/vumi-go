@@ -123,8 +123,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
     def test_jsbox_logs(self):
         campaign_key = self.user_api.user_account_key
         [conversation_key] = self.conv_store.list_conversations()
-        log_manager = LogManager(self.user_api.api.redis.sub_manager(
-            "jsbox_logs_store"))
+        log_manager = LogManager(self.user_api.api.redis)
         for i in range(10):
             log_manager.add_log(campaign_key, conversation_key,
                                 "test %d" % i, logging.INFO)

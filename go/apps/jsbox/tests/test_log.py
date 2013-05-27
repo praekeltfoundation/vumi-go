@@ -49,7 +49,9 @@ class TestTxLogManager(TestCase, GoPersistenceMixin, LogCheckerMixin):
     def setUp(self):
         super(TestTxLogManager, self).setUp()
         yield self._persist_setUp()
-        self.redis = yield self.get_redis_manager()
+        self.parent_redis = yield self.get_redis_manager()
+        self.redis = self.parent_redis.sub_manager(
+            LogManager.DEFAULT_SUB_STORE)
 
     @inlineCallbacks
     def tearDown(self):
@@ -57,7 +59,7 @@ class TestTxLogManager(TestCase, GoPersistenceMixin, LogCheckerMixin):
         yield self._persist_tearDown()
 
     def log_manager(self, max_logs=None):
-        return LogManager(self.redis, max_logs)
+        return LogManager(self.parent_redis, max_logs)
 
     @inlineCallbacks
     def test_add_log(self):
@@ -113,11 +115,13 @@ class TestGoLoggingResource(ResourceTestCaseBase, GoPersistenceMixin,
     def setUp(self):
         super(TestGoLoggingResource, self).setUp()
         yield self._persist_setUp()
-        self.redis = yield self.get_redis_manager()
+        self.parent_redis = yield self.get_redis_manager()
+        self.redis = self.parent_redis.sub_manager(
+            LogManager.DEFAULT_SUB_STORE)
         yield self.create_resource({
             'redis_manager': {
-                'FAKE_REDIS': self.redis,
-                'key_prefix': self.redis._key_prefix,
+                'FAKE_REDIS': self.parent_redis,
+                'key_prefix': self.parent_redis.get_key_prefix(),
             }
         })
         self.conversation = Mock(key="conv-1", user_account_key="campaign-1")

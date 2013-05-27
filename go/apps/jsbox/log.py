@@ -21,8 +21,12 @@ class LogManager(object):
     # Django.
 
     DEFAULT_MAX_LOGS_PER_CONVERSATION = 1000
+    DEFAULT_SUB_STORE = "jsbox_logs_store"
 
-    def __init__(self, redis, max_logs_per_conversation=None):
+    def __init__(self, redis, max_logs_per_conversation=None,
+                 sub_store=DEFAULT_SUB_STORE):
+        if sub_store is not None:
+            redis = redis.sub_manager(sub_store)
         self.redis = self.manager = redis
         if max_logs_per_conversation is None:
             max_logs_per_conversation = self.DEFAULT_MAX_LOGS_PER_CONVERSATION
@@ -61,7 +65,8 @@ class GoLoggingResource(LoggingResource):
         max_logs_per_conversation = self.config.get(
             'max_logs_per_conversation')
         redis = yield TxRedisManager.from_config(redis_config)
-        self.log_manager = LogManager(redis, max_logs_per_conversation)
+        self.log_manager = LogManager(
+            redis, max_logs_per_conversation=max_logs_per_conversation)
 
     @inlineCallbacks
     def log(self, api, msg, level):
