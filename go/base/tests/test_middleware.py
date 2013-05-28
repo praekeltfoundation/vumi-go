@@ -6,10 +6,38 @@ from django.test.client import RequestFactory
 from django.test.utils import override_settings
 from django.http import HttpResponse
 
-from go.base.middleware import ResponseTimeMiddleware
+from go.api.go_api.session_manager import SessionManager
 from go.base.amqp import AmqpConnection
+from go.base.middleware import VumiUserApiMiddleware, ResponseTimeMiddleware
+from go.base.tests.utils import VumiGoDjangoTestCase
+from go.vumitools.api import VumiUserApi
 
 from mock import patch
+
+
+class VumiUserApiMiddlewareTestCase(VumiGoDjangoTestCase):
+    def setUp(self):
+        super(VumiUserApiMiddlewareTestCase, self).setUp()
+        self.setup_api()
+        self.user = self.mk_django_user()
+        self.factory = RequestFactory()
+        self.mw = VumiUserApiMiddleware()
+
+    def test_unauthenticated_access(self):
+        request = self.factory.get('/accounts/login/')
+        self.mw.process_request(request)
+        self.assertFalse(hasattr(request, 'user_api'))
+        self.assertFalse(hasattr(request, 'session'))
+
+    def test_authenticated_access(self):
+        request = self.factory.get('/accounts/login/')
+        request.user = self.user
+        request.session = {}
+        self.mw.process_request(request)
+        self.assertTrue(isinstance(request.user_api, VumiUserApi))
+        self.assertEqual(
+            SessionManager.get_user_account_key(request.session),
+            self.user.get_profile().user_account)
 
 
 class ResponseTimeMiddlewareTestcase(TestCase):
