@@ -33,7 +33,7 @@
 (function(exports) {
   // Model for a 'placeholder' attached to a state that one end of a connection
   // can be hooked onto.
-  exports.EndpointModel = Backbone.RelationalModel.extend({
+  var EndpointModel = Backbone.RelationalModel.extend({
     relations: [{
       type: Backbone.HasOne,
       key: 'target',
@@ -43,7 +43,7 @@
   });
 
   // Model for a single state in a state machine
-  exports.StateModel = Backbone.RelationalModel.extend({
+  var StateModel = Backbone.RelationalModel.extend({
     relations: [{
       type: Backbone.HasMany,
       key: 'endpoints',
@@ -53,7 +53,7 @@
 
   // Model for a state machine. Holds a collection of states and keeps track of
   // the initial state (`state0`).
-  exports.StateMachineModel = Backbone.RelationalModel.extend({
+  var StateMachineModel = Backbone.RelationalModel.extend({
     relations: [{
       type: Backbone.HasMany,
       key: 'states',
@@ -64,5 +64,11 @@
       includeInJSON: 'id',
       relatedModel: 'go.components.states.StateModel'
     }]
+  });
+
+  _.extend(exports, {
+    EndpointModel: EndpointModel,
+    StateModel: StateModel,
+    StateMachineModel: StateMachineModel
   });
 })(go.components.states = {});
