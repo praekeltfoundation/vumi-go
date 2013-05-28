@@ -3,16 +3,16 @@
 
 from django.contrib.sessions.backends.base import SessionBase, CreateError
 
-from go.go_api.session_manager import SessionManager
+from go.base.utils import vumi_api
 
 
 class SessionStore(SessionBase):
     """
-    Implements database session store.
+    Implements redis session store on top of `go.api.go_api.session_manager`.
     """
     def __init__(self, session_key=None):
         super(SessionStore, self).__init__(session_key)
-        self.session_manager = SessionManager()
+        self.session_manager = vumi_api().session_manager
 
     def encode(self, data):
         """Replace Django's pickle serialization with a null-op.
@@ -30,9 +30,9 @@ class SessionStore(SessionBase):
 
     def load(self):
         session_data = self.session_manager.get_session(self.session_key)
-        if session_data:
+        if session_data is not None:
             session = self.decode(session_data)
-            if session:
+            if session is not None:
                 return session
         self.create()
         return {}
