@@ -5,6 +5,8 @@
    Django and Twisted workers (e.g. the Go API).
    """
 
+import json
+
 from twisted.internet.defer import returnValue
 
 from vumi.persist.redis_base import Manager
@@ -30,11 +32,18 @@ class SessionManager(object):
         """Returns True if the session_key exists, False otherwise."""
         return self.manager.exists(self._session_key(session_key))
 
+    @Manager.calls_manager
     def get_session(self, session_key):
         """Returns the session_data for the session_key or None if the
            session_key doesn't exist or has expired.
            """
-        return self.manager.get(self._session_key(session_key))
+        session_json = yield self.manager.get(self._session_key(session_key))
+        session_data = json.loads(session_json)
+        returnValue(session_data)
+
+    @classmethod
+    def set_user_account_key(cls, session, user_account_key):
+        session[GO_USER_ACCOUNT_KEY] = user_account_key
 
     @Manager.calls_manager
     def get_user_account_key(self, session_key):
@@ -42,26 +51,30 @@ class SessionManager(object):
 
         Otherwise returns None.
         """
-        session = self.get_session(session_key)
+        # TODO: make this method more similar to set_user_account_key
+        session = yield self.get_session(session_key)
         if session:
             returnValue(session.get(GO_USER_ACCOUNT_KEY))
-        return None
+        returnValue(None)
 
     @Manager.calls_manager
     def create_session(self, session_key, session_data, expire_seconds):
         """Attempts to create the given session entry. Returns False
            if the attempt to create the session fails and True otherwise.
            """
+        session_json = json.dumps(session_data)
         created = yield self.manager.setnx(
-            self._session_key(session_key), session_data)
+            self._session_key(session_key), session_json)
         if created:
-            yield self.manager.expire(expire_seconds)
+            yield self.manager.expire(
+                self._session_key(session_key), expire_seconds)
         returnValue(created)
 
     @Manager.calls_manager
     def save_session(self, session_key, session_data, expire_seconds):
         """Save the given session entry."""
-        yield self.manager.set(self._session_key(session_key), session_data)
+        session_json = json.dumps(session_data)
+        yield self.manager.set(self._session_key(session_key), session_json)
         yield self.manager.expire(expire_seconds)
 
     def delete_session(self, session_key):

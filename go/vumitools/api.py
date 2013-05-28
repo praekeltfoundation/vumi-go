@@ -20,6 +20,7 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
+from go.api.go_api.session_manager import SessionManager
 from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
@@ -480,6 +481,8 @@ class VumiApi(object):
         self.account_store = AccountStore(self.manager)
         self.token_manager = TokenManager(
                                 self.redis.sub_manager('token_manager'))
+        self.session_manager = SessionManager(
+            self.redis.sub_manager('session_manager'))
         self.mapi = sender
 
     @staticmethod

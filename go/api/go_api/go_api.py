@@ -64,7 +64,7 @@ class GoApiServer(JSONRPC):
     def _format_conversation_list(self, convs):
         return [ConversationType.format_conversation(c) for c in convs]
 
-    @signature(returns=List("List of campaigns",
+    @signature(returns=List("List of campaigns.",
                             item_type=CampaignType()))
     def jsonrpc_campaigns(self):
         """List the campaigns a user has access to."""

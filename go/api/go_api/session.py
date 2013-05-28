@@ -2,7 +2,6 @@
 # -*- test-case-name: go.api.go_api.tests.test_session -*-
 
 from django.contrib.sessions.backends.base import SessionBase, CreateError
-from django.utils.encoding import force_unicode
 
 from go.go_api.session_manager import SessionManager
 
@@ -15,10 +14,24 @@ class SessionStore(SessionBase):
         super(SessionStore, self).__init__(session_key)
         self.session_manager = SessionManager()
 
+    def encode(self, data):
+        """Replace Django's pickle serialization with a null-op.
+
+        The SessionManager can store any JSON serializable object.
+        """
+        return data
+
+    def decode(self, data):
+        """Replace Django's pickle serialization with a null-op.
+
+        The SessionManager can store any JSON serializable object.
+        """
+        return data
+
     def load(self):
         session_data = self.session_manager.get_session(self.session_key)
         if session_data:
-            session = self.decode(force_unicode(session_data))
+            session = self.decode(session_data)
             if session:
                 return session
         self.create()

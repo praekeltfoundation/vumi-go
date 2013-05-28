@@ -30,7 +30,7 @@ class GoUserSessionAccessChecker(object):
     implements(checkers.ICredentialsChecker)
     credentialInterfaces = (credentials.IUsernamePassword,)
 
-    EXPECTED_USERNAME = "session"
+    EXPECTED_USERNAME = "session_id"
 
     def __init__(self, session_manager):
         self.session_manager = session_manager
@@ -50,7 +50,7 @@ class GoUserSessionAccessChecker(object):
 class GoUserAuthSessionWrapper(HTTPAuthSessionWrapper):
     def __init__(self, realm, vumi_api):
         checkers = [
-            GoUserSessionAccessChecker(vumi_api),
+            GoUserSessionAccessChecker(vumi_api.session_manager),
         ]
         p = portal.Portal(realm, checkers)
         factory = BasicCredentialFactory("Vumi Go API")

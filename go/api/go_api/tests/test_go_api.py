@@ -15,6 +15,7 @@ from go.vumitools.api import VumiApi
 from go.vumitools.tests.utils import GoPersistenceMixin
 from go.api.go_api.go_api import (
     GoApiWorker, GoApiServer, ConversationType, CampaignType)
+from go.api.go_api.session_manager import SessionManager
 
 
 class ConversationTypeTestCase(TestCase):
@@ -125,7 +126,7 @@ class GoApiWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
         yield super(GoApiWorkerTestCase, self).tearDown()
 
     @inlineCallbacks
-    def get_api_worker(self, config=None, start=True):
+    def get_api_worker(self, config=None, start=True, auth=True):
         config = {} if config is None else config
         config.setdefault('worker_name', 'test_api_worker')
         config.setdefault('twisted_endpoint', 'tcp:0')
@@ -138,12 +139,27 @@ class GoApiWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
         yield worker.startService()
         port = worker.services[0]._waitingForPort.result
         addr = port.getHost()
-        proxy = Proxy("http://%s:%d/api/" % (addr.host, addr.port))
+
+        vumi_api = worker.vumi_api
+
+        user, password = None, None
+        if auth:
+            account = yield self.mk_user(vumi_api, u"user-1")
+            session_id = "session-1"
+            session = {}
+            vumi_api.session_manager.set_user_account_key(
+                session, account.key)
+            yield vumi_api.session_manager.create_session(
+                session_id, session, expire_seconds=30)
+            user, password = "session_id", session_id
+
+        proxy = Proxy("http://%s:%d/api/" % (addr.host, addr.port),
+                      user=user, password=password)
         returnValue((worker, proxy))
 
     @inlineCallbacks
     def test_invalid_auth(self):
-        worker, proxy = yield self.get_api_worker()
+        worker, proxy = yield self.get_api_worker(auth=False)
         try:
             yield proxy.callRemote('system.listMethods')
         except ValueError, e:
@@ -154,8 +170,8 @@ class GoApiWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
     @inlineCallbacks
     def test_valid_auth(self):
         worker, proxy = yield self.get_api_worker()
-        result = yield proxy.callRemote('system.listMethods')
-        self.fail("Check something here.")
+        yield proxy.callRemote('system.listMethods')
+        # if we reach here the proxy call didn't throw an authentication error
 
     @inlineCallbacks
     def test_list_methods(self):
@@ -168,19 +184,10 @@ class GoApiWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
         worker, proxy = yield self.get_api_worker()
         result = yield proxy.callRemote('system.methodHelp', 'campaigns')
         self.assertEqual(result, u"\n".join([
-            "Acquire a tag from the pool (returns None if"
-            " no tags are avaliable).",
+            "List the campaigns a user has access to.",
             "",
-            ":param Unicode pool:",
-            "    Name of pool to acquire tag from.",
-            ":param Unicode owner:",
-            "    Owner acquiring tag (or None). May be null. Default: None.",
-            ":param Dict reason:",
-            "    Metadata on why tag is being acquired (or None)."
-            " May be null.",
-            "    Default: None.",
-            ":rtype Tag:",
-            "    Tag acquired (or None).",
+            ":rtype List:",
+            "    List of campaigns.",
         ]))
 
     @inlineCallbacks
