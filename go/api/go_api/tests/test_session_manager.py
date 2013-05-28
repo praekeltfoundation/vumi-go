@@ -58,6 +58,12 @@ class SessionManagerTestCase(TestCase, GoPersistenceMixin):
         self.assertEqual((yield self.sm.exists("session-1")), True)
 
     @inlineCallbacks
+    def test_session_ttl(self):
+        yield self.sm.save_session(u"session-1", {}, 10)
+        self.assertTrue((yield self.sm.session_ttl(u"session-1")) <= 10)
+        self.assertEqual((yield self.sm.session_ttl(u"session-unknown")), None)
+
+    @inlineCallbacks
     def test_get_session(self):
         session = {
             "foo": {"thing": 1},

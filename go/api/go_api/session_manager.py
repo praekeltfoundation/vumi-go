@@ -43,6 +43,17 @@ class SessionManager(object):
         return self.manager.exists(self._session_key(session_key))
 
     @Manager.calls_manager
+    def session_ttl(self, session_key):
+        """Returns the time until the session_key expires.
+
+        Returns None if the key does not exist or has no expiry time.
+        """
+        ttl = yield self.manager.ttl(self._session_key(session_key))
+        if ttl < 0:
+            returnValue(None)
+        returnValue(ttl)
+
+    @Manager.calls_manager
     def get_session(self, session_key):
         """Returns the session_data for the session_key or None if the
            session_key doesn't exist or has expired.
