@@ -25,6 +25,8 @@
             return this;
         }
     });
-    exports.TextareaView = TextareaView;
 
+    _.extend(exports, {
+      TextareaView: TextareaView
+    });
 })(go.campaign.bulkMessage = {});

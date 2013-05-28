@@ -2,7 +2,6 @@
 // =========
 
 (function(exports) {
-
     var init = function(selector) {
         $table = $(selector);
 
@@ -52,9 +51,7 @@
         });
     };
 
-    exports.init = init;
-
-
+    _.extend(exports, {
+      init: init
+    });
 })(go.tables = {});
-
-

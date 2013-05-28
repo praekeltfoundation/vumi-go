@@ -8,9 +8,9 @@
 
   // Acts as a 'base' for class-like objects which can be extended (with the
   // prototype chain set up automatically)
-  exports.Extendable = function () {};
+  var Extendable = function () {};
 
-  exports.Extendable.extend = function() {
+  Extendable.extend = function() {
     // Backbone has an internal `extend()` function which it assigns to its
     // structures. We need this function, so we arbitrarily choose
     // `Backbone.Model`, since it has the function we are looking for.
@@ -18,7 +18,7 @@
   };
 
   // A class-like object onto which events can be bound and emitted
-  exports.Eventable = exports.Extendable.extend(Backbone.Events);
+  var Eventable = Extendable.extend(Backbone.Events);
 
   // A structure that stores key-value pairs, provides helpful operations for
   // accessing the data, and emits events when items are added or removed.
@@ -31,7 +31,7 @@
   // Events emitted:
   //   - 'add' (key, value) - Emitted when an item is added
   //   - 'remove' (key, value) - Emitted when an item is removed
-  var Lookup = exports.Lookup = exports.Eventable.extend({
+  var Lookup = Eventable.extend({
     constructor: function(items) {
       this._items = {};
 
@@ -72,7 +72,7 @@
   // A protected form of a lookup who's collection of items can only be
   // added/removed from internally. Intended to be used as an extendable,
   // abstract structure.
-  var ProtectedLookup = exports.ProtectedLookup = Lookup.extend({
+  var ProtectedLookup = Lookup.extend({
     _add: Lookup.prototype.add,
 
     _remove: Lookup.prototype.remove,
@@ -95,7 +95,7 @@
   // Events emitted:
   //   - 'add' (key, value) - Emitted when an item is added
   //   - 'remove' (key, value) - Emitted when an item is removed
-  exports.LookupGroup = ProtectedLookup.extend({
+  var LookupGroup = ProtectedLookup.extend({
     constructor: function(lookups) {
       Lookup.prototype.constructor.call(this);
 
@@ -147,7 +147,7 @@
   // Events emitted:
   //   - 'add' (id, view) - Emitted when a view is added
   //   - 'remove' (id, view) - Emitted when a view is removed
-  exports.ViewCollection = ProtectedLookup.extend({
+  var ViewCollection = ProtectedLookup.extend({
     addDefaults: {render: true},
 
     constructor: function(collection) {
@@ -164,9 +164,9 @@
     create: function(model) { return new Backbone.View({model: model}); },
 
     _add: function(model, options) {
+      _.defaults(options, this.addDefaults);
       var view = this.create(model);
       ProtectedLookup.prototype._add.call(this, model.id, view);
-      view.render();
       if (options.render) { view.render(); }
     },
 
@@ -179,5 +179,20 @@
     render: function() {
       this.values().forEach(function(v) { v.render(); });
     }
+  });
+
+  // A self-maintaining, 'flattened' lookup of the views in a group of view
+  // collections.
+  var ViewCollectionGroup = LookupGroup.extend({
+    render: ViewCollection.prototype.render
+  });
+
+  _.extend(exports, {
+    Extendable: Extendable,
+    Eventable: Eventable,
+    Lookup: Lookup,
+    LookupGroup: LookupGroup,
+    ViewCollection: ViewCollection,
+    ViewCollectionGroup: ViewCollectionGroup
   });
 })(go.components.structures = {});

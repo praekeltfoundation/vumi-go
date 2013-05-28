@@ -4,12 +4,12 @@
 
 (function(exports) {
   // Merges the passed in objects together into a single object
-  var merge = exports.merge = function() {
+  var merge = function() {
     Array.prototype.unshift.call(arguments, {});
     return _.extend.apply(this, arguments);
   };
 
-  exports.highlightActiveLinks = function() {
+  var highlightActiveLinks = function() {
     // find links in the document that match the current
     // windows url and set them as active.
 
@@ -19,4 +19,9 @@
 
     $('a[href="' + url + '"]').addClass('active');
   };
+
+  _.extend(exports, {
+    merge: merge,
+    highlightActiveLinks: highlightActiveLinks
+  });
 })(go.utils = {});
