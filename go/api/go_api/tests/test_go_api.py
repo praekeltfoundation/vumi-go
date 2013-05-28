@@ -15,7 +15,6 @@ from go.vumitools.api import VumiApi
 from go.vumitools.tests.utils import GoPersistenceMixin
 from go.api.go_api.go_api import (
     GoApiWorker, GoApiServer, ConversationType, CampaignType)
-from go.api.go_api.session_manager import SessionManager
 
 
 class ConversationTypeTestCase(TestCase):
