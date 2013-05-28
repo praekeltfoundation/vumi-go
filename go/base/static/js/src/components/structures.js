@@ -162,7 +162,7 @@
     _add: function(model, options) {
       _.defaults(options, this.addDefaults);
       var view = this.create(model);
-      Lookup.prototype.add.call(this, model.id, view);
+      ProtectedLookup.prototype._add.call(this, model.id, view);
       if (options.render) { view.render(); }
     },
 
