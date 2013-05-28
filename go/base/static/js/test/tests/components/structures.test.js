@@ -64,7 +64,7 @@ describe("go.components.structures", function() {
 
     describe(".each", function() {
       it("should iterate through each lookup item's value", function(done) {
-        var c = 3;
+        var c = lookup.values().length;
 
         lookup.each(function(v, i) {
           assert.equal(v, i + 1);
@@ -75,8 +75,6 @@ describe("go.components.structures", function() {
 
     describe(".map", function() {
       it("should map each lookup's lookup item's value", function() {
-        var c = 3;
-
         assert.deepEqual(
           lookup.map(function(v) { return v + 1; }),
           [2, 3, 4]);
