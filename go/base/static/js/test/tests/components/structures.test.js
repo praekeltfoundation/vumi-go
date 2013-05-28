@@ -62,6 +62,27 @@ describe("go.components.structures", function() {
       });
     });
 
+    describe(".each", function() {
+      it("should iterate through each lookup item's value", function(done) {
+        var c = 3;
+
+        lookup.each(function(v, i) {
+          assert.equal(v, i + 1);
+          --c || done();
+        });
+      });
+    });
+
+    describe(".values", function() {
+      it("should map each lookup's lookup item's value", function() {
+        var c = 3;
+
+        assert.deepEqual(
+          lookup.map(function(v) { return v + 1; }),
+          [2, 3, 4]);
+      });
+    });
+
     describe(".has", function() {
       it("should determine whether an item exists in the lookup", function() {
         assert.deepEqual(lookup.has('a'), true);
