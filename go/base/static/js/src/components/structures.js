@@ -45,9 +45,9 @@
 
     items: function() { return _.clone(this._items); },
 
-    each: function(fn) { return this.values().forEach(fn); },
+    each: function(fn, that) { return this.values().forEach(fn, that); },
 
-    map: function(fn) { return this.values().map(fn); },
+    map: function(fn, that) { return this.values().map(fn, that); },
 
     has: function(k) { return _.has(this._items, k); },
 
