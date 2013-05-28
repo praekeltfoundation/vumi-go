@@ -180,4 +180,10 @@
       this.values().forEach(function(v) { v.render(); });
     }
   });
+
+  // A self-maintaining, 'flattened' lookup of the views in a group of view
+  // collections.
+  exports.ViewCollectionGroup = LookupGroup.extend({
+    render: ViewCollection.prototype.render
+  });
 })(go.components.structures = {});
