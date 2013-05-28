@@ -133,14 +133,8 @@ class GoApiWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
         config.setdefault('health_path', 'health')
         config = self.mk_config(config)
         worker = yield self.get_worker(config, GoApiWorker, start)
-        if not start:
-            returnValue(worker)
-        yield worker.startService()
-        port = worker.services[0]._waitingForPort.result
-        addr = port.getHost()
 
         vumi_api = worker.vumi_api
-
         user, password = None, None
         if auth:
             account = yield self.mk_user(vumi_api, u"user-1")
@@ -151,6 +145,13 @@ class GoApiWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
             yield vumi_api.session_manager.create_session(
                 session_id, session, expire_seconds=30)
             user, password = "session_id", session_id
+
+        if not start:
+            returnValue(worker)
+        yield worker.startService()
+
+        port = worker.services[0]._waitingForPort.result
+        addr = port.getHost()
 
         proxy = Proxy("http://%s:%d/api/" % (addr.host, addr.port),
                       user=user, password=password)
