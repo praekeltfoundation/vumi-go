@@ -164,9 +164,9 @@
     create: function(model) { return new Backbone.View({model: model}); },
 
     _add: function(model, options) {
+      _.defaults(options, this.addDefaults);
       var view = this.create(model);
       ProtectedLookup.prototype._add.call(this, model.id, view);
-      view.render();
       if (options.render) { view.render(); }
     },
 
@@ -179,5 +179,11 @@
     render: function() {
       this.values().forEach(function(v) { v.render(); });
     }
+  });
+
+  // A self-maintaining, 'flattened' lookup of the views in a group of view
+  // collections.
+  exports.ViewCollectionGroup = LookupGroup.extend({
+    render: ViewCollection.prototype.render
   });
 })(go.components.structures = {});
