@@ -6,7 +6,7 @@ from django.conf import settings
 
 from go.base.utils import vumi_api_for_user
 from go.base.amqp import connection
-from go.api.go_api.session_manager import GO_USER_SESSION_KEY
+from go.api.go_api.session_manager import SessionManager
 
 from vumi.blinkenlights.metrics import AVG
 
@@ -19,7 +19,8 @@ class VumiUserApiMiddleware(object):
         if user is not None and user.is_authenticated():
             user_api = vumi_api_for_user(request.user)
             request.user_api = user_api
-            request.session[GO_USER_SESSION_KEY] = user_api.user_account_key
+            SessionManager.set_user_account_key(
+                request.session, user_api.user_account_key)
 
 
 class ResponseTimeMiddleware(object):

@@ -40,8 +40,8 @@ class GoUserSessionAccessChecker(object):
         if credentials.username != self.EXPECTED_USERNAME:
             raise error.UnauthorizedLogin()
         session_id = credentials.password
-        user_account_key = (
-            yield self.session_manager.get_user_account_key(session_id))
+        session = yield self.session_manager.get_session(session_id)
+        user_account_key = self.session_manager.get_user_account_key(session)
         if user_account_key:
             returnValue(user_account_key)
         raise error.UnauthorizedLogin()
