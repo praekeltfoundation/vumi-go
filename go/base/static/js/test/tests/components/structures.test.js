@@ -73,7 +73,7 @@ describe("go.components.structures", function() {
       });
     });
 
-    describe(".values", function() {
+    describe(".map", function() {
       it("should map each lookup's lookup item's value", function() {
         var c = 3;
 
