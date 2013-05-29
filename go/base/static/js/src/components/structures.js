@@ -39,6 +39,8 @@
       for (var k in items) { this.add(k, items[k]); }
     },
 
+    size: function() { return _.size(this._items); },
+
     keys: function() { return _.keys(this._items); },
 
     values: function() { return _.values(this._items); },
@@ -48,6 +50,11 @@
     each: function(fn, that) { return this.values().forEach(fn, that); },
 
     map: function(fn, that) { return this.values().map(fn, that); },
+
+    eachItem: function(fn, that) {
+      var items = this.items();
+      for (var k in items) { fn.call(that, k, items[k]); }
+    },
 
     has: function(k) { return _.has(this._items, k); },
 
