@@ -118,7 +118,7 @@ class GoUserAuthSessionWrapperTestCase(TestCase, GoPersistenceMixin):
 
             def render(self, request):
                 request.setResponseCode(200)
-                return "%s: %s" % (text, self.user)
+                return "%s: %s" % (text, self.user.encode("utf-8"))
 
         realm = GoUserRealm(lambda user: TestResource(user))
         wrapper = GoUserAuthSessionWrapper(realm, self.vumi_api)
