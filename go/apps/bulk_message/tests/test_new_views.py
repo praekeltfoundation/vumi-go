@@ -112,27 +112,28 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
                 },
             }
 
-        [cmd] = self.get_api_commands_sent()
-        expected_cmd = VumiApiCommand.command(
-            '%s_application' % (conversation.conversation_type,), 'start',
-            batch_id=batch.key,
-            dedupe=False,
-            msg_options=msg_options,
-            conversation_type=conversation.conversation_type,
-            conversation_key=conversation.key,
-            is_client_initiated=conversation.is_client_initiated(),
-            )
-        self.assertEqual(cmd, expected_cmd)
+        [start_cmd, hack_cmd] = self.get_api_commands_sent()
+        self.assertEqual(start_cmd, VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,), 'start',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key))
+        self.assertEqual(hack_cmd, VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,),
+                'initial_action_hack',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key,
+                is_client_initiated=conversation.is_client_initiated(),
+                batch_id=batch.key, msg_options=msg_options, dedupe=False))
 
     def test_start_with_deduplication(self):
         self.client.post(self.get_view_url('start'), {'dedupe': '1'})
-        [cmd] = self.get_api_commands_sent()
-        self.assertEqual(cmd.payload['kwargs']['dedupe'], True)
+        [start_cmd, hack_cmd] = self.get_api_commands_sent()
+        self.assertEqual(hack_cmd.payload['kwargs']['dedupe'], True)
 
     def test_start_without_deduplication(self):
         self.client.post(self.get_view_url('start'))
-        [cmd] = self.get_api_commands_sent()
-        self.assertEqual(cmd.payload['kwargs']['dedupe'], False)
+        [start_cmd, hack_cmd] = self.get_api_commands_sent()
+        self.assertEqual(hack_cmd.payload['kwargs']['dedupe'], False)
 
     def test_send_fails(self):
         """
@@ -238,7 +239,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
     def test_aggregates(self):
         self.put_sample_messages_in_conversation(
-            self.user_api, self.conv_key, 10, start_timestamp=date(2012, 1, 1),
+            self.user_api, self.conv_key, 10, start_date=date(2012, 1, 1),
             time_multiplier=12)
         response = self.client.get(self.get_view_url('aggregates'),
                                    {'direction': 'inbound'})
@@ -253,7 +254,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
     def test_export_messages(self):
         self.put_sample_messages_in_conversation(
-            self.user_api, self.conv_key, 10, start_timestamp=date(2012, 1, 1),
+            self.user_api, self.conv_key, 10, start_date=date(2012, 1, 1),
             time_multiplier=12)
         response = self.client.post(self.get_view_url('show'), {
             '_export_conversation_messages': True,
@@ -264,10 +265,10 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(self.conversation.name in email.subject)
         self.assertTrue(self.conversation.name in email.body)
         [(file_name, content, mime_type)] = email.attachments
-        self.assertEqual(file_name, 'messages-export.csv')
+        self.assertEqual(file_name, 'messages-export.zip')
         # 1 header, 10 sent, 10 received, 1 trailing newline == 22
         self.assertEqual(22, len(content.split('\n')))
-        self.assertEqual(mime_type, 'text/csv')
+        self.assertEqual(mime_type, 'application/zip')
 
 
 class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
@@ -352,10 +353,11 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         expected_cmd = VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
             'send_message',
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
             command_data={
                 'batch_id': batch.key,
                 'msg_options': msg_options,
-                'conversation_key': conversation.key,
                 'content':
                     'Please visit http://%s%s to start your conversation.' % (
                     site.domain, reverse('token', kwargs={'token': 'abcdef'})),
@@ -422,7 +424,7 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
 
         batch = conversation.mdb.get_batch(batch_key)
         [tag] = list(batch.tags)
-        [cmd] = self.get_api_commands_sent()
+        [start_cmd, hack_cmd] = self.get_api_commands_sent()
 
         msg_options = {
             "transport_type": "sms",
@@ -433,18 +435,17 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
                 "go": {"user_account": conversation.user_account.key},
                 },
             }
-
-        expected_cmd = VumiApiCommand.command(
-            '%s_application' % (conversation.conversation_type,), 'start',
-            batch_id=batch.key,
-            dedupe=True,
-            msg_options=msg_options,
-            conversation_type=conversation.conversation_type,
-            conversation_key=conversation.key,
-            is_client_initiated=conversation.is_client_initiated(),
-            )
-
-        self.assertEqual(cmd, expected_cmd)
+        self.assertEqual(start_cmd, VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,), 'start',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key))
+        self.assertEqual(hack_cmd, VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,),
+                'initial_action_hack',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key,
+                is_client_initiated=conversation.is_client_initiated(),
+                batch_id=batch.key, msg_options=msg_options, dedupe=True))
 
         # check token was consumed so it can't be re-used to send the
         # conversation messages again
@@ -503,13 +504,16 @@ class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
         })
         self.assertRedirects(response, self.get_view_url('show'))
 
-        [start_cmd, reply_to_cmd] = self.get_api_commands_sent()
+        [start_cmd, hack_cmd, reply_to_cmd] = self.get_api_commands_sent()
         [tag] = conversation.get_tags()
         msg_options = conversation.make_message_options(tag)
         msg_options['in_reply_to'] = msg['message_id']
         self.assertEqual(reply_to_cmd['worker_name'],
                             'bulk_message_application')
         self.assertEqual(reply_to_cmd['command'], 'send_message')
+        self.assertEqual(reply_to_cmd['args'],
+                         [self.conversation.user_account.key,
+                          self.conversation.key])
         self.assertEqual(reply_to_cmd['kwargs']['command_data'], {
             'batch_id': conversation.get_latest_batch_key(),
             'conversation_key': conversation.key,

@@ -12,8 +12,6 @@ from django.contrib import messages
 from django.conf import settings
 from django.http import HttpResponse
 
-from go.vumitools.conversation.models import (
-    CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
 from go.base.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (
@@ -50,7 +48,7 @@ class ConversationView(TemplateView):
         return self.conversation_views.conversation_form(*args, **kw)
 
     def get_next_view(self, conversation):
-        if conversation.get_status() != CONVERSATION_DRAFT:
+        if not conversation.is_draft():
             return 'show'
         if self.conversation_views.conversation_initiator == 'client':
             return 'start'
@@ -86,9 +84,6 @@ class NewConversationView(ConversationView):
         conversation_data['delivery_tag_pool'] = tag_info[0]
         if tag_info[2]:
             conversation_data['delivery_tag'] = tag_info[2]
-
-        # Ignoring start time, because we don't actually do anything with it.
-        conversation_data['start_timestamp'] = datetime.utcnow()
 
         conversation = request.user_api.new_conversation(
             conversation_type, **conversation_data)
@@ -278,14 +273,15 @@ class ShowConversationView(ConversationView):
                 self.conversation_views.edit_conversation_forms is not None),
             'user_api': request.user_api,
             }
-        status = conversation.get_status()
         templ = lambda name: self.get_template_name('includes/%s' % (name,))
 
-        if status == CONVERSATION_FINISHED:
+        if conversation.archived():
+            # HACK: This assumes "stopped" and "archived" are equivalent.
             params['button_template'] = templ('ended-button')
-        elif status == CONVERSATION_RUNNING:
+        elif conversation.running():
             params['button_template'] = templ('end-button')
-        elif status == CONVERSATION_DRAFT:
+        else:
+            # TODO: Figure out better state management.
             params['button_template'] = templ('next-button')
             params['next_url'] = self.get_view_url(
                 self.get_next_view(conversation),

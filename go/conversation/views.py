@@ -6,8 +6,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from go.conversation.forms import ConversationSearchForm
 from go.base.utils import get_conversation_definition, conversation_or_404
-from go.conversation.conversation_views import (
-    ConversationView, ConversationViewFinder)
+from go.conversation.conversation_views import ConversationViewFinder
 
 
 CONVERSATIONS_PER_PAGE = 12
