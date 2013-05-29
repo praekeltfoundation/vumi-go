@@ -6,6 +6,7 @@
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ next }}">
     <fieldset>
+        
         <p>
             <input type="text" name="{{ form.username.name }}" placeholder="{{ form.username.label }}" class="input-large">            
         </p>
@@ -16,6 +17,12 @@
             <button type="submit" class="btn">Sign In</button>
             <a href="{% url 'auth_password_reset' %}">Forgot your password?</a>
         </p>
+
+        {% if form.errors %}
+        <p class="alert alert-error">
+            The username or password that you've provided is incorrect.
+        </p>
+        {% endif %}
     </fieldset>
 </form>
 {% endblock %}
