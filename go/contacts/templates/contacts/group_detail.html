@@ -2,7 +2,7 @@
 {% load url from future %}
 
 
-{% block content_extraclass %}campaigns{% endblock %}
+{% block content_extraclass %}contacts{% endblock %}
 
 {% block content_title %}
     <a href="{% url 'contacts:groups' %}">Groups</a>
@@ -39,9 +39,7 @@
 {% block extrascript %}
     {{ block.super }}
     <script type="text/javascript">
-        $(function() {
-            go.tables.init('.table-manage-data');
-        });
+        go.components.tables.init();
     </script>
 {% endblock %}
 

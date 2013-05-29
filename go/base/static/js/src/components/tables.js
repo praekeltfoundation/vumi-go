@@ -66,7 +66,7 @@
 
         // the entire row of the table should act as a link, except for the
         // header row.
-        $table.find('tbody tr').not(':first-child').click(function() {
+        $table.find('tbody tr').click(function() {
             var url = $(this).attr(opts.linkAttribute);
             if (url.length) window.location = url;
         });

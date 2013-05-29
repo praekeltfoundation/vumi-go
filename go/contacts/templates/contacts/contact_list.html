@@ -12,10 +12,11 @@
 
 
 {% block content_actions_right %}
-    <div class="button pull-left">
+    <div class="components-table-buttons pull-left">
         <button class="btn" disabled="disabled" data-table-id="people">Delete</button>
         <button class="btn" disabled="disabled" data-table-id="people">Export</button>
         <button class="btn" disabled="disabled" data-table-id="people">Assign to group</button>
+        {# TODO: Pipe in group's here #}
     </div>
 {% endblock %}
 
@@ -32,12 +33,15 @@
 
 {% block content_main_list %}
     {% include "contacts/contact_list_table.html" %}
+    {% include "base/includes/pagination.html" %}
 {% endblock %}
 
 
 {% block ondomready %}
     {{ block.super }}
-    go.tables.init('.table-manage-data');
+    go.components.tables.init({
+        checkedToggle: $('.components-table-buttons button')
+    });
 {% endblock %}
 
 {% block modals %}
