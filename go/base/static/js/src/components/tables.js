@@ -20,7 +20,7 @@
         // element within which it's held clickable.
         $checkboxes.parent().click(function(e) {
             e.stopPropagation();
-            var $cb = $(this).find('input[type="checkbox"]').click();
+            var $cb = $(this).find('input:checkbox').click();
         });
 
         $checkboxes.click(function(e) {
@@ -40,6 +40,8 @@
             var allChecked = true;
             var oneChecked = false;
             $checkboxes.each(function() {
+
+
                 if (!$(this).prop('checked')) {
                     // one of our checkboxes isn't checked.
                     allChecked = false;
