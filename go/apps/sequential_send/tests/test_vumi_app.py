@@ -99,7 +99,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         """
 
         # Avoid hitting Riak for the conversation and Redis for poll times.
-        expected = [[conv.get_batch_keys()[0], conv.key] for conv in convs]
+        expected = [[conv.user_account.key, conv.key] for conv in convs]
         poll_times = [(yield self.app._get_last_poll_time())]
         scheduled_conversations = yield self.app._get_scheduled_conversations()
 

@@ -1,7 +1,7 @@
 {% if conversation %}
 	<div class="span4">
 	    <div class="convos shadow">
-	        <span class="label label-info">{{conversation.start_timestamp}}</span>
+	        <span class="label label-info">{{conversation.created_at}}</span>
 	        {% if conversation.ended %}
 	        	<span class="label label-important"><i class="icon-ok-circle icon-white"></i> Finished</span>
 	        {% else %}

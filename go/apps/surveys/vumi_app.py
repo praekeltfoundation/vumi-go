@@ -131,32 +131,16 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             message)
 
     @inlineCallbacks
-    def get_conversation(self, batch_id, conversation_key):
-        batch = yield self.vumi_api.mdb.get_batch(batch_id)
-        if batch is None:
-            log.error('Cannot find batch for batch_id %s' % (batch_id,))
-            return
-
-        user_account_key = batch.metadata["user_account"]
-        if user_account_key is None:
-            log.error("No account key in batch metadata: %r" % (batch,))
-            return
-
-        user_api = self.get_user_api(user_account_key)
-        conv = yield user_api.get_wrapped_conversation(conversation_key)
-        returnValue(conv)
-
-    @inlineCallbacks
-    def process_command_start(self, batch_id, conversation_type,
-                              conversation_key, msg_options,
-                              is_client_initiated, **extra_params):
+    def process_command_send_survey(self, user_account_key, conversation_key,
+                                    batch_id, msg_options, is_client_initiated,
+                                    **extra_params):
 
         if is_client_initiated:
             log.debug('Conversation %r is client initiated, no need to notify '
                       'the application worker' % (conversation_key,))
             return
 
-        conv = yield self.get_conversation(batch_id, conversation_key)
+        conv = yield self.get_conversation(user_account_key, conversation_key)
         if not conv:
             return
 
@@ -166,13 +150,18 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
                 yield self.start_survey(to_addr, conv, **msg_options)
 
     @inlineCallbacks
-    def process_command_send_message(self, *args, **kwargs):
+    def process_command_send_message(self, user_account_key, conversation_key,
+                                     **kwargs):
+        command_data = kwargs.pop('command_data')
+        if kwargs:
+            log.info("Received unexpected command args: %s" % (kwargs,))
+        conv = yield self.get_conversation(user_account_key, conversation_key)
         log.info('Processing send_message: %s' % kwargs)
-        command_data = kwargs['command_data']
         to_addr = command_data['to_addr']
         content = command_data['content']
         msg_options = command_data['msg_options']
         in_reply_to = msg_options.pop('in_reply_to', None)
+        self.add_conv_to_msg_options(conv, msg_options)
         if in_reply_to:
             msg = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
             if msg:
@@ -186,3 +175,10 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         else:
             yield self.send_to(
                 to_addr, content, endpoint='default', **msg_options)
+
+    def process_command_initial_action_hack(self, *args, **kwargs):
+        # HACK: This lets us do whatever we used to do when we got a `start'
+        # message without having horrible app-specific view logic.
+        # TODO: Remove this when we've decoupled the various conversation
+        # actions from the lifecycle.
+        return self.process_command_send_survey(*args, **kwargs)
