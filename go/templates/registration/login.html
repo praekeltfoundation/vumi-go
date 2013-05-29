@@ -7,11 +7,11 @@
     <input type="hidden" name="next" value="{{ next }}">
     {% if form.errors %}
     <p class="alert alert-error">
-        <strong>Whoops!</strong> The username or password that you've provided is incorrect.
+        <strong>Whoops!</strong> The email address or password that you've provided is incorrect.
     </p>
     {% endif %}
     <p>
-        <input type="text" name="{{ form.username.name }}" placeholder="{{ form.username.label }}" class="input-large">            
+        <input type="text" name="{{ form.username.name }}" placeholder="Email address" class="input-large">            
     </p>
     <p>
         <input type="password" name="{{ form.password.name }}" placeholder="{{ form.password.label }}" class="input-large">            
