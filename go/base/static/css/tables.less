@@ -1,0 +1,21 @@
+.components-table
+{
+    overflow:hidden;
+    td, tr {
+        color:#2f3436;
+        vertical-align:middle;
+    }
+
+    thead td, thead tr {
+        color:#a7aaac;
+        text-transform:uppercase;
+    }
+
+    // the first row is a checkbox, the whole area is clickable in order
+    // to make the target area of the checkbox larger, visually indicate
+    // that with a change to the cursor.
+    tr td:first-child, th:first-child {
+        cursor:pointer;
+    }
+
+}

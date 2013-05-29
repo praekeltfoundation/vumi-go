@@ -14,9 +14,9 @@
 {% endblock %}
 
 {% block content_actions_right %}
-    <div class="button pull-left">
-        <button class="btn" disabled="disabled" data-table-id="conversations">Copy</button>
-        <button class="btn" disabled="disabled" data-table-id="conversations">Archive</button>
+    <div class="components-table-buttons pull-left">
+        <button class="btn" disabled="disabled">Copy</button>
+        <button class="btn" disabled="disabled">Archive</button>
     </div>
 
     <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
@@ -56,7 +56,7 @@
 
             {% include "base/includes/messages.html" %}
 
-            <table class="table table-manage-data" data-table-id="conversations">
+            <table class="table components-table">
                 <thead>
                     <tr>
                         <th><input type="checkbox"></th>
@@ -116,5 +116,7 @@
 {% endblock %}
 
 {% block ondomready %}
-    go.tables.init('.table-manage-data');
+    go.components.tables.init({
+        checkedToggle: $('.components-table-buttons button')
+    });
 {% endblock %}
