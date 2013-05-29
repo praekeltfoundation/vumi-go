@@ -8,9 +8,6 @@ body {
 .footer {
   margin: 1em;
 }
-.logo-large {
-  margin: 1em 0 2em 0;
-}
 .main-nav {
   margin: 0;
   font-size: 13px;
@@ -226,4 +223,7 @@ body {
 }
 .table-manage-data td {
   color: #2f3436;
+}
+.accounts .logo-large {
+  margin: 1em 0 2em 0;
 }
