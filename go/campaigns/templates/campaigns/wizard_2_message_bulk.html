@@ -16,7 +16,7 @@
 {% endblock %}
 
 
-{% block domready %}
+{% block ondomready %}
     {{ block.super }}
     $('.breadcrumbs a').eq(1).addClass('active');
     new go.campaign.bulkMessage.TextareaView({el: $('#frm-campaign textarea')});
