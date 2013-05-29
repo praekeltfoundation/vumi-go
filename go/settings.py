@@ -370,6 +370,7 @@ PIPELINE_JS = {
             'js/src/components/components.js',
             'js/src/components/structures.js',
             'js/src/components/states.js',
+            'js/src/components/plumbing.js',
             'js/src/campaign/campaign.js',
             'js/src/campaign/interactive.js',
             'js/src/campaign/bulkMessage.js',

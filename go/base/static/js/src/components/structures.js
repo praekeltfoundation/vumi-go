@@ -160,7 +160,7 @@
     },
 
     render: function() {
-      this.values().forEach(function(v) { v.render(); });
+      this.each(function(v) { v.render(); });
     }
   });
 
