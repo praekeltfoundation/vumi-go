@@ -12,6 +12,8 @@ from go.apps.tests.base import DjangoGoApplicationTestCase
 
 class MultiSurveyTestCase(DjangoGoApplicationTestCase):
 
+    TEST_CONVERSATION_TYPE = u'multi_survey'
+
     def setUp(self):
         super(MultiSurveyTestCase, self).setUp()
         self.setup_riak_fixtures()
@@ -188,7 +190,7 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         self.put_sample_messages_in_conversation(
             self.user_api, self.conv_key, 10, start_date=date(2012, 1, 1),
             time_multiplier=12)
-        conv_url = reverse('survey:show', kwargs={
+        conv_url = reverse('multi_survey:show', kwargs={
             'conversation_key': self.conv_key,
             })
         response = self.client.post(conv_url, {
@@ -208,3 +210,35 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         # 1 header, 10 sent, 10 received, 1 trailing newline == 22
         self.assertEqual(22, len(csv_contents.split('\n')))
         self.assertEqual(mime_type, 'application/zip')
+
+    def test_send_one_off_reply(self):
+        self.put_sample_messages_in_conversation(self.user_api,
+                                                    self.conv_key, 1)
+        conversation = self.get_wrapped_conv()
+        [msg] = conversation.received_messages()
+        response = self.client.post(reverse('multi_survey:show', kwargs={
+            'conversation_key': self.conv_key
+            }), {
+                'in_reply_to': msg['message_id'],
+                'content': 'foo',
+                'to_addr': 'should be ignored',
+                '_send_one_off_reply': True,
+            })
+        self.assertRedirects(response, reverse('multi_survey:show', kwargs={
+            'conversation_key': self.conv_key,
+            }))
+
+        [start_cmd, hack_cmd, reply_to_cmd] = self.get_api_commands_sent()
+        [tag] = conversation.get_tags()
+        msg_options = conversation.make_message_options(tag)
+        msg_options['in_reply_to'] = msg['message_id']
+        self.assertEqual(reply_to_cmd['worker_name'],
+                            'multi_survey_application')
+        self.assertEqual(reply_to_cmd['command'], 'send_message')
+        self.assertEqual(reply_to_cmd['kwargs']['command_data'], {
+            'batch_id': conversation.get_latest_batch_key(),
+            'conversation_key': conversation.key,
+            'content': 'foo',
+            'to_addr': msg['from_addr'],
+            'msg_options': msg_options,
+            })
