@@ -50,6 +50,12 @@ describe("go.components.structures", function() {
       lookup = new Lookup({a: 1, b: 2, c: 3});
     });
 
+    describe(".size", function() {
+      it("should return the lookup's item count", function() {
+        assert.deepEqual(lookup.size(), 3);
+      });
+    });
+
     describe(".keys", function() {
       it("should get the lookup's item's keys", function() {
         assert.deepEqual(lookup.keys(), ['a', 'b', 'c']);
@@ -63,13 +69,10 @@ describe("go.components.structures", function() {
     });
 
     describe(".each", function() {
-      it("should iterate through each lookup item's value", function(done) {
-        var c = lookup.values().length;
-
-        lookup.each(function(v, i) {
-          assert.equal(v, i + 1);
-          --c || done();
-        });
+      it("should iterate through each lookup item's value", function() {
+        var values = [];
+        lookup.each(function(v) { values.push(v); });
+        assert.deepEqual(lookup.values(), values);
       });
     });
 
@@ -78,6 +81,14 @@ describe("go.components.structures", function() {
         assert.deepEqual(
           lookup.map(function(v) { return v + 1; }),
           [2, 3, 4]);
+      });
+    });
+
+    describe(".eachItem", function() {
+      it("should iterate through each the lookup's items", function() {
+        var items = {};
+        lookup.eachItem(function(k, v) { items[k] = v; });
+        assert.deepEqual(lookup.items(), items);
       });
     });
 
