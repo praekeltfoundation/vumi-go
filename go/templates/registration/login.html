@@ -2,15 +2,15 @@
 {% load url from future %}
 
 {% block auth_form %}
-<form action="{% url 'auth_login' %}" method="post" class="auth-login">
+<form action="{% url 'auth_login' %}" method="post">
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ next }}">
     <fieldset>
         <p>
-            <input type="text" class="input-large email required" id="signin-input-email" name="username" placeholder="Email Address">
+            <input type="text" name="{{ form.username.name }}" placeholder="{{ form.username.label }}" class="input-large">            
         </p>
         <p>
-            <input type="password" class="input-large required" id="signin-input-password" name="password" placeholder="Password">
+            <input type="password" name="{{ form.password.name }}" placeholder="{{ form.password.label }}" class="input-large">            
         </p>
         <p>
             <button type="submit" class="btn">Sign In</button>
@@ -19,4 +19,3 @@
     </fieldset>
 </form>
 {% endblock %}
-
