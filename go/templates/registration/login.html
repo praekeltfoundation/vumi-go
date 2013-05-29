@@ -5,20 +5,20 @@
 <form action="{% url 'auth_login' %}" method="post">
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ next }}">
-        {% if form.errors %}
-        <p class="alert alert-error">
-            <strong>Whoops!</strong> The username or password that you've provided is incorrect.
-        </p>
-        {% endif %}
-        <p>
-            <input type="text" name="{{ form.username.name }}" placeholder="{{ form.username.label }}" class="input-large">            
-        </p>
-        <p>
-            <input type="password" name="{{ form.password.name }}" placeholder="{{ form.password.label }}" class="input-large">            
-        </p>
-        <p>
-            <button type="submit" class="btn">Sign In</button>
-            <a href="{% url 'auth_password_reset' %}">Forgot your password?</a>
-        </p>
+    {% if form.errors %}
+    <p class="alert alert-error">
+        <strong>Whoops!</strong> The username or password that you've provided is incorrect.
+    </p>
+    {% endif %}
+    <p>
+        <input type="text" name="{{ form.username.name }}" placeholder="{{ form.username.label }}" class="input-large">            
+    </p>
+    <p>
+        <input type="password" name="{{ form.password.name }}" placeholder="{{ form.password.label }}" class="input-large">            
+    </p>
+    <p>
+        <button type="submit" class="btn">Sign In</button>
+        <a href="{% url 'auth_password_reset' %}">Forgot your password?</a>
+    </p>
 </form>
 {% endblock %}
