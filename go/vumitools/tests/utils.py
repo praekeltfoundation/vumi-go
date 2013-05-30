@@ -206,7 +206,7 @@ class GoPersistenceMixin(PersistenceMixin):
 
     @PersistenceMixin.sync_or_async
     def mk_user(self, vumi_api, username):
-        key = "test-%s-user" % (self._users_created,)
+        key = u"test-%s-user" % (self._users_created,)
         self._users_created += 1
         user = vumi_api.account_store.users(key, username=username)
         yield user.save()
