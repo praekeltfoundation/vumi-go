@@ -1,7 +1,7 @@
 describe("go.components.plumbing (endpoints)", function() {
-  var states = go.components.states,
-      StateMachineModel = states.StateMachineModel,
-      EndpointModel = states.EndpointModel;
+  var stateMachine = go.components.stateMachine,
+      StateMachineModel = stateMachine.StateMachineModel,
+      EndpointModel = stateMachine.EndpointModel;
 
   var plumbing = go.components.plumbing,
       DiagramView = go.components.plumbing.DiagramView,

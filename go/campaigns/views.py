@@ -146,15 +146,9 @@ def contacts(request, campaign_key):
         'campaign_key': campaign_key,
     })
 
-
+@login_required
 def preview(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        if action == 'start':
-            # 3.2.1.ignition!
-            # (Start the conversation)
-            return redirect('conversations:index')
 
     contact_store = request.user_api.contact_store
     groups = dict((group.name, contact_store.count_contacts_for_group(group))
@@ -164,4 +158,27 @@ def preview(request, campaign_key):
         'conversation': conversation,
         'campaign_key': campaign_key,
         'groups': groups,
+    })
+
+
+@login_required
+def incoming_list(request, campaign_key):
+    conversation = conversation_or_404(request.user_api, campaign_key)
+    return render(request, 'campaigns/incoming_list.html', {
+        'conversation': conversation,
+    })
+
+
+@login_required
+def incoming_detail(request, campaign_key, contact_key):
+    conversation = conversation_or_404(request.user_api, campaign_key)
+    form = CampaignBulkMessageForm()
+    
+    if request.method == 'POST':
+        # TODO: process sending message from form
+        pass
+
+    return render(request, 'campaigns/incoming_detail.html', {
+        'conversation': conversation,
+        'form': form
     })

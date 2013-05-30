@@ -1,5 +1,5 @@
-// go.components.states
-// ====================
+// go.components.stateMachine
+// ==========================
 // Models for the state-machine-like parts of the ui.
 //
 // XXX: The models are intended to be used as abstract structures to be
@@ -9,15 +9,15 @@
 // `StateModel`'s relation's like this:
 //
 // ```
-// var InOutStateModel = go.components.states.StateModel.extend({
+// var InOutStateModel = go.components.stateMachine.StateModel.extend({
 //   relations: [{
 //       type: Backbone.HasOne,
 //       key: 'in-endpoint',
-//       relatedModel: 'go.components.states.EndpointModel'
+//       relatedModel: 'go.components.stateMachine.EndpointModel'
 //     }, {
 //       type: Backbone.HasOne,
 //       key: 'out-endpoint',
-//       relatedModel: 'go.components.states.EndpointModel'
+//       relatedModel: 'go.components.stateMachine.EndpointModel'
 //     }]
 // });
 // ```
@@ -38,7 +38,7 @@
       type: Backbone.HasOne,
       key: 'target',
       includeInJSON: 'id',
-      relatedModel: 'go.components.states.EndpointModel'
+      relatedModel: 'go.components.stateMachine.EndpointModel'
     }]
   });
 
@@ -47,7 +47,7 @@
     relations: [{
       type: Backbone.HasMany,
       key: 'endpoints',
-      relatedModel: 'go.components.states.EndpointModel'
+      relatedModel: 'go.components.stateMachine.EndpointModel'
     }]
   });
 
@@ -57,12 +57,12 @@
     relations: [{
       type: Backbone.HasMany,
       key: 'states',
-      relatedModel: 'go.components.states.StateModel'
+      relatedModel: 'go.components.stateMachine.StateModel'
     }, {
       type: Backbone.HasOne,
       key: 'state0',
       includeInJSON: 'id',
-      relatedModel: 'go.components.states.StateModel'
+      relatedModel: 'go.components.stateMachine.StateModel'
     }]
   });
 
@@ -71,4 +71,4 @@
     StateModel: StateModel,
     StateMachineModel: StateMachineModel
   });
-})(go.components.states = {});
+})(go.components.stateMachine = {});

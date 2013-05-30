@@ -1,8 +1,8 @@
 describe("go.components.plumbing (states)", function() {
-  var states = go.components.states,
-      StateMachineModel = states.StateMachineModel,
-      StateModel = states.StateModel,
-      EndpointModel = states.EndpointModel;
+  var stateMachine = go.components.stateMachine,
+      StateMachineModel = stateMachine.StateMachineModel,
+      StateModel = stateMachine.StateModel,
+      EndpointModel = stateMachine.EndpointModel;
 
   var plumbing = go.components.plumbing,
       DiagramView = go.components.plumbing.DiagramView,
@@ -45,7 +45,7 @@ describe("go.components.plumbing (states)", function() {
       relations: [{
           type: Backbone.HasOne,
           key: 'endpoint',
-          relatedModel: 'go.components.states.EndpointModel'
+          relatedModel: 'go.components.stateMachine.EndpointModel'
         }]
     });
 
@@ -115,11 +115,11 @@ describe("go.components.plumbing (states)", function() {
       relations: [{
           type: Backbone.HasOne,
           key: 'inEndpoint',
-          relatedModel: 'go.components.states.EndpointModel'
+          relatedModel: 'go.components.stateMachine.EndpointModel'
         }, {
           type: Backbone.HasMany,
           key: 'outEndpoints',
-          relatedModel: 'go.components.states.EndpointModel'
+          relatedModel: 'go.components.stateMachine.EndpointModel'
         }
       ]
     });

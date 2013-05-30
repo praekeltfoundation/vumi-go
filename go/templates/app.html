@@ -5,7 +5,7 @@
 <nav class="main-nav navbar clearfix">
     <div class="pull-left">
         <a class="brand" href="/">
-            <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi" class="logo">
+            <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go" class="logo">
         </a>
         
         <ul class="nav">
@@ -25,7 +25,7 @@
             </a>
             <ul class="dropdown-menu" role="menu">
                 <li><a href="#">Switch account</a></li>
-                <li><a href="#">Logout</a></li>    
+                <li><a href="{% url 'auth_logout' %}">Logout</a></li>    
             </ul>
         </li>
     </ul>

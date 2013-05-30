@@ -7,8 +7,7 @@
 
 {% block content_actions_right %}
     <a href="{% url 'conversations:index' %}">Cancel</a>
-    <button class="btn btn-primary" data-action="start">Start</button>
-    {# TODO: Maybe this shouldn't post and simply go to another a view? #}
+    <a href="{% url 'campaigns:incoming_list' conversation.key %}" class="btn btn-primary">Start</a>
 {% endblock %}
 
 {% block content_main %}
