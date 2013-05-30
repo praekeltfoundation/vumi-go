@@ -9,6 +9,7 @@ from django.core.paginator import Paginator
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.templatetags import go_tags
 from go.base import utils
+from go.vumitools.api import VumiApi, VumiUserApi
 
 
 class AuthenticationTestCase(VumiGoDjangoTestCase):
@@ -76,6 +77,16 @@ class UtilsTestCase(VumiGoDjangoTestCase):
         super(UtilsTestCase, self).setUp()
         self.setup_api()
         self.user = self.mk_django_user()
+
+    def test_vumi_api_for_user(self):
+        user_api = utils.vumi_api_for_user(self.user)
+        self.assertTrue(isinstance(user_api, VumiUserApi))
+        self.assertEqual(user_api.user_account_key,
+                         self.user.get_profile().user_account)
+
+    def test_vumi_api(self):
+        vumi_api = utils.vumi_api()
+        self.assertTrue(isinstance(vumi_api, VumiApi))
 
     def test_padded_queryset(self):
         short_list = User.objects.all()[:1]
