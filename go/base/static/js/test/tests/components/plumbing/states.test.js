@@ -13,7 +13,7 @@ describe("go.components.plumbing (states)", function() {
   var diagram;
 
   beforeEach(function() {
-    var smModel = new StateMachineModel({
+    var model = new StateMachineModel({
       states: [{
         id: 'a',
         endpoints: [
@@ -30,7 +30,7 @@ describe("go.components.plumbing (states)", function() {
     });
 
     $('body').append("<div id='diagram'></div>");
-    diagram = new DiagramView({el: '#diagram', model: smModel});
+    diagram = new DiagramView({el: '#diagram', model: model});
   });
 
   afterEach(function() {

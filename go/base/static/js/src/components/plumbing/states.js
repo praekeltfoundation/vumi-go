@@ -16,12 +16,10 @@
   // - [type]: The view type to instantiate for each new endpoint view.
   // Defaults to EndpointView.
   var StateViewEndpointCollection = ViewCollection.extend({
-    View: EndpointView,
-
     constructor: function(options) {
       this.state = options.state;
       this.attr = options.attr;
-      this.type = options.type || this.View;
+      this.type = options.type || this.state.EndpointView;
 
       ViewCollection
         .prototype
@@ -72,7 +70,11 @@
   // Options:
   // - diagram: the diagram view that the state view belongs to
   var StateView = Backbone.View.extend({
+    // Override to control how endpoints are created
     EndpointCollection: StateViewEndpointCollection,
+
+    // Override to change the default endpoint view type
+    EndpointView: EndpointView,
 
     // A list of configuration objects, where each corresponds to a group of
     // endpoints or a single endpoint. Override to change the state schema.
@@ -98,7 +100,7 @@
     StateView: StateView,
     StateViewEndpointCollection: StateViewEndpointCollection,
 
-    // Secondary components exposed for testing purposes
+    // Secondary components
     StateViewEndpoints: StateViewEndpoints
   });
 })(go.components.plumbing);

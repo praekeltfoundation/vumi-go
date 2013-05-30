@@ -55,8 +55,6 @@
   // Arguments:
   // - diagram: The state diagram view associated to the endpoints
   var DiagramViewConnections = Lookup.extend({
-    View: ConnectionView,
-
     constructor: function(diagram) {
       Lookup.prototype.constructor.call(this);
 
@@ -98,8 +96,12 @@
     add: function(sourceId, targetId) {
       var endpoints = this.diagram.endpoints,
           source = endpoints.get(sourceId),
-          target = endpoints.get(targetId),
-          connection = new this.View({source: source, target: target});
+          target = endpoints.get(targetId);
+
+      var connection = new this.diagram.ConnectionView({
+        source: source,
+        target: target
+      });
 
       return Lookup.prototype.add.call(this, sourceId, connection);
     },
@@ -114,12 +116,10 @@
   // - [type]: The view type to instantiate for each new state view. Defaults
   // to StateView.
   var DiagramViewStateCollection = ViewCollection.extend({
-    View: StateView,
-
     constructor: function(options) {
       this.diagram = options.diagram;
       this.attr = options.attr;
-      this.type = options.type || this.View;
+      this.type = options.type || this.diagram.StateView;
 
       ViewCollection
         .prototype
@@ -157,15 +157,27 @@
   // The main view for the state diagram. Delegates interactions between
   // the states and their endpoints.
   var DiagramView = Backbone.View.extend({
+    // Override to control how states are created
     StateCollection: DiagramViewStateCollection,
+
+    // Override to change the default state view type
+    StateView: StateView,
+
+    // Override to change the connection view type
+    ConnectionView: ConnectionView,
 
     // A list of configuration objects, where each corresponds to a group of
     // states. Override to change the state schema.
     stateSchema: [{attr: 'states'}],
 
     initialize: function() {
+      // Lookup of all the states in the diagram
       this.states = new DiagramViewStates(this);
+
+      // Lookup of all the endpoints in the diagram
       this.endpoints = new DiagramViewEndpoints(this);
+
+      // Lookup of all the connections in the diagram
       this.connections = new DiagramViewConnections(this);
     },
 
@@ -179,11 +191,11 @@
   _.extend(exports, {
     // Components intended to be used and extended
     DiagramView: DiagramView,
-    DiagramViewConnections: DiagramViewConnections,
     DiagramViewStateCollection: DiagramViewStateCollection,
 
-    // Secondary components exposed for testing purposes
+    // Secondary components
     DiagramViewEndpoints: DiagramViewEndpoints,
-    DiagramViewStates: DiagramViewStates
+    DiagramViewStates: DiagramViewStates,
+    DiagramViewConnections: DiagramViewConnections
   });
 })(go.components.plumbing);
