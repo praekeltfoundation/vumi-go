@@ -70,7 +70,7 @@
         // header row.
         $table.find('tbody tr').click(function() {
             var url = $(this).attr(opts.linkAttribute);
-            if (url.length) window.location = url;
+            if (typeof(url) !== 'undefined') window.location = url;
         });
     };
 
