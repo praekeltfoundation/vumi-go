@@ -16,9 +16,10 @@
 
       // Keep a reference the actual jsPlumb connection
       this.plumbConnection = null;
+      this.on('plumb:connect', this.onPlumbConnect, this);
+      this.on('plumb:disconnect', this.onPlumbDisconnect, this);
     },
 
-    // Makes the plumb params passed to jsPlumb when creating the connection.
     // Override when extending `ConnectionView` to specialise what params
     // are passed to jsPlumb
     plumbOptions: function() { return {}; },
@@ -28,6 +29,18 @@
         source: this.source.plumbEndpoint,
         target: this.target.plumbEndpoint
       }, this.plumbOptions());
+    },
+
+    onPlumbConnect: function(e) {
+      this.plumbConnection = e.connection;
+      this.source.trigger('connect', this);
+      this.target.trigger('connect', this);
+    },
+
+    onPlumbDisconnect: function(e) {
+      this.destroy();
+      this.source.trigger('disconnect', this);
+      this.target.trigger('disconnect', this);
     },
 
     destroy: function() {

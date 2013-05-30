@@ -5,7 +5,8 @@ describe("go.components.plumbing (endpoints)", function() {
 
   var plumbing = go.components.plumbing,
       DiagramView = go.components.plumbing.DiagramView,
-      EndpointView = plumbing.EndpointView;
+      EndpointView = plumbing.EndpointView,
+      ConnectionView = plumbing.ConnectionView;
 
   var diagram;
 
@@ -63,7 +64,9 @@ describe("go.components.plumbing (endpoints)", function() {
           done();
         });
 
-        a1.trigger('connect', a1, b1);
+        a1.trigger(
+          'connect',
+          new ConnectionView({source: a1, target: b1}));
       });
     });
 
@@ -74,7 +77,7 @@ describe("go.components.plumbing (endpoints)", function() {
           done();
         });
 
-        a3.trigger('disconnect', a3, b3);
+        a3.trigger('disconnect', diagram.connections.get('a3'));
       });
     });
 

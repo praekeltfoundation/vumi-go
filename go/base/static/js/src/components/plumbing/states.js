@@ -49,7 +49,10 @@
   // - state: The state view associated to the endpoints
   var StateViewEndpoints = ViewCollectionGroup.extend({
     constructor: function(state) {
-      ViewCollectionGroup.prototype.constructor.call(this);
+      ViewCollectionGroup
+        .prototype
+        .constructor
+        .call(this);
 
       this.state = state;
       this.schema = this.state.endpointSchema;
@@ -86,7 +89,10 @@
 
     initialize: function(options) {
       this.diagram = options.diagram;
+
+      // Lookup of all the endpoints in this state
       this.endpoints = new StateViewEndpoints(this);
+
       this.model.on('change', this.render, this);
     },
 
@@ -100,9 +106,9 @@
   _.extend(exports, {
     // Components intended to be used and extended
     StateView: StateView,
-    StateViewEndpointCollection: StateViewEndpointCollection,
 
     // Secondary components
-    StateViewEndpoints: StateViewEndpoints
+    StateViewEndpoints: StateViewEndpoints,
+    StateViewEndpointCollection: StateViewEndpointCollection
   });
 })(go.components.plumbing);

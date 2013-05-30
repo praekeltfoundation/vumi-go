@@ -20,7 +20,6 @@
       this.model.on('change', this.render, this);
     },
 
-    // Makes the plumb params passed to jsPlumb when creating the endpoint.
     // Override when extending `EndpointView` to specialise what params are
     // passed to jsPlumb
     plumbOptions: function() { return {}; },
@@ -33,12 +32,21 @@
       }, this.plumbOptions());
     },
 
-    onConnect: function(source, target, plumbEvent) {
-      if (this === source) { this.model.set('target', target.model); }
+    onConnect: function(connection) {
+      if (this === connection.source) {
+        // set the model silently to prevent recursive event propagation
+        this.model.set(
+          'target',
+          connection.target.model,
+          {silent: true});
+      }
     },
 
-    onDisconnect: function(source, target, plumbEvent) {
-      if (this === source) { this.model.unset('target'); }
+    onDisconnect: function(connection) {
+      if (this === connection.source) {
+        // unset the model silently to prevent recursive event propagation
+        this.model.unset('target', {silent: true});
+      }
     },
 
     destroy: function() {
