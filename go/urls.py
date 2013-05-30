@@ -3,11 +3,8 @@ from django.contrib import admin
 from django.http import HttpResponse
 from django.views.generic import RedirectView
 
-from registration.views import register
-from go.account.forms import RegistrationForm
 
 admin.autodiscover()
-
 
 def health(request):
     return HttpResponse('')
@@ -19,11 +16,7 @@ urlpatterns = patterns('',
 
     # django-regisration auth, override some views so we can specify
     # our own custom forms to use.
-    url(r'^accounts/register/$', register, {
-        'backend': 'registration.backends.default.DefaultBackend',
-        'form_class': RegistrationForm,
-        }, name='registration_register'),
-    url(r'^accounts/', include('registration.backends.default.urls')),
+
 
     # simple todo view for stuff that's not completed yet
     url(r'^todo/.*$', 'go.base.views.todo', name='todo'),
@@ -38,7 +31,8 @@ urlpatterns = patterns('',
     url(r'^campaigns/', include('go.campaigns.urls', namespace='campaigns')),
     url(r'^app/', include('go.apps.urls')),
     url(r'^contacts/', include('go.contacts.urls', namespace='contacts')),
-    url(r'^account/', include('go.account.urls', namespace='account')),
+
+    url(r'^account/', include('go.account.urls', namespace='accounts')),
 )
 
 urlpatterns += patterns('django.contrib.flatpages.views',

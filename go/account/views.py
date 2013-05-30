@@ -82,3 +82,6 @@ def index(request):
         'email_form': email_form,
         'account_form': account_form,
     })
+
+def settings(request):
+    return HttpResponse(1)
