@@ -10,8 +10,6 @@
   // - source: The source endpoint view
   // - target: The target endpoint view
   var ConnectionView = Backbone.View.extend({
-    plumbDefaults: {},
-
     initialize: function(options) {
       this.source = options.source;
       this.target = options.target;
@@ -23,10 +21,13 @@
     // Makes the plumb params passed to jsPlumb when creating the connection.
     // Override when extending `ConnectionView` to specialise what params
     // are passed to jsPlumb
-    plumbParams: function() {
-      return _.defaults(
-        {source: this.source.plumbEndpoint, target: this.target.plumbEndpoint},
-        this.plumbDefaults);
+    plumbOptions: function() { return {}; },
+
+    _plumbOptions: function() {
+      return _.defaults({
+        source: this.source.plumbEndpoint,
+        target: this.target.plumbEndpoint
+      }, this.plumbOptions());
     },
 
     destroy: function() {
@@ -39,7 +40,7 @@
 
     render: function() {
       if (!this.plumbConnection) {
-        this.plumbConnection = jsPlumb.connect(this.plumbParams());
+        this.plumbConnection = jsPlumb.connect(this._plumbOptions());
       }
       return this;
     }

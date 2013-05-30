@@ -128,7 +128,9 @@
     },
 
     create: function(model) {
-      return new this.type({diagram: this.diagram, model: model});
+      return new this.type(_.defaults(
+        {diagram: this.diagram, model: model},
+        this.diagram.stateOptions()));
     }
   });
   
@@ -145,7 +147,7 @@
 
     subscribe: function(options) {
       _.extend(options, {diagram: this.diagram});
-      var endpoints = new this.diagram.StateCollection(options);
+      var endpoints = new DiagramViewStateCollection(options);
 
       return ViewCollectionGroup
         .prototype
@@ -157,9 +159,6 @@
   // The main view for the state diagram. Delegates interactions between
   // the states and their endpoints.
   var DiagramView = Backbone.View.extend({
-    // Override to control how states are created
-    StateCollection: DiagramViewStateCollection,
-
     // Override to change the default state view type
     StateView: StateView,
 
@@ -169,6 +168,9 @@
     // A list of configuration objects, where each corresponds to a group of
     // states. Override to change the state schema.
     stateSchema: [{attr: 'states'}],
+
+    // Override to change what options are passed to each new state view
+    stateOptions: function() { return {}; },
 
     initialize: function() {
       // Lookup of all the states in the diagram

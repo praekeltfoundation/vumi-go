@@ -39,7 +39,9 @@
     },
 
     create: function(model) {
-      return new this.type({state: this.state, model: model});
+      return new this.type(_.defaults(
+        {state: this.state, model: model},
+        this.state.endpointOptions()));
     }
   });
 
@@ -56,7 +58,7 @@
 
     subscribe: function(options) {
       _.extend(options, {state: this.state});
-      var endpoints = new this.state.EndpointCollection(options);
+      var endpoints = new StateViewEndpointCollection(options);
 
       return ViewCollectionGroup
         .prototype
@@ -70,15 +72,15 @@
   // Options:
   // - diagram: the diagram view that the state view belongs to
   var StateView = Backbone.View.extend({
-    // Override to control how endpoints are created
-    EndpointCollection: StateViewEndpointCollection,
-
     // Override to change the default endpoint view type
     EndpointView: EndpointView,
 
     // A list of configuration objects, where each corresponds to a group of
     // endpoints or a single endpoint. Override to change the state schema.
     endpointSchema: [{attr: 'endpoints'}],
+
+    // Override to change what options are passed to each new endpoint view
+    endpointOptions: function () { return {}; },
 
     id: function() { return this.model.id; },
 

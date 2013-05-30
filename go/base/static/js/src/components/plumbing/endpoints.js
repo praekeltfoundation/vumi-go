@@ -9,9 +9,6 @@
   // Options:
   // - state: The view to which this endpoint is to be attached
   var EndpointView = Backbone.View.extend({
-    // Default params passed to jsPlumb when creating the jsPlumb endpoint
-    plumbDefaults: {isSource: true, isTarget: true},
-
     initialize: function(options) {
       this.state = options.state;
 
@@ -26,8 +23,14 @@
     // Makes the plumb params passed to jsPlumb when creating the endpoint.
     // Override when extending `EndpointView` to specialise what params are
     // passed to jsPlumb
-    plumbParams: function() {
-      return _.defaults({uuid: this.model.id}, this.plumbDefaults);
+    plumbOptions: function() { return {}; },
+
+    _plumbOptions: function() {
+      return _.defaults({
+        uuid: this.model.id,
+        isSource: true,
+        isTarget: true
+      }, this.plumbOptions());
     },
 
     onConnect: function(source, target, plumbEvent) {
@@ -50,7 +53,7 @@
       if (!this.plumbEndpoint) {
         this.plumbEndpoint = jsPlumb.addEndpoint(
           this.state.$el,
-          this.plumbParams());
+          this._plumbOptions());
       }
       return this;
     }
