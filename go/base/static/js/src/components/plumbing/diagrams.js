@@ -25,16 +25,14 @@
 
       // Add the initial states' endpoints
       var states = diagram.states;
-      states.eachItem(
-        function(id, endpoint) { this.addState(id, endpoint); },
-        this);
+      states.eachItem(this.addState, this);
 
       states.on('add', this.addState, this);
-      states.on('remove', this.addRemove, this);
+      states.on('remove', this.removeState, this);
     },
 
     addState: function(id, state) { this.subscribe(id, state.endpoints); },
-    removeState: function(id) { return this.unsubscribe(id); }
+    removeState: function(id) { this.unsubscribe(id); }
   });
 
   // Keeps connections between endpoint models in sync with the jsPlumb
@@ -46,16 +44,20 @@
     addDefaults: {render: true},
 
     constructor: function(diagram) {
-      Lookup.prototype.constructor.call(this);
+      Lookup
+        .prototype
+        .constructor
+        .call(this);
+
       this.diagram = diagram;
 
       var endpoints = this.diagram.endpoints;
-      endpoints.each(this.subscribeEndpoint, this);
+      endpoints.eachItem(this.subscribeEndpoint, this);
       endpoints.on('add', this.subscribeEndpoint, this);
       endpoints.on('remove', this.unsubscribeEndpoint, this);
 
-      // Check which endpoint models were connected upon initialisation and add
-      // the initial connections accordingly
+      // Check which endpoint models were connected upon initialisation
+      // and add the initial connections accordingly
       endpoints.each(this._initConnection, this);
 
       jsPlumb.bind(
@@ -79,16 +81,6 @@
       }
     },
 
-    subscribeEndpoint: function(endpoint) {
-      endpoint.model.on('change:target', this.onTargetChange, this);
-      return this;
-    },
-
-    unsubscribeEndpoint: function(endpoint) {
-      endpoint.model.off('change:target', this.onTargetChange, this);
-      return this;
-    },
-
     onTargetChange: function(sourceModel, targetModel) {
       // If the target has been set, connect.
       // Otherwise, the target has been unset, so disconnect.
@@ -108,6 +100,16 @@
     onPlumbDisconnect: function(e) {
       var connection = this.get(e.sourceEndpoint.getUuid());
       connection.trigger('disconnect', e);
+    },
+
+    subscribeEndpoint: function(id, endpoint) {
+      endpoint.model.on('change:target', this.onTargetChange, this);
+      return this;
+    },
+
+    unsubscribeEndpoint: function(id, endpoint) {
+      endpoint.model.off('change:target', this.onTargetChange, this);
+      return this;
     },
 
     add: function(sourceId, targetId, options) {

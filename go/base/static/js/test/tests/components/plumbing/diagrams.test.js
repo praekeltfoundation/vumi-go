@@ -102,13 +102,68 @@ describe("go.components.plumbing (diagrams)", function() {
   });
 
   describe(".DiagramViewEndpoints", function() {
+    var endpoints,
+        jediA,
+        ewokA;
+
+    var assertSubscribed = function(id, otherEndpoints) {
+      assert(endpoints.members.has(id));
+      assert.includeMembers(endpoints.keys(), otherEndpoints.keys());
+    };
+
+    var assertUnsubscribed = function(id, otherEndpoints) {
+      assert(!endpoints.members.has(id));
+      otherEndpoints.eachItem(function(id) { assert(!endpoints.has(id)); });
+    };
+
     beforeEach(function() {
-      diagram.render();
+      endpoints = diagram.endpoints;
+
+      var ewokModelA = new StateModel({
+        id: 'ewok-a',
+        endpoints: [{id: 'ewok-a1'}, {id: 'ewok-a2'}]
+      });
+
+      ewokA = new StateView({diagram: diagram, model: ewokModelA});
+      jediA = diagram.states.get('jedi-a');
     });
 
-    describe("on 'connection' jsPlumb events", function() {
-      it("should delegate 'connection' events to involved endpoints",
+    describe("on 'add' state events", function() {
+      it("should subscribe the new state's endpoints to the group",
+      function(done) {
+        diagram.states.on('add', function() {
+          assertSubscribed('ewok-a', ewokA.endpoints);
+          done();
+        });
+
+        diagram.states.add('ewok-a', ewokA);
+      });
+    });
+
+    describe("on 'remove' state events", function() {
+      it("should unsubscribe the state's endpoints from the group",
+      function(done) {
+        diagram.states.on('remove', function() {
+          assertUnsubscribed('jedi-a', jediA.endpoints);
+          done();
+        });
+
+        diagram.states.remove('jedi-a');
+      });
+    });
+
+    describe(".addState", function() {
+      it("should subscribe the state's endpoints to the group", function() {
+        endpoints.addState('ewok-a', ewokA);
+        assertSubscribed('ewok-a', ewokA.endpoints);
+      });
+    });
+
+    describe(".removeState", function() {
+      it("should unsubscribe the state's endpoints from the group",
       function() {
+        endpoints.removeState('jedi-a');
+        assertUnsubscribed('jedi-a', jediA.endpoints);
       });
     });
   });
