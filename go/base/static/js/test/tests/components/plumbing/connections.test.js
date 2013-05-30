@@ -1,8 +1,8 @@
 describe("go.components.plumbing (connections)", function() {
   var states = go.components.states,
-      plumbing = go.components.plumbing;
+      StateMachineModel = states.StateMachineModel;
 
-  var StateMachineModel = go.components.states.StateMachineModel,
+  var plumbing = go.components.plumbing,
       DiagramView = go.components.plumbing.DiagramView;
 
   var diagram;

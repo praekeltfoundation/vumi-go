@@ -1,9 +1,11 @@
 describe("go.components.plumbing (endpoints)", function() {
   var states = go.components.states,
-      plumbing = go.components.plumbing;
+      StateMachineModel = states.StateMachineModel,
+      EndpointModel = states.EndpointModel;
 
-  var StateMachineModel = go.components.states.StateMachineModel,
-      DiagramView = go.components.plumbing.DiagramView;
+  var plumbing = go.components.plumbing,
+      DiagramView = go.components.plumbing.DiagramView,
+      EndpointView = plumbing.EndpointView;
 
   var diagram;
 
@@ -36,9 +38,6 @@ describe("go.components.plumbing (endpoints)", function() {
   });
 
   describe(".EndpointView", function() {
-    var EndpointModel = states.EndpointModel;
-        EndpointView = plumbing.EndpointView;
-
     var a, b,
         a1, a2, a3,
         b1, b2, b3;
