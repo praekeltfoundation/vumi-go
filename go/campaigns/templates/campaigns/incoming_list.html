@@ -12,7 +12,7 @@
 {% endblock %}
 
 {% block content_actions_right %}
-    <div class="button pull-left">
+    <div class="components-table-buttons pull-left">
         <button class="btn" disabled="disabled" data-table-id="messages">Export CSV</button>
         <button class="btn" disabled="disabled" data-table-id="messages">Delete</button>
     </div>
@@ -38,7 +38,7 @@
 
             {% include "base/includes/messages.html" %}
 
-            <table class="table table-manage-data" data-table-id="messages">
+            <table class="table components-table">
                 <thead>
                     <tr>
                         <th><input type="checkbox"></th>
@@ -81,5 +81,7 @@
 {% endblock %}
 
 {% block ondomready %}
-    go.tables.init('.table-manage-data');
+    go.components.tables.init({
+        checkedToggle: $('.components-table-buttons button')
+    });
 {% endblock %}
