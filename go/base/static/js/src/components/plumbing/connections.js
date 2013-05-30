@@ -21,20 +21,24 @@
     },
 
     // Makes the plumb params passed to jsPlumb when creating the connection.
-    // Override when extending `EndpointConnection` to specialise what params
+    // Override when extending `ConnectionView` to specialise what params
     // are passed to jsPlumb
     plumbParams: function() {
       return _.defaults(
-        {source: this.source.plumbEndpoint, target: this.target.plumbEndpoint},         this.plumbDefaults);
+        {source: this.source.plumbEndpoint, target: this.target.plumbEndpoint},
+        this.plumbDefaults);
     },
 
     destroy: function() {
-      if (this.plumbConnection) { jsPlumb.detach(this.plumbConnection); }
+      if (this.plumbConnection) {
+        jsPlumb.detach(this.plumbConnection);
+        this.plumbConnection = null;
+      }
       return this;
     },
 
     render: function() {
-      if (this.plumbConnection) {
+      if (!this.plumbConnection) {
         this.plumbConnection = jsPlumb.connect(this.plumbParams());
       }
       return this;

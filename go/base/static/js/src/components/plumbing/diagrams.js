@@ -97,8 +97,8 @@
 
     add: function(sourceId, targetId) {
       var endpoints = this.diagram.endpoints,
-          source = endpoints.source,
-          target = endpoints.target,
+          source = endpoints.get(sourceId),
+          target = endpoints.get(targetId),
           connection = new this.View({source: source, target: target});
 
       return Lookup.prototype.add.call(this, sourceId, connection);
@@ -158,7 +158,6 @@
   // the states and their endpoints.
   var DiagramView = Backbone.View.extend({
     StateCollection: DiagramViewStateCollection,
-    Connections: DiagramViewConnections,
 
     // A list of configuration objects, where each corresponds to a group of
     // states. Override to change the state schema.
@@ -167,7 +166,7 @@
     initialize: function() {
       this.states = new DiagramViewStates(this);
       this.endpoints = new DiagramViewEndpoints(this);
-      this.connections = new this.Connections(this);
+      this.connections = new DiagramViewConnections(this);
     },
 
     render: function() {

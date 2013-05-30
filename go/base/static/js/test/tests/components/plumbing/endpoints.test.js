@@ -1,17 +1,14 @@
-describe("go.components.plumbing", function() {
+describe("go.components.plumbing (endpoints)", function() {
   var states = go.components.states,
-      StateMachineModel = states.StateMachineModel;
+      plumbing = go.components.plumbing;
 
-  var plumbing = go.components.plumbing;
-      DiagramView = plumbing.DiagramView;
+  var StateMachineModel = go.components.states.StateMachineModel,
+      DiagramView = go.components.plumbing.DiagramView;
 
-  var model,
-      diagram;
+  var diagram;
 
   beforeEach(function() {
-    $('body').append("<div id='diagram'></div>");
-
-    model = new StateMachineModel({
+    var smModel = new StateMachineModel({
       states: [{
         id: 'a',
         endpoints: [
@@ -27,8 +24,15 @@ describe("go.components.plumbing", function() {
       }]
     });
 
-    diagram = new DiagramView({el: '#diagram', model: model});
-    diagram.render();
+    $('body').append("<div id='diagram'></div>");
+    diagram = new DiagramView({el: '#diagram', model: smModel});
+  });
+
+  afterEach(function() {
+    Backbone.Relational.store.reset();
+    jsPlumb.unbind();
+    jsPlumb.detachEveryConnection();
+    $('#diagram').remove();
   });
 
   describe(".EndpointView", function() {
@@ -38,7 +42,7 @@ describe("go.components.plumbing", function() {
     var a, b,
         a1, a2, a3,
         b1, b2, b3;
-    
+
     beforeEach(function() {
       a = diagram.states.get('a');
       a1 = diagram.endpoints.get('a1');
@@ -49,8 +53,10 @@ describe("go.components.plumbing", function() {
       b1 = diagram.endpoints.get('b1');
       b2 = diagram.endpoints.get('b2');
       b3 = diagram.endpoints.get('b3');
-    });
 
+      diagram.render();
+    });
+    
     describe("on 'connect' events", function() {
       it("should set its model's target", function(done) {
         a1.on('connect', function() {
@@ -96,8 +102,5 @@ describe("go.components.plumbing", function() {
           a.el);
       });
     });
-  });
-
-  describe(".StateEndpointCollection", function() {
   });
 });

@@ -39,7 +39,10 @@
     },
 
     destroy: function() {
-      if (this.plumbEndpoint) { jsPlumb.deleteEndpoint(this.plumbEndpoint); }
+      if (this.plumbEndpoint) {
+        jsPlumb.deleteEndpoint(this.plumbEndpoint);
+        this.plumbEndpoint = null;
+      }
       return this;
     },
 
