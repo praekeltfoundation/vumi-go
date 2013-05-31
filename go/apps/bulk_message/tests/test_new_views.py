@@ -35,6 +35,12 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         return reverse('conversations:new_conversation', kwargs={
             'conversation_type': 'bulk_message'})
 
+    def get_action_view_url(self, action_name, conv_key=None):
+        if conv_key is None:
+            conv_key = self.conv_key
+        return reverse('conversations:conversation_action', kwargs={
+            'conversation_key': conv_key, 'action_name': action_name})
+
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
         return self.user_api.wrap_conversation(conv)
@@ -269,6 +275,32 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         # 1 header, 10 sent, 10 received, 1 trailing newline == 22
         self.assertEqual(22, len(content.split('\n')))
         self.assertEqual(mime_type, 'application/zip')
+
+    def test_action_bulk_send_get(self):
+        # Start the conversation
+        self.client.post(self.get_view_url('start'))
+        self.assertEqual(2, len(self.get_api_commands_sent()))
+        response = self.client.get(self.get_action_view_url('bulk_send'))
+        conversation = response.context[0].get('conversation')
+        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        self.assertEqual([], self.get_api_commands_sent())
+        # TODO: build a suitable form for this.
+        # self.fail()
+
+    def test_action_bulk_send_post(self):
+        # Start the conversation
+        self.client.post(self.get_view_url('start'))
+        self.assertEqual(2, len(self.get_api_commands_sent()))
+        response = self.client.post(self.get_action_view_url('bulk_send'))
+        self.assertRedirects(response, self.get_view_url('show'))
+        [bulk_send_cmd] = self.get_api_commands_sent()
+        conversation = self.user_api.get_wrapped_conversation(self.conv_key)
+        self.assertEqual(bulk_send_cmd, VumiApiCommand.command(
+            '%s_application' % (conversation.conversation_type,),
+            'bulk_send',
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=conversation.get_batches()[0].key, msg_options={}))
 
 
 class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):

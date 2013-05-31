@@ -68,13 +68,7 @@ class BulkMessageApplication(GoApplicationWorker):
 
     @inlineCallbacks
     def process_command_bulk_send(self, user_account_key, conversation_key,
-                                  batch_id, msg_options, is_client_initiated,
-                                  **extra_params):
-
-        if is_client_initiated:
-            log.warning('Trying to start a client initiated conversation '
-                'on a bulk message send.')
-            return
+                                  batch_id, msg_options, **extra_params):
 
         conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:

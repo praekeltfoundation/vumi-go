@@ -1,5 +1,4 @@
 import csv
-from datetime import datetime
 from StringIO import StringIO
 
 from django.views.generic import TemplateView
@@ -453,6 +452,43 @@ class MessageSearchResultConversationView(ConversationView):
             'generic/includes/message-list.html', context)
 
 
+class ConversationActionView(ConversationView):
+    """View for performing an arbitrary conversation action.
+
+    This is a special case, and is therefore handled differently.
+    """
+    view_name = 'action'
+
+    # Theis is set in the constructor, but the attribute must exist already.
+    action = None
+
+    def _render_form(self, request, conversation, form):
+        return self.render_to_response({
+            'conversation': conversation,
+            'form': form,
+        })
+
+    def get(self, request, conversation):
+        form = self.action.get_action_form()
+        if form is None:
+            # FIXME: Do something sensible here.
+            print "No form"
+        return self._render_form(request, conversation, form)
+
+    def post(self, request, conversation):
+        action_data = {}
+        form_cls = self.action.get_action_form()
+        if form_cls is not None:
+            form = form_cls(request.POST)
+            if not form.is_valid():
+                return self._render_form(request, conversation, form)
+            action_data = form.cleaned_data
+        self.action.perform_action(action_data)
+
+        return self.redirect_to(self.get_next_view(conversation),
+                                conversation_key=conversation.key)
+
+
 def tf_server_initiated(pool, metadata):
     return metadata.get('server_initiated', False)
 
@@ -565,6 +601,8 @@ class ConversationViewFinder(object):
             self.view_mapping[view.view_name] = view
             self.path_suffix_mapping[view.path_suffix] = view
 
+        self.actions = [action(conv_def.conv) for action in conv_def.actions]
+
     def get_view_url(self, view_name, **kwargs):
         kwargs['path_suffix'] = self.view_mapping[view_name].path_suffix
         return reverse('conversations:conversation', kwargs=kwargs)
@@ -574,6 +612,12 @@ class ConversationViewFinder(object):
             raise Http404
         return self.path_suffix_mapping[path_suffix].as_view(
             conversation_views=self)
+
+    def get_action_view(self, action_name):
+        for action in self.actions:
+            return ConversationActionView.as_view(
+                conversation_views=self, action=action)
+        raise Http404
 
     def get_new_conversation_view(self):
         return NewConversationView.as_view(conversation_views=self)
