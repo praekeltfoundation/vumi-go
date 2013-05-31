@@ -99,7 +99,7 @@
 
     onPlumbDisconnect: function(e) {
       var connection = this.get(e.sourceEndpoint.getUuid());
-      connection.trigger('disconnect', e);
+      connection.trigger('disconnect');
     },
 
     subscribeEndpoint: function(id, endpoint) {

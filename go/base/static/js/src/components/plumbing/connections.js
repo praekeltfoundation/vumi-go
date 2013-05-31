@@ -37,7 +37,7 @@
       this.target.trigger('connect', this);
     },
 
-    onPlumbDisconnect: function(e) {
+    onPlumbDisconnect: function() {
       this.destroy();
       this.source.trigger('disconnect', this);
       this.target.trigger('disconnect', this);

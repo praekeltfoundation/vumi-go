@@ -46,6 +46,82 @@ describe("go.components.plumbing (connections)", function() {
       diagram.render();
     });
 
+    describe("on 'plumb:connect' events", function() {
+      var connection,
+          plumbEvent;
+          
+      beforeEach(function() {
+        connection = new ConnectionView({source: a1, target: b1});
+        plumbEvent = {connection: {}}; // stubbed plumb event
+      });
+
+      it("should use the connection given by the event as its own",
+      function(done) {
+        connection.on('plumb:connect', function() {
+          assert.equal(connection.plumbConnection, plumbEvent.connection);
+          done();
+        });
+
+        connection.trigger('plumb:connect', plumbEvent);
+      });
+
+      it("should trigger a 'connect' event on its endpoints",
+      function(done) {
+        var a1Connect,
+            b1Connect;
+
+        a1.on('connect', function(eventConnection) {
+          assert.equal(connection, eventConnection);
+          (a1Connect = true) && b1Connect && done();
+        });
+
+        b1.on('connect', function(eventConnection) {
+          assert.equal(connection, eventConnection);
+          a1Connect && (b1Connect = true) && done();
+        });
+
+        connection.trigger('plumb:connect', plumbEvent);
+      });
+    });
+
+
+    describe("on 'plumb:disconnect' events", function() {
+      var a3, b3,
+          connection;
+          
+      beforeEach(function() {
+        a3 = diagram.endpoints.get('a3');
+        b3 = diagram.endpoints.get('b3');
+        connection = diagram.connections.get('a3');
+      });
+
+      it("should destroy itself", function(done) {
+        connection.on('plumb:disconnect', function() {
+          assert.isNull(connection.plumbConnection);
+          done();
+        });
+
+        connection.trigger('plumb:disconnect');
+      });
+
+      it("should trigger a 'disconnect' event on its endpoints",
+      function(done) {
+        var a1Disconnect,
+            b1Disconnect;
+
+        a3.on('disconnect', function(eventConnection) {
+          assert.equal(connection, eventConnection);
+          (a1Disconnect = true) && b1Disconnect && done();
+        });
+
+        b3.on('disconnect', function(eventConnection) {
+          assert.equal(connection, eventConnection);
+          a1Disconnect && (b1Disconnect = true) && done();
+        });
+
+        connection.trigger('plumb:disconnect');
+      });
+    });
 
     describe(".destroy", function() {
       it("should remove the actual jsPlumb connection", function(done) {
