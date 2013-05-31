@@ -123,7 +123,6 @@ class ConversationApiWorker(BaseWorker):
 
     worker_name = 'conversation_api_worker'
     CONFIG_CLASS = ConversationApiWorkerConfig
-    SEND_TO_TAGS = frozenset(['default'])
 
     @inlineCallbacks
     def setup_worker(self):

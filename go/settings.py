@@ -182,6 +182,7 @@ DEBUG_TOOLBAR_CONFIG = {
     'ENABLE_STACKTRACES': True,
 }
 
+SESSION_ENGINE = 'go.api.go_api.session'
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
