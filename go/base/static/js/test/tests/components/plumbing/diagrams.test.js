@@ -168,6 +168,34 @@ describe("go.components.plumbing (diagrams)", function() {
     });
   });
 
+  describe(".DiagramViewConnections", function() {
+    var assertAdded = function() {
+    };
+
+    var assertRemoved = function() {
+    };
+
+    it("should add connections for endpoints connected on initialisation");
+
+    describe("on diagram endpoint 'add' events", function() {
+      it("should add a connection if an endpoint's model's target is set");
+      it("should remove a connection if an endpoint's model's target is unset");
+    });
+
+    describe("on diagram endpoint 'remove' events", function() {
+      it("should stop watching for changes to the endpoint's target attribute");
+    });
+
+    describe("on 'connection' jsPlumb events", function() {
+      it("should add the connection if it does not yet exist");
+      it("delegate the event to the relevant connection");
+    });
+
+    describe("on 'connectionDetached' jsPlumb events", function() {
+      it("delegate the event to the relevant connection");
+    });
+  });
+
   describe(".Diagram", function() {
     it("should set up the states according to the schema", function() {
       assert.deepEqual(

@@ -99,7 +99,6 @@
     render: function() {
       this.diagram.$el.append(this.$el);
       this.endpoints.render();
-      return this;
     }
   });
 

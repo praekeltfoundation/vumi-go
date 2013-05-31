@@ -35,10 +35,7 @@
     onConnect: function(connection) {
       if (this === connection.source) {
         // set the model silently to prevent recursive event propagation
-        this.model.set(
-          'target',
-          connection.target.model,
-          {silent: true});
+        this.model.set('target', connection.target.model, {silent: true});
       }
     },
 
@@ -54,7 +51,6 @@
         jsPlumb.deleteEndpoint(this.plumbEndpoint);
         this.plumbEndpoint = null;
       }
-      return this;
     },
 
     render: function() {
@@ -63,7 +59,6 @@
           this.state.$el,
           this._plumbOptions());
       }
-      return this;
     }
   });
 

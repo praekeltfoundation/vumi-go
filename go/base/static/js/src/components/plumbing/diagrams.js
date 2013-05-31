@@ -7,7 +7,7 @@
       Lookup = structures.Lookup,
       ViewCollectionGroup = structures.ViewCollectionGroup,
       ViewCollection = structures.ViewCollection;
-      
+
   var plumbing = go.components.plumbing,
       StateView = plumbing.StateView,
       ConnectionView = plumbing.ConnectionView;
@@ -81,6 +81,20 @@
       }
     },
 
+    onPlumbConnect: function(e) {
+      var connection = this.add(
+        e.sourceEndpoint.getUuid(),
+        e.targetEndpoint.getUuid(),
+        {render: false});
+
+      connection.trigger('plumb:connect', e);
+    },
+
+    onPlumbDisconnect: function(e) {
+      var connection = this.get(e.sourceEndpoint.getUuid());
+      connection.trigger('plumb:disconnect');
+    },
+
     onTargetChange: function(sourceModel, targetModel) {
       // If the target has been set, connect.
       // Otherwise, the target has been unset, so disconnect.
@@ -88,28 +102,12 @@
       else { this.remove(sourceModel.id); }
     },
 
-    onPlumbConnect: function(e) {
-      var connection = this.add(
-        e.sourceEndpoint.getUuid(),
-        e.targetEndpoint.getUuid(),
-        {render: false});
-
-      connection.trigger('connect', e);
-    },
-
-    onPlumbDisconnect: function(e) {
-      var connection = this.get(e.sourceEndpoint.getUuid());
-      connection.trigger('disconnect');
-    },
-
     subscribeEndpoint: function(id, endpoint) {
       endpoint.model.on('change:target', this.onTargetChange, this);
-      return this;
     },
 
     unsubscribeEndpoint: function(id, endpoint) {
       endpoint.model.off('change:target', this.onTargetChange, this);
-      return this;
     },
 
     add: function(sourceId, targetId, options) {
@@ -148,7 +146,9 @@
         .call(this, sourceId);
     },
 
-    render: function() { this.each(function(c) { c.render(); }); }
+    render: function() {
+      this.each(function(c) { c.render(); });
+    }
   });
 
   // Options:
@@ -228,7 +228,6 @@
     render: function() {
       this.states.render();
       this.connections.render();
-      return this;
     }
   });
 

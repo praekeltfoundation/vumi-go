@@ -38,7 +38,7 @@
     },
 
     onPlumbDisconnect: function() {
-      this.destroy();
+      this.plumbConnection = null;
       this.source.trigger('disconnect', this);
       this.target.trigger('disconnect', this);
     },
@@ -48,14 +48,12 @@
         jsPlumb.detach(this.plumbConnection);
         this.plumbConnection = null;
       }
-      return this;
     },
 
     render: function() {
       if (!this.plumbConnection) {
         this.plumbConnection = jsPlumb.connect(this._plumbOptions());
       }
-      return this;
     }
   });
 

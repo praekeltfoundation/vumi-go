@@ -55,7 +55,7 @@ describe("go.components.plumbing (connections)", function() {
         plumbEvent = {connection: {}}; // stubbed plumb event
       });
 
-      it("should use the connection given by the event as its own",
+      it("should use the jsPlumb connection given by the event as its own",
       function(done) {
         connection.on('plumb:connect', function() {
           assert.equal(connection.plumbConnection, plumbEvent.connection);
@@ -95,7 +95,7 @@ describe("go.components.plumbing (connections)", function() {
         connection = diagram.connections.get('a3');
       });
 
-      it("should destroy itself", function(done) {
+      it("should ensure its jsPlumb connection is removed", function(done) {
         connection.on('plumb:disconnect', function() {
           assert.isNull(connection.plumbConnection);
           done();
@@ -125,8 +125,8 @@ describe("go.components.plumbing (connections)", function() {
 
     describe(".destroy", function() {
       it("should remove the actual jsPlumb connection", function(done) {
-        jsPlumb.bind('connectionDetached', function(e) {
-          assert.equal(connection.plumbConnection, e.connection);
+        jsPlumb.bind('connectionDetached', function() {
+          assert.isNull(connection.plumbConnection);
           done();
         });
 
