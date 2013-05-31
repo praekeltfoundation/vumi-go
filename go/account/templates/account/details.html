@@ -10,9 +10,9 @@ Account
 {% block content_main %}
 <div class="row-fluid">
     <div class="span9">
-        <h5>Personal details</h5>
+        <h4>Personal details</h4>
         {% include "base/includes/messages.html" %}
-        <form class="form-horizontal" action="" method="post">
+        <form class="form-horizontal indent" action="" method="post">
             {% csrf_token %}
             {{ account_form }}
             <div class="form-actions">
@@ -22,22 +22,22 @@ Account
     </div>
 
     <div class="span3 sidebar">
-
-        <h5>Admin settings</h5>
-
+        <h4>Admin settings</h4>
         <ul class="nav nav-pills nav-stacked">
             <li>
-                <a href="">Billing</a>
-                <br>
-                View a list of monthly statements
+                <a href="">
+                    Billing<br>
+                    <span>View a list of monthly statements</span>
+                </a>
+                
             </li>
             <li>
-                <a href="">Users and permissions</a>
-                <br>
-                Add and edit users and access rights
+                <a href="">
+                    Users and permissions<br>
+                    <span>Add and edit users and access rights</span>
+                </a>
             </li>   
         </ul>
-
     </div>
 </div>
 {% endblock %}

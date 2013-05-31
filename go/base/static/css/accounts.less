@@ -15,8 +15,11 @@
     // the details page doens't have an actions bar
     .actions { display:none; }
 
-    h5 {
-        border-bottom:1px #333 dotted;
+    h4 {
+        color:#000;
+        border-bottom:1px #c9c9c9 dotted;
+        padding-bottom:1em;
+        margin:0;
     }
 
     // so that the element inside are not touching the sides
@@ -27,7 +30,24 @@
         padding-right:1em;
     }
 
-    .sidebar .nav a {
-        text-indent:0;
+    .sidebar .nav {
+
+        li {
+            text-indent:0;
+            border-bottom:1px #c9c9c9 dotted;
+            padding:1em 0;
+        }
+        a {
+            padding:0;
+            margin:0;
+            text-indent:0;
+            line-height:1.5em;
+
+            span {
+                color:#2f3436;
+            }
+        }
     }
+
+
 }

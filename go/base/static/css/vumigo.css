@@ -230,8 +230,11 @@ body {
 .accounts.details .actions {
   display: none;
 }
-.accounts.details h5 {
-  border-bottom: 1px #333 dotted;
+.accounts.details h4 {
+  color: #000;
+  border-bottom: 1px #c9c9c9 dotted;
+  padding-bottom: 1em;
+  margin: 0;
 }
 .accounts.details .span9 {
   padding-left: 1em;
@@ -239,8 +242,19 @@ body {
 .accounts.details .span3 {
   padding-right: 1em;
 }
-.accounts.details .sidebar .nav a {
+.accounts.details .sidebar .nav li {
   text-indent: 0;
+  border-bottom: 1px #c9c9c9 dotted;
+  padding: 1em 0;
+}
+.accounts.details .sidebar .nav a {
+  padding: 0;
+  margin: 0;
+  text-indent: 0;
+  line-height: 1.5em;
+}
+.accounts.details .sidebar .nav a span {
+  color: #2f3436;
 }
 .components-table {
   overflow: hidden;
