@@ -34,7 +34,16 @@
   // Model for a 'placeholder' attached to a state that one end of a connection
   // can be hooked onto.
   var EndpointModel = Backbone.RelationalModel.extend({
+  });
+
+  // Model for a connection between two endpoint models
+  var ConnectionModel = Backbone.RelationalModel.extend({
     relations: [{
+      type: Backbone.HasOne,
+      key: 'source',
+      includeInJSON: 'id',
+      relatedModel: 'go.components.stateMachine.EndpointModel'
+    }, {
       type: Backbone.HasOne,
       key: 'target',
       includeInJSON: 'id',
@@ -63,11 +72,16 @@
       key: 'state0',
       includeInJSON: 'id',
       relatedModel: 'go.components.stateMachine.StateModel'
+    }, {
+      type: Backbone.HasMany,
+      key: 'connections',
+      relatedModel: 'go.components.stateMachine.ConnectionModel'
     }]
   });
 
   _.extend(exports, {
     EndpointModel: EndpointModel,
+    ConnectionModel: ConnectionModel,
     StateModel: StateModel,
     StateMachineModel: StateMachineModel
   });
