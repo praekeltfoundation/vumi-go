@@ -1,19 +1,23 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
-
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
 from django.template.loader import render_to_string
+from django.http import HttpResponse
 
 from go.account.forms import EmailForm, AccountForm
 from go.account.tasks import update_account_details
 from go.base.django_token_manager import DjangoTokenManager
 
 
-@login_required
 def index(request):
+    return HttpResponse("I stole this page")
+
+@login_required
+def details(request):
     profile = request.user.get_profile()
     token_manager = DjangoTokenManager(request.user_api.api.token_manager)
     account = profile.get_user_account()
@@ -36,12 +40,9 @@ def index(request):
                 params = {
                     'first_name': data['name'],
                     'last_name': data['surname'],
-                    'new_password': data['new_password'],
-                    'email_address': data['email_address'],
                     'msisdn': data['msisdn'],
                     'confirm_start_conversation':
-                        data['confirm_start_conversation'],
-                    'email_summary': data['email_summary'],
+                        data['confirm_start_conversation']
                 }
 
                 token = token_manager.generate_callback_token(request.path,
@@ -62,7 +63,7 @@ def index(request):
                 messages.info(request,
                     'Please confirm this change by clicking on the link '
                     'that was just sent to your mailbox.')
-                return redirect('account:index')
+                return redirect('accounts:details')
 
         elif '_email' in request.POST:
             email_form = EmailForm(request.POST)
@@ -73,15 +74,13 @@ def index(request):
                 send_mail(subject, message, _from, ['support@vumi.org'])
                 messages.info(request, 'Thanks for your email. We will be in '
                                         'touch shortly.')
-                return redirect(reverse('account:index'))
+                return redirect(reverse('accounts:details'))
             else:
                 messages.error(request, 'We didn\'t understand some of the '
                     'values your provided in the email form, please try '
                     'again.')
-    return render(request, 'account/index.html', {
+
+    return render(request, 'account/details.html', {
         'email_form': email_form,
         'account_form': account_form,
     })
-
-def settings(request):
-    return HttpResponse(1)

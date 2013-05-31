@@ -227,6 +227,21 @@ body {
 .accounts .logo-large {
   margin: 1em 0 2em 0;
 }
+.accounts.details .actions {
+  display: none;
+}
+.accounts.details h5 {
+  border-bottom: 1px #333 dotted;
+}
+.accounts.details .span9 {
+  padding-left: 1em;
+}
+.accounts.details .span3 {
+  padding-right: 1em;
+}
+.accounts.details .sidebar .nav a {
+  text-indent: 0;
+}
 .components-table {
   overflow: hidden;
 }

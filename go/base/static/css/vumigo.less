@@ -144,6 +144,10 @@ body {
     margin:0;
   }
 
+  // this cannot be applied to a row-fluid or span element.
+  // it's unfortunate, but that's the way the cookie crumbles.
+  // you'll get visual leaks if you try and indent one of the 
+  // above.
   .indent {
     margin:2em 1em;
   }

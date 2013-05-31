@@ -1,0 +1,43 @@
+{% extends "account/base.html" %}
+
+{% block content_extraclass %}accounts details{% endblock %}
+
+{% block content_title %}
+Account
+{% endblock %}
+
+
+{% block content_main %}
+<div class="row-fluid">
+    <div class="span9">
+        <h5>Personal details</h5>
+        {% include "base/includes/messages.html" %}
+        <form class="form-horizontal" action="" method="post">
+            {% csrf_token %}
+            {{ account_form }}
+            <div class="form-actions">
+                <input type="submit" class="btn btn-primary" value="Save changes">
+            </div>
+        </form>
+    </div>
+
+    <div class="span3 sidebar">
+
+        <h5>Admin settings</h5>
+
+        <ul class="nav nav-pills nav-stacked">
+            <li>
+                <a href="">Billing</a>
+                <br>
+                View a list of monthly statements
+            </li>
+            <li>
+                <a href="">Users and permissions</a>
+                <br>
+                Add and edit users and access rights
+            </li>   
+        </ul>
+
+    </div>
+</div>
+{% endblock %}
