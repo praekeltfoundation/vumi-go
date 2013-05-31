@@ -368,7 +368,7 @@ PIPELINE_JS = {
             'js/src/errors.js',
             'js/src/components/components.js',
             'js/src/components/structures.js',
-            'js/src/components/states.js',
+            'js/src/components/stateMachine.js',
             'js/src/components/tables.js',
             'js/src/campaign/campaign.js',
             'js/src/campaign/interactive.js',
