@@ -52,13 +52,12 @@
       this.diagram = diagram;
 
       var endpoints = this.diagram.endpoints;
-      endpoints.eachItem(this.subscribeEndpoint, this);
       endpoints.on('add', this.subscribeEndpoint, this);
       endpoints.on('remove', this.unsubscribeEndpoint, this);
 
-      // Check which endpoint models were connected upon initialisation
-      // and add the initial connections accordingly
-      endpoints.each(this._initConnection, this);
+      endpoints.eachItem(function(id, endpoint) {
+        this.subscribeEndpoint(id, endpoint, {render: false});
+      }, this);
 
       jsPlumb.bind(
         'connection',
@@ -67,18 +66,6 @@
       jsPlumb.bind(
         'connectionDetached',
         _.bind(this.onPlumbDisconnect, this));
-    },
-
-    _initConnection: function(endpoint) {
-      var sourceModel = endpoint.model,
-          targetModel = sourceModel.get('target');
-
-      if (targetModel) {
-        this.add(
-          sourceModel.id,
-          targetModel.id,
-          {render: false});
-      }
     },
 
     onPlumbConnect: function(e) {
@@ -102,16 +89,22 @@
       else { this.remove(sourceModel.id); }
     },
 
-    subscribeEndpoint: function(id, endpoint) {
+    subscribeEndpoint: function(id, endpoint, options) {
+      var target = endpoint.model.get('target');
+      if (target) { this.add(id, target.id, options); }
+
       endpoint.model.on('change:target', this.onTargetChange, this);
     },
 
     unsubscribeEndpoint: function(id, endpoint) {
+      var target = endpoint.model.get('target');
+      if (target) { this.remove(id); }
+
       endpoint.model.off('change:target', this.onTargetChange, this);
     },
 
     add: function(sourceId, targetId, options) {
-      _.defaults(options, this.addDefaults);
+      options = _.defaults(options || {}, this.addDefaults);
       var connection = this.get(sourceId);
 
       // return connection if it already exists
