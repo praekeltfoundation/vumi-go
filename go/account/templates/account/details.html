@@ -15,8 +15,10 @@ Account
         <form class="form-horizontal indent" action="" method="post">
             {% csrf_token %}
             {{ account_form }}
+
             <div class="form-actions">
-                <input type="submit" class="btn btn-primary" value="Save changes">
+                <input type="submit" class="btn btn-primary" value="Save">
+                <button class="btn">Change password</button>
             </div>
         </form>
     </div>
