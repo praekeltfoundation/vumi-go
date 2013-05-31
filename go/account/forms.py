@@ -1,9 +1,8 @@
 from django import forms
 from registration.forms import RegistrationFormUniqueEmail
-
 from bootstrap.forms import BootstrapMixin, BootstrapForm, Fieldset
-
 from vumi.utils import normalize_msisdn
+
 
 class AccountForm(BootstrapForm):
 

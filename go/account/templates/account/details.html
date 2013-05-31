@@ -12,12 +12,13 @@ Account
     <div class="span9">
         <h4>Personal details</h4>
         {% include "base/includes/messages.html" %}
-        <form class="form-horizontal indent" action="" method="post">
+        <form class="indent" action="" method="post">
             {% csrf_token %}
             {{ account_form }}
 
             <div class="form-actions">
                 <input type="submit" class="btn btn-primary" value="Save">
+                
                 <button class="btn">Change password</button>
             </div>
         </form>
@@ -42,4 +43,7 @@ Account
         </ul>
     </div>
 </div>
+{% endblock %}
+
+{% block modals %}
 {% endblock %}
