@@ -348,8 +348,14 @@ describe("go.components.structures", function() {
   var SubthingView = Backbone.View.extend();
 
   var SubthingViewCollection = SubviewCollection.extend({
-    defaults: function() { return {type: SubthingView}; },
-    opts: function() { return {id: this.size()}; }
+    defaults: {type: SubthingView},
+
+    opts: function() { return {id: this.size()}; },
+
+    constructor: function(options) {
+      SubviewCollection.prototype.constructor.call(this, options);
+      this.options = options;
+    }
   });
 
   describe(".SubviewCollection", function() {
@@ -448,6 +454,15 @@ describe("go.components.structures", function() {
           .get('lonelySubthing')
           .keys(),
         ['d']);
+    });
+
+    it("shouldn't allow its schema to be modified during setup", function() {
+      var subthings = subviews.members.get('subthings');
+      subthings.options.someProp = 23;
+      assert.deepEqual(
+        subviews.schema,
+        [{attr: 'subthings'},
+         {attr: 'lonelySubthing'}]);
     });
   });
 });
