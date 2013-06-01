@@ -67,7 +67,7 @@ def details(request):
                 messages.info(request,
                     'Please confirm this change by clicking on the link '
                     'that was just sent to your mailbox.')
-                return redirect('accounts:details')
+                return redirect('auth_details')
 
         elif '_email' in request.POST:
             email_form = EmailForm(request.POST)
@@ -78,7 +78,7 @@ def details(request):
                 send_mail(subject, message, _from, ['support@vumi.org'])
                 messages.info(request, 'Thanks for your email. We will be in '
                                         'touch shortly.')
-                return redirect(reverse('accounts:details'))
+                return redirect(reverse('auth_details'))
             else:
                 messages.error(request, 'We didn\'t understand some of the '
                     'values your provided in the email form, please try '

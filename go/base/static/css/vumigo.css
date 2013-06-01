@@ -224,6 +224,9 @@ body {
 .table-manage-data td {
   color: #2f3436;
 }
+.accounts {
+  color: #c1c1c1;
+}
 .accounts .logo-large {
   margin: 1em 0 2em 0;
 }

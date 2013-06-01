@@ -13,6 +13,6 @@ urlpatterns = patterns('',
         'form_class': RegistrationForm,
         },
         name='registration_register'),
-    url(r'^details/$', views.details, name='details'),
+    url(r'^details/$', views.details, name='auth_details'),
 )
 urlpatterns += authpatterns

@@ -32,7 +32,7 @@ urlpatterns = patterns('',
     url(r'^app/', include('go.apps.urls')),
     url(r'^contacts/', include('go.contacts.urls', namespace='contacts')),
 
-    url(r'^account/', include('go.account.urls', namespace='accounts')),
+    url(r'^accounts/', include('go.account.urls')),
 )
 
 urlpatterns += patterns('django.contrib.flatpages.views',

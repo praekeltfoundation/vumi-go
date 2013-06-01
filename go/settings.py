@@ -313,8 +313,6 @@ try:
 except ImportError:
     pass
 
-# django-registration tokens expire after a week
-ACCOUNT_ACTIVATION_DAYS = 7
 
 # Compress Less with `lesscpy`
 COMPRESS_PRECOMPILERS = (
@@ -329,6 +327,9 @@ DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 # AUTH CONFIGURATION
 AUTH_PROFILE_MODULE = 'base.UserProfile'
 LOGIN_REDIRECT_URL = '/'
+# django-registration tokens expire after a week
+ACCOUNT_ACTIVATION_DAYS = 7
+
 
 # PIPELINES CONFIGURATION
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
