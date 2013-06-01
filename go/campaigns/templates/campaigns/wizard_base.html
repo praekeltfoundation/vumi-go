@@ -1,41 +1,34 @@
 {% extends "app.html" %}
 {% load url from future %}
 
-{% block content_extraclass %}accounts{% endblock %}
-
-{% block content_title %}
-{% endblock %}
+{% block content_extraclass %}campaigns{% endblock %}
 
 {% block content_breadcrumbs %}
-{% endblock %}
-
-{% block content_actions_left %}
+    <a href="{% url 'campaigns:details' campaign_key %}">Details</a>
+    {% if not campaign_key %}
+        <a href="#">Messages</a>
+        <a href="#">Contacts</a>
+        <a href="#">Preview &amp; Activate</a>
+    {% else %}
+        <a href="{% url 'campaigns:message' campaign_key %}">Messages</a>
+        <a href="{% url 'campaigns:contacts' campaign_key %}">Contacts</a>
+        <a href="{% url 'campaigns:preview' campaign_key %}">Preview &amp; Activate</a>
+    {% endif %}
 {% endblock %}
 
 {% block content_actions_right %}
+    <a href="{% url 'conversations:index' %}">Cancel</a>
+    <button class="btn btn-primary" data-action="draft">Save draft</button>
+    <button class="btn btn-primary" data-action="save">Next step</button>
 {% endblock %}
 
 
-{% block content_main %}
-    <div class="row-fluid">
-        <div class="span3 sidebar">
-
-            <div class="nav nav-list extra-actions">
-                <a href="{% url 'contacts:new_person' %}">New contact...</a>
-            </div>
-
-            <ul class="nav nav-list">
-                <li><a href="{% url 'contacts:people' %}">All contacts</a></li>
-                <li><a href="#">Smart groups</a></li>
-                <li><a href="{% url 'contacts:groups' %}">Groups</a></li>
-            </ul>
-
-        </div>
-        <div class="span9">
-            {% include "base/includes/messages.html" %}
-            {% block content_main_list %}
-            {% endblock %}
-        </div>
-    </div>
+{% block ondomready %}
+    // these are the save draft and cancel buttons at the top.
+    $('.actions .right button').on('click', function(e) {
+        e.preventDefault();
+        var $frm = $('#frm-campaign');
+        $frm.prepend('<input type="hidden" name="action" value="' + $(this).attr('data-action') + '">');
+        $frm.submit();
+    });    
 {% endblock %}
-
