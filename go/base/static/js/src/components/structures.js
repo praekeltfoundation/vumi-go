@@ -230,7 +230,11 @@
 
       this.view = view;
       this.schema = _(this).result('schema');
-      this.schema.forEach(this.subscribe, this);
+
+      // clone each collection option set so we don't modify the schema
+      this.schema.forEach(
+        function(options) { this.subscribe(_.clone(options)); },
+        this);
     },
 
     subscribe: function(options) {
