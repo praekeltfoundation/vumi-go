@@ -31,7 +31,6 @@ urlpatterns = patterns('',
     url(r'^campaigns/', include('go.campaigns.urls', namespace='campaigns')),
     url(r'^app/', include('go.apps.urls')),
     url(r'^contacts/', include('go.contacts.urls', namespace='contacts')),
-
     url(r'^accounts/', include('go.account.urls')),
 )
 
