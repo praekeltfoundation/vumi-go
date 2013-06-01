@@ -12,6 +12,8 @@ from go.account.forms import EmailForm, AccountForm
 from go.account.tasks import update_account_details
 from go.base.django_token_manager import DjangoTokenManager
 
+from django.contrib.auth.forms import PasswordChangeForm
+
 
 def index(request):
     return HttpResponse("I stole this page")
@@ -30,6 +32,8 @@ def details(request):
         'email_summary': account.email_summary,
     })
     email_form = EmailForm()
+    
+    password_change_form = PasswordChangeForm(request.user)
 
     if request.method == 'POST':
         if '_account' in request.POST:
@@ -80,7 +84,14 @@ def details(request):
                     'values your provided in the email form, please try '
                     'again.')
 
+        elif '_password' in request.POST:
+            print '-------------------------'
+            password_change_form = PasswordChangeForm(request.user,
+                                                      request.POST)
+
+
     return render(request, 'account/details.html', {
         'email_form': email_form,
         'account_form': account_form,
+        'password_change_form': password_change_form
     })

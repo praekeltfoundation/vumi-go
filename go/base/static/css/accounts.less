@@ -13,7 +13,7 @@
 .accounts.details {
 
     // the details page doens't have an actions bar
-    .actions { display:none; }
+    .actions { visibility:hidden; }
 
     h4 {
         color:#000;
@@ -24,10 +24,10 @@
 
     // so that the elements these are not touching the side of the 
     // container
-    .span9 {
+    .span8 {
         padding-left:1em;
     }
-    .span3 {
+    .span4 {
         padding-right:1em;
     }
 
@@ -43,9 +43,11 @@
             margin:0;
             text-indent:0;
             line-height:1.5em;
+            font-weight:bold;
 
             span {
                 color:#2f3436;
+                font-weight:normal;
             }
         }
     }

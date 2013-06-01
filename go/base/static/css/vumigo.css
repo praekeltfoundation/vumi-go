@@ -228,7 +228,7 @@ body {
   margin: 1em 0 2em 0;
 }
 .accounts.details .actions {
-  display: none;
+  visibility: hidden;
 }
 .accounts.details h4 {
   color: #000;
@@ -236,10 +236,10 @@ body {
   padding-bottom: 1em;
   margin: 0;
 }
-.accounts.details .span9 {
+.accounts.details .span8 {
   padding-left: 1em;
 }
-.accounts.details .span3 {
+.accounts.details .span4 {
   padding-right: 1em;
 }
 .accounts.details .sidebar .nav li {
@@ -252,9 +252,11 @@ body {
   margin: 0;
   text-indent: 0;
   line-height: 1.5em;
+  font-weight: bold;
 }
 .accounts.details .sidebar .nav a span {
   color: #2f3436;
+  font-weight: normal;
 }
 .components-table {
   overflow: hidden;

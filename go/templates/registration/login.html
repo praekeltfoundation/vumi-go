@@ -2,7 +2,7 @@
 {% load url from future %}
 
 {% block auth_form %}
-<form action="{% url 'auth_login' %}" method="post">
+<form action="" method="post">
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ next }}">
     {% if form.errors %}
@@ -18,7 +18,7 @@
     </p>
     <p>
         <button type="submit" class="btn">Sign In</button>
-        <a href="{% url 'auth_password_reset' %}">Forgot your password?</a>
+        <a href="{% url 'accounts:auth_password_reset' %}">Forgot your password?</a>
     </p>
 </form>
 {% endblock %}
