@@ -170,12 +170,93 @@
     render: ViewCollection.prototype.render
   });
 
+  // A collection of subviews mapping to an attribute on a view's model.
+  //
+  // Options:
+  // - view: The parent view for this collection of subviews
+  // - attr: The attr on the parent view's model which holds the associated
+  // collection or model
+  // - [type]: The view type to instantiate for each new view.
+  var SubviewCollection = ViewCollection.extend({
+    // Override to change the default options used on initialisation
+    defaults: {type: Backbone.View},
+
+    // Override to change the options passed to each new view
+    opts: {},
+
+    constructor: function(options) {
+      _(options).defaults(_(this).result('defaults'));
+      this.view = options.view;
+      this.attr = options.attr;
+      this.type = options.type;
+
+      ViewCollection
+        .prototype
+        .constructor
+        .call(this, this._models());
+    },
+
+    _models: function() {
+      var modelOrCollection = this.view.model.get(this.attr);
+
+      // If we were given a single model instead of a collection, create a
+      // singleton collection with the model so we can work with things
+      // uniformly
+      return modelOrCollection instanceof Backbone.Model
+        ? new Backbone.Collection([modelOrCollection])
+        : modelOrCollection;
+    },
+
+    create: function(model) {
+      var opts = _(this).result('opts');
+      opts.model = model;
+
+      return new this.type(opts);
+    }
+  });
+
+  // A self-maintaining, 'flattened' lookup of subview collections defined by a
+  // schema.
+  //
+  // Arguments:
+  // - view: The parent view of the group
+  var SubviewCollectionGroup = ViewCollectionGroup.extend({
+    // Override to change the subview collection type
+    collectionType: SubviewCollection,
+
+    // Override to change the subview schema
+    schema: [{attr: 'subviews', type: Backbone.View}],
+
+    constructor: function(view) {
+      ViewCollectionGroup
+        .prototype
+        .constructor
+        .call(this);
+
+      this.view = view;
+      this.schema = _(this).result('schema');
+      this.schema.forEach(this.subscribe, this);
+    },
+
+    subscribe: function(options) {
+      options.view = this.view;
+      var collection = new this.collectionType(options);
+
+      return ViewCollectionGroup
+        .prototype
+        .subscribe
+        .call(this, options.attr, collection);
+    }
+  });
+
   _.extend(exports, {
     Extendable: Extendable,
     Eventable: Eventable,
     Lookup: Lookup,
     LookupGroup: LookupGroup,
     ViewCollection: ViewCollection,
-    ViewCollectionGroup: ViewCollectionGroup
+    ViewCollectionGroup: ViewCollectionGroup,
+    SubviewCollection: SubviewCollection,
+    SubviewCollectionGroup: SubviewCollectionGroup
   });
 })(go.components.structures = {});

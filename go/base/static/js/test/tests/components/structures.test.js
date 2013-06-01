@@ -342,4 +342,112 @@ describe("go.components.structures", function() {
       });
     });
   });
+
+  var SubviewCollection = structures.SubviewCollection;
+
+  var SubthingView = Backbone.View.extend();
+
+  var SubthingViewCollection = SubviewCollection.extend({
+    defaults: function() { return {type: SubthingView}; },
+    opts: function() { return {id: this.size()}; }
+  });
+
+  describe(".SubviewCollection", function() {
+    var view,
+        subviews;
+
+    beforeEach(function() {
+      var model = new Backbone.Model({
+        subthings: new Backbone.Collection([
+          {id: 'a'},
+          {id: 'b'},
+          {id: 'c'}
+        ]),
+        lonelySubthing: new Backbone.Model({id: 'd'})
+      });
+
+      view = new Backbone.View({model: model});
+
+      subviews = new SubthingViewCollection({
+        view: view,
+        attr: 'subthings'
+      });
+    });
+
+    it("should be useable with model type attributes", function() {
+      subviews = new SubthingViewCollection({
+        view: view,
+        attr: 'lonelySubthing'
+      });
+
+      assert.deepEqual(subviews.keys(), ['d']);
+    });
+
+    it("should be useable with collection type attributes", function() {
+      subviews = new SubthingViewCollection({
+        view: view,
+        attr: 'subthings'
+      });
+
+      assert.deepEqual(subviews.keys(), ['a', 'b', 'c']);
+    });
+
+    describe(".create", function() {
+      it("should create subviews of the collection's type", function() {
+        subviews.each(function(v) { assert.instanceOf(v, SubthingView); });
+      });
+
+      it("should create the view with options defined by the collection",
+      function() {
+        subviews.each(function(v, i) { assert.equal(v.id, i); });
+      });
+    });
+  });
+
+  describe(".SubviewCollectionGroup", function() {
+    var view,
+        subviews;
+
+    var SubviewCollectionGroup = structures.SubviewCollectionGroup;
+
+    var SubthingViewCollections = SubviewCollectionGroup.extend({
+      collectionType: SubthingViewCollection,
+
+      schema: [
+        {attr: 'subthings'},
+        {attr: 'lonelySubthing'}]
+    });
+
+    beforeEach(function() {
+      var model = new Backbone.Model({
+        subthings: new Backbone.Collection([
+          {id: 'a'},
+          {id: 'b'},
+          {id: 'c'}
+        ]),
+        lonelySubthing: new Backbone.Model({id: 'd'})
+      });
+
+      view = new Backbone.View({model: model});
+      subviews = new SubthingViewCollections(view);
+    });
+
+    it("should set up the subviews according to the schema", function() {
+      assert.deepEqual(subviews.keys(), ['a', 'b', 'c', 'd']);
+
+      assert.deepEqual(
+        subviews
+          .members
+          .get('subthings')
+          .keys(),
+        ['a', 'b', 'c']);
+
+      assert.deepEqual(
+        subviews
+          .members
+          .get('lonelySubthing')
+          .keys(),
+        ['d']);
+    });
+  });
 });
