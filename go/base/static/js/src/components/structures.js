@@ -185,15 +185,13 @@
     opts: {},
 
     constructor: function(options) {
-      _(options).defaults(_(this).result('defaults'));
       this.view = options.view;
       this.attr = options.attr;
+
+      _(options).defaults(_(this).result('defaults'));
       this.type = options.type;
 
-      ViewCollection
-        .prototype
-        .constructor
-        .call(this, this._models());
+      ViewCollection.prototype.constructor.call(this, this._models());
     },
 
     _models: function() {
@@ -228,10 +226,7 @@
     schema: [{attr: 'subviews', type: Backbone.View}],
 
     constructor: function(view) {
-      ViewCollectionGroup
-        .prototype
-        .constructor
-        .call(this);
+      ViewCollectionGroup.prototype.constructor.call(this);
 
       this.view = view;
       this.schema = _(this).result('schema');
