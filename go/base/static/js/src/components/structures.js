@@ -222,7 +222,7 @@
   // - view: The parent view of the group
   var SubviewCollectionGroup = ViewCollectionGroup.extend({
     // Override to change the subview collection type
-    SubviewCollection: SubviewCollection,
+    collectionType: SubviewCollection,
 
     // Override to change the subview schema
     schema: [{attr: 'subviews', type: Backbone.View}],
@@ -240,7 +240,7 @@
 
     subscribe: function(options) {
       options.view = this.view;
-      var collection = new this.SubviewCollection(options);
+      var collection = new this.collectionType(options);
 
       return ViewCollectionGroup
         .prototype

@@ -411,7 +411,7 @@ describe("go.components.structures", function() {
     var SubviewCollectionGroup = structures.SubviewCollectionGroup;
 
     var SubthingViewCollections = SubviewCollectionGroup.extend({
-      SubviewCollection: SubthingViewCollection,
+      collectionType: SubthingViewCollection,
 
       schema: [
         {attr: 'subthings'},
