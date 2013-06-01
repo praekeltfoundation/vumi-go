@@ -1,7 +1,6 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
-from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
@@ -18,6 +17,7 @@ from django.contrib.auth.forms import PasswordChangeForm
 def index(request):
     return HttpResponse("I stole this page")
 
+
 @login_required
 def details(request):
     profile = request.user.get_profile()
@@ -32,7 +32,6 @@ def details(request):
         'email_summary': account.email_summary,
     })
     email_form = EmailForm()
-    
     password_change_form = PasswordChangeForm(request.user)
 
     if request.method == 'POST':
@@ -85,7 +84,6 @@ def details(request):
                     'again.')
 
         elif '_password' in request.POST:
-            print '-------------------------'
             password_change_form = PasswordChangeForm(request.user,
                                                       request.POST)
 
