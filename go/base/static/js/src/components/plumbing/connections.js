@@ -27,14 +27,7 @@
       this.target = endpoints.get(this.model.get('target').id);
 
       // Keep a reference the actual jsPlumb connection
-      this.plumbConnection = null;
-    },
-
-    _plumbRefresh: function() {
-      // Check whether a jsPlumb connection exists for this connection and hold
-      // onto it if it does
       this.plumbConnection = this.diagram
-        .connections
         .plumbConnections
         .get(_(this).result('id')) || null;
     },
@@ -47,9 +40,8 @@
     },
 
     destroy: function() {
-      this._plumbRefresh();
-
       var plumbConnection = this.plumbConnection;
+
       if (plumbConnection) {
         this.plumbConnection = null;
         jsPlumb.detach(plumbConnection);
@@ -59,7 +51,6 @@
     },
 
     render: function() {
-      this._plumbRefresh();
       if (!this.plumbConnection) {
         this.plumbConnection = jsPlumb.connect(this._plumbOptions());
       }

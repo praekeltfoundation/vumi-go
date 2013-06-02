@@ -78,10 +78,6 @@
       this.diagram = diagram;  // helpful alias
       SubviewCollectionGroup.prototype.constructor.call(this, diagram);
 
-      // Hold onto all the connections made by jsPlumb so look them up later
-      // (jsPlumb doesn't provide an easy way to do this)
-      this.plumbConnections = new Lookup();
-
       jsPlumb.bind(
         'connection',
         _.bind(this.onPlumbConnect, this));
@@ -111,7 +107,7 @@
           targetId = e.targetEndpoint.getUuid(),
           connectionId = idOfConnection(sourceId, targetId);
 
-      this.plumbConnections.add(connectionId, e.connection);
+      this.diagram.plumbConnections.add(connectionId, e.connection);
 
       // Case 1:
       // -------
@@ -142,7 +138,7 @@
           targetId = e.targetEndpoint.getUuid(),
           connectionId = idOfConnection(sourceId, targetId);
 
-      this.plumbConnections.remove(connectionId);
+      this.diagram.plumbConnections.remove(connectionId);
 
       // Case 1:
       // -------
@@ -208,6 +204,10 @@
 
       // Lookup/Manager of all the endpoints in the diagram
       this.endpoints = new DiagramViewEndpoints(this);
+
+      // Hold onto all the connections made by jsPlumb to look them up later
+      // (jsPlumb doesn't provide an easy way to do this)
+      this.plumbConnections = new Lookup();
 
       // Lookup/Manager of all the connections in the diagram
       this.connections = new DiagramViewConnections(this);
