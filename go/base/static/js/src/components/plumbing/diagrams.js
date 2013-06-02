@@ -5,22 +5,19 @@
 (function(exports) {
   var structures = go.components.structures,
       Lookup = structures.Lookup,
-      ViewCollectionGroup = structures.ViewCollectionGroup,
-      ViewCollection = structures.ViewCollection;
+      SubviewCollection = structures.SubviewCollection,
+      SubviewCollectionGroup = structures.SubviewCollectionGroup,
+      ViewCollectionGroup = structures.ViewCollectionGroup;
 
   var plumbing = go.components.plumbing,
       StateView = plumbing.StateView,
-      ConnectionView = plumbing.ConnectionView;
+      ConnectionView = plumbing.ConnectionView,
+      idOfConnection = plumbing.idOfConnection;
 
-  // Arguments:
-  // - diagram: The state diagram view associated to the endpoints
+  // Keeps track of all the endpoints in the state diagram
   var DiagramViewEndpoints = ViewCollectionGroup.extend({
     constructor: function(diagram) {
-      ViewCollectionGroup
-        .prototype
-        .constructor
-        .call(this);
-
+      ViewCollectionGroup.prototype.constructor.call(this);
       this.diagram = diagram;
 
       // Add the initial states' endpoints
@@ -32,32 +29,58 @@
     },
 
     addState: function(id, state) { this.subscribe(id, state.endpoints); },
+
     removeState: function(id) { this.unsubscribe(id); }
   });
 
-  // Keeps connections between endpoint models in sync with the jsPlumb
+  var DiagramViewConnectionCollection = SubviewCollection.extend({
+    defaults: function() {
+      var endpointType = this.view
+        .stateType
+        .prototype
+        .endpointType;
+
+      return {
+        type: this.view.connectionType,
+        sourceType: endpointType,
+        targetType: endpointType
+      };
+    },
+
+    opts: function() {
+      var opts = _(this.view).result('connectionOptions');
+      opts.diagram = this.view;
+      return opts;
+    },
+
+    constructor: function(options) {
+      SubviewCollection.prototype.constructor.call(this, options);
+      this.sourceType = options.sourceType;
+      this.targetType = options.targetType;
+    },
+
+    // Returns whether or not this collection accepts a connection based on the
+    // types of the given source and target endpoints
+    accepts: function(source, target) {
+      return source instanceof this.sourceType
+          && target instanceof this.targetType;
+    }
+  });
+
+  // Keeps connections between connection models in sync with the jsPlumb
   // connections in the UI
-  //
-  // Arguments:
-  // - diagram: The state diagram view associated to the endpoints
-  var DiagramViewConnections = Lookup.extend({
-    addDefaults: {render: true},
+  var DiagramViewConnections = SubviewCollectionGroup.extend({
+    collectionType: DiagramViewConnectionCollection,
+
+    schema: function() { return _(this.diagram).result('connectionSchema'); },
 
     constructor: function(diagram) {
-      Lookup
-        .prototype
-        .constructor
-        .call(this);
+      this.diagram = diagram;  // helpful alias
+      SubviewCollectionGroup.prototype.constructor.call(this, diagram);
 
-      this.diagram = diagram;
-
-      var endpoints = this.diagram.endpoints;
-      endpoints.on('add', this.subscribeEndpoint, this);
-      endpoints.on('remove', this.unsubscribeEndpoint, this);
-
-      endpoints.eachItem(function(id, endpoint) {
-        this.subscribeEndpoint(id, endpoint, {render: false});
-      }, this);
+      // Hold onto all the connections made by jsPlumb so look them up later
+      // (jsPlumb doesn't provide an easy way to do this)
+      this.plumbConnections = new Lookup();
 
       jsPlumb.bind(
         'connection',
@@ -68,159 +91,132 @@
         _.bind(this.onPlumbDisconnect, this));
     },
 
-    onPlumbConnect: function(e) {
-      var connection = this.add(
-        e.sourceEndpoint.getUuid(),
-        e.targetEndpoint.getUuid(),
-        {render: false});
+    // Returns the first connection collection found that accepts a connection
+    // based on the type of the given source and target endpoints. We need this
+    // to determine which connection collection a new connection made in the ui
+    // belongs to.
+    determineCollection: function(source, target) {
+      var collections = this.members.values(),
+          i = collections.length,
+          c;
 
-      connection.trigger('plumb:connect', e);
+      while (i--) {
+        c = collections[i];
+        if (c.accepts(source, target)) { return c; }
+      }
+    },
+
+    onPlumbConnect: function(e) {
+      var sourceId = e.sourceEndpoint.getUuid(),
+          targetId = e.targetEndpoint.getUuid(),
+          connectionId = idOfConnection(sourceId, targetId);
+
+      this.plumbConnections.add(connectionId, e.connection);
+
+      // Case 1:
+      // -------
+      // The connection model and its view have been added, but we haven't
+      // rendered the view (drawn the jsPlumb connection) yet. We don't
+      // need to add the connection since it already exists.
+      if (this.has(connectionId)) { return; }
+
+      // Case 2:
+      // -------
+      // The connection was created in the UI, so no model or view exists yet.
+      // We need to create a new connection model and its view.
+      var source = this.diagram.endpoints.get(sourceId),
+          target = this.diagram.endpoints.get(targetId),
+          collection = this.determineCollection(source, target);
+
+      // Add a new connection model to the view collection's models. The view
+      // collection will recognise the addition and add a corresponding view
+      collection.models.add({
+        id: connectionId,
+        source: source.model,
+        target: target.model
+      });
     },
 
     onPlumbDisconnect: function(e) {
-      var connection = this.get(e.sourceEndpoint.getUuid());
-      connection.trigger('plumb:disconnect');
-    },
+      var sourceId = e.sourceEndpoint.getUuid(),
+          targetId = e.targetEndpoint.getUuid(),
+          connectionId = idOfConnection(sourceId, targetId);
 
-    onTargetChange: function(sourceModel, targetModel) {
-      // If the target has been set, connect.
-      // Otherwise, the target has been unset, so disconnect.
-      if (targetModel) { this.add(sourceModel.id, targetModel.id); }
-      else { this.remove(sourceModel.id); }
-    },
+      this.plumbConnections.remove(connectionId);
 
-    subscribeEndpoint: function(id, endpoint, options) {
-      var target = endpoint.model.get('target');
-      if (target) { this.add(id, target.id, options); }
+      // Case 1:
+      // -------
+      // The connection model and its view have been removed from its
+      // collection, so its connection view was destroyed (along with the
+      // jsPlumb connection). We don't need to remove the connection model
+      // and view since they no longer exists. 
+      if (!this.has(connectionId)) { return; }
 
-      endpoint.model.on('change:target', this.onTargetChange, this);
-    },
+      // Case 2:
+      // -------
+      // The connection was removed in the UI, so the model and view still
+      // exist. We need to remove them.
+      var source = this.diagram.endpoints.get(sourceId),
+          target = this.diagram.endpoints.get(targetId),
+          collection = this.determineCollection(source, target);
 
-    unsubscribeEndpoint: function(id, endpoint) {
-      var target = endpoint.model.get('target');
-      if (target) { this.remove(id); }
-
-      endpoint.model.off('change:target', this.onTargetChange, this);
-    },
-
-    add: function(sourceId, targetId, options) {
-      options = _.defaults(options || {}, this.addDefaults);
-      var connection = this.get(sourceId);
-
-      // return connection if it already exists
-      if (connection) { return connection; }
-
-      var endpoints = this.diagram.endpoints,
-          source = endpoints.get(sourceId),
-          target = endpoints.get(targetId);
-
-      connection = new this.diagram.ConnectionView({
-        source: source,
-        target: target
-      });
-
-      // add the connection, keyed by the sourceId
-      Lookup
-        .prototype
-        .add
-        .call(this, sourceId, connection);
-
-      if (options.render) { connection.render(); }
-      return connection;
-    },
-
-    remove: function(sourceId) {
-      var connection = this.get(sourceId);
-      connection.destroy();
-
-      return Lookup
-        .prototype
-        .remove
-        .call(this, sourceId);
-    },
-
-    render: function() {
-      this.each(function(c) { c.render(); });
+      // If we remove the model, the connection view collection will recognise
+      // this and remove the corresponding view.
+      collection.models.remove(connectionId);
     }
   });
 
-  // Options:
-  // - diagram: The diagram view associated to the state group
-  // - attr: The attr on the state view's model which holds the collection
-  // of states
-  // - [type]: The view type to instantiate for each new state view. Defaults
-  // to StateView.
-  var DiagramViewStateCollection = ViewCollection.extend({
-    constructor: function(options) {
-      this.diagram = options.diagram;
-      this.attr = options.attr;
-      this.type = options.type || this.diagram.StateView;
-
-      ViewCollection
-        .prototype
-        .constructor
-        .call(this, this.diagram.model.get(this.attr));
-    },
-
-    create: function(model) {
-      return new this.type(_.defaults(
-        {diagram: this.diagram, model: model},
-        this.diagram.stateOptions()));
+  var DiagramViewStateCollection = SubviewCollection.extend({
+    defaults: function() { return {type: this.view.stateType}; },
+    opts: function() {
+      var opts = _(this.view).result('stateOptions');
+      opts.diagram = this.view;
+      return opts;
     }
   });
-  
-  // Arguments:
-  // - diagram: The diagram view associated to the states
-  var DiagramViewStates = ViewCollectionGroup.extend({
-    constructor: function(diagram) {
-      ViewCollectionGroup.prototype.constructor.call(this);
 
-      this.diagram = diagram;
-      this.schema = this.diagram.stateSchema;
-      this.schema.forEach(this.subscribe, this);
-    },
-
-    subscribe: function(options) {
-      _.extend(options, {diagram: this.diagram});
-      var endpoints = new DiagramViewStateCollection(options);
-
-      return ViewCollectionGroup
-        .prototype
-        .subscribe
-        .call(this, options.attr, endpoints);
-    }
+  // Keeps track of all the states in a state diagram
+  var DiagramViewStates = SubviewCollectionGroup.extend({
+    collectionType: DiagramViewStateCollection,
+    schema: function() { return _(this.view).result('stateSchema'); }
   });
 
   // The main view for the state diagram. Delegates interactions between
   // the states and their endpoints.
   var DiagramView = Backbone.View.extend({
     // Override to change the default state view type
-    StateView: StateView,
+    stateType: StateView,
 
     // Override to change the connection view type
-    ConnectionView: ConnectionView,
+    connectionType: ConnectionView,
 
-    // A list of configuration objects, where each corresponds to a group of
-    // states. Override to change the state schema.
+    // Override to change how the states map to the diagram view's model
     stateSchema: [{attr: 'states'}],
 
     // Override to change what options are passed to each new state view
-    stateOptions: function() { return {}; },
+    stateOptions: {},
+
+    // Override to change how the connections map to the diagram view's model
+    connectionSchema: [{attr: 'connections'}],
+
+    // Override to change what options are passed to each new connection view
+    connectionOptions: {},
 
     initialize: function() {
-      // Lookup of all the states in the diagram
+      // Lookup/Manager of all the states in the diagram
       this.states = new DiagramViewStates(this);
 
-      // Lookup of all the endpoints in the diagram
+      // Lookup/Manager of all the endpoints in the diagram
       this.endpoints = new DiagramViewEndpoints(this);
 
-      // Lookup of all the connections in the diagram
+      // Lookup/Manager of all the connections in the diagram
       this.connections = new DiagramViewConnections(this);
     },
 
     render: function() {
       this.states.render();
       this.connections.render();
+      return this;
     }
   });
 
@@ -229,9 +225,10 @@
     DiagramView: DiagramView,
 
     // Secondary components
-    DiagramViewStates: DiagramViewStates,
     DiagramViewEndpoints: DiagramViewEndpoints,
+    DiagramViewConnectionCollection: DiagramViewConnectionCollection,
     DiagramViewConnections: DiagramViewConnections,
+    DiagramViewStates: DiagramViewStates,
     DiagramViewStateCollection: DiagramViewStateCollection
   });
 })(go.components.plumbing);

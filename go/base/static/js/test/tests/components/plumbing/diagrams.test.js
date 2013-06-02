@@ -8,51 +8,58 @@ describe("go.components.plumbing (diagrams)", function() {
       EndpointView = plumbing.EndpointView,
       StateView = plumbing.StateView,
       ConnectionView = plumbing.ConnectionView,
-      DiagramView = plumbing.DiagramView,
-      DiagramViewConnections = plumbing.DiagramViewConnections;
+      DiagramView = plumbing.DiagramView;
+
+  var ToyEndpointView = EndpointView.extend({
+    destroy: function() {
+      EndpointView.prototype.destroy.call(this);
+      this.destroyed = true;
+      return this;
+    },
+
+    render: function() {
+      EndpointView.prototype.render.call(this);
+      this.rendered = true;
+      return this;
+    }
+  });
+
+  var JediEndpointView  = ToyEndpointView.extend(),
+      SithEndpointView  = ToyEndpointView.extend();
 
   var ToyStateView = StateView.extend({
     destroy: function() {
-      StateView
-        .prototype
-        .destroy
-        .call(this);
-
+      StateView.prototype.destroy.call(this);
       this.destroyed = true;
+      return this;
     },
 
     render: function() {
-      StateView
-        .prototype
-        .render
-        .call(this);
-
+      StateView.prototype.render.call(this);
       this.rendered = true;
+      return this;
     }
   });
 
-  var SithStateView = ToyStateView.extend(),
-      JediStateView = ToyStateView.extend();
+  var JediStateView = ToyStateView.extend({endpointType: JediEndpointView}),
+      SithStateView = ToyStateView.extend({endpointType: SithEndpointView});
 
   var ToyConnectionView = ConnectionView.extend({
     destroy: function() {
-      ConnectionView
-        .prototype
-        .destroy
-        .call(this);
-
+      ConnectionView.prototype.destroy.call(this);
       this.destroyed = true;
+      return this;
     },
 
     render: function() {
-      ConnectionView
-        .prototype
-        .render
-        .call(this);
-
+      ConnectionView.prototype.render.call(this);
       this.rendered = true;
+      return this;
     }
   });
+
+  var JedisToSithsView = ToyConnectionView.extend(),
+      SithsToJedisView = ToyConnectionView.extend();
 
   var ToyStateMachineModel = StateMachineModel.extend({
     relations: [{
@@ -64,19 +71,32 @@ describe("go.components.plumbing (diagrams)", function() {
       key: 'siths',
       relatedModel: 'go.components.stateMachine.StateModel'
     }, {
-      type: Backbone.HasOne,
-      key: 'state0',
-      includeInJSON: 'id',
-      relatedModel: 'go.components.stateMachine.StateModel'
+      type: Backbone.HasMany,
+      key: 'jedisToSiths',
+      relatedModel: 'go.components.stateMachine.ConnectionModel'
+    }, {
+      type: Backbone.HasMany,
+      key: 'sithsToJedis',
+      relatedModel: 'go.components.stateMachine.ConnectionModel'
     }]
   });
 
   var ToyDiagramView = DiagramView.extend({
-    ConnectionView: ToyConnectionView,
     stateSchema: [
       {attr: 'jedis', type: JediStateView},
       {attr: 'siths', type: SithStateView}
-    ]
+    ],
+    connectionSchema: [{
+      attr: 'jedisToSiths',
+      type: JedisToSithsView,
+      sourceType: JediEndpointView,
+      targetType: SithEndpointView
+    }, {
+      attr: 'sithsToJedis',
+      type: SithsToJedisView,
+      sourceType: SithEndpointView,
+      targetType: JediEndpointView
+    }]
   });
 
   var diagram;
@@ -84,38 +104,54 @@ describe("go.components.plumbing (diagrams)", function() {
   beforeEach(function() {
     // Sorry, I know its a very bad example. Siths and Jedis are state types.
     // ToyStateMachineModel contains two collections of states: one for the
-    // sith states, one for jedi states.
+    // sith states, one for jedi states. It also contains two collections of
+    // connections: one for jedi-to-sith connections and one for sith-to-jedi
+    // connections. I have no idea what the connections are supposed to mean
+    // (shifts in sides of the force?), so don't try look into it :).
+
     var model = new ToyStateMachineModel({
       jedis: [{
-        id: 'jedi-a',
+        id: 'jediA',
         endpoints: [
-          {id: 'jedi-a1'},
-          {id: 'jedi-a2'},
-          {id: 'jedi-a3', target: {id: 'sith-b2'}}]
+          {id: 'jediA1'},
+          {id: 'jediA2'},
+          {id: 'jediA3'}]
       }, {
-        id: 'jedi-b',
+        id: 'jediB',
         endpoints: [
-          {id: 'jedi-b1'},
-          {id: 'jedi-b2'},
-          {id: 'jedi-b3'}]
+          {id: 'jediB1'},
+          {id: 'jediB2'},
+          {id: 'jediB3'}]
       }],
+
       siths: [{
-        id: 'sith-a',
+        id: 'sithA',
         endpoints: [
-          {id: 'sith-a1'},
-          {id: 'sith-a2'},
-          {id: 'sith-a3'}]
+          {id: 'sithA1'},
+          {id: 'sithA2'},
+          {id: 'sithA3'}]
       }, {
-        id: 'sith-b',
+        id: 'sithB',
         endpoints: [
-          {id: 'sith-b1'},
-          {id: 'sith-b2'},
-          {id: 'sith-b3'}]
+          {id: 'sithB1'},
+          {id: 'sithB2'},
+          {id: 'sithB3'}]
+      }],
+      
+      jedisToSiths: [{
+        id: 'jediA3-sithB2',
+        source: {id: 'jediA3'},
+        target: {id: 'sithB2'}
+      }],
+
+      sithsToJedis: [{
+        id: 'sithA3-jediB2',
+        source: {id: 'sithA3'},
+        target: {id: 'jediB2'}
       }]
     });
 
     $('body').append("<div id='diagram'></div>");
-
     diagram = new ToyDiagramView({el: '#diagram', model: model});
   });
 
@@ -123,26 +159,29 @@ describe("go.components.plumbing (diagrams)", function() {
     Backbone.Relational.store.reset();
     jsPlumb.unbind();
     jsPlumb.detachEveryConnection();
+    jsPlumb.deleteEveryEndpoint();
     $('#diagram').remove();
   });
 
   describe(".DiagramViewEndpoints", function() {
+    var DiagramViewEndpoints = plumbing.DiagramViewEndpoints;
+
     var endpoints,
         jediA,
         ewokA;
 
-    var assertSubscribed = function(id, otherEndpoints) {
+    var assertSubscribed = function(id, subscriber) {
       assert(endpoints.members.has(id));
-      assert.includeMembers(endpoints.keys(), otherEndpoints.keys());
+      assert.includeMembers(endpoints.keys(), subscriber.keys());
     };
 
-    var assertUnsubscribed = function(id, otherEndpoints) {
+    var assertUnsubscribed = function(id, subscriber) {
       assert(!endpoints.members.has(id));
-      otherEndpoints.eachItem(function(id) { assert(!endpoints.has(id)); });
+      subscriber.eachItem(function(id) { assert(!endpoints.has(id)); });
     };
 
     beforeEach(function() {
-      endpoints = diagram.endpoints;
+      endpoints = new DiagramViewEndpoints(diagram);
 
       var ewokModelA = new StateModel({
         id: 'ewok-a',
@@ -150,7 +189,7 @@ describe("go.components.plumbing (diagrams)", function() {
       });
 
       ewokA = new StateView({diagram: diagram, model: ewokModelA});
-      jediA = diagram.states.get('jedi-a');
+      jediA = diagram.states.get('jediA');
     });
 
     describe("on 'add' state events", function() {
@@ -169,11 +208,11 @@ describe("go.components.plumbing (diagrams)", function() {
       it("should unsubscribe the state's endpoints from the group",
       function(done) {
         diagram.states.on('remove', function() {
-          assertUnsubscribed('jedi-a', jediA.endpoints);
+          assertUnsubscribed('jediA', jediA.endpoints);
           done();
         });
 
-        diagram.states.remove('jedi-a');
+        diagram.states.remove('jediA');
       });
     });
 
@@ -187,283 +226,180 @@ describe("go.components.plumbing (diagrams)", function() {
     describe(".removeState", function() {
       it("should unsubscribe the state's endpoints from the group",
       function() {
-        endpoints.removeState('jedi-a');
-        assertUnsubscribed('jedi-a', jediA.endpoints);
+        endpoints.removeState('jediA');
+        assertUnsubscribed('jediA', jediA.endpoints);
+      });
+    });
+  });
+
+  describe(".DiagramViewConnectionCollection", function() {
+    var DiagramViewConnectionCollection
+      = plumbing.DiagramViewConnectionCollection;
+
+    var connections;
+
+    beforeEach(function() {
+      connections = new DiagramViewConnectionCollection({
+        view: diagram,
+        attr: 'sithsToJedis',
+        sourceType: SithEndpointView,
+        targetType: JediEndpointView
+      });
+    });
+
+    describe(".accepts", function() {
+      it("should determine whether the source and target are belong",
+      function() {
+        assert(connections.accepts(
+          diagram.endpoints.get('sithA3'),
+          diagram.endpoints.get('jediB2')));
+
+        assert(!connections.accepts(
+          diagram.endpoints.get('jediA3'),
+          diagram.endpoints.get('sithB2')));
       });
     });
   });
 
   describe(".DiagramViewConnections", function() {
-    var connections;
+    var DiagramViewConnections = plumbing.DiagramViewConnections;
+
+    var connections,
+        jedisToSiths;
 
     beforeEach(function() {
       connections = diagram.connections;
-
-      // render to ensure the jsPlumb endpoints exist so we can create jsPlumb
-      // endpoints between them
-      diagram.render();
+      jedisToSiths = connections.members.get('jedisToSiths');
     });
 
-    var assertAdded = function(sourceId, targetId) {
-      var connection = connections.get(sourceId);
-      assert(connection);
-      assert.equal(connection.source, diagram.endpoints.get(sourceId));
-      assert.equal(connection.target, diagram.endpoints.get(targetId));
-    };
+    describe(".determineCollection", function() {
+      it("should determine which collection a source and target belong to",
+      function() {
+        assert.equal(
+          connections.members.get('jedisToSiths'),
+          connections.determineCollection(
+            diagram.endpoints.get('jediA1'),
+            diagram.endpoints.get('sithB1')));
 
-    var assertRemoved = function(sourceId) {
-      assert(!connections.has(sourceId));
-    };
-
-    describe("on diagram endpoint 'add' events", function() {
-      var subscribed;
-
-      var MockDiagramViewConnections = DiagramViewConnections.extend({
-        subscribeEndpoint: function(id, endpoint, options) {
-          DiagramViewConnections
-            .prototype
-            .subscribeEndpoint
-            .call(this, id, endpoint, options);
-
-          subscribed[id] = endpoint;
-        }
-      });
-
-      beforeEach(function() {
-        subscribed = {};
-        connections = new MockDiagramViewConnections(diagram);
-      });
-
-      it("should subscribe the endpoint", function(done) {
-        var jediA4Model = new EndpointModel({id: 'jedi-a4'});
-        var jediA4 = new EndpointView({
-          state: diagram.states.get('jedi-a'),
-          model: jediA4Model
-        });
-
-        diagram.endpoints.on('add', function() {
-          assert.equal(subscribed['jedi-a4'], jediA4);
-          done();
-        });
-
-        diagram.endpoints.add('jedi-a4', jediA4);
-      });
-    });
-
-    describe("on diagram endpoint 'remove' events", function() {
-      var unsubscribed;
-
-      var MockDiagramViewConnections = DiagramViewConnections.extend({
-        unsubscribeEndpoint: function(id, endpoint) {
-          DiagramViewConnections
-            .prototype
-            .unsubscribeEndpoint
-            .call(this, id, endpoint);
-
-          unsubscribed[id] = endpoint;
-        }
-      });
-
-      beforeEach(function() {
-        unsubscribed = {};
-        connections = new MockDiagramViewConnections(diagram);
-      });
-
-      it("should unsubscribe the endpoint", function(done) {
-        var jediA3 = diagram.endpoints.get('jedi-a3');
-
-        diagram.endpoints.on('remove', function(id, endpoint) {
-          assert.equal(unsubscribed['jedi-a3'], jediA3);
-          done();
-        });
-
-        diagram.endpoints.remove('jedi-a3');
+        assert.equal(
+          connections.members.get('sithsToJedis'),
+          connections.determineCollection(
+            diagram.endpoints.get('sithA1'),
+            diagram.endpoints.get('jediB1')));
       });
     });
 
     describe("on 'connection' jsPlumb events", function() {
-      it("should add the connection if it does not yet exist",
+      beforeEach(function() {
+        // render the diagram to ensure the jsPlumb endpoints are drawn
+        diagram.render();
+      }); 
+
+      it("should add a connection model and its view if they do not yet exist",
       function(done) {
-        jsPlumb.bind('connection', function() {
-          assertAdded('jedi-a1', 'sith-a3');
+        var jediA1 = diagram.endpoints.get('jediA1'),
+            sithB1 = diagram.endpoints.get('sithB1');
+
+        connections.on('add', function(id, connection) {
+
+          // check that the model was added
+          assert.equal(connection.model.get('source'), jediA1.model);
+          assert.equal(connection.model.get('target'), sithB1.model);
+          assert.equal(
+            connection.model,
+            jedisToSiths.models.get('jediA1-sithB1'));
+
+          // check that the view was added
+          assert.equal(connection.source, jediA1);
+          assert.equal(connection.target, sithB1);
+          assert.equal(connection, connections.get('jediA1-sithB1'));
+
           done();
         });
 
-        diagram.render();
         jsPlumb.connect({
-          source: diagram
-            .endpoints
-            .get('jedi-a1')
-            .plumbEndpoint,
-
-          target: diagram
-            .endpoints
-            .get('sith-a3')
-            .plumbEndpoint
+          source: jediA1.plumbEndpoint,
+          target: sithB1.plumbEndpoint
         });
       });
     });
 
     describe("on 'connectionDetached' jsPlumb events", function() {
-      it("delegate the event to the relevant connection", function(done) {
-        var jediA3 = diagram.endpoints.get('jedi-a3'),
-            sithB2 = diagram.endpoints.get('sith-b2'),
-            connection = diagram.connections.get('jedi-a3');
-
-        connection.on('plumb:disconnect', function() { done(); });
-        diagram.render();
-        jsPlumb.detach(connection.plumbConnection);
-      });
-    });
-
-    describe(".subscribeEndpoint", function() {
       beforeEach(function() {
-        // Turn off endpoint add events so `subscribeEndpoint` isn't called
-        // automatically (making testing difficult)
-        diagram.endpoints.off('add');
-      });
+        // render the diagram and connections to ensure the jsPlumb endpoints
+        // and connections are drawn
+        diagram.render();
+      }); 
 
-      it("should add a connection if the endpoint's model's target is set",
-      function() {
-        var jediA4Model = new EndpointModel({
-          id: 'jedi-a4',
-          target: {id: 'sith-a3'}
-        });
-
-        var jediA4 = new EndpointView({
-          state: diagram.states.get('jedi-a'),
-          model: jediA4Model
-        });
-
-        diagram.endpoints.add('jedi-a4', jediA4);
-
-        connections.subscribeEndpoint('jedi-a4', jediA4, {render: false});
-        assertAdded('jedi-a4', 'sith-a3');
-      });
-
-      it("should add a connection when the endpoint's target is set",
+      it("should remove the connection model and its view if they still exist",
       function(done) {
-        var jediA4Model = new EndpointModel({id: 'jedi-a4'});
-        var jediA4 = new EndpointView({
-          state: diagram.states.get('jedi-a'),
-          model: jediA4Model
-        });
+        var jediA3 = diagram.endpoints.get('jediA3'),
+            sithB2 = diagram.endpoints.get('sithB2'),
+            jediA3SithB2 = connections.get('jediA3-sithB2');
 
-        diagram.endpoints.add('jedi-a4', jediA4);
-        connections.subscribeEndpoint('jedi-a4', jediA4, {render: false});
+        // make sure that the connection did initially exist
+        assert(jediA3SithB2);
 
-        jediA4Model.on('change:target', function() {
-          assertAdded('jedi-a4', 'sith-a3');
+        connections.on('remove', function(id, connection) {
+
+          // check that the model was removed
+          assert(!jedisToSiths.models.get('jediA3-sithB2'));
+          assert.equal(connection.model.get('source'), jediA3.model);
+          assert.equal(connection.model.get('target'), sithB2.model);
+
+          // check that the view was removed
+          assert(!connections.has('jediA3-sithB2'));
+          assert.equal(jediA3SithB2, connection);
+
           done();
         });
 
-        jediA4Model.set(
-          'target',
-          diagram
-            .endpoints
-            .get('sith-a3')
-            .model);
-      });
-
-      it("should remove a connection when an endpoint's target is unset",
-      function(done) {
-        var jediA3Model = diagram
-          .endpoints
-          .get('jedi-a3')
-          .model;
-
-        jediA3Model.on('change:target', function() {
-          assertRemoved('jedi-a3');
-          done();
-        });
-
-        jediA3Model.unset('target');
-      });
-    });
-
-    describe(".unsubscribeEndpoint", function() {
-      it("should remove a connection if the endpoint's model's target is set",
-      function() {
-        var jediA3 = diagram.endpoints.get('jedi-a3');
-        connections.unsubscribeEndpoint('jedi-a3', jediA3);
-        assertRemoved('jedi-a3');
-      });
-    });
-
-    describe(".add", function() {
-      it("should return the connection if it already exists", function() {
-        assert.equal(
-          connections.get('jedi-a3'),
-          connections.add('jedi-a3', 'sith-b2'));
-      });
-
-      it("add a new connection with the associated endpoints", function() {
-        connections.add('jedi-a1', 'sith-b1');
-        assertAdded('jedi-a1', 'sith-b1');
-      });
-    });
-
-    describe(".remove", function() {
-      it("should destroy the connection", function() {
-        var connection = connections.remove('jedi-a3');
-        assert(connection.destroyed);
-      });
-
-      it("should remove the connection", function() {
-        connections.remove('jedi-a3');
-        assertRemoved('jedi-a3');
+        jsPlumb.detach(jediA3SithB2.plumbConnection);
       });
     });
   });
 
   describe(".Diagram", function() {
-    it("should set up the states according to the schema", function() {
-      assert.deepEqual(
-        diagram
-          .states
-          .members
-          .get('jedis')
-          .keys(),
-        ['jedi-a', 'jedi-b']);
-
-      assert.deepEqual(
-        diagram
-          .states
-          .members
-          .get('siths')
-          .keys(),
-        ['sith-a', 'sith-b']);
-
-      assert.deepEqual(
-        diagram.states.keys(),
-        ['jedi-a', 'jedi-b', 'sith-a', 'sith-b']);
-
-      diagram
-        .states
-        .members
-        .get('jedis')
-        .each(function(e) { assert.instanceOf(e, JediStateView); });
-
-      diagram
-        .states
-        .members
-        .get('siths')
-        .each(function(e) { assert.instanceOf(e, SithStateView); });
-    });
-
     it("should keep track of all endpoints in the diagram", function() {
       assert.deepEqual(
         diagram.endpoints.keys(),
-        ['jedi-a1', 'jedi-a2', 'jedi-a3',
-         'jedi-b1', 'jedi-b2', 'jedi-b3',
-         'sith-a1', 'sith-a2', 'sith-a3',
-         'sith-b1', 'sith-b2', 'sith-b3']);
+        ['jediA1', 'jediA2', 'jediA3',
+         'jediB1', 'jediB2', 'jediB3',
+         'sithA1', 'sithA2', 'sithA3',
+         'sithB1', 'sithB2', 'sithB3']);
     });
 
-    it("should keep track of all connections in the diagram", function() {
+    it("should set up the connections according to the schema", function() {
+      var jedisToSiths = diagram.connections.members.get('jedisToSiths'),
+          sithsToJedis = diagram.connections.members.get('sithsToJedis');
+
+      assert.deepEqual(jedisToSiths.keys(), ['jediA3-sithB2']);
+      assert.deepEqual(sithsToJedis.keys(), ['sithA3-jediB2']);
+
+      jedisToSiths.each(
+        function(e) { assert.instanceOf(e, JedisToSithsView); });
+
+      sithsToJedis.each(
+        function(e) { assert.instanceOf(e, SithsToJedisView); });
+
       assert.deepEqual(
         diagram.connections.keys(),
-        ['jedi-a3']);  // connections are keyed by their source endpoint id
+        ['jediA3-sithB2', 'sithA3-jediB2']);
+    });
+
+    it("should set up the states according to the schema", function() {
+      var jedis = diagram.states.members.get('jedis'),
+          siths = diagram.states.members.get('siths');
+
+      assert.deepEqual(jedis.keys(), ['jediA', 'jediB']);
+      assert.deepEqual(siths.keys(), ['sithA', 'sithB']);
+
+      jedis.each(function(e) { assert.instanceOf(e, JediStateView); });
+      siths.each(function(e) { assert.instanceOf(e, SithStateView); });
+
+      assert.deepEqual(
+        diagram.states.keys(),
+        ['jediA', 'jediB', 'sithA', 'sithB']);
     });
 
     describe(".render", function() {

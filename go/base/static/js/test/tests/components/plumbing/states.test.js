@@ -1,8 +1,7 @@
 describe("go.components.plumbing (states)", function() {
   var stateMachine = go.components.stateMachine,
       StateMachineModel = stateMachine.StateMachineModel,
-      StateModel = stateMachine.StateModel,
-      EndpointModel = stateMachine.EndpointModel;
+      StateModel = stateMachine.StateModel;
 
   var plumbing = go.components.plumbing,
       DiagramView = go.components.plumbing.DiagramView,
@@ -10,27 +9,75 @@ describe("go.components.plumbing (states)", function() {
       EndpointView = plumbing.EndpointView,
       StateViewEndpointCollection = plumbing.StateViewEndpointCollection;
 
-  var diagram;
+  var ToyStateModel = StateModel.extend({
+    relations: [{
+        type: Backbone.HasOne,
+        key: 'inEndpoint',
+        relatedModel: 'go.components.stateMachine.EndpointModel'
+      }, {
+        type: Backbone.HasMany,
+        key: 'outEndpoints',
+        relatedModel: 'go.components.stateMachine.EndpointModel'
+      }
+    ]
+  });
+
+  var ToyStateMachineModel = StateMachineModel.extend({
+    relations: [{
+      type: Backbone.HasMany,
+      key: 'states',
+      relatedModel: ToyStateModel
+    }, {
+      type: Backbone.HasOne,
+      key: 'state0',
+      includeInJSON: 'id',
+      relatedModel: 'go.components.stateMachine.StateModel'
+    }, {
+      type: Backbone.HasMany,
+      key: 'connections',
+      relatedModel: 'go.components.stateMachine.ConnectionModel'
+    }]
+  });
+
+  var ToyEndpointView = EndpointView.extend({
+    render: function() {
+      EndpointView.prototype.render.call(this);
+      this.rendered = true;
+    }
+  });
+
+  var InEndpointView = ToyEndpointView.extend(),
+      OutEndpointView = ToyEndpointView.extend();
+
+  var ToyStateView = StateView.extend({
+    endpointSchema: [
+      {attr: 'inEndpoint', type: InEndpointView},
+      {attr: 'outEndpoints', type: OutEndpointView}
+    ]
+  });
+
+  var ToyDiagramView = DiagramView.extend({stateType: ToyStateView});
+
+  var diagram,
+      state;
 
   beforeEach(function() {
-    var model = new StateMachineModel({
+    var model = new ToyStateMachineModel({
       states: [{
-        id: 'a',
-        endpoints: [
-          {id: 'a1'},
-          {id: 'a2'},
-          {id: 'a3', target: {id: 'b3'}}]
-      }, {
-        id: 'b',
-        endpoints: [
-          {id: 'b1'},
-          {id: 'b2'},
-          {id: 'b3'}]
-      }]
+        id: 'state',
+        inEndpoint: {id: 'in'},
+        outEndpoints: [
+          {id: 'out1'},
+          {id: 'out2'},
+          {id: 'out3'}]
+      }],
+
+      connections: []
     });
 
     $('body').append("<div id='diagram'></div>");
-    diagram = new DiagramView({el: '#diagram', model: model});
+    diagram = new ToyDiagramView({el: '#diagram', model: model});
+    state = diagram.states.get('state');
   });
 
   afterEach(function() {
@@ -40,160 +87,33 @@ describe("go.components.plumbing (states)", function() {
     $('#diagram').remove();
   });
 
-  describe(".StateViewEndpointCollection", function() {
-    var SingleEndpointStateModel = StateModel.extend({
-      relations: [{
-          type: Backbone.HasOne,
-          key: 'endpoint',
-          relatedModel: 'go.components.stateMachine.EndpointModel'
-        }]
-    });
-
-    var SingleEndpointStateView = StateView.extend({
-      endpointSchema: [{attr: 'endpoint'}]
-    });
-    it("should be useable with endpoint collections", function() {
-      var endpoints = new StateViewEndpointCollection({
-        state: diagram.states.get('a'),
-        attr: 'endpoints'
-      });
-
-      assert.deepEqual(endpoints.keys(), ['a1', 'a2', 'a3']);
-    });
-
-    it("should be useable with single endpoint models", function() {
-      var state = new SingleEndpointStateView({
-        diagram: diagram,
-        model: new SingleEndpointStateModel({id: 'c', endpoint: {id: 'c1'}})
-      });
-
-      var endpoints = new StateViewEndpointCollection({
-        state: state,
-        attr: 'endpoint'
-      });
-
-      assert.deepEqual(endpoints.keys(), ['c1']);
-    });
-
-    describe(".create", function() {
-      var endpoints,
-          endpointModel;
-
-      var ToyEndpointView = EndpointView.extend();
-      
-      beforeEach(function() {
-        endpointModel = new EndpointModel({id: 'a4'});
-
-        endpoints = new StateViewEndpointCollection({
-          state: diagram.states.get('a'),
-          attr: 'endpoints',
-          type: ToyEndpointView
-        });
-      });
-
-      it("should create endpoints of the collection's type", function() {
-        assert.instanceOf(endpoints.create(endpointModel), ToyEndpointView);
-      });
-
-      it("should give the created endpoint the state view", function() {
-        assert.equal(
-          endpoints.create(endpointModel).state,
-          diagram.states.get('a'));
-      });
-    });
-  });
-
   describe(".StateView", function() {
-    var ToyEndpointView = EndpointView.extend({
-      render: function() { this.rendered = true; }
-    });
-
-    var InEndpointView = ToyEndpointView.extend(),
-        OutEndpointView = ToyEndpointView.extend();
-
-    var ToyStateModel = StateModel.extend({
-      relations: [{
-          type: Backbone.HasOne,
-          key: 'inEndpoint',
-          relatedModel: 'go.components.stateMachine.EndpointModel'
-        }, {
-          type: Backbone.HasMany,
-          key: 'outEndpoints',
-          relatedModel: 'go.components.stateMachine.EndpointModel'
-        }
-      ]
-    });
-
-    var ToyStateView = StateView.extend({
-      endpointSchema: [
-        {attr: 'inEndpoint', type: InEndpointView},
-        {attr: 'outEndpoints', type: OutEndpointView}
-      ]
-    });
-
-    var state;
-
-    beforeEach(function() {
-      var model = new ToyStateModel({
-        id: 'c',
-        inEndpoint: {id: 'cIn'},
-        outEndpoints: [
-          {id: 'cOut1'},
-          {id: 'cOut2'},
-          {id: 'cOut3'}]
-      });
-
-      state = new ToyStateView({
-        diagram: diagram,
-        model: model
-      });
-    });
-
     it("should set up the endpoints according to the schema", function() {
-      assert.deepEqual(
-        state
-          .endpoints
-          .members
-          .get('inEndpoint')
-          .keys(),
-        ['cIn']);
+      var inEndpoint = state.endpoints.members.get('inEndpoint'),
+          outEndpoints = state.endpoints.members.get('outEndpoints');
 
-      assert.deepEqual(
-        state
-          .endpoints
-          .members
-          .get('outEndpoints')
-          .keys(),
-        ['cOut1', 'cOut2', 'cOut3']);
+      assert.deepEqual(inEndpoint.keys(), ['in']);
+      assert.deepEqual(outEndpoints.keys(), ['out1', 'out2', 'out3']);
+
+      inEndpoint.each(function(e) { assert.instanceOf(e, InEndpointView); });
+      outEndpoints.each(function(e) { assert.instanceOf(e, OutEndpointView); });
 
       assert.deepEqual(
         state.endpoints.keys(),
-        ['cIn', 'cOut1', 'cOut2', 'cOut3']);
-
-      state
-        .endpoints
-        .members
-        .get('inEndpoint')
-        .each(function(e) { assert.instanceOf(e, InEndpointView); });
-
-      state
-        .endpoints
-        .members
-        .get('outEndpoints')
-        .each(function(e) { assert.instanceOf(e, OutEndpointView); });
+        ['in', 'out1', 'out2', 'out3']);
     });
 
     describe(".render", function() {
       it("should add the state view to the diagram", function() {
-        assert(_.isEmpty($('#diagram #c').get()));
+        assert(_.isEmpty($('#diagram #state').get()));
         state.render();
-        assert(!_.isEmpty($('#diagram #c').get()));
+        assert(!_.isEmpty($('#diagram #state').get()));
       });
 
       it("shouldn't render duplicates", function() {
         state.render();
         state.render();
-        assert.equal($('#diagram #c').length, 1);
+        assert.equal($('#diagram #state').length, 1);
       });
 
       it("should render its endpoints", function() {

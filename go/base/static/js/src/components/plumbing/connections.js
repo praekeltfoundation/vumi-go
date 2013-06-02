@@ -4,60 +4,72 @@
 // 'plumbing view') in Go
 
 (function(exports) {
+  var idOfConnection = function(sourceId, targetId) {
+    return sourceId + '-' + targetId;
+  };
+
   // View for a connection between two endpoints in a state diagram.
   //
   // Options:
-  // - source: The source endpoint view
-  // - target: The target endpoint view
+  // - diagram: The diagram this connection is part of
   var ConnectionView = Backbone.View.extend({
+    // Override to change what params are passed to jsPlumb
+    plumbOptions: {},
+
+    id: function() { return this.model.id; },
+
     initialize: function(options) {
-      this.source = options.source;
-      this.target = options.target;
+      this.diagram = options.diagram;
+
+      // get the source and target endpoint views from the diagram
+      var endpoints = this.diagram.endpoints;
+      this.source = endpoints.get(this.model.get('source').id),
+      this.target = endpoints.get(this.model.get('target').id);
 
       // Keep a reference the actual jsPlumb connection
       this.plumbConnection = null;
-      this.on('plumb:connect', this.onPlumbConnect, this);
-      this.on('plumb:disconnect', this.onPlumbDisconnect, this);
     },
 
-    // Override when extending `ConnectionView` to specialise what params
-    // are passed to jsPlumb
-    plumbOptions: function() { return {}; },
+    _plumbRefresh: function() {
+      // Check whether a jsPlumb connection exists for this connection and hold
+      // onto it if it does
+      this.plumbConnection = this.diagram
+        .connections
+        .plumbConnections
+        .get(_(this).result('id')) || null;
+    },
 
     _plumbOptions: function() {
       return _.defaults({
         source: this.source.plumbEndpoint,
         target: this.target.plumbEndpoint
-      }, this.plumbOptions());
-    },
-
-    onPlumbConnect: function(e) {
-      this.plumbConnection = e.connection;
-      this.source.trigger('connect', this);
-      this.target.trigger('connect', this);
-    },
-
-    onPlumbDisconnect: function() {
-      this.plumbConnection = null;
-      this.source.trigger('disconnect', this);
-      this.target.trigger('disconnect', this);
+      }, _(this).result('plumbOptions'));
     },
 
     destroy: function() {
-      if (this.plumbConnection) {
-        jsPlumb.detach(this.plumbConnection);
+      this._plumbRefresh();
+
+      var plumbConnection = this.plumbConnection;
+      if (plumbConnection) {
         this.plumbConnection = null;
+        jsPlumb.detach(plumbConnection);
       }
+
+      return this;
     },
 
     render: function() {
+      this._plumbRefresh();
       if (!this.plumbConnection) {
         this.plumbConnection = jsPlumb.connect(this._plumbOptions());
       }
+
+      return this;
     }
   });
 
   _.extend(exports, {
+    idOfConnection: idOfConnection,
     ConnectionView: ConnectionView
   });
 })(go.components.plumbing);

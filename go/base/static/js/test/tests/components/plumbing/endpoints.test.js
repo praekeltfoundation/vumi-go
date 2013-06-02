@@ -1,29 +1,20 @@
 describe("go.components.plumbing (endpoints)", function() {
   var stateMachine = go.components.stateMachine,
-      StateMachineModel = stateMachine.StateMachineModel,
-      EndpointModel = stateMachine.EndpointModel;
+      StateMachineModel = stateMachine.StateMachineModel;
 
   var plumbing = go.components.plumbing,
-      DiagramView = go.components.plumbing.DiagramView,
-      EndpointView = plumbing.EndpointView,
-      ConnectionView = plumbing.ConnectionView;
+      DiagramView = plumbing.DiagramView;
 
   var diagram;
 
   beforeEach(function() {
     var model = new StateMachineModel({
       states: [{
-        id: 'a',
+        id: 'state',
         endpoints: [
-          {id: 'a1'},
-          {id: 'a2'},
-          {id: 'a3', target: {id: 'b3'}}]
-      }, {
-        id: 'b',
-        endpoints: [
-          {id: 'b1'},
-          {id: 'b2'},
-          {id: 'b3'}]
+          {id: 'endpoint1'},
+          {id: 'endpoint2'},
+          {id: 'endpoint3'}]
       }]
     });
 
@@ -39,69 +30,41 @@ describe("go.components.plumbing (endpoints)", function() {
   });
 
   describe(".EndpointView", function() {
-    var a, b,
-        a1, a2, a3,
-        b1, b2, b3;
+    var EndpointModel = stateMachine.EndpointModel,
+        EndpointView = plumbing.EndpointView;
+
+    var state,
+        endpoint1;
 
     beforeEach(function() {
-      a = diagram.states.get('a');
-      a1 = diagram.endpoints.get('a1');
-      a2 = diagram.endpoints.get('a2');
-      a3 = diagram.endpoints.get('a3');
-
-      b = diagram.states.get('b');
-      b1 = diagram.endpoints.get('b1');
-      b2 = diagram.endpoints.get('b2');
-      b3 = diagram.endpoints.get('b3');
-
+      state = diagram.states.get('state');
+      endpoint1 = diagram.endpoints.get('endpoint1');
       diagram.render();
     });
     
-    describe("on 'connect' events", function() {
-      it("should set its model's target", function(done) {
-        a1.on('connect', function() {
-          assert.equal(a1.model.get('target'), b1.model);
-          done();
-        });
-
-        a1.trigger(
-          'connect',
-          new ConnectionView({source: a1, target: b1}));
-      });
-    });
-
-    describe("on 'disconnect' events", function() {
-      it("should set its model's target", function(done) {
-        a3.on('disconnect', function() {
-          assert(!a3.model.has('target'));
-          done();
-        });
-
-        a3.trigger('disconnect', diagram.connections.get('a3'));
-      });
-    });
-
     describe(".destroy", function() {
       it("should remove the actual jsPlumb endpoint", function() {
-        assert.isDefined(jsPlumb.getEndpoint('a1'));
-        a1.destroy();
-        assert.isNull(jsPlumb.getEndpoint('a1'));
+        assert.isDefined(jsPlumb.getEndpoint('endpoint1'));
+        endpoint1.destroy();
+        assert.isNull(jsPlumb.getEndpoint('endpoint1'));
       });
     });
 
     describe(".render", function() {
       it("should create the actual jsPlumb endpoint", function() {
-        var a4 = new EndpointView({
-          state: a,
-          model: new EndpointModel({id: 'a4'})
+        var endpoint4 = new EndpointView({
+          state: state,
+          model: new EndpointModel({id: 'endpoint4'})
         });
 
-        assert.isUndefined(jsPlumb.getEndpoint('a4'));
-        a4.render();
-        assert.isDefined(jsPlumb.getEndpoint('a4'));
+        assert.isUndefined(jsPlumb.getEndpoint('endpoint4'));
+
+        endpoint4.render();
+
+        assert.isDefined(jsPlumb.getEndpoint('endpoint4'));
         assert.equal(
-          jsPlumb.getEndpoint('a4').getElement().get(0),
-          a.el);
+          jsPlumb.getEndpoint('endpoint4').getElement().get(0),
+          state.el);
       });
     });
   });

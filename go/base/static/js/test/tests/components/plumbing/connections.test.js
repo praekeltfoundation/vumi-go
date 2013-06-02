@@ -14,13 +14,19 @@ describe("go.components.plumbing (connections)", function() {
         endpoints: [
           {id: 'a1'},
           {id: 'a2'},
-          {id: 'a3', target: {id: 'b3'}}]
+          {id: 'a3'}]
       }, {
         id: 'b',
         endpoints: [
           {id: 'b1'},
           {id: 'b2'},
           {id: 'b3'}]
+      }],
+
+      connections: [{
+        id: 'a3-b2',
+        source: {id: 'a3'},
+        target: {id: 'b2'}
       }]
     });
 
@@ -36,108 +42,46 @@ describe("go.components.plumbing (connections)", function() {
   });
 
   describe(".ConnectionView", function() {
-    var ConnectionView = plumbing.ConnectionView;
+    var ConnectionModel = stateMachine.ConnectionModel,
+        ConnectionView = plumbing.ConnectionView;
 
-    var a1, b1;
+    var a1,
+        b1,
+        a3B2;
 
     beforeEach(function() {
       a1 = diagram.endpoints.get('a1');
       b1 = diagram.endpoints.get('b1');
+      a3B2 = diagram.connections.get('a3-b2');
       diagram.render();
-    });
-
-    describe("on 'plumb:connect' events", function() {
-      var connection,
-          plumbEvent;
-          
-      beforeEach(function() {
-        connection = new ConnectionView({source: a1, target: b1});
-        plumbEvent = {connection: {}}; // stubbed plumb event
-      });
-
-      it("should use the jsPlumb connection given by the event as its own",
-      function(done) {
-        connection.on('plumb:connect', function() {
-          assert.equal(connection.plumbConnection, plumbEvent.connection);
-          done();
-        });
-
-        connection.trigger('plumb:connect', plumbEvent);
-      });
-
-      it("should trigger a 'connect' event on its endpoints",
-      function(done) {
-        var a1Connect,
-            b1Connect;
-
-        a1.on('connect', function(eventConnection) {
-          assert.equal(connection, eventConnection);
-          (a1Connect = true) && b1Connect && done();
-        });
-
-        b1.on('connect', function(eventConnection) {
-          assert.equal(connection, eventConnection);
-          a1Connect && (b1Connect = true) && done();
-        });
-
-        connection.trigger('plumb:connect', plumbEvent);
-      });
-    });
-
-
-    describe("on 'plumb:disconnect' events", function() {
-      var a3, b3,
-          connection;
-          
-      beforeEach(function() {
-        a3 = diagram.endpoints.get('a3');
-        b3 = diagram.endpoints.get('b3');
-        connection = diagram.connections.get('a3');
-      });
-
-      it("should ensure its jsPlumb connection is removed", function(done) {
-        connection.on('plumb:disconnect', function() {
-          assert.isNull(connection.plumbConnection);
-          done();
-        });
-
-        connection.trigger('plumb:disconnect');
-      });
-
-      it("should trigger a 'disconnect' event on its endpoints",
-      function(done) {
-        var a1Disconnect,
-            b1Disconnect;
-
-        a3.on('disconnect', function(eventConnection) {
-          assert.equal(connection, eventConnection);
-          (a1Disconnect = true) && b1Disconnect && done();
-        });
-
-        b3.on('disconnect', function(eventConnection) {
-          assert.equal(connection, eventConnection);
-          a1Disconnect && (b1Disconnect = true) && done();
-        });
-
-        connection.trigger('plumb:disconnect');
-      });
     });
 
     describe(".destroy", function() {
       it("should remove the actual jsPlumb connection", function(done) {
-        jsPlumb.bind('connectionDetached', function() {
-          assert.isNull(connection.plumbConnection);
+        var plumbConnection = a3B2.plumbConnection;
+
+        assert(plumbConnection);
+
+        jsPlumb.bind('connectionDetached', function(e) {
+          assert.equal(plumbConnection, e.connection);
+          assert.isNull(a3B2.plumbConnection);
           done();
         });
 
-        var connection = diagram.connections.get('a3');
-        connection.destroy();
+        a3B2.destroy();
       });
     });
 
     describe(".render", function() {
       it("should create the actual jsPlumb connection", function(done) {
-        var connection = new ConnectionView({source: a1, target: b1});
+        var connection = new ConnectionView({
+          diagram: diagram,
+          model: new ConnectionModel({
+            id: 'a1-b1',
+            source: {id: 'a1'},
+            target: {id: 'b1'}
+          })
+        });
 
         jsPlumb.bind('connection', function(e) {
           assert.equal(connection.source.plumbEndpoint,
