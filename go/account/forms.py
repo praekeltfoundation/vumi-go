@@ -1,10 +1,9 @@
 from django import forms
 from registration.forms import RegistrationFormUniqueEmail
-from bootstrap.forms import BootstrapMixin, BootstrapForm, Fieldset
 from vumi.utils import normalize_msisdn
 
 
-class AccountForm(BootstrapForm):
+class AccountForm(forms.Form):
 
     def __init__(self, user, *args, **kwargs):
         super(AccountForm, self).__init__(*args, **kwargs)
@@ -43,7 +42,7 @@ class AccountForm(BootstrapForm):
         return confirm_start_conversation
 
 
-class RegistrationForm(BootstrapMixin, RegistrationFormUniqueEmail):
+class RegistrationForm(RegistrationFormUniqueEmail):
     def __init__(self, *args, **kwargs):
         super(RegistrationForm, self).__init__(*args, **kwargs)
         del self.fields['username']
@@ -54,6 +53,6 @@ class RegistrationForm(BootstrapMixin, RegistrationFormUniqueEmail):
         return self.cleaned_data
 
 
-class EmailForm(BootstrapForm):
+class EmailForm(forms.Form):
     subject = forms.CharField()
     message = forms.CharField(widget=forms.Textarea)
