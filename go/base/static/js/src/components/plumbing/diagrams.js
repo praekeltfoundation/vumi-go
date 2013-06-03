@@ -107,8 +107,6 @@
           targetId = e.targetEndpoint.getUuid(),
           connectionId = idOfConnection(sourceId, targetId);
 
-      this.diagram.plumbConnections.add(connectionId, e.connection);
-
       // Case 1:
       // -------
       // The connection model and its view have been added, but we haven't
@@ -124,12 +122,13 @@
           target = this.diagram.endpoints.get(targetId),
           collection = this.determineCollection(source, target);
 
-      // Add a new connection model to the view collection's models. The view
-      // collection will recognise the addition and add a corresponding view
-      collection.models.add({
+      collection.add({
         id: connectionId,
         source: source.model,
         target: target.model
+      }, {
+        addModel: true,
+        view: {plumbConnection: e.connection}
       });
     },
 
@@ -137,8 +136,6 @@
       var sourceId = e.sourceEndpoint.getUuid(),
           targetId = e.targetEndpoint.getUuid(),
           connectionId = idOfConnection(sourceId, targetId);
-
-      this.diagram.plumbConnections.remove(connectionId);
 
       // Case 1:
       // -------
@@ -158,7 +155,7 @@
 
       // If we remove the model, the connection view collection will recognise
       // this and remove the corresponding view.
-      collection.models.remove(connectionId);
+      collection.remove(connectionId, {removeModel: true});
     }
   });
 
@@ -204,10 +201,6 @@
 
       // Lookup/Manager of all the endpoints in the diagram
       this.endpoints = new DiagramViewEndpoints(this);
-
-      // Hold onto all the connections made by jsPlumb to look them up later
-      // (jsPlumb doesn't provide an easy way to do this)
-      this.plumbConnections = new Lookup();
 
       // Lookup/Manager of all the connections in the diagram
       this.connections = new DiagramViewConnections(this);

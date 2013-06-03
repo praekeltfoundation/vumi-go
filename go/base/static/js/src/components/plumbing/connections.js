@@ -27,9 +27,7 @@
       this.target = endpoints.get(this.model.get('target').id);
 
       // Keep a reference the actual jsPlumb connection
-      this.plumbConnection = this.diagram
-        .plumbConnections
-        .get(_(this).result('id')) || null;
+      this.plumbConnection = options.plumbConnection || null;
     },
 
     _plumbOptions: function() {
