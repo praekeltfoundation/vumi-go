@@ -246,8 +246,9 @@ describe("go.components.structures", function() {
   });
 
   describe(".ViewCollection", function() {
-    var ViewCollection = structures.ViewCollection,
-        models,
+    var ViewCollection = structures.ViewCollection;
+
+    var models,
         views;
 
     var ToyView = Backbone.View.extend({
@@ -261,37 +262,26 @@ describe("go.components.structures", function() {
     });
 
     var ToyViewCollection = ViewCollection.extend({
-      create: function(model) { return new ToyView({model: model}); }
+      create: function(options) { return new ToyView(options); }
     });
+
+    var assertAdded = function(id) {
+      assert.equal(views.get(id).model, models.get(id));
+    };
+
+    var assertRemoved = function(id) {
+      assert(!views.has(id));
+    };
 
     beforeEach(function() {
       models = new Backbone.Collection([{id: 'a'}, {id: 'b'}, {id: 'c'}]);
       views = new ToyViewCollection(models);
     });
 
-    describe("on 'add' collection events", function() {
+    describe("on 'add' model collection events", function() {
       it("should add a view corresponding to the model", function(done) {
         models.on('add', function() {
-          assert.equal(views.get('d').model, models.get('d'));
-          done();
-        });
-
-        models.add({id: 'd'});
-      });
-
-      it("should emit an 'add' event", function(done) {
-        views.on('add', function(id, view) {
-          assert.equal(id, 'd');
-          assert.equal(view, views.get('d'));
-          done();
-        });
-
-        models.add({id: 'd'});
-      });
-
-      it("should render the added view", function(done) {
-        models.on('add', function() {
-          assert(views.get('d').rendered);
+          assertAdded('d');
           done();
         });
 
@@ -302,11 +292,47 @@ describe("go.components.structures", function() {
     describe("on 'remove' collection events", function() {
       it("should remove the corresponding view", function(done) {
         models.on('remove', function() {
-          assert.isUndefined(views.get('c'));
+          assertRemoved('c');
           done();
         });
 
         models.remove('c');
+      });
+    });
+
+    describe(".add", function() {
+      var modelD;
+
+      beforeEach(function() {
+        modelD = new Backbone.Model({id: 'd'});
+        models.add(modelD, {silent: true});
+      });
+
+      it("should emit an 'add' event", function(done) {
+        views.on('add', function(id, view) {
+          assert.equal(id, 'd');
+          assert.equal(view, views.get('d'));
+          done();
+        });
+
+        views.add(modelD);
+      });
+
+      it("should render the added view", function() {
+        views.add(modelD);
+        assert(views.get('d').rendered);
+      });
+
+      it("should add the model if 'addModel' is true", function() {
+        views.add(modelD, {addModel: true});
+        assert(views.models.get('d'));
+      });
+    });
+
+    describe(".remove", function() {
+      it("should remove the view", function() {
+        views.remove('c');
+        assertRemoved('c');
       });
 
       it("should emit a 'remove' event", function(done) {
@@ -318,19 +344,16 @@ describe("go.components.structures", function() {
           done();
         });
 
-        models.remove('c');
+        views.remove('c');
       });
 
-      it("should call the view's destroy() function if it exists",
-         function(done) {
-        var viewC = views.get('c');
+      it("should call the view's destroy() function if it exists", function() {
+        assert(views.remove('c').destroyed);
+      });
 
-        models.on('remove', function() {
-          assert(viewC.destroyed);
-          done();
-        });
-
-        models.remove('c');
+      it("should remove the model if 'removeModel' is true", function() {
+        views.remove('c', {removeModel: true});
+        assert.isUndefined(views.models.get('c'));
       });
     });
 
