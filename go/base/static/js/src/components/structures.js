@@ -131,7 +131,15 @@
   //   - 'add' (id, view) - Emitted when a view is added
   //   - 'remove' (id, view) - Emitted when a view is removed
   var ViewCollection = Lookup.extend({
-    addDefaults: {render: true},
+    addDefaults: {
+      render: true,  // render view after adding
+      sync: false  // add the model if it is not in the collection
+    },
+
+    removeDefaults: {
+      render: true,  // render view after adding
+      sync: false  // add the model if it is not in the collection
+    },
 
     constructor: function(collection) {
       Lookup.prototype.constructor.call(this);
@@ -139,28 +147,42 @@
       this.models = collection;
       this.models.each(function(m) { this.add(m, {render: false}); }, this);
 
-      this.models.on('add', this.add, this);
-      this.models.on('remove', this.remove, this);
+      this.models.on('add', function(m) { this.add(m); }, this);
+      this.models.on('remove', function(m) { this.remove(m); }, this);
     },
 
     // Override to specialise how the view is created
-    create: function(model) { return new Backbone.View({model: model}); },
+    create: function(options) { return new Backbone.View(options); },
 
     add: function(model, options) {
-      _.defaults(options, this.addDefaults);
-      var view = this.create(model);
+      options = _(options || {}).defaults(this.addDefaults, {view: {}});
+
+      if (options.sync) { this.models.add(model, {silent: true}); }
+      model = this.models.get(model);
+
+      options.view.model = model;
+      var view = this.create(options.view);
+
       Lookup.prototype.add.call(this, model.id, view);
+
       if (options.render) { view.render(); }
+
+      return this;
     },
 
-    remove: function(model) {
+    remove: function(model, options) {
+      options = _(options || {}).defaults(this.removeDefaults);
+
+      if (options.sync) { this.models.remove(model); }
       var view = Lookup.prototype.remove.call(this, model.id);
       if (view && typeof view.destroy === 'function') { view.destroy(); }
+
       return view;
     },
 
     render: function() {
       this.each(function(v) { v.render(); });
+      return this;
     }
   });
 
@@ -205,11 +227,9 @@
         : modelOrCollection;
     },
 
-    create: function(model) {
-      var opts = _(this).result('opts');
-      opts.model = model;
-
-      return new this.type(opts);
+    create: function(options) {
+      _(options).defaults(_(this).result('opts'));
+      return new this.type(options);
     }
   });
 
