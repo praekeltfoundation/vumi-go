@@ -1,0 +1,74 @@
+{% extends "account/base.html" %}
+
+{% load url from future %}
+{% load humanize %}
+
+{% block content_extraclass %}accounts{% endblock %}
+{% block content_title %}Users{% endblock %}
+
+{% block content_actions_left %}
+    <button class="btn btn-primary">New User</button>
+{% endblock %}
+
+{% block content_actions_right %}
+    <div class="components-table-buttons pull-left">
+        <button class="btn" disabled="disabled">Delete</button>
+        <button class="btn" disabled="disabled">Edit</button>
+    </div>
+{% endblock %}
+
+{% block content_main %}
+<div class="row-fluid">
+    <div class="span3 sidebar">
+    </div>
+
+    <div class="span9">
+        
+        <table class="table components-table">
+            <thead>
+            <tr>
+                <th><input type="checkbox"></th>
+                <th>Email</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Last Active</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for user in user_list %}
+                 <tr>
+                    <td>
+                        <input type="checkbox" name="contact" value="{{ contact.key }}">
+                    </td>
+                    <td>
+                        {{ user.email }}
+                    </td>
+                    <td>
+                        {{ user.get_full_name }}
+                    </td>
+                    <td>
+                        {{ user.get_profile.role }}
+                    </td>
+                    <td>
+                        {{ user.last_login|naturalday }}
+                    </td>
+                 </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5">
+                        You don't have any users yet.
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% include "base/includes/pagination.html" %}
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+{% endblock %}
+
+{% block ondomready %}
+{% endblock %}

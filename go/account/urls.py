@@ -13,7 +13,7 @@ urlpatterns = patterns('',
         },
         name='registration_register'),
     url(r'^details/$', views.details, name='auth_details'),
-    url(r'^users/$', 'go.base.views.todo', name='auth_user_list'),
+    url(r'^users/$', views.user_list, name='auth_user_list'),
     url(r'^users/(?P<user_id>\d+)/$', 'go.base.views.todo',
         name='auth_user_detail'),
 )

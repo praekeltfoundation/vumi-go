@@ -42,7 +42,7 @@ class UserProfile(models.Model):
     organisation = models.ForeignKey(UserOrganisation, blank=True, null=True)
 
     def __unicode__(self):
-        return u' '.join([self.user.first_name, self.user.last_name])
+        return u"%s's profile" % self.user
 
     def get_user_account(self):
         return get_account_store().get_user(self.user_account)
