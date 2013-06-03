@@ -133,12 +133,12 @@
   var ViewCollection = Lookup.extend({
     addDefaults: {
       render: true,  // render view after adding
-      sync: false  // add the model if it is not in the collection
+      addModel: false  // add the model if it is not in the collection
     },
 
     removeDefaults: {
       render: true,  // render view after adding
-      sync: false  // add the model if it is not in the collection
+      removeModel: false  // add the model if it is not in the collection
     },
 
     constructor: function(collection) {
@@ -157,12 +157,11 @@
     add: function(modelOrId, options) {
       options = _(options || {}).defaults(this.addDefaults, {view: {}});
 
-      if (options.sync) { this.models.add(modelOrId, {silent: true}); }
+      if (options.addModel) { this.models.add(modelOrId, {silent: true}); }
       var model = this.models.get(modelOrId);
 
       options.view.model = model;
       var view = this.create(options.view);
-
       Lookup.prototype.add.call(this, model.id, view);
 
       if (options.render) { view.render(); }
@@ -179,10 +178,9 @@
 
     remove: function(modelOrId, options) {
       var id = this._id(modelOrId);
-
       options = _(options || {}).defaults(this.removeDefaults);
 
-      if (options.sync) { this.models.remove(id); }
+      if (options.removeModel) { this.models.remove(id); }
       var view = Lookup.prototype.remove.call(this, id);
       if (view && typeof view.destroy === 'function') { view.destroy(); }
 
