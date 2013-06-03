@@ -160,6 +160,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        action_url = '/conversations/%s/action/bulk_send' % (conversation.key,)
+        self.assertContains(response, action_url)
 
     def test_show_cached_message_pagination(self):
         # Create 21 inbound & 21 outbound messages, since we have

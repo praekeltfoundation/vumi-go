@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load url from future %}
+
+{% block content %}
+<div>
+    <img src="{{STATIC_URL}}pics/header/logo.png"/>
+    {% if success %}
+    <h2>Conversation confirmed</h2>
+    {% else %}
+    <h2>Please Confirm</h2>
+    {% endif %}
+    {% include "base/includes/messages.html" %}
+    <p>
+    {% if not success %}
+        You are about to start a conversation. Please review the details below
+        and click confirm if everything is in order.
+    {% endif %}
+    </p>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th colspan="2">{{conversation.name}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th>Message:</th>
+                <td>{{conversation.description}}</td>
+            </tr>
+            <tr>
+                <th>Groups:</th>
+                <td>
+                    {% for group in conversation.get_groups %}
+                        <span class="label label-inverse">{{group.name}}</span>
+                    {% endfor %}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% if not success %}
+<form method="post">
+    {{form}}
+    <div class="form-actions">
+        <input type="submit" class="btn btn-primary" data-loading-text="saving..." value="Confirm">
+    </div>
+    {% csrf_token %}
+</form>
+{% endif %}
+{% endblock %}

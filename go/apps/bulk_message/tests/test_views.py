@@ -162,6 +162,9 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        # Just to make sure we're not somehow using the other views here.
+        action_url = '/conversations/%s/action/bulk_send' % (conversation.key,)
+        self.assertNotContains(response, action_url)
 
     def test_show_cached_message_pagination(self):
         # Create 21 inbound & 21 outbound messages, since we have

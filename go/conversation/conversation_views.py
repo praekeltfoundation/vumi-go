@@ -25,7 +25,7 @@ from go.base.utils import (make_read_only_form, page_range_window)
 class ConversationView(TemplateView):
     view_name = None
     path_suffix = None
-    template_base = 'generic'
+    template_base = 'conversation_views'
 
     # Theis is set in the constructor, but the attribute must exist already.
     conversation_views = None
@@ -271,6 +271,8 @@ class ShowConversationView(ConversationView):
             'is_editable': (
                 self.conversation_views.edit_conversation_forms is not None),
             'user_api': request.user_api,
+            'actions': [action.action_name
+                        for action in self.conversation_views.actions],
             }
         templ = lambda name: self.get_template_name('includes/%s' % (name,))
 

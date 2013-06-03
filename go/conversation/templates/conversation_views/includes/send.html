@@ -1,0 +1,39 @@
+<div class="span4">
+    <div class="box shadow conv-disabled">
+        <h3>2. Message Recipients</h3>
+        <br>
+        {% include "conversation/includes/groups-selected.html" with groups=groups %}
+    </div>
+</div>
+<div class="span4">
+    <div class="box shadow">
+        <h3>3. Send Message</h3>
+        <br><a name="step3" id="step3"></a>
+        <p>Please review before sending:</p>
+        <table class="table table-condensed cost">
+            <thead>
+                <tr>
+                    <th colspan="4">Message:</th>
+                </tr>
+                <tr>
+                    <td colspan="4">{{conversation.description}}</td>
+                </tr>
+            </thead>
+        </table>
+        <div class="btn-toolbar">
+            <div class="btn-group">
+                <input type="submit" class="btn btn-success btn-large" value="Send Message &rarr;">
+            </div>
+            <div class="btn-group"><input type="reset" class="btn" onClick="javascript:history.go(-1)" value="Go Back"></div>
+            <div class="btn-group">
+                <label class="checkbox">
+                    <input type="checkbox" value="1" name="dedupe" />
+                    Filter out duplicates from groups
+                </label>
+            </div>
+            <!--
+            <div class="btn-group"><input type="reset" class="btn" value="Cancel"></div>
+            -->
+        </div>
+    </div>
+</div>
