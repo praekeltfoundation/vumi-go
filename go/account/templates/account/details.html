@@ -1,11 +1,7 @@
 {% extends "account/base.html" %}
 
 {% block content_extraclass %}accounts details{% endblock %}
-
-{% block content_title %}
-Account
-{% endblock %}
-
+{% block content_title %}Account{% endblock %}
 
 {% block content_main %}
 <div class="row-fluid">
@@ -33,21 +29,20 @@ Account
                 <button class="btn" data-toggle="modal" data-target="#changePassword">Change password</button>
             </div>
         </form>
-
     </div>
 
     <div class="span4 sidebar">
         <h4>Admin settings</h4>
         <ul class="nav nav-pills nav-stacked">
             <li>
-                <a href="">
+                <a href="{% url todo %}">
                     Billing<br>
                     <span>View a list of monthly statements</span>
                 </a>
                 
             </li>
             <li>
-                <a href="">
+                <a href="{% url todo %}">
                     Users and permissions<br>
                     <span>Add and edit users and access rights</span>
                 </a>
