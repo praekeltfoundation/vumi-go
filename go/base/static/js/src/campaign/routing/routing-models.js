@@ -2,6 +2,10 @@
 // ==============================
 // Models for campaign routing screen.
 
+// We use the state machine models as a base to make use of any
+// custom/overriden functionality the models provide over Backbone.Model,
+// seeing as the models for campaign routing are of a state machine nature.
+// NOTE: This is subject to change.
 var stateMachine = go.components.stateMachine,
     EndpointModel = stateMachine.EndpointModel,
     ConnectionModel = stateMachine.ConnectionModel,
