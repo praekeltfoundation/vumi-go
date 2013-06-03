@@ -166,7 +166,7 @@
 
       if (options.render) { view.render(); }
 
-      return this;
+      return view;
     },
 
     _id: function(modelOrId) {
