@@ -154,11 +154,11 @@
     // Override to specialise how the view is created
     create: function(options) { return new Backbone.View(options); },
 
-    add: function(model, options) {
+    add: function(modelOrId, options) {
       options = _(options || {}).defaults(this.addDefaults, {view: {}});
 
-      if (options.sync) { this.models.add(model, {silent: true}); }
-      model = this.models.get(model);
+      if (options.sync) { this.models.add(modelOrId, {silent: true}); }
+      var model = this.models.get(modelOrId);
 
       options.view.model = model;
       var view = this.create(options.view);
@@ -170,11 +170,20 @@
       return this;
     },
 
-    remove: function(model, options) {
+    _id: function(modelOrId) {
+      return modelOrId.id
+        ? modelOrId.id
+        : modelOrId.cid
+        || modelOrId;
+    },
+
+    remove: function(modelOrId, options) {
+      var id = this._id(modelOrId);
+
       options = _(options || {}).defaults(this.removeDefaults);
 
-      if (options.sync) { this.models.remove(model); }
-      var view = Lookup.prototype.remove.call(this, model.id);
+      if (options.sync) { this.models.remove(id); }
+      var view = Lookup.prototype.remove.call(this, id);
       if (view && typeof view.destroy === 'function') { view.destroy(); }
 
       return view;

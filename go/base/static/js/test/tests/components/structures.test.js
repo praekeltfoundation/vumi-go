@@ -331,7 +331,7 @@ describe("go.components.structures", function() {
 
     describe(".remove", function() {
       it("should remove the view", function() {
-        views.remove({id: 'c'});
+        views.remove('c');
         assertRemoved('c');
       });
 
@@ -344,15 +344,15 @@ describe("go.components.structures", function() {
           done();
         });
 
-        views.remove({id: 'c'});
+        views.remove('c');
       });
 
       it("should call the view's destroy() function if it exists", function() {
-        assert(views.remove({id: 'c'}).destroyed);
+        assert(views.remove('c').destroyed);
       });
 
       it("should remove the model if 'sync' is true", function() {
-        views.remove({id: 'c'}, {sync: true});
+        views.remove('c', {sync: true});
         assert.isUndefined(views.models.get('c'));
       });
     });
