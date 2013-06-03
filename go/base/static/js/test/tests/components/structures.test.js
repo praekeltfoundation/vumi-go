@@ -323,8 +323,8 @@ describe("go.components.structures", function() {
         assert(views.get('d').rendered);
       });
 
-      it("should add the model if 'sync' is true", function() {
-        views.add(modelD, {sync: true});
+      it("should add the model if 'addModel' is true", function() {
+        views.add(modelD, {addModel: true});
         assert(views.models.get('d'));
       });
     });
@@ -351,8 +351,8 @@ describe("go.components.structures", function() {
         assert(views.remove('c').destroyed);
       });
 
-      it("should remove the model if 'sync' is true", function() {
-        views.remove('c', {sync: true});
+      it("should remove the model if 'removeModel' is true", function() {
+        views.remove('c', {removeModel: true});
         assert.isUndefined(views.models.get('c'));
       });
     });
