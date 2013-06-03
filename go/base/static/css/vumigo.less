@@ -2,8 +2,8 @@
 
 
 body {
-  background:#2f3436;
-  color: #c1c1c1;
+  background: #2f3436;
+  color: #2f3436;
 }
 
 .main-container {
@@ -144,6 +144,10 @@ body {
     margin:0;
   }
 
+  // this cannot be applied to a row-fluid or span element.
+  // it's unfortunate, but that's the way the cookie crumbles.
+  // you'll get visual leaks if you try and indent one of the 
+  // above.
   .indent {
     margin:2em 1em;
   }
@@ -270,6 +274,18 @@ body {
   }
   
 }
+
+
+.help-inline .errorlist {
+  list-style:none;
+  
+
+  li {
+    padding:0;
+    margin:0;  
+  }
+}
+
 
 @import "accounts.less";
 @import "tables.less";
