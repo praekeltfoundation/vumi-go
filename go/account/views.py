@@ -5,13 +5,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
 from django.template.loader import render_to_string
-from django.http import HttpResponse
+from django.contrib.auth.forms import PasswordChangeForm
 
 from go.account.forms import EmailForm, AccountForm
 from go.account.tasks import update_account_details
+from go.base.models import UserProfile
 from go.base.django_token_manager import DjangoTokenManager
-
-from django.contrib.auth.forms import PasswordChangeForm
 
 
 @login_required
@@ -91,4 +90,22 @@ def details(request):
         'email_form': email_form,
         'account_form': account_form,
         'password_change_form': password_change_form
+    })
+
+
+@login_required
+def user_list(request):
+    """Fetch a list of users that belong to the same company in the
+    users profile."""
+
+    user_list = []
+    user_profile = request.user.get_profile()
+    if user_profile.organisation:
+        for profile in UserProfile.objects.filter(
+            organisation=user_profile.organisation):
+            user_list.append(profile.user)
+
+    return render(request, 'account/user_list.html', {
+        'user_list': user_list,
+        'profile': user_profile
     })
