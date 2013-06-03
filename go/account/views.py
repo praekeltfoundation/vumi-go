@@ -14,10 +14,6 @@ from go.base.django_token_manager import DjangoTokenManager
 from django.contrib.auth.forms import PasswordChangeForm
 
 
-def index(request):
-    return HttpResponse("I stole this page")
-
-
 @login_required
 def details(request):
     profile = request.user.get_profile()

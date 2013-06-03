@@ -7,7 +7,6 @@ from go.account.forms import RegistrationForm
 from go.account import views
 
 urlpatterns = patterns('',
-    url(r'^$', views.index, name='index'),
     url(r'^register/$', register, {
         'backend': 'registration.backends.default.DefaultBackend',
         'form_class': RegistrationForm,
