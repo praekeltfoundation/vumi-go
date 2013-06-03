@@ -98,13 +98,14 @@ def user_list(request):
     """Fetch a list of users that belong to the same company in the
     users profile."""
 
-    # TODO: Each user has to belong to an organisation, make sure the model
-    # reflects that, otherwise we'll introduce a security problem.
-    # grab the list of profiles that also belong to this user's organisation
     user_list = []
     user_profile = request.user.get_profile()
-    for profile in UserProfile.objects.filter(
-        organisation=user_profile.organisation):
-        user_list.append(profile.user)
+    if user_profile.organisation:
+        for profile in UserProfile.objects.filter(
+            organisation=user_profile.organisation):
+            user_list.append(profile.user)
 
-    return render(request, 'account/user_list.html', {'user_list': user_list})
+    return render(request, 'account/user_list.html', {
+        'user_list': user_list,
+        'profile': user_profile
+    })
