@@ -15,7 +15,18 @@ Account
         <form class="form-horizontal indent" action="" method="post">
             <input type="hidden" name="_account">
             {% csrf_token %}
-            {{ account_form }}
+            
+            {% for field in account_form %}
+            <div class="control-group{% if field.errors %} error{% endif %}">
+                <label class="control-label" for="id_{{ field.name }}">{{ field.label }}</label>
+                <div class="controls">
+                    {{ field }}
+                    {% if field.errors %}
+                    <span class="help-inline">{{ field.errors }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
 
             <div class="form-actions">
                 <input type="submit" class="btn btn-primary" value="Save">                
@@ -58,7 +69,17 @@ Account
 
             <input type="hidden" name="_password">
             {% csrf_token %}
-            {{ password_change_form.as_p }}
+            {% for field in password_change_form %}
+            <div class="control-group{% if field.errors %} error{% endif %}">
+                <label class="control-label" for="id_{{ field.name }}">{{ field.label }}</label>
+                <div class="controls">
+                    {{ field }}
+                    {% if field.errors %}
+                    <span class="help-inline">{{ field.errors }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
             <div class="form-actions">
                 <input type="submit" class="btn btn-primary" value="Change">
             </div>

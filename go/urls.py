@@ -14,10 +14,6 @@ urlpatterns = patterns('',
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
     url(r'^admin/', include(admin.site.urls)),
 
-    # django-regisration auth, override some views so we can specify
-    # our own custom forms to use.
-
-
     # simple todo view for stuff that's not completed yet
     url(r'^todo/.*$', 'go.base.views.todo', name='todo'),
     url(r'^t/task/$', 'go.base.views.token_task', name='token_task'),

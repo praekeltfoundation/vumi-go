@@ -86,6 +86,9 @@ def details(request):
         elif '_password' in request.POST:
             password_change_form = PasswordChangeForm(request.user,
                                                       request.POST)
+            if password_change_form.is_valid():
+                password_change_form.save()
+
 
 
     return render(request, 'account/details.html', {

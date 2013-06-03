@@ -224,6 +224,13 @@ body {
 .table-manage-data td {
   color: #2f3436;
 }
+.help-inline .errorlist {
+  list-style: none;
+}
+.help-inline .errorlist li {
+  padding: 0;
+  margin: 0;
+}
 .accounts {
   color: #c1c1c1;
 }
