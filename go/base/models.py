@@ -40,6 +40,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField('auth.User')
     user_account = models.CharField(max_length=100)
     organisation = models.ForeignKey(UserOrganisation, blank=True, null=True)
+    is_admin = models.BooleanField(default=False)
 
     def __unicode__(self):
         return u"%s's profile" % self.user

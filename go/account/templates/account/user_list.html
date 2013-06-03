@@ -47,7 +47,11 @@
                         {{ user.get_full_name }}
                     </td>
                     <td>
-                        {{ user.get_profile.role }}
+                        {% if user.get_profile.is_admin %}
+                        Admin
+                        {% else %}
+                        User
+                        {% endif %}
                     </td>
                     <td>
                         {{ user.last_login|naturalday }}
