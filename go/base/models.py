@@ -43,7 +43,7 @@ class UserProfile(models.Model):
     is_admin = models.BooleanField(default=False)
 
     def __unicode__(self):
-        return u"%s's profile" % self.user
+        return u"%s's profile" % self.user.email
 
     def get_user_account(self):
         return get_account_store().get_user(self.user_account)
