@@ -72,7 +72,12 @@
 {% endblock %}
 
 {% block modals %}
+{# TODO: Create users, edit permissions modal. #}
 {% endblock %}
 
 {% block ondomready %}
+    {{ block.super }}
+    go.components.tables.init({
+        checkedToggle: $('.components-table-buttons button')
+    });
 {% endblock %}

@@ -1,9 +1,10 @@
 body {
   background: #2f3436;
-  color: #2f3436;
+  color: #aaa;
 }
 .main-container {
   min-width: 650px;
+  color: #2f3436;
 }
 .footer {
   margin: 1em;
