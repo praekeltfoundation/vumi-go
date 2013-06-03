@@ -138,7 +138,7 @@
 
     removeDefaults: {
       render: true,  // render view after adding
-      removeModel: false  // add the model if it is not in the collection
+      removeModel: false  // remove the model if it is in the collection
     },
 
     constructor: function(collection) {
