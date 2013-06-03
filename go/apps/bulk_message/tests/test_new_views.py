@@ -284,14 +284,14 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
         self.assertEqual([], self.get_api_commands_sent())
-        # TODO: build a suitable form for this.
-        # self.fail()
+        self.assertContains(response, 'name="message"')
 
     def test_action_bulk_send_post(self):
         # Start the conversation
         self.client.post(self.get_view_url('start'))
         self.assertEqual(2, len(self.get_api_commands_sent()))
-        response = self.client.post(self.get_action_view_url('bulk_send'))
+        response = self.client.post(self.get_action_view_url('bulk_send'),
+                                    {'message': 'I am ham, not spam.'})
         self.assertRedirects(response, self.get_view_url('show'))
         [bulk_send_cmd] = self.get_api_commands_sent()
         conversation = self.user_api.get_wrapped_conversation(self.conv_key)
@@ -300,7 +300,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             'bulk_send',
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
-            batch_id=conversation.get_batches()[0].key, msg_options={}))
+            batch_id=conversation.get_batches()[0].key, msg_options={},
+            content='I am ham, not spam.'))
 
 
 class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
