@@ -109,12 +109,11 @@ class SubscriptionTestCase(DjangoGoApplicationTestCase):
         """
         conversation = self.get_wrapped_conv()
         self.acquire_all_longcode_tags()
-        consumer = self.get_cmd_consumer()
         response = self.client.post(reverse('subscription:start', kwargs={
             'conversation_key': conversation.key}), follow=True)
         self.assertRedirects(response, reverse('subscription:start', kwargs={
             'conversation_key': conversation.key}))
-        [] = self.fetch_cmds(consumer)
+        [] = self.get_api_commands_sent()
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "No spare messaging tags.")
 

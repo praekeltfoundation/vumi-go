@@ -1,5 +1,4 @@
 import csv
-from datetime import datetime
 from StringIO import StringIO
 
 from django.conf import settings
@@ -18,8 +17,7 @@ from go.conversation.forms import (ConversationForm, ConversationGroupForm,
                                    ReplyToMessageForm)
 from go.apps.surveys import forms
 from go.apps.surveys.views import _clear_empties
-from go.conversation.tasks import (export_conversation_messages,
-                                    send_one_off_reply)
+from go.conversation.tasks import export_conversation_messages
 
 from vxpolls.manager import PollManager
 
@@ -304,6 +302,26 @@ def end(request, conversation_key):
         'conversation_key': conversation.key}))
 
 
+def _send_one_off_reply(user_api, conversation, in_reply_to, content):
+    inbound_message = user_api.api.mdb.get_inbound_message(in_reply_to)
+    if inbound_message is None:
+        print 'Replying to an unknown message'
+
+    [tag] = conversation.get_tags()
+    msg_options = conversation.make_message_options(tag)
+    msg_options['in_reply_to'] = in_reply_to
+    conversation.dispatch_command(
+        'send_message', user_api.user_account_key, conversation.key,
+        command_data={
+            "batch_id": conversation.get_latest_batch_key(),
+            "conversation_key": conversation.key,
+            "to_addr": inbound_message['from_addr'],
+            "content": content,
+            "msg_options": msg_options,
+       }
+    )
+
+
 @login_required
 def show(request, conversation_key):
     conversation = conversation_or_404(request.user_api, conversation_key)
@@ -323,9 +341,8 @@ def show(request, conversation_key):
         if form.is_valid():
             in_reply_to = form.cleaned_data['in_reply_to']
             content = form.cleaned_data['content']
-            send_one_off_reply.delay(
-                request.user_api.user_account_key, conversation.key,
-                in_reply_to, content)
+            _send_one_off_reply(request.user_api, conversation,
+                                in_reply_to, content)
             messages.info(request, 'Reply scheduled for sending.')
             return redirect(reverse('multi_survey:show', kwargs={
                 'conversation_key': conversation.key,

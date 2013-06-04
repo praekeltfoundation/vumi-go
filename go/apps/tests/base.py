@@ -1,14 +1,15 @@
 from datetime import datetime, timedelta
 import uuid
 
-from go.base.tests.utils import VumiGoDjangoTestCase, declare_longcode_tags
-from go.vumitools.tests.utils import CeleryTestMixIn
-from go.base.utils import vumi_api_for_user
-
+from vumi.tests.fake_amqp import FakeAMQPBroker
 from vumi.message import TransportUserMessage, TransportEvent
 
+from go.base.tests.utils import VumiGoDjangoTestCase, declare_longcode_tags
+from go.base import utils as base_utils
+from go.vumitools.tests.utils import FakeAmqpConnection
 
-class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
+
+class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
     use_riak = True
 
     TEST_GROUP_NAME = u"Test Group"
@@ -26,9 +27,16 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
 
     def setUp(self):
         super(DjangoGoApplicationTestCase, self).setUp()
+        self._amqp = FakeAMQPBroker()
+        self._amqp.exchange_declare('vumi', 'direct')
+        self._old_connection = base_utils.connection
+        base_utils.connection = FakeAmqpConnection(self._amqp)
         self.setup_api()
         self.declare_longcode_tags()
-        self.setup_celery_for_tests()
+
+    def tearDown(self):
+        base_utils.connection = self._old_connection
+        super(DjangoGoApplicationTestCase, self).tearDown()
 
     def setup_riak_fixtures(self):
         self.user = self.mk_django_user()
@@ -189,7 +197,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
             msisdn=unicode(msisdn), **kwargs)
 
     def setup_user_api(self, django_user):
-        self.user_api = vumi_api_for_user(django_user)
+        self.user_api = base_utils.vumi_api_for_user(django_user)
         # XXX: We assume the tagpool already exists here. We need to rewrite
         #      a lot of this test infrastructure.
         self.add_tagpool_permission(u"longcode")
@@ -202,7 +210,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         declare_longcode_tags(self.api)
 
     def add_tagpool_permission(self, tagpool, max_keys=None):
-        permission = self.user_api.api.account_store.tag_permissions(
+        permission = self.api.account_store.tag_permissions(
             uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
         permission.save()
         account = self.user_api.get_user_account()
@@ -214,8 +222,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
             self.user_api.acquire_tag(u"longcode")
 
     def get_api_commands_sent(self):
-        consumer = self.get_cmd_consumer()
-        return self.fetch_cmds(consumer)
+        return base_utils.connection.get_commands()
 
     def put_sample_messages_in_conversation(self, user_api, conversation_key,
                                             message_count,
@@ -256,7 +263,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase, CeleryTestMixIn):
         return self.contact_store.get_contacts_for_conversation(conversation)
 
     def add_app_permission(self, application):
-        permission = self.user_api.api.account_store.application_permissions(
+        permission = self.api.account_store.application_permissions(
             uuid.uuid4().hex, application=application)
         permission.save()
 

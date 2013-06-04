@@ -113,15 +113,13 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         """
         Test the start conversation view
         """
-        consumer = self.get_cmd_consumer()
-
         response = self.client.post(reverse('multi_survey:start', kwargs={
             'conversation_key': self.conv_key}))
         self.assertRedirects(response, reverse('multi_survey:show', kwargs={
             'conversation_key': self.conv_key}))
 
         conversation = self.get_wrapped_conv()
-        [start_cmd, hack_cmd] = self.fetch_cmds(consumer)
+        [start_cmd, hack_cmd] = self.get_api_commands_sent()
         [batch] = conversation.get_batches()
         [tag] = list(batch.tags)
         [contact] = self.get_contacts_for_conversation(conversation)
@@ -152,12 +150,11 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         Test failure to send messages
         """
         self.acquire_all_longcode_tags()
-        consumer = self.get_cmd_consumer()
         response = self.client.post(reverse('multi_survey:start', kwargs={
             'conversation_key': self.conv_key}), follow=True)
         self.assertRedirects(response, reverse('multi_survey:start', kwargs={
             'conversation_key': self.conv_key}))
-        [] = self.fetch_cmds(consumer)
+        [] = self.get_api_commands_sent()
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "No spare messaging tags.")
 

@@ -157,6 +157,8 @@ class GoWorkerMixin(object):
 
     @inlineCallbacks
     def process_command_start(self, user_account_key, conversation_key):
+        log.info("Starting conversation '%s' for user '%s'." % (
+            conversation_key, user_account_key))
         conv = yield self.get_conversation(user_account_key, conversation_key)
         status = conv.get_status()
         if status != CONVERSATION_STARTING:
