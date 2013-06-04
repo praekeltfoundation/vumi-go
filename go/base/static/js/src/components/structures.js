@@ -265,8 +265,10 @@
     },
 
     subscribe: function(options) {
+      var collectionType = options.collectionType || this.collectionType;
+
       options.view = this.view;
-      var collection = new this.collectionType(options);
+      var collection = new collectionType(options);
 
       return ViewCollectionGroup
         .prototype
