@@ -143,7 +143,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:
             log.warning("Cannot find conversation '%s' for user '%s'." % (
-                user_account_key, conversation_key))
+                conversation_key, user_account_key))
             return
 
         for contacts in (yield conv.get_opted_in_contact_bunches()):
@@ -160,7 +160,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:
             log.warning("Cannot find conversation '%s' for user '%s'." % (
-                user_account_key, conversation_key))
+                conversation_key, user_account_key))
             return
 
         log.info('Processing send_message: %s' % kwargs)

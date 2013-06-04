@@ -118,7 +118,7 @@ class StreamingHTTPWorker(GoApplicationWorker):
         conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:
             log.warning("Cannot find conversation '%s' for user '%s'." % (
-                user_account_key, conversation_key))
+                conversation_key, user_account_key))
             return
 
         command_data = kwargs['command_data']
