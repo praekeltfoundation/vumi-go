@@ -36,7 +36,7 @@
             </thead>
             <tbody>
             {% for user in user_list %}
-                 <tr>
+                 <tr data-url="{% url 'auth_user_detail' user.pk %}">
                     <td>
                         <input type="checkbox" name="contact" value="{{ contact.key }}">
                     </td>

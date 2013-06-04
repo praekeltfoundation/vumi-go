@@ -1,0 +1,28 @@
+{% extends "account/base.html" %}
+
+{% load url from future %}
+{% load humanize %}
+
+{% block content_extraclass %}accounts{% endblock %}
+{% block content_title %}
+    <a href="{% url 'auth_user_list' %}">Users</a>
+    &raquo;
+    {% if edit_user %}
+    {% else %}
+    New user
+    {% endif %}
+{% endblock %}
+
+{% block content_actions_left %}
+{% endblock %}
+
+{% block content_actions_right %}
+{% endblock %}
+
+{% block content_main %}
+    <form class="form-horizontal" method="post" action="">
+    </form>
+{% endblock %}
+
+{% block modals %}
+{% endblock %}

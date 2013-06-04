@@ -109,3 +109,12 @@ def user_list(request):
         'user_list': user_list,
         'profile': user_profile
     })
+
+@login_required
+def user_detail(request, user_id=None):
+    """Shows a form that allows you to edit the details of this user"""
+
+    # TODO: Does the user have permission to do this?
+
+    return render(request, 'account/user_detail.html', {
+    })
