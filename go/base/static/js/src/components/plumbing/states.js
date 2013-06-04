@@ -11,11 +11,7 @@
 
   var StateViewEndpointCollection = SubviewCollection.extend({
     defaults: function() { return {type: this.view.endpointType}; },
-    opts: function() {
-      return _.defaults(
-        {state: this.view, collection: this},
-        _(this.view).result('endpointOptions'));
-    }
+    opts: function() { return {state: this.view, collection: this}; }
   });
 
   // Keeps track of all the endpoints in the state view
@@ -33,9 +29,6 @@
     // A list of configuration objects, where each corresponds to a group of
     // endpoints or a single endpoint. Override to change the state schema.
     endpointSchema: [{attr: 'endpoints'}],
-
-    // Override to change what options are passed to each new endpoint view
-    endpointOptions: {},
 
     // Override to change the default endpoint view type
     endpointType: EndpointView,

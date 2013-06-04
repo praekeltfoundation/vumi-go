@@ -47,11 +47,7 @@
       };
     },
 
-    opts: function() {
-      return _.defaults(
-        {diagram: this.view, collection: this},
-        _(this.view).result('connectionOptions'));
-    },
+    opts: function() { return {diagram: this.view, collection: this}; },
 
     constructor: function(options) {
       SubviewCollection.prototype.constructor.call(this, options);
@@ -160,11 +156,7 @@
 
   var DiagramViewStateCollection = SubviewCollection.extend({
     defaults: function() { return {type: this.view.stateType}; },
-    opts: function() {
-      return _.defaults(
-        {diagram: this.view, collection: this},
-        _(this.view).result('stateOptions'));
-    }
+    opts: function() { return {diagram: this.view, collection: this}; }
   });
 
   // Keeps track of all the states in a state diagram
@@ -184,9 +176,6 @@
     // Override to change how the states map to the diagram view's model
     stateSchema: [{attr: 'states'}],
 
-    // Override to change what options are passed to each new state view
-    stateOptions: {},
-
     // Override to change the default state view type
     stateType: StateView,
 
@@ -196,9 +185,6 @@
     // Override to change how the connections map to the diagram view's model
     connectionSchema: [{attr: 'connections'}],
 
-    // Override to change what options are passed to each new connection view
-    connectionOptions: {},
- 
     // Override to change the connection view type
     connectionType: ConnectionView,
 
