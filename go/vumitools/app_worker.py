@@ -158,6 +158,11 @@ class GoWorkerMixin(object):
     @inlineCallbacks
     def process_command_start(self, user_account_key, conversation_key):
         conv = yield self.get_conversation(user_account_key, conversation_key)
+        if conv is None:
+            log.warning(
+                "Trying to start missing conversation '%s' for user '%s'." % (
+                    conversation_key, user_account_key))
+            return
         status = conv.get_status()
         if status != CONVERSATION_STARTING:
             log.warning(
@@ -170,6 +175,11 @@ class GoWorkerMixin(object):
     @inlineCallbacks
     def process_command_stop(self, user_account_key, conversation_key):
         conv = yield self.get_conversation(user_account_key, conversation_key)
+        if conv is None:
+            log.warning(
+                "Trying to stop missing conversation '%s' for user '%s'." % (
+                    conversation_key, user_account_key))
+            return
         status = conv.get_status()
         if status != CONVERSATION_STOPPING:
             log.warning(
