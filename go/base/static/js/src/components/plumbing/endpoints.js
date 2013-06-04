@@ -15,7 +15,11 @@
     id: function() { return this.model.id; },
 
     initialize: function(options) {
+      // the state view that this endpoint is part of
       this.state = options.state;
+
+      // the collection of endpoint views that this endpoint is part of
+      this.collection = options.collection;
 
       // Keep a reference to the actual jsPlumb endpoint
       this.plumbEndpoint = null;

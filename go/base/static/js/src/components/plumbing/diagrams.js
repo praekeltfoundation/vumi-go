@@ -48,9 +48,9 @@
     },
 
     opts: function() {
-      var opts = _(this.view).result('connectionOptions');
-      opts.diagram = this.view;
-      return opts;
+      return _.defaults(
+        {diagram: this.view, collection: this},
+        _(this.view).result('connectionOptions'));
     },
 
     constructor: function(options) {
@@ -162,9 +162,9 @@
   var DiagramViewStateCollection = SubviewCollection.extend({
     defaults: function() { return {type: this.view.stateType}; },
     opts: function() {
-      var opts = _(this.view).result('stateOptions');
-      opts.diagram = this.view;
-      return opts;
+      return _.defaults(
+        {diagram: this.view, collection: this},
+        _(this.view).result('stateOptions'));
     }
   });
 

@@ -54,6 +54,7 @@ describe("go.components.plumbing (endpoints)", function() {
       it("should create the actual jsPlumb endpoint", function() {
         var endpoint4 = new EndpointView({
           state: state,
+          collection: state.endpoints.members.get('endpoints'),
           model: new EndpointModel({id: 'endpoint4'})
         });
 

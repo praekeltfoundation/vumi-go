@@ -12,9 +12,9 @@
   var StateViewEndpointCollection = SubviewCollection.extend({
     defaults: function() { return {type: this.view.endpointType}; },
     opts: function() {
-      var opts = _(this.view).result('endpointOptions');
-      opts.state = this.view;
-      return opts;
+      return _.defaults(
+        {state: this.view, collection: this},
+        _(this.view).result('endpointOptions'));
     }
   });
 
@@ -38,7 +38,11 @@
     id: function() { return this.model.id; },
 
     initialize: function(options) {
+      // the diagram view that this state is part of
       this.diagram = options.diagram;
+
+      // the collection of state views that this state is part of
+      this.collection = options.collection;
 
       // Lookup of all the endpoints in this state
       this.endpoints = new StateViewEndpoints(this);

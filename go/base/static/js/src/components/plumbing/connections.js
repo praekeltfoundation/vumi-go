@@ -19,7 +19,11 @@
     id: function() { return this.model.id; },
 
     initialize: function(options) {
+      // the diagram view that this connection is part of
       this.diagram = options.diagram;
+
+      // the collection of connection views that this connection is part of
+      this.collection = options.collection;
 
       // get the source and target endpoint views from the diagram
       var endpoints = this.diagram.endpoints;
