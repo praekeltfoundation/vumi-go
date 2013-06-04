@@ -20,20 +20,28 @@
 
   // Keeps track of all the endpoints in the state view
   var StateViewEndpoints = SubviewCollectionGroup.extend({
-    collectionType: StateViewEndpointCollection,
-    schema: function() { return _(this.view).result('endpointSchema'); }
+    schema: function() { return _(this.state).result('endpointSchema'); },
+
+    constructor: function(state) {
+      this.state = state;  // helpful alias
+      this.collectionType = this.state.endpointCollectionType;
+      SubviewCollectionGroup.prototype.constructor.call(this, state);
+    }
   });
 
   var StateView = Backbone.View.extend({
-    // Override to change the default endpoint view type
-    endpointType: EndpointView,
-
     // A list of configuration objects, where each corresponds to a group of
     // endpoints or a single endpoint. Override to change the state schema.
     endpointSchema: [{attr: 'endpoints'}],
 
     // Override to change what options are passed to each new endpoint view
     endpointOptions: {},
+
+    // Override to change the default endpoint view type
+    endpointType: EndpointView,
+
+    // Override to change the default endpoint view collection type
+    endpointCollectionType: StateViewEndpointCollection,
 
     id: function() { return this.model.id; },
 

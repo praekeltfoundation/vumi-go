@@ -70,12 +70,11 @@
   // Keeps connections between connection models in sync with the jsPlumb
   // connections in the UI
   var DiagramViewConnections = SubviewCollectionGroup.extend({
-    collectionType: DiagramViewConnectionCollection,
-
     schema: function() { return _(this.diagram).result('connectionSchema'); },
 
     constructor: function(diagram) {
       this.diagram = diagram;  // helpful alias
+      this.collectionType = this.diagram.connectionCollectionType;
       SubviewCollectionGroup.prototype.constructor.call(this, diagram);
 
       jsPlumb.bind(
@@ -170,30 +169,41 @@
 
   // Keeps track of all the states in a state diagram
   var DiagramViewStates = SubviewCollectionGroup.extend({
-    collectionType: DiagramViewStateCollection,
-    schema: function() { return _(this.view).result('stateSchema'); }
+    schema: function() { return _(this.diagram).result('stateSchema'); },
+
+    constructor: function(diagram) {
+      this.diagram = diagram;  // helpful alias
+      this.collectionType = this.diagram.stateCollectionType;
+      SubviewCollectionGroup.prototype.constructor.call(this, diagram);
+    }
   });
 
   // The main view for the state diagram. Delegates interactions between
   // the states and their endpoints.
   var DiagramView = Backbone.View.extend({
-    // Override to change the default state view type
-    stateType: StateView,
-
-    // Override to change the connection view type
-    connectionType: ConnectionView,
-
     // Override to change how the states map to the diagram view's model
     stateSchema: [{attr: 'states'}],
 
     // Override to change what options are passed to each new state view
     stateOptions: {},
 
+    // Override to change the default state view type
+    stateType: StateView,
+
+    // Override to change the default state view collection type
+    stateCollectionType: DiagramViewStateCollection,
+
     // Override to change how the connections map to the diagram view's model
     connectionSchema: [{attr: 'connections'}],
 
     // Override to change what options are passed to each new connection view
     connectionOptions: {},
+ 
+    // Override to change the connection view type
+    connectionType: ConnectionView,
+
+    // Override to change the default connection view collection type
+    connectionCollectionType: DiagramViewConnectionCollection,
 
     initialize: function() {
       // Lookup/Manager of all the states in the diagram
