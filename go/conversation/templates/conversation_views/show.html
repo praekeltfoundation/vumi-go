@@ -18,22 +18,24 @@
 
     <div class="row">
         <div class="span12">
-            {% if actions %}<h2>Conversation actions:</h2>
-            <ul>
-            {% for action in actions %}
-                <li><a href="{% url 'conversations:conversation_action' conversation_key=conversation.key action_name=action%}">{{action}}</a></li>
-            {% endfor %}
-            </ul>{% endif %}
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="span12">
             {% include "base/includes/messages.html" %}
         </div>
     </div>
 
-    {% include "generic/includes/overview.html" %}
+    {% include "conversation_views/includes/overview.html" %}
+
+    <div class="row">
+        <div class="span12">
+            {% if actions %}<h2>Conversation actions:</h2>
+            (This is ugly, but it's a short-term hack.)
+            <ul>
+            {% for action in actions %}
+                <li><a href="{% url 'conversations:conversation_action' conversation_key=conversation.key action_name=action%}">{{action}}</a></li>
+            {% endfor %}
+            </ul>
+            <hr>{% endif %}
+        </div>
+    </div>
 
     {# {% include "conversation/includes/dashboard.html" %} #}
 
