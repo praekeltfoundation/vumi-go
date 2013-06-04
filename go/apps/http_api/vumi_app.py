@@ -112,15 +112,15 @@ class StreamingHTTPWorker(GoApplicationWorker):
     def get_api_config(self, conversation, key):
         return conversation.config.get('http_api', {}).get(key)
 
-    def process_command_start(self, batch_id, conversation_type,
-                              conversation_key, msg_options,
-                              is_client_initiated, **extra_params):
-        log.info("Starting HTTP API for conversation (key: %r)." %
-                 (conversation_key,))
-
     @inlineCallbacks
-    def process_command_send_message(self, account_key, conversation_key, **kwargs):
-        conv = yield self.get_conversation(account_key, conversation_key)
+    def process_command_send_message(self, user_account_key, conversation_key,
+                                     **kwargs):
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        if conv is None:
+            log.warning("Cannot find conversation '%s' for user '%s'." % (
+                user_account_key, conversation_key))
+            return
+
         command_data = kwargs['command_data']
         log.info('Processing send_message: %s' % kwargs)
         to_addr = command_data['to_addr']
