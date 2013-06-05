@@ -106,8 +106,6 @@ def user_list(request):
     if user_profile.organisation:
         for profile in UserProfile.objects.filter(
                 organisation=user_profile.organisation):
-            print '-----------'
-            print profile
             user_list.append(profile.user)
 
     return render(request, 'account/user_list.html', {
