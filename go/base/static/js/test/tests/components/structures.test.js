@@ -437,14 +437,19 @@ describe("go.components.structures", function() {
     var view,
         subviews;
 
+    var LonelySubthingViewCollection = SubthingViewCollection.extend();
+
     var SubviewCollectionGroup = structures.SubviewCollectionGroup;
 
     var SubthingViewCollections = SubviewCollectionGroup.extend({
       collectionType: SubthingViewCollection,
 
-      schema: [
-        {attr: 'subthings'},
-        {attr: 'lonelySubthing'}]
+      schema: [{
+        attr: 'subthings'
+      }, {
+        attr: 'lonelySubthing',
+        collectionType: LonelySubthingViewCollection
+      }]
     });
 
     beforeEach(function() {
@@ -479,13 +484,26 @@ describe("go.components.structures", function() {
         ['d']);
     });
 
+    it("should allow the view collection type to be configured in the schema",
+    function() {
+      assert.instanceOf(subviews.members.get('subthings'),
+                        SubthingViewCollection);
+
+      assert.instanceOf(subviews.members.get('lonelySubthing'),
+                        LonelySubthingViewCollection);
+    });
+
     it("shouldn't allow its schema to be modified during setup", function() {
       var subthings = subviews.members.get('subthings');
       subthings.options.someProp = 23;
       assert.deepEqual(
         subviews.schema,
-        [{attr: 'subthings'},
-         {attr: 'lonelySubthing'}]);
+        [{
+          attr: 'subthings'
+        }, {
+          attr: 'lonelySubthing',
+          collectionType: LonelySubthingViewCollection
+        }]);
     });
   });
 });

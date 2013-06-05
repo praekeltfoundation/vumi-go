@@ -249,8 +249,12 @@
     // Override to change the subview collection type
     collectionType: SubviewCollection,
 
-    // Override to change the subview schema
+    // A list of specs/options, each a subview collection.
+    // Override to change the subview collections are created.
     schema: [{attr: 'subviews', type: Backbone.View}],
+
+    // Defaults to apply to each subview spec/option set
+    defaults: {},
 
     constructor: function(view) {
       ViewCollectionGroup.prototype.constructor.call(this);
@@ -265,8 +269,10 @@
     },
 
     subscribe: function(options) {
-      options.view = this.view;
-      var collection = new this.collectionType(options);
+      _(options).defaults({view: this.view}, _(this).result('defaults'));
+
+      var collectionType = options.collectionType || this.collectionType,
+          collection = new collectionType(options);
 
       return ViewCollectionGroup
         .prototype
