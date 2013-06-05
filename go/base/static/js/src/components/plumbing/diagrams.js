@@ -122,7 +122,7 @@
       // The connection model and its view have been removed from its
       // collection, so its connection view was destroyed (along with the
       // jsPlumb connection). We don't need to remove the connection model
-      // and view since they no longer exists. 
+      // and view since they no longer exists.
       if (!this.has(connectionId)) { return; }
 
       // Case 2:
