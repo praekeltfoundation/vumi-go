@@ -62,16 +62,16 @@ describe("go.components.plumbing (endpoints)", function() {
     });
   });
 
-  describe(".StaticEndpointView", function() {
+  describe(".StaticEndpoint", function() {
     var EndpointModel = stateMachine.EndpointModel,
-        StaticEndpointView = plumbing.StaticEndpointView;
+        StaticEndpoint = plumbing.StaticEndpoint;
 
     var endpoint;
 
     beforeEach(function() {
       var x = diagram.states.get('x');
 
-      endpoint = new StaticEndpointView({
+      endpoint = new StaticEndpoint({
         state: x,
         collection: x.endpoints.members.get('endpoints'),
         model: new EndpointModel({id: 'x4'})
@@ -82,7 +82,7 @@ describe("go.components.plumbing (endpoints)", function() {
       var anchors;
 
       beforeEach(function() {
-        anchors = StaticEndpointView.prototype.anchors;
+        anchors = StaticEndpoint.prototype.anchors;
       });
       
       it("should a provide jsPlumb anchor generators for each side of a state",
@@ -127,30 +127,30 @@ describe("go.components.plumbing (endpoints)", function() {
     });
   });
 
-  describe(".AligningEndpointViewCollection", function() {
+  describe(".AligningEndpointCollection", function() {
     var EndpointModel = stateMachine.EndpointModel,
-        StaticEndpointView = plumbing.StaticEndpointView;
+        StaticEndpoint = plumbing.StaticEndpoint;
 
-    var AligningEndpointViewCollection
-      = plumbing.AligningEndpointViewCollection;
+    var AligningEndpointCollection
+      = plumbing.AligningEndpointCollection;
 
-    var MockAligningCollection = AligningEndpointViewCollection.extend({
+    var MockAligningEndpointCollection = AligningEndpointCollection.extend({
       render: function() {
-        AligningEndpointViewCollection.prototype.render.call(this);
+        AligningEndpointCollection.prototype.render.call(this);
         this.rendered = true;
         return this;
       }
     });
 
-    var MockStaticEndpointView = StaticEndpointView.extend({
+    var MockStaticEndpoint = StaticEndpoint.extend({
       reposition: function(t) {
-        StaticEndpointView.prototype.reposition.call(this, t);
+        StaticEndpoint.prototype.reposition.call(this, t);
         this.t = t;
         return this;
       },
 
       render: function() {
-        StaticEndpointView.prototype.render.call(this);
+        StaticEndpoint.prototype.render.call(this);
         this.rendered = true;
         return this;
       }
@@ -169,10 +169,10 @@ describe("go.components.plumbing (endpoints)", function() {
       var x = diagram.states.get('x');
       x.render();
 
-      endpoints = new MockAligningCollection({
+      endpoints = new MockAligningEndpointCollection({
         view: x,
         attr: 'endpoints',
-        type: MockStaticEndpointView,
+        type: MockStaticEndpoint,
         margin: 0
       });
     });

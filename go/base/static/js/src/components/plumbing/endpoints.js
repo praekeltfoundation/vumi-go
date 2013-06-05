@@ -70,7 +70,7 @@
 
   // An endpoint view type which remains in the same position until it is
   // repositioned.
-  var StaticEndpointView = EndpointView.extend({
+  var StaticEndpoint = EndpointView.extend({
     defaults: {side: 'left'},
 
     anchors: {
@@ -103,17 +103,17 @@
     }
   });
 
-  // Automatically aligns its endpoints to be evenly spaced on the configured
-  // side of the state view.
+  // Automatically aligns its endpoints to be evenly spaced on one side of the
+  // state view.
   //
   // NOTE: Must be used with `StateEndpointView` types, or its derivatives
-  var AligningEndpointViewCollection = EndpointViewCollection.extend({
+  var AligningEndpointCollection = EndpointViewCollection.extend({
     addDefaults: _.defaults(
       {render: false},
       EndpointViewCollection.prototype.addDefaults),
 
     defaults: {
-      type: StaticEndpointView,
+      type: StaticEndpoint,
       side: 'left',  // the side of the state the collection is drawn on
       margin: 0.1  // margin spacing on each end of the state side
     },
@@ -159,7 +159,7 @@
     EndpointView: EndpointView,
     EndpointViewCollection: EndpointViewCollection,
 
-    StaticEndpointView: StaticEndpointView,
-    AligningEndpointViewCollection: AligningEndpointViewCollection
+    StaticEndpoint: StaticEndpoint,
+    AligningEndpointCollection: AligningEndpointCollection
   });
 })(go.components.plumbing);
