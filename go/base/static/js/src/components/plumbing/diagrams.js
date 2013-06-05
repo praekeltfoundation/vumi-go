@@ -5,14 +5,15 @@
 (function(exports) {
   var structures = go.components.structures,
       Lookup = structures.Lookup,
-      SubviewCollection = structures.SubviewCollection,
       SubviewCollectionGroup = structures.SubviewCollectionGroup,
       ViewCollectionGroup = structures.ViewCollectionGroup;
 
   var plumbing = go.components.plumbing,
+      idOfConnection = plumbing.idOfConnection,
       StateView = plumbing.StateView,
       ConnectionView = plumbing.ConnectionView,
-      idOfConnection = plumbing.idOfConnection;
+      StateViewCollection = plumbing.StateViewCollection,
+      ConnectionViewCollection = plumbing.ConnectionViewCollection;
 
   // Keeps track of all the endpoints in the state diagram
   var DiagramViewEndpoints = ViewCollectionGroup.extend({
@@ -33,9 +34,12 @@
     removeState: function(id) { this.unsubscribe(id); }
   });
 
-  var DiagramViewConnectionCollection = SubviewCollection.extend({
+  // Keeps connections between connection models in sync with the jsPlumb
+  // connections in the UI
+  var DiagramViewConnections = SubviewCollectionGroup.extend({
     defaults: function() {
-      var endpointType = this.view
+      // Get the default endpoint type for the diagram's default state type
+      var endpointType = this.diagram
         .stateType
         .prototype
         .endpointType;
@@ -47,25 +51,6 @@
       };
     },
 
-    opts: function() { return {diagram: this.view, collection: this}; },
-
-    constructor: function(options) {
-      SubviewCollection.prototype.constructor.call(this, options);
-      this.sourceType = options.sourceType;
-      this.targetType = options.targetType;
-    },
-
-    // Returns whether or not this collection accepts a connection based on the
-    // types of the given source and target endpoints
-    accepts: function(source, target) {
-      return source instanceof this.sourceType
-          && target instanceof this.targetType;
-    }
-  });
-
-  // Keeps connections between connection models in sync with the jsPlumb
-  // connections in the UI
-  var DiagramViewConnections = SubviewCollectionGroup.extend({
     schema: function() { return _(this.diagram).result('connectionSchema'); },
 
     constructor: function(diagram) {
@@ -154,13 +139,9 @@
     }
   });
 
-  var DiagramViewStateCollection = SubviewCollection.extend({
-    defaults: function() { return {type: this.view.stateType}; },
-    opts: function() { return {diagram: this.view, collection: this}; }
-  });
-
   // Keeps track of all the states in a state diagram
   var DiagramViewStates = SubviewCollectionGroup.extend({
+    defaults: function() { return {type: this.diagram.stateType}; },
     schema: function() { return _(this.diagram).result('stateSchema'); },
 
     constructor: function(diagram) {
@@ -180,7 +161,7 @@
     stateType: StateView,
 
     // Override to change the default state view collection type
-    stateCollectionType: DiagramViewStateCollection,
+    stateCollectionType: StateViewCollection,
 
     // Override to change how the connections map to the diagram view's model
     connectionSchema: [{attr: 'connections'}],
@@ -189,7 +170,7 @@
     connectionType: ConnectionView,
 
     // Override to change the default connection view collection type
-    connectionCollectionType: DiagramViewConnectionCollection,
+    connectionCollectionType: ConnectionViewCollection,
 
     initialize: function() {
       // Lookup/Manager of all the states in the diagram
@@ -215,9 +196,7 @@
 
     // Secondary components
     DiagramViewEndpoints: DiagramViewEndpoints,
-    DiagramViewConnectionCollection: DiagramViewConnectionCollection,
     DiagramViewConnections: DiagramViewConnections,
-    DiagramViewStates: DiagramViewStates,
-    DiagramViewStateCollection: DiagramViewStateCollection
+    DiagramViewStates: DiagramViewStates
   });
 })(go.components.plumbing);
