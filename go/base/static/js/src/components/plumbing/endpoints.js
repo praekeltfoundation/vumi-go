@@ -4,6 +4,9 @@
 // view') in Go
 
 (function(exports) {
+  var structures = go.components.structures,
+      SubviewCollection = structures.SubviewCollection;
+
   // View for a single endpoint on a state in a state diagram.
   //
   // Options:
@@ -53,7 +56,14 @@
     }
   });
 
+  // A collection of endpoint views attached to a state view
+  var EndpointViewCollection = SubviewCollection.extend({
+    defaults: {type: EndpointView},
+    opts: function() { return {state: this.view, collection: this}; }
+  });
+
   _.extend(exports, {
-    EndpointView: EndpointView
+    EndpointView: EndpointView,
+    EndpointViewCollection: EndpointViewCollection
   });
 })(go.components.plumbing);
