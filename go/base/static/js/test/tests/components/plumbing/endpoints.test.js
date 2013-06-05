@@ -231,6 +231,7 @@ describe("go.components.plumbing (endpoints)", function() {
       });
 
       it("should realign its endpoints", function() {
+        endpoints.realign();
         endpoints.remove('x3');
 
         // check that we haven't realigned yet

@@ -115,7 +115,7 @@
     defaults: {
       type: StaticEndpoint,
       side: 'left',  // the side of the state the collection is drawn on
-      margin: 0.1  // margin spacing on each end of the state side
+      margin: 0.005  // margin spacing on each end of the state side
     },
 
     opts: function() {
@@ -126,15 +126,12 @@
       };
     },
 
-    constructor: function(options) {
-      EndpointViewCollection.prototype.constructor.call(this, options);
+    initialize: function(options) {
       this.side = options.side;
       this.margin = options.margin;
 
       this.on('add', this.render, this);
       this.on('remove', this.render, this);
-
-      this.realign();
     },
 
     realign: function() {
@@ -143,7 +140,7 @@
 
       var space = 1 - (this.margin * 2),
           incr = space / (size + 1),
-          t = 0;
+          t = this.margin;
 
       this.each(function(e) { e.reposition(t += incr); });
       return this;
