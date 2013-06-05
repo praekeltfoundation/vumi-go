@@ -29,7 +29,7 @@ describe("go.components.plumbing (endpoints)", function() {
       x1 = diagram.endpoints.get('x1');
       diagram.render();
     });
-    
+
     describe(".destroy", function() {
       it("should remove the actual jsPlumb endpoint", function() {
         assert.isDefined(jsPlumb.getEndpoint('x1'));

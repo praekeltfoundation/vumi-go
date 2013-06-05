@@ -122,7 +122,7 @@ describe("go.components.plumbing (diagrams)", function() {
       beforeEach(function() {
         // render the diagram to ensure the jsPlumb endpoints are drawn
         diagram.render();
-      }); 
+      });
 
       it("should add a connection model and its view if they do not yet exist",
       function(done) {
@@ -157,7 +157,7 @@ describe("go.components.plumbing (diagrams)", function() {
         // render the diagram and connections to ensure the jsPlumb endpoints
         // and connections are drawn
         diagram.render();
-      }); 
+      });
 
       it("should remove the connection model and its view if they still exist",
       function(done) {
