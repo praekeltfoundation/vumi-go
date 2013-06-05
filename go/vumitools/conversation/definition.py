@@ -38,6 +38,9 @@ class ConversationAction(object):
     """
 
     action_name = None
+    action_display_name = None
+
+    redirect_to = None
 
     def __init__(self, conv):
         self._conv = conv

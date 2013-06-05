@@ -4,12 +4,12 @@ from StringIO import StringIO
 from django.views.generic import TemplateView
 from django.core.paginator import PageNotAnInteger, EmptyPage
 from django import forms
-
 from django.shortcuts import redirect, render, Http404
 from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.conf import settings
 from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 
 from go.vumitools.exceptions import ConversationSendError
 from go.base.django_token_manager import DjangoTokenManager
@@ -26,6 +26,7 @@ class ConversationView(TemplateView):
     view_name = None
     path_suffix = None
     template_base = 'conversation_views'
+    csrf_exempt = False
 
     # Theis is set in the constructor, but the attribute must exist already.
     conversation_views = None
@@ -271,9 +272,8 @@ class ShowConversationView(ConversationView):
             'is_editable': (
                 self.conversation_views.edit_conversation_forms is not None),
             'user_api': request.user_api,
-            'actions': [action.action_name
-                        for action in self.conversation_views.actions],
-            }
+            'actions': self.conversation_views.actions,
+        }
         templ = lambda name: self.get_template_name('includes/%s' % (name,))
 
         if conversation.archived():
@@ -339,7 +339,6 @@ class EditConversationView(ConversationView):
     """
     view_name = 'edit'
     path_suffix = 'edit/'
-    edit_conversation_forms = ()
 
     def _render_forms(self, request, conversation, edit_forms):
         def sum_media(form_list):
@@ -371,8 +370,9 @@ class EditConversationView(ConversationView):
 
     def make_forms(self, conversation):
         config = conversation.get_config()
+        edit_forms = self.conversation_views.edit_conversation_forms
         return [self.make_form(key, edit_form, config)
-                for key, edit_form in self.edit_conversation_forms]
+                for key, edit_form in edit_forms]
 
     def process_form(self, form):
         if hasattr(form, 'to_metadata'):
@@ -381,9 +381,10 @@ class EditConversationView(ConversationView):
 
     def process_forms(self, request, conversation):
         config = conversation.get_config()
+        edit_forms = self.conversation_views.edit_conversation_forms
         edit_forms_with_keys = [
             (key, edit_form_cls(request.POST, prefix=key))
-            for key, edit_form_cls in self.edit_conversation_forms]
+            for key, edit_form_cls in edit_forms]
         edit_forms = [edit_form for _key, edit_form in edit_forms_with_keys]
 
         for key, edit_form in edit_forms_with_keys:
@@ -473,8 +474,8 @@ class ConversationActionView(ConversationView):
     def get(self, request, conversation):
         form = self.action.get_action_form()
         if form is None:
-            # FIXME: Do something sensible here.
-            print "No form"
+            # We have no form, so assume we're just redirecting elsewhere.
+            return self.action_done(conversation)
         return self._render_form(request, conversation, form)
 
     def post(self, request, conversation):
@@ -486,9 +487,13 @@ class ConversationActionView(ConversationView):
                 return self._render_form(request, conversation, form)
             action_data = form.cleaned_data
         self.action.perform_action(action_data)
+        return self.action_done(conversation)
 
-        return self.redirect_to(self.get_next_view(conversation),
-                                conversation_key=conversation.key)
+    def action_done(self, conversation):
+        next_view = self.get_next_view(conversation)
+        if self.action.redirect_to is not None:
+            next_view = self.action.redirect_to
+        return self.redirect_to(next_view, conversation_key=conversation.key)
 
 
 def tf_server_initiated(pool, metadata):
@@ -612,8 +617,11 @@ class ConversationViewFinder(object):
     def get_view(self, path_suffix):
         if path_suffix not in self.path_suffix_mapping:
             raise Http404
-        return self.path_suffix_mapping[path_suffix].as_view(
-            conversation_views=self)
+        view_cls = self.path_suffix_mapping[path_suffix]
+        view = view_cls.as_view(conversation_views=self)
+        if view_cls.csrf_exempt:
+            view = csrf_exempt(view)
+        return view
 
     def get_action_view(self, action_name):
         for action in self.actions:

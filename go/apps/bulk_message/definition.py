@@ -13,6 +13,7 @@ class MessageForm(BootstrapForm):
 
 class BulkSendAction(ConversationAction):
     action_name = 'bulk_send'
+    action_display_name = 'Send Bulk Message'
 
     def get_action_form(self):
         return MessageForm

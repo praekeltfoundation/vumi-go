@@ -30,7 +30,7 @@
             (This is ugly, but it's a short-term hack.)
             <ul>
             {% for action in actions %}
-                <li><a href="{% url 'conversations:conversation_action' conversation_key=conversation.key action_name=action%}">{{action}}</a></li>
+                <li><a href="{% url 'conversations:conversation_action' conversation_key=conversation.key action_name=action.action_name%}">{{action.action_display_name}}</a></li>
             {% endfor %}
             </ul>
             <hr>{% endif %}
