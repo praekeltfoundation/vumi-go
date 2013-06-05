@@ -1,13 +1,17 @@
-from django.shortcuts import render, redirect
+
 from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.conf import settings
-from django.template.loader import render_to_string
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib.auth.forms import PasswordChangeForm
+from django.conf import settings
+from django.http import HttpResponseForbidden
+from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import render_to_string
 
-from go.account.forms import EmailForm, AccountForm
+from go.account.forms import (EmailForm, AccountForm, UserAccountForm,
+    UserProfileForm)
 from go.account.tasks import update_account_details
 from go.base.models import UserProfile
 from go.base.django_token_manager import DjangoTokenManager
@@ -114,7 +118,27 @@ def user_list(request):
 def user_detail(request, user_id=None):
     """Shows a form that allows you to edit the details of this user"""
 
-    # TODO: Does the user have permission to do this?
+    # Is the `user` an admin, do they have the rights to edit a user?
+    user_profile = request.user.get_profile()
+    if not user_profile.is_admin:
+        return HttpResponseForbidden("You're not an admin.")
+
+    # Are they editing a member of the same organisation?
+    edit_user = get_object_or_404(User, id=user_id)
+    edit_user_profile = edit_user.get_profile()
+    if user_profile.organisation != edit_user_profile.organisation:
+        return HttpResponseForbidden("This user is not in your organisation.")
+
+
+    # grab the user
+    user_form  = UserAccountForm()
+    user_profile_form = UserProfileForm()
+
+    if request.method == 'POST':
+        pass
+        # save the forms.
 
     return render(request, 'account/user_detail.html', {
+        'user_form': user_form,
+        'user_profile_form': user_profile_form
     })
