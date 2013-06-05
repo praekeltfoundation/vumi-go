@@ -7,8 +7,6 @@ describe("go.components.plumbing (endpoints)", function() {
       newSimpleDiagram = testHelpers.newSimpleDiagram,
       tearDown = testHelpers.tearDown;
 
-  var diagram;
-
   beforeEach(function() {
     setUp();
   });
@@ -18,17 +16,15 @@ describe("go.components.plumbing (endpoints)", function() {
   });
 
   describe(".EndpointView", function() {
-    beforeEach(function() {
-      diagram = newSimpleDiagram();
-    });
-
     var EndpointModel = stateMachine.EndpointModel,
         EndpointView = plumbing.EndpointView;
 
-    var x,
+    var diagram,
+        x,
         x1;
 
     beforeEach(function() {
+      diagram = newSimpleDiagram();
       x = diagram.states.get('x');
       x1 = diagram.endpoints.get('x1');
       diagram.render();

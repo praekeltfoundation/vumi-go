@@ -8,8 +8,6 @@ describe("go.components.plumbing (connections)", function() {
       newComplexDiagram = testHelpers.newComplexDiagram,
       tearDown = testHelpers.tearDown;
 
-  var diagram;
-
   beforeEach(function() {
     setUp();
   });
@@ -19,18 +17,16 @@ describe("go.components.plumbing (connections)", function() {
   });
 
   describe(".ConnectionView", function() {
-    beforeEach(function() {
-      diagram = new newSimpleDiagram();
-    });
-
     var ConnectionModel = stateMachine.ConnectionModel,
         ConnectionView = plumbing.ConnectionView;
 
-    var x1,
+    var diagram,
+        x1,
         y1,
         x3_y2;
 
     beforeEach(function() {
+      diagram = new newSimpleDiagram();
       x1 = diagram.endpoints.get('x1');
       y1 = diagram.endpoints.get('y1');
       x3_y2 = diagram.connections.get('x3-y2');
@@ -79,7 +75,8 @@ describe("go.components.plumbing (connections)", function() {
   });
 
   describe(".ConnectionCollection", function() {
-    var connections;
+    var diagram,
+        connections;
 
     beforeEach(function() {
       diagram = newComplexDiagram();

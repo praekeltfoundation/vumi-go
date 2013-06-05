@@ -7,11 +7,8 @@ describe("go.components.plumbing (states)", function() {
       newComplexDiagram = testHelpers.newComplexDiagram,
       tearDown = testHelpers.tearDown;
 
-  var diagram;
-
   beforeEach(function() {
     setUp();
-    diagram = newComplexDiagram();
   });
 
   afterEach(function() {
@@ -22,9 +19,11 @@ describe("go.components.plumbing (states)", function() {
     var LeftEndpointView = testHelpers.LeftEndpointView,
         RightEndpointView = testHelpers.RightEndpointView;
 
-    var a1;
+    var diagram,
+        a1;
 
     beforeEach(function() {
+      diagram = newComplexDiagram();
       a1 = diagram.states.get('a1');
     });
 
