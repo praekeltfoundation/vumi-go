@@ -4,77 +4,96 @@
 
 (function(exports) {
 
+    var TableView = Backbone.View.extend({
 
-    var init = function(options) {
+        events: {
+            'click thead input:checkbox': 'toggleAllCheckboxes',
+            'click tbody input:checkbox': 'onClick',
+            'click tbody tr td:first-child': 'onClick',
+            'click tbody tr': 'openRow'
+        },
 
-        var opts = {
-            tableSelector: '.components-table',
-            linkAttribute: 'data-url'
-        };
-        $.extend(opts, options);
-
-        var $table = $(opts.tableSelector);
-        var $checkboxes = $table.find('input:checkbox');
-
-        // increase the target area of the checkbox by making the the td 
-        // element within which it's held clickable.
-        $checkboxes.parent().click(function(e) {
-            e.stopPropagation();
-            var $cb = $(this).find('input:checkbox').click();
-        });
-
-        $checkboxes.click(function(e) {
-            e.stopPropagation();
-
-            var $cb = $(this);
-            var $checkboxes = $table.find('tbody input:checkbox');
-
-            // the checkbox in the table's header was selected, so deselect
-            // or select or children rows accordingly.
-            if ($cb.parents('thead').length) {
-                $checkboxes.prop('checked', $cb.prop('checked'));
+        initialize: function() {
+            // the table is rendered elsewhere, so el is an absolute
+            // requirements.
+            if (this.$el.length === 0) {
+                throw('You must pass and `el` attribute to TableView.');
             }
 
-            // if all the $checkboxes are selected then we should update the 
-            // state of the header checkbox to reflect that.
+            _.defaults(this.options, {
+                rowLinkAttribute: 'data-url'
+            });
+
+            _.bindAll(this,
+                'toggleAllCheckboxes',
+                'onClick',
+                'onChecked',
+                'openRow'
+            );
+
+            this.on('onChecked', this.onChecked);
+        },
+
+        // select or deselect all the checkboxes based on the state of the 
+        // single checkbox in the header.
+        toggleAllCheckboxes: function(ev) {
+            this.$el.find('tbody input:checkbox').prop('checked',
+                $(ev.target).prop('checked'));
+
+            this.trigger('onChecked');
+        },
+
+        onClick: function(ev) {
+            ev.stopPropagation();
+            $this = $(ev.target);
+
+            // the `td` that houses the checkbox is clickable, this make the
+            // checkbox easier to click because it increases the target
+            // area.
+            if ($this.is('td')) {
+                $this.find('input:checkbox').trigger('click');
+                return false;
+            }
+
+            this.trigger('onChecked');
+        },
+
+        onChecked: function() {
+
+            // determine if all the checkboxes are selected
             var allChecked = true;
-            var oneChecked = false;
-            $checkboxes.each(function() {
-
-
+            var numChecked = 0;
+            this.$el.find('tbody input:checkbox').each(function() {
                 if (!$(this).prop('checked')) {
                     // one of our checkboxes isn't checked.
                     allChecked = false;
                 } else {
-                    oneChecked = true;
-                }
-                // once the below condition is proved then I no longer need
-                // this loop, you're either this below or the defaults that
-                // we set at the start of the loop.
-                if (!allChecked && oneChecked) {
-                    return false;
+                    numChecked += 1;
                 }
             });
-            $table.find('thead input:checkbox').prop('checked', allChecked);
 
+            this.$el.find('thead input:checkbox').prop('checked', allChecked);
 
-            // the user of the table passes in a selector of elements that they
-            // want `enabled` when one of the checkboxes is checked, here we
-            // enable or disable based on `oneChecked`.
-            if (typeof(opts.checkedToggle) !== 'undefined') {
-                $(opts.checkedToggle).prop('disabled', !oneChecked);
+            var selector = this.options.onCheckedSelector;
+            if (typeof(selector) !== 'undefined') {
+                $(selector).prop('disabled', numChecked <= 0);
             }
-        });
+            var callback = this.options.onCheckedCallback;
+            if (typeof(callback) !== 'undefined') {
+                callback.call(this, allChecked, numChecked);
+            }
+        },
 
-        // the entire row of the table should act as a link, except for the
-        // header row.
-        $table.find('tbody tr').click(function() {
-            var url = $(this).attr(opts.linkAttribute);
+        openRow: function(ev) {
+            var $this = $(ev.target).parents('tr');
+            var url = $this.attr(this.options.rowLinkAttribute);
             if (typeof(url) !== 'undefined') window.location = url;
-        });
-    };
+        }
+
+    });
+
 
     _.extend(exports, {
-      init: init
+        TableView: TableView
     });
 })(go.components.tables = {});
