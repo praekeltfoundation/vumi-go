@@ -4,42 +4,6 @@
 
 (function(exports) {
 
-
-    var TableView = Backbone.View.extend({
-
-        events: {
-            'click thead input:checkbox': 'toggle',
-            'click tbody input:checkbox': 'pew',
-            'click tbody tr td:first-child': 'pew',
-            'click tr': 'openRow',
-        },
-
-        initialize: function() {
-            // the table is rendered elsewhere, so el is an absolute
-            // requirements.
-            if (this.$el.length === 0) {
-                throw('You must pass and `el` attribute to TableView.');
-            }
-            _.bindAll(this, 'toggle', 'pew', 'openRow');
-
-        },
-
-        toggle: function() {
-
-            var $checkbo
-
-        },
-
-        pew: function() {
-
-        },
-
-        openRow: function() {
-
-        }
-
-    });
-
     var init = function(options) {
 
         var opts = {
