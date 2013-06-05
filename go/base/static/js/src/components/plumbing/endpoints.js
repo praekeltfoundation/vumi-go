@@ -103,10 +103,63 @@
     }
   });
 
+  // Automatically aligns its endpoints to be evenly spaced on the configured
+  // side of the state view.
+  //
+  // NOTE: Must be used with `StateEndpointView` types, or its derivatives
+  var AligningEndpointViewCollection = EndpointViewCollection.extend({
+    addDefaults: _.defaults(
+      {render: false},
+      EndpointViewCollection.prototype.addDefaults),
+
+    defaults: {
+      type: StaticEndpointView,
+      side: 'left',  // the side of the state the collection is drawn on
+      margin: 0.1  // margin spacing on each end of the state side
+    },
+
+    opts: function() {
+      return {
+        state: this.view,
+        collection: this,
+        side: this.side
+      };
+    },
+
+    constructor: function(options) {
+      EndpointViewCollection.prototype.constructor.call(this, options);
+      this.side = options.side;
+      this.margin = options.margin;
+
+      this.on('add', this.render, this);
+      this.on('remove', this.render, this);
+
+      this.realign();
+    },
+
+    realign: function() {
+      var size = this.size();
+      if (!size) { return this; }
+
+      var space = 1 - (this.margin * 2),
+          incr = space / (size + 1),
+          t = 0;
+
+      this.each(function(e) { e.reposition(t += incr); });
+      return this;
+    },
+
+    render: function() {
+      this.realign();
+      EndpointViewCollection.prototype.render.call(this);
+    }
+  });
+
   _.extend(exports, {
     EndpointView: EndpointView,
     EndpointViewCollection: EndpointViewCollection,
 
-    StaticEndpointView: StaticEndpointView
+    StaticEndpointView: StaticEndpointView,
+    AligningEndpointViewCollection: AligningEndpointViewCollection
   });
 })(go.components.plumbing);

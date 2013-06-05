@@ -126,4 +126,119 @@ describe("go.components.plumbing (endpoints)", function() {
       });
     });
   });
+
+  describe(".AligningEndpointViewCollection", function() {
+    var EndpointModel = stateMachine.EndpointModel,
+        StaticEndpointView = plumbing.StaticEndpointView;
+
+    var AligningEndpointViewCollection
+      = plumbing.AligningEndpointViewCollection;
+
+    var MockAligningCollection = AligningEndpointViewCollection.extend({
+      render: function() {
+        AligningEndpointViewCollection.prototype.render.call(this);
+        this.rendered = true;
+        return this;
+      }
+    });
+
+    var MockStaticEndpointView = StaticEndpointView.extend({
+      reposition: function(t) {
+        StaticEndpointView.prototype.reposition.call(this, t);
+        this.t = t;
+        return this;
+      },
+
+      render: function() {
+        StaticEndpointView.prototype.render.call(this);
+        this.rendered = true;
+        return this;
+      }
+    });
+
+    var endpoints;
+
+    var assertAlignment = function() {
+      var expected = Array.prototype.slice.call(arguments);
+      endpoints.each(function(e, i) {
+        assert.closeTo(e.t, expected[i], 0.0000001);
+      });
+    };
+
+    beforeEach(function() {
+      var x = diagram.states.get('x');
+      x.render();
+
+      endpoints = new MockAligningCollection({
+        view: x,
+        attr: 'endpoints',
+        type: MockStaticEndpointView,
+        margin: 0
+      });
+    });
+
+    describe("on 'add' events", function() {
+      it("should re-render its endpoints", function(done) {
+        endpoints.on('add', function() {
+          assert(endpoints.rendered);
+          done();
+        });
+
+        assert(!endpoints.rendered);
+        endpoints.add({id: 'x4'}, {addModel: true});
+      });
+    });
+
+    describe("on 'remove' events", function() {
+      it("should re-render its endpoints", function(done) {
+        endpoints.on('remove', function() {
+          assert(endpoints.rendered);
+          done();
+        });
+
+        assert(!endpoints.rendered);
+        endpoints.remove('x3');
+      });
+    });
+
+    describe(".realign", function() {
+      beforeEach(function() {
+        // Ensure we only render manually
+        endpoints.off('add');
+        endpoints.off('remove');
+      });
+
+      it("should align endpoints to be equally spaced", function() {
+        endpoints.realign();
+        assertAlignment(1/4, 1/2, 3/4);
+
+        endpoints.add({id: 'x4'}, {addModel: true});
+        endpoints.realign();
+        assertAlignment(1/5, 2/5, 3/5, 4/5);
+
+        endpoints.remove('x4');
+        endpoints.remove('x3');
+        endpoints.remove('x2');
+        endpoints.realign();
+        assertAlignment(1/2);
+      });
+    });
+
+    describe(".render", function() {
+      beforeEach(function() {
+        // Ensure we only render manually
+        endpoints.off('remove');
+      });
+
+      it("should realign its endpoints", function() {
+        endpoints.remove('x3');
+
+        // check that we haven't realigned yet
+        assertAlignment(1/4, 1/2, 3/4);
+
+        endpoints.render();
+        assertAlignment(1/3, 2/3);
+      });
+    });
+  });
 });
