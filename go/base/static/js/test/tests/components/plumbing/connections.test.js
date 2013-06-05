@@ -1,98 +1,95 @@
 describe("go.components.plumbing (connections)", function() {
-  var stateMachine = go.components.stateMachine,
-      StateMachineModel = stateMachine.StateMachineModel;
+  var stateMachine = go.components.stateMachine;
+      plumbing = go.components.plumbing;
 
-  var plumbing = go.components.plumbing,
-      DiagramView = go.components.plumbing.DiagramView;
-
-  var diagram;
+  var testHelpers = plumbing.testHelpers,
+      setUp = testHelpers.setUp,
+      newSimpleDiagram = testHelpers.newSimpleDiagram,
+      newComplexDiagram = testHelpers.newComplexDiagram,
+      tearDown = testHelpers.tearDown;
 
   beforeEach(function() {
-    var model = new StateMachineModel({
-      states: [{
-        id: 'a',
-        endpoints: [
-          {id: 'a1'},
-          {id: 'a2'},
-          {id: 'a3'}]
-      }, {
-        id: 'b',
-        endpoints: [
-          {id: 'b1'},
-          {id: 'b2'},
-          {id: 'b3'}]
-      }],
-
-      connections: [{
-        id: 'a3-b2',
-        source: {id: 'a3'},
-        target: {id: 'b2'}
-      }]
-    });
-
-    $('body').append("<div id='diagram'></div>");
-    diagram =  new DiagramView({el: '#diagram', model: model});
+    setUp();
   });
 
   afterEach(function() {
-    Backbone.Relational.store.reset();
-    jsPlumb.unbind();
-    jsPlumb.detachEveryConnection();
-    $('#diagram').remove();
+    tearDown();
   });
 
   describe(".ConnectionView", function() {
     var ConnectionModel = stateMachine.ConnectionModel,
         ConnectionView = plumbing.ConnectionView;
 
-    var a1,
-        b1,
-        a3B2;
+    var diagram,
+        x1,
+        y1,
+        x3_y2;
 
     beforeEach(function() {
-      a1 = diagram.endpoints.get('a1');
-      b1 = diagram.endpoints.get('b1');
-      a3B2 = diagram.connections.get('a3-b2');
+      diagram = new newSimpleDiagram();
+      x1 = diagram.endpoints.get('x1');
+      y1 = diagram.endpoints.get('y1');
+      x3_y2 = diagram.connections.get('x3-y2');
       diagram.render();
     });
 
     describe(".destroy", function() {
       it("should remove the actual jsPlumb connection", function(done) {
-        var plumbConnection = a3B2.plumbConnection;
+        var plumbConnection = x3_y2.plumbConnection;
 
         assert(plumbConnection);
 
         jsPlumb.bind('connectionDetached', function(e) {
           assert.equal(plumbConnection, e.connection);
-          assert.isNull(a3B2.plumbConnection);
+          assert.isNull(x3_y2.plumbConnection);
           done();
         });
 
-        a3B2.destroy();
+        x3_y2.destroy();
       });
     });
 
     describe(".render", function() {
       it("should create the actual jsPlumb connection", function(done) {
-        var connection = new ConnectionView({
+        var x1_y1 = new ConnectionView({
           diagram: diagram,
           model: new ConnectionModel({
-            id: 'a1-b1',
-            source: {id: 'a1'},
-            target: {id: 'b1'}
+            id: 'x1-y1',
+            source: {id: 'x1'},
+            target: {id: 'y1'}
           })
         });
 
         jsPlumb.bind('connection', function(e) {
-          assert.equal(connection.source.plumbEndpoint,
+          assert.equal(x1_y1.source.plumbEndpoint,
                        e.sourceEndpoint);
 
-          assert.equal(connection.target.plumbEndpoint,
+          assert.equal(x1_y1.target.plumbEndpoint,
                        e.targetEndpoint);
           done();
         });
 
-        connection.render();
+        x1_y1.render();
+      });
+    });
+  });
+
+  describe(".ConnectionCollection", function() {
+    var diagram,
+        connections;
+
+    beforeEach(function() {
+      diagram = newComplexDiagram();
+      connections = diagram.connections.members.get('leftToRight');
+    });
+
+    describe(".accepts", function() {
+      it("should determine whether the source and target belong", function() {
+        var a1L1 = diagram.endpoints.get('a1L1'),
+            b1R1 = diagram.endpoints.get('b1R1');
+
+        assert(connections.accepts(a1L1, b1R1));
+        assert(!connections.accepts(b1R1, a1L1));
       });
     });
   });

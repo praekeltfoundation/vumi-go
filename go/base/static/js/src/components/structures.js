@@ -32,11 +32,14 @@
   //   - 'add' (key, value) - Emitted when an item is added
   //   - 'remove' (key, value) - Emitted when an item is removed
   var Lookup = Eventable.extend({
+    addDefaults: {silent: false},
+    removeDefaults: {silent: false},
+
     constructor: function(items) {
       this._items = {};
 
       items = items || {};
-      for (var k in items) { this.add(k, items[k]); }
+      for (var k in items) { this.add(k, items[k], {silent: true}); }
     },
 
     size: function() { return _.size(this._items); },
@@ -60,17 +63,21 @@
 
     get: function(key) { return this._items[key]; },
 
-    add: function(key, value) {
+    add: function(key, value, options) {
+      options = _(options || {}).defaults(this.addDefaults);
+
       this._items[key] = value;
-      this.trigger('add', key, value);
+      if (!options.silent) { this.trigger('add', key, value); }
       return this;
     },
 
-    remove: function(key) {
+    remove: function(key, options) {
+      options = _(options || {}).defaults(this.removeDefaults);
+
       var value = this._items[key];
       if (value) {
         delete this._items[key];
-        this.trigger('remove', key, value);
+        if (!options.silent) { this.trigger('remove', key, value); }
       }
       return value;
     }
@@ -132,11 +139,13 @@
   //   - 'remove' (id, view) - Emitted when a view is removed
   var ViewCollection = Lookup.extend({
     addDefaults: {
+      silent: false,
       render: true,  // render view after adding
       addModel: false  // add the model if it is not in the collection
     },
 
     removeDefaults: {
+      silent: false,
       render: true,  // render view after adding
       removeModel: false  // remove the model if it is in the collection
     },
@@ -145,7 +154,10 @@
       Lookup.prototype.constructor.call(this);
 
       this.models = collection;
-      this.models.each(function(m) { this.add(m, {render: false}); }, this);
+
+      this.models.each(
+        function(m) { this.add(m, {render: false, silent: true}); },
+        this);
 
       this.models.on('add', function(m) { this.add(m); }, this);
       this.models.on('remove', function(m) { this.remove(m); }, this);
@@ -162,7 +174,7 @@
 
       options.view.model = model;
       var view = this.create(options.view);
-      Lookup.prototype.add.call(this, model.id, view);
+      Lookup.prototype.add.call(this, model.id, view, options);
 
       if (options.render) { view.render(); }
 
@@ -181,7 +193,7 @@
       options = _(options || {}).defaults(this.removeDefaults);
 
       if (options.removeModel) { this.models.remove(id); }
-      var view = Lookup.prototype.remove.call(this, id);
+      var view = Lookup.prototype.remove.call(this, id, options);
       if (view && typeof view.destroy === 'function') { view.destroy(); }
 
       return view;
@@ -196,7 +208,10 @@
   // A self-maintaining, 'flattened' lookup of the views in a group of view
   // collections.
   var ViewCollectionGroup = LookupGroup.extend({
-    render: ViewCollection.prototype.render
+    render: function() {
+      this.members.each(function(collection) { collection.render(); });
+      return this;
+    }
   });
 
   // A collection of subviews mapping to an attribute on a view's model.
@@ -219,9 +234,12 @@
 
       _(options).defaults(_(this).result('defaults'));
       this.type = options.type;
+      this.initialize(options);
 
       ViewCollection.prototype.constructor.call(this, this._models());
     },
+
+    initialize: function() {},
 
     _models: function() {
       var modelOrCollection = this.view.model.get(this.attr);

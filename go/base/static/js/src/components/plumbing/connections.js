@@ -4,6 +4,12 @@
 // 'plumbing view') in Go
 
 (function(exports) {
+  var structures = go.components.structures,
+      SubviewCollection = structures.SubviewCollection;
+
+  var plumbing = go.components.plumbing,
+      EndpointView = plumbing.EndpointView;
+
   var idOfConnection = function(sourceId, targetId) {
     return sourceId + '-' + targetId;
   };
@@ -19,7 +25,11 @@
     id: function() { return this.model.id; },
 
     initialize: function(options) {
+      // the diagram view that this connection is part of
       this.diagram = options.diagram;
+
+      // the collection of connection views that this connection is part of
+      this.collection = options.collection;
 
       // get the source and target endpoint views from the diagram
       var endpoints = this.diagram.endpoints;
@@ -57,8 +67,35 @@
     }
   });
 
+  // A collection of connections views that form part of a diagram view
+  var ConnectionViewCollection = SubviewCollection.extend({
+    defaults: {
+      type: ConnectionView,
+      sourceType: EndpointView,
+      targetType: EndpointView
+    },
+
+    opts: function() { return {diagram: this.diagram, collection: this}; },
+
+    constructor: function(options) {
+      this.diagram = options.view;
+
+      SubviewCollection.prototype.constructor.call(this, options);
+      this.sourceType = options.sourceType;
+      this.targetType = options.targetType;
+    },
+
+    // Returns whether or not this collection accepts a connection based on the
+    // types of the given source and target endpoints
+    accepts: function(source, target) {
+      return source instanceof this.sourceType
+          && target instanceof this.targetType;
+    }
+  });
+
   _.extend(exports, {
     idOfConnection: idOfConnection,
-    ConnectionView: ConnectionView
+    ConnectionView: ConnectionView,
+    ConnectionViewCollection: ConnectionViewCollection
   });
 })(go.components.plumbing);
