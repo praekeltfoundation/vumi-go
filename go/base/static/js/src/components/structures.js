@@ -219,9 +219,12 @@
 
       _(options).defaults(_(this).result('defaults'));
       this.type = options.type;
+      this.initialize(options);
 
       ViewCollection.prototype.constructor.call(this, this._models());
     },
+
+    initialize: function() {},
 
     _models: function() {
       var modelOrCollection = this.view.model.get(this.attr);
