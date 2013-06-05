@@ -154,17 +154,13 @@
       Lookup.prototype.constructor.call(this);
 
       this.models = collection;
-      this.models.each(function(m) { this.add(m, {render: false}); }, this);
 
-      this.models.on(
-        'add',
-        function(m) { this.add(m, {silent: true}); },
+      this.models.each(
+        function(m) { this.add(m, {render: false, silent: true}); },
         this);
 
-      this.models.on(
-        'remove',
-        function(m) { this.remove(m, {silent: true}); },
-        this);
+      this.models.on('add', function(m) { this.add(m); }, this);
+      this.models.on('remove', function(m) { this.remove(m); }, this);
     },
 
     // Override to specialise how the view is created
