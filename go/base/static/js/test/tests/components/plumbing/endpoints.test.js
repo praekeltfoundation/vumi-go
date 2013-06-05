@@ -7,8 +7,11 @@ describe("go.components.plumbing (endpoints)", function() {
       newSimpleDiagram = testHelpers.newSimpleDiagram,
       tearDown = testHelpers.tearDown;
 
+  var diagram;
+
   beforeEach(function() {
     setUp();
+    diagram = newSimpleDiagram();
   });
 
   afterEach(function() {
@@ -19,12 +22,10 @@ describe("go.components.plumbing (endpoints)", function() {
     var EndpointModel = stateMachine.EndpointModel,
         EndpointView = plumbing.EndpointView;
 
-    var diagram,
-        x,
+    var x,
         x1;
 
     beforeEach(function() {
-      diagram = newSimpleDiagram();
       x = diagram.states.get('x');
       x1 = diagram.endpoints.get('x1');
       diagram.render();
@@ -57,6 +58,71 @@ describe("go.components.plumbing (endpoints)", function() {
             .getElement()
             .get(0),
           x.el);
+      });
+    });
+  });
+
+  describe(".StaticEndpointView", function() {
+    var EndpointModel = stateMachine.EndpointModel,
+        StaticEndpointView = plumbing.StaticEndpointView;
+
+    var endpoint;
+
+    beforeEach(function() {
+      var x = diagram.states.get('x');
+
+      endpoint = new StaticEndpointView({
+        state: x,
+        collection: x.endpoints.members.get('endpoints'),
+        model: new EndpointModel({id: 'x4'})
+      });
+    });
+
+    describe(".anchors", function() {
+      var anchors;
+
+      beforeEach(function() {
+        anchors = StaticEndpointView.prototype.anchors;
+      });
+      
+      it("should a provide jsPlumb anchor generators for each side of a state",
+      function() {
+        assert.deepEqual(anchors.left(0.3), [0, 0.3, -1, 0]);
+        assert.deepEqual(anchors.right(0.3), [1, 0.3, 1, 0]);
+        assert.deepEqual(anchors.top(0.3), [0.3, 0, 0, -1]);
+        assert.deepEqual(anchors.bottom(0.3), [0.3, 1, 0, 1]);
+      });
+    });
+
+    describe(".render", function() {
+      var plumbEndpoint;
+
+      beforeEach(function() {
+        // ensure the plumb endpoint exists
+        diagram.render();
+        endpoint.render();
+
+        plumbEndpoint = endpoint.plumbEndpoint;
+        sinon.stub(plumbEndpoint, 'setAnchor');
+      });
+
+      afterEach(function() {
+        plumbEndpoint.setAnchor.restore();
+      });
+
+      it("reposition the endpoint according to its anchor position",
+      function() {
+        endpoint
+          .reposition(0.2)
+          .render();
+
+        assert(plumbEndpoint.setAnchor.calledWith([0, 0.2, -1, 0]));
+
+        endpoint
+          .reposition(0.1)
+          .render();
+
+        assert(plumbEndpoint.setAnchor.calledWith([0, 0.1, -1, 0]));
       });
     });
   });
