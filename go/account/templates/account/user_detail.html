@@ -8,6 +8,11 @@
     <a href="{% url 'auth_user_list' %}">Users</a>
     &raquo;
     {% if edit_user %}
+        {% if edit_user.get_full_name %}
+            {{ edit_user.get_full_name }}
+        {% else %}
+            {{ edit_user.email }}
+        {% endif %}
     {% else %}
     New user
     {% endif %}
@@ -20,9 +25,37 @@
 {% endblock %}
 
 {% block content_main %}
-<form class="form-horizontal" method="post" action="">
-    {{ user_form }}
-    {{ user_profile_form }}
+<form class="form-horizontal indent" method="post" action="">
+    <input type="hidden" name="_account">
+    {% csrf_token %}
+
+    {% for field in user_form %}
+    <div class="control-group{% if field.errors %} error{% endif %}">
+        <label class="control-label" for="id_{{ field.name }}">{{ field.label }}</label>
+        <div class="controls">
+            {{ field }}
+            {% if field.errors %}
+            <span class="help-inline">{{ field.errors }}</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% for field in user_profile_form %}
+    <div class="control-group{% if field.errors %} error{% endif %}">
+        <label class="control-label" for="id_{{ field.name }}">{{ field.label }}</label>
+        <div class="controls">
+            {{ field }}
+            {% if field.errors %}
+            <span class="help-inline">{{ field.errors }}</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="form-actions">
+        <input type="submit" class="btn btn-primary" value="Save">                
+    </div>
 </form>
 {% endblock %}
 

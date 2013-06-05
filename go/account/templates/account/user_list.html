@@ -7,14 +7,18 @@
 {% block content_title %}Users{% endblock %}
 
 {% block content_actions_left %}
-    <button class="btn btn-primary">New User</button>
+    {% if is_admin %}
+        <a href="{% url 'auth_user_create' %}" class="btn btn-primary">New User</a>
+    {% endif %}
 {% endblock %}
 
 {% block content_actions_right %}
-    <div class="components-table-buttons pull-left">
-        <button class="btn" disabled="disabled">Delete</button>
-        <button class="btn" disabled="disabled">Edit</button>
-    </div>
+    {% if is_admin %}
+        <div class="components-table-buttons pull-left">
+            <button class="btn" disabled="disabled">Edit</button>
+            <button class="btn" disabled="disabled">Delete</button>
+        </div>
+    {% endif %}
 {% endblock %}
 
 {% block content_main %}
@@ -36,9 +40,13 @@
             </thead>
             <tbody>
             {% for user in user_list %}
-                 <tr data-url="{% url 'auth_user_detail' user.pk %}">
+                {% if is_admin %}
+                <tr data-url="{% url 'auth_user_detail' user.pk %}">
+                {% else %}
+                <tr>
+                {% endif %}
                     <td>
-                        <input type="checkbox" name="contact" value="{{ contact.key }}">
+                        <input type="checkbox" name="user" value="{{ user.id }}">
                     </td>
                     <td>
                         {{ user.email }}

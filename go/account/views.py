@@ -1,4 +1,3 @@
-
 from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
 from django.contrib import messages
@@ -106,12 +105,14 @@ def user_list(request):
     user_profile = request.user.get_profile()
     if user_profile.organisation:
         for profile in UserProfile.objects.filter(
-            organisation=user_profile.organisation):
+                organisation=user_profile.organisation):
+            print '-----------'
+            print profile
             user_list.append(profile.user)
 
     return render(request, 'account/user_list.html', {
         'user_list': user_list,
-        'profile': user_profile
+        'is_admin': request.user.get_profile().is_admin
     })
 
 @login_required
@@ -124,21 +125,44 @@ def user_detail(request, user_id=None):
         return HttpResponseForbidden("You're not an admin.")
 
     # Are they editing a member of the same organisation?
-    edit_user = get_object_or_404(User, id=user_id)
-    edit_user_profile = edit_user.get_profile()
-    if user_profile.organisation != edit_user_profile.organisation:
-        return HttpResponseForbidden("This user is not in your organisation.")
+    
+    if user_id:
+        # editing
+        edit_user = get_object_or_404(User, id=user_id)
+        edit_user_profile = edit_user.get_profile()
+        if user_profile.organisation != edit_user_profile.organisation:
+            return HttpResponseForbidden("This user is not in your \
+                organisation.")
+    else:
+        # creating a new user
+        edit_user = None
+        edit_user_profile = UserProfile(
+            organisation=user_profile.organisation)
 
-
-    # grab the user
-    user_form  = UserAccountForm()
-    user_profile_form = UserProfileForm()
+    user_form = UserAccountForm(instance=edit_user)
+    user_profile_form = UserProfileForm(instance=edit_user_profile,
+        initial={
+            'organisation': user_profile.organisation
+        })
 
     if request.method == 'POST':
-        pass
-        # save the forms.
+        user = user_form  = UserAccountForm(request.POST, instance=edit_user)
+        user_profile_form = UserProfileForm(request.POST,
+            instance=edit_user_profile)
+
+        if user_form.is_valid() and user_profile_form.is_valid():
+            # TODO: This works fine for editing users, but I think
+            # creating users is slightly more complicated because
+            # it needs to work within riak.
+
+            # TODO: Username isn't required in vumigo, what should we 
+            # use instead?
+            user_form.save()
+            user_profile_form.save()
+            messages.add_message(request, messages.INFO, 'User saved')
 
     return render(request, 'account/user_detail.html', {
+        'edit_user': edit_user,
         'user_form': user_form,
         'user_profile_form': user_profile_form
     })

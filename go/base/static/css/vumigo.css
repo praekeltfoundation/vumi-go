@@ -81,6 +81,7 @@ body {
   -moz-background-clip: padding;
   border-radius: 5px;
   background-clip: padding-box;
+  min-height: 400px;
 }
 .content .header {
   height: 54px;
@@ -216,14 +217,8 @@ body {
   max-width: 100%;
   min-width: 80%;
 }
-.table-manage-data {
-  margin-top: 1em;
-}
-.table-manage-data tr {
-  cursor: pointer;
-}
-.table-manage-data td {
-  color: #2f3436;
+.nav-stacked a:hover {
+  background: none !important;
 }
 .help-inline .errorlist {
   list-style: none;
@@ -281,7 +276,9 @@ body {
   color: #a7aaac;
   text-transform: uppercase;
 }
-.components-table tr td:first-child,
-.components-table th:first-child {
+.components-table tr[data-url] {
   cursor: pointer;
+}
+.components-table tr[data-url]:hover {
+  background: #e6e5e0;
 }

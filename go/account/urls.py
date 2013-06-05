@@ -14,6 +14,7 @@ urlpatterns = patterns('',
         name='registration_register'),
     url(r'^details/$', views.details, name='auth_details'),
     url(r'^users/$', views.user_list, name='auth_user_list'),
+    url(r'^users/create/$', views.user_detail, name='auth_user_create'),
     url(r'^users/(?P<user_id>\d+)/$', views.user_detail,
         name='auth_user_detail'),
 )

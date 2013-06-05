@@ -14,8 +14,14 @@
     // the first row is a checkbox, the whole area is clickable in order
     // to make the target area of the checkbox larger, visually indicate
     // that with a change to the cursor.
-    tr td:first-child, th:first-child {
+
+    // rows in lists that are clickable.
+    tr[data-url] {
         cursor:pointer;
+
+        &:hover {
+            background:#e6e5e0;
+        }
     }
 
 }
