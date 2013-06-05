@@ -13,9 +13,10 @@
 
 {% block content_actions_right %}
     <div class="components-table-buttons pull-left">
-        <button class="btn" disabled="disabled">Delete</button>
-        <button class="btn" disabled="disabled">Export</button>
-        <button class="btn" disabled="disabled">Assign to group</button>
+        <button class="btn" disabled="disabled" data-table-id="people">Delete</button>
+        <button class="btn" disabled="disabled" data-table-id="people">Export</button>
+        <button class="btn" disabled="disabled" data-table-id="people">Assign to group</button>
+        {# TODO: Pipe in group's here #}
     </div>
 {% endblock %}
 

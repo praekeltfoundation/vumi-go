@@ -27,23 +27,13 @@ post_save.connect(create_user_profile, sender=User,
     dispatch_uid='go.base.models.create_user_profile')
 
 
-class UserOrganisation(models.Model):
-    """A group of users belong to an organisations"""
-    name = models.CharField(max_length=128)
-
-    def __unicode__(self):
-        return self.name
-
-
 class UserProfile(models.Model):
     """A profile for a user"""
     user = models.OneToOneField('auth.User')
     user_account = models.CharField(max_length=100)
-    organisation = models.ForeignKey(UserOrganisation, blank=True, null=True)
-    is_admin = models.BooleanField(default=False)
 
     def __unicode__(self):
-        return u"%s's profile" % self.user.email
+        return u' '.join([self.user.first_name, self.user.last_name])
 
     def get_user_account(self):
         return get_account_store().get_user(self.user_account)
