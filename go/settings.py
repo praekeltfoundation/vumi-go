@@ -216,9 +216,6 @@ LOGGING = {
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 SKIP_SOUTH_TESTS = True
 SOUTH_TESTS_MIGRATE = False
-AUTH_PROFILE_MODULE = 'base.UserProfile'
-
-# celery / RabbitMQ configuration
 
 BROKER_HOST = "localhost"
 BROKER_PORT = 5672
@@ -316,8 +313,6 @@ try:
 except ImportError:
     pass
 
-# django-registration tokens expire after a week
-ACCOUNT_ACTIVATION_DAYS = 7
 
 # Compress Less with `lesscpy`
 COMPRESS_PRECOMPILERS = (
@@ -329,15 +324,15 @@ if DEBUG:
 # Password resets are sent from this address
 DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 
-# # Redirect to this URL after a successful login.
-# from django.core.urlresolvers import reverse
+# AUTH CONFIGURATION
+AUTH_PROFILE_MODULE = 'base.UserProfile'
+LOGIN_REDIRECT_URL = '/'
+# django-registration tokens expire after a week
+ACCOUNT_ACTIVATION_DAYS = 7
 
-# LOGIN_REDIRECT_URL = reverse('home')
 
 # PIPELINES CONFIGURATION
-
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
-
 PIPELINE_CSS = {
     'all': {
         'source_filenames': (
