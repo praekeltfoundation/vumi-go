@@ -196,7 +196,10 @@
   // A self-maintaining, 'flattened' lookup of the views in a group of view
   // collections.
   var ViewCollectionGroup = LookupGroup.extend({
-    render: ViewCollection.prototype.render
+    render: function() {
+      this.members.each(function(collection) { collection.render(); });
+      return this;
+    }
   });
 
   // A collection of subviews mapping to an attribute on a view's model.
