@@ -80,6 +80,8 @@
         c = collections[i];
         if (c.accepts(source, target)) { return c; }
       }
+
+      return null;
     },
 
     onPlumbConnect: function(e) {
@@ -101,6 +103,9 @@
       var source = this.diagram.endpoints.get(sourceId),
           target = this.diagram.endpoints.get(targetId),
           collection = this.determineCollection(source, target);
+
+      // This kind of connection is not supported so just return.
+      if (collection === null) { return ; }
 
       collection.add({
         id: connectionId,
