@@ -2,7 +2,7 @@
 {% load url from future %}
 
 {% block auth_form %}
-<form action="" method="post">
+<form action="{% url 'auth_login' %}" method="post">
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ next }}">
     {% if form.errors %}

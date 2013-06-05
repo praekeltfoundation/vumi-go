@@ -1,6 +1,6 @@
 body {
   background: #2f3436;
-  color: #2f3436;
+  color: #c1c1c1;
 }
 .main-container {
   min-width: 650px;
@@ -224,48 +224,8 @@ body {
 .table-manage-data td {
   color: #2f3436;
 }
-.help-inline .errorlist {
-  list-style: none;
-}
-.help-inline .errorlist li {
-  padding: 0;
-  margin: 0;
-}
-.accounts {
-  color: #c1c1c1;
-}
 .accounts .logo-large {
   margin: 1em 0 2em 0;
-}
-.accounts.details .actions {
-  visibility: hidden;
-}
-.accounts.details h4 {
-  color: #000;
-  border-bottom: 1px #c9c9c9 dotted;
-  padding-bottom: 1em;
-  margin: 0;
-}
-.accounts.details .span8 {
-  padding-left: 1em;
-}
-.accounts.details .span4 {
-  padding-right: 1em;
-}
-.accounts.details .sidebar .nav li {
-  text-indent: 0;
-  border-bottom: 1px #c9c9c9 dotted;
-}
-.accounts.details .sidebar .nav a {
-  padding: 1em 0;
-  margin: 0;
-  text-indent: 0;
-  line-height: 1.5em;
-  font-weight: bold;
-}
-.accounts.details .sidebar .nav a span {
-  color: #2f3436;
-  font-weight: normal;
 }
 .components-table {
   overflow: hidden;
