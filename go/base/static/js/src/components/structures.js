@@ -39,7 +39,7 @@
       this._items = {};
 
       items = items || {};
-      for (var k in items) { this.add(k, items[k]); }
+      for (var k in items) { this.add(k, items[k], {silent: true}); }
     },
 
     size: function() { return _.size(this._items); },
