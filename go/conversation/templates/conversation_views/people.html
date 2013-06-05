@@ -37,7 +37,7 @@
             <div class="box shadow">
                 <h3>2. Message Recipients</h3>
                 <br><a name="step2" id="step2"></a>
-                {% include "conversation/includes/groups.html" with groups=groups %}
+                {% include "conversation_views/includes/groups.html" with groups=groups %}
                 <div class="btn-toolbar">
                     <div class="btn-group"><input type="submit" class="btn btn-primary" value="Next &rarr;"></div>
                     <div class="btn-group"><input type="reset" class="btn" onClick="javascript:history.go(-1)" value="Go Back"></div>
@@ -57,5 +57,5 @@
 
 
 {% block modals %}
-    {% include "conversation/includes/tools.html" %}
+    {% include "conversation_views/includes/tools.html" %}
 {% endblock %}

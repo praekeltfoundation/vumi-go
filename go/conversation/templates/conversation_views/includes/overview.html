@@ -1,9 +1,10 @@
+{% load url from future %}
 <div class="row">
     <div class="span12">
         <div class="pull-right">
             {% include button_template %}
             {% if is_editable %}
-                <form id="conversation-edit" name="conversation-edit" method="get" action="{{ conversation.get_absolute_url }}edit/">
+                <form id="conversation-edit" name="conversation-edit" method="get" action="{% url 'conversations:conversation' conversation_key=conversation.key path_suffix='edit/' %}">
                 {% csrf_token %}
                     <div class="btn-group"><input type="submit" class="btn btn-primary" value="Edit"></div>
                 </form>

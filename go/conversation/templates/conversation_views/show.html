@@ -30,19 +30,19 @@
             (This is ugly, but it's a short-term hack.)
             <ul>
             {% for action in actions %}
-                <li><a href="{% url 'conversations:conversation_action' conversation_key=conversation.key action_name=action.action_name%}">{{action.action_display_name}}</a></li>
+                <li><a href="{% url 'conversations:conversation_action' conversation_key=conversation.key action_name=action.action_name %}">{{action.action_display_name}}</a></li>
             {% endfor %}
             </ul>
             <hr>{% endif %}
         </div>
     </div>
 
-    {# {% include "conversation/includes/dashboard.html" %} #}
+    {# {% include "conversation_views/includes/dashboard.html" %} #}
 
     {% show_conversation_messages conversation direction=request.GET.direction page=request.GET.p query=request.GET.q token=request.GET.token %}
 
 {% endblock %}
 
 {% block extra_js %}
-    {# {% include "conversation/includes/charts.html" %} #}
+    {# {% include "conversation_views/includes/charts.html" %} #}
 {% endblock %}

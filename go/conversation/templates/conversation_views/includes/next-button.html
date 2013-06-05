@@ -1,8 +1,9 @@
+{% load url from future %}
 <form id="conversation-next" name="conversation-next" class="form-inline" method="post" action="{{ next_url }}">
     {% csrf_token %}
     <input type="submit" class="btn btn-primary" value="Next &rarr;">
 </form>
-<form id="conversation-end" name="conversation-end" class="form-inline" method="post" action="{{ conversation.get_absolute_url }}end/">
+<form id="conversation-end" name="conversation-end" class="form-inline" method="post" action="{% url 'conversations:conversation' conversation_key=conversation.key path_suffix='end/' %}">
     {% csrf_token %}
     <input type="submit" name="end_conversation" class="btn btn-danger" value="End Conversation">
 </form>

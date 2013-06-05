@@ -1,3 +1,4 @@
+{% load url from future %}
 <table class="table table-bordered table-striped">
     <thead>
         <tr>
@@ -20,7 +21,7 @@
 <script>
     function load_results() {
         $.ajax({
-            url: "{{conversation.get_absolute_url}}message_search_result/",
+            url: "{% url 'conversations:conversation' conversation_key=conversation.key path_suffix='message_search_result/' %}",
             data: {
                 "q": "{{query}}",
                 "token": "{{token}}",
