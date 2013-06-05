@@ -25,13 +25,13 @@ body {
 }
 .main-nav li {
   height: 39px;
-  padding: 0 20px;
+  padding: 0 15px;
   border-right: 1px #212527 solid;
 }
 .main-nav ul li:first-child {
   padding: 0;
 }
-.main-nav ul:last-child li:first-child {
+.main-nav ul:nth-child(2) li:first-child {
   border-left: 1px #212527 solid;
 }
 .main-nav li.active a {
