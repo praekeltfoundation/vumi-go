@@ -6,6 +6,9 @@
 
     var TableFormView = Backbone.View.extend({
 
+        template_singular: _.template("Are you sure you want to <%=action%> this item?"),
+        template_plural: _.template("Are you sure you want to <%=action%> these <%=numChecked%> items?"),
+
         events: {
             'click thead input:checkbox': 'toggleAllCheckboxes',
             'click tbody tr td:first-child input:checkbox': 'onClick',
@@ -89,15 +92,13 @@
         showConfirmationModal: function(options) {
 
             var $cbs = this.$el.find('tbody input:checked');
-            var numChecked = $cbs.length;
-            var q = "Are you sure you want to <%=action%> this item?";
-            if (numChecked > 1) {
-                q = "Are you sure you want to <%=action%> these <%=numChecked%> items?";
+            var template = this.template_singular;
+            if ($cbs.length > 1) {
+                template = this.template_plural;
             }
-            var qq = _.template(q);
-            var message = qq({
+            var message = template({
                 action: options.action,
-                numChecked: numChecked
+                numChecked: $cbs.length
             });
 
             var that = this;
