@@ -7,7 +7,9 @@ describe("go.components.tables", function() {
     var tableFormView;
     beforeEach(function() {
 
-      $buttons = $('<div class="buttons"><button disabled="disabled"><button disabled="disabled"></div>');
+      $buttons = $('<div class="buttons"></div>');
+      $buttons.append('<button data-action="delete" disabled="disabled">Delete</button');
+      $buttons.append('<button data-action="edit" disabled="disabled">Edit</button');
 
       $form = $('<form><table><thead></thead><tbody></tbody></table></form>');
       $form.find('thead').append('<tr><th><input name="h1" type="checkbox"></th><th>head</th></tr>');
@@ -16,7 +18,7 @@ describe("go.components.tables", function() {
 
       tableFormView = new go.components.tables.TableFormView({
         el: $form,
-        onCheckedSelector: $buttons.find('button'),
+        onCheckedSelector: $buttons.find('button')
       });
     });
 
@@ -25,28 +27,27 @@ describe("go.components.tables", function() {
       assert.isFalse($form.find('thead input:checkbox').prop('checked'));
       var $cbs = $form.find('tbody tr td:first-child');
       $cbs.trigger('click');
-
       assert.isTrue($form.find('thead input:checkbox').prop('checked'));
     });
 
     it('should execute `onCheckedCallback` event when a checkbox is toggled', function() {
 
-      tableFormView.options.onCheckedCallback = function() {
+      tableFormView.options.onCheckedCallback = function(done) {
         assert.isTrue($cb.prop('checked'));
         done();
-      }
+      };
 
       var $cb = $form.find('tbody input:checkbox').eq(0);
       $cb.trigger('click');
     });
-    
-    it('elements in `onCheckedSelector` should toggle `disabled`', function() {
+
+    it('should toggle disabled on elements from `onCheckedSelector.`', function() {
 
       // enabled
       var $cb = $form.find('tbody input:checkbox').eq(0);
       $cb.trigger('click');
       assert.isTrue($cb.prop('checked'));
-        
+
       // disabled
       $cb.trigger('click');
       assert.isFalse($cb.prop('checked'));
