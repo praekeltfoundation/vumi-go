@@ -24,6 +24,7 @@
 {% endblock %}
 
 {% block content_main %}
+<form class="table-form-view" method="post" action="">
     <div class="row-fluid">
         <div class="span3 sidebar">
 
@@ -78,11 +79,21 @@
             </table>
         </div>
     </div>
+</form>
 {% endblock %}
 
 {% block ondomready %}
-    var tableView = new go.components.tables.TableView({
-        el: '.components-table',
-        onCheckedSelector: '.components-table-buttons button',
+    var tableFormView = new go.components.tables.TableFormView({
+        el: '.table-form-view',
+        onCheckedSelector: '.table-form-view-buttons button',
+    });
+
+    $('.table-form-view-buttons button').each(function() {
+        var action = $(this).attr('data-action');
+        if (typeof(action) !== 'undefined') {
+            $(this).click(function() {
+                tableFormView.showConfirmationModal({action: action});
+            });
+        }
     });
 {% endblock %}

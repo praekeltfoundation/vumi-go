@@ -3,7 +3,7 @@
 {% load humanize %}
 
 
-{% block content_extraclass %}dashboard{% endblock %}
+{% block content_extraclass %}dashboard campaigns{% endblock %}
 
 {% block content_title %}Dashboard{% endblock %}
 
@@ -14,10 +14,10 @@
 {% endblock %}
 
 {% block content_actions_right %}
-    <div class="components-table-buttons pull-left">
-        <button class="btn" disabled="disabled">Copy</button>
-        <button class="btn" disabled="disabled">Archive</button>
-        <button class="btn" disabled="disabled">Edit</button>
+    <div class="table-form-view-buttons pull-left">
+        <button class="btn" data-action="copy" disabled="disabled">Copy</button>
+        <button class="btn" data-action="archive" disabled="disabled">Archive</button>
+        <button class="btn" data-action="edit" disabled="disabled">Edit</button>
     </div>
 
     <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
@@ -57,70 +57,76 @@
 
             {% include "base/includes/messages.html" %}
 
-            <table class="table components-table">
-                <thead>
-                    <tr>
-                        <th><input type="checkbox"></th>
-                        <th>Campaigns</th>
-                        <th>Status</th>
-                        <!-- TODO: We don't have a backend that provides a friendly name for this yet. -->
-                        <!-- <th>Channel</th> -->
-                        <th>Interactions</th>
-                        <!-- TODO: We don't have a backend service yet for this value -->
-                        <!-- <th>In Last</th> -->
-                        <!-- TODO: We're only storing the created_at value :\ -->
-                        <th>Last Edited</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% if conversations %}
-                        {% for conversation in page.object_list %}
-                        <tr data-url="{{ conversation.get_absolute_url }}">
-                            <td><input type="checkbox" value="{{ conversation.key }}"></td>
-                            <td>{{ conversation.name }}</td>
-                            <td class="{{ conversation.get_status }}">{{ conversation.get_status }}</td>
-                            <!-- <td></td> -->
-                            <td>{{ conversation.count_replies|add:conversation.count_sent_messages }} </td>
-                            <!-- <td></td> -->
-                            <td>{{ conversation.created_at|naturaltime }}</td>
-                            <td>
-                                <a href="{% url 'campaigns:incoming_list' conversation.key %}" class="btn btn-mini">
-                                    Messages
-                                </a>
-                                <a href="{% url 'todo' %}" class="btn btn-mini">
-                                    Report
-                                </a>
+            <form class="table-form-view" method="post" action="">
+                {% csrf_token %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox"></th>
+                            <th>Campaigns</th>
+                            <th>Status</th>
+                            <!-- TODO: We don't have a backend that provides a friendly name for this yet. -->
+                            <!-- <th>Channel</th> -->
+                            <th>Interactions</th>
+                            <!-- TODO: We don't have a backend service yet for this value -->
+                            <!-- <th>In Last</th> -->
+                            <!-- TODO: We're only storing the created_at value :\ -->
+                            <th>Last Edited</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if conversations %}
+                            {% for conversation in page.object_list %}
+                            <tr data-url="{{ conversation.get_absolute_url }}">
+                                <td><input type="checkbox" name="conversation_key" value="{{ conversation.key }}"></td>
+                                <td>{{ conversation.name }}</td>
+                                <td class="status {{ conversation.get_status }}">{{ conversation.get_status }}</td>
+                                <!-- <td></td> -->
+                                <td>{{ conversation.count_replies|add:conversation.count_sent_messages }} </td>
+                                <!-- <td></td> -->
+                                <td>{{ conversation.created_at|naturaltime }}</td>
+                                <td>
+                                    <a href="{% url 'campaigns:incoming_list' conversation.key %}">Messages</a>
+                                    <a href="{% url 'todo' %}">Reports</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if paginator.num_pages > 1 %}
+                            <tr colspan="9">
+                                {% include "base/includes/pagination.html" %}
+                            </tr>
+                            {% endif %}
+                        {% else %}
+                        <tr>
+                            <td colspan="9">
+                            {% if query %}
+                                No contacts match <strong>{{ query }}</strong>
+                            {% else %}
+                                No conversations.
+                            {% endif %}
                             </td>
                         </tr>
-                        {% endfor %}
-                        {% if paginator.num_pages > 1 %}
-                        <tr colspan="9">
-                            {% include "base/includes/pagination.html" %}
-                        </tr>
                         {% endif %}
-                    {% else %}
-                    <tr>
-                        <td colspan="9">
-                        {% if query %}
-                            No contacts match <strong>{{ query }}</strong>
-                        {% else %}
-                            No conversations.
-                        {% endif %}
-                        </td>
-                    </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </form>
         </div>
     </div>
 {% endblock %}
 
 {% block ondomready %}
-    var tableView = new go.components.tables.TableView({
-        el: '.components-table',
-        onCheckedSelector: '.components-table-buttons button',
+    var tableFormView = new go.components.tables.TableFormView({
+        el: '.table-form-view',
+        onCheckedSelector: '.table-form-view-buttons button',
     });
 
-    // archive and copy need actions associateed to them.
+    $('.table-form-view-buttons button').each(function() {
+        var action = $(this).attr('data-action');
+        if (typeof(action) !== 'undefined') {
+            $(this).click(function() {
+                tableFormView.showConfirmationModal({action: action});
+            });
+        }
+    });
 {% endblock %}

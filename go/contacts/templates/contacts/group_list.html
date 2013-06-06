@@ -26,16 +26,17 @@
 
 
 {% block content_main_list %}
+<form class="table-form-view" method="post" action="">
     {% include "contacts/group_list_table.html" %}
     {% include "base/includes/pagination.html" %}
+</form>
 {% endblock %}
 
 
 {% block ondomready %}
     {{ block.super }}
-    var tableView = new go.components.tables.TableView({
-        el: '.components-table',
-        onCheckedSelector: '.components-table-buttons button'
+    var tableFormView = new go.components.tables.TableFormView({
+        el: '.table-form-view',
     });
 {% endblock %}
 

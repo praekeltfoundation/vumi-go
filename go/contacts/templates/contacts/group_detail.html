@@ -16,6 +16,7 @@
 
 {% block content_actions_right %}
     <div class="pull-right">
+        
         <div class="btn-group">
             <a class="btn btn-success" href="#" data-toggle="dropdown"><i class="icon-user white"></i> Group Actions</a>
             <a class="btn btn-success dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
@@ -28,19 +29,21 @@
                 <li><a data-toggle="modal" href="#delGroup"><i class="icon-trash"></i> Remove Group</a></li>
             </ul>
         </div>
+
     </div>
 {% endblock %}
 
 
 {% block content_main_list %}
+<form class="table-form-view" method="post" action="">
     {% include "contacts/contact_list_table.html" %}
+</form>
 {% endblock %}
 
 {% block ondomready %}
     {{ block.super }}
-    var tableView = new go.components.tables.TableView({
-        el: '.components-table',
-        onCheckedSelector: '.components-table-buttons button',
+    var tableFormView = new go.components.tables.TableFormView({
+        el: '.table-form-view',
     });
 {% endblock %}
 

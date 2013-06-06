@@ -4,29 +4,7 @@
 
 (function(exports) {
 
-
-    // Are you sure you want to delete X, 
-    var ModalView = Backbone.View.extend({
-
-        initialize: function() {
-
-        },
-
-        render: function() {
-            return this;
-        },
-        
-        show: function() {
-
-        },
-
-        hide: function() {
-
-        }
-    });
-
-
-    var TableView = Backbone.View.extend({
+    var TableFormView = Backbone.View.extend({
 
         events: {
             'click thead input:checkbox': 'toggleAllCheckboxes',
@@ -38,19 +16,21 @@
         initialize: function() {
             // the table is rendered elsewhere, so el is an absolute
             // requirements.
-            if (this.$el.length === 0) {
-                throw('You must pass and `el` attribute to TableView.');
+            if (!this.$el.is('form')) {
+                throw("TableFormView must get an `el` attribute that's a FORM element")
             }
 
             _.defaults(this.options, {
-                rowLinkAttribute: 'data-url'
+                rowLinkAttribute: 'data-url',
+                actionPrefix: '_'
             });
 
             _.bindAll(this,
                 'toggleAllCheckboxes',
                 'onClick',
                 'onChecked',
-                'followLink'
+                'followLink',
+                'showConfirmationModal'
             );
 
             this.on('onChecked', this.onChecked);
@@ -106,12 +86,37 @@
             var $this = $(ev.target).parents('tr');
             var url = $this.attr(this.options.rowLinkAttribute);
             if (typeof(url) !== 'undefined') window.location = url;
-        }
+        },
 
+        showConfirmationModal: function(options) {
+
+            var $cbs = this.$el.find('tbody input:checked');
+            var numChecked = $cbs.length;
+            var q = "Are you sure you want to <%=action%> this item?";
+            if (numChecked > 1) {
+                q = "Are you sure you want to <%=action%> these <%=numChecked%> items?";
+            }
+            var qq = _.template(q);
+            var message = qq({
+                action: options.action,
+                numChecked: numChecked
+            });
+
+            var that = this;
+            bootbox.confirm(message, function(submit) {
+                if (submit === false) return;
+                // add an action field to the form; the view to which this
+                // submits can use this field to determine which action
+                // was envoked.
+                that.$el.append('<input type="hidden" name="' +
+                    that.options.actionPrefix + options.action + '">');
+                that.$el.submit();
+            });
+        }
     });
 
 
     _.extend(exports, {
-        TableView: TableView
+        TableFormView: TableFormView
     });
 })(go.components.tables = {});
