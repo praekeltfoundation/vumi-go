@@ -164,6 +164,16 @@ describe("go.components.structures", function() {
       group = new LookupGroup({'a': lookupA, 'b': lookupB});
     });
 
+    describe(".ownerOf", function() {
+      it("should retrieve the member that owns an item", function() {
+        assert.equal(group.ownerOf('c'), lookupA);
+      });
+
+      it("should return undefined if no owner is found", function() {
+        assert.isUndefined(group.ownerOf('g'));
+      });
+    });
+
     describe(".subscribe", function() {
       it("should add all the lookup's items to the group", function() {
         assert.equal(group.subscribe('c', new Lookup({g: 7, h: 8})), group);
@@ -201,6 +211,15 @@ describe("go.components.structures", function() {
         var lookupC = new Lookup({g: 7, h: 8});
         group.subscribe('c', lookupC);
         assert.equal(group.members.get('c'), lookupC);
+      });
+
+      it("should add the items to the owner lookup", function() {
+        var lookupC = new Lookup({g: 7, h: 8});
+        group.subscribe('c', lookupC);
+
+        lookupC.keys().forEach(function(k) {
+          assert.equal(group.ownerOf(k), lookupC);
+        });
       });
     });
 
@@ -241,6 +260,14 @@ describe("go.components.structures", function() {
       it("should remove the lookup from the group's member lookup", function() {
         group.unsubscribe('b');
         assert(!group.members.has('b'));
+      });
+
+      it("should remove the items from the owner lookup", function() {
+        var lookupB = group.unsubscribe('b');
+
+        lookupB.keys().forEach(function(k) {
+          assert.isUndefined(group.ownerOf(k));
+        });
       });
     });
   });

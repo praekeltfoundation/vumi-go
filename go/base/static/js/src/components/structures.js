@@ -90,13 +90,22 @@
       Lookup.prototype.constructor.call(this);
       this.members = new Lookup();
 
+      // Lookup of item owners by item keys
+      this._owners = {};
+
       lookups = lookups || {};
       for (var k in lookups) { this.subscribe(k, lookups[k]); }
     },
 
+    ownerOf: function(key) { return this._owners[key]; },
+
     subscribe: function(key, lookup) {
-      var items = lookup.items();
-      for (var k in items) { this.add(k, items[k]); }
+      var owners = this._owners;
+
+      lookup.eachItem(function(k, v) {
+        this.add(k, v);
+        owners[k] = lookup;
+      }, this);
 
       lookup.on('add', this.add, this);
       lookup.on('remove', this.remove, this);
@@ -106,8 +115,13 @@
     },
 
     unsubscribe: function(key) {
-      var lookup = this.members.get(key);
-      lookup.keys().forEach(this.remove, this);
+      var lookup = this.members.get(key),
+          owners = this._owners;
+
+      lookup.keys().forEach(function(k) {
+        this.remove(k);
+        delete owners[k];
+      }, this);
 
       lookup.off('add', this.add, this);
       lookup.off('remove', this.remove, this);
