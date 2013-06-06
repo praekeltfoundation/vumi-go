@@ -24,6 +24,7 @@
 {% endblock %}
 
 {% block content_main %}
+<form class="table-form-view" method="post" action="">
     <div class="row-fluid">
         <div class="span3 sidebar">
 
@@ -78,10 +79,12 @@
             </table>
         </div>
     </div>
+</form>
 {% endblock %}
 
 {% block ondomready %}
-    go.components.tables.init({
-        checkedToggle: $('.components-table-buttons button')
+    var tableFormView = new go.components.tables.TableFormView({
+        el: '.table-form-view',
+        actions: '.table-form-view-buttons button',
     });
 {% endblock %}

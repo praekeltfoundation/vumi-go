@@ -14,78 +14,77 @@
 
 {% block content_actions_right %}
     {% if is_admin %}
-        <div class="components-table-buttons pull-left">
-            <button class="btn" disabled="disabled">Edit</button>
-            <button class="btn" disabled="disabled">Delete</button>
+        <div class="table-form-view-buttons pull-left">
+            <button class="btn" data-action="edit" disabled="disabled">Edit</button>
+            <button class="btn" data-action="delete" disabled="disabled">Delete</button>
         </div>
     {% endif %}
 {% endblock %}
 
 {% block content_main %}
-<div class="row-fluid">
-    <div class="span3 sidebar">
-    </div>
+    <form class="table-form-view" action="" method="post">
+        <div class="row-fluid">
+            <div class="span3 sidebar">
+            </div>
 
-    <div class="span9">
-        
-        <table class="table components-table">
-            <thead>
-            <tr>
-                <th><input type="checkbox"></th>
-                <th>Email</th>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Last Active</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for user in user_list %}
-                {% if is_admin %}
-                <tr data-url="{% url 'auth_user_detail' user.pk %}">
-                {% else %}
-                <tr>
-                {% endif %}
-                    <td>
-                        <input type="checkbox" name="user" value="{{ user.id }}">
-                    </td>
-                    <td>
-                        {{ user.email }}
-                    </td>
-                    <td>
-                        {{ user.get_full_name }}
-                    </td>
-                    <td>
-                        {% if user.get_profile.is_admin %}
-                        Admin
+            <div class="span9">
+                
+                <table class="table components-table">
+                    <thead>
+                    <tr>
+                        <th><input type="checkbox"></th>
+                        <th>Email</th>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Last Active</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for user in user_list %}
+                        {% if is_admin %}
+                        <tr data-url="{% url 'auth_user_detail' user.pk %}">
                         {% else %}
-                        User
+                        <tr>
                         {% endif %}
-                    </td>
-                    <td>
-                        {{ user.last_login|naturalday }}
-                    </td>
-                 </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="5">
-                        You don't have any users yet.
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% include "base/includes/pagination.html" %}
-    </div>
-</div>
-{% endblock %}
-
-{% block modals %}
-{# TODO: Create users, edit permissions modal. #}
+                            <td>
+                                <input type="checkbox" name="user" value="{{ user.id }}">
+                            </td>
+                            <td>
+                                {{ user.email }}
+                            </td>
+                            <td>
+                                {{ user.get_full_name }}
+                            </td>
+                            <td>
+                                {% if user.get_profile.is_admin %}
+                                Admin
+                                {% else %}
+                                User
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ user.last_login|naturalday }}
+                            </td>
+                         </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5">
+                                You don't have any users yet.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% include "base/includes/pagination.html" %}
+            </div>
+        </div>
+    </form>
 {% endblock %}
 
 {% block ondomready %}
     {{ block.super }}
-    go.components.tables.init({
-        checkedToggle: $('.components-table-buttons button')
+    var tableFormView = new go.components.tables.TableFormView({
+        el: '.table-form-view',
+        actions: '.table-form-view-buttons button',
     });
 {% endblock %}

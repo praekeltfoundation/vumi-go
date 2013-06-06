@@ -12,9 +12,9 @@
 
 
 {% block content_actions_right %}
-    <div class="components-table-buttons pull-left">
-        <button class="btn" disabled="disabled">Delete</button>
-        <button class="btn" disabled="disabled">Export</button>
+    <div class="table-form-view-buttons pull-left">
+        <button class="btn" data-action="delete" disabled="disabled">Delete</button>
+        <button class="btn" data-action="export" disabled="disabled">Export</button>
         <button class="btn" disabled="disabled">Assign to group</button>
     </div>
 {% endblock %}
@@ -31,21 +31,22 @@
 
 
 {% block content_main_list %}
-    {% include "contacts/contact_list_table.html" %}
-    {% include "base/includes/pagination.html" %}
+    <form class="table-form-view" method="post" action="">
+        {% include "contacts/contact_list_table.html" %}
+        {% include "base/includes/pagination.html" %}
+    </form>
 {% endblock %}
 
 
 {% block ondomready %}
     {{ block.super }}
-    go.components.tables.init({
-        checkedToggle: $('.components-table-buttons button')
+    var tableFormView = new go.components.tables.TableFormView({
+        el: '.table-form-view',
+        actions: '.table-form-view-buttons button',
     });
 {% endblock %}
 
 {% block modals %}
-    {# TODO, delete #}
-    {# TODO, export #}
     {# TODO, assign to group #}
     {# TODO, import contacts #}
 
