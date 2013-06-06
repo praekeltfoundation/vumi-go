@@ -146,10 +146,9 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         Test failure to send messages
         """
         self.acquire_all_longcode_tags()
-        consumer = self.get_cmd_consumer()
         response = self.client.post(self.get_view_url('start'), follow=True)
         self.assertRedirects(response, self.get_view_url('start'))
-        [] = self.fetch_cmds(consumer)
+        [] = self.get_api_commands_sent()
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "No spare messaging tags.")
 

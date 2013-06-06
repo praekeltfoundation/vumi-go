@@ -8,7 +8,8 @@ from django import forms
 from django.http import Http404
 from django.conf import settings
 
-from go.vumitools.api import VumiUserApi, VumiApi
+from go.base.amqp import connection
+from go.vumitools.api import VumiApi
 
 
 def conversation_or_404(user_api, key):
@@ -18,15 +19,16 @@ def conversation_or_404(user_api, key):
     return user_api.wrap_conversation(conversation)
 
 
-def vumi_api_for_user(user):
-    """Return a Vumi API instance for the given user."""
-    return VumiUserApi.from_config_sync(user.get_profile().user_account,
-                                        settings.VUMI_API_CONFIG)
-
-
 def vumi_api():
     """Return a Vumi API instance."""
-    return VumiApi.from_config_sync(settings.VUMI_API_CONFIG)
+    return VumiApi.from_config_sync(settings.VUMI_API_CONFIG, connection)
+
+
+def vumi_api_for_user(user, api=None):
+    """Return a Vumi API instance for the given user."""
+    if api is None:
+        api = vumi_api()
+    return api.get_user_api(user.get_profile().user_account)
 
 
 def padded_queryset(queryset, size=6, padding=None):

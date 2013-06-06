@@ -2,8 +2,6 @@
 
 """Tests for go.vumitools.api."""
 
-import json
-
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -14,44 +12,24 @@ from go.vumitools.opt_out import OptOutStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.api import (
     VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent)
-from go.vumitools.tests.utils import (
-    AppWorkerTestCase, CeleryTestMixIn, DummyConsumerFactory)
+from go.vumitools.tests.utils import AppWorkerTestCase, FakeAmqpConnection
 from go.vumitools.account.old_models import AccountStoreVNone, AccountStoreV1
 
 
-class TestTxVumiApi(AppWorkerTestCase, CeleryTestMixIn):
+class TestTxVumiApi(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(TestTxVumiApi, self).setUp()
         if self.sync_persistence:
-            self.set_up_celery()
-            self.vumi_api = VumiApi.from_config_sync(self._persist_config)
+            # Set up the vumi exchange, in case we don't have one.
+            self._amqp.exchange_declare('vumi', 'direct')
+            self.vumi_api = VumiApi.from_config_sync(
+                self._persist_config, FakeAmqpConnection(self._amqp))
         else:
             self.vumi_api = yield VumiApi.from_config_async(
                 self._persist_config, get_fake_amq_client(self._amqp))
         self._persist_riak_managers.append(self.vumi_api.manager)
         self._persist_redis_managers.append(self.vumi_api.redis)
-
-    def tearDown(self):
-        if self.sync_persistence:
-            self.restore_celery()
-        return super(TestTxVumiApi, self).tearDown()
-
-    def set_up_celery(self):
-        # Set up the vumi exchange, in case we don't have one.
-        self._amqp.exchange_declare('vumi', 'direct')
-
-        def consumer_factory():
-            dummy_consumer = DummyConsumerFactory()
-            dummy_consumer.publish = self._publish_celery_command
-            return dummy_consumer
-
-        self.VUMI_COMMANDS_CONSUMER = consumer_factory
-        self.setup_celery_for_tests()
-
-    def _publish_celery_command(self, cmd_dict):
-        data = json.dumps(cmd_dict)
-        self._amqp.publish_raw('vumi', 'vumi.api', data)
 
     @inlineCallbacks
     def test_batch_start(self):

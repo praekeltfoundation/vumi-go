@@ -492,11 +492,13 @@ class VumiApi(object):
         return riak_config, redis_config
 
     @classmethod
-    def from_config_sync(cls, config):
+    def from_config_sync(cls, config, amqp_client=None):
         riak_config, redis_config = cls._parse_config(config)
         manager = RiakManager.from_config(riak_config)
         redis = RedisManager.from_config(redis_config)
-        sender = SyncMessageSender()
+        sender = None
+        if amqp_client is not None:
+            sender = SyncMessageSender(amqp_client)
         return cls(manager, redis, sender)
 
     @classmethod
@@ -618,13 +620,13 @@ class VumiApi(object):
 
 
 class SyncMessageSender(object):
-    def __init__(self):
-        self.publisher_config = VumiApiCommand.default_routing_config()
-        from go.vumitools import api_celery
-        self.api_celery = api_celery
+    def __init__(self, amqp_client):
+        self.amqp_client = amqp_client
 
     def send_command(self, command):
-        self.api_celery.send_command_task.delay(command, self.publisher_config)
+        if not self.amqp_client.is_connected():
+            self.amqp_client.connect()
+        self.amqp_client.publish_command_message(command)
 
 
 class AsyncMessageSender(object):
