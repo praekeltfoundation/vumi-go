@@ -102,7 +102,7 @@
 
   // Complex diagram example
   // -----------------------
-  
+
   var ComplexStateModel = StateModel.extend({
     relations: [{
       type: Backbone.HasMany,
@@ -190,7 +190,7 @@
       left: [{id: 'b2L1'}, {id: 'b2L2'}],
       right: [{id: 'b2R1'}, {id: 'b2R2'}]
     }],
-    
+
     leftToRight: [{
       id: 'a1L2-b2R2',
       source: {id: 'a1L2'},

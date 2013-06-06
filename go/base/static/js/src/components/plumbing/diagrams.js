@@ -80,6 +80,8 @@
         c = collections[i];
         if (c.accepts(source, target)) { return c; }
       }
+
+      return null;
     },
 
     onPlumbConnect: function(e) {
@@ -102,6 +104,9 @@
           target = this.diagram.endpoints.get(targetId),
           collection = this.determineCollection(source, target);
 
+      // This kind of connection is not supported so just return.
+      if (collection === null) { return ; }
+
       collection.add({
         id: connectionId,
         source: source.model,
@@ -122,19 +127,14 @@
       // The connection model and its view have been removed from its
       // collection, so its connection view was destroyed (along with the
       // jsPlumb connection). We don't need to remove the connection model
-      // and view since they no longer exists. 
+      // and view since they no longer exists.
       if (!this.has(connectionId)) { return; }
 
       // Case 2:
       // -------
       // The connection was removed in the UI, so the model and view still
       // exist. We need to remove them.
-      var source = this.diagram.endpoints.get(sourceId),
-          target = this.diagram.endpoints.get(targetId),
-          collection = this.determineCollection(source, target);
-
-      // If we remove the model, the connection view collection will recognise
-      // this and remove the corresponding view.
+      var collection = this.ownerOf(connectionId);
       collection.remove(connectionId, {removeModel: true});
     }
   });
