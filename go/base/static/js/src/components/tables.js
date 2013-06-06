@@ -74,7 +74,6 @@
     };
 
     _.extend(exports, {
-      init: init,
-      TableView: TableView
+      init: init
     });
 })(go.components.tables = {});
