@@ -20,7 +20,6 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
-from go.api.go_api.session_manager import SessionManager
 from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
@@ -471,6 +470,10 @@ class VumiUserApi(object):
 
 class VumiApi(object):
     def __init__(self, manager, redis, sender=None):
+        # local import to avoid circular import since
+        # go.api.go_api needs to access VumiApi
+        from go.api.go_api.session_manager import SessionManager
+
         self.manager = manager
         self.redis = redis
 
