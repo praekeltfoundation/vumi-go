@@ -1,6 +1,27 @@
 from django import forms
+from django.contrib.auth.models import User
+
 from registration.forms import RegistrationFormUniqueEmail
 from vumi.utils import normalize_msisdn
+
+from go.base.models import UserProfile
+
+
+class UserAccountForm(forms.ModelForm):
+
+    def __init__(self, *args, **kwargs):
+        super(UserAccountForm, self).__init__(*args, **kwargs)
+        self.fields['email'].required = True
+
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name', 'email')
+
+
+class UserProfileForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ('is_admin',)
 
 
 class AccountForm(forms.Form):

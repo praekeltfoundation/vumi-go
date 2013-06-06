@@ -4,14 +4,13 @@
 
 (function(exports) {
 
-
     var init = function(options) {
 
         var opts = {
             tableSelector: '.components-table',
             linkAttribute: 'data-url'
         };
-        $.extend(opts, options);
+        _.defaults(opts, options);
 
         var $table = $(opts.tableSelector);
         var $checkboxes = $table.find('input:checkbox');
