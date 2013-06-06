@@ -1,4 +1,5 @@
 import csv
+import logging
 from StringIO import StringIO
 
 from django.views.generic import TemplateView
@@ -14,8 +15,6 @@ from django.conf.urls.defaults import url, patterns
 from django.conf import settings
 from django.http import HttpResponse
 
-from vumi import log
-
 from go.vumitools.exceptions import ConversationSendError
 from go.base.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConversationForm, ConversationGroupForm,
@@ -25,6 +24,8 @@ from go.conversation.tasks import export_conversation_messages
 from go.base import message_store_client as ms_client
 from go.base.utils import (make_read_only_form, conversation_or_404,
                             page_range_window)
+
+logger = logging.getLogger(__name__)
 
 
 class ConversationView(TemplateView):
@@ -313,7 +314,7 @@ class ShowConversationView(ConversationView):
     def send_one_off_reply(user_api, conversation, in_reply_to, content):
         inbound_message = user_api.api.mdb.get_inbound_message(in_reply_to)
         if inbound_message is None:
-            log.info('Replying to an unknown message: %s' % (in_reply_to,))
+            logger.info('Replying to an unknown message: %s' % (in_reply_to,))
 
         [tag] = conversation.get_tags()
         msg_options = conversation.make_message_options(tag)
