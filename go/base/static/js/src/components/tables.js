@@ -4,6 +4,28 @@
 
 (function(exports) {
 
+
+    // Are you sure you want to delete X, 
+    var ModalView = Backbone.View.extend({
+
+        initialize: function() {
+
+        },
+
+        render: function() {
+            return this;
+        },
+        
+        show: function() {
+
+        },
+
+        hide: function() {
+
+        }
+    });
+
+
     var TableView = Backbone.View.extend({
 
         events: {

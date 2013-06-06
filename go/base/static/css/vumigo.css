@@ -157,6 +157,22 @@ body {
 .span9 {
   padding-right: 20px;
 }
+.table-manage-data {
+  margin-top: 1em;
+}
+.table-manage-data tr {
+  cursor: pointer;
+}
+.table-manage-data td {
+  color: #2f3436;
+}
+.help-inline .errorlist {
+  list-style: none;
+}
+.help-inline .errorlist li {
+  padding: 0;
+  margin: 0;
+}
 .campaigns .header a {
   color: #878b8e;
   font-weight: bold;
@@ -215,22 +231,6 @@ body {
   width: auto;
   max-width: 100%;
   min-width: 80%;
-}
-.table-manage-data {
-  margin-top: 1em;
-}
-.table-manage-data tr {
-  cursor: pointer;
-}
-.table-manage-data td {
-  color: #2f3436;
-}
-.help-inline .errorlist {
-  list-style: none;
-}
-.help-inline .errorlist li {
-  padding: 0;
-  margin: 0;
 }
 .accounts {
   color: #c1c1c1;
