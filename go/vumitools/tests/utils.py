@@ -56,6 +56,10 @@ class FakeAmqpConnection(object):
         self._connected = True
 
     def publish_command_message(self, command):
+        # This both sends messages via self._amqp and appends them to
+        # self.commands to support to different use cases -- namely,
+        # testing that messages are succesfully routed and testing that
+        # the correct commands are queue for sending.
         self.commands.append(command)
         return self._amqp.publish_raw('vumi', 'vumi.api', command.to_json())
 
