@@ -14,6 +14,8 @@ from django.conf.urls.defaults import url, patterns
 from django.conf import settings
 from django.http import HttpResponse
 
+from vumi import log
+
 from go.vumitools.exceptions import ConversationSendError
 from go.base.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConversationForm, ConversationGroupForm,
@@ -307,10 +309,11 @@ class ShowConversationView(ConversationView):
                 conversation_key=conversation.key)
         return self.render_to_response(params)
 
-    def send_one_off_reply(self, user_api, conversation, in_reply_to, content):
+    @staticmethod
+    def send_one_off_reply(user_api, conversation, in_reply_to, content):
         inbound_message = user_api.api.mdb.get_inbound_message(in_reply_to)
         if inbound_message is None:
-            print 'Replying to an unknown message'
+            log.info('Replying to an unknown message: %s' % (in_reply_to,))
 
         [tag] = conversation.get_tags()
         msg_options = conversation.make_message_options(tag)
