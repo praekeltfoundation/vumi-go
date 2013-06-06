@@ -144,7 +144,7 @@ def user_detail(request, user_id=None):
         })
 
     if request.method == 'POST':
-        user = user_form  = UserAccountForm(request.POST, instance=edit_user)
+        user_form  = UserAccountForm(request.POST, instance=edit_user)
         user_profile_form = UserProfileForm(request.POST,
             instance=edit_user_profile)
 
