@@ -5,6 +5,7 @@
 /.coverage
 /coverage-html/
 /coverage.xml
+/node_modules/
 /nosetests.xml
 /pyflakes.log
 /pep8.log
