@@ -33,9 +33,9 @@ describe("go.components.tables", function() {
       assert.isTrue($form.find('thead input:checkbox').prop('checked'));
     });
 
-    it('should execute `onCheckedCallback` event when a checkbox is toggled', function() {
+    it('should execute `onCheckedCallback` event when a checkbox is toggled', function(done) {
 
-      tableFormView.options.onCheckedCallback = function(done) {
+      tableFormView.options.onCheckedCallback = function() {
         assert.isTrue($cb.prop('checked'));
         done();
       };
