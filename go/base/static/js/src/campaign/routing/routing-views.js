@@ -7,6 +7,7 @@
       StateView = plumbing.StateView,
       DiagramView = plumbing.DiagramView,
       StaticEndpoint = plumbing.StaticEndpoint,
+      StateViewCollection = plumbing.StateViewCollection,
       AligningEndpointCollection = plumbing.AligningEndpointCollection;
 
   var routing = go.campaign.routing,
@@ -22,11 +23,32 @@
     endpointType: StaticEndpoint,
     endpointCollectionType: AligningEndpointCollection,
 
-    render: function() {
+    initialize: function(options) {
+      StateView.prototype.initialize.call(this, options);
+      this.$column = options.$column;
+    },
+
+    render: function(top, left) {
       jsPlumb.draggable(this.$el);
-      // TODO append to column
+
+      this.$el
+        .css('top', top)
+        .css('left', left);
+
+      this.$column.append(this.$el);
       this.endpoints.render();
       return this;
+    }
+  });
+
+  var RoutingStateCollection = StateViewCollection.extend({
+    opts: function() {
+      var opts = StateViewCollection.prototype.opts.call(this);
+      return _(opts).extend({$column: this.$column});
+    },
+
+    initialize: function(options) {
+      this.$column = this.diagram.$(options.columnEl);
     }
   });
 
@@ -54,18 +76,21 @@
   // A vertical section of the routing screen dedicated to a particular
   // collection of the three state types (Channel, RoutingBlock or
   // Application).
-  //
-  // Arguments:
-  //   - diagram: the diagram view that the column is part of
   var RoutingScreenColumn = Backbone.View.extend({
-    intialize: function(diagram) {
-      this.diagram = diagram;
+    intialize: function(options) {
+      this.diagram = options.diagram;
       this.states = this.diagram.states.members.get(this.collectionName);
       this.ensureElement(this.diagram.$('#' + this.id));
     },
 
     render: function() {
-      this.states.render();
+      var top = 0,
+          left = 0;
+
+      this.states.each(function(state) {
+        state.render(top, left);
+      });
+
       // TODO render placeholder view
     }
   });
@@ -75,14 +100,14 @@
     collectionName: 'channels'
   });
 
-  var ApplicationColumn = RoutingScreenColumn.extend({
-    id: 'applications',
-    collectionName: 'applications'
-  });
-
   var RoutingBlockColumn = RoutingScreenColumn.extend({
     id: 'routing-blocks',
     collectionName: 'routing_blocks'
+  });
+
+  var ApplicationColumn = RoutingScreenColumn.extend({
+    id: 'applications',
+    collectionName: 'applications'
   });
 
   // Main components
@@ -90,9 +115,24 @@
 
   var RoutingScreen = DiagramView.extend({
     stateType: RoutingState,
+    stateCollectionType: RoutingStateCollection,
+
+    stateSchema: [{
+      attr: 'channels',
+      type: ChannelState,
+      columnEl: '#channels'
+    }, {
+      attr: 'routing_blocks',
+      type: RoutingBlockState,
+      columnEl: '#routing-blocks'
+    }, {
+      attr: 'applications',
+      type: ApplicationState,
+      columnEl: '#applications'
+    }],
+
     initialize: function(options) {
       DiagramView.prototype.initialize.call(this, options);
-
       this.channels = new ChannelColumn({diagram: this});
       this.routingBlocks = new RoutingBlockColumn({diagram: this});
       this.applications = new ApplicationColumn({diagram: this});
@@ -108,5 +148,17 @@
   });
 
   _(exports).extend({
+    RoutingScreen: RoutingScreen,
+
+    RoutingState: RoutingState,
+    RoutingStateCollection: RoutingStateCollection,
+    ChannelState: ChannelState,
+    RoutingBlockState: RoutingBlockState,
+    ApplicationState: ApplicationState,
+
+    RoutingScreenColumn: RoutingScreenColumn,
+    ChannelColumn: ChannelColumn,
+    RoutingBlockColumn: RoutingBlockColumn,
+    ApplicationColumn: ApplicationColumn
   });
 })(go.campaign.routing);
