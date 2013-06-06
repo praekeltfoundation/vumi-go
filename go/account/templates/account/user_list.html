@@ -85,15 +85,6 @@
     {{ block.super }}
     var tableFormView = new go.components.tables.TableFormView({
         el: '.table-form-view',
-        onCheckedSelector: '.table-form-view-buttons button',
+        actions: '.table-form-view-buttons button',
     });
-
-    $('.table-form-view-buttons button').each(function() {
-        var action = $(this).attr('data-action');
-        if (typeof(action) !== 'undefined') {
-            $(this).click(function() {
-                tableFormView.showConfirmationModal({action: action});
-            });
-        }
-    });    
 {% endblock %}

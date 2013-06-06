@@ -35,6 +35,19 @@
             // this event is fired by `toggleAllCheckboxes` and `onClick`
             // and is fired when you change the value of the checkbox.
             this.on('checkbox:changed', this.onChanged);
+
+            // the actions are enabled when atleast a single checkbox
+            // is selected.
+            this.$actions = $(this.options.actions);
+            var that = this;
+            this.$actions.each(function() {
+                var action = $(this).attr('data-action');
+                if (typeof(action) !== 'undefined') {
+                    $(this).click(function() {
+                        that.showConfirmationModal({action: action});
+                    });
+                }
+            });
         },
 
         // select or deselect all the checkboxes based on the state of the 
@@ -73,10 +86,8 @@
             });
 
             this.$el.find('thead input:checkbox').prop('checked', allChecked);
-            var selector = this.options.onCheckedSelector;
-            if (typeof(selector) !== 'undefined') {
-                $(selector).prop('disabled', numChecked <= 0);
-            }
+            // enable/ disable the buttons.
+            this.$actions.prop('disabled', numChecked <= 0);
             var callback = this.options.onCheckedCallback;
             if (typeof(callback) !== 'undefined') {
                 callback.call(this, allChecked, numChecked);
@@ -91,14 +102,13 @@
 
         showConfirmationModal: function(options) {
 
-            var $cbs = this.$el.find('tbody input:checked');
+            var numChecked = this.$el.find('tbody input:checked').length;
             var template = this.template_singular;
-            if ($cbs.length > 1) {
-                template = this.template_plural;
-            }
+            if (numChecked > 1) template = this.template_plural;
+
             var message = template({
                 action: options.action,
-                numChecked: $cbs.length
+                numChecked: numChecked
             });
 
             var that = this;

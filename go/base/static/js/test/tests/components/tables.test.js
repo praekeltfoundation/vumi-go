@@ -20,6 +20,9 @@ describe("go.components.tables", function() {
         el: $form,
         onCheckedSelector: $buttons.find('button')
       });
+
+      
+
     });
 
     it('should toggle the header checkbox when all checkboxes are checked', function() {
@@ -54,6 +57,8 @@ describe("go.components.tables", function() {
       assert.isTrue($buttons.find('button').eq(0).prop('disabled'));
 
     });
+
+
 
   });
 });
