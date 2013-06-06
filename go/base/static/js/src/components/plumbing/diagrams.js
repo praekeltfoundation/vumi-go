@@ -129,12 +129,7 @@
       // -------
       // The connection was removed in the UI, so the model and view still
       // exist. We need to remove them.
-      var source = this.diagram.endpoints.get(sourceId),
-          target = this.diagram.endpoints.get(targetId),
-          collection = this.determineCollection(source, target);
-
-      // If we remove the model, the connection view collection will recognise
-      // this and remove the corresponding view.
+      var collection = this.ownerOf(connectionId);
       collection.remove(connectionId, {removeModel: true});
     }
   });
