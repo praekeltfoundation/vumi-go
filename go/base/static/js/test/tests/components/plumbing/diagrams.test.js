@@ -150,6 +150,18 @@ describe("go.components.plumbing (diagrams)", function() {
           target: b2R1.plumbEndpoint
         });
       });
+
+      it("should ignore unsupported connections", function(done) {
+        var knownEndpoint = diagram.endpoints.get('b2R1').plumbEndpoint,
+            unknownEndpoint = jsPlumb.addEndpoint(diagram.states.get('a1').$el);
+
+        jsPlumb.bind('connection', function() { done(); });
+
+        jsPlumb.connect({
+          source: knownEndpoint,
+          target: unknownEndpoint
+        });
+      });
     });
 
     describe("on 'connectionDetached' jsPlumb events", function() {
