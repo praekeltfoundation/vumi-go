@@ -36,11 +36,12 @@
     {% include "contacts/contact_list_table.html" %}
 {% endblock %}
 
-{% block extrascript %}
+{% block ondomready %}
     {{ block.super }}
-    <script type="text/javascript">
-        go.components.tables.init();
-    </script>
+    var tableView = new go.components.tables.TableView({
+        el: '.components-table',
+        onCheckedSelector: '.components-table-buttons button',
+    });
 {% endblock %}
 
 

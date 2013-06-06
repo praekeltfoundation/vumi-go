@@ -8,9 +8,9 @@
 
         events: {
             'click thead input:checkbox': 'toggleAllCheckboxes',
-            'click tbody input:checkbox': 'onClick',
+            'click tbody tr td:first-child input:checkbox': 'onClick',
             'click tbody tr td:first-child': 'onClick',
-            'click tbody tr': 'openRow'
+            'click tbody tr': 'followLink'
         },
 
         initialize: function() {
@@ -28,7 +28,7 @@
                 'toggleAllCheckboxes',
                 'onClick',
                 'onChecked',
-                'openRow'
+                'followLink'
             );
 
             this.on('onChecked', this.onChecked);
@@ -45,21 +45,18 @@
 
         onClick: function(ev) {
             ev.stopPropagation();
-            $this = $(ev.target);
+            var $this = $(ev.target);
 
             // the `td` that houses the checkbox is clickable, this make the
             // checkbox easier to click because it increases the target
             // area.
             if ($this.is('td')) {
                 $this.find('input:checkbox').trigger('click');
-                return false;
             }
-
             this.trigger('onChecked');
         },
 
         onChecked: function() {
-
             // determine if all the checkboxes are selected
             var allChecked = true;
             var numChecked = 0;
@@ -73,7 +70,6 @@
             });
 
             this.$el.find('thead input:checkbox').prop('checked', allChecked);
-
             var selector = this.options.onCheckedSelector;
             if (typeof(selector) !== 'undefined') {
                 $(selector).prop('disabled', numChecked <= 0);
@@ -84,7 +80,7 @@
             }
         },
 
-        openRow: function(ev) {
+        followLink: function(ev) {
             var $this = $(ev.target).parents('tr');
             var url = $this.attr(this.options.rowLinkAttribute);
             if (typeof(url) !== 'undefined') window.location = url;

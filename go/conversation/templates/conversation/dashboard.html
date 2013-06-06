@@ -116,16 +116,8 @@
 {% endblock %}
 
 {% block ondomready %}
-    
-    var table = new go.components.tables.TableView({
+    var tableView = new go.components.tables.TableView({
         el: '.components-table',
         onCheckedSelector: '.components-table-buttons button',
-        onCheckedCallback: function(allChecked, numChecked) {
-            console.log('pew');
-        }
     });
-
-    //go.components.tables.init({
-    //    checkedToggle: $('.components-table-buttons button')
-    //});
 {% endblock %}

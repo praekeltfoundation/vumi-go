@@ -33,7 +33,10 @@
 
 {% block ondomready %}
     {{ block.super }}
-    go.components.tables.init();
+    var tableView = new go.components.tables.TableView({
+        el: '.components-table',
+        onCheckedSelector: '.components-table-buttons button',
+    });
 {% endblock %}
 
 {% block modals %}
