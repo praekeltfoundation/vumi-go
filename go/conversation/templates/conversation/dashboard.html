@@ -92,11 +92,7 @@
                                 </td>
                             </tr>
                             {% endfor %}
-                            {% if paginator.num_pages > 1 %}
-                            <tr colspan="9">
-                                {% include "base/includes/pagination.html" %}
-                            </tr>
-                            {% endif %}
+                            
                         {% else %}
                         <tr>
                             <td colspan="9">
@@ -110,6 +106,7 @@
                         {% endif %}
                     </tbody>
                 </table>
+                {% include "base/includes/pagination.html" %}
             </form>
         </div>
     </div>

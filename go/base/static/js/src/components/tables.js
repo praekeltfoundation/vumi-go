@@ -26,14 +26,12 @@
             });
 
             _.bindAll(this,
-                'toggleAllCheckboxes',
-                'onClick',
-                'onChecked',
-                'followLink',
                 'showConfirmationModal'
             );
 
-            this.on('onChecked', this.onChecked);
+            // this event is fired by `toggleAllCheckboxes` and `onClick`
+            // and is fired when you change the value of the checkbox.
+            this.on('checkbox:changed', this.onChanged);
         },
 
         // select or deselect all the checkboxes based on the state of the 
@@ -42,7 +40,7 @@
             this.$el.find('tbody input:checkbox').prop('checked',
                 $(ev.target).prop('checked'));
 
-            this.trigger('onChecked');
+            this.trigger('checkbox:changed');
         },
 
         onClick: function(ev) {
@@ -55,10 +53,10 @@
             if ($this.is('td')) {
                 $this.find('input:checkbox').trigger('click');
             }
-            this.trigger('onChecked');
+            this.trigger('checkbox:changed');
         },
 
-        onChecked: function() {
+        onChanged: function() {
             // determine if all the checkboxes are selected
             var allChecked = true;
             var numChecked = 0;
