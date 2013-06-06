@@ -23,6 +23,7 @@ class ConversationDefinitionBase(object):
     conversation_group_form = None
     edit_conversation_forms = None
     conversation_start_params = None
+    draft_view = None
 
     actions = ()
 

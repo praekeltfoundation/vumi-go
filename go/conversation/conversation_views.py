@@ -52,6 +52,8 @@ class ConversationView(TemplateView):
     def get_next_view(self, conversation):
         if not conversation.is_draft():
             return 'show'
+        if self.conversation_views.draft_view is not None:
+            return self.conversation_views.draft_view
         if self.conversation_views.conversation_initiator == 'client':
             return 'start'
         return 'people'
@@ -593,6 +595,7 @@ class ConversationViewFinder(object):
     conversation_group_form = ConversationGroupForm
     edit_conversation_forms = None
     conversation_start_params = None
+    draft_view = None
 
     def __init__(self, conv_def):
 
@@ -615,6 +618,8 @@ class ConversationViewFinder(object):
             self.edit_conversation_forms = conv_def.edit_conversation_forms
         if conv_def.conversation_start_params is not None:
             self.conversation_start_params = conv_def.conversation_start_params
+        if conv_def.draft_view is not None:
+            self.draft_view = conv_def.draft_view
 
         views = list(self.DEFAULT_CONVERSATION_VIEWS)
         if self.conversation_initiator == 'client':
