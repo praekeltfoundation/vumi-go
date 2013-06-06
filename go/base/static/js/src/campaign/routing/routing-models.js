@@ -1,5 +1,5 @@
-// go.components.routing (models)
-// ==============================
+// go.campaign.routing (models)
+// ============================
 // Models for campaign routing screen.
 
 // We use the state machine models as a base to make use of any
@@ -66,4 +66,4 @@ var stateMachine = go.components.stateMachine,
     ApplicationModel: ApplicationModel,
     CampaignRoutingModel: CampaignRoutingModel
   });
-})(go.components.routing);
+})(go.campaign.routing);
