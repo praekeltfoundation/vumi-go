@@ -202,7 +202,7 @@ describe("go.components.structures", function() {
         assert.isFalse(group.has('b'));
       });
 
-      it("should add the item to the owner lookup", function() {
+      it("should remove the item from the owner lookup", function() {
         group.remove('b');
         assert.isUndefined(group.ownerOf('b'));
       });
@@ -221,7 +221,7 @@ describe("go.components.structures", function() {
         group.subscribe('c', lookupC);
 
         lookupC.on('add', function(key, value) {
-          assertAdded(lookupC, key, value);
+          assertAdded(lookupC, 'i', 9);
           done();
         });
 
@@ -234,7 +234,7 @@ describe("go.components.structures", function() {
         group.subscribe('c', lookupC);
 
         lookupC.on('remove', function(key, value) {
-          assertRemoved(key);
+          assertRemoved('g');
           done();
         });
 

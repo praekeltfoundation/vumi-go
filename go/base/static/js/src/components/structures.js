@@ -105,7 +105,7 @@
       // owner of an item to be added, while with removes, we know already. We
       // keep a lookup so we can unbind the add callbacks when the member is
       // unsubscribed.
-      this._adds = {};
+      this._memberAdds = {};
 
       lookups = lookups || {};
       for (var k in lookups) { this.subscribe(k, lookups[k]); }
@@ -125,7 +125,7 @@
 
     subscribe: function(key, lookup) {
       var add = _(this.add).bind(this, lookup);
-      this._adds[key] = add;
+      this._memberAdds[key] = add;
 
       lookup.eachItem(add);
       lookup.on('add', add);
@@ -137,9 +137,9 @@
 
     unsubscribe: function(key) {
       var lookup = this.members.get(key),
-          add = this._adds[key];
+          add = this._memberAdds[key];
 
-      delete this._adds[key];
+      delete this._memberAdds[key];
       lookup.off('add', add);
       lookup.off('remove', this.remove, this);
 
