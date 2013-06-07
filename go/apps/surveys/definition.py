@@ -204,6 +204,12 @@ class SendSurveyAction(ConversationAction):
             is_client_initiated=action_data['is_client_initiated'])
 
 
+class DownloadUserDataAction(ConversationAction):
+    action_name = 'download_user_data'
+    action_display_name = 'Download User Data'
+    redirect_to = 'user_data'
+
+
 class ConversationDefinition(ConversationDefinitionBase):
     conversation_type = 'surveys'
 
@@ -213,4 +219,7 @@ class ConversationDefinition(ConversationDefinitionBase):
         SurveyEditView,
         UserDataView,
     )
-    actions = (SendSurveyAction,)
+    actions = (
+        SendSurveyAction,
+        DownloadUserDataAction,
+    )

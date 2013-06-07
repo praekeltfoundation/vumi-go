@@ -651,8 +651,9 @@ class ConversationViewFinder(object):
 
     def get_action_view(self, action_name):
         for action in self.actions:
-            return ConversationActionView.as_view(
-                conversation_views=self, action=action)
+            if action.action_name == action_name:
+                return ConversationActionView.as_view(
+                    conversation_views=self, action=action)
         raise Http404
 
     def get_new_conversation_view(self):
