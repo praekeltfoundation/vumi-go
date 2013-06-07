@@ -108,38 +108,12 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         [batch] = conversation.get_batches()
         [tag] = list(batch.tags)
         [contact] = self.get_contacts_for_conversation(conversation)
-        msg_options = {
-            "transport_type": "sms",
-            "transport_name": self.transport_name,
-            "from_addr": "default10001",
-            "helper_metadata": {
-                "tag": {"tag": list(tag)},
-                "go": {"user_account": conversation.user_account.key},
-                },
-            }
 
-        [start_cmd, hack_cmd] = self.get_api_commands_sent()
+        [start_cmd] = self.get_api_commands_sent()
         self.assertEqual(start_cmd, VumiApiCommand.command(
                 '%s_application' % (conversation.conversation_type,), 'start',
                 user_account_key=conversation.user_account.key,
                 conversation_key=conversation.key))
-        self.assertEqual(hack_cmd, VumiApiCommand.command(
-                '%s_application' % (conversation.conversation_type,),
-                'initial_action_hack',
-                user_account_key=conversation.user_account.key,
-                conversation_key=conversation.key,
-                is_client_initiated=conversation.is_client_initiated(),
-                batch_id=batch.key, msg_options=msg_options, dedupe=False))
-
-    def test_start_with_deduplication(self):
-        self.client.post(self.get_view_url('start'), {'dedupe': '1'})
-        [start_cmd, hack_cmd] = self.get_api_commands_sent()
-        self.assertEqual(hack_cmd.payload['kwargs']['dedupe'], True)
-
-    def test_start_without_deduplication(self):
-        self.client.post(self.get_view_url('start'))
-        [start_cmd, hack_cmd] = self.get_api_commands_sent()
-        self.assertEqual(hack_cmd.payload['kwargs']['dedupe'], False)
 
     def test_send_fails(self):
         """
@@ -277,22 +251,20 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(22, len(content.split('\n')))
         self.assertEqual(mime_type, 'application/zip')
 
-    def test_action_bulk_send_get(self):
-        # Start the conversation
-        self.client.post(self.get_view_url('start'))
-        self.assertEqual(2, len(self.get_api_commands_sent()))
+    def test_action_bulk_send_view(self):
         response = self.client.get(self.get_action_view_url('bulk_send'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
         self.assertEqual([], self.get_api_commands_sent())
         self.assertContains(response, 'name="message"')
 
-    def test_action_bulk_send_post(self):
+    def test_action_bulk_send_dedupe(self):
         # Start the conversation
         self.client.post(self.get_view_url('start'))
-        self.assertEqual(2, len(self.get_api_commands_sent()))
-        response = self.client.post(self.get_action_view_url('bulk_send'),
-                                    {'message': 'I am ham, not spam.'})
+        self.assertEqual(1, len(self.get_api_commands_sent()))
+        response = self.client.post(
+            self.get_action_view_url('bulk_send'),
+            {'message': 'I am ham, not spam.', 'dedupe': True})
         self.assertRedirects(response, self.get_view_url('show'))
         [bulk_send_cmd] = self.get_api_commands_sent()
         conversation = self.user_api.get_wrapped_conversation(self.conv_key)
@@ -302,7 +274,25 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.get_batches()[0].key, msg_options={},
-            content='I am ham, not spam.'))
+            content='I am ham, not spam.', dedupe=True))
+
+    def test_action_bulk_send_no_dedupe(self):
+        # Start the conversation
+        self.client.post(self.get_view_url('start'))
+        self.assertEqual(1, len(self.get_api_commands_sent()))
+        response = self.client.post(
+            self.get_action_view_url('bulk_send'),
+            {'message': 'I am ham, not spam.', 'dedupe': False})
+        self.assertRedirects(response, self.get_view_url('show'))
+        [bulk_send_cmd] = self.get_api_commands_sent()
+        conversation = self.user_api.get_wrapped_conversation(self.conv_key)
+        self.assertEqual(bulk_send_cmd, VumiApiCommand.command(
+            '%s_application' % (conversation.conversation_type,),
+            'bulk_send',
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=conversation.get_batches()[0].key, msg_options={},
+            content='I am ham, not spam.', dedupe=False))
 
 
 class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
@@ -458,28 +448,12 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
 
         batch = conversation.mdb.get_batch(batch_key)
         [tag] = list(batch.tags)
-        [start_cmd, hack_cmd] = self.get_api_commands_sent()
+        [start_cmd] = self.get_api_commands_sent()
 
-        msg_options = {
-            "transport_type": "sms",
-            "transport_name": self.transport_name,
-            "from_addr": "default10001",
-            "helper_metadata": {
-                "tag": {"tag": list(tag)},
-                "go": {"user_account": conversation.user_account.key},
-                },
-            }
         self.assertEqual(start_cmd, VumiApiCommand.command(
                 '%s_application' % (conversation.conversation_type,), 'start',
                 user_account_key=conversation.user_account.key,
                 conversation_key=conversation.key))
-        self.assertEqual(hack_cmd, VumiApiCommand.command(
-                '%s_application' % (conversation.conversation_type,),
-                'initial_action_hack',
-                user_account_key=conversation.user_account.key,
-                conversation_key=conversation.key,
-                is_client_initiated=conversation.is_client_initiated(),
-                batch_id=batch.key, msg_options=msg_options, dedupe=True))
 
         # check token was consumed so it can't be re-used to send the
         # conversation messages again

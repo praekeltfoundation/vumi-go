@@ -126,14 +126,13 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
         self.assertEqual([], self.get_api_commands_sent())
-        self.assertContains(response, 'name="is_client_initiated"')
 
     def test_action_send_survey_post(self):
         # Start the conversation
         self.client.post(self.get_view_url('start'))
-        self.assertEqual(2, len(self.get_api_commands_sent()))
-        response = self.client.post(self.get_action_view_url('send_survey'),
-                                    {'is_client_initiated': True})
+        self.assertEqual(1, len(self.get_api_commands_sent()))
+        response = self.client.post(
+            self.get_action_view_url('send_survey'), {})
         self.assertRedirects(response, self.get_view_url('show'))
         [bulk_send_cmd] = self.get_api_commands_sent()
         conversation = self.user_api.get_wrapped_conversation(self.conv_key)
@@ -143,7 +142,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.get_batches()[0].key, msg_options={},
-            is_client_initiated=True))
+            is_client_initiated=False))
 
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
@@ -162,31 +161,15 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, self.get_view_url('show'))
 
         conversation = self.get_wrapped_conv()
-        [start_cmd, hack_cmd] = self.get_api_commands_sent()
+        [start_cmd] = self.get_api_commands_sent()
         [batch] = conversation.get_batches()
         [tag] = list(batch.tags)
         [contact] = self.get_contacts_for_conversation(conversation)
-        msg_options = {
-            "transport_type": "sms",
-            "transport_name": self.transport_name,
-            "from_addr": "default10001",
-            "helper_metadata": {
-                "tag": {"tag": list(tag)},
-                "go": {"user_account": conversation.user_account.key},
-                },
-            }
 
         self.assertEqual(start_cmd, VumiApiCommand.command(
-                '%s_application' % (conversation.conversation_type,), 'start',
-                user_account_key=conversation.user_account.key,
-                conversation_key=conversation.key))
-        self.assertEqual(hack_cmd, VumiApiCommand.command(
-                '%s_application' % (conversation.conversation_type,),
-                'initial_action_hack',
-                user_account_key=conversation.user_account.key,
-                conversation_key=conversation.key,
-                is_client_initiated=conversation.is_client_initiated(),
-                batch_id=batch.key, msg_options=msg_options, dedupe=False))
+            '%s_application' % (conversation.conversation_type,), 'start',
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key))
 
     def test_send_fails(self):
         """

@@ -1,5 +1,4 @@
 from bootstrap.forms import BootstrapForm
-from django.forms import BooleanField
 from django.conf import settings
 from django.contrib import messages
 from django.http import HttpResponse
@@ -187,7 +186,8 @@ class UserDataView(ConversationView):
 
 
 class SendSurveyForm(BootstrapForm):
-    is_client_initiated = BooleanField()
+    # TODO: Something better than this?
+    pass
 
 
 class SendSurveyAction(ConversationAction):
@@ -200,8 +200,7 @@ class SendSurveyAction(ConversationAction):
     def perform_action(self, action_data):
         return self.send_command(
             'send_survey', batch_id=self._conv.get_latest_batch_key(),
-            msg_options={},
-            is_client_initiated=action_data['is_client_initiated'])
+            msg_options={}, is_client_initiated=False)
 
 
 class DownloadUserDataAction(ConversationAction):

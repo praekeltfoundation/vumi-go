@@ -168,7 +168,7 @@ class StartConversationView(ConversationView):
                     })
 
     def _start_conversation(self, request, conversation):
-        params = {}
+        params = {'send_initial_action_hack': False}
         params.update(self.conversation_views.conversation_start_params or {})
 
         if self.conversation_views.conversation_initiator != 'client':
@@ -240,7 +240,8 @@ class ConfirmConversationView(ConversationView):
         if not token_data:
             raise Http404
 
-        params = token_data.get('extra_params', {})
+        params = {'send_initial_action_hack': False}
+        params.update(token_data.get('extra_params', {}))
         user_token, sys_token = token_manager.parse_full_token(token)
         confirmation_form = ConfirmConversationForm(request.POST)
         success = False
@@ -506,7 +507,9 @@ class ConversationActionView(ConversationView):
         form_cls = self.action.get_action_form()
         if form_cls is not None:
             form = form_cls(request.POST)
+            print "POST:", request.POST
             if not form.is_valid():
+                print "invalid"
                 return self._render_form(request, conversation, form)
             action_data = form.cleaned_data
         self.action.perform_action(action_data)
