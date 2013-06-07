@@ -102,18 +102,26 @@
 
   // A lookup of overlays for jsPlumb connectors (connections)
   var connectorOverlays = {
-    arrow: [
+    headArrow: [
       'Arrow', {
       width: 12,
       height: 12,
       location: 1,
-      id: 'arrow'
+      id: 'head-arrow'
+    }],
+
+    midArrow: [
+      'Arrow', {
+      width: 12,
+      height: 12,
+      location: 0.5,
+      id: 'mid-arrow'
     }]
   };
 
   var DirectionalConnection = ConnectionView.extend({
     plumbOptions: function() {
-      return {overlays: [connectorOverlays.arrow]};
+      return {overlays: [connectorOverlays.headArrow]};
     }
   });
 
