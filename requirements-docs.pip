@@ -4,4 +4,5 @@
 Sphinx
 Twisted
 zope.interface
+protobuf # riakasaurus needs this
 -r requirements.pip
