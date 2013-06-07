@@ -4,4 +4,4 @@
 Sphinx
 Twisted
 zope.interface
-https://github.com/praekelt/vumi/tarball/develop#egg=vumi-dev
+-r requirements.pip
