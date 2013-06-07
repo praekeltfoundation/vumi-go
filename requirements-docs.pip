@@ -2,3 +2,5 @@
 # only, used by readthedocs.org for publishing
 # docs on http://vumi-go.readthedocs.org/
 Sphinx
+Twisted
+zope.interface
