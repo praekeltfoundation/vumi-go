@@ -34,7 +34,7 @@ install_requires, dependency_links = parse_requirements("requirements.pip")
 
 setup(
     name="vumi-go",
-    version="0.0.1",
+    version="0.5.0a",
     url='http://github.com/praekelt/vumi-go',
     license='BSD',
     description="Vumi Go",
