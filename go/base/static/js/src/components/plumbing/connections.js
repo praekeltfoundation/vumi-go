@@ -119,7 +119,7 @@
     }]
   };
 
-  var DirectionalConnection = ConnectionView.extend({
+  var DirectionalConnectionView = ConnectionView.extend({
     plumbOptions: function() {
       return {overlays: [connectorOverlays.headArrow]};
     }
@@ -131,6 +131,6 @@
     ConnectionViewCollection: ConnectionViewCollection,
 
     connectorOverlays: connectorOverlays,
-    DirectionalConnection: DirectionalConnection
+    DirectionalConnectionView: DirectionalConnectionView
   });
 })(go.components.plumbing);
