@@ -14,7 +14,7 @@
   //
   // Options:
   // - state: The view to which this endpoint is to be attached
-  var EndpointView = Backbone.View.extend({
+  var Endpoint = Backbone.View.extend({
     // Override to change what params are passed to jsPlumb
     plumbOptions: {},
 
@@ -60,8 +60,8 @@
   });
 
   // A collection of endpoint views attached to a state view
-  var EndpointViewCollection = SubviewCollection.extend({
-    defaults: {type: EndpointView},
+  var EndpointCollection = SubviewCollection.extend({
+    defaults: {type: Endpoint},
     opts: function() { return {state: this.view, collection: this}; }
   });
 
@@ -70,7 +70,7 @@
 
   // An endpoint view type which remains in the same position until it is
   // repositioned.
-  var StaticEndpoint = EndpointView.extend({
+  var StaticEndpoint = Endpoint.extend({
     defaults: {side: 'left'},
 
     anchors: {
@@ -81,7 +81,7 @@
     },
 
     constructor: function(options) {
-      EndpointView.prototype.constructor.call(this, options);
+      Endpoint.prototype.constructor.call(this, options);
       _(options).defaults(_(this).result('defaults'));
 
       this.side = options.side;
@@ -97,7 +97,7 @@
     },
 
     render: function() {
-      EndpointView.prototype.render.call(this);
+      Endpoint.prototype.render.call(this);
       this.plumbEndpoint.setAnchor(this.plumbAnchor);
       return this;
     }
@@ -106,11 +106,11 @@
   // Automatically aligns its endpoints to be evenly spaced on one side of the
   // state view.
   //
-  // NOTE: Must be used with `StateEndpointView` types, or its derivatives
-  var AligningEndpointCollection = EndpointViewCollection.extend({
+  // NOTE: Must be used with `StateEndpoint` types, or its derivatives
+  var AligningEndpointCollection = EndpointCollection.extend({
     addDefaults: _.defaults(
       {render: false},
-      EndpointViewCollection.prototype.addDefaults),
+      EndpointCollection.prototype.addDefaults),
 
     defaults: {
       type: StaticEndpoint,
@@ -148,13 +148,13 @@
 
     render: function() {
       this.realign();
-      EndpointViewCollection.prototype.render.call(this);
+      EndpointCollection.prototype.render.call(this);
     }
   });
 
   _.extend(exports, {
-    EndpointView: EndpointView,
-    EndpointViewCollection: EndpointViewCollection,
+    Endpoint: Endpoint,
+    EndpointCollection: EndpointCollection,
 
     StaticEndpoint: StaticEndpoint,
     AligningEndpointCollection: AligningEndpointCollection

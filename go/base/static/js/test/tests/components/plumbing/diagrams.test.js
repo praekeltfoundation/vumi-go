@@ -18,10 +18,10 @@ describe("go.components.plumbing (diagrams)", function() {
     tearDown();
   });
 
-  describe(".DiagramViewEndpoints", function() {
+  describe(".DiagramEndpoints", function() {
     var StateModel = stateMachine.StateModel,
-        StateView = plumbing.StateView,
-        DiagramViewEndpoints = plumbing.DiagramViewEndpoints;
+        State = plumbing.State,
+        DiagramEndpoints = plumbing.DiagramEndpoints;
 
     var endpoints,
         a1,
@@ -38,7 +38,7 @@ describe("go.components.plumbing (diagrams)", function() {
     };
 
     beforeEach(function() {
-      endpoints = new DiagramViewEndpoints(diagram);
+      endpoints = new DiagramEndpoints(diagram);
 
       var model = new StateModel({
         id: 'a3',
@@ -46,7 +46,7 @@ describe("go.components.plumbing (diagrams)", function() {
         right: [{id: 'a3R1'}, {id: 'a3R2'}]
       });
 
-      a3 = new StateView({diagram: diagram, model: model});
+      a3 = new State({diagram: diagram, model: model});
       a1 = diagram.states.get('a1');
     });
 
@@ -90,8 +90,8 @@ describe("go.components.plumbing (diagrams)", function() {
     });
   });
 
-  describe(".DiagramViewConnections", function() {
-    var DiagramViewConnections = plumbing.DiagramViewConnections;
+  describe(".DiagramConnections", function() {
+    var DiagramConnections = plumbing.DiagramConnections;
 
     var connections,
         leftToRight;
@@ -200,11 +200,11 @@ describe("go.components.plumbing (diagrams)", function() {
   });
 
   describe(".Diagram", function() {
-    var AppleStateView = testHelpers.AppleStateView,
-        BananaStateView = testHelpers.BananaStateView;
+    var AppleState = testHelpers.AppleState,
+        BananaState = testHelpers.BananaState;
 
-    var LeftToRightView = testHelpers.LeftToRightView,
-        RightToLeftView = testHelpers.RightToLeftView;
+    var LeftToRight = testHelpers.LeftToRight,
+        RightToLeft = testHelpers.RightToLeft;
 
     it("should keep track of all endpoints in the diagram", function() {
       assert.deepEqual(
@@ -223,10 +223,10 @@ describe("go.components.plumbing (diagrams)", function() {
       assert.deepEqual(rightToLeft.keys(), ['b1R2-a2L2']);
 
       leftToRight.each(
-        function(e) { assert.instanceOf(e, LeftToRightView); });
+        function(e) { assert.instanceOf(e, LeftToRight); });
 
       rightToLeft.each(
-        function(e) { assert.instanceOf(e, RightToLeftView); });
+        function(e) { assert.instanceOf(e, RightToLeft); });
 
       assert.deepEqual(
         diagram.connections.keys(),
@@ -240,8 +240,8 @@ describe("go.components.plumbing (diagrams)", function() {
       assert.deepEqual(apples.keys(), ['a1', 'a2']);
       assert.deepEqual(bananas.keys(), ['b1', 'b2']);
 
-      apples.each(function(e) { assert.instanceOf(e, AppleStateView); });
-      bananas.each(function(e) { assert.instanceOf(e, BananaStateView); });
+      apples.each(function(e) { assert.instanceOf(e, AppleState); });
+      bananas.each(function(e) { assert.instanceOf(e, BananaState); });
 
       assert.deepEqual(diagram.states.keys(), ['a1', 'a2', 'b1', 'b2']);
     });

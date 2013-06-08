@@ -16,9 +16,9 @@ describe("go.components.plumbing (connections)", function() {
     tearDown();
   });
 
-  describe(".ConnectionView", function() {
+  describe(".Connection", function() {
     var ConnectionModel = stateMachine.ConnectionModel,
-        ConnectionView = plumbing.ConnectionView;
+        Connection = plumbing.Connection;
 
     var diagram,
         x1,
@@ -51,7 +51,7 @@ describe("go.components.plumbing (connections)", function() {
 
     describe(".render", function() {
       it("should create the actual jsPlumb connection", function(done) {
-        var x1_y1 = new ConnectionView({
+        var x1_y1 = new Connection({
           diagram: diagram,
           model: new ConnectionModel({
             id: 'x1-y1',

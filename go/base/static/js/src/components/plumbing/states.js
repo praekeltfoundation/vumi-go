@@ -8,11 +8,11 @@
       SubviewCollectionGroup = structures.SubviewCollectionGroup;
 
   var plumbing = go.components.plumbing,
-      EndpointView = plumbing.EndpointView,
-      EndpointViewCollection = plumbing.EndpointViewCollection;
+      Endpoint = plumbing.Endpoint,
+      EndpointCollection = plumbing.EndpointCollection;
 
   // Keeps track of all the endpoints in the state view
-  var StateViewEndpoints = SubviewCollectionGroup.extend({
+  var StateEndpoints = SubviewCollectionGroup.extend({
     defaults: function() { return {type: this.state.endpointType}; },
     schema: function() { return _(this.state).result('endpointSchema'); },
 
@@ -23,16 +23,16 @@
     }
   });
 
-  var StateView = Backbone.View.extend({
+  var State = Backbone.View.extend({
     // A list of configuration objects, where each corresponds to a group of
     // endpoints or a single endpoint. Override to change the state schema.
     endpointSchema: [{attr: 'endpoints'}],
 
     // Override to change the default endpoint view type
-    endpointType: EndpointView,
+    endpointType: Endpoint,
 
     // Override to change the default endpoint view collection type
-    endpointCollectionType: EndpointViewCollection,
+    endpointCollectionType: EndpointCollection,
 
     id: function() { return this.model.id; },
 
@@ -44,7 +44,7 @@
       this.collection = options.collection;
 
       // Lookup of all the endpoints in this state
-      this.endpoints = new StateViewEndpoints(this);
+      this.endpoints = new StateEndpoints(this);
 
       this.model.on('change', this.render, this);
     },
@@ -62,17 +62,17 @@
   });
 
   // A collection of state views that form part of a diagram view
-  var StateViewCollection = SubviewCollection.extend({
-    defaults: {type: StateView},
+  var StateCollection = SubviewCollection.extend({
+    defaults: {type: State},
     opts: function() { return {diagram: this.view, collection: this}; }
   });
 
   _.extend(exports, {
     // Components intended to be used and extended
-    StateView: StateView,
-    StateViewCollection: StateViewCollection,
+    State: State,
+    StateCollection: StateCollection,
 
     // Secondary components
-    StateViewEndpoints: StateViewEndpoints
+    StateEndpoints: StateEndpoints
   });
 })(go.components.plumbing);

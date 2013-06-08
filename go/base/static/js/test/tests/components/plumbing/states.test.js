@@ -15,9 +15,9 @@ describe("go.components.plumbing (states)", function() {
     tearDown();
   });
 
-  describe(".StateView", function() {
-    var LeftEndpointView = testHelpers.LeftEndpointView,
-        RightEndpointView = testHelpers.RightEndpointView;
+  describe(".State", function() {
+    var LeftEndpoint = testHelpers.LeftEndpoint,
+        RightEndpoint = testHelpers.RightEndpoint;
 
     var diagram,
         a1;
@@ -34,8 +34,8 @@ describe("go.components.plumbing (states)", function() {
       assert.deepEqual(left.keys(), ['a1L1', 'a1L2']);
       assert.deepEqual(right.keys(), ['a1R1', 'a1R2']);
 
-      left.each(function(e) { assert.instanceOf(e, LeftEndpointView); });
-      right.each(function(e) { assert.instanceOf(e, RightEndpointView); });
+      left.each(function(e) { assert.instanceOf(e, LeftEndpoint); });
+      right.each(function(e) { assert.instanceOf(e, RightEndpoint); });
 
       assert.deepEqual(
         a1.endpoints.keys(),
