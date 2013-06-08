@@ -18,9 +18,9 @@ describe("go.components.plumbing (endpoints)", function() {
     tearDown();
   });
 
-  describe(".EndpointView", function() {
+  describe(".Endpoint", function() {
     var EndpointModel = stateMachine.EndpointModel,
-        EndpointView = plumbing.EndpointView;
+        Endpoint = plumbing.Endpoint;
 
     var x,
         x1;
@@ -41,7 +41,7 @@ describe("go.components.plumbing (endpoints)", function() {
 
     describe(".render", function() {
       it("should create the actual jsPlumb endpoint", function() {
-        var x4 = new EndpointView({
+        var x4 = new Endpoint({
           state: x,
           collection: x.endpoints.members.get('endpoints'),
           model: new EndpointModel({id: 'x4'})

@@ -10,51 +10,51 @@
       StateMachineModel = stateMachine.StateMachineModel;
 
   var plumbing = go.components.plumbing,
-      EndpointView = plumbing.EndpointView,
-      StateView = plumbing.StateView,
-      ConnectionView = plumbing.ConnectionView,
-      DiagramView = plumbing.DiagramView;
+      Endpoint = plumbing.Endpoint,
+      State = plumbing.State,
+      Connection = plumbing.Connection,
+      Diagram = plumbing.Diagram;
 
   // Mocks
   // -----
 
-  var MockEndpointView = EndpointView.extend({
+  var MockEndpoint = Endpoint.extend({
     destroy: function() {
-      EndpointView.prototype.destroy.call(this);
+      Endpoint.prototype.destroy.call(this);
       this.destroyed = true;
       return this;
     },
 
     render: function() {
-      EndpointView.prototype.render.call(this);
+      Endpoint.prototype.render.call(this);
       this.rendered = true;
       return this;
     }
   });
 
-  var MockStateView = StateView.extend({
+  var MockState = State.extend({
     destroy: function() {
-      StateView.prototype.destroy.call(this);
+      State.prototype.destroy.call(this);
       this.destroyed = true;
       return this;
     },
 
     render: function() {
-      StateView.prototype.render.call(this);
+      State.prototype.render.call(this);
       this.rendered = true;
       return this;
     }
   });
 
-  var MockConnectionView = ConnectionView.extend({
+  var MockConnection = Connection.extend({
     destroy: function() {
-      ConnectionView.prototype.destroy.call(this);
+      Connection.prototype.destroy.call(this);
       this.destroyed = true;
       return this;
     },
 
     render: function() {
-      ConnectionView.prototype.render.call(this);
+      Connection.prototype.render.call(this);
       this.rendered = true;
       return this;
     }
@@ -63,13 +63,13 @@
   // Simple diagram example
   // ----------------------
 
-  var SimpleEndpointView = MockEndpointView.extend({});
+  var SimpleEndpoint = MockEndpoint.extend({});
 
-  var SimpleStateView = MockStateView.extend({
-    endpointType: SimpleEndpointView
+  var SimpleState = MockState.extend({
+    endpointType: SimpleEndpoint
   });
 
-  var SimpleDiagramView = DiagramView.extend({stateType: SimpleStateView});
+  var SimpleDiagram = Diagram.extend({stateType: SimpleState});
 
   var simpleModelData = {
     states: [{
@@ -94,7 +94,7 @@
   };
 
   var newSimpleDiagram = function() {
-    return new SimpleDiagramView({
+    return new SimpleDiagram({
       el: '#diagram',
       model: new StateMachineModel(simpleModelData)
     });
@@ -135,38 +135,38 @@
     }]
   });
 
-  var ComplexEndpointView = MockEndpointView.extend(),
-      LeftEndpointView = ComplexEndpointView.extend(),
-      RightEndpointView = ComplexEndpointView.extend();
+  var ComplexEndpoint = MockEndpoint.extend(),
+      LeftEndpoint = ComplexEndpoint.extend(),
+      RightEndpoint = ComplexEndpoint.extend();
 
-  var ComplexStateView = MockStateView.extend({
+  var ComplexState = MockState.extend({
     endpointSchema: [
-      {attr: 'left', type: LeftEndpointView},
-      {attr: 'right', type: RightEndpointView}]
+      {attr: 'left', type: LeftEndpoint},
+      {attr: 'right', type: RightEndpoint}]
   });
 
-  var AppleStateView = ComplexStateView.extend(),
-      BananaStateView = ComplexStateView.extend();
+  var AppleState = ComplexState.extend(),
+      BananaState = ComplexState.extend();
 
-  var ComplexConnectionView = MockConnectionView.extend(),
-      LeftToRightView = ComplexConnectionView.extend(),
-      RightToLeftView = ComplexConnectionView.extend();
+  var ComplexConnection = MockConnection.extend(),
+      LeftToRight = ComplexConnection.extend(),
+      RightToLeft = ComplexConnection.extend();
 
-  var ComplexDiagramView = DiagramView.extend({
+  var ComplexDiagram = Diagram.extend({
     stateSchema: [
-      {attr: 'apples', type: AppleStateView},
-      {attr: 'bananas', type: BananaStateView}
+      {attr: 'apples', type: AppleState},
+      {attr: 'bananas', type: BananaState}
     ],
     connectionSchema: [{
       attr: 'leftToRight',
-      type: LeftToRightView,
-      sourceType: LeftEndpointView,
-      targetType: RightEndpointView
+      type: LeftToRight,
+      sourceType: LeftEndpoint,
+      targetType: RightEndpoint
     }, {
       attr: 'rightToLeft',
-      type: RightToLeftView,
-      sourceType: RightEndpointView,
-      targetType: LeftEndpointView
+      type: RightToLeft,
+      sourceType: RightEndpoint,
+      targetType: LeftEndpoint
     }]
   });
 
@@ -205,7 +205,7 @@
   };
 
   var newComplexDiagram = function() {
-    return new ComplexDiagramView({
+    return new ComplexDiagram({
       el: '#diagram',
       model: new ComplexStateMachineModel(complexModelData)
     });
@@ -227,31 +227,31 @@
   };
 
   _.extend(exports, {
-    MockEndpointView: MockEndpointView,
-    MockStateView: MockStateView,
-    MockConnectionView: MockConnectionView,
+    MockEndpoint: MockEndpoint,
+    MockState: MockState,
+    MockConnection: MockConnection,
 
-    SimpleEndpointView: SimpleEndpointView,
-    SimpleStateView: SimpleStateView,
-    SimpleDiagramView: SimpleDiagramView,
+    SimpleEndpoint: SimpleEndpoint,
+    SimpleState: SimpleState,
+    SimpleDiagram: SimpleDiagram,
 
     simpleModelData: simpleModelData,
     newSimpleDiagram: newSimpleDiagram,
 
-    ComplexEndpointView: ComplexEndpointView,
-    LeftEndpointView: LeftEndpointView,
-    RightEndpointView: RightEndpointView,
+    ComplexEndpoint: ComplexEndpoint,
+    LeftEndpoint: LeftEndpoint,
+    RightEndpoint: RightEndpoint,
 
-    ComplexStateView: ComplexStateView,
-    AppleStateView: AppleStateView,
-    BananaStateView: BananaStateView,
+    ComplexState: ComplexState,
+    AppleState: AppleState,
+    BananaState: BananaState,
 
-    ComplexConnectionView: ComplexConnectionView,
-    LeftToRightView: LeftToRightView,
-    RightToLeftView: RightToLeftView,
+    ComplexConnection: ComplexConnection,
+    LeftToRight: LeftToRight,
+    RightToLeft: RightToLeft,
 
     ComplexStateMachineModel: ComplexStateMachineModel,
-    ComplexDiagramView: ComplexDiagramView,
+    ComplexDiagram: ComplexDiagram,
 
     complexModelData: complexModelData,
     newComplexDiagram: newComplexDiagram,

@@ -10,13 +10,13 @@
 
   var plumbing = go.components.plumbing,
       idOfConnection = plumbing.idOfConnection,
-      StateView = plumbing.StateView,
-      ConnectionView = plumbing.ConnectionView,
-      StateViewCollection = plumbing.StateViewCollection,
-      ConnectionViewCollection = plumbing.ConnectionViewCollection;
+      State = plumbing.State,
+      Connection = plumbing.Connection,
+      StateCollection = plumbing.StateCollection,
+      ConnectionCollection = plumbing.ConnectionCollection;
 
   // Keeps track of all the endpoints in the state diagram
-  var DiagramViewEndpoints = ViewCollectionGroup.extend({
+  var DiagramEndpoints = ViewCollectionGroup.extend({
     constructor: function(diagram) {
       ViewCollectionGroup.prototype.constructor.call(this);
       this.diagram = diagram;
@@ -36,7 +36,7 @@
 
   // Keeps connections between connection models in sync with the jsPlumb
   // connections in the UI
-  var DiagramViewConnections = SubviewCollectionGroup.extend({
+  var DiagramConnections = SubviewCollectionGroup.extend({
     defaults: function() {
       // Get the default endpoint type for the diagram's default state type
       var endpointType = this.diagram
@@ -140,7 +140,7 @@
   });
 
   // Keeps track of all the states in a state diagram
-  var DiagramViewStates = SubviewCollectionGroup.extend({
+  var DiagramStates = SubviewCollectionGroup.extend({
     defaults: function() { return {type: this.diagram.stateType}; },
     schema: function() { return _(this.diagram).result('stateSchema'); },
 
@@ -153,34 +153,34 @@
 
   // The main view for the state diagram. Delegates interactions between
   // the states and their endpoints.
-  var DiagramView = Backbone.View.extend({
+  var Diagram = Backbone.View.extend({
     // Override to change how the states map to the diagram view's model
     stateSchema: [{attr: 'states'}],
 
     // Override to change the default state view type
-    stateType: StateView,
+    stateType: State,
 
     // Override to change the default state view collection type
-    stateCollectionType: StateViewCollection,
+    stateCollectionType: StateCollection,
 
     // Override to change how the connections map to the diagram view's model
     connectionSchema: [{attr: 'connections'}],
 
     // Override to change the connection view type
-    connectionType: ConnectionView,
+    connectionType: Connection,
 
     // Override to change the default connection view collection type
-    connectionCollectionType: ConnectionViewCollection,
+    connectionCollectionType: ConnectionCollection,
 
     initialize: function() {
       // Lookup/Manager of all the states in the diagram
-      this.states = new DiagramViewStates(this);
+      this.states = new DiagramStates(this);
 
       // Lookup/Manager of all the endpoints in the diagram
-      this.endpoints = new DiagramViewEndpoints(this);
+      this.endpoints = new DiagramEndpoints(this);
 
       // Lookup/Manager of all the connections in the diagram
-      this.connections = new DiagramViewConnections(this);
+      this.connections = new DiagramConnections(this);
     },
 
     render: function() {
@@ -192,11 +192,11 @@
 
   _.extend(exports, {
     // Components intended to be used and extended
-    DiagramView: DiagramView,
+    Diagram: Diagram,
 
     // Secondary components
-    DiagramViewEndpoints: DiagramViewEndpoints,
-    DiagramViewConnections: DiagramViewConnections,
-    DiagramViewStates: DiagramViewStates
+    DiagramEndpoints: DiagramEndpoints,
+    DiagramConnections: DiagramConnections,
+    DiagramStates: DiagramStates
   });
 })(go.components.plumbing);

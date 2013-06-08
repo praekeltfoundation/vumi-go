@@ -8,7 +8,7 @@
       SubviewCollection = structures.SubviewCollection;
 
   var plumbing = go.components.plumbing,
-      EndpointView = plumbing.EndpointView;
+      Endpoint = plumbing.Endpoint;
 
   var idOfConnection = function(sourceId, targetId) {
     return sourceId + '-' + targetId;
@@ -18,7 +18,7 @@
   //
   // Options:
   // - diagram: The diagram this connection is part of
-  var ConnectionView = Backbone.View.extend({
+  var Connection = Backbone.View.extend({
     // Override to change what params are passed to jsPlumb
     plumbOptions: {},
 
@@ -68,11 +68,11 @@
   });
 
   // A collection of connections views that form part of a diagram view
-  var ConnectionViewCollection = SubviewCollection.extend({
+  var ConnectionCollection = SubviewCollection.extend({
     defaults: {
-      type: ConnectionView,
-      sourceType: EndpointView,
-      targetType: EndpointView
+      type: Connection,
+      sourceType: Endpoint,
+      targetType: Endpoint
     },
 
     opts: function() { return {diagram: this.diagram, collection: this}; },
@@ -95,7 +95,7 @@
 
   _.extend(exports, {
     idOfConnection: idOfConnection,
-    ConnectionView: ConnectionView,
-    ConnectionViewCollection: ConnectionViewCollection
+    Connection: Connection,
+    ConnectionCollection: ConnectionCollection
   });
 })(go.components.plumbing);
