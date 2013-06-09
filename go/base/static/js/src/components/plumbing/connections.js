@@ -42,8 +42,9 @@
 
     _plumbOptions: function() {
       return _.defaults({
-        source: this.source.plumbEndpoint,
-        target: this.target.plumbEndpoint
+        source: this.source.$el,
+        target: this.target.$el,
+        container: this.diagram.$el
       }, _(this).result('plumbOptions'));
     },
 
