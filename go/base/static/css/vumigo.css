@@ -138,8 +138,16 @@ button {
   padding-left: 20px;
   padding-right: 20px;
 }
+.content .actions .right {
+  padding: 0 20px;
+  overflow: hidden;
+}
 .content .indent {
   margin: 2em 1em;
+}
+.content .actions .left,
+.content .sidebar {
+  max-width: 210px;
 }
 .content .sidebar .nav-list a {
   color: #2f3436;
@@ -176,9 +184,6 @@ button {
   color: #54a6de !important;
   background: transparent !important;
   text-decoration: underline;
-}
-.span9 {
-  padding-right: 20px;
 }
 .nav-stacked a:hover {
   background: none !important;
@@ -314,5 +319,5 @@ button {
   cursor: pointer;
 }
 .table-form-view-buttons {
-  margin-right: 1em;
+  margin: 0 1em 0 0;
 }

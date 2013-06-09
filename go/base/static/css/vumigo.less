@@ -157,6 +157,11 @@ a:link, button {
         padding-right:20px;
       }
     }
+
+    .right {
+      padding:0 20px;
+      overflow:hidden;
+    }
   }
 
 
@@ -167,7 +172,17 @@ a:link, button {
   .indent {
     margin:2em 1em;
   }
-}
+
+  // this is experimental, because the site is fluid the sidebar tends
+  // to grow really long and kinda looks a bit ugly.
+  // this will prevent the sidebar from growing too long.
+  .actions .left, .sidebar {
+    max-width:210px;
+  }
+
+} // end content
+
+
 
 .content .sidebar .nav-list {
 
@@ -192,6 +207,8 @@ a:link, button {
   }
 }
 
+
+
 .content .sidebar .extra-actions {
 
   margin-bottom:1em;
@@ -207,10 +224,6 @@ a:link, button {
     background:transparent !important;
     text-decoration:underline;
   }
-}
-
-.span9 {
-  padding-right:20px;
 }
 
 

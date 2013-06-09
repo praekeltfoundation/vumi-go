@@ -12,10 +12,16 @@
 {% endblock %}
 
 {% block content_actions_right %}
-    <div class="components-table-buttons pull-left">
-        <button class="btn" disabled="disabled" data-table-id="messages">Export CSV</button>
-        <button class="btn" disabled="disabled" data-table-id="messages">Delete</button>
+    <div class="pull-left">
+        <button class="btn">Download .csv</button>
+
     </div>
+    <div class="table-form-view-buttons pull-left">
+        &nbsp;
+        With message:
+        <button class="btn" disabled="disabled">Delete</button>
+    </div>
+    
 
     <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
         <input type="text" class="search-query" placeholder="Search" name="{{ search_form.query.name }}" value="{{ search_form.query.value|default:"" }}">

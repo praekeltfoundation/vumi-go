@@ -6,12 +6,11 @@
 
 {# TODO, title #}
 {% block content_title %}
-    <a href="{% url 'campaigns:incoming_list' conversation.key %}">Messages</a>
-    &raquo;
-    {{ contact.msisdn }}
+    Messages from/ to {{ contact.msisdn }}
 {% endblock %}
 
 {% block content_actions_left %}
+    <button class="btn btn-primary" href="{% url 'campaigns:incoming_list' conversation.key %}">Back to messages</button>
 {% endblock %}
 
 {% block content_actions_right %}
