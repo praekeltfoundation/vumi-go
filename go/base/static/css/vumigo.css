@@ -4,6 +4,7 @@ body {
 }
 .main-container {
   min-width: 650px;
+  padding: 0 25px;
 }
 .footer {
   color: #aaa;
