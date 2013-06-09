@@ -20,9 +20,15 @@
     width: 14,
     height: 14,
 
+    // Override to set whether not the endpoint can source connections
+    isSource: true,
+
+    // Override to set whether the element can be the target of connections
+    isTarget: true,
+
     // Override to change what params are passed to jsPlumb when configuring
     // the element as a connection source
-    plumbSourceOpts: {anchor: 'Continuous'},
+    plumbSourceOpts: {anchor: 'Continuous', maxConnections: 1},
 
     // Override to change what params are passed to jsPlumb when configuring
     // the element as a connection target
@@ -36,8 +42,13 @@
       // the collection of endpoint views that this endpoint is part of
       this.collection = options.collection;
 
-      jsPlumb.makeSource(this.$el, _(this).result('plumbSourceOpts'));
-      jsPlumb.makeTarget(this.$el, _(this).result('plumbTargetOpts'));
+      if (this.isSource) {
+        jsPlumb.makeSource(this.$el, _(this).result('plumbSourceOpts'));
+      }
+
+      if (this.isTarget) {
+        jsPlumb.makeTarget(this.$el, _(this).result('plumbTargetOpts'));
+      }
     },
 
     destroy: function() {
