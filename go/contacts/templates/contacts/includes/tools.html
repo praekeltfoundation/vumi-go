@@ -56,6 +56,21 @@
     </form>
 </div><!--/uplContactFrm-->
 
+<div class="modal hide fade" id="delContact">
+  <form method="post" action="">
+    {% csrf_token %}
+    <input type="hidden" name="_delete">
+    <div class="modal-body">
+      Are you sure you want to delete this item?
+    </div>
+    <div class="modal-footer">
+      <a class="btn" data-dismiss="modal" href="#">Cancel</a>
+      <button type="submit" class="btn btn-primary">OK</button>
+    </div>
+  </form>
+</div>
+<!--/delContact-->
+
 <div class="modal hide fade" id="expContactFrm">
     <div class="modal-header">
         <a class="close" data-dismiss="modal">×</a>
