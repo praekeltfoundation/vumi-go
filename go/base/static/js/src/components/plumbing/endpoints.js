@@ -28,11 +28,11 @@
 
     // Override to change what params are passed to jsPlumb when configuring
     // the element as a connection source
-    plumbSourceOpts: {anchor: 'Continuous', maxConnections: 1},
+    plumbSourceOptions: {anchor: 'Continuous', maxConnections: 1},
 
     // Override to change what params are passed to jsPlumb when configuring
     // the element as a connection target
-    plumbTargetOpts: {anchor: 'Continuous'},
+    plumbTargetOptions: {anchor: 'Continuous'},
 
     initialize: function(options) {
       // the state view that this endpoint is part of
@@ -43,11 +43,11 @@
       this.collection = options.collection;
 
       if (this.isSource) {
-        jsPlumb.makeSource(this.$el, _(this).result('plumbSourceOpts'));
+        jsPlumb.makeSource(this.$el, _(this).result('plumbSourceOptions'));
       }
 
       if (this.isTarget) {
-        jsPlumb.makeTarget(this.$el, _(this).result('plumbTargetOpts'));
+        jsPlumb.makeTarget(this.$el, _(this).result('plumbTargetOptions'));
       }
     },
 
