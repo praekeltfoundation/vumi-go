@@ -70,9 +70,9 @@ describe("go.components.plumbing (endpoints)", function() {
     });
   });
 
-  describe(".StaticEndpointView", function() {
+  describe(".ParametricEndpointView", function() {
     var EndpointModel = stateMachine.EndpointModel,
-        StaticEndpointView = plumbing.StaticEndpointView;
+        ParametricEndpointView = plumbing.ParametricEndpointView;
 
     var state,
         endpoint;
@@ -86,7 +86,7 @@ describe("go.components.plumbing (endpoints)", function() {
         .width(200)
         .height(300);
 
-      endpoint = new StaticEndpointView({
+      endpoint = new ParametricEndpointView({
         state: state,
         collection: state.endpoints.members.get('endpoints'),
         model: new EndpointModel({id: 'x4'})
@@ -161,7 +161,7 @@ describe("go.components.plumbing (endpoints)", function() {
 
   describe(".AligningEndpointCollection", function() {
     var EndpointModel = stateMachine.EndpointModel,
-        StaticEndpointView = plumbing.StaticEndpointView;
+        ParametricEndpointView = plumbing.ParametricEndpointView;
 
     var AligningEndpointCollection
       = plumbing.AligningEndpointCollection;
@@ -174,15 +174,15 @@ describe("go.components.plumbing (endpoints)", function() {
       }
     });
 
-    var MockStaticEndpointView = StaticEndpointView.extend({
+    var MockParametricEndpointView = ParametricEndpointView.extend({
       reposition: function(t) {
-        StaticEndpointView.prototype.reposition.call(this, t);
+        ParametricEndpointView.prototype.reposition.call(this, t);
         this.t = t;
         return this;
       },
 
       render: function() {
-        StaticEndpointView.prototype.render.call(this);
+        ParametricEndpointView.prototype.render.call(this);
         this.rendered = true;
         return this;
       }
@@ -204,7 +204,7 @@ describe("go.components.plumbing (endpoints)", function() {
       endpoints = new MockAligningEndpointCollection({
         view: x,
         attr: 'endpoints',
-        type: MockStaticEndpointView,
+        type: MockParametricEndpointView,
         margin: 0
       });
     });

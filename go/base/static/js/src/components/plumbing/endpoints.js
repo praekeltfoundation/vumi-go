@@ -74,9 +74,9 @@
   // Derived components
   // ------------------
 
-  // An endpoint view type which remains in the same position until it is
-  // repositioned.
-  var StaticEndpointView = EndpointView.extend({
+  // An endpoint view type which resides on a side of the state, and
+  // can be positioned along the side based on a parameter t.
+  var ParametricEndpointView = EndpointView.extend({
     defaults: function() {
       return {
         side: 'left',
@@ -86,8 +86,6 @@
         }
       };
     },
-
-    // Offset for positioning the endpoint on the side of the state
 
     initialize: function(options) {
       EndpointView.prototype.initialize.call(this, options);
@@ -149,14 +147,14 @@
   // Automatically aligns its endpoints to be evenly spaced on one side of the
   // state view.
   //
-  // NOTE: Must be used with `StaticEndpointView` types, or its derivatives
+  // NOTE: Must be used with `ParametricEndpointView` types, or its derivatives
   var AligningEndpointCollection = EndpointViewCollection.extend({
     addDefaults: _.defaults(
       {render: false},
       EndpointViewCollection.prototype.addDefaults),
 
     defaults: {
-      type: StaticEndpointView,
+      type: ParametricEndpointView,
       side: 'left',  // the side of the state the collection is drawn on
       margin: 0.005  // margin spacing on each end of the state side
     },
@@ -199,7 +197,7 @@
     EndpointView: EndpointView,
     EndpointViewCollection: EndpointViewCollection,
 
-    StaticEndpointView: StaticEndpointView,
+    ParametricEndpointView: ParametricEndpointView,
     AligningEndpointCollection: AligningEndpointCollection
   });
 })(go.components.plumbing);
