@@ -271,6 +271,7 @@ body {
   font-weight: normal;
 }
 .table-form-view {
+  margin-top: 1em;
   overflow: hidden;
 }
 .table-form-view td,
