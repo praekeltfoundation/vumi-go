@@ -1,16 +1,6 @@
 {% extends "contacts/base.html" %}
 {% load url from future %}
 
-
-{% block content_extraclass %}contacts{% endblock %}
-
-{% block content_title %}
-    <a href="{% url 'contacts:groups' %}">Groups</a>
-    &raquo;
-    {{ group.name }}
-{% endblock %}
-
-
 {% block content_actions_left %}
 {% endblock %}
 
@@ -29,7 +19,6 @@
                 <li><a data-toggle="modal" href="#delGroup"><i class="icon-trash"></i> Remove Group</a></li>
             </ul>
         </div>
-
     </div>
 {% endblock %}
 

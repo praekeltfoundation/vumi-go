@@ -1,17 +1,6 @@
 {% extends "contacts/base.html" %}
 {% load url from future %}
 
-
-{% block content_title %}
-    <a href="{% url 'contacts:people' %}">Contacts</a>
-    &raquo;
-    {% if contact %}
-        {{ contact }}
-    {% else %}
-        New contact
-    {% endif %}
-{% endblock %}
-
 {% block content_actions_left %}
     <button class="btn btn-primary" data-toggle="modal" data-target="#uplContacts">Import contacts</button>
 {% endblock %}
