@@ -157,16 +157,24 @@ button {
   margin-left: -20px;
 }
 .content .sidebar .nav-list a.active:hover {
+  color: #fff;
   background: #b41c30;
 }
 .content .sidebar .extra-actions {
   margin-bottom: 1em;
 }
-.content .sidebar .extra-actions a {
+.content .sidebar .extra-actions a,
+.content .sidebar .extra-actions a.active {
   color: #0088cc;
 }
+.content .sidebar .extra-actions a.active {
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
 .content .sidebar .extra-actions a:hover {
-  color: ##54a6de;
+  color: #54a6de !important;
+  background: transparent !important;
   text-decoration: underline;
 }
 .span9 {

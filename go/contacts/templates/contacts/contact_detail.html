@@ -13,11 +13,16 @@
 {% endblock %}
 
 {% block content_actions_left %}
+    <button class="btn btn-primary" data-toggle="modal" data-target="#uplContacts">Import contacts</button>
 {% endblock %}
 
 {% block content_actions_right %}
+    {% if contact %}
+    <div class="pull-left">
+        <button class="btn" data-toggle="modal" data-target="#delContact">Delete</button>
+    </div>
+    {% endif %}
 {% endblock %}
-
 
 {% block content_main_list %}
     <form class="form-horizontal" method="post" action="">
@@ -48,4 +53,9 @@
             </div>
         </fieldset>
     </form>
+{% endblock %}
+
+{% block modals %}
+    {# TODO delete contact modal #}
+    {% include "contacts/includes/tools.html" with show_groups=1 save_group=1 %}
 {% endblock %}

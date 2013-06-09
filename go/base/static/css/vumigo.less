@@ -187,6 +187,7 @@ a:link, button {
     margin-left:-20px;
   }
   a.active:hover {
+    color:#fff;
     background:#b41c30;
   }
 }
@@ -195,9 +196,15 @@ a:link, button {
 
   margin-bottom:1em;
   
-  a { color:#0088cc; }
+  a, a.active { color:#0088cc; }
+  a.active {
+    margin:0;
+    border:0;
+    background:transparent;
+  }
   a:hover {
-    color:##54a6de;
+    color:#54a6de !important;
+    background:transparent !important;
     text-decoration:underline;
   }
 }
