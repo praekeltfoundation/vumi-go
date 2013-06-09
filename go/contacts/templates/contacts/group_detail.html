@@ -2,24 +2,22 @@
 {% load url from future %}
 
 {% block content_actions_left %}
+    <button class="btn btn-primary" data-toggle="modal" data-target="#uplContactFrm">Import contacts</button>
 {% endblock %}
 
 {% block content_actions_right %}
-    <div class="pull-right">
-        
-        <div class="btn-group">
-            <a class="btn btn-success" href="#" data-toggle="dropdown"><i class="icon-user white"></i> Group Actions</a>
-            <a class="btn btn-success dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
-            <ul class="dropdown-menu">
-                <li><a href="{% url 'contacts:new_person' %}"><i class="icon-user"></i> New Contact</a></li>
-                <li><a data-toggle="modal" href="#uplContactFrm"><i class="icon-upload"></i> Upload Contacts</a></li>
-                <li><a data-toggle="modal" href="#expContactFrm"><i class="icon-envelope"></i> Export Contacts</a></li>
-                <li><a data-toggle="modal" href="#editGroup"><i class="icon-edit"></i> Edit Group</a></li>
-                <li><a data-toggle="modal" href="#emptyGroup"><i class="icon-fire"></i> Delete Group's Contacts</a></li>
-                <li><a data-toggle="modal" href="#delGroup"><i class="icon-trash"></i> Remove Group</a></li>
-            </ul>
-        </div>
+    <div class="table-form-view-buttons pull-left">
+        <button class="btn" data-action="delete" disabled="disabled">Delete</button>
+        <button class="btn" data-toggle="modal" data-target="#expContactFrm" disabled="disabled">Export</button>
     </div>
+    <div class="pull-left ">
+        With group: 
+        <button class="btn" data-toggle="modal" data-target="#delGroup">Delete</button>
+        <button class="btn" data-toggle="modal" data-target="#editGroup">Rename</button>
+        <button class="btn" data-toggle="modal" data-target="#startCampaign">Start campaign</button>
+    </div>
+
+    
 {% endblock %}
 
 
@@ -33,9 +31,10 @@
     {{ block.super }}
     var tableFormView = new go.components.tables.TableFormView({
         el: '.table-form-view',
+        actions: '.table-form-view-buttons button'
     });
 {% endblock %}
 
 {% block modals %}
-    {% include "contacts/includes/tools.html" %}
+    {% include "contacts/includes/tools.html" with group=group %}
 {% endblock %}

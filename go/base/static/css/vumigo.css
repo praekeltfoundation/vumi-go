@@ -313,3 +313,6 @@ button {
 .table-form-view tr[data-url] {
   cursor: pointer;
 }
+.table-form-view-buttons {
+  margin-right: 1em;
+}
