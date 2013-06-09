@@ -6,6 +6,11 @@ body {
   color: #2f3436;
 }
 
+a:link, button {
+  .transition(color .1s, background .1s);
+}
+
+
 .main-container {
   // prevent wrapping.
   min-width:650px;
@@ -111,13 +116,25 @@ body {
       
       padding:0 12px;
       margin:0;
-      color:#000;
+      color:#2F3436;
 
-      a { color:#000; }
+      a { color:#2F3436; }
+
+      a:hover {
+        color:#000;
+        text-decoration:none;
+      }
     }
 
-    .pull-right {
+
+    .breadcrumbs {
       text-align:right;
+      padding:0 12px;
+
+        .navbar-search {
+          margin:0;
+        }
+
     }
   }
 
@@ -142,9 +159,6 @@ body {
     }
   }
 
-  .navbar-search {
-    margin:0;
-  }
 
   // this cannot be applied to a row-fluid or span element.
   // it's unfortunate, but that's the way the cookie crumbles.
@@ -215,5 +229,6 @@ body {
 }
 
 @import "campaigns.less";
+@import "contacts.less";
 @import "accounts.less";
 @import "tables.less";

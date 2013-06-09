@@ -2,6 +2,14 @@ body {
   background: #2f3436;
   color: #2f3436;
 }
+a:link,
+button {
+  -webkit-transition: color 0.1s, background 0.1s;
+  -moz-transition: color 0.1s, background 0.1s;
+  -o-transition: color 0.1s, background 0.1s;
+  -ms-transition: color 0.1s, background 0.1s;
+  transition: color 0.1s, background 0.1s;
+}
 .main-container {
   min-width: 650px;
   padding: 0 25px;
@@ -94,13 +102,21 @@ body {
   font-weight: bold;
   padding: 0 12px;
   margin: 0;
-  color: #000;
+  color: #2F3436;
 }
 .content .header h1 a {
-  color: #000;
+  color: #2F3436;
 }
-.content .header .pull-right {
+.content .header h1 a:hover {
+  color: #000;
+  text-decoration: none;
+}
+.content .header .breadcrumbs {
   text-align: right;
+  padding: 0 12px;
+}
+.content .header .breadcrumbs .navbar-search {
+  margin: 0;
 }
 .content .actions {
   height: 50px;
@@ -121,9 +137,6 @@ body {
   margin-left: -5px;
   padding-left: 20px;
   padding-right: 20px;
-}
-.content .navbar-search {
-  margin: 0;
 }
 .content .indent {
   margin: 2em 1em;
@@ -282,6 +295,7 @@ body {
 .table-form-view td:first-child,
 .table-form-view th:first-child {
   text-align: center;
+  cursor: pointer;
 }
 .table-form-view thead td,
 .table-form-view thead tr {
