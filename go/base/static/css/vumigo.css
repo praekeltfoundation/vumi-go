@@ -279,6 +279,10 @@ body {
   color: #2f3436;
   vertical-align: middle;
 }
+.table-form-view td:first-child,
+.table-form-view th:first-child {
+  text-align: center;
+}
 .table-form-view thead td,
 .table-form-view thead tr {
   color: #a7aaac;
