@@ -7,9 +7,7 @@
 {% block content_title %}Users{% endblock %}
 
 {% block content_actions_left %}
-    {% if is_admin %}
-        <a href="{% url 'auth_user_create' %}" class="btn btn-primary">New User</a>
-    {% endif %}
+    <a href="{% url 'auth_user_create' %}" class="btn btn-primary">New User</a>
 {% endblock %}
 
 {% block content_actions_right %}
