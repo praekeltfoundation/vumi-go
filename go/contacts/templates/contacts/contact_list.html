@@ -5,7 +5,6 @@
     <button class="btn btn-primary" data-toggle="modal" data-target="#uplContacts">Import contacts</button>
 {% endblock %}
 
-
 {% block content_actions_right %}
     <div class="table-form-view-buttons pull-left">
         <button class="btn" data-action="delete" disabled="disabled">Delete</button>
@@ -23,7 +22,6 @@
 
 
 {% block ondomready %}
-    {{ block.super }}
     var tableFormView = new go.components.tables.TableFormView({
         el: '.table-form-view',
         actions: '.table-form-view-buttons button',
