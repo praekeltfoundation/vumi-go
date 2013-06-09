@@ -77,21 +77,25 @@
   // An endpoint view type which remains in the same position until it is
   // repositioned.
   var StaticEndpointView = EndpointView.extend({
-    defaults: {side: 'left'},
+    defaults: function() {
+      return {
+        side: 'left',
+        offset: {
+          left: this.width * -0.5,
+          top: this.height * -0.5
+        }
+      };
+    },
+
+    // Offset for positioning the endpoint on the side of the state
 
     initialize: function(options) {
       EndpointView.prototype.initialize.call(this, options);
       _(options).defaults(_(this).result('defaults'));
 
       this.side = options.side;
+      this.offset = options.offset;
       this.positioner = this.positioners[this.side];
-
-      // Offset for the endpoint's center to be the 'pivot' point when
-      // positioning the endpoint on the side of the state
-      this._offset = {
-        left: this.width * -0.5,
-        top: this.height * -0.5
-      };
 
       this.reposition(0.5);
     },
@@ -99,29 +103,29 @@
     positioners: {
       left: function(t) {
         return {
-          left: this._offset.left,
-          top: this._offset.top + (t * this.$state.height())
+          left: this.offset.left,
+          top: this.offset.top + (t * this.$state.height())
         };
       },
 
       right: function(t) {
         return {
-          left: this._offset.left + this.$state.width(),
-          top: this._offset.top + (t * this.$state.height())
+          left: this.offset.left + this.$state.width(),
+          top: this.offset.top + (t * this.$state.height())
         };
       },
 
       top: function(t) {
         return {
-          left: this._offset.left + (t * this.$state.width()),
-          top: this._offset.top
+          left: this.offset.left + (t * this.$state.width()),
+          top: this.offset.top
         };
       },
 
       bottom: function(t) {
         return {
-          left: this._offset.left + (t * this.$state.width()),
-          top: this._offset.top + this.$state.height()
+          left: this.offset.left + (t * this.$state.width()),
+          top: this.offset.top + this.$state.height()
         };
       }
     },
