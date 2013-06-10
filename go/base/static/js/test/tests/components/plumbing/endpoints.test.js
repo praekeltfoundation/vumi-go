@@ -25,6 +25,12 @@ describe("go.components.plumbing (endpoints)", function() {
     var EndpointModel = stateMachine.EndpointModel,
         EndpointView = plumbing.EndpointView;
 
+    var ToyEndpointView = EndpointView.extend({
+      width: 20,
+      height: 25,
+      labelled: true
+    });
+
     var x,
         x1;
 
@@ -46,7 +52,7 @@ describe("go.components.plumbing (endpoints)", function() {
       var x4;
 
       beforeEach(function() {
-        x4 = new EndpointView({
+        x4 = new ToyEndpointView({
           state: x,
           collection: x.endpoints.members.get('endpoints'),
           model: new EndpointModel({id: 'x4'})
@@ -60,12 +66,15 @@ describe("go.components.plumbing (endpoints)", function() {
       });
 
       it("should set the dimensions of the endpoint", function() {
-        x4.width = 20;
-        x4.height = 25;
-
         x4.render();
         assert.equal($('#x #x4').width(), 20);
         assert.equal($('#x #x4').height(), 25);
+      });
+
+      it("should add a label to the endpoint if labelling is enabled",
+      function() {
+        x4.render();
+        assert(oneElExists('#x #x4 .label'));
       });
     });
   });
