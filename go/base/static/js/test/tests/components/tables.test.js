@@ -1,6 +1,6 @@
 describe("go.components.tables", function() {
 
-  describe(".TableFormView", function() {
+  describe.skip(".TableFormView", function() {
 
     var $buttons;
     var $form;
@@ -33,7 +33,6 @@ describe("go.components.tables", function() {
       assert.isTrue($form.find('thead input:checkbox').prop('checked'));
     });
 
-    /*
     it('should execute `onCheckedCallback` event when a checkbox is toggled', function(done) {
 
       tableFormView.options.onCheckedCallback = function() {
@@ -58,7 +57,6 @@ describe("go.components.tables", function() {
       assert.isTrue($buttons.find('button').eq(0).prop('disabled'));
 
     });
-    */
 
 
 
