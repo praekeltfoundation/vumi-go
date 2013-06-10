@@ -119,6 +119,11 @@ describe("go.components.plumbing (diagrams)", function() {
     });
 
     describe("on 'connection' jsPlumb events", function() {
+      var EndpointView = plumbing.EndpointView,
+          EndpointModel = stateMachine.EndpointModel;
+
+      var UnknownEndpointView = EndpointView.extend();
+
       beforeEach(function() {
         // render the diagram to ensure the jsPlumb endpoints are drawn
         diagram.render();
@@ -145,22 +150,22 @@ describe("go.components.plumbing (diagrams)", function() {
           done();
         });
 
-        jsPlumb.connect({
-          source: a1L1.plumbEndpoint,
-          target: b2R1.plumbEndpoint
-        });
+        jsPlumb.connect({source: a1L1.$el, target: b2R1.$el});
       });
 
       it("should ignore unsupported connections", function(done) {
-        var knownEndpoint = diagram.endpoints.get('b2R1').plumbEndpoint,
-            unknownEndpoint = jsPlumb.addEndpoint(diagram.states.get('a1').$el);
+        var a1 = diagram.states.get('a1'),
+            b2R1 = diagram.endpoints.get('b2R1');
 
-        jsPlumb.bind('connection', function() { done(); });
-
-        jsPlumb.connect({
-          source: knownEndpoint,
-          target: unknownEndpoint
+        var unknown = new UnknownEndpointView({
+          state: a1,
+          collection: a1.endpoints.members.get('left'),
+          model: new EndpointModel({id: 'a1L3'})
         });
+
+        unknown.render();
+        jsPlumb.bind('connection', function() { done(); });
+        jsPlumb.connect({source: b2R1.$el, target: unknown.$el});
       });
     });
 

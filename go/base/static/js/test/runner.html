@@ -11,14 +11,14 @@
     <script src="vendor/chai.js"></script>
     <script src="vendor/sinon.js"></script>
     <script>
-      mocha.ui('bdd'); 
+      mocha.ui('bdd');
       mocha.reporter('html');
       window.assert = chai.assert;
     </script>
 
     <script src="../vendor/jquery-1.9.1.js"></script>
     <script src="../vendor/jquery.ui-1.10.3.js"></script>
-    <script src="../vendor/jquery.jsPlumb-1.4.1.js"></script>
+    <script src="../vendor/jquery.jsPlumb-1.4.1.leakfix.js"></script>
     <script src="../vendor/lodash.underscore-1.2.1.js"></script>
     <script src="../vendor/backbone-1.0.0.js"></script>
     <script src="../vendor/backbone-relational-0.8.5.js"></script>
@@ -39,10 +39,11 @@
     <script src="../src/campaign/interactive.js"></script>
     <script src="../src/campaign/bulkMessage.js"></script>
 
+    <script src="tests/testHelpers.js"></script>
     <script src="tests/errors.test.js"></script>
     <script src="tests/utils.test.js"></script>
     <script src="tests/components/structures.test.js"></script>
-    <script src="tests/components/plumbing/helpers.js"></script>
+    <script src="tests/components/plumbing/testHelpers.js"></script>
     <script src="tests/components/plumbing/endpoints.test.js"></script>
     <script src="tests/components/plumbing/states.test.js"></script>
     <script src="tests/components/plumbing/connections.test.js"></script>
