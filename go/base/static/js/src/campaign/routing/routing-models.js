@@ -55,7 +55,7 @@ var stateMachine = go.components.stateMachine,
   });
 
   var CampaignRoutingModel = StateMachineModel.extend({
-    idAttribute: 'uuid',
+    idAttribute: 'campaign_id',
 
     relations: [{
       type: Backbone.HasMany,
