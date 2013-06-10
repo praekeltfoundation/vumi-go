@@ -20,8 +20,17 @@
     $('a[href="' + url + '"]').addClass('active');
   };
 
+  // Returns `obj` if it is a function, otherwise wraps `obj` in a function and
+  // returns the function
+  var functor = function(obj) {
+    return typeof obj === 'function'
+      ? obj
+      : function() { return obj; };
+  };
+
   _.extend(exports, {
     merge: merge,
+    functor: functor,
     highlightActiveLinks: highlightActiveLinks
   });
 })(go.utils = {});
