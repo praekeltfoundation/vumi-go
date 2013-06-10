@@ -28,11 +28,11 @@
 
     // Override to change what params are passed to jsPlumb when configuring
     // the element as a connection source
-    plumbSourceOpts: {anchor: 'Continuous', maxConnections: 1},
+    plumbSourceOptions: {anchor: 'Continuous', maxConnections: 1},
 
     // Override to change what params are passed to jsPlumb when configuring
     // the element as a connection target
-    plumbTargetOpts: {anchor: 'Continuous'},
+    plumbTargetOptions: {anchor: 'Continuous'},
 
     initialize: function(options) {
       // the state view that this endpoint is part of
@@ -43,11 +43,11 @@
       this.collection = options.collection;
 
       if (this.isSource) {
-        jsPlumb.makeSource(this.$el, _(this).result('plumbSourceOpts'));
+        jsPlumb.makeSource(this.$el, _(this).result('plumbSourceOptions'));
       }
 
       if (this.isTarget) {
-        jsPlumb.makeTarget(this.$el, _(this).result('plumbTargetOpts'));
+        jsPlumb.makeTarget(this.$el, _(this).result('plumbTargetOptions'));
       }
     },
 
@@ -74,24 +74,26 @@
   // Derived components
   // ------------------
 
-  // An endpoint view type which remains in the same position until it is
-  // repositioned.
-  var StaticEndpointView = EndpointView.extend({
-    defaults: {side: 'left'},
+  // An endpoint view type which resides on a side of the state, and
+  // can be positioned along the side based on a parameter t.
+  var ParametricEndpointView = EndpointView.extend({
+    defaults: function() {
+      return {
+        side: 'left',
+        offset: {
+          left: this.width * -0.5,
+          top: this.height * -0.5
+        }
+      };
+    },
 
     initialize: function(options) {
       EndpointView.prototype.initialize.call(this, options);
       _(options).defaults(_(this).result('defaults'));
 
       this.side = options.side;
+      this.offset = options.offset;
       this.positioner = this.positioners[this.side];
-
-      // Offset for the endpoint's center to be the 'pivot' point when
-      // positioning the endpoint on the side of the state
-      this._offset = {
-        left: this.width * -0.5,
-        top: this.height * -0.5
-      };
 
       this.reposition(0.5);
     },
@@ -99,29 +101,29 @@
     positioners: {
       left: function(t) {
         return {
-          left: this._offset.left,
-          top: this._offset.top + (t * this.$state.height())
+          left: this.offset.left,
+          top: this.offset.top + (t * this.$state.height())
         };
       },
 
       right: function(t) {
         return {
-          left: this._offset.left + this.$state.width(),
-          top: this._offset.top + (t * this.$state.height())
+          left: this.offset.left + this.$state.width(),
+          top: this.offset.top + (t * this.$state.height())
         };
       },
 
       top: function(t) {
         return {
-          left: this._offset.left + (t * this.$state.width()),
-          top: this._offset.top
+          left: this.offset.left + (t * this.$state.width()),
+          top: this.offset.top
         };
       },
 
       bottom: function(t) {
         return {
-          left: this._offset.left + (t * this.$state.width()),
-          top: this._offset.top + this.$state.height()
+          left: this.offset.left + (t * this.$state.width()),
+          top: this.offset.top + this.$state.height()
         };
       }
     },
@@ -145,14 +147,14 @@
   // Automatically aligns its endpoints to be evenly spaced on one side of the
   // state view.
   //
-  // NOTE: Must be used with `StaticEndpointView` types, or its derivatives
+  // NOTE: Must be used with `ParametricEndpointView` types, or its derivatives
   var AligningEndpointCollection = EndpointViewCollection.extend({
     addDefaults: _.defaults(
       {render: false},
       EndpointViewCollection.prototype.addDefaults),
 
     defaults: {
-      type: StaticEndpointView,
+      type: ParametricEndpointView,
       side: 'left',  // the side of the state the collection is drawn on
       margin: 0.005  // margin spacing on each end of the state side
     },
@@ -195,7 +197,7 @@
     EndpointView: EndpointView,
     EndpointViewCollection: EndpointViewCollection,
 
-    StaticEndpointView: StaticEndpointView,
+    ParametricEndpointView: ParametricEndpointView,
     AligningEndpointCollection: AligningEndpointCollection
   });
 })(go.components.plumbing);
