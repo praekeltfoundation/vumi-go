@@ -17,7 +17,19 @@ var stateMachine = go.components.stateMachine,
   });
 
   var RoutingEntryModel = ConnectionModel.extend({
-    idAttribute: 'uuid'
+    idAttribute: 'uuid',
+
+    relations: [{
+      type: Backbone.HasOne,
+      key: 'source',
+      includeInJSON: 'uuid',
+      relatedModel: RoutingEndpointModel
+    }, {
+      type: Backbone.HasOne,
+      key: 'target',
+      includeInJSON: 'uuid',
+      relatedModel: RoutingEndpointModel
+    }]
   });
 
   var ChannelModel = StateModel.extend({
@@ -26,7 +38,7 @@ var stateMachine = go.components.stateMachine,
     relations: [{
       type: Backbone.HasMany,
       key: 'endpoints',
-      relatedModel: EndpointModel
+      relatedModel: RoutingEndpointModel
     }]
   });
 
@@ -36,11 +48,11 @@ var stateMachine = go.components.stateMachine,
     relations: [{
       type: Backbone.HasMany,
       key: 'conversation_endpoints',
-      relatedModel: EndpointModel
+      relatedModel: RoutingEndpointModel
     }, {
       type: Backbone.HasMany,
       key: 'channel_endpoints',
-      relatedModel: EndpointModel
+      relatedModel: RoutingEndpointModel
     }]
   });
 
@@ -50,7 +62,7 @@ var stateMachine = go.components.stateMachine,
     relations: [{
       type: Backbone.HasMany,
       key: 'endpoints',
-      relatedModel: EndpointModel
+      relatedModel: RoutingEndpointModel
     }]
   });
 

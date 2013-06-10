@@ -6,34 +6,43 @@
   var plumbing = go.components.plumbing,
       StateView = plumbing.StateView,
       DiagramView = plumbing.DiagramView,
-      StaticEndpoint = plumbing.StaticEndpoint,
+      ParametricEndpointView = plumbing.ParametricEndpointView,
+      DirectionalConnectionView = plumbing.DirectionalConnectionView,
       StateViewCollection = plumbing.StateViewCollection,
-      AligningEndpointCollection = plumbing.AligningEndpointCollection;
+      AligningEndpointCollection = plumbing.AligningEndpointCollection,
+      connectorOverlays = plumbing.connectorOverlays;
 
-  var routing = go.campaign.routing,
-      ChannelModel = routing.ChannelModel,
-      RoutingBlockModel = routing.RoutingBlockModel,
-      ApplicationModel = routing.ApplicationModel,
-      CampaignRoutingModel = routing.CampaignRoutingModel;
+  // Endpoints
+  // ---------
+
+  var RoutingEndpointView = ParametricEndpointView.extend({
+    labelled: true,
+    labelText: function() { return this.model.get('name'); },
+    labelOptions: function() {
+      return {
+        my: 'bottom',
+        at: 'top',
+        text: this.labelText.bind(this)
+      };
+    }
+  });
 
   // States
   // ------
 
-  var RoutingState = StateView.extend({
-    endpointType: StaticEndpoint,
+  var RoutingStateView = StateView.extend({
+    endpointType: RoutingEndpointView,
     endpointCollectionType: AligningEndpointCollection,
 
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
-      this.$column = options.$column;
+      this.$column = this.diagram.$(options.columnEl);
     },
 
-    render: function(top, left) {
-      jsPlumb.draggable(this.$el);
-
+    render: function() {
       this.$el
-        .css('top', top)
-        .css('left', left);
+        .css('position', 'relative')
+        .text(this.model.get('description'));
 
       this.$column.append(this.$el);
       this.endpoints.render();
@@ -41,33 +50,33 @@
     }
   });
 
-  var RoutingStateCollection = StateViewCollection.extend({
-    opts: function() {
-      var opts = StateViewCollection.prototype.opts.call(this);
-      return _(opts).extend({$column: this.$column});
-    },
-
-    initialize: function(options) {
-      this.$column = this.diagram.$(options.columnEl);
-    }
-  });
-
-  var ChannelState = StateView.extend({
-    className: 'channel',
+  var ChannelStateView = RoutingStateView.extend({
+    className: 'state channel',
     endpointSchema: [{attr: 'endpoints', side: 'right'}]
   });
 
-  var RoutingBlockState = StateView.extend({
-    className: 'routing-block',
+  var RoutingBlockStateView = RoutingStateView.extend({
+    className: 'state routing-block',
     endpointSchema: [
       {attr: 'channel_endpoints', side: 'left'},
-      {attr: 'application_endpoints', side: 'right'}
+      {attr: 'conversation_endpoints', side: 'right'}
     ]
   });
 
-  var ApplicationState = StateView.extend({
-    className: 'application',
+  var ConversationStateView = RoutingStateView.extend({
+    className: 'state conversation',
     endpointSchema: [{attr: 'endpoints', side: 'left'}]
+  });
+
+  var RoutingStateCollection = StateViewCollection.extend({
+    opts: function() {
+      var opts = StateViewCollection.prototype.opts.call(this);
+      return _(opts).extend({columnEl: this.columnEl});
+    },
+
+    initialize: function(options) {
+      this.columnEl = options.columnEl;
+    }
   });
 
   // Columns
@@ -75,90 +84,102 @@
 
   // A vertical section of the routing screen dedicated to a particular
   // collection of the three state types (Channel, RoutingBlock or
-  // Application).
-  var RoutingScreenColumn = Backbone.View.extend({
-    intialize: function(options) {
+  // Conversation).
+  var RoutingColumnView = Backbone.View.extend({
+    initialize: function(options) {
       this.diagram = options.diagram;
       this.states = this.diagram.states.members.get(this.collectionName);
-      this.ensureElement(this.diagram.$('#' + this.id));
+      this.setElement(this.diagram.$('#' + this.id));
+
+      this._initPlumb();
     },
 
+    _initPlumb: function() {
+      var defaults = jsPlumb.Defaults;
+      defaults.Connector = ['StateMachine'];
+      defaults.ConnectionOverlays = [connectorOverlays.headArrow];
+    },
+
+    repaint: function() { jsPlumb.repaintEverything(); },
+
     render: function() {
-      var top = 0,
-          left = 0;
+      this.states.each(function(s) { s.render(); });
 
-      this.states.each(function(state) {
-        state.render(top, left);
+      // Allow the user to 'shuffle' the states in the column, repainting the
+      // jsPlumb connections and endpoints on each update hook
+      this.$el.sortable({
+        start: this.repaint,
+        sort: this.repaint,
+        stop: this.repaint
       });
-
-      // TODO render placeholder view
     }
   });
 
-  var ChannelColumn = RoutingScreenColumn.extend({
+  var ChannelColumnView = RoutingColumnView.extend({
     id: 'channels',
     collectionName: 'channels'
   });
 
-  var RoutingBlockColumn = RoutingScreenColumn.extend({
+  var RoutingBlockColumnView = RoutingColumnView.extend({
     id: 'routing-blocks',
     collectionName: 'routing_blocks'
   });
 
-  var ApplicationColumn = RoutingScreenColumn.extend({
-    id: 'applications',
-    collectionName: 'applications'
+  var ConversationColumnView = RoutingColumnView.extend({
+    id: 'conversations',
+    collectionName: 'conversations'
   });
 
   // Main components
   // ---------------
 
-  var RoutingScreen = DiagramView.extend({
-    stateType: RoutingState,
+  var RoutingScreenView = DiagramView.extend({
     stateCollectionType: RoutingStateCollection,
-
     stateSchema: [{
       attr: 'channels',
-      type: ChannelState,
+      type: ChannelStateView,
       columnEl: '#channels'
     }, {
       attr: 'routing_blocks',
-      type: RoutingBlockState,
+      type: RoutingBlockStateView,
       columnEl: '#routing-blocks'
     }, {
-      attr: 'applications',
-      type: ApplicationState,
-      columnEl: '#applications'
+      attr: 'conversations',
+      type: ConversationStateView,
+      columnEl: '#conversations'
     }],
+
+    connectionType: DirectionalConnectionView,
+    connectionSchema: [{attr: 'routing_entries'}],
 
     initialize: function(options) {
       DiagramView.prototype.initialize.call(this, options);
-      this.channels = new ChannelColumn({diagram: this});
-      this.routingBlocks = new RoutingBlockColumn({diagram: this});
-      this.applications = new ApplicationColumn({diagram: this});
+      this.channels = new ChannelColumnView({diagram: this});
+      this.routingBlocks = new RoutingBlockColumnView({diagram: this});
+      this.conversations = new ConversationColumnView({diagram: this});
     },
 
     render: function() {
       this.channels.render();
       this.routingBlocks.render();
-      this.applications.render();
+      this.conversations.render();
       this.connections.render();
       return this;
     }
   });
 
   _(exports).extend({
-    RoutingScreen: RoutingScreen,
+    RoutingScreenView: RoutingScreenView,
 
-    RoutingState: RoutingState,
+    RoutingStateView: RoutingStateView,
     RoutingStateCollection: RoutingStateCollection,
-    ChannelState: ChannelState,
-    RoutingBlockState: RoutingBlockState,
-    ApplicationState: ApplicationState,
+    ChannelStateView: ChannelStateView,
+    RoutingBlockStateView: RoutingBlockStateView,
+    ConversationStateView: ConversationStateView,
 
-    RoutingScreenColumn: RoutingScreenColumn,
-    ChannelColumn: ChannelColumn,
-    RoutingBlockColumn: RoutingBlockColumn,
-    ApplicationColumn: ApplicationColumn
+    RoutingColumnView: RoutingColumnView,
+    ChannelColumnView: ChannelColumnView,
+    RoutingBlockColumnView: RoutingBlockColumnView,
+    ConversationColumnView: ConversationColumnView
   });
 })(go.campaign.routing);
