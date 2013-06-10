@@ -1,5 +1,5 @@
-// go.components.plumbing.testHelpers
-// ==================================
+// go.testHelpers
+// ==============
 
 (function(exports) {
   var oneElExists = function(selector) {
