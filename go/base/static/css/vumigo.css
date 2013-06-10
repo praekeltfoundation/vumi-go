@@ -25,13 +25,13 @@ body {
 }
 .main-nav li {
   height: 39px;
-  padding: 0 20px;
+  padding: 0 15px;
   border-right: 1px #212527 solid;
 }
 .main-nav ul li:first-child {
   padding: 0;
 }
-.main-nav ul:last-child li:first-child {
+.main-nav ul:nth-child(2) li:first-child {
   border-left: 1px #212527 solid;
 }
 .main-nav li.active a {
@@ -81,6 +81,7 @@ body {
   -moz-background-clip: padding;
   border-radius: 5px;
   background-clip: padding-box;
+  min-height: 400px;
 }
 .content .header {
   height: 54px;
@@ -157,6 +158,19 @@ body {
 .span9 {
   padding-right: 20px;
 }
+.nav-stacked a:hover {
+  background: none !important;
+}
+.help-inline .errorlist {
+  list-style: none;
+}
+.help-inline .errorlist li {
+  padding: 0;
+  margin: 0;
+}
+.campaigns.dashboard .status {
+  text-transform: capitalize;
+}
 .campaigns .header a {
   color: #878b8e;
   font-weight: bold;
@@ -166,10 +180,10 @@ body {
 .campaigns .header a.active {
   color: #000;
 }
-.campaigns .actions {
+.campaigns .actions .right {
   text-align: right;
 }
-.campaigns .actions a:first-child {
+.campaigns .actions .right a:first-child {
   margin-right: 20px;
 }
 .campaigns .control-label {
@@ -216,22 +230,6 @@ body {
   max-width: 100%;
   min-width: 80%;
 }
-.table-manage-data {
-  margin-top: 1em;
-}
-.table-manage-data tr {
-  cursor: pointer;
-}
-.table-manage-data td {
-  color: #2f3436;
-}
-.help-inline .errorlist {
-  list-style: none;
-}
-.help-inline .errorlist li {
-  padding: 0;
-  margin: 0;
-}
 .accounts {
   color: #c1c1c1;
 }
@@ -268,20 +266,19 @@ body {
   color: #2f3436;
   font-weight: normal;
 }
-.components-table {
+.table-form-view {
   overflow: hidden;
 }
-.components-table td,
-.components-table tr {
+.table-form-view td,
+.table-form-view tr {
   color: #2f3436;
   vertical-align: middle;
 }
-.components-table thead td,
-.components-table thead tr {
+.table-form-view thead td,
+.table-form-view thead tr {
   color: #a7aaac;
   text-transform: uppercase;
 }
-.components-table tr td:first-child,
-.components-table th:first-child {
+.table-form-view tr[data-url] {
   cursor: pointer;
 }

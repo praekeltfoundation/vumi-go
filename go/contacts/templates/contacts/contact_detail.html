@@ -20,7 +20,7 @@
 
 
 {% block content_main_list %}
-    <form id="frm-person" method="post" action="" class="form-horizontal">
+    <form class="form-horizontal" method="post" action="">
         {% csrf_token %}
         <fieldset>
             {% for field in form.visible_fields %}

@@ -353,6 +353,7 @@ PIPELINE_JS = {
             'js/vendor/jquery.jsPlumb-1.4.1.js',
             'js/vendor/jquery.ui-1.10.3.js',
             'bootstrap/js/bootstrap.min.js',
+            'js/vendor/bootbox.js',
         ),
         'output_filename': 'export/lib.js'
     },

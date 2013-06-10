@@ -10,9 +10,13 @@
   var plumbing = go.components.plumbing,
       EndpointView = plumbing.EndpointView;
 
+
   var idOfConnection = function(sourceId, targetId) {
     return sourceId + '-' + targetId;
   };
+
+  // Base components
+  // ---------------
 
   // View for a connection between two endpoints in a state diagram.
   //
@@ -42,8 +46,9 @@
 
     _plumbOptions: function() {
       return _.defaults({
-        source: this.source.plumbEndpoint,
-        target: this.target.plumbEndpoint
+        source: this.source.$el,
+        target: this.target.$el,
+        container: this.diagram.$el
       }, _(this).result('plumbOptions'));
     },
 
@@ -93,9 +98,40 @@
     }
   });
 
+  // Derived components
+  // ------------------
+
+  // A lookup of overlays for jsPlumb connectors (connections)
+  var connectorOverlays = {
+    headArrow: [
+      'Arrow', {
+      width: 12,
+      height: 12,
+      location: 1,
+      id: 'head-arrow'
+    }],
+
+    midArrow: [
+      'Arrow', {
+      width: 12,
+      height: 12,
+      location: 0.5,
+      id: 'mid-arrow'
+    }]
+  };
+
+  var DirectionalConnectionView = ConnectionView.extend({
+    plumbOptions: function() {
+      return {overlays: [connectorOverlays.headArrow]};
+    }
+  });
+
   _.extend(exports, {
     idOfConnection: idOfConnection,
     ConnectionView: ConnectionView,
-    ConnectionViewCollection: ConnectionViewCollection
+    ConnectionViewCollection: ConnectionViewCollection,
+
+    connectorOverlays: connectorOverlays,
+    DirectionalConnectionView: DirectionalConnectionView
   });
 })(go.components.plumbing);

@@ -7,6 +7,9 @@
   var structures = go.components.structures,
       SubviewCollection = structures.SubviewCollection;
 
+  var view = go.components.views,
+      LabelView = view.LabelView;
+
   // Base components
   // ---------------
 
@@ -15,47 +18,69 @@
   // Options:
   // - state: The view to which this endpoint is to be attached
   var EndpointView = Backbone.View.extend({
-    // Override to change what params are passed to jsPlumb
-    plumbOptions: {},
-
     id: function() { return this.model.id; },
+    className: 'endpoint',
+    width: 14,
+    height: 14,
+
+    // Override to set whether the endpoint can source connections
+    isSource: true,
+
+    // Override to set whether the element can be the target of connections
+    isTarget: true,
+
+    // Override to change what params are passed to jsPlumb when configuring
+    // the element as a connection source
+    plumbSourceOptions: {anchor: 'Continuous', maxConnections: 1},
+
+    // Override to change what params are passed to jsPlumb when configuring
+    // the element as a connection target
+    plumbTargetOptions: {anchor: 'Continuous'},
+
+    // Override to enable labelling
+    labelled: false,
+
+    // Override to change the options used to initialise the label
+    labelOptions: {my: 'right center', at: 'left center', text: ''},
 
     initialize: function(options) {
       // the state view that this endpoint is part of
       this.state = options.state;
+      this.$state = this.state.$el;
 
       // the collection of endpoint views that this endpoint is part of
       this.collection = options.collection;
 
-      // Keep a reference to the actual jsPlumb endpoint
-      this.plumbEndpoint = null;
+      if (this.isSource) {
+        jsPlumb.makeSource(this.$el, _(this).result('plumbSourceOptions'));
+      }
+
+      if (this.isTarget) {
+        jsPlumb.makeTarget(this.$el, _(this).result('plumbTargetOptions'));
+      }
+
+      if (this.labelled) {
+        this.label = new LabelView(this._labelOptions());
+      }
     },
 
-    _plumbOptions: function() {
-      return _.defaults({
-        uuid: _(this).result('id'),
-        isSource: true,
-        isTarget: true
-      }, _(this).result('plumbOptions'));
+    _labelOptions: function() {
+      return _.defaults({of: this.$el}, _(this).result('labelOptions'));
     },
 
     destroy: function() {
-      if (this.plumbEndpoint) {
-        jsPlumb.deleteEndpoint(this.plumbEndpoint);
-        this.plumbEndpoint = null;
-      }
-
+      this.$el.remove();
       return this;
     },
 
     render: function() {
-      if (!this.plumbEndpoint) {
-        this.plumbEndpoint = jsPlumb.addEndpoint(
-          this.state.$el,
-          this._plumbOptions());
-      }
+      this.$el
+        .height(this.height)
+        .width(this.width);
 
-      return this;
+      this.state.$el.append(this.$el);
+
+      if (this.labelled) { this.label.render(); }
     }
   });
 
@@ -68,52 +93,87 @@
   // Derived components
   // ------------------
 
-  // An endpoint view type which remains in the same position until it is
-  // repositioned.
-  var StaticEndpoint = EndpointView.extend({
-    defaults: {side: 'left'},
-
-    anchors: {
-      left: function(t) { return [0, t, -1, 0]; },
-      right: function(t) { return [1, t, 1, 0]; },
-      top: function(t) { return [t, 0, 0, -1]; },
-      bottom: function(t) { return [t, 1, 0, 1]; }
+  // An endpoint view type which resides on a side of the state, and
+  // can be positioned along the side based on a parameter t.
+  var ParametricEndpointView = EndpointView.extend({
+    defaults: function() {
+      return {
+        side: 'left',
+        offset: {
+          left: this.width * -0.5,
+          top: this.height * -0.5
+        }
+      };
     },
 
-    constructor: function(options) {
-      EndpointView.prototype.constructor.call(this, options);
+    initialize: function(options) {
+      EndpointView.prototype.initialize.call(this, options);
       _(options).defaults(_(this).result('defaults'));
 
       this.side = options.side;
-      this.anchor = this.anchors[this.side];
+      this.offset = options.offset;
+      this.positioner = this.positioners[this.side];
+
       this.reposition(0.5);
+    },
+
+    positioners: {
+      left: function(t) {
+        return {
+          left: this.offset.left,
+          top: this.offset.top + (t * this.$state.height())
+        };
+      },
+
+      right: function(t) {
+        return {
+          left: this.offset.left + this.$state.width(),
+          top: this.offset.top + (t * this.$state.height())
+        };
+      },
+
+      top: function(t) {
+        return {
+          left: this.offset.left + (t * this.$state.width()),
+          top: this.offset.top
+        };
+      },
+
+      bottom: function(t) {
+        return {
+          left: this.offset.left + (t * this.$state.width()),
+          top: this.offset.top + this.$state.height()
+        };
+      }
     },
 
     // Move the endpoint along its side based on parameter t, where
     // 0 <= t <= 1.
     reposition: function(t) {
-      this.plumbAnchor = this.anchor(t);
+      this.position = this.positioner(t);
       return this;
     },
 
     render: function() {
-      EndpointView.prototype.render.call(this);
-      this.plumbEndpoint.setAnchor(this.plumbAnchor);
-      return this;
+      this.$el
+        .css({position: 'absolute'})
+        .offset(this.position);
+
+      return EndpointView.prototype.render.call(this);
     }
   });
 
   // Automatically aligns its endpoints to be evenly spaced on one side of the
   // state view.
   //
-  // NOTE: Must be used with `StateEndpointView` types, or its derivatives
+  // NOTE: Must be used with `ParametricEndpointView` types, or its derivatives
   var AligningEndpointCollection = EndpointViewCollection.extend({
     addDefaults: _.defaults(
       {render: false},
       EndpointViewCollection.prototype.addDefaults),
 
     defaults: {
-      type: StaticEndpoint,
+      type: ParametricEndpointView,
       side: 'left',  // the side of the state the collection is drawn on
       margin: 0.005  // margin spacing on each end of the state side
     },
@@ -156,7 +216,7 @@
     EndpointView: EndpointView,
     EndpointViewCollection: EndpointViewCollection,
 
-    StaticEndpoint: StaticEndpoint,
+    ParametricEndpointView: ParametricEndpointView,
     AligningEndpointCollection: AligningEndpointCollection
   });
 })(go.components.plumbing);

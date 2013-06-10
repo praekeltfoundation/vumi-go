@@ -36,14 +36,14 @@ body {
 
   li { 
     height:39px;
-    padding:0 20px;
+    padding:0 15px;
     border-right:1px #212527 solid;
   }
   ul li:first-child {
     // this is the logo
     padding:0;
   }
-  ul:last-child li:first-child {
+  ul:nth-child(2) li:first-child {
     border-left:1px #212527 solid;
   }
   li.active a { background:transparent !important; }
@@ -98,6 +98,7 @@ body {
   background:#f2f1ed;
   border:#212527 solid 5px;
   .border-radius(5px);
+  min-height:400px;
 
   .header {
     height:54px;
@@ -192,94 +193,16 @@ body {
 }
 
 
-.campaigns {
-
-  .header a {
-    color:#878b8e;
-    font-weight:bold;
-    font-size:16px;
-    margin-right:10px;
-  }
-  .header a.active {
-    color:#000;
-  }
-
-  .actions {
-    text-align:right; // cancel, save draft, next step
-
-    a:first-child {
-      margin-right:20px;
-    }
-  }
-
-  .control-label {
-      color:#000;
-      font-weight:bold;
-
-      a:link, a:visited {
-        color:#000;
-      }
-      a:hover {
-        text-decoration:none;
-      }
-  }
 
 
-  form {
-    .boxes {
-      text-align:center;
-    }
 
-    .title {
-      text-transform:uppercase;
-
-      .tooltip {
-        text-transform:none;
-      }
-    }
-
-    .box {
-      background:#d2d0c7;
-      color:#000;
-      font-size:16px;
-      padding:15px 0;
-      text-align:center;
-      .border-radius(5px);
-      margin-bottom:1em;
-      
-
-      label {
-        text-align:left;
-        text-indent:10%;
-      }
-
-      input, select {
-        width:auto;
-        max-width:100%;
-        min-width:80%;
-      }
-    }
-  }
+.nav-stacked a:hover {
+  background:none !important;
 }
 
-.table-manage-data {
-
-  margin-top:1em;
-
-  tr {
-    cursor:pointer;
-  }
-
-  td {
-    color:#2f3436;
-  }
-  
-}
-
-
+// this is used in forms
 .help-inline .errorlist {
   list-style:none;
-  
 
   li {
     padding:0;
@@ -287,6 +210,6 @@ body {
   }
 }
 
-
+@import "campaigns.less";
 @import "accounts.less";
 @import "tables.less";

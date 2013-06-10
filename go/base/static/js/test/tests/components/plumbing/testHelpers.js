@@ -1,5 +1,5 @@
-// go.components.plumbing.testHelpers)
-// =====================================
+// go.components.plumbing.testHelpers
+// ==================================
 // Contains example structures and data for plumbing component tests.
 
 (function(exports) {
