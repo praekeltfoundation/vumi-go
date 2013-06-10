@@ -59,7 +59,7 @@ describe("go.components.plumbing (endpoints)", function() {
         assert(oneElExists('#x #x4'));
       });
 
-      it("set the dimensions of the endpoint", function() {
+      it("should set the dimensions of the endpoint", function() {
         x4.width = 20;
         x4.height = 25;
 
