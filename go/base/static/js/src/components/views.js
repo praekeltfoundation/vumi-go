@@ -11,9 +11,9 @@
   // Options:
   //   - text: A string or a function returning a string containing the text to
   //   be displayed by the label
-  //   - of: The element this label should be attached to
-  //   - my: The my on the label to align with the of
-  //   - at: The my on the of to align the label against
+  //   - of: The target element this label should be attached to
+  //   - my: The point on the label to align with the of
+  //   - at: The point on the target element to align the label against
   var LabelView = Backbone.View.extend({
     tagName: 'span',
     className: 'label',
