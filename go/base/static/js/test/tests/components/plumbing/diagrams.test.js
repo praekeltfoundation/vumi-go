@@ -153,19 +153,22 @@ describe("go.components.plumbing (diagrams)", function() {
         jsPlumb.connect({source: a1L1.$el, target: b2R1.$el});
       });
 
-      it("should ignore unsupported connections", function(done) {
-        var a1 = diagram.states.get('a1'),
-            b2R1 = diagram.endpoints.get('b2R1');
+      it("should fire an event when unsupported connections are encountered",
+      function(done) {
+        var a1L1 = diagram.endpoints.get('a1L1'),
+            a1L2 = diagram.endpoints.get('a1L2');
 
-        var unknown = new UnknownEndpointView({
-          state: a1,
-          collection: a1.endpoints.members.get('left'),
-          model: new EndpointModel({id: 'a1L3'})
-        });
+        diagram.connections.on(
+          'error:unsupported',
+          function(source, target, plumbConnection) {
+            assert.equal(source, a1L1);
+            assert.equal(target, a1L2);
+            assert(a1L1.$el.is(plumbConnection.source));
+            assert(a1L2.$el.is(plumbConnection.target));
+            done();
+          });
 
-        unknown.render();
-        jsPlumb.bind('connection', function() { done(); });
-        jsPlumb.connect({source: b2R1.$el, target: unknown.$el});
+        jsPlumb.connect({source: a1L1.$el, target: a1L2.$el});
       });
     });
 
