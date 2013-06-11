@@ -28,12 +28,12 @@
 {% endblock %}
 
 
-{% block extrascript %}
-{{ block.super }}
-<script type="text/javascript">
-    $(function() {
-        // highlight the breadcrumbs.
-        $('.breadcrumbs a').eq(2).addClass('active');
+{% block ondomready %}
+    {{ block.super }}
+    // highlight the breadcrumbs.
+    $('.breadcrumbs a').eq(2).addClass('active');
+
+    var tableFormView = new go.components.tables.TableFormView({
+        el: '#frm-campaign'
     });
-</script>
 {% endblock %}

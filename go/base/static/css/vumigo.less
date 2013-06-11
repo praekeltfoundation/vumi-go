@@ -6,9 +6,15 @@ body {
   color: #2f3436;
 }
 
+a:link, button {
+  .transition(color .1s, background .1s);
+}
+
+
 .main-container {
   // prevent wrapping.
   min-width:650px;
+  padding:0 25px;
 }
 
 .footer {
@@ -17,21 +23,20 @@ body {
 }
 
 
-
 .main-nav {
   margin:0;
-  font-size:13px;
+  font-size:15px;
 
   .brand {
     position:relative;
     width:60px;
+    border:0 !important;
   }
 
   .logo {
     position:absolute;
-    width:80px;
-    top:10px;
-    left:5px;
+    top:20px;
+    left:-5px;
   }
 
   li { 
@@ -111,13 +116,25 @@ body {
       
       padding:0 12px;
       margin:0;
-      color:#000;
+      color:#2F3436;
 
-      a { color:#000; }
+      a { color:#2F3436; }
+
+      a:hover {
+        color:#000;
+        text-decoration:none;
+      }
     }
 
-    .pull-right {
+
+    .breadcrumbs {
       text-align:right;
+      padding:0 12px;
+
+        .navbar-search {
+          margin:0;
+        }
+
     }
   }
 
@@ -140,11 +157,17 @@ body {
         padding-right:20px;
       }
     }
+
+    .right {
+      padding:0 20px;
+      overflow:hidden;
+
+      .navbar-search {
+        margin-top:0;
+      }
+    }
   }
 
-  .navbar-search {
-    margin:0;
-  }
 
   // this cannot be applied to a row-fluid or span element.
   // it's unfortunate, but that's the way the cookie crumbles.
@@ -153,7 +176,17 @@ body {
   .indent {
     margin:2em 1em;
   }
-}
+
+  // this is experimental, because the site is fluid the sidebar tends
+  // to grow really long and kinda looks a bit ugly.
+  // this will prevent the sidebar from growing too long.
+  .actions .left, .sidebar {
+    max-width:210px;
+  }
+
+} // end content
+
+
 
 .content .sidebar .nav-list {
 
@@ -173,23 +206,28 @@ body {
     margin-left:-20px;
   }
   a.active:hover {
+    color:#fff;
     background:#b41c30;
   }
 }
 
+
+
 .content .sidebar .extra-actions {
 
-  a { color:#0088cc; }
+  margin-bottom:1em;
+  
+  a, a.active { color:#0088cc; }
+  a.active {
+    margin:0;
+    border:0;
+    background:transparent;
+  }
   a:hover {
-    color:##54a6de;
+    color:#54a6de !important;
+    background:transparent !important;
     text-decoration:underline;
   }
-
-  margin-bottom:1em;
-}
-
-.span9 {
-  padding-right:20px;
 }
 
 
@@ -210,6 +248,11 @@ body {
   }
 }
 
+.alert {
+  margin:1em 0;
+}
+
 @import "campaigns.less";
+@import "contacts.less";
 @import "accounts.less";
 @import "tables.less";
