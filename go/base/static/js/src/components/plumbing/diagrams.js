@@ -9,11 +9,13 @@
       ViewCollectionGroup = structures.ViewCollectionGroup;
 
   var plumbing = go.components.plumbing,
-      idOfConnection = plumbing.idOfConnection,
       StateView = plumbing.StateView,
       ConnectionView = plumbing.ConnectionView,
       StateViewCollection = plumbing.StateViewCollection,
       ConnectionViewCollection = plumbing.ConnectionViewCollection;
+
+  var stateMachine = go.components.stateMachine,
+      idOfConnection = stateMachine.idOfConnection;
 
   // Keeps track of all the endpoints in the state diagram
   var DiagramViewEndpoints = ViewCollectionGroup.extend({
@@ -108,7 +110,6 @@
       if (collection === null) { return ; }
 
       collection.add({
-        id: connectionId,
         source: source.model,
         target: target.model
       }, {
