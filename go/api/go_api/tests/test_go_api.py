@@ -129,6 +129,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         conv, tag = yield self._setup_simple_routing_table()
         result = yield self.proxy.callRemote(
             "routing_entries", self.campaign_key)
+        result.sort(key=lambda x: x['source']['uuid'])
         self.assertEqual(result, [
             {
                 u'source': {u'uuid': u'CONVERSATION:jsbox:%s:default'
@@ -147,6 +148,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         conv, tag = yield self._setup_simple_routing_table()
         result = yield self.proxy.callRemote(
             "routing_table", self.campaign_key)
+        result['routing_entries'].sort(key=lambda x: x['source']['uuid'])
         self.assertEqual(result, {
             u'channels': [
                 {

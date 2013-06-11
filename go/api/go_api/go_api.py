@@ -61,7 +61,7 @@ class GoApiServer(JSONRPC):
                 source_uuid=u"%s:%s" % (src_conn, src_endp),
                 target_uuid=u"%s:%s" % (dst_conn, dst_endp))
                 for src_conn, src_endp, dst_conn, dst_endp
-                in sorted(routing_table.entries())]
+                in routing_table.entries()]
 
         d = user_api.get_routing_table()
         d.addCallback(format_routing_entries)
