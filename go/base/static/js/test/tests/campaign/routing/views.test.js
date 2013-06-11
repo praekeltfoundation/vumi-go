@@ -59,6 +59,44 @@ describe("go.campaign.routing (views)", function() {
     });
   });
 
+  describe(".RoutingEntryCollection", function() {
+    var RoutingEntryCollection = routing.RoutingEntryCollection;
+
+    var collection;
+
+    beforeEach(function() {
+      collection = new RoutingEntryCollection({
+        view: screen,
+        attr: 'routing_entries'
+      });
+    });
+
+    describe(".accepts", function() {
+      it("should determine if a source and target match the accepted pairs",
+      function() {
+        var e1 = screen.endpoints.get('endpoint1'),
+            e4 = screen.endpoints.get('endpoint4'),
+            e5 = screen.endpoints.get('endpoint5'),
+            e8 = screen.endpoints.get('endpoint8');
+
+        assert(collection.accepts(e1, e4));
+        assert(collection.accepts(e4, e1));
+
+        assert(collection.accepts(e5, e8));
+        assert(collection.accepts(e8, e5));
+
+        assert.isFalse(collection.accepts(e1, e5));
+        assert.isFalse(collection.accepts(e5, e1));
+
+        assert.isFalse(collection.accepts(e8, e4));
+        assert.isFalse(collection.accepts(e4, e8));
+
+        assert.isFalse(collection.accepts(e8, e1));
+        assert.isFalse(collection.accepts(e1, e8));
+      });
+    });
+  });
+
   describe(".RoutingStateView", function() {
     var ChannelModel = routing.ChannelModel,
         RoutingStateView = routing.RoutingStateView;
@@ -144,6 +182,32 @@ describe("go.campaign.routing (views)", function() {
   });
 
   describe(".RoutingScreenView", function() {
+    describe("on 'error:unsupported' connection events", function() {
+      var connectionCount = function(a, b) {
+        return jsPlumb.getConnections({source: a.$el, target: b.$el}).length;
+      };
+
+      var noConnections = function(a, b) {
+        return connectionCount(a, b) === 0;
+      };
+
+      beforeEach(function() {
+        screen.render();
+      });
+
+      it("should detach the jsPlumb connection", function(done) {
+        var e1 = screen.endpoints.get('endpoint1'),
+            e8 = screen.endpoints.get('endpoint8');
+
+        screen.connections.on('error:unsupported', function() {
+          assert(noConnections(e1, e8));
+          done();
+        });
+
+        jsPlumb.connect({source: e1.$el, target: e8.$el});
+      });
+    });
+
     describe(".render", function() {
       it("should render the states in its channels column", function() {
         assert(noElExists('#routing-screen #channels .state'));

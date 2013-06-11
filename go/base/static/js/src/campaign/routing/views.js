@@ -10,6 +10,7 @@
       DirectionalConnectionView = plumbing.DirectionalConnectionView,
       StateViewCollection = plumbing.StateViewCollection,
       AligningEndpointCollection = plumbing.AligningEndpointCollection,
+      ConnectionViewCollection = plumbing.ConnectionViewCollection,
       connectorOverlays = plumbing.connectorOverlays;
 
   // Endpoints
@@ -24,6 +25,34 @@
         at: 'top',
         text: this.labelText.bind(this)
       };
+    }
+  });
+
+  var ChannelEndpointView = RoutingEndpointView.extend(),
+      RoutingBlockChannelEndpointView = RoutingEndpointView.extend(),
+      RoutingBlockConversationEndpointView = RoutingEndpointView.extend(),
+      ConversationEndpointView = RoutingEndpointView.extend();
+
+  // Routing entries (connections)
+  // -----------------------------
+
+  var RoutingEntryCollection = ConnectionViewCollection.extend({
+    acceptedPairs: [
+      [ChannelEndpointView, RoutingBlockChannelEndpointView],
+      [ConversationEndpointView, RoutingBlockConversationEndpointView]],
+
+    accepts: function(source, target) {
+      var pairs = this.acceptedPairs,
+          i = pairs.length,
+          pair, a, b;
+
+      while (i--) {
+        pair = pairs[i], a = pair[0], b = pair[1];
+        if (source instanceof a && target instanceof b) { return true; }
+        if (target instanceof a && source instanceof b) { return true; }
+      }
+
+      return false;
     }
   });
 
@@ -57,20 +86,33 @@
 
   var ChannelStateView = RoutingStateView.extend({
     className: 'state channel',
-    endpointSchema: [{attr: 'endpoints', side: 'right'}]
+    endpointSchema: [{
+      attr: 'endpoints',
+      side: 'right',
+      type: ChannelEndpointView
+    }]
   });
 
   var RoutingBlockStateView = RoutingStateView.extend({
     className: 'state routing-block',
-    endpointSchema: [
-      {attr: 'channel_endpoints', side: 'left'},
-      {attr: 'conversation_endpoints', side: 'right'}
-    ]
+    endpointSchema: [{
+      attr: 'channel_endpoints',
+      side: 'left',
+      type: RoutingBlockChannelEndpointView
+    }, {
+      attr: 'conversation_endpoints',
+      side: 'right',
+      type: RoutingBlockConversationEndpointView
+    }]
   });
 
   var ConversationStateView = RoutingStateView.extend({
     className: 'state conversation',
-    endpointSchema: [{attr: 'endpoints', side: 'left'}]
+    endpointSchema: [{
+      attr: 'endpoints',
+      side: 'left',
+      type: ConversationEndpointView
+    }]
   });
 
   var RoutingStateCollection = StateViewCollection.extend({
@@ -147,6 +189,7 @@
     }],
 
     connectionType: DirectionalConnectionView,
+    connectionCollectionType: RoutingEntryCollection,
     connectionSchema: [{attr: 'routing_entries'}],
 
     initialize: function(options) {
@@ -157,6 +200,13 @@
 
       // Give the jsPlumb connectors arrow overlays
       jsPlumb.Defaults.ConnectionOverlays = [connectorOverlays.headArrow];
+
+      this.connections.on('error:unsupported', this.onUnsupportedConnection);
+    },
+
+    onUnsupportedConnection: function(source, target, plumbConnection) {
+      // TODO handle better in future (Response in UI or something?)
+      jsPlumb.detach(plumbConnection, {fireEvent: false});
     },
 
     render: function() {
@@ -182,6 +232,7 @@
     RoutingBlockStateView: RoutingBlockStateView,
     ConversationStateView: ConversationStateView,
 
-    RoutingEndpointView: RoutingEndpointView
+    RoutingEndpointView: RoutingEndpointView,
+    RoutingEntryCollection: RoutingEntryCollection
   });
 })(go.campaign.routing);
