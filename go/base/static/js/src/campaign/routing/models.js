@@ -17,12 +17,6 @@ var stateMachine = go.components.stateMachine,
   });
 
   var RoutingEntryModel = ConnectionModel.extend({
-    // TODO We need to use id here, since `StateDiagramConnections` saves
-    // connections models with an 'id' attribute instead of UUID. We need to
-    // change this to 'uuid' to conform with the other routing models once we
-    // have made `StateDiagramConnections` less opinionated.
-    idAttribute: 'id',
-
     relations: [{
       type: Backbone.HasOne,
       key: 'source',
