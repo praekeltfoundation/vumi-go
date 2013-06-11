@@ -158,6 +158,16 @@ describe("go.components.structures", function() {
         lookupB,
         group;
 
+    var assertAdded = function(owner, key, value) {
+      assert.equal(group.get(key), value);
+      assert.equal(group.ownerOf(key), owner);
+    };
+
+    var assertRemoved = function(key) {
+      assert.isFalse(group.has(key));
+      assert.isUndefined(group.ownerOf(key));
+    };
+
     beforeEach(function() {
       lookupA = new Lookup({a: 1, b: 2, c: 3});
       lookupB = new Lookup({d: 4, e: 5, f: 6});
@@ -174,6 +184,30 @@ describe("go.components.structures", function() {
       });
     });
 
+    describe(".add", function() {
+      it("should add the key value pair", function() {
+        group.add(lookupA, 'g', 7);
+        assert.equal(group.get('g'), 7);
+      });
+
+      it("should add the item to the owner lookup", function() {
+        group.add(lookupA, 'g', 7);
+        assert.equal(group.ownerOf('g'), lookupA);
+      });
+    });
+
+    describe(".remove", function() {
+      it("should remove the key value pair", function() {
+        assert.equal(group.remove('b'), 2);
+        assert.isFalse(group.has('b'));
+      });
+
+      it("should remove the item from the owner lookup", function() {
+        group.remove('b');
+        assert.isUndefined(group.ownerOf('b'));
+      });
+    });
+
     describe(".subscribe", function() {
       it("should add all the lookup's items to the group", function() {
         assert.equal(group.subscribe('c', new Lookup({g: 7, h: 8})), group);
@@ -187,7 +221,7 @@ describe("go.components.structures", function() {
         group.subscribe('c', lookupC);
 
         lookupC.on('add', function(key, value) {
-          assert.equal(group.get('i'), 9);
+          assertAdded(lookupC, 'i', 9);
           done();
         });
 
@@ -200,7 +234,7 @@ describe("go.components.structures", function() {
         group.subscribe('c', lookupC);
 
         lookupC.on('remove', function(key, value) {
-          assert(!group.has('g'));
+          assertRemoved('g');
           done();
         });
 

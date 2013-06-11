@@ -12,7 +12,17 @@ var stateMachine = go.components.stateMachine,
     StateMachineModel = stateMachine.StateMachineModel;
 
 (function(exports) {
+  var RoutingEndpointModel = EndpointModel.extend({
+    idAttribute: 'uuid'
+  });
+
+  var RoutingEntryModel = ConnectionModel.extend({
+    idAttribute: 'uuid'
+  });
+
   var ChannelModel = StateModel.extend({
+    idAttribute: 'uuid',
+
     relations: [{
       type: Backbone.HasMany,
       key: 'endpoints',
@@ -21,9 +31,11 @@ var stateMachine = go.components.stateMachine,
   });
 
   var RoutingBlockModel = StateModel.extend({
+    idAttribute: 'uuid',
+
     relations: [{
       type: Backbone.HasMany,
-      key: 'application_endpoints',
+      key: 'conversation_endpoints',
       relatedModel: EndpointModel
     }, {
       type: Backbone.HasMany,
@@ -32,7 +44,9 @@ var stateMachine = go.components.stateMachine,
     }]
   });
 
-  var ApplicationModel = StateModel.extend({
+  var ConversationModel = StateModel.extend({
+    idAttribute: 'uuid',
+
     relations: [{
       type: Backbone.HasMany,
       key: 'endpoints',
@@ -41,6 +55,8 @@ var stateMachine = go.components.stateMachine,
   });
 
   var CampaignRoutingModel = StateMachineModel.extend({
+    idAttribute: 'campaign_id',
+
     relations: [{
       type: Backbone.HasMany,
       key: 'channels',
@@ -51,19 +67,23 @@ var stateMachine = go.components.stateMachine,
       relatedModel: RoutingBlockModel
     }, {
       type: Backbone.HasMany,
-      key: 'applications',
-      relatedModel: ApplicationModel
+      key: 'conversations',
+      relatedModel: ConversationModel
     }, {
       type: Backbone.HasMany,
-      key: 'connections',
-      relatedModel: ConnectionModel
+      key: 'routing_entries',
+      relatedModel: RoutingEntryModel
     }]
   });
 
   _.extend(exports, {
+    CampaignRoutingModel: CampaignRoutingModel,
+
     ChannelModel: ChannelModel,
     RoutingBlockModel: RoutingBlockModel,
-    ApplicationModel: ApplicationModel,
-    CampaignRoutingModel: CampaignRoutingModel
+    ConversationModel: ConversationModel,
+
+    RoutingEntryModel: RoutingEntryModel,
+    RoutingEndpointModel: RoutingEndpointModel
   });
 })(go.campaign.routing);

@@ -85,8 +85,8 @@
     },
 
     onPlumbConnect: function(e) {
-      var sourceId = e.sourceEndpoint.getUuid(),
-          targetId = e.targetEndpoint.getUuid(),
+      var sourceId = e.source.attr('id'),
+          targetId = e.target.attr('id'),
           connectionId = idOfConnection(sourceId, targetId);
 
       // Case 1:
@@ -118,8 +118,8 @@
     },
 
     onPlumbDisconnect: function(e) {
-      var sourceId = e.sourceEndpoint.getUuid(),
-          targetId = e.targetEndpoint.getUuid(),
+      var sourceId = e.source.attr('id'),
+          targetId = e.target.attr('id'),
           connectionId = idOfConnection(sourceId, targetId);
 
       // Case 1:
@@ -181,6 +181,13 @@
 
       // Lookup/Manager of all the connections in the diagram
       this.connections = new DiagramViewConnections(this);
+
+      // Set the view as the default container so jsPlumb connects endpoint
+      // elements properly.
+      //
+      // https://github.com/sporritt/jsPlumb/wiki/setup
+      // #overriding-the-default-behaviour
+      jsPlumb.Defaults.Container = this.$el;
     },
 
     render: function() {

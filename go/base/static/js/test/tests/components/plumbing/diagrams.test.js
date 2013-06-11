@@ -25,7 +25,7 @@ describe("go.components.plumbing (diagrams)", function() {
 
     var endpoints,
         a1,
-        c1;
+        a3;
 
     var assertSubscribed = function(id, subscriber) {
       assert(endpoints.members.has(id));
@@ -41,12 +41,12 @@ describe("go.components.plumbing (diagrams)", function() {
       endpoints = new DiagramViewEndpoints(diagram);
 
       var model = new StateModel({
-        id: 'c1',
-        left: [{id: 'c1L1'}, {id: 'c1L2'}],
-        right: [{id: 'c1R1'}, {id: 'c1R2'}]
+        id: 'a3',
+        left: [{id: 'a3L1'}, {id: 'a3L2'}],
+        right: [{id: 'a3R1'}, {id: 'a3R2'}]
       });
 
-      c1 = new StateView({diagram: diagram, model: model});
+      a3 = new StateView({diagram: diagram, model: model});
       a1 = diagram.states.get('a1');
     });
 
@@ -54,11 +54,11 @@ describe("go.components.plumbing (diagrams)", function() {
       it("should subscribe the new state's endpoints to the group",
       function(done) {
         diagram.states.on('add', function() {
-          assertSubscribed('c1', c1.endpoints);
+          assertSubscribed('a3', a3.endpoints);
           done();
         });
 
-        diagram.states.add('c1', c1);
+        diagram.states.add(diagram.states.members.get('apples'), 'a3', a3);
       });
     });
 
@@ -76,8 +76,8 @@ describe("go.components.plumbing (diagrams)", function() {
 
     describe(".addState", function() {
       it("should subscribe the state's endpoints to the group", function() {
-        endpoints.addState('c1', c1);
-        assertSubscribed('c1', c1.endpoints);
+        endpoints.addState('a3', a3);
+        assertSubscribed('a3', a3.endpoints);
       });
     });
 
@@ -119,6 +119,11 @@ describe("go.components.plumbing (diagrams)", function() {
     });
 
     describe("on 'connection' jsPlumb events", function() {
+      var EndpointView = plumbing.EndpointView,
+          EndpointModel = stateMachine.EndpointModel;
+
+      var UnknownEndpointView = EndpointView.extend();
+
       beforeEach(function() {
         // render the diagram to ensure the jsPlumb endpoints are drawn
         diagram.render();
@@ -145,22 +150,22 @@ describe("go.components.plumbing (diagrams)", function() {
           done();
         });
 
-        jsPlumb.connect({
-          source: a1L1.plumbEndpoint,
-          target: b2R1.plumbEndpoint
-        });
+        jsPlumb.connect({source: a1L1.$el, target: b2R1.$el});
       });
 
       it("should ignore unsupported connections", function(done) {
-        var knownEndpoint = diagram.endpoints.get('b2R1').plumbEndpoint,
-            unknownEndpoint = jsPlumb.addEndpoint(diagram.states.get('a1').$el);
+        var a1 = diagram.states.get('a1'),
+            b2R1 = diagram.endpoints.get('b2R1');
 
-        jsPlumb.bind('connection', function() { done(); });
-
-        jsPlumb.connect({
-          source: knownEndpoint,
-          target: unknownEndpoint
+        var unknown = new UnknownEndpointView({
+          state: a1,
+          collection: a1.endpoints.members.get('left'),
+          model: new EndpointModel({id: 'a1L3'})
         });
+
+        unknown.render();
+        jsPlumb.bind('connection', function() { done(); });
+        jsPlumb.connect({source: b2R1.$el, target: unknown.$el});
       });
     });
 

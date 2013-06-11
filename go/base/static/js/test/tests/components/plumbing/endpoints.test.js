@@ -1,11 +1,14 @@
 describe("go.components.plumbing (endpoints)", function() {
   var stateMachine = go.components.stateMachine;
-      plumbing = go.components.plumbing;
+      plumbing = go.components.plumbing,
+      testHelpers = go.testHelpers;
 
-  var testHelpers = plumbing.testHelpers,
-      setUp = testHelpers.setUp,
-      newSimpleDiagram = testHelpers.newSimpleDiagram,
-      tearDown = testHelpers.tearDown;
+  var oneElExists = testHelpers.oneElExists,
+      noElExists = testHelpers.noElExists;
+
+  var setUp = plumbing.testHelpers.setUp,
+      newSimpleDiagram = plumbing.testHelpers.newSimpleDiagram,
+      tearDown = plumbing.testHelpers.tearDown;
 
   var diagram;
 
@@ -22,6 +25,12 @@ describe("go.components.plumbing (endpoints)", function() {
     var EndpointModel = stateMachine.EndpointModel,
         EndpointView = plumbing.EndpointView;
 
+    var ToyEndpointView = EndpointView.extend({
+      width: 20,
+      height: 25,
+      labelled: true
+    });
+
     var x,
         x1;
 
@@ -32,104 +41,136 @@ describe("go.components.plumbing (endpoints)", function() {
     });
 
     describe(".destroy", function() {
-      it("should remove the actual jsPlumb endpoint", function() {
-        assert.isDefined(jsPlumb.getEndpoint('x1'));
+      it("should remove the element", function() {
+        assert(oneElExists('#x #x1'));
         x1.destroy();
-        assert.isNull(jsPlumb.getEndpoint('x1'));
+        assert(noElExists('#x #x1'));
       });
     });
 
     describe(".render", function() {
-      it("should create the actual jsPlumb endpoint", function() {
-        var x4 = new EndpointView({
+      var x4;
+
+      beforeEach(function() {
+        x4 = new ToyEndpointView({
           state: x,
           collection: x.endpoints.members.get('endpoints'),
           model: new EndpointModel({id: 'x4'})
         });
+      });
 
-        assert.isUndefined(jsPlumb.getEndpoint('x4'));
-
+      it("should append the endpoint to the state element", function() {
+        assert(noElExists('#x #x4'));
         x4.render();
+        assert(oneElExists('#x #x4'));
+      });
 
-        assert.isDefined(jsPlumb.getEndpoint('x4'));
-        assert.equal(
-          jsPlumb
-            .getEndpoint('x4')
-            .getElement()
-            .get(0),
-          x.el);
+      it("should set the dimensions of the endpoint", function() {
+        x4.render();
+        assert.equal($('#x #x4').width(), 20);
+        assert.equal($('#x #x4').height(), 25);
+      });
+
+      it("should add a label to the endpoint if labelling is enabled",
+      function() {
+        x4.render();
+        assert(oneElExists('#x #x4 .label'));
       });
     });
   });
 
-  describe(".StaticEndpoint", function() {
+  describe(".ParametricEndpointView", function() {
     var EndpointModel = stateMachine.EndpointModel,
-        StaticEndpoint = plumbing.StaticEndpoint;
+        ParametricEndpointView = plumbing.ParametricEndpointView;
 
-    var endpoint;
+    var state,
+        endpoint;
 
     beforeEach(function() {
-      var x = diagram.states.get('x');
+      state = diagram.states.get('x');
 
-      endpoint = new StaticEndpoint({
-        state: x,
-        collection: x.endpoints.members.get('endpoints'),
+      state
+        .render()
+        .$el
+        .width(200)
+        .height(300);
+
+      endpoint = new ParametricEndpointView({
+        state: state,
+        collection: state.endpoints.members.get('endpoints'),
         model: new EndpointModel({id: 'x4'})
       });
     });
 
-    describe(".anchors", function() {
-      var anchors;
+    describe(".positioners", function() {
+      var positioners;
 
       beforeEach(function() {
-        anchors = StaticEndpoint.prototype.anchors;
+        positioners = endpoint.positioners;
       });
-      
-      it("should a provide jsPlumb anchor generators for each side of a state",
-      function() {
-        assert.deepEqual(anchors.left(0.3), [0, 0.3, -1, 0]);
-        assert.deepEqual(anchors.right(0.3), [1, 0.3, 1, 0]);
-        assert.deepEqual(anchors.top(0.3), [0.3, 0, 0, -1]);
-        assert.deepEqual(anchors.bottom(0.3), [0.3, 1, 0, 1]);
+
+      describe(".left", function() {
+        it("should return the position on the left corresponding to param t",
+        function() {
+          assert.deepEqual(
+            positioners.left.call(endpoint, 0.5),
+            {left: -7, top: 143});
+        });
+      });
+
+      describe(".right", function() {
+        it("should find the position on the right corresponding to param t",
+        function() {
+          assert.deepEqual(
+            positioners.right.call(endpoint, 0.5),
+            {left: 193, top: 143});
+        });
+      });
+
+      describe(".top", function() {
+        it("should find the position on the top corresponding to param t",
+        function() {
+          assert.deepEqual(
+            positioners.top.call(endpoint, 0.5),
+            {left: 93, top: -7});
+        });
+      });
+
+      describe(".bottom", function() {
+        it("should find the position on the bottom corresponding to param t",
+        function() {
+          assert.deepEqual(
+            positioners.bottom.call(endpoint, 0.5),
+            {left: 93, top: 293});
+        });
       });
     });
 
     describe(".render", function() {
-      var plumbEndpoint;
-
-      beforeEach(function() {
-        // ensure the plumb endpoint exists
-        diagram.render();
-        endpoint.render();
-
-        plumbEndpoint = endpoint.plumbEndpoint;
-        sinon.stub(plumbEndpoint, 'setAnchor');
-      });
-
-      afterEach(function() {
-        plumbEndpoint.setAnchor.restore();
-      });
-
-      it("reposition the endpoint according to its anchor position",
+      it("should position the endpoint",
       function() {
         endpoint
           .reposition(0.2)
           .render();
 
-        assert(plumbEndpoint.setAnchor.calledWith([0, 0.2, -1, 0]));
+        assert.deepEqual(
+          endpoint.$el.offset(),
+          {left: -7, top: 53});
 
         endpoint
           .reposition(0.1)
           .render();
 
-        assert(plumbEndpoint.setAnchor.calledWith([0, 0.1, -1, 0]));
+        assert.deepEqual(
+          endpoint.$el.offset(),
+          {left: -7, top: 23});
       });
     });
   });
 
   describe(".AligningEndpointCollection", function() {
     var EndpointModel = stateMachine.EndpointModel,
-        StaticEndpoint = plumbing.StaticEndpoint;
+        ParametricEndpointView = plumbing.ParametricEndpointView;
 
     var AligningEndpointCollection
       = plumbing.AligningEndpointCollection;
@@ -142,15 +183,15 @@ describe("go.components.plumbing (endpoints)", function() {
       }
     });
 
-    var MockStaticEndpoint = StaticEndpoint.extend({
+    var MockParametricEndpointView = ParametricEndpointView.extend({
       reposition: function(t) {
-        StaticEndpoint.prototype.reposition.call(this, t);
+        ParametricEndpointView.prototype.reposition.call(this, t);
         this.t = t;
         return this;
       },
 
       render: function() {
-        StaticEndpoint.prototype.render.call(this);
+        ParametricEndpointView.prototype.render.call(this);
         this.rendered = true;
         return this;
       }
@@ -172,7 +213,7 @@ describe("go.components.plumbing (endpoints)", function() {
       endpoints = new MockAligningEndpointCollection({
         view: x,
         attr: 'endpoints',
-        type: MockStaticEndpoint,
+        type: MockParametricEndpointView,
         margin: 0
       });
     });

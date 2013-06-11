@@ -61,11 +61,8 @@ describe("go.components.plumbing (connections)", function() {
         });
 
         jsPlumb.bind('connection', function(e) {
-          assert.equal(x1_y1.source.plumbEndpoint,
-                       e.sourceEndpoint);
-
-          assert.equal(x1_y1.target.plumbEndpoint,
-                       e.targetEndpoint);
+          assert(x1_y1.source.$el.is(e.source));
+          assert(x1_y1.target.$el.is(e.target));
           done();
         });
 
