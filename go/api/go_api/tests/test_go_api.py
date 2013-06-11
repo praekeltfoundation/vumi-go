@@ -1,4 +1,4 @@
-"""Tests for go.api.go_api."""
+"""Tests for go.api.go_api.go_api"""
 
 from txjsonrpc.web.jsonrpc import Proxy
 
@@ -7,58 +7,20 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.trial.unittest import TestCase
 from twisted.web.server import Site
 
-from vumi.rpc import RpcCheckError
 from vumi.tests.utils import VumiWorkerTestCase
 from vumi.utils import http_request
 
 from go.vumitools.api import VumiApi
-from go.vumitools.tests.utils import GoPersistenceMixin
-from go.api.go_api.go_api import (
-    GoApiWorker, GoApiServer, ConversationType, CampaignType)
+from go.vumitools.tests.utils import GoAppWorkerTestMixin
+from go.api.go_api.go_api import GoApiWorker, GoApiServer
 
 
-class ConversationTypeTestCase(TestCase):
-
-    def _conv_dict(self, without=(), **kw):
-        conv_dict = kw.copy()
-        conv_dict.setdefault('key', u'conv-1')
-        conv_dict.setdefault('name', u'Conversation One')
-        conv_dict.setdefault('description', u'A Dummy Conversation')
-        conv_dict.setdefault('conversation_type', u'jsbox')
-        for key in without:
-            del conv_dict[key]
-        return conv_dict
-
-    def test_check(self):
-        conv_type = ConversationType()
-        conv_type.check('name', self._conv_dict())
-        for key in ['key', 'name', 'description', 'conversation_type']:
-            self.assertRaises(
-                RpcCheckError, conv_type.check, 'name',
-                self._conv_dict(without=(key,)))
-
-
-class CampaignTypeTestCase(TestCase):
-    def _campaign_dict(self, without=(), **kw):
-        campaign_dict = kw.copy()
-        campaign_dict.setdefault('key', u'campaign-1')
-        campaign_dict.setdefault('name', u'Campaign One')
-        for key in without:
-            del campaign_dict[key]
-        return campaign_dict
-
-    def test_check(self):
-        campaign_type = CampaignType()
-        campaign_type.check('name', self._campaign_dict())
-        for key in ['key', 'name']:
-            self.assertRaises(
-                RpcCheckError, campaign_type.check, 'name',
-                self._campaign_dict(without=(key,)))
-
-
-class GoApiServerTestCase(TestCase, GoPersistenceMixin):
+class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     use_riak = True
+    worker_name = 'GoApiServer'
+    transport_name = 'sphex'
+    transport_type = 'sphex_type'
 
     @inlineCallbacks
     def setUp(self):
@@ -88,28 +50,100 @@ class GoApiServerTestCase(TestCase, GoPersistenceMixin):
         ])
 
     @inlineCallbacks
-    def test_active_conversations(self):
+    def test_conversations(self):
         conv = yield self.user_api.conversation_store.new_conversation(
             u'jsbox', u'My Conversation', u'A description', {})
         result = yield self.proxy.callRemote(
-            "active_conversations", self.campaign_key)
+            "conversations", self.campaign_key)
         self.assertEqual(result, [
             {
-                'key': conv.key,
-                'conversation_type': conv.conversation_type,
+                'uuid': conv.key,
+                'type': conv.conversation_type,
                 'name': conv.name,
                 'description': conv.description,
+                'endpoints': [
+                    {
+                        u'name': u'default',
+                        u'uuid': u'%s:%s' % (conv.key, u'default'),
+                    },
+                ],
             },
         ])
 
     @inlineCallbacks
-    def test_active_conversations_with_no_conversations(self):
+    def test_conversations_with_no_conversations(self):
         result = yield self.proxy.callRemote(
-            "active_conversations", self.campaign_key)
+            "conversations", self.campaign_key)
         self.assertEqual(result, [])
 
+    @inlineCallbacks
+    def test_channels(self):
+        yield self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
+        yield self.user_api.acquire_tag(u"pool")  # acquires tag1
+        result = yield self.proxy.callRemote(
+            "channels", self.campaign_key)
+        self.assertEqual(result, [
+            {
+                u'uuid': u'pool:tag1',
+                u'name': u'tag1',
+                u'tag': [u'pool', u'tag1'],
+                u'description': u'Pool: tag1',
+                u'endpoints': [
+                    {
+                        u'name': u'default',
+                        u'uuid': u'pool:tag1:default'
+                    },
+                ],
+            },
+        ])
 
-class GoApiWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
+    @inlineCallbacks
+    def test_routing_blocks_with_no_routing_blocks(self):
+        result = yield self.proxy.callRemote(
+            "routing_blocks", self.campaign_key)
+        self.assertEqual(result, [])
+
+    @inlineCallbacks
+    def test_routing_table(self):
+        conv = yield self.user_api.conversation_store.new_conversation(
+            u'jsbox', u'My Conversation', u'A description', {})
+        yield self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
+        yield self.user_api.acquire_tag(u"pool")  # acquires tag1
+        result = yield self.proxy.callRemote(
+            "routing_table", self.campaign_key)
+        self.assertEqual(result, {
+            u'channels': [
+                {
+                    u'uuid': u'pool:tag1',
+                    u'name': u'tag1',
+                    u'tag': [u'pool', u'tag1'],
+                    u'description': u'Pool: tag1',
+                    u'endpoints': [
+                        {u'name': u'default', u'uuid': u'pool:tag1:default'}],
+                }
+            ],
+            u'conversations': [
+                {
+                    u'uuid': conv.key,
+                    u'type': conv.conversation_type,
+                    u'name': conv.name,
+                    u'description': conv.description,
+                    u'endpoints': [
+                        {
+                            u'name': u'default',
+                            u'uuid': u'%s:default' % conv.key,
+                        },
+                    ],
+                }
+            ],
+            u'routing_blocks': [
+            ],
+            u'routing_entries': [
+            ]
+        })
+
+
+class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):
 
     use_riak = True
 
@@ -177,7 +211,7 @@ class GoApiWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
     def test_list_methods(self):
         worker, proxy = yield self.get_api_worker()
         result = yield proxy.callRemote('system.listMethods')
-        self.assertTrue(u'active_conversations' in result)
+        self.assertTrue(u'conversations' in result)
 
     @inlineCallbacks
     def test_method_help(self):

@@ -4,55 +4,23 @@
 """JSON RPC API for Vumi Go front-end and others."""
 
 from twisted.application.internet import StreamServerEndpointService
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, succeed, DeferredList
 
 from txjsonrpc.jsonrpc import addIntrospection
 from txjsonrpc.web.jsonrpc import JSONRPC
 
 from vumi.config import ConfigDict, ConfigText, ConfigServerEndpoint
-from vumi.rpc import signature, Unicode, List, Dict
+from vumi.rpc import signature, Unicode, List
 from vumi.transports.httprpc import httprpc
 from vumi.utils import build_web_site
 from vumi.worker import BaseWorker
 
+from go.api.go_api.api_types import (
+    CampaignType, ConversationType, ChannelType, RoutingBlockType,
+    RoutingEntryType, RoutingType)
 from go.api.go_api.auth import GoUserRealm, GoUserAuthSessionWrapper
+from go.vumitools.account import RoutingTableHelper
 from go.vumitools.api import VumiApi
-
-
-class ConversationType(Dict):
-    def __init__(self, *args, **kw):
-        kw['required_fields'] = {
-            'key': Unicode(),
-            'name': Unicode(),
-            'description': Unicode(),
-            'conversation_type': Unicode(),
-        }
-        super(ConversationType, self).__init__(*args, **kw)
-
-    @classmethod
-    def format_conversation(cls, conv):
-        return {
-            'key': conv.key,
-            'name': conv.name,
-            'description': conv.description,
-            'conversation_type': conv.conversation_type,
-        }
-
-
-class CampaignType(Dict):
-    def __init__(self, *args, **kw):
-        kw['required_fields'] = {
-            'key': Unicode(),
-            'name': Unicode(),
-        }
-        super(CampaignType, self).__init__(*args, **kw)
-
-    @classmethod
-    def format_campaign(cls, campaign):
-        return {
-            'key': campaign["key"],
-            'name': campaign["name"],
-        }
 
 
 class GoApiServer(JSONRPC):
@@ -61,8 +29,43 @@ class GoApiServer(JSONRPC):
         self.user_account_key = user_account_key
         self.vumi_api = vumi_api
 
-    def _format_conversation_list(self, convs):
-        return [ConversationType.format_conversation(c) for c in convs]
+    def _conversations(self, user_api):
+        def format_conversations(convs):
+            return [ConversationType.format_conversation(c) for c in convs]
+
+        d = user_api.active_conversations()
+        d.addCallback(format_conversations)
+        return d
+
+    def _channels(self, user_api):
+        def endpoints_to_channels(endpoints):
+            return [ChannelType.format_channel(tag) for tag in endpoints]
+
+        d = user_api.list_endpoints()
+        d.addCallback(endpoints_to_channels)
+        return d
+
+    def _routing_blocks(self, user_api):
+        def format_routing_blocks(routing_blocks):
+            return [RoutingBlockType.format_routing_block(rb)
+                    for rb in routing_blocks]
+
+        d = succeed([])  # TODO: complete once routing blocks exist
+        d.addCallback(format_routing_blocks)
+        return d
+
+    def _routing_entries(self, user_api):
+        def format_routing_entries(routing_table):
+            routing_table = RoutingTableHelper(routing_table)
+            return [RoutingEntryType.format_entry(
+                source_uuid=u"%s:%s" % (src_conn, src_endp),
+                target_uuid=u"%s:%s" % (dst_conn, dst_endp))
+                for src_conn, src_endp, dst_conn, dst_endp
+                in routing_table.entries()]
+
+        d = user_api.get_routing_table()
+        d.addCallback(format_routing_entries)
+        return d
 
     @signature(returns=List("List of campaigns.",
                             item_type=CampaignType()))
@@ -76,12 +79,73 @@ class GoApiServer(JSONRPC):
     @signature(campaign_key=Unicode("Campaign key."),
                returns=List("List of conversations.",
                             item_type=ConversationType()))
-    def jsonrpc_active_conversations(self, campaign_key):
+    def jsonrpc_conversations(self, campaign_key):
         """List the active conversations under a particular campaign.
            """
         user_api = self.vumi_api.get_user_api(campaign_key)
-        d = user_api.active_conversations()
-        d.addCallback(self._format_conversation_list)
+        return self._conversations(user_api)
+
+    @signature(campaign_key=Unicode("Campaign key."),
+               returns=List("List of channels.",
+                            item_type=ChannelType()))
+    def jsonrpc_channels(self, campaign_key):
+        """List the active channels under a particular campaign.
+           """
+        user_api = self.vumi_api.get_user_api(campaign_key)
+        return self._channels(user_api)
+
+    @signature(campaign_key=Unicode("Campaign key."),
+               returns=List("List of routing blocks.",
+                            item_type=ChannelType()))
+    def jsonrpc_routing_blocks(self, campaign_key):
+        """List the active routing blocks under a particular campaign.
+           """
+        user_api = self.vumi_api.get_user_api(campaign_key)
+        return self._routing_blocks(user_api)
+
+    @signature(campaign_key=Unicode("Campaign key."),
+               returns=RoutingType("Description of the routing table."))
+    def jsonrpc_routing_table(self, campaign_key):
+        user_api = self.vumi_api.get_user_api(campaign_key)
+        deferreds = []
+        deferreds.append(self._channels(user_api))
+        deferreds.append(self._routing_blocks(user_api))
+        deferreds.append(self._conversations(user_api))
+        deferreds.append(self._routing_entries(user_api))
+
+        def construct_json(results):
+            for success, result  in results:
+                if not success:
+                    result.raiseException()
+            results = [r[1] for r in results]
+            channels, routing_blocks, conversations, routing_entries = results
+            return RoutingType.format_routing(
+                channels, routing_blocks, conversations, routing_entries)
+
+        d = DeferredList(deferreds, consumeErrors=True)
+        d.addCallback(construct_json)
+        return d
+
+    @signature(campaign_key=Unicode("Campaign key."),
+               routing=RoutingType("Description of the new routing table."))
+    def jsonrpc_update_routing_table(self, campaign_key, routing):
+        user_api = self.vumi_api.get_user_api(campaign_key)
+        deferreds = []
+        deferreds.append(self._channels(user_api))
+        deferreds.append(self._routing_blocks(user_api))
+        deferreds.append(self._conversations(user_api))
+
+        def check_routing_table(result):
+            # TODO: checks
+            pass
+
+        def save_routing_table(result):
+            # TODO: save
+            pass
+
+        d = DeferredList(deferreds, consumeErrors=True)
+        d.addCallback(check_routing_table)
+        d.addCallback(save_routing_table)
         return d
 
 
