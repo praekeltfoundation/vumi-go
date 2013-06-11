@@ -1,0 +1,45 @@
+{% extends "app.html" %}
+{% load url from future %}
+
+{% block content_extraclass %}campaigns{% endblock %}
+
+{# TODO, title #}
+{% block content_title %}
+    Campaign Routing
+{% endblock %}
+
+{% block content_actions_right %}
+    <a href="{% url 'conversations:index' %}">Cancel</a>
+    <a href="" class="btn btn-primary">Save</a>
+{% endblock %}
+
+{% block content_main %}
+    <div id='routing-diagram' class="row-fluid">
+        <div class='span3 column' id='channels'></div>
+        <div class='span3 column' id='routing-blocks'></div>
+        <div class='span3 column' id='conversations'></div>
+    </div>
+{% endblock %}
+
+{% block ondomready %}
+    {{ block.super }}
+
+jsPlumb.ready(function() {
+  var routing = go.campaign.routing,
+      modelData = routing.testHelpers.modelData,
+      CampaignRoutingModel = routing.CampaignRoutingModel,
+      RoutingDiagramView = routing.RoutingDiagramView;
+
+  var plumbDefaults = jsPlumb.Defaults;
+  plumbDefaults.Connector = ['StateMachine'];
+  plumbDefaults.PaintStyle.lineWidth = 2;
+  plumbDefaults.EndpointStyle.radius = 3;
+
+  var diagram = new RoutingDiagramView({
+    el: '#routing-diagram',
+    model: new CampaignRoutingModel(modelData)
+  });
+
+  diagram.render();
+});
+{% endblock %}
