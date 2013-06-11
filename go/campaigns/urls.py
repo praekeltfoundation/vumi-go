@@ -1,7 +1,8 @@
 from django.conf.urls.defaults import patterns, url
 from go.campaigns import views
 
-urlpatterns = patterns('',
+urlpatterns = patterns(
+    '',
     url(r'^details/$', views.details, name='details'),
     url(r'^details/(?P<campaign_key>\w+)/$', views.details, name='details'),
     # TODO: message is probably not a good name for these views, considering

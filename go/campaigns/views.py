@@ -77,7 +77,6 @@ def message_conversation(request, campaign_key):
         # TODO save and go to next step.
         return redirect('campaigns:contacts', campaign_key=conversation.key)
 
-
     return render(request, 'campaigns/wizard_2_conversation.html', {
         'campaign_key': campaign_key
     })
@@ -146,6 +145,7 @@ def contacts(request, campaign_key):
         'campaign_key': campaign_key,
     })
 
+
 @login_required
 def preview(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
@@ -173,7 +173,7 @@ def incoming_list(request, campaign_key):
 def incoming_detail(request, campaign_key, contact_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
     form = CampaignBulkMessageForm()
-    
+
     if request.method == 'POST':
         # TODO: process sending message from form
         pass
