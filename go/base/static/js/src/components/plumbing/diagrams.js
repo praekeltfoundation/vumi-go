@@ -106,8 +106,13 @@
           target = this.diagram.endpoints.get(targetId),
           collection = this.determineCollection(source, target);
 
-      // This kind of connection is not supported so just return.
-      if (collection === null) { return ; }
+      // Case 3:
+      // -------
+      // This kind of connection is not supported
+      if (collection === null) {
+        this.trigger('error:unsupported', source, target, e.connection);
+        return;
+      }
 
       collection.add({
         source: source.model,
