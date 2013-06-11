@@ -375,8 +375,8 @@ PIPELINE_JS = {
             'js/src/campaign/interactive.js',
             'js/src/campaign/bulkMessage.js',
             'js/src/campaign/routing/routing.js',
-            'js/src/campaign/routing/routing-models.js',
-            'js/src/campaign/routing/routing-views.js',
+            'js/src/campaign/routing/models.js',
+            'js/src/campaign/routing/views.js',
         ),
         'output_filename': 'export/go.js'
     },
