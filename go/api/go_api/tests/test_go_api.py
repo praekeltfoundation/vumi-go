@@ -10,6 +10,7 @@ from twisted.web.server import Site
 from vumi.tests.utils import VumiWorkerTestCase
 from vumi.utils import http_request
 
+from go.vumitools.account.models import GoConnector, RoutingTableHelper
 from go.vumitools.api import VumiApi
 from go.vumitools.tests.utils import GoAppWorkerTestMixin
 from go.api.go_api.go_api import GoApiWorker, GoApiServer
@@ -64,7 +65,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
                 'endpoints': [
                     {
                         u'name': u'default',
-                        u'uuid': u'%s:%s' % (conv.key, u'default'),
+                        u'uuid': u'CONVERSATION:jsbox:%s:default' % conv.key,
                     },
                 ],
             },
@@ -91,7 +92,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
                 u'endpoints': [
                     {
                         u'name': u'default',
-                        u'uuid': u'pool:tag1:default'
+                        u'uuid': u'TRANSPORT_TAG:pool:tag1:default'
                     },
                 ],
             },
@@ -104,11 +105,46 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         self.assertEqual(result, [])
 
     @inlineCallbacks
-    def test_routing_table(self):
+    def _connect_conversation_to_tag(self, conv, tag):
+        conv_conn = str(GoConnector.for_conversation(
+        conv.conversation_type, conv.key))
+        channel_conn = str(GoConnector.for_transport_tag(*tag))
+        user_account = yield self.user_api.get_user_account()
+        rt_helper = RoutingTableHelper(user_account.routing_table)
+        rt_helper.add_entry(channel_conn, 'default', conv_conn, 'default')
+        rt_helper.add_entry(conv_conn, 'default', channel_conn, 'default')
+        yield user_account.save()
+
+    @inlineCallbacks
+    def _setup_simple_routing_table(self):
         conv = yield self.user_api.conversation_store.new_conversation(
             u'jsbox', u'My Conversation', u'A description', {})
         yield self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
-        yield self.user_api.acquire_tag(u"pool")  # acquires tag1
+        tag = yield self.user_api.acquire_tag(u"pool")  # acquires tag1
+        yield self._connect_conversation_to_tag(conv, tag)
+        returnValue((conv, tag))
+
+    @inlineCallbacks
+    def test_routing_entries(self):
+        conv, tag = yield self._setup_simple_routing_table()
+        result = yield self.proxy.callRemote(
+            "routing_entries", self.campaign_key)
+        self.assertEqual(result, [
+            {
+                u'source': {u'uuid': u'CONVERSATION:jsbox:%s:default'
+                            % conv.key},
+                u'target': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'}
+            },
+            {
+                u'source': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'},
+                u'target': {u'uuid': u'CONVERSATION:jsbox:%s:default'
+                            % conv.key},
+            },
+        ])
+
+    @inlineCallbacks
+    def test_routing_table(self):
+        conv, tag = yield self._setup_simple_routing_table()
         result = yield self.proxy.callRemote(
             "routing_table", self.campaign_key)
         self.assertEqual(result, {
@@ -119,7 +155,11 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
                     u'tag': [u'pool', u'tag1'],
                     u'description': u'Pool: tag1',
                     u'endpoints': [
-                        {u'name': u'default', u'uuid': u'pool:tag1:default'}],
+                        {
+                            u'name': u'default',
+                            u'uuid': u'TRANSPORT_TAG:pool:tag1:default',
+                        }
+                    ],
                 }
             ],
             u'conversations': [
@@ -131,7 +171,8 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
                     u'endpoints': [
                         {
                             u'name': u'default',
-                            u'uuid': u'%s:default' % conv.key,
+                            u'uuid': u'CONVERSATION:jsbox:%s:default'
+                            % conv.key,
                         },
                     ],
                 }
@@ -139,6 +180,16 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
             u'routing_blocks': [
             ],
             u'routing_entries': [
+                {
+                    u'source': {u'uuid': u'CONVERSATION:jsbox:%s:default'
+                                % conv.key},
+                    u'target': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'}
+                },
+                {
+                    u'source': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'},
+                    u'target': {u'uuid': u'CONVERSATION:jsbox:%s:default'
+                                % conv.key},
+                },
             ]
         })
 

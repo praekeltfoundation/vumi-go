@@ -61,7 +61,7 @@ class GoApiServer(JSONRPC):
                 source_uuid=u"%s:%s" % (src_conn, src_endp),
                 target_uuid=u"%s:%s" % (dst_conn, dst_endp))
                 for src_conn, src_endp, dst_conn, dst_endp
-                in routing_table.entries()]
+                in sorted(routing_table.entries())]
 
         d = user_api.get_routing_table()
         d.addCallback(format_routing_entries)
@@ -104,8 +104,21 @@ class GoApiServer(JSONRPC):
         return self._routing_blocks(user_api)
 
     @signature(campaign_key=Unicode("Campaign key."),
-               returns=RoutingType("Description of the routing table."))
+               returns=List("List of routing table entries.",
+                            item_type=RoutingEntryType()))
+    def jsonrpc_routing_entries(self, campaign_key):
+        """List the routing entries from a particular campaign's routing table.
+           """
+        user_api = self.vumi_api.get_user_api(campaign_key)
+        return self._routing_entries(user_api)
+
+    @signature(campaign_key=Unicode("Campaign key."),
+               returns=RoutingType(
+                   "Complete description of the routing table."))
     def jsonrpc_routing_table(self, campaign_key):
+        """List the channels, conversations, routing blocks and routing table
+        entries that make up a campaign's routing.
+        """
         user_api = self.vumi_api.get_user_api(campaign_key)
         deferreds = []
         deferreds.append(self._channels(user_api))
