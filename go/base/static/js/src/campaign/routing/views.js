@@ -1,6 +1,6 @@
 // go.campaign.routing (views)
 // ===========================
-// Views for campaign routing screen.
+// Views for campaign routing diagram.
 
 (function(exports) {
   var plumbing = go.components.plumbing,
@@ -129,14 +129,14 @@
   // Columns
   // -------
 
-  // A vertical section of the routing screen dedicated to a particular
+  // A vertical section of the routing diagram dedicated to a particular
   // collection of the three state types (Channel, RoutingBlock or
   // Conversation).
   var RoutingColumnView = Backbone.View.extend({
     initialize: function(options) {
-      this.screen = options.screen;
-      this.states = this.screen.states.members.get(this.collectionName);
-      this.setElement(this.screen.$('#' + this.id));
+      this.diagram = options.diagram;
+      this.states = this.diagram.states.members.get(this.collectionName);
+      this.setElement(this.diagram.$('#' + this.id));
     },
 
     repaint: function() { jsPlumb.repaintEverything(); },
@@ -172,7 +172,7 @@
   // Main components
   // ---------------
 
-  var RoutingScreenView = DiagramView.extend({
+  var RoutingDiagramView = DiagramView.extend({
     stateCollectionType: RoutingStateCollection,
     stateSchema: [{
       attr: 'channels',
@@ -194,9 +194,9 @@
 
     initialize: function(options) {
       DiagramView.prototype.initialize.call(this, options);
-      this.channels = new ChannelColumnView({screen: this});
-      this.routingBlocks = new RoutingBlockColumnView({screen: this});
-      this.conversations = new ConversationColumnView({screen: this});
+      this.channels = new ChannelColumnView({diagram: this});
+      this.routingBlocks = new RoutingBlockColumnView({diagram: this});
+      this.conversations = new ConversationColumnView({diagram: this});
 
       // Give the jsPlumb connectors arrow overlays
       jsPlumb.Defaults.ConnectionOverlays = [connectorOverlays.headArrow];
@@ -219,7 +219,7 @@
   });
 
   _(exports).extend({
-    RoutingScreenView: RoutingScreenView,
+    RoutingDiagramView: RoutingDiagramView,
 
     RoutingColumnView: RoutingColumnView,
     ChannelColumnView: ChannelColumnView,
