@@ -56,7 +56,6 @@
       endpoints: [{uuid: 'endpoint9', name: 'default'}]
     }],
     routing_entries: [{
-      id: 'endpoint1-endpoint4',
       source: {uuid: 'endpoint1'},
       target: {uuid: 'endpoint4'}
     }]
