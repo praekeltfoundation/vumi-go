@@ -191,11 +191,16 @@
     // Override to specialise how the view is created
     create: function(options) { return new Backbone.View(options); },
 
-    add: function(modelOrId, options) {
+    add: function(model, options) {
       options = _(options || {}).defaults(this.addDefaults, {view: {}});
 
-      if (options.addModel) { this.models.add(modelOrId, {silent: true}); }
-      var model = this.models.get(modelOrId);
+      if (options.addModel) {
+        // We create a new model before adding to handle cases where id's are
+        // only assigned when the model is initialised (we need the model id
+        // below for using it as the key to lookup the corresponding view)
+        model = new this.models.model(model);
+        this.models.add(model, {silent: true});
+      }
 
       options.view.model = model;
       var view = this.create(options.view);
