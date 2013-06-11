@@ -1,6 +1,7 @@
 """Tests for go.api.go_api.go_api"""
 
 from txjsonrpc.web.jsonrpc import Proxy
+from txjsonrpc.jsonrpclib import Fault
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -13,6 +14,7 @@ from vumi.utils import http_request
 from go.vumitools.account.models import GoConnector, RoutingTableHelper
 from go.vumitools.api import VumiApi
 from go.vumitools.tests.utils import GoAppWorkerTestMixin
+from go.api.go_api.api_types import RoutingEntryType
 from go.api.go_api.go_api import GoApiWorker, GoApiServer
 
 
@@ -194,6 +196,47 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
                 },
             ]
         })
+
+    def mk_routing_entry(self, source_uuid, target_uuid):
+        return RoutingEntryType.format_entry(source_uuid, target_uuid)
+
+    def mk_routing_table(self, entries):
+        return {
+            'channels': [], 'conversations': [], 'routing_blocks': [],
+            'routing_entries': [self.mk_routing_entry(*e) for e in entries],
+        }
+
+    @inlineCallbacks
+    def test_update_routing_table_with_bad_source_endpoint(self):
+        conv, tag = yield self._setup_simple_routing_table()
+        routing_table = self.mk_routing_table([
+            ('foo', 'TRANSPORT_TAG:pool:tag1:default'),
+        ])
+        try:
+            yield self.proxy.callRemote(
+                "update_routing_table", self.campaign_key, routing_table)
+        except Fault, e:
+            self.assertEqual(e.faultString,
+                             "Unknown source endpoint: {u'uuid': u'foo'}")
+            self.assertEqual(e.faultCode, 400)
+        else:
+            self.fail("Expected unknown source endpoint fault.")
+
+    @inlineCallbacks
+    def test_update_routing_table_with_bad_target_endpoint(self):
+        conv, tag = yield self._setup_simple_routing_table()
+        routing_table = self.mk_routing_table([
+            ('TRANSPORT_TAG:pool:tag1:default', 'bar'),
+        ])
+        try:
+            yield self.proxy.callRemote(
+                "update_routing_table", self.campaign_key, routing_table)
+        except Fault, e:
+            self.assertEqual(e.faultString,
+                             "Unknown target endpoint: {u'uuid': u'bar'}")
+            self.assertEqual(e.faultCode, 400)
+        else:
+            self.fail("Expected unknown target endpoint fault.")
 
 
 class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):

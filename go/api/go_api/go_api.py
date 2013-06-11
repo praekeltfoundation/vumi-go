@@ -3,10 +3,13 @@
 
 """JSON RPC API for Vumi Go front-end and others."""
 
+import itertools
+
 from twisted.application.internet import StreamServerEndpointService
 from twisted.internet.defer import inlineCallbacks, succeed, DeferredList
 
 from txjsonrpc.jsonrpc import addIntrospection
+from txjsonrpc.jsonrpclib import Fault
 from txjsonrpc.web.jsonrpc import JSONRPC
 
 from vumi.config import ConfigDict, ConfigText, ConfigServerEndpoint
@@ -21,6 +24,14 @@ from go.api.go_api.api_types import (
 from go.api.go_api.auth import GoUserRealm, GoUserAuthSessionWrapper
 from go.vumitools.account import RoutingTableHelper
 from go.vumitools.api import VumiApi
+
+
+class InvalidRoutingTable(Fault):
+    """Raised when a routing table contains invalid endpoints."""
+    FAULT_CODE = 400
+
+    def __init__(self, msg):
+        super(InvalidRoutingTable, self).__init__(self.FAULT_CODE, msg)
 
 
 class GoApiServer(JSONRPC):
@@ -127,7 +138,7 @@ class GoApiServer(JSONRPC):
         deferreds.append(self._routing_entries(user_api))
 
         def construct_json(results):
-            for success, result  in results:
+            for success, result in results:
                 if not success:
                     result.raiseException()
             results = [r[1] for r in results]
@@ -148,17 +159,58 @@ class GoApiServer(JSONRPC):
         deferreds.append(self._routing_blocks(user_api))
         deferreds.append(self._conversations(user_api))
 
-        def check_routing_table(result):
-            # TODO: checks
-            pass
+        def gather_endpoints(results):
+            for success, result in results:
+                if not success:
+                    result.raiseException()
+            results = [r[1] for r in results]
+            channels, routing_blocks, conversations = results
 
-        def save_routing_table(result):
-            # TODO: save
-            pass
+            endpoints = set(
+                endpoint['uuid'] for endpoint in itertools.chain(
+                    (e for c in channels for e in c['endpoints']),
+                    (e for c in conversations for e in c['endpoints']),
+                    (e for r in routing_blocks
+                     for e in r['channel_endpoints']),
+                    (e for r in routing_blocks
+                     for e in r['conversation_endpoints']),
+                )
+            )
+            return endpoints
+
+        def check_routing_table(endpoints):
+            routing_entries = routing['routing_entries']
+            for entry in routing_entries:
+                source, target = entry['source'], entry['target']
+                if source['uuid'] not in endpoints:
+                    raise InvalidRoutingTable("Unknown source endpoint: %r"
+                                              % (source,))
+                if target['uuid'] not in endpoints:
+                    raise InvalidRoutingTable("Unknown target endpoint: %r"
+                                              % (target,))
+            return routing_entries
+
+        def populate_routing_table(routing_entries):
+            routing_table = {}
+            rt_helper = RoutingTableHelper(routing_table)
+            for entry in routing_entries:
+                source, target = entry['source'], entry['target']
+                src_conn, _, src_endp = source['uuid'].rpartition(":")
+                dst_conn, _, dst_endp = target['uuid'].rpartition(":")
+                rt_helper.add_entry(src_conn, src_endp, dst_conn, dst_endp)
+
+            d = user_api.get_user_account()
+            d.addCallback(save_routing_table, routing_table)
+            return d
+
+        def save_routing_table(user_account, routing_table):
+            user_account.routing_table = routing_table
+            return user_account.save()
 
         d = DeferredList(deferreds, consumeErrors=True)
+        d.addCallback(gather_endpoints)
         d.addCallback(check_routing_table)
-        d.addCallback(save_routing_table)
+        d.addCallback(populate_routing_table)
         return d
 
 
