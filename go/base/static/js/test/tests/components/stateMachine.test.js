@@ -1,6 +1,10 @@
 describe("go.components.stateMachine", function() {
   var stateMachine = go.components.stateMachine;
 
+  afterEach(function() {
+    Backbone.Relational.store.reset();
+  });
+
   describe(".ConnectionModel", function() {
     var EndpointModel = stateMachine.EndpointModel,
         ConnectionModel = stateMachine.ConnectionModel;
