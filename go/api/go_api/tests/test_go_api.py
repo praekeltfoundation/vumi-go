@@ -46,6 +46,16 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         yield self._persist_tearDown()
 
     @inlineCallbacks
+    def assert_faults(self, d, fault_code, fault_string):
+        try:
+            yield d
+        except Fault, e:
+            self.assertEqual(e.faultString, fault_string)
+            self.assertEqual(e.faultCode, fault_code)
+        else:
+            self.fail("Expected fault %s: %s." % (fault_code, fault_string))
+
+    @inlineCallbacks
     def test_campaigns(self):
         result = yield self.proxy.callRemote("campaigns")
         self.assertEqual(result, [
@@ -212,15 +222,10 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         routing_table = self.mk_routing_table([
             ('foo', 'TRANSPORT_TAG:pool:tag1:default'),
         ])
-        try:
-            yield self.proxy.callRemote(
+        d = self.proxy.callRemote(
                 "update_routing_table", self.campaign_key, routing_table)
-        except Fault, e:
-            self.assertEqual(e.faultString,
-                             "Unknown source endpoint: {u'uuid': u'foo'}")
-            self.assertEqual(e.faultCode, 400)
-        else:
-            self.fail("Expected unknown source endpoint fault.")
+        yield self.assert_faults(
+            d, 400, "Unknown source endpoint: {u'uuid': u'foo'}")
 
     @inlineCallbacks
     def test_update_routing_table_with_bad_target_endpoint(self):
@@ -228,15 +233,10 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         routing_table = self.mk_routing_table([
             ('TRANSPORT_TAG:pool:tag1:default', 'bar'),
         ])
-        try:
-            yield self.proxy.callRemote(
+        d = self.proxy.callRemote(
                 "update_routing_table", self.campaign_key, routing_table)
-        except Fault, e:
-            self.assertEqual(e.faultString,
-                             "Unknown target endpoint: {u'uuid': u'bar'}")
-            self.assertEqual(e.faultCode, 400)
-        else:
-            self.fail("Expected unknown target endpoint fault.")
+        yield self.assert_faults(
+            d, 400, "Unknown target endpoint: {u'uuid': u'bar'}")
 
 
 class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):
