@@ -225,7 +225,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         d = self.proxy.callRemote(
                 "update_routing_table", self.campaign_key, routing_table)
         yield self.assert_faults(
-            d, 400, "Unknown source endpoint: {u'uuid': u'foo'}")
+            d, 400, "Unknown source endpoint {u'uuid': u'foo'}")
 
     @inlineCallbacks
     def test_update_routing_table_with_bad_target_endpoint(self):
@@ -236,10 +236,13 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         d = self.proxy.callRemote(
                 "update_routing_table", self.campaign_key, routing_table)
         yield self.assert_faults(
-            d, 400, "Unknown target endpoint: {u'uuid': u'bar'}")
+            d, 400, u"Source channel endpoint {u'uuid':"
+            " u'TRANSPORT_TAG:pool:tag1:default'}"
+            " should link to a conversation endpoint"
+            " but links to {u'uuid': u'bar'}")
 
     @inlineCallbacks
-    def test_update_routing_table_with_simple_loop(self):
+    def test_update_routing_table_with_channel_linked_to_itself(self):
         conv, tag = yield self._setup_simple_routing_table()
         routing_table = self.mk_routing_table([
             ('TRANSPORT_TAG:pool:tag1:default',
@@ -248,8 +251,26 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         d = self.proxy.callRemote(
                 "update_routing_table", self.campaign_key, routing_table)
         yield self.assert_faults(
-            d, 400, "Loop from source endpoint {u'uuid': "
-            "u'TRANSPORT_TAG:pool:tag1:default'} to itself.")
+            d, 400, u"Source channel endpoint"
+            " {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'} should link"
+            " to a conversation endpoint but links to {u'uuid':"
+            " u'TRANSPORT_TAG:pool:tag1:default'}")
+
+    @inlineCallbacks
+    def test_update_routing_table_with_conversation_linked_to_itself(self):
+        conv, tag = yield self._setup_simple_routing_table()
+        endpoint_uuid = ('CONVERSATION:%s:%s:default'
+                         % (conv.conversation_type, conv.key))
+        routing_table = self.mk_routing_table([
+            (endpoint_uuid, endpoint_uuid)
+        ])
+        d = self.proxy.callRemote(
+                "update_routing_table", self.campaign_key, routing_table)
+        yield self.assert_faults(
+            d, 400, u"Source conversation endpoint"
+            " {u'uuid': %r} should link"
+            " to a channel endpoint but links to {u'uuid': %r}"
+            % (endpoint_uuid, endpoint_uuid))
 
     @inlineCallbacks
     def test_update_routing_table(self):

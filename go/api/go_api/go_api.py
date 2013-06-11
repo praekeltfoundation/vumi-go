@@ -166,33 +166,47 @@ class GoApiServer(JSONRPC):
             results = [r[1] for r in results]
             channels, routing_blocks, conversations = results
 
-            endpoints = set(
+            channel_endpoints = set(
                 endpoint['uuid'] for endpoint in itertools.chain(
                     (e for c in channels for e in c['endpoints']),
-                    (e for c in conversations for e in c['endpoints']),
                     (e for r in routing_blocks
                      for e in r['channel_endpoints']),
-                    (e for r in routing_blocks
-                     for e in r['conversation_endpoints']),
                 )
             )
-            return endpoints
+            conversation_endpoints = set(
+                endpoint['uuid'] for endpoint in itertools.chain(
+                    (e for c in conversations for e in c['endpoints']),
+                    (e for r in routing_blocks
+                     for e in r['conversation_endpoints'])
+                )
+            )
 
-        def check_routing_table(endpoints):
+            return channel_endpoints, conversation_endpoints
+
+        def check_routing_table(endpoint_sets):
+            """Check that endpoints link from known channel (right) endpoints
+            to known conversation (left) endpoints or vice versa.
+            """
+            channel_endpoints, conversation_endpoints = endpoint_sets
             routing_entries = routing['routing_entries']
             for entry in routing_entries:
                 source, target = entry['source'], entry['target']
-                if source['uuid'] not in endpoints:
-                    raise InvalidRoutingTable("Unknown source endpoint: %r"
+                src_uuid, dst_uuid = source['uuid'], target['uuid']
+                if src_uuid in channel_endpoints:
+                    if dst_uuid not in conversation_endpoints:
+                        raise InvalidRoutingTable(
+                            "Source channel endpoint %r should link to a"
+                            " conversation endpoint but links to %r"
+                            % (source, target))
+                elif src_uuid in conversation_endpoints:
+                    if dst_uuid not in channel_endpoints:
+                        raise InvalidRoutingTable(
+                            "Source conversation endpoint %r should link to a"
+                            " channel endpoint but links to %r"
+                            % (source, target))
+                else:
+                    raise InvalidRoutingTable("Unknown source endpoint %r"
                                               % (source,))
-                if target['uuid'] not in endpoints:
-                    raise InvalidRoutingTable("Unknown target endpoint: %r"
-                                              % (target,))
-                src_conn, _, src_endp = source['uuid'].rpartition(":")
-                dst_conn, _, dst_endp = target['uuid'].rpartition(":")
-                if src_conn == dst_conn:
-                    raise InvalidRoutingTable("Loop from source endpoint"
-                                              " %r to itself." % (source,))
                 return routing_entries
 
         def populate_routing_table(routing_entries):
