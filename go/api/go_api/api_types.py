@@ -5,6 +5,8 @@
 
 from vumi.rpc import Unicode, List, Dict, Tag
 
+from go.vumitools.account.models import GoConnector
+
 
 class CampaignType(Dict):
     def __init__(self, *args, **kw):
@@ -65,6 +67,7 @@ class ConversationType(Dict):
 
     @classmethod
     def format_conversation(cls, conv):
+        conn = GoConnector.for_conversation(conv.conversation_type, conv.key)
         return {
             'uuid': conv.key,
             'type': conv.conversation_type,
@@ -73,7 +76,7 @@ class ConversationType(Dict):
             'endpoints': [
                 # TODO: add additional endpoints once we know how to list them
                 EndpointType.format_endpoint(
-                    uuid=u"%s:%s" % (conv.key, u'default'), name=u"default")
+                    uuid=u"%s:%s" % (conn, u'default'), name=u"default")
             ],
         }
 
@@ -103,13 +106,14 @@ class ChannelType(Dict):
     def format_channel(cls, tag):
         pool, tagname = tag
         uuid = u":".join(tag)
+        conn = GoConnector.for_transport_tag(pool, tagname)
         return {
             'uuid': uuid, 'tag': tag, 'name': tagname,
             'description': u"%s: %s" % (
                 pool.replace('_', ' ').title(), tagname),
             'endpoints': [
                 EndpointType.format_endpoint(
-                    uuid=u"%s:%s" % (uuid, u'default'), name=u"default")
+                    uuid=u"%s:%s" % (conn, u'default'), name=u"default")
             ]
         }
 
@@ -163,7 +167,8 @@ class RoutingEntryType(Dict):
         }
         super(RoutingEntryType, self).__init__(*args, **kw)
 
-    def format_entry(self, source_uuid, target_uuid):
+    @classmethod
+    def format_entry(cls, source_uuid, target_uuid):
         return {
             'source': {'uuid': source_uuid},
             'target': {'uuid': target_uuid},
