@@ -36,6 +36,10 @@
   var EndpointModel = Backbone.RelationalModel.extend({
   });
 
+  var idOfConnection = function(sourceId, targetId) {
+    return sourceId + '-' + targetId;
+  };
+
   // Model for a connection between two endpoint models
   var ConnectionModel = Backbone.RelationalModel.extend({
     relations: [{
@@ -48,7 +52,18 @@
       key: 'target',
       includeInJSON: 'id',
       relatedModel: 'go.components.stateMachine.EndpointModel'
-    }]
+    }],
+
+    initialize: function() {
+      // Ensure our connection models ids are generated from their source and
+      // target so we have a consistent way of creating new connection models
+      // in the ui and looking them up later by their source and target
+      //
+      // NOTE: We don't set the id attribute used when syncing the model with
+      // the server, we only set the model's id *property* so we can use it on
+      // the client side
+      this.id = idOfConnection(this.get('source').id, this.get('target').id);
+    }
   });
 
   // Model for a single state in a state machine
@@ -80,6 +95,7 @@
   });
 
   _.extend(exports, {
+    idOfConnection: idOfConnection,
     EndpointModel: EndpointModel,
     ConnectionModel: ConnectionModel,
     StateModel: StateModel,

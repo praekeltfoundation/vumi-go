@@ -10,11 +10,6 @@
   var plumbing = go.components.plumbing,
       EndpointView = plumbing.EndpointView;
 
-
-  var idOfConnection = function(sourceId, targetId) {
-    return sourceId + '-' + targetId;
-  };
-
   // Base components
   // ---------------
 
@@ -127,7 +122,6 @@
   });
 
   _.extend(exports, {
-    idOfConnection: idOfConnection,
     ConnectionView: ConnectionView,
     ConnectionViewCollection: ConnectionViewCollection,
 
