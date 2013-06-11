@@ -65,7 +65,7 @@
     </div>
     <div class="modal-footer">
       <a class="btn" data-dismiss="modal" href="#">Cancel</a>
-      <button type="submit" class="btn btn-primary">OK</button>
+      <button type="submit" data-loading-text="saving..." class="btn btn-primary">OK</button>
     </div>
   </form>
 </div>
@@ -210,7 +210,7 @@
   </div>
   <div class="modal-footer">
     <a href="#" class="btn" data-dismiss="modal">Cancel</a>
-    <button type="submit" name='_start_campaign' class="btn btn-primary" data-loading-text="saving...">Start Campaign</button>
+    <button type="submit" name='_start_campaign' class="btn btn-primary" data-loading-text="starting campaign...">Start Campaign</button>
   </div>
   {% csrf_token %}
   </form>
