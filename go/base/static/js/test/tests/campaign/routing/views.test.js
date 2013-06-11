@@ -3,17 +3,17 @@ describe("go.campaign.routing (views)", function() {
 
   var setUp = routing.testHelpers.setUp,
       tearDown = routing.testHelpers.tearDown,
-      newRoutingScreen = routing.testHelpers.newRoutingScreen;
+      newRoutingDiagram = routing.testHelpers.newRoutingDiagram;
 
   var testHelpers = go.testHelpers,
       noElExists = testHelpers.noElExists,
       oneElExists = testHelpers.oneElExists;
 
-  var screen;
+  var diagram;
 
   beforeEach(function() {
     setUp();
-    screen = newRoutingScreen();
+    diagram = newRoutingDiagram();
   });
 
   afterEach(function() {
@@ -28,7 +28,7 @@ describe("go.campaign.routing (views)", function() {
         endpoint;
 
     beforeEach(function() {
-      state = screen.states.get('channel1');
+      state = diagram.states.get('channel1');
 
       var model = new RoutingEndpointModel({
         uuid: 'endpoint80',
@@ -48,7 +48,7 @@ describe("go.campaign.routing (views)", function() {
       });
 
       it("should display a label with the endpoint name", function() {
-        var labelEl = '#routing-screen #channels #channel1 #endpoint80 .label';
+        var labelEl = '#routing-diagram #channels #channel1 #endpoint80 .label';
 
         assert(noElExists(labelEl));
         endpoint.render();
@@ -66,7 +66,7 @@ describe("go.campaign.routing (views)", function() {
 
     beforeEach(function() {
       collection = new RoutingEntryCollection({
-        view: screen,
+        view: diagram,
         attr: 'routing_entries'
       });
     });
@@ -74,10 +74,10 @@ describe("go.campaign.routing (views)", function() {
     describe(".accepts", function() {
       it("should determine if a source and target match the accepted pairs",
       function() {
-        var e1 = screen.endpoints.get('endpoint1'),
-            e4 = screen.endpoints.get('endpoint4'),
-            e5 = screen.endpoints.get('endpoint5'),
-            e8 = screen.endpoints.get('endpoint8');
+        var e1 = diagram.endpoints.get('endpoint1'),
+            e4 = diagram.endpoints.get('endpoint4'),
+            e5 = diagram.endpoints.get('endpoint5'),
+            e8 = diagram.endpoints.get('endpoint8');
 
         assert(collection.accepts(e1, e4));
         assert(collection.accepts(e4, e1));
@@ -116,19 +116,19 @@ describe("go.campaign.routing (views)", function() {
 
       state = new RoutingStateView({
         model: model,
-        diagram: screen,
+        diagram: diagram,
         columnEl: '#channels',
-        collection: screen.states.members.get('channels')
+        collection: diagram.states.members.get('channels')
       });
     });
 
     describe(".render", function() {
       beforeEach(function() {
-        screen.render();
+        diagram.render();
       });
 
       it("should append the state to its column", function() {
-        var stateEl = '#routing-screen #channels #channel4';
+        var stateEl = '#routing-diagram #channels #channel4';
 
         assert(noElExists(stateEl));
         state.render();
@@ -136,14 +136,14 @@ describe("go.campaign.routing (views)", function() {
       });
 
       it("should render its endpoints", function() {
-        assert(noElExists('#routing-screen #channels #channel4 .endpoint'));
+        assert(noElExists('#routing-diagram #channels #channel4 .endpoint'));
         state.render();
-        assert(oneElExists('#routing-screen #channels #channel4 #endpoint80'));
-        assert(oneElExists('#routing-screen #channels #channel4 #endpoint81'));
+        assert(oneElExists('#routing-diagram #channels #channel4 #endpoint80'));
+        assert(oneElExists('#routing-diagram #channels #channel4 #endpoint81'));
       });
 
       it("should display the state's description", function() {
-        var descriptionEl = '#routing-screen #channels #channel4 .description';
+        var descriptionEl = '#routing-diagram #channels #channel4 .description';
 
         assert(noElExists(descriptionEl));
         state.render();
@@ -166,22 +166,22 @@ describe("go.campaign.routing (views)", function() {
     var column;
 
     beforeEach(function() {
-      column = new ToyRoutingColumnView({screen: screen});
+      column = new ToyRoutingColumnView({diagram: diagram});
     });
 
     describe(".render", function() {
       it("should render the states it contains", function() {
-        assert(noElExists('#routing-screen #channels .state'));
+        assert(noElExists('#routing-diagram #channels .state'));
         column.render();
 
-        assert(oneElExists('#routing-screen #channels #channel1'));
-        assert(oneElExists('#routing-screen #channels #channel2'));
-        assert(oneElExists('#routing-screen #channels #channel3'));
+        assert(oneElExists('#routing-diagram #channels #channel1'));
+        assert(oneElExists('#routing-diagram #channels #channel2'));
+        assert(oneElExists('#routing-diagram #channels #channel3'));
       });
     });
   });
 
-  describe(".RoutingScreenView", function() {
+  describe(".RoutingDiagramView", function() {
     describe("on 'error:unsupported' connection events", function() {
       var connectionCount = function(a, b) {
         return jsPlumb.getConnections({source: a.$el, target: b.$el}).length;
@@ -192,14 +192,14 @@ describe("go.campaign.routing (views)", function() {
       };
 
       beforeEach(function() {
-        screen.render();
+        diagram.render();
       });
 
       it("should detach the jsPlumb connection", function(done) {
-        var e1 = screen.endpoints.get('endpoint1'),
-            e8 = screen.endpoints.get('endpoint8');
+        var e1 = diagram.endpoints.get('endpoint1'),
+            e8 = diagram.endpoints.get('endpoint8');
 
-        screen.connections.on('error:unsupported', function() {
+        diagram.connections.on('error:unsupported', function() {
           assert(noConnections(e1, e8));
           done();
         });
@@ -210,36 +210,36 @@ describe("go.campaign.routing (views)", function() {
 
     describe(".render", function() {
       it("should render the states in its channels column", function() {
-        assert(noElExists('#routing-screen #channels .state'));
-        screen.render();
+        assert(noElExists('#routing-diagram #channels .state'));
+        diagram.render();
 
-        assert(oneElExists('#routing-screen #channels #channel1'));
-        assert(oneElExists('#routing-screen #channels #channel2'));
-        assert(oneElExists('#routing-screen #channels #channel3'));
+        assert(oneElExists('#routing-diagram #channels #channel1'));
+        assert(oneElExists('#routing-diagram #channels #channel2'));
+        assert(oneElExists('#routing-diagram #channels #channel3'));
       });
 
       it("should render the states in its routing blocks column", function() {
-        assert(noElExists('#routing-screen #routing-blocks .state'));
-        screen.render();
+        assert(noElExists('#routing-diagram #routing-blocks .state'));
+        diagram.render();
 
-        assert(oneElExists('#routing-screen #routing-blocks #routing-block1'));
-        assert(oneElExists('#routing-screen #routing-blocks #routing-block2'));
+        assert(oneElExists('#routing-diagram #routing-blocks #routing-block1'));
+        assert(oneElExists('#routing-diagram #routing-blocks #routing-block2'));
       });
 
       it("should render the states in its conversations column", function() {
-        assert(noElExists('#routing-screen #conversations .state'));
-        screen.render();
+        assert(noElExists('#routing-diagram #conversations .state'));
+        diagram.render();
 
-        assert(oneElExists('#routing-screen #conversations #conversation1'));
-        assert(oneElExists('#routing-screen #conversations #conversation2'));
+        assert(oneElExists('#routing-diagram #conversations #conversation1'));
+        assert(oneElExists('#routing-diagram #conversations #conversation2'));
       });
 
       it("should render the connections between states across columns",
       function() {
-        var e1_e4 = screen.connections.get('endpoint1-endpoint4');
+        var e1_e4 = diagram.connections.get('endpoint1-endpoint4');
 
         assert(_.isEmpty(jsPlumb.getConnections()));
-        screen.render();
+        diagram.render();
 
         assert.deepEqual(
           jsPlumb.getConnections(),

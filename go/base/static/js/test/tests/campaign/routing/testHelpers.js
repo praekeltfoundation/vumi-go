@@ -4,7 +4,7 @@
 (function(exports) {
   var routing = go.campaign.routing,
       CampaignRoutingModel = routing.CampaignRoutingModel,
-      RoutingScreenView = routing.RoutingScreenView;
+      RoutingDiagramView = routing.RoutingDiagramView;
 
   var modelData = {
     campaign_id: 'campaign1',
@@ -61,9 +61,9 @@
     }]
   };
 
-  var newRoutingScreen = function() {
-    return new RoutingScreenView({
-      el: '#routing-screen',
+  var newRoutingDiagram = function() {
+    return new RoutingDiagramView({
+      el: '#routing-diagram',
       model: new CampaignRoutingModel(modelData)
     });
   };
@@ -73,7 +73,7 @@
 
   var setUp = function() {
     $('body').append([
-      "<div id='routing-screen'>",
+      "<div id='routing-diagram'>",
         "<div class='column' id='channels'></div>",
         "<div class='column' id='routing-blocks'></div>",
         "<div class='column' id='conversations'></div>",
@@ -86,13 +86,13 @@
     jsPlumb.unbind();
     jsPlumb.detachEveryConnection();
     jsPlumb.deleteEveryEndpoint();
-    $('#routing-screen').remove();
+    $('#routing-diagram').remove();
   };
 
   _.extend(exports, {
     setUp: setUp,
     tearDown: tearDown,
     modelData: modelData,
-    newRoutingScreen: newRoutingScreen
+    newRoutingDiagram: newRoutingDiagram
   });
 })(go.campaign.routing.testHelpers = {});
