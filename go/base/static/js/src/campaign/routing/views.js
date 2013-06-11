@@ -39,10 +39,15 @@
       this.$column = this.diagram.$(options.columnEl);
     },
 
+    descriptionTemplate: _.template(
+      "<span class='description'><%= description %><span>"),
+
     render: function() {
       this.$el
         .css('position', 'relative')
-        .text(this.model.get('description'));
+        .append(this.descriptionTemplate({
+          description: this.model.get('description')
+        }));
 
       this.$column.append(this.$el);
       this.endpoints.render();
@@ -87,17 +92,9 @@
   // Conversation).
   var RoutingColumnView = Backbone.View.extend({
     initialize: function(options) {
-      this.diagram = options.diagram;
-      this.states = this.diagram.states.members.get(this.collectionName);
-      this.setElement(this.diagram.$('#' + this.id));
-
-      this._initPlumb();
-    },
-
-    _initPlumb: function() {
-      var defaults = jsPlumb.Defaults;
-      defaults.Connector = ['StateMachine'];
-      defaults.ConnectionOverlays = [connectorOverlays.headArrow];
+      this.screen = options.screen;
+      this.states = this.screen.states.members.get(this.collectionName);
+      this.setElement(this.screen.$('#' + this.id));
     },
 
     repaint: function() { jsPlumb.repaintEverything(); },
@@ -154,9 +151,17 @@
 
     initialize: function(options) {
       DiagramView.prototype.initialize.call(this, options);
-      this.channels = new ChannelColumnView({diagram: this});
-      this.routingBlocks = new RoutingBlockColumnView({diagram: this});
-      this.conversations = new ConversationColumnView({diagram: this});
+      this.channels = new ChannelColumnView({screen: this});
+      this.routingBlocks = new RoutingBlockColumnView({screen: this});
+      this.conversations = new ConversationColumnView({screen: this});
+
+      this._initPlumb();
+    },
+
+    _initPlumb: function() {
+      var defaults = jsPlumb.Defaults;
+      defaults.Connector = ['StateMachine'];
+      defaults.ConnectionOverlays = [connectorOverlays.headArrow];
     },
 
     render: function() {
@@ -171,15 +176,17 @@
   _(exports).extend({
     RoutingScreenView: RoutingScreenView,
 
+    RoutingColumnView: RoutingColumnView,
+    ChannelColumnView: ChannelColumnView,
+    RoutingBlockColumnView: RoutingBlockColumnView,
+    ConversationColumnView: ConversationColumnView,
+
     RoutingStateView: RoutingStateView,
     RoutingStateCollection: RoutingStateCollection,
     ChannelStateView: ChannelStateView,
     RoutingBlockStateView: RoutingBlockStateView,
     ConversationStateView: ConversationStateView,
 
-    RoutingColumnView: RoutingColumnView,
-    ChannelColumnView: ChannelColumnView,
-    RoutingBlockColumnView: RoutingBlockColumnView,
-    ConversationColumnView: ConversationColumnView
+    RoutingEndpointView: RoutingEndpointView
   });
 })(go.campaign.routing);
