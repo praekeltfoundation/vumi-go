@@ -188,7 +188,12 @@ class GoApiServer(JSONRPC):
                 if target['uuid'] not in endpoints:
                     raise InvalidRoutingTable("Unknown target endpoint: %r"
                                               % (target,))
-            return routing_entries
+                src_conn, _, src_endp = source['uuid'].rpartition(":")
+                dst_conn, _, dst_endp = target['uuid'].rpartition(":")
+                if src_conn == dst_conn:
+                    raise InvalidRoutingTable("Loop from source endpoint"
+                                              " %r to itself." % (source,))
+                return routing_entries
 
         def populate_routing_table(routing_entries):
             routing_table = {}
@@ -207,10 +212,14 @@ class GoApiServer(JSONRPC):
             user_account.routing_table = routing_table
             return user_account.save()
 
+        def swallow_result(result):
+            return None
+
         d = DeferredList(deferreds, consumeErrors=True)
         d.addCallback(gather_endpoints)
         d.addCallback(check_routing_table)
         d.addCallback(populate_routing_table)
+        d.addCallback(swallow_result)
         return d
 
 

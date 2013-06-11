@@ -238,6 +238,31 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         yield self.assert_faults(
             d, 400, "Unknown target endpoint: {u'uuid': u'bar'}")
 
+    @inlineCallbacks
+    def test_update_routing_table_with_simple_loop(self):
+        conv, tag = yield self._setup_simple_routing_table()
+        routing_table = self.mk_routing_table([
+            ('TRANSPORT_TAG:pool:tag1:default',
+             'TRANSPORT_TAG:pool:tag1:default'),
+        ])
+        d = self.proxy.callRemote(
+                "update_routing_table", self.campaign_key, routing_table)
+        yield self.assert_faults(
+            d, 400, "Loop from source endpoint {u'uuid': "
+            "u'TRANSPORT_TAG:pool:tag1:default'} to itself.")
+
+    @inlineCallbacks
+    def test_update_routing_table(self):
+        conv, tag = yield self._setup_simple_routing_table()
+        routing_table = self.mk_routing_table([
+            ('TRANSPORT_TAG:pool:tag1:default',
+             'CONVERSATION:%s:%s:default'
+             % (conv.conversation_type, conv.key)),
+        ])
+        result = yield self.proxy.callRemote(
+            "update_routing_table", self.campaign_key, routing_table)
+        self.assertIdentical(result, None)
+
 
 class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):
 
