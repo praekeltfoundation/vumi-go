@@ -155,13 +155,8 @@
       this.routingBlocks = new RoutingBlockColumnView({screen: this});
       this.conversations = new ConversationColumnView({screen: this});
 
-      this._initPlumb();
-    },
-
-    _initPlumb: function() {
-      var defaults = jsPlumb.Defaults;
-      defaults.Connector = ['StateMachine'];
-      defaults.ConnectionOverlays = [connectorOverlays.headArrow];
+      // Give the jsPlumb connectors arrow overlays
+      jsPlumb.Defaults.ConnectionOverlays = [connectorOverlays.headArrow];
     },
 
     render: function() {
