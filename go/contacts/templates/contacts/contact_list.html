@@ -1,34 +1,17 @@
 {% extends "contacts/base.html" %}
 {% load url from future %}
 
-
-{% block content_title %}
-    <a href="{% url 'contacts:people' %}">Contacts</a>
-{% endblock %}
-
 {% block content_actions_left %}
-    <button class="btn btn-primary">Import contacts</button>
+    <button class="btn btn-primary" data-toggle="modal" data-target="#uplContacts">Import contacts</button>
 {% endblock %}
-
 
 {% block content_actions_right %}
     <div class="table-form-view-buttons pull-left">
         <button class="btn" data-action="delete" disabled="disabled">Delete</button>
-        <button class="btn" data-action="export" disabled="disabled">Export</button>
+        <button class="btn" data-toggle="modal" data-target="#expContactFrm" disabled="disabled">Export</button>
         <button class="btn" disabled="disabled">Assign to group</button>
     </div>
 {% endblock %}
-
-{% block content_breadcrumbs %}
-    <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
-        <input type="text" id="search-filter-input" name="q" value="{{query|default:''}}" placeholder="Find people..." class="input-large search-query">
-        <button type="submit" id="search-filter-btn" class="btn">Search</button>
-        {% if query %}
-            Create a <a href="#createSmartGroup" data-toggle="modal">Smart Group</a> using these results.
-        {% endif %}
-    </form>
-{% endblock %}
-
 
 {% block content_main_list %}
     <form class="table-form-view" method="post" action="">
@@ -39,7 +22,6 @@
 
 
 {% block ondomready %}
-    {{ block.super }}
     var tableFormView = new go.components.tables.TableFormView({
         el: '.table-form-view',
         actions: '.table-form-view-buttons button',
@@ -48,7 +30,5 @@
 
 {% block modals %}
     {# TODO, assign to group #}
-    {# TODO, import contacts #}
-
     {% include "contacts/includes/tools.html" with show_groups=1 save_group=1 %}
 {% endblock %}

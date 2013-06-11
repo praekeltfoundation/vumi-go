@@ -2,8 +2,17 @@ body {
   background: #2f3436;
   color: #2f3436;
 }
+a:link,
+button {
+  -webkit-transition: color 0.1s, background 0.1s;
+  -moz-transition: color 0.1s, background 0.1s;
+  -o-transition: color 0.1s, background 0.1s;
+  -ms-transition: color 0.1s, background 0.1s;
+  transition: color 0.1s, background 0.1s;
+}
 .main-container {
   min-width: 650px;
+  padding: 0 25px;
 }
 .footer {
   color: #aaa;
@@ -11,17 +20,17 @@ body {
 }
 .main-nav {
   margin: 0;
-  font-size: 13px;
+  font-size: 15px;
 }
 .main-nav .brand {
   position: relative;
   width: 60px;
+  border: 0 !important;
 }
 .main-nav .logo {
   position: absolute;
-  width: 80px;
-  top: 10px;
-  left: 5px;
+  top: 20px;
+  left: -5px;
 }
 .main-nav li {
   height: 39px;
@@ -93,13 +102,21 @@ body {
   font-weight: bold;
   padding: 0 12px;
   margin: 0;
-  color: #000;
+  color: #2F3436;
 }
 .content .header h1 a {
-  color: #000;
+  color: #2F3436;
 }
-.content .header .pull-right {
+.content .header h1 a:hover {
+  color: #000;
+  text-decoration: none;
+}
+.content .header .breadcrumbs {
   text-align: right;
+  padding: 0 12px;
+}
+.content .header .breadcrumbs .navbar-search {
+  margin: 0;
 }
 .content .actions {
   height: 50px;
@@ -121,11 +138,19 @@ body {
   padding-left: 20px;
   padding-right: 20px;
 }
-.content .navbar-search {
-  margin: 0;
+.content .actions .right {
+  padding: 0 20px;
+  overflow: hidden;
+}
+.content .actions .right .navbar-search {
+  margin-top: 0;
 }
 .content .indent {
   margin: 2em 1em;
+}
+.content .actions .left,
+.content .sidebar {
+  max-width: 210px;
 }
 .content .sidebar .nav-list a {
   color: #2f3436;
@@ -143,20 +168,25 @@ body {
   margin-left: -20px;
 }
 .content .sidebar .nav-list a.active:hover {
+  color: #fff;
   background: #b41c30;
 }
 .content .sidebar .extra-actions {
   margin-bottom: 1em;
 }
-.content .sidebar .extra-actions a {
+.content .sidebar .extra-actions a,
+.content .sidebar .extra-actions a.active {
   color: #0088cc;
 }
-.content .sidebar .extra-actions a:hover {
-  color: ##54a6de;
-  text-decoration: underline;
+.content .sidebar .extra-actions a.active {
+  margin: 0;
+  border: 0;
+  background: transparent;
 }
-.span9 {
-  padding-right: 20px;
+.content .sidebar .extra-actions a:hover {
+  color: #54a6de !important;
+  background: transparent !important;
+  text-decoration: underline;
 }
 .nav-stacked a:hover {
   background: none !important;
@@ -167,6 +197,9 @@ body {
 .help-inline .errorlist li {
   padding: 0;
   margin: 0;
+}
+.alert {
+  margin: 1em 0;
 }
 .campaigns.dashboard .status {
   text-transform: capitalize;
@@ -267,12 +300,18 @@ body {
   font-weight: normal;
 }
 .table-form-view {
+  margin-top: 1em;
   overflow: hidden;
 }
 .table-form-view td,
 .table-form-view tr {
   color: #2f3436;
   vertical-align: middle;
+}
+.table-form-view td:first-child,
+.table-form-view th:first-child {
+  text-align: center;
+  cursor: pointer;
 }
 .table-form-view thead td,
 .table-form-view thead tr {
@@ -281,4 +320,7 @@ body {
 }
 .table-form-view tr[data-url] {
   cursor: pointer;
+}
+.table-form-view-buttons {
+  margin: 0 1em 0 0;
 }
