@@ -182,3 +182,12 @@ def incoming_detail(request, campaign_key, contact_key):
         'conversation': conversation,
         'form': form
     })
+
+
+@login_required
+def routing(request, campaign_key):
+    # TODO Get initial routing model data so we can bootstrap it to page load
+
+    # TODO give stuff to the template
+    return render(request, 'campaigns/routing.html', {
+    })
