@@ -29,8 +29,9 @@ class EndpointType(Dict):
 
     The following fields are required:
 
-    * uuid: 'endpoint-uuid-1'
-    * name: 'default'
+    * uuid: Unique identifier for the endpoint. Usually
+            `<connector-id>:<endpoint-name>`.
+    * name: Name of the endpoint, e.g. 'default'.
     """
     def __init__(self, *args, **kw):
         kw['required_fields'] = {
@@ -50,11 +51,13 @@ class ConversationType(Dict):
 
         The following fields are required:
 
-        * uuid: 'routing-block-uuid-2',
-        * type: 'bulk-message',
-        * name: 'bulk-message-1',
-        * description: 'Some Bulk Message App',
-        * endpoints: [{uuid: 'endpoint-uuid-4', name: 'default'}]
+        * uuid: The conversation key.
+        * type: The conversation type, e.g. 'bulk-message'.
+        * name: The conversation name, e.g. 'My Bulk Sender'.
+        * description: The conversation description, e.g.
+                       'Some Bulk Message App'.
+        * endpoints: A list of `EndpointType` dictionaries, e.g.
+                     `[{uuid: 'endpoint-uuid-4', name: 'default'}]`.
         """
         kw['required_fields'] = {
             'uuid': Unicode(),
@@ -86,11 +89,13 @@ class ChannelType(Dict):
 
     The following keys are required:
 
-    * uuid: 'channel-uuid-1',
-    * tag: ['apposit_sms', '*121#'],
-    * name: '*121#',
-    * description: 'Apposit Sms: *121#',
-    * endpoints: [{uuid: 'endpoint-uuid-1', name: 'default'}]
+    * uuid: The channel key.
+    * tag: A two-element list of the tag pool and tag name, e.g.
+           `['apposit_sms', '*121#']`.
+    * name: The channel name, often the same as the tag name, e.g. '*121#'.
+    * description: The channel description, e.g. 'Apposit Sms: *121#'.
+    * endpoints: A list of `EndpointType` dictionaries, e.g.
+                 `[{uuid: 'endpoint-uuid-1', name: 'default'}]`.
     """
     def __init__(self, *args, **kw):
         kw['required_fields'] = {
@@ -123,12 +128,19 @@ class RoutingBlockType(Dict):
 
     The following keys are required:
 
-    * uuid: 'routing-block-uuid-1',
-    * type: 'keyword',
-    * name: 'keyword-routing-block',
-    * description: 'Keyword',
-    * channel_endpoints: [{uuid: 'endpoint-uuid-2', name: 'default'}],
-    * conversation_endpoints: [{uuid: 'endpoint-uuid-3', name: 'default'}]
+    * uuid: The routing block key.
+    * type: The routing block type, e.g. 'keyword'.
+    * name: The routing block name, e.g. 'My Keyword Routing Block'.
+    * description: The routing block description,
+                   e.g.'A description of this routing block'.
+    * channel_endpoints: The endpoints that can be connected to channels
+                         (i.e. the endpoints on the left).
+                         A list of `EndpointType` dictionaries, e.g.
+                         `[{uuid: 'endpoint-uuid-2', name: 'default'}]`.
+    * conversation_endpoints: The endpoints that can be connected to
+                              conversations (i.e. the endpoints on the right).
+                              A list of `EndpointType` dictionaries, e.g.
+                              `[{uuid: 'endpoint-uuid-3', name: 'default'}]`.
     """
     def __init__(self, *args, **kw):
         kw['required_fields'] = {
@@ -156,8 +168,10 @@ class RoutingEntryType(Dict):
 
     The following keys are required:
 
-    * source: {uuid: 'endpoint-uuid-1'},
-    * target: {uuid: 'endpoint-uuid-2'}
+    * source: A dictionary containing the uuid of the source endpoint, e.g.
+              `{uuid: 'endpoint-uuid-1'}`.
+    * target: A dictionary containing the uuid of the destination endpoint,
+              e.g. `{uuid: 'endpoint-uuid-2'}`.
     """
     def __init__(self, *args, **kw):
         uuid_dict = Dict(required_fields={'uuid': Unicode()})
