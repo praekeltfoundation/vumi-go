@@ -17,6 +17,12 @@ describe("go.components.views", function() {
 
     var label;
 
+    var assertOffset = function(el, expectedOffset) {
+      var offset = $(el).offset();
+      assert.closeTo(offset.top, expectedOffset.top, 1);
+      assert.closeTo(offset.left, expectedOffset.left, 1);
+    };
+
     beforeEach(function() {
       $('#dummy')
         .width(200)
@@ -40,9 +46,7 @@ describe("go.components.views", function() {
 
       it("should position the label at the given position", function() {
         label.render();
-        assert.deepEqual(
-          $('#dummy .label').offset(),
-          {left: 21, top: 73});
+        assertOffset('#dummy .label', {left: 21, top: 73});
       });
 
       it("should render the given text", function() {
