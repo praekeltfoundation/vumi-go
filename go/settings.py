@@ -333,6 +333,7 @@ ACCOUNT_ACTIVATION_DAYS = 7
 
 # PIPELINES CONFIGURATION
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
+PIPELINE_JS_COMPRESSOR = False
 PIPELINE_CSS = {
     'all': {
         'source_filenames': (
