@@ -208,6 +208,88 @@ describe("go.components.plumbing (endpoints)", function() {
     });
   });
 
+  describe(".FollowingEndpointView", function() {
+    var FollowingEndpointView = plumbing.FollowingEndpointView;
+
+    var state,
+        endpoint,
+        $target;
+
+    beforeEach(function() {
+      $target = $('<span></span').attr('id', 'target');
+
+      state = diagram.states.get('x');
+      state.$el.append($target);
+
+      endpoint = new FollowingEndpointView({
+        state: state,
+        target: '#target',
+        collection: state.endpoints.members.get('endpoints'),
+        model: new EndpointModel({id: 'x4'})
+      });
+
+      state
+        .render()
+        .$el
+        .width(200)
+        .height(300)
+        .css('position', 'absolute');
+
+      $target
+        .width(20)
+        .height(40)
+        .css({position: 'absolute', top: 10, left: 20});
+
+      endpoint
+        .$el
+        .width(20)
+        .height(10);
+    });
+
+    describe(".positioners", function() {
+      var positioners;
+
+      beforeEach(function() {
+        positioners = endpoint.positioners;
+      });
+
+      describe(".left", function() {
+        it("should find the position on the left corresponding to the target",
+        function() {
+          assert.deepEqual(
+            positioners.left.call(endpoint),
+            {left: -10, top: 25});
+        });
+      });
+
+      describe(".right", function() {
+        it("should find the position on the right corresponding to the target ",
+        function() {
+          assert.deepEqual(
+            positioners.right.call(endpoint),
+            {left: 190, top: 25});
+        });
+      });
+    });
+
+    describe(".render", function() {
+      it("should follow to its target", function() {
+        endpoint.render();
+
+        assert.deepEqual(
+          endpoint.$el.position(),
+          {top: 25, left: -10});
+
+        $target.css({top: 20, left: 25});
+        endpoint.render();
+
+        assert.deepEqual(
+          endpoint.$el.position(),
+          {top: 35, left: -10});
+      });
+    });
+  });
+
   describe(".AligningEndpointCollection", function() {
     var EndpointModel = stateMachine.EndpointModel,
         ParametricEndpointView = plumbing.ParametricEndpointView;

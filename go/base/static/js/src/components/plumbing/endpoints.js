@@ -4,6 +4,9 @@
 // view') in Go
 
 (function(exports) {
+  var utils = go.utils,
+      functor = utils.functor;
+
   var structures = go.components.structures,
       SubviewCollection = structures.SubviewCollection;
 
@@ -102,11 +105,11 @@
       _(options).defaults(_(this).result('defaults'));
 
       this.side = options.side;
-      this.offset = options.offset;
+      this.offset = functor(options.offset);
     },
 
     // Override to specialise how the endpoint is positioned
-    position: function() { return _(this).result('offset'); },
+    position: function() { this.offset(); },
 
     render: function() {
       EndpointView.prototype.render.call(this);
@@ -128,7 +131,7 @@
 
     positioners: {
       left: function(t) {
-        var offset = _(this).result('offset');
+        var offset = this.offset();
         return {
           left: offset.left,
           top: offset.top + (t * this.$state.height())
@@ -136,7 +139,7 @@
       },
 
       right: function(t) {
-        var offset = _(this).result('offset');
+        var offset = this.offset();
         return {
           left: offset.left + this.$state.width(),
           top: offset.top + (t * this.$state.height())
@@ -144,7 +147,7 @@
       },
 
       top: function(t) {
-        var offset = _(this).result('offset');
+        var offset = this.offset();
         return {
           left: offset.left + (t * this.$state.width()),
           top: offset.top
@@ -152,7 +155,7 @@
       },
 
       bottom: function(t) {
-        var offset = _(this).result('offset');
+        var offset = this.offset();
         return {
           left: offset.left + (t * this.$state.width()),
           top: offset.top + this.$state.height()
@@ -171,8 +174,35 @@
   });
 
   // An endpoint view type which resides on a side of the state, and
-  // and follows the vertical position of one the state's child elements.
+  // and follows the vertical position of one of the state's child elements.
   var FollowingEndpointView = PositionableEndpointView.extend({
+    initialize: function(options) {
+      PositionableEndpointView.prototype.initialize.call(this, options);
+      this.$target = this.state.$(options.target);
+      this.position = this.positioners[this.side];
+    },
+
+    positioners: {
+      left: function() {
+        var offset = this.offset();
+        return {
+          left: offset.left,
+          top: offset.top + this.targetOffset()
+        };
+      },
+
+      right: function() {
+        var offset = this.offset();
+        return {
+          left: offset.left + this.$state.outerWidth(),
+          top: offset.top + this.targetOffset()
+        };
+      }
+    },
+
+    targetOffset: function() {
+      return this.$target.position().top + (this.$target.outerHeight() / 2);
+    }
   });
 
   // Automatically aligns its endpoints to be evenly spaced on one side of the
@@ -230,6 +260,7 @@
 
     PositionableEndpointView: PositionableEndpointView,
     ParametricEndpointView: ParametricEndpointView,
+    FollowingEndpointView: FollowingEndpointView,
     AligningEndpointCollection: AligningEndpointCollection
   });
 })(go.components.plumbing);
