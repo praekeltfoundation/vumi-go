@@ -17,14 +17,9 @@
   // ---------
 
   var RoutingEndpointView = ParametricEndpointView.extend({
-    labelled: true,
-    labelText: function() { return this.model.get('name'); },
-    labelOptions: function() {
-      return {
-        my: 'bottom',
-        at: 'top',
-        text: this.labelText.bind(this)
-      };
+    render: function() {
+      this.$el.text(this.model.get('name'));
+      return ParametricEndpointView.prototype.render.call(this);
     }
   });
 
@@ -72,13 +67,14 @@
       "<span class='description'><%= description %><span>"),
 
     render: function() {
+      this.$column.append(this.$el);
+
       this.$el
         .css('position', 'relative')
         .append(this.descriptionTemplate({
           description: this.model.get('description')
         }));
 
-      this.$column.append(this.$el);
       this.endpoints.render();
       return this;
     }
