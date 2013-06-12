@@ -30,19 +30,16 @@ describe("go.components.tables", function() {
       assert.isTrue($form.find('thead input:checkbox').prop('checked'));
     });
 
-    it.skip('should execute `onCheckedCallback` event when a checkbox is toggled', function(done) {
+    it('should execute `onCheckedCallback` when a checkbox is checked', function(done) {
 
       tableFormView.options.onCheckedCallback = function() {
-        assert.isTrue($cb.prop('checked'));
         done();
       };
-
-      var $cb = $form.find('tbody input:checkbox').eq(0);
+      var $cb = $form.find('tbody tr td:first-child').eq(0);
       $cb.trigger('click');
     });
 
     it('should toggle disabled on elements from `onCheckedSelector.`', function() {
-
       // enabled
       var $cb = $form.find('tbody input:checkbox').eq(0);
       $cb.trigger('click');
@@ -54,5 +51,6 @@ describe("go.components.tables", function() {
       assert.isTrue($buttons.find('button').eq(0).prop('disabled'));
 
     });
+
   });
 });
