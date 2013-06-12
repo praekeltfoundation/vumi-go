@@ -61,6 +61,7 @@
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
       this.$column = this.diagram.$(options.columnEl);
+      this.$description = $('<span></span>').attr('class', 'description');
     },
 
     descriptionTemplate: _.template(
@@ -71,11 +72,11 @@
 
       this.$el
         .css('position', 'relative')
-        .append(this.descriptionTemplate({
-          description: this.model.get('description')
-        }));
+        .append(this.$description);
 
+      this.$description.text(this.model.get('description'));
       this.endpoints.render();
+
       return this;
     }
   });
