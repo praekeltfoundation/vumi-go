@@ -173,7 +173,7 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def start(self, no_batch_tag=False, batch_id=None, acquire_tag=True,
-              **extra_params):
+              send_initial_action_hack=True, **extra_params):
         """
         Send the start command to this conversations application worker.
 
@@ -238,16 +238,18 @@ class ConversationWrapper(object):
                                     user_account_key=self.c.user_account.key,
                                     conversation_key=self.c.key)
 
-        msg_options = yield self.make_message_options(tag)
+        if send_initial_action_hack:
+            msg_options = yield self.make_message_options(tag)
 
-        is_client_initiated = yield self.is_client_initiated()
-        yield self.dispatch_command('initial_action_hack',
-                                    user_account_key=self.c.user_account.key,
-                                    conversation_key=self.c.key,
-                                    batch_id=batch_id,
-                                    msg_options=msg_options,
-                                    is_client_initiated=is_client_initiated,
-                                    **extra_params)
+            is_client_initiated = yield self.is_client_initiated()
+            yield self.dispatch_command(
+                'initial_action_hack',
+                user_account_key=self.c.user_account.key,
+                conversation_key=self.c.key,
+                batch_id=batch_id,
+                msg_options=msg_options,
+                is_client_initiated=is_client_initiated,
+                **extra_params)
 
     @Manager.calls_manager
     def _add_to_routing_table(self, tag, outbound_only=False):

@@ -41,7 +41,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,
-                            from_addr=u'+27831234567{0}'):
+                           from_addr=u'+27831234567{0}'):
         user_api = self.user_api
         group = yield user_api.contact_store.new_group(u'test group')
 
@@ -66,7 +66,6 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_start(self):
-
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
 
