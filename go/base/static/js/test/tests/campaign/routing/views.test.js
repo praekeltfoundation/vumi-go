@@ -47,14 +47,14 @@ describe("go.campaign.routing (views)", function() {
         state.render();
       });
 
-      it("should display a label with the endpoint name", function() {
-        var labelEl = '#routing-diagram #channels #channel1 #endpoint80 .label';
+      it("should display a the endpoint name", function() {
+        var el = '#routing-diagram #channels #channel1 #endpoint80';
 
-        assert(noElExists(labelEl));
+        assert(noElExists(el));
         endpoint.render();
 
-        assert(oneElExists(labelEl));
-        assert.equal($(labelEl).text(), 'default');
+        assert(oneElExists(el));
+        assert.equal($(el).text(), 'default');
       });
     });
   });
