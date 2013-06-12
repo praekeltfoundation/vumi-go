@@ -35,7 +35,8 @@
   var RoutingEntryCollection = ConnectionViewCollection.extend({
     acceptedPairs: [
       [ChannelEndpointView, RoutingBlockChannelEndpointView],
-      [ConversationEndpointView, RoutingBlockConversationEndpointView]],
+      [ConversationEndpointView, RoutingBlockConversationEndpointView],
+      [ChannelEndpointView, ConversationEndpointView]],
 
     accepts: function(source, target) {
       var pairs = this.acceptedPairs,

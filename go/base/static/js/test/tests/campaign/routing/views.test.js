@@ -77,6 +77,7 @@ describe("go.campaign.routing (views)", function() {
         var e1 = diagram.endpoints.get('endpoint1'),
             e4 = diagram.endpoints.get('endpoint4'),
             e5 = diagram.endpoints.get('endpoint5'),
+            e6 = diagram.endpoints.get('endpoint6'),
             e8 = diagram.endpoints.get('endpoint8');
 
         assert(collection.accepts(e1, e4));
@@ -85,14 +86,17 @@ describe("go.campaign.routing (views)", function() {
         assert(collection.accepts(e5, e8));
         assert(collection.accepts(e8, e5));
 
+        assert(collection.accepts(e1, e8));
+        assert(collection.accepts(e8, e1));
+
         assert.isFalse(collection.accepts(e1, e5));
         assert.isFalse(collection.accepts(e5, e1));
 
-        assert.isFalse(collection.accepts(e8, e4));
-        assert.isFalse(collection.accepts(e4, e8));
+        assert.isFalse(collection.accepts(e4, e5));
+        assert.isFalse(collection.accepts(e5, e4));
 
-        assert.isFalse(collection.accepts(e8, e1));
-        assert.isFalse(collection.accepts(e1, e8));
+        assert.isFalse(collection.accepts(e4, e6));
+        assert.isFalse(collection.accepts(e6, e4));
       });
     });
   });
@@ -196,15 +200,15 @@ describe("go.campaign.routing (views)", function() {
       });
 
       it("should detach the jsPlumb connection", function(done) {
-        var e1 = diagram.endpoints.get('endpoint1'),
-            e8 = diagram.endpoints.get('endpoint8');
+        var e4 = diagram.endpoints.get('endpoint4'),
+            e6 = diagram.endpoints.get('endpoint6');
 
         diagram.connections.on('error:unsupported', function() {
-          assert(noConnections(e1, e8));
+          assert(noConnections(e4, e6));
           done();
         });
 
-        jsPlumb.connect({source: e1.$el, target: e8.$el});
+        jsPlumb.connect({source: e4.$el, target: e6.$el});
       });
     });
 
