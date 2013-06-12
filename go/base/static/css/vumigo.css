@@ -263,9 +263,31 @@ button {
   max-width: 100%;
   min-width: 80%;
 }
-.campaigns #routing-diagram .state {
+.campaigns #routing-diagram .column-container {
+  text-align: center;
+}
+.campaigns #routing-diagram .column-container .title {
+  font-size: 22px;
+  margin: 10px 0;
+  font-family: inherit;
+  font-weight: bold;
+  display: block;
+  color: inherit;
+  text-rendering: optimizelegibility;
+}
+.campaigns #routing-diagram .column-container .new {
+  font-size: 35px;
+  line-height: 50px;
+  width: 130px;
+  height: 50px;
+}
+.campaigns #routing-diagram .column-container .column {
+  margin-top: 15px;
+  display: inline-block;
+}
+.campaigns #routing-diagram .column-container .state {
   background: #d2d0c7;
-  color: #000;
+  color: #333;
   font-size: 16px;
   text-align: center;
   -webkit-border-radius: 5px;
@@ -274,11 +296,25 @@ button {
   -moz-background-clip: padding;
   border-radius: 5px;
   background-clip: padding-box;
-  width: 120px;
-  padding: 15px 15px;
+  width: 150px;
   min-height: 100px;
+  margin: 15px auto;
+  padding-top: 10px;
   z-index: 0;
   -webkit-user-select: none;
+}
+.campaigns #routing-diagram .column-container .state .description {
+  margin: 10px;
+}
+.campaigns #routing-diagram .column-container .state:hover {
+  cursor: move;
+}
+.campaigns #routing-diagram .column-container .endpoint:hover {
+  cursor: pointer;
+}
+.campaigns #routing-diagram ._jsPlumb_endpoint,
+.campaigns #routing-diagram ._jsPlumb_connector {
+  z-index: 200;
 }
 .accounts {
   color: #c1c1c1;

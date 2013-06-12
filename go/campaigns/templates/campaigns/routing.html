@@ -10,14 +10,35 @@
 
 {% block content_actions_right %}
     <a href="{% url 'conversations:index' %}">Cancel</a>
+
+    {# TODO Send model data back to server when clicked #}
     <a href="" class="btn btn-primary">Save</a>
 {% endblock %}
 
 {% block content_main %}
-    <div id='routing-diagram' class="row-fluid">
-        <div class='span3 column' id='channels'></div>
-        <div class='span3 column' id='routing-blocks'></div>
-        <div class='span3 column' id='conversations'></div>
+    <div class="container">
+      <div id="routing-diagram" class="row">
+          <div class="span4 column-container">
+            <span class="title">Channels</span>
+            {# TODO Go to to new channel screen #}
+            <a href="" class="btn btn-primary new">+</a>
+            <div class="column" id="channels"></div>
+          </div>
+
+          <div class="span4 column-container">
+            <span class="title">Routing Blocks</span>
+            {# TODO Go to to new routing block screen #}
+            <a href="" class="btn btn-primary new">+</a>
+            <div class="column" id="routing-blocks"></div>
+          </div>
+
+          <div class="span4 column-container">
+            <span class="title">Conversations</span>
+            {# TODO Go to to new conversation screen #}
+            <a href="" class="btn btn-primary new">+</a>
+            <div class="column" id="conversations"></div>
+          </div>
+      </div>
     </div>
 {% endblock %}
 
@@ -30,10 +51,17 @@ jsPlumb.ready(function() {
       CampaignRoutingModel = routing.CampaignRoutingModel,
       RoutingDiagramView = routing.RoutingDiagramView;
 
-  var plumbDefaults = jsPlumb.Defaults;
-  plumbDefaults.Connector = ['StateMachine'];
-  plumbDefaults.PaintStyle.lineWidth = 2;
-  plumbDefaults.EndpointStyle.radius = 3;
+  jsPlumb.Defaults.Connector = ['StateMachine'];
+
+  _(jsPlumb.Defaults.EndpointStyle).extend({
+    radius: 3,
+    fillStyle: '#2f3436'
+  });
+
+  _(jsPlumb.Defaults.PaintStyle).extend({
+    lineWidth: 2,
+    strokeStyle: '#2f3436'
+  });
 
   var diagram = new RoutingDiagramView({
     el: '#routing-diagram',

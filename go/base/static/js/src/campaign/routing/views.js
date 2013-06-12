@@ -17,6 +17,7 @@
   // ---------
 
   var RoutingEndpointView = ParametricEndpointView.extend({
+    className: 'endpoint label',
     render: function() {
       this.$el.text(this.model.get('name'));
       return ParametricEndpointView.prototype.render.call(this);
