@@ -64,9 +64,6 @@
       this.$description = $('<span></span>').attr('class', 'description');
     },
 
-    descriptionTemplate: _.template(
-      "<span class='description'><%= description %><span>"),
-
     render: function() {
       this.$column.append(this.$el);
 
