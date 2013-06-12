@@ -4,7 +4,7 @@ from vumi.tests.utils import UTCNearNow
 
 from go.vumitools.tests.utils import GoPersistenceMixin
 from go.vumitools.account.models import (
-    AccountStore, GoConnector, GoConnectorError)
+    AccountStore, RoutingTableHelper, GoConnector, GoConnectorError)
 from go.vumitools.account.old_models import AccountStoreVNone, AccountStoreV1
 
 
@@ -83,6 +83,20 @@ class UserAccountTestCase(GoPersistenceMixin, TestCase):
         self.assert_user_vnone(user_vnone)
         user = yield self.store.get_user(user_vnone.key)
         self.assert_user(user, tags=None, routing_table=None)
+
+
+class RoutingTableHelperTestCase(TestCase):
+    def test_entries(self):
+        rt = RoutingTableHelper({
+            "conn1": {
+                "default1.1": ["conn2", "default2"],
+                "default1.2": ["conn3", "default3"],
+            }
+        })
+        self.assertEqual(sorted(rt.entries()), [
+            ("conn1", "default1.1", "conn2", "default2"),
+            ("conn1", "default1.2", "conn3", "default3"),
+        ])
 
 
 class GoConnectorTestCase(TestCase):

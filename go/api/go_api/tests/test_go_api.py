@@ -1,64 +1,29 @@
-"""Tests for go.api.go_api."""
+"""Tests for go.api.go_api.go_api"""
 
 from txjsonrpc.web.jsonrpc import Proxy
+from txjsonrpc.jsonrpclib import Fault
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.trial.unittest import TestCase
 from twisted.web.server import Site
 
-from vumi.rpc import RpcCheckError
 from vumi.tests.utils import VumiWorkerTestCase
 from vumi.utils import http_request
 
+from go.vumitools.account.models import GoConnector, RoutingTableHelper
 from go.vumitools.api import VumiApi
-from go.vumitools.tests.utils import GoPersistenceMixin
-from go.api.go_api.go_api import (
-    GoApiWorker, GoApiServer, ConversationType, CampaignType)
+from go.vumitools.tests.utils import GoAppWorkerTestMixin
+from go.api.go_api.api_types import RoutingEntryType
+from go.api.go_api.go_api import GoApiWorker, GoApiServer
 
 
-class ConversationTypeTestCase(TestCase):
-
-    def _conv_dict(self, without=(), **kw):
-        conv_dict = kw.copy()
-        conv_dict.setdefault('key', u'conv-1')
-        conv_dict.setdefault('name', u'Conversation One')
-        conv_dict.setdefault('description', u'A Dummy Conversation')
-        conv_dict.setdefault('conversation_type', u'jsbox')
-        for key in without:
-            del conv_dict[key]
-        return conv_dict
-
-    def test_check(self):
-        conv_type = ConversationType()
-        conv_type.check('name', self._conv_dict())
-        for key in ['key', 'name', 'description', 'conversation_type']:
-            self.assertRaises(
-                RpcCheckError, conv_type.check, 'name',
-                self._conv_dict(without=(key,)))
-
-
-class CampaignTypeTestCase(TestCase):
-    def _campaign_dict(self, without=(), **kw):
-        campaign_dict = kw.copy()
-        campaign_dict.setdefault('key', u'campaign-1')
-        campaign_dict.setdefault('name', u'Campaign One')
-        for key in without:
-            del campaign_dict[key]
-        return campaign_dict
-
-    def test_check(self):
-        campaign_type = CampaignType()
-        campaign_type.check('name', self._campaign_dict())
-        for key in ['key', 'name']:
-            self.assertRaises(
-                RpcCheckError, campaign_type.check, 'name',
-                self._campaign_dict(without=(key,)))
-
-
-class GoApiServerTestCase(TestCase, GoPersistenceMixin):
+class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     use_riak = True
+    worker_name = 'GoApiServer'
+    transport_name = 'sphex'
+    transport_type = 'sphex_type'
 
     @inlineCallbacks
     def setUp(self):
@@ -81,6 +46,16 @@ class GoApiServerTestCase(TestCase, GoPersistenceMixin):
         yield self._persist_tearDown()
 
     @inlineCallbacks
+    def assert_faults(self, d, fault_code, fault_string):
+        try:
+            yield d
+        except Fault, e:
+            self.assertEqual(e.faultString, fault_string)
+            self.assertEqual(e.faultCode, fault_code)
+        else:
+            self.fail("Expected fault %s: %s." % (fault_code, fault_string))
+
+    @inlineCallbacks
     def test_campaigns(self):
         result = yield self.proxy.callRemote("campaigns")
         self.assertEqual(result, [
@@ -88,28 +63,229 @@ class GoApiServerTestCase(TestCase, GoPersistenceMixin):
         ])
 
     @inlineCallbacks
-    def test_active_conversations(self):
+    def test_conversations(self):
         conv = yield self.user_api.conversation_store.new_conversation(
             u'jsbox', u'My Conversation', u'A description', {})
         result = yield self.proxy.callRemote(
-            "active_conversations", self.campaign_key)
+            "conversations", self.campaign_key)
         self.assertEqual(result, [
             {
-                'key': conv.key,
-                'conversation_type': conv.conversation_type,
+                'uuid': conv.key,
+                'type': conv.conversation_type,
                 'name': conv.name,
                 'description': conv.description,
+                'endpoints': [
+                    {
+                        u'name': u'default',
+                        u'uuid': u'CONVERSATION:jsbox:%s:default' % conv.key,
+                    },
+                ],
             },
         ])
 
     @inlineCallbacks
-    def test_active_conversations_with_no_conversations(self):
+    def test_conversations_with_no_conversations(self):
         result = yield self.proxy.callRemote(
-            "active_conversations", self.campaign_key)
+            "conversations", self.campaign_key)
         self.assertEqual(result, [])
 
+    @inlineCallbacks
+    def test_channels(self):
+        yield self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
+        yield self.user_api.acquire_tag(u"pool")  # acquires tag1
+        result = yield self.proxy.callRemote(
+            "channels", self.campaign_key)
+        self.assertEqual(result, [
+            {
+                u'uuid': u'pool:tag1',
+                u'name': u'tag1',
+                u'tag': [u'pool', u'tag1'],
+                u'description': u'Pool: tag1',
+                u'endpoints': [
+                    {
+                        u'name': u'default',
+                        u'uuid': u'TRANSPORT_TAG:pool:tag1:default'
+                    },
+                ],
+            },
+        ])
 
-class GoApiWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
+    @inlineCallbacks
+    def test_routing_blocks_with_no_routing_blocks(self):
+        result = yield self.proxy.callRemote(
+            "routing_blocks", self.campaign_key)
+        self.assertEqual(result, [])
+
+    @inlineCallbacks
+    def _connect_conversation_to_tag(self, conv, tag):
+        conv_conn = str(GoConnector.for_conversation(
+        conv.conversation_type, conv.key))
+        channel_conn = str(GoConnector.for_transport_tag(*tag))
+        user_account = yield self.user_api.get_user_account()
+        rt_helper = RoutingTableHelper(user_account.routing_table)
+        rt_helper.add_entry(channel_conn, 'default', conv_conn, 'default')
+        rt_helper.add_entry(conv_conn, 'default', channel_conn, 'default')
+        yield user_account.save()
+
+    @inlineCallbacks
+    def _setup_simple_routing_table(self):
+        conv = yield self.user_api.conversation_store.new_conversation(
+            u'jsbox', u'My Conversation', u'A description', {})
+        yield self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
+        tag = yield self.user_api.acquire_tag(u"pool")  # acquires tag1
+        yield self._connect_conversation_to_tag(conv, tag)
+        returnValue((conv, tag))
+
+    @inlineCallbacks
+    def test_routing_entries(self):
+        conv, tag = yield self._setup_simple_routing_table()
+        result = yield self.proxy.callRemote(
+            "routing_entries", self.campaign_key)
+        result.sort(key=lambda x: x['source']['uuid'])
+        self.assertEqual(result, [
+            {
+                u'source': {u'uuid': u'CONVERSATION:jsbox:%s:default'
+                            % conv.key},
+                u'target': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'}
+            },
+            {
+                u'source': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'},
+                u'target': {u'uuid': u'CONVERSATION:jsbox:%s:default'
+                            % conv.key},
+            },
+        ])
+
+    @inlineCallbacks
+    def test_routing_table(self):
+        conv, tag = yield self._setup_simple_routing_table()
+        result = yield self.proxy.callRemote(
+            "routing_table", self.campaign_key)
+        result['routing_entries'].sort(key=lambda x: x['source']['uuid'])
+        self.assertEqual(result, {
+            u'channels': [
+                {
+                    u'uuid': u'pool:tag1',
+                    u'name': u'tag1',
+                    u'tag': [u'pool', u'tag1'],
+                    u'description': u'Pool: tag1',
+                    u'endpoints': [
+                        {
+                            u'name': u'default',
+                            u'uuid': u'TRANSPORT_TAG:pool:tag1:default',
+                        }
+                    ],
+                }
+            ],
+            u'conversations': [
+                {
+                    u'uuid': conv.key,
+                    u'type': conv.conversation_type,
+                    u'name': conv.name,
+                    u'description': conv.description,
+                    u'endpoints': [
+                        {
+                            u'name': u'default',
+                            u'uuid': u'CONVERSATION:jsbox:%s:default'
+                            % conv.key,
+                        },
+                    ],
+                }
+            ],
+            u'routing_blocks': [
+            ],
+            u'routing_entries': [
+                {
+                    u'source': {u'uuid': u'CONVERSATION:jsbox:%s:default'
+                                % conv.key},
+                    u'target': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'}
+                },
+                {
+                    u'source': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'},
+                    u'target': {u'uuid': u'CONVERSATION:jsbox:%s:default'
+                                % conv.key},
+                },
+            ]
+        })
+
+    def mk_routing_entry(self, source_uuid, target_uuid):
+        return RoutingEntryType.format_entry(source_uuid, target_uuid)
+
+    def mk_routing_table(self, entries):
+        return {
+            'channels': [], 'conversations': [], 'routing_blocks': [],
+            'routing_entries': [self.mk_routing_entry(*e) for e in entries],
+        }
+
+    @inlineCallbacks
+    def test_update_routing_table_with_bad_source_endpoint(self):
+        conv, tag = yield self._setup_simple_routing_table()
+        routing_table = self.mk_routing_table([
+            ('foo', 'TRANSPORT_TAG:pool:tag1:default'),
+        ])
+        d = self.proxy.callRemote(
+                "update_routing_table", self.campaign_key, routing_table)
+        yield self.assert_faults(
+            d, 400, "Unknown source endpoint {u'uuid': u'foo'}")
+
+    @inlineCallbacks
+    def test_update_routing_table_with_bad_target_endpoint(self):
+        conv, tag = yield self._setup_simple_routing_table()
+        routing_table = self.mk_routing_table([
+            ('TRANSPORT_TAG:pool:tag1:default', 'bar'),
+        ])
+        d = self.proxy.callRemote(
+                "update_routing_table", self.campaign_key, routing_table)
+        yield self.assert_faults(
+            d, 400, u"Source outbound-receiving endpoint {u'uuid':"
+            " u'TRANSPORT_TAG:pool:tag1:default'}"
+            " should link to an inbound-receiving endpoint"
+            " but links to {u'uuid': u'bar'}")
+
+    @inlineCallbacks
+    def test_update_routing_table_with_channel_linked_to_itself(self):
+        conv, tag = yield self._setup_simple_routing_table()
+        routing_table = self.mk_routing_table([
+            ('TRANSPORT_TAG:pool:tag1:default',
+             'TRANSPORT_TAG:pool:tag1:default'),
+        ])
+        d = self.proxy.callRemote(
+                "update_routing_table", self.campaign_key, routing_table)
+        yield self.assert_faults(
+            d, 400, u"Source outbound-receiving endpoint"
+            " {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'} should link"
+            " to an inbound-receiving endpoint but links to {u'uuid':"
+            " u'TRANSPORT_TAG:pool:tag1:default'}")
+
+    @inlineCallbacks
+    def test_update_routing_table_with_conversation_linked_to_itself(self):
+        conv, tag = yield self._setup_simple_routing_table()
+        endpoint_uuid = ('CONVERSATION:%s:%s:default'
+                         % (conv.conversation_type, conv.key))
+        routing_table = self.mk_routing_table([
+            (endpoint_uuid, endpoint_uuid)
+        ])
+        d = self.proxy.callRemote(
+                "update_routing_table", self.campaign_key, routing_table)
+        yield self.assert_faults(
+            d, 400, u"Source inbound-receiving endpoint"
+            " {u'uuid': %r} should link"
+            " to an outbound-receiving endpoint but links to {u'uuid': %r}"
+            % (endpoint_uuid, endpoint_uuid))
+
+    @inlineCallbacks
+    def test_update_routing_table(self):
+        conv, tag = yield self._setup_simple_routing_table()
+        routing_table = self.mk_routing_table([
+            ('TRANSPORT_TAG:pool:tag1:default',
+             'CONVERSATION:%s:%s:default'
+             % (conv.conversation_type, conv.key)),
+        ])
+        result = yield self.proxy.callRemote(
+            "update_routing_table", self.campaign_key, routing_table)
+        self.assertIdentical(result, None)
+
+
+class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):
 
     use_riak = True
 
@@ -177,7 +353,7 @@ class GoApiWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
     def test_list_methods(self):
         worker, proxy = yield self.get_api_worker()
         result = yield proxy.callRemote('system.listMethods')
-        self.assertTrue(u'active_conversations' in result)
+        self.assertTrue(u'conversations' in result)
 
     @inlineCallbacks
     def test_method_help(self):
