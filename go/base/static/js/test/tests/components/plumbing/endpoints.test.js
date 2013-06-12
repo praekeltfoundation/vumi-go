@@ -83,7 +83,8 @@ describe("go.components.plumbing (endpoints)", function() {
         .render()
         .$el
         .width(200)
-        .height(300);
+        .height(300)
+        .css('padding', 10);
 
       endpoint = new ParametricEndpointView({
         state: state,
@@ -109,7 +110,7 @@ describe("go.components.plumbing (endpoints)", function() {
         function() {
           assert.deepEqual(
             positioners.left.call(endpoint, 0.5),
-            {left: -10, top: 145});
+            {left: -10, top: 155});
         });
       });
 
@@ -118,7 +119,7 @@ describe("go.components.plumbing (endpoints)", function() {
         function() {
           assert.deepEqual(
             positioners.right.call(endpoint, 0.5),
-            {left: 190, top: 145});
+            {left: 210, top: 155});
         });
       });
 
@@ -127,7 +128,7 @@ describe("go.components.plumbing (endpoints)", function() {
         function() {
           assert.deepEqual(
             positioners.top.call(endpoint, 0.5),
-            {left: 90, top: -5});
+            {left: 100, top: -5});
         });
       });
 
@@ -136,7 +137,7 @@ describe("go.components.plumbing (endpoints)", function() {
         function() {
           assert.deepEqual(
             positioners.bottom.call(endpoint, 0.5),
-            {left: 90, top: 295});
+            {left: 100, top: 315});
         });
       });
     });
@@ -150,7 +151,7 @@ describe("go.components.plumbing (endpoints)", function() {
 
         assert.deepEqual(
           endpoint.$el.position(),
-          {left: -10, top: 55});
+          {left: -10, top: 59});
 
         endpoint
           .reposition(0.1)
@@ -158,7 +159,7 @@ describe("go.components.plumbing (endpoints)", function() {
 
         assert.deepEqual(
           endpoint.$el.position(),
-          {left: -10, top: 25});
+          {left: -10, top: 27});
       });
     });
   });

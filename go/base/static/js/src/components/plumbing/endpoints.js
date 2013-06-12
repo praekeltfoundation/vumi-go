@@ -115,22 +115,22 @@
         var offset = _(this).result('offset');
         return {
           left: offset.left,
-          top: offset.top + (t * this.$state.height())
+          top: offset.top + (t * this.$state.outerHeight())
         };
       },
 
       right: function(t) {
         var offset = _(this).result('offset');
         return {
-          left: offset.left + this.$state.width(),
-          top: offset.top + (t * this.$state.height())
+          left: offset.left + this.$state.outerWidth(),
+          top: offset.top + (t * this.$state.outerHeight())
         };
       },
 
       top: function(t) {
         var offset = _(this).result('offset');
         return {
-          left: offset.left + (t * this.$state.width()),
+          left: offset.left + (t * this.$state.outerWidth()),
           top: offset.top
         };
       },
@@ -138,8 +138,8 @@
       bottom: function(t) {
         var offset = _(this).result('offset');
         return {
-          left: offset.left + (t * this.$state.width()),
-          top: offset.top + this.$state.height()
+          left: offset.left + (t * this.$state.outerWidth()),
+          top: offset.top + this.$state.outerHeight()
         };
       }
     },
