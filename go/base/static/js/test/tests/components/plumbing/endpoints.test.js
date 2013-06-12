@@ -69,6 +69,51 @@ describe("go.components.plumbing (endpoints)", function() {
     });
   });
 
+  describe(".PositionableEndpointView", function() {
+    var PositionableEndpointView = plumbing.PositionableEndpointView;
+
+    var ToyEndpointView = PositionableEndpointView.extend({
+      reposition: function(p) { this.p = p; },
+      position: function() { return this.p; }
+    });
+
+    var state,
+        endpoint;
+
+    beforeEach(function() {
+      state = diagram.states.get('x');
+
+      endpoint = new ToyEndpointView({
+        state: state,
+        collection: state.endpoints.members.get('endpoints'),
+        model: new EndpointModel({id: 'x4'})
+      });
+
+      state
+        .render()
+        .$el
+        .offset({top: 100, left: 200});
+    });
+
+    describe(".render", function() {
+      it("should position the endpoint relative to the state", function() {
+        endpoint.reposition({top: -25, left: -50});
+        endpoint.render();
+
+        assert.deepEqual(
+          endpoint.$el.offset(),
+          {top: 75, left: 150});
+
+        endpoint.reposition({top: -30, left: -50});
+        endpoint.render();
+
+        assert.deepEqual(
+          endpoint.$el.offset(),
+          {top: 70, left: 150});
+      });
+    });
+  });
+
   describe(".ParametricEndpointView", function() {
     var EndpointModel = stateMachine.EndpointModel,
         ParametricEndpointView = plumbing.ParametricEndpointView;
@@ -79,17 +124,17 @@ describe("go.components.plumbing (endpoints)", function() {
     beforeEach(function() {
       state = diagram.states.get('x');
 
-      state
-        .render()
-        .$el
-        .width(200)
-        .height(300);
-
       endpoint = new ParametricEndpointView({
         state: state,
         collection: state.endpoints.members.get('endpoints'),
         model: new EndpointModel({id: 'x4'})
       });
+
+      state
+        .render()
+        .$el
+        .width(200)
+        .height(300);
 
       endpoint
         .$el

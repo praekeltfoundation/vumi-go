@@ -86,9 +86,7 @@
   // Derived components
   // ------------------
 
-  // An endpoint view type which resides on a side of the state, and
-  // can be positioned along the side based on a parameter t.
-  var ParametricEndpointView = EndpointView.extend({
+  var PositionableEndpointView = EndpointView.extend({
     defaults: {
       side: 'left',
       offset: function() {
@@ -105,8 +103,26 @@
 
       this.side = options.side;
       this.offset = options.offset;
-      this.positioner = this.positioners[this.side];
+    },
 
+    // Override to specialise how the endpoint is positioned
+    position: function() { return _(this).result('offset'); },
+
+    render: function() {
+      EndpointView.prototype.render.call(this);
+
+      this.$el
+        .css('position', 'absolute')
+        .css(this.position());
+    }
+  });
+
+  // An endpoint view type which resides on a side of the state, and
+  // can be positioned along the side based on a parameter t.
+  var ParametricEndpointView = PositionableEndpointView.extend({
+    initialize: function(options) {
+      PositionableEndpointView.prototype.initialize.call(this, options);
+      this.positioner = this.positioners[this.side];
       this.t = 0.5;
     },
 
@@ -151,15 +167,12 @@
       return this;
     },
 
-    position: function() { return this.positioner(this.t); },
+    position: function() { return this.positioner(this.t); }
+  });
 
-    render: function() {
-      EndpointView.prototype.render.call(this);
-
-      this.$el
-        .css('position', 'absolute')
-        .css(this.position());
-    }
+  // An endpoint view type which resides on a side of the state, and
+  // and follows the vertical position of one the state's child elements.
+  var FollowingEndpointView = PositionableEndpointView.extend({
   });
 
   // Automatically aligns its endpoints to be evenly spaced on one side of the
@@ -215,6 +228,7 @@
     EndpointView: EndpointView,
     EndpointViewCollection: EndpointViewCollection,
 
+    PositionableEndpointView: PositionableEndpointView,
     ParametricEndpointView: ParametricEndpointView,
     AligningEndpointCollection: AligningEndpointCollection
   });
