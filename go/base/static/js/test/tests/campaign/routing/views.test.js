@@ -47,7 +47,7 @@ describe("go.campaign.routing (views)", function() {
         state.render();
       });
 
-      it("should display a the endpoint name", function() {
+      it("should display the endpoint name", function() {
         var el = '#routing-diagram #channels #channel1 #endpoint80';
 
         assert(noElExists(el));
