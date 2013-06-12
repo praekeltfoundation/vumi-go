@@ -236,9 +236,9 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         d = self.proxy.callRemote(
                 "update_routing_table", self.campaign_key, routing_table)
         yield self.assert_faults(
-            d, 400, u"Source channel endpoint {u'uuid':"
+            d, 400, u"Source outbound-receiving endpoint {u'uuid':"
             " u'TRANSPORT_TAG:pool:tag1:default'}"
-            " should link to a conversation endpoint"
+            " should link to an inbound-receiving endpoint"
             " but links to {u'uuid': u'bar'}")
 
     @inlineCallbacks
@@ -251,9 +251,9 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         d = self.proxy.callRemote(
                 "update_routing_table", self.campaign_key, routing_table)
         yield self.assert_faults(
-            d, 400, u"Source channel endpoint"
+            d, 400, u"Source outbound-receiving endpoint"
             " {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'} should link"
-            " to a conversation endpoint but links to {u'uuid':"
+            " to an inbound-receiving endpoint but links to {u'uuid':"
             " u'TRANSPORT_TAG:pool:tag1:default'}")
 
     @inlineCallbacks
@@ -267,9 +267,9 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         d = self.proxy.callRemote(
                 "update_routing_table", self.campaign_key, routing_table)
         yield self.assert_faults(
-            d, 400, u"Source conversation endpoint"
+            d, 400, u"Source inbound-receiving endpoint"
             " {u'uuid': %r} should link"
-            " to a channel endpoint but links to {u'uuid': %r}"
+            " to an outbound-receiving endpoint but links to {u'uuid': %r}"
             % (endpoint_uuid, endpoint_uuid))
 
     @inlineCallbacks

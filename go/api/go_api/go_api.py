@@ -166,44 +166,45 @@ class GoApiServer(JSONRPC):
             results = [r[1] for r in results]
             channels, routing_blocks, conversations = results
 
-            channel_endpoints = set(
+            recv_outbound_endpoints = set(
                 endpoint['uuid'] for endpoint in itertools.chain(
                     (e for c in channels for e in c['endpoints']),
                     (e for r in routing_blocks
-                     for e in r['channel_endpoints']),
+                     for e in r['conversation_endpoints']),
                 )
             )
-            conversation_endpoints = set(
+            recv_inbound_endpoints = set(
                 endpoint['uuid'] for endpoint in itertools.chain(
                     (e for c in conversations for e in c['endpoints']),
                     (e for r in routing_blocks
-                     for e in r['conversation_endpoints'])
+                     for e in r['channel_endpoints'])
                 )
             )
 
-            return channel_endpoints, conversation_endpoints
+            return recv_outbound_endpoints, recv_inbound_endpoints
 
         def check_routing_table(endpoint_sets):
-            """Check that endpoints link from known channel (right) endpoints
-            to known conversation (left) endpoints or vice versa.
+            """Check that endpoints link from known receives-outbound (right)
+            endpoints to known receives-inbound (left) endpoints or vice
+            versa.
             """
-            channel_endpoints, conversation_endpoints = endpoint_sets
+            recv_outbound_endpoints, recv_inbound_endpoints = endpoint_sets
             routing_entries = routing['routing_entries']
             for entry in routing_entries:
                 source, target = entry['source'], entry['target']
                 src_uuid, dst_uuid = source['uuid'], target['uuid']
-                if src_uuid in channel_endpoints:
-                    if dst_uuid not in conversation_endpoints:
+                if src_uuid in recv_outbound_endpoints:
+                    if dst_uuid not in recv_inbound_endpoints:
                         raise InvalidRoutingTable(
-                            "Source channel endpoint %r should link to a"
-                            " conversation endpoint but links to %r"
-                            % (source, target))
-                elif src_uuid in conversation_endpoints:
-                    if dst_uuid not in channel_endpoints:
+                            "Source outbound-receiving endpoint %r should"
+                            " link to an inbound-receiving endpoint but links"
+                            " to %r" % (source, target))
+                elif src_uuid in recv_inbound_endpoints:
+                    if dst_uuid not in recv_outbound_endpoints:
                         raise InvalidRoutingTable(
-                            "Source conversation endpoint %r should link to a"
-                            " channel endpoint but links to %r"
-                            % (source, target))
+                            "Source inbound-receiving endpoint %r should"
+                            " link to an outbound-receiving endpoint but links"
+                            " to %r" % (source, target))
                 else:
                     raise InvalidRoutingTable("Unknown source endpoint %r"
                                               % (source,))
