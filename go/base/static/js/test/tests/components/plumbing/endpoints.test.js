@@ -25,11 +25,7 @@ describe("go.components.plumbing (endpoints)", function() {
     var EndpointModel = stateMachine.EndpointModel,
         EndpointView = plumbing.EndpointView;
 
-    var ToyEndpointView = EndpointView.extend({
-      width: 20,
-      height: 25,
-      labelled: true
-    });
+    var ToyEndpointView = EndpointView.extend({labelled: true});
 
     var x,
         x1;
@@ -65,12 +61,6 @@ describe("go.components.plumbing (endpoints)", function() {
         assert(oneElExists('#x #x4'));
       });
 
-      it("should set the dimensions of the endpoint", function() {
-        x4.render();
-        assert.equal($('#x #x4').width(), 20);
-        assert.equal($('#x #x4').height(), 25);
-      });
-
       it("should add a label to the endpoint if labelling is enabled",
       function() {
         x4.render();
@@ -100,6 +90,11 @@ describe("go.components.plumbing (endpoints)", function() {
         collection: state.endpoints.members.get('endpoints'),
         model: new EndpointModel({id: 'x4'})
       });
+
+      endpoint
+        .$el
+        .width(20)
+        .height(10);
     });
 
     describe(".positioners", function() {
@@ -114,7 +109,7 @@ describe("go.components.plumbing (endpoints)", function() {
         function() {
           assert.deepEqual(
             positioners.left.call(endpoint, 0.5),
-            {left: -7, top: 143});
+            {left: -10, top: 145});
         });
       });
 
@@ -123,7 +118,7 @@ describe("go.components.plumbing (endpoints)", function() {
         function() {
           assert.deepEqual(
             positioners.right.call(endpoint, 0.5),
-            {left: 193, top: 143});
+            {left: 190, top: 145});
         });
       });
 
@@ -132,7 +127,7 @@ describe("go.components.plumbing (endpoints)", function() {
         function() {
           assert.deepEqual(
             positioners.top.call(endpoint, 0.5),
-            {left: 93, top: -7});
+            {left: 90, top: -5});
         });
       });
 
@@ -141,7 +136,7 @@ describe("go.components.plumbing (endpoints)", function() {
         function() {
           assert.deepEqual(
             positioners.bottom.call(endpoint, 0.5),
-            {left: 93, top: 293});
+            {left: 90, top: 295});
         });
       });
     });
@@ -154,16 +149,16 @@ describe("go.components.plumbing (endpoints)", function() {
           .render();
 
         assert.deepEqual(
-          endpoint.$el.offset(),
-          {left: -7, top: 53});
+          endpoint.$el.position(),
+          {left: -10, top: 55});
 
         endpoint
           .reposition(0.1)
           .render();
 
         assert.deepEqual(
-          endpoint.$el.offset(),
-          {left: -7, top: 23});
+          endpoint.$el.position(),
+          {left: -10, top: 25});
       });
     });
   });
