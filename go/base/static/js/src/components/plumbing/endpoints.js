@@ -20,8 +20,6 @@
   var EndpointView = Backbone.View.extend({
     id: function() { return this.model.id; },
     className: 'endpoint',
-    width: 14,
-    height: 14,
 
     // Override to set whether the endpoint can source connections
     isSource: true,
@@ -74,12 +72,7 @@
     },
 
     render: function() {
-      this.$el
-        .height(this.height)
-        .width(this.width);
-
       this.state.$el.append(this.$el);
-
       if (this.labelled) { this.label.render(); }
     }
   });
@@ -96,14 +89,14 @@
   // An endpoint view type which resides on a side of the state, and
   // can be positioned along the side based on a parameter t.
   var ParametricEndpointView = EndpointView.extend({
-    defaults: function() {
-      return {
-        side: 'left',
-        offset: {
-          left: this.width * -0.5,
-          top: this.height * -0.5
-        }
-      };
+    defaults: {
+      side: 'left',
+      offset: function() {
+        return {
+          left: this.$el.outerWidth() * -0.5,
+          top: this.$el.outerHeight() * -0.5
+        };
+      }
     },
 
     initialize: function(options) {
@@ -114,35 +107,39 @@
       this.offset = options.offset;
       this.positioner = this.positioners[this.side];
 
-      this.reposition(0.5);
+      this.t = 0.5;
     },
 
     positioners: {
       left: function(t) {
+        var offset = _(this).result('offset');
         return {
-          left: this.offset.left,
-          top: this.offset.top + (t * this.$state.height())
+          left: offset.left,
+          top: offset.top + (t * this.$state.height())
         };
       },
 
       right: function(t) {
+        var offset = _(this).result('offset');
         return {
-          left: this.offset.left + this.$state.width(),
-          top: this.offset.top + (t * this.$state.height())
+          left: offset.left + this.$state.width(),
+          top: offset.top + (t * this.$state.height())
         };
       },
 
       top: function(t) {
+        var offset = _(this).result('offset');
         return {
-          left: this.offset.left + (t * this.$state.width()),
-          top: this.offset.top
+          left: offset.left + (t * this.$state.width()),
+          top: offset.top
         };
       },
 
       bottom: function(t) {
+        var offset = _(this).result('offset');
         return {
-          left: this.offset.left + (t * this.$state.width()),
-          top: this.offset.top + this.$state.height()
+          left: offset.left + (t * this.$state.width()),
+          top: offset.top + this.$state.height()
         };
       }
     },
@@ -150,16 +147,18 @@
     // Move the endpoint along its side based on parameter t, where
     // 0 <= t <= 1.
     reposition: function(t) {
-      this.position = this.positioner(t);
+      this.t = t;
       return this;
     },
 
-    render: function() {
-      this.$el
-        .css({position: 'absolute'})
-        .offset(this.position);
+    position: function() { return this.positioner(this.t); },
 
-      return EndpointView.prototype.render.call(this);
+    render: function() {
+      EndpointView.prototype.render.call(this);
+
+      this.$el
+        .css('position', 'absolute')
+        .css(this.position());
     }
   });
 
