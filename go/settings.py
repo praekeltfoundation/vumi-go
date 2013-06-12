@@ -379,6 +379,11 @@ PIPELINE_JS = {
             'js/src/campaign/routing/routing.js',
             'js/src/campaign/routing/models.js',
             'js/src/campaign/routing/views.js',
+
+            # TODO This is here so we can access the test model data. This
+            # gives us the data we need for a 'demo' of the routing screen.
+            # Remove once the screen is hooked up to the API.
+            'js/test/tests/campaign/routing/testHelpers.js',
         ),
         'output_filename': 'export/go.js'
     },

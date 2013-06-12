@@ -54,6 +54,14 @@
       name: 'bulk-message2',
       description: 'Some Other Bulk Message App',
       endpoints: [{uuid: 'endpoint9', name: 'default'}]
+    }, {
+      uuid: 'conversation3',
+      type: 'js-app',
+      name: 'js-app1',
+      description: 'Some JS App',
+      endpoints: [
+        {uuid: 'endpoint10', name: 'default'},
+        {uuid: 'endpoint11', name: 'sms'}]
     }],
     routing_entries: [{
       source: {uuid: 'endpoint1'},
