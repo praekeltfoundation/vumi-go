@@ -493,6 +493,7 @@ class ConversationActionView(ConversationView):
         return self.render_to_response({
             'conversation': conversation,
             'form': form,
+            'action_display_name': self.action.action_display_name,
         })
 
     def get(self, request, conversation):

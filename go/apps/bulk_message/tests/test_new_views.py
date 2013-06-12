@@ -257,6 +257,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
         self.assertEqual([], self.get_api_commands_sent())
         self.assertContains(response, 'name="message"')
+        self.assertContains(response, '<h1>Send Bulk Message</h1>')
 
     def test_action_bulk_send_dedupe(self):
         # Start the conversation
