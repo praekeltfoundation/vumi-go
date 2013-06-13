@@ -316,6 +316,12 @@ button {
 .campaigns #routing-diagram ._jsPlumb_connector {
   z-index: 200;
 }
+.campaigns #frm-conversation-details ul,
+.campaigns #frm-conversation-details li {
+  padding: 0;
+  margin: 0;
+  list-style-type: none;
+}
 .accounts {
   color: #c1c1c1;
 }
