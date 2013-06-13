@@ -159,9 +159,17 @@ def incoming_list(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
 
     # TODO: Where would I get conversation data?
+    # FAKE DATA FOR BADLARD.
+    message_list = (
+        {'contact': '07922 539 521', 'threads': 35, 'date': '2013-03-21'},
+        {'contact': '55555 539 521', 'threads': 27, 'date': '2013-03-21'},
+        {'contact': '07922 222 521', 'threads': 51, 'date': '2013-03-21'},
+        {'contact': '22222 539 222', 'threads': 99, 'date': '2013-03-21'},
+    )
 
     return render(request, 'campaigns/incoming_list.html', {
         'conversation': conversation,
+        'message_list': message_list
     })
 
 
