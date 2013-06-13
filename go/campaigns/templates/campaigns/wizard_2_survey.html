@@ -1,4 +1,4 @@
-{% extends "campaigns/wizard_2_survey.html" %}
+{% extends "campaigns/wizard_base.html" %}
 
 
 {% block extrahead %}
@@ -25,7 +25,11 @@
         // highlight the breadcrumbs.
         $('.breadcrumbs a').eq(1).addClass('active');
 
-
+        $('.actions .right button[data-action="save"]').off('click').on('click', function(e) {
+            e.preventDefault();
+            
+            console.log('show dialog');
+        });    
     });
 
 
