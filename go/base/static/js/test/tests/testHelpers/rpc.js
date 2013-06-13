@@ -1,5 +1,5 @@
-// go.test.helpers.rpc
-// ===================
+// go.testHelpers.rpc
+// ==================
 
 (function(exports) {
   var assertRequest = function(req, url, method, params) {
