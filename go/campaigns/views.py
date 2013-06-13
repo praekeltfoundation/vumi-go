@@ -182,9 +182,20 @@ def incoming_detail(request, campaign_key, contact_key):
         # TODO: process sending message from form
         pass
 
+    # TODO: Where would I get conversation data?
+    # FAKE DATA FOR BADLARD.
+    message_list = (
+        {'contact': 'You', 'message': 'Thank you'},
+        {'contact': '55555 539 521', 'message': 'Saturday'},
+        {'contact': 'You', 'message': 'What days do you eat?'},
+        {'contact': '55555 539 521', 'message': 'Hotdogs'},
+        {'contact': 'You', 'message': 'What is your favourite meal?'},
+    )
+
     return render(request, 'campaigns/incoming_detail.html', {
         'conversation': conversation,
-        'form': form
+        'form': form,
+        'message_list': message_list
     })
 
 
