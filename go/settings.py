@@ -379,6 +379,9 @@ PIPELINE_JS = {
             'js/src/campaign/routing/routing.js',
             'js/src/campaign/routing/models.js',
             'js/src/campaign/routing/views.js',
+            'js/src/campaign/dialogue/dialogue.js',
+            'js/src/campaign/dialogue/models.js',
+            'js/src/campaign/dialogue/views.js',
 
             # TODO This is here so we can access the test model data. This
             # gives us the data we need for a 'demo' of the routing screen.
