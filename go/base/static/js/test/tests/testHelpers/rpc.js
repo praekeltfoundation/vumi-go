@@ -32,6 +32,9 @@
       },
 
       respondWith: function(data) {
+        // deep copy the data to ensure it can't be modified (which may cause
+        // obscure test passes/failures)
+        data = JSON.parse(JSON.stringify(data));
         requests[0].success(response(requests[0].data.id, data));
       }
     };

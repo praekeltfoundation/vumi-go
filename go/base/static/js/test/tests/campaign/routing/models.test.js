@@ -12,12 +12,10 @@ describe("go.campaign.routing (models)", function() {
   describe(".CampaignRoutingModel", function() {
     var CampaignRoutingModel = routing.CampaignRoutingModel;
 
-    var server,
-        data;
+    var server;
 
     beforeEach(function() {
       server = fakeServer('/api/v1/go/api');
-      data = _.clone(modelData);
     });
 
     afterEach(function() {
@@ -34,16 +32,19 @@ describe("go.campaign.routing (models)", function() {
       it("should update the model on the client side", function() {
         var model = new CampaignRoutingModel();
         model.fetch();
-        server.respondWith(data);
-        assert.deepEqual(model.toJSON(), data);
+        server.respondWith(modelData);
+
+        // Backbone.rpc adds an extra `_rpcId` attribute which isn't part of
+        // our test model data. We need to exclude it for the assertion
+        assert.deepEqual(modelData, _(model.toJSON()).omit('_rpcId'));
       });
     });
 
     describe(".save", function() {
       it("should issue the correct api request", function() {
-        var model = new CampaignRoutingModel(data);
+        var model = new CampaignRoutingModel(modelData);
         model.save();
-        server.assertRequest('update_routing_table', ['campaign1', data]);
+        server.assertRequest('update_routing_table', ['campaign1', modelData]);
       });
     });
   });
