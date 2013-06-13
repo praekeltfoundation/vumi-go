@@ -339,6 +339,9 @@ button {
 .campaigns #routing-diagram ._jsPlumb_connector {
   z-index: 200;
 }
+.contacts .smart-group-search form {
+  display: inline;
+}
 .accounts {
   color: #c1c1c1;
 }
