@@ -169,5 +169,15 @@ def user_detail(request, user_id=None):
 
 def billing(request):
     # TODO: Does this data exist anywhere?
+
+    # FAKE DATA
+    statement_list = (
+        {'date': '2013-03-31'},
+        {'date': '2013-02-28'},
+        {'date': '2013-01-31'},
+        {'date': '2013-12-31'},
+    )
+
     return render(request, 'account/billing.html', {
+        'statement_list': statement_list
     })
