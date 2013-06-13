@@ -1,0 +1,36 @@
+<div class="modal hide fade" id="previewConv">
+  	<div class="modal-header">
+    	<a class="close" data-dismiss="modal">×</a>
+    	<h3>Send preview of message</h3>
+  	</div>
+  	<form class="form-horizontal">
+  	<div class="modal-body">
+  		<fieldset>
+	        <label class="control-label" for="contacts">Select which contact(s) you'd like to message:</label>
+	        <table class="table table-condensed">
+	        <tbody>
+	            {% for contact in conversation.people %}
+	            <tr>
+	            <td>
+	                <label class="checkbox inline">
+	                    <input type="checkbox" name="contact" value="{{contact.pk}}" class="group-check"> {{contact}}
+	                </label>
+	            </td>
+	            </tr>
+	            {% empty %}
+	            <tr>
+	            <td>
+	                You don't have any contacts for this conversation.
+	            </td>
+	            </tr>
+	            {% endfor %}
+	        </tbody>
+	        </table>
+	        <div class="btn-toolbar">
+	            <div class="btn-group"><input type="submit" class="btn btn-primary" value="Send &rarr;"></div>
+	            <div class="btn-group"><input type="reset" class="btn" value="Cancel" data-dismiss="modal"></div>
+	        </div>
+	    </fieldset>
+  	</div>
+  	</form>
+</div>
