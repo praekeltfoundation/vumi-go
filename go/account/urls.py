@@ -17,5 +17,6 @@ urlpatterns = patterns('',
     url(r'^users/create/$', views.user_detail, name='auth_user_create'),
     url(r'^users/(?P<user_id>\d+)/$', views.user_detail,
         name='auth_user_detail'),
+    url(r'^billing/$', views.billing, name='auth_billing'),
 )
 urlpatterns += authpatterns

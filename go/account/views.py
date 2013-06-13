@@ -125,7 +125,6 @@ def user_detail(request, user_id=None):
         return HttpResponseForbidden("You're not an admin.")
 
     # Are they editing a member of the same organisation?
-    
     if user_id:
         # editing
         edit_user = get_object_or_404(User, id=user_id)
@@ -141,21 +140,21 @@ def user_detail(request, user_id=None):
 
     user_form = UserAccountForm(instance=edit_user)
     user_profile_form = UserProfileForm(instance=edit_user_profile,
-        initial={
-            'organisation': user_profile.organisation
-        })
+            initial={
+                'organisation': user_profile.organisation
+            })
 
     if request.method == 'POST':
-        user_form  = UserAccountForm(request.POST, instance=edit_user)
+        user_form = UserAccountForm(request.POST, instance=edit_user)
         user_profile_form = UserProfileForm(request.POST,
-            instance=edit_user_profile)
+                                            instance=edit_user_profile)
 
         if user_form.is_valid() and user_profile_form.is_valid():
             # TODO: This works fine for editing users, but I think
             # creating users is slightly more complicated because
             # it needs to work within riak.
 
-            # TODO: Username isn't required in vumigo, what should we 
+            # TODO: Username isn't required in vumigo, what should we
             # use instead?
             user_form.save()
             user_profile_form.save()
@@ -165,4 +164,10 @@ def user_detail(request, user_id=None):
         'edit_user': edit_user,
         'user_form': user_form,
         'user_profile_form': user_profile_form
+    })
+
+
+def billing(request):
+    # TODO: Does this data exist anywhere?
+    return render(request, 'account/billing.html', {
     })

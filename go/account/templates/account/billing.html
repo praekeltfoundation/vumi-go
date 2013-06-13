@@ -1,0 +1,40 @@
+{% extends "app.html" %}
+{% load url from future %}
+
+{% block content_extraclass %}account{% endblock %}
+{% block content_title %}Statements{% endblock %}
+
+{% block content_main %}
+<div class="row-fluid">
+    <div class="span12">
+        <div class="indent">
+            {% include "base/includes/messages.html" %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Statement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for statement in statement_list %}
+                    <tr>
+                        <td>{{ statement.date }}</td>
+                        <td><a href="{% url 'todo' %}">View</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2">
+                            You don't have any statements
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% include "base/includes/pagination.html" %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
