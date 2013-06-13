@@ -1,6 +1,4 @@
 from datetime import date
-from zipfile import ZipFile
-from StringIO import StringIO
 
 from django.test.client import Client
 from django.core import mail
@@ -9,6 +7,8 @@ from django.contrib.sites.models import Site
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.vumitools.token_manager import TokenManager
+from go.conversation.conversation_views import ConversationViewFinder
+from go.base.utils import get_conversation_definition
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
 
@@ -24,6 +24,23 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.client = Client()
         self.client.login(username='username', password='password')
 
+    def get_view_url(self, view, conv_key=None):
+        if conv_key is None:
+            conv_key = self.conv_key
+        conv_def = get_conversation_definition(self.TEST_CONVERSATION_TYPE)
+        finder = ConversationViewFinder(conv_def(None))
+        return finder.get_view_url(view, conversation_key=conv_key)
+
+    def get_new_view_url(self):
+        return reverse('conversations:new_conversation', kwargs={
+            'conversation_type': 'bulk_message'})
+
+    def get_action_view_url(self, action_name, conv_key=None):
+        if conv_key is None:
+            conv_key = self.conv_key
+        return reverse('conversations:conversation_action', kwargs={
+            'conversation_key': conv_key, 'action_name': action_name})
+
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
         return self.user_api.wrap_conversation(conv)
@@ -31,23 +48,21 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
     def run_new_conversation(self, selected_option, pool, tag):
         # render the form
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        response = self.client.get(reverse('bulk_message:new'))
+        response = self.client.get(self.get_new_view_url())
         self.assertEqual(response.status_code, 200)
         # post the form
-        response = self.client.post(reverse('bulk_message:new'), {
+        response = self.client.post(self.get_new_view_url(), {
             'subject': 'the subject',
             'message': 'the message',
             'delivery_class': 'sms',
             'delivery_tag_pool': selected_option,
         })
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
-        conversation = self.get_latest_conversation()
-        self.assertEqual(conversation.delivery_class, 'sms')
-        self.assertEqual(conversation.delivery_tag_pool, pool)
-        self.assertEqual(conversation.delivery_tag, tag)
-        self.assertRedirects(response, reverse('bulk_message:people', kwargs={
-            'conversation_key': conversation.key,
-        }))
+        conv = self.get_latest_conversation()
+        self.assertEqual(conv.delivery_class, 'sms')
+        self.assertEqual(conv.delivery_tag_pool, pool)
+        self.assertEqual(conv.delivery_tag, tag)
+        self.assertRedirects(response, self.get_view_url('people', conv.key))
 
     def test_new_conversation(self):
         """test the creation of a new conversation"""
@@ -66,10 +81,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """
         conversation = self.get_wrapped_conv()
         self.assertFalse(conversation.ended())
-        response = self.client.post(reverse('bulk_message:end', kwargs={
-            'conversation_key': conversation.key}), follow=True)
-        self.assertRedirects(response, reverse('bulk_message:show', kwargs={
-            'conversation_key': conversation.key}))
+        response = self.client.post(self.get_view_url('end'), follow=True)
+        self.assertRedirects(response, self.get_view_url('show'))
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "Conversation ended")
         conversation = self.get_wrapped_conv()
@@ -78,11 +91,9 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
         conversation"""
-        response = self.client.post(reverse('bulk_message:people',
-            kwargs={'conversation_key': self.conv_key}), {'groups': [
-                    grp.key for grp in self.contact_store.list_groups()]})
-        self.assertRedirects(response, reverse('bulk_message:start', kwargs={
-            'conversation_key': self.conv_key}))
+        response = self.client.post(self.get_view_url('people'), {'groups': [
+            grp.key for grp in self.contact_store.list_groups()]})
+        self.assertRedirects(response, self.get_view_url('start'))
 
     def test_start(self):
         """
@@ -90,65 +101,27 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """
         conversation = self.get_wrapped_conv()
 
-        response = self.client.post(reverse('bulk_message:start', kwargs={
-            'conversation_key': conversation.key}))
-        self.assertRedirects(response, reverse('bulk_message:show', kwargs={
-            'conversation_key': conversation.key}))
+        response = self.client.post(self.get_view_url('start'))
+        self.assertRedirects(response, self.get_view_url('show'))
 
         conversation = self.get_wrapped_conv()
         [batch] = conversation.get_batches()
         [tag] = list(batch.tags)
         [contact] = self.get_contacts_for_conversation(conversation)
-        msg_options = {
-            "transport_type": "sms",
-            "transport_name": self.transport_name,
-            "from_addr": "default10001",
-            "helper_metadata": {
-                "tag": {"tag": list(tag)},
-                "go": {"user_account": conversation.user_account.key},
-                },
-            }
 
-        [start_cmd, hack_cmd] = self.get_api_commands_sent()
+        [start_cmd] = self.get_api_commands_sent()
         self.assertEqual(start_cmd, VumiApiCommand.command(
                 '%s_application' % (conversation.conversation_type,), 'start',
                 user_account_key=conversation.user_account.key,
                 conversation_key=conversation.key))
-        self.assertEqual(hack_cmd, VumiApiCommand.command(
-                '%s_application' % (conversation.conversation_type,),
-                'initial_action_hack',
-                user_account_key=conversation.user_account.key,
-                conversation_key=conversation.key,
-                is_client_initiated=conversation.is_client_initiated(),
-                batch_id=batch.key, msg_options=msg_options, dedupe=False))
-
-    def test_start_with_deduplication(self):
-        conversation = self.get_wrapped_conv()
-        self.client.post(
-            reverse('bulk_message:start', kwargs={
-                    'conversation_key': conversation.key}),
-            {'dedupe': '1'})
-        [start_cmd, hack_cmd] = self.get_api_commands_sent()
-        self.assertEqual(hack_cmd.payload['kwargs']['dedupe'], True)
-
-    def test_start_without_deduplication(self):
-        conversation = self.get_wrapped_conv()
-        self.client.post(reverse('bulk_message:start', kwargs={
-            'conversation_key': conversation.key}), {
-        })
-        [start_cmd, hack_cmd] = self.get_api_commands_sent()
-        self.assertEqual(hack_cmd.payload['kwargs']['dedupe'], False)
 
     def test_send_fails(self):
         """
         Test failure to send messages
         """
-        conversation = self.get_wrapped_conv()
         self.acquire_all_longcode_tags()
-        response = self.client.post(reverse('bulk_message:start', kwargs={
-            'conversation_key': conversation.key}), follow=True)
-        self.assertRedirects(response, reverse('bulk_message:start', kwargs={
-            'conversation_key': conversation.key}))
+        response = self.client.post(self.get_view_url('start'), follow=True)
+        self.assertRedirects(response, self.get_view_url('start'))
         [] = self.get_api_commands_sent()
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "No spare messaging tags.")
@@ -157,21 +130,18 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """
         Test showing the conversation
         """
-        response = self.client.get(reverse('bulk_message:show', kwargs={
-            'conversation_key': self.conv_key}))
+        response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
-        # Just to make sure we're not somehow using the other views here.
-        action_url = '/conversations/%s/action/bulk_send' % (conversation.key,)
-        self.assertNotContains(response, action_url)
+        self.assertContains(response, 'Send Bulk Message')
+        self.assertContains(response, self.get_action_view_url('bulk_send'))
 
     def test_show_cached_message_pagination(self):
         # Create 21 inbound & 21 outbound messages, since we have
         # 20 messages per page it should give us 2 pages
         self.put_sample_messages_in_conversation(self.user_api,
-                                                    self.conv_key, 21)
-        response = self.client.get(reverse('bulk_message:show', kwargs={
-            'conversation_key': self.conv_key}))
+                                                 self.conv_key, 21)
+        response = self.client.get(self.get_view_url('show'))
 
         # Check pagination
         # We should have 60 references to a contact, which by default display
@@ -189,10 +159,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
     def test_show_cached_message_overview(self):
         self.put_sample_messages_in_conversation(self.user_api,
-                                                    self.conv_key, 10)
-        response = self.client.get(reverse('bulk_message:show', kwargs={
-            'conversation_key': self.conv_key
-            }))
+                                                 self.conv_key, 10)
+        response = self.client.get(self.get_view_url('show'))
         self.assertContains(response,
             '10 sent for delivery to the networks.')
         self.assertContains(response,
@@ -207,15 +175,13 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         Client.return_value = fake_client
         MatchResult.return_value = fake_result
 
-        response = self.client.get(reverse('bulk_message:show', kwargs={
-                'conversation_key': self.conv_key,
-            }), {
-                'q': 'hello world 1',
-            })
+        response = self.client.get(self.get_view_url('show'), {
+            'q': 'hello world 1',
+        })
 
         template_names = [t.name for t in response.templates]
-        self.assertTrue('generic/includes/message-load-results.html' in
-                        template_names)
+        self.assertTrue(
+            'generic/includes/message-load-results.html' in template_names)
         self.assertEqual(response.context['token'], fake_client.token)
 
     @patch('go.base.message_store_client.MatchResult')
@@ -227,10 +193,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         Client.return_value = fake_client
         MatchResult.return_value = fake_result
 
-        fetch_results_url = reverse('bulk_message:message_search_result',
-            kwargs={
-                'conversation_key': self.conv_key,
-            })
+        fetch_results_url = self.get_view_url('message_search_result')
         fetch_results_params = {
             'q': 'hello world 1',
             'batch_id': 'batch-id',
@@ -239,31 +202,28 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             'delay': 100,
         }
 
-        response1 = self.client.get(fetch_results_url,
-                                    fetch_results_params)
-        response2 = self.client.get(fetch_results_url,
-                                    fetch_results_params)
+        response1 = self.client.get(fetch_results_url, fetch_results_params)
+        response2 = self.client.get(fetch_results_url, fetch_results_params)
 
         # First time it should still show the loading page
         self.assertTrue('generic/includes/message-load-results.html' in
-                            [t.name for t in response1.templates])
+                        [t.name for t in response1.templates])
         self.assertEqual(response1.context['delay'], 1.1 * 100)
         # Second time it should still render the messages
         self.assertTrue('generic/includes/message-list.html' in
-                            [t.name for t in response2.templates])
+                        [t.name for t in response2.templates])
         self.assertEqual(response1.context['token'], fake_client.token)
         # Second time we should list the matching messages
         self.assertEqual(response2.context['token'], fake_client.token)
-        self.assertEqual(len(response2.context['message_page'].object_list),
-            10)
+        self.assertEqual(
+            len(response2.context['message_page'].object_list), 10)
 
     def test_aggregates(self):
         self.put_sample_messages_in_conversation(
             self.user_api, self.conv_key, 10, start_date=date(2012, 1, 1),
             time_multiplier=12)
-        response = self.client.get(reverse('bulk_message:aggregates', kwargs={
-            'conversation_key': self.conv_key
-            }), {'direction': 'inbound'})
+        response = self.client.get(self.get_view_url('aggregates'),
+                                   {'direction': 'inbound'})
         self.assertEqual(response.content, '\r\n'.join([
             '2011-12-28,2',
             '2011-12-29,2',
@@ -277,26 +237,63 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.put_sample_messages_in_conversation(
             self.user_api, self.conv_key, 10, start_date=date(2012, 1, 1),
             time_multiplier=12)
-        conv_url = reverse('bulk_message:show', kwargs={
-            'conversation_key': self.conv_key,
-            })
-        response = self.client.post(conv_url, {
+        response = self.client.post(self.get_view_url('show'), {
             '_export_conversation_messages': True,
-            })
-        self.assertRedirects(response, conv_url)
+        })
+        self.assertRedirects(response, self.get_view_url('show'))
         [email] = mail.outbox
         self.assertEqual(email.recipients(), [self.user.email])
         self.assertTrue(self.conversation.name in email.subject)
         self.assertTrue(self.conversation.name in email.body)
-        [(file_name, contents, mime_type)] = email.attachments
+        [(file_name, content, mime_type)] = email.attachments
         self.assertEqual(file_name, 'messages-export.zip')
-
-        zipfile = ZipFile(StringIO(contents), 'r')
-        csv_contents = zipfile.open('messages-export.csv', 'r').read()
-
         # 1 header, 10 sent, 10 received, 1 trailing newline == 22
-        self.assertEqual(22, len(csv_contents.split('\n')))
+        self.assertEqual(22, len(content.split('\n')))
         self.assertEqual(mime_type, 'application/zip')
+
+    def test_action_bulk_send_view(self):
+        response = self.client.get(self.get_action_view_url('bulk_send'))
+        conversation = response.context[0].get('conversation')
+        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        self.assertEqual([], self.get_api_commands_sent())
+        self.assertContains(response, 'name="message"')
+        self.assertContains(response, '<h1>Send Bulk Message</h1>')
+
+    def test_action_bulk_send_dedupe(self):
+        # Start the conversation
+        self.client.post(self.get_view_url('start'))
+        self.assertEqual(1, len(self.get_api_commands_sent()))
+        response = self.client.post(
+            self.get_action_view_url('bulk_send'),
+            {'message': 'I am ham, not spam.', 'dedupe': True})
+        self.assertRedirects(response, self.get_view_url('show'))
+        [bulk_send_cmd] = self.get_api_commands_sent()
+        conversation = self.user_api.get_wrapped_conversation(self.conv_key)
+        self.assertEqual(bulk_send_cmd, VumiApiCommand.command(
+            '%s_application' % (conversation.conversation_type,),
+            'bulk_send',
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=conversation.get_batches()[0].key, msg_options={},
+            content='I am ham, not spam.', dedupe=True))
+
+    def test_action_bulk_send_no_dedupe(self):
+        # Start the conversation
+        self.client.post(self.get_view_url('start'))
+        self.assertEqual(1, len(self.get_api_commands_sent()))
+        response = self.client.post(
+            self.get_action_view_url('bulk_send'),
+            {'message': 'I am ham, not spam.', 'dedupe': False})
+        self.assertRedirects(response, self.get_view_url('show'))
+        [bulk_send_cmd] = self.get_api_commands_sent()
+        conversation = self.user_api.get_wrapped_conversation(self.conv_key)
+        self.assertEqual(bulk_send_cmd, VumiApiCommand.command(
+            '%s_application' % (conversation.conversation_type,),
+            'bulk_send',
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=conversation.get_batches()[0].key, msg_options={},
+            content='I am ham, not spam.', dedupe=False))
 
 
 class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
@@ -311,6 +308,11 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         self.redis = self.get_redis_manager()
         self.tm = TokenManager(self.redis.sub_manager('token_manager'))
 
+    def get_view_url(self, view):
+        conv_def = get_conversation_definition(self.TEST_CONVERSATION_TYPE)
+        finder = ConversationViewFinder(conv_def(None))
+        return finder.get_view_url(view, conversation_key=self.conv_key)
+
     def test_confirm_start_conversation_get(self):
         """
         Test the start conversation view with the confirm_start_conversation
@@ -321,16 +323,12 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         account.confirm_start_conversation = True
         account.save()
 
-        conversation = self.user_api.get_wrapped_conversation(self.conv_key)
-
-        response = self.client.get(reverse('bulk_message:start', kwargs={
-            'conversation_key': conversation.key
-            }))
+        response = self.client.get(self.get_view_url('start'))
 
         self.assertEqual(response.context['confirm_start_conversation'], True)
         template_names = [t.name for t in response.templates]
         self.assertTrue('generic/includes/conversation_start_confirmation.html'
-                            in template_names)
+                        in template_names)
 
     def test_confirm_start_conversation_post(self):
         """
@@ -352,13 +350,9 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         # mock the token generation
         with patch.object(TokenManager, 'generate_token') as mock_method:
             mock_method.return_value = ('abcdef', '123456')
-            response = self.client.post(reverse('bulk_message:start', kwargs={
-                'conversation_key': conversation.key,
-                }))
+            response = self.client.post(self.get_view_url('start'))
 
-        self.assertRedirects(response, reverse('bulk_message:show', kwargs={
-            'conversation_key': conversation.key,
-            }))
+        self.assertRedirects(response, self.get_view_url('show'))
 
         conversation = self.user_api.get_wrapped_conversation(self.conv_key)
         [batch] = conversation.get_batches()
@@ -405,9 +399,7 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
                                     token_data['system_token'])
 
         response = self.client.get('%s?token=%s' % (
-            reverse('bulk_message:confirm', kwargs={
-                'conversation_key': conversation.key,
-            }), full_token))
+            self.get_view_url('confirm'), full_token))
 
         self.assertContains(response, conversation.name)
         self.assertContains(response, conversation.description)
@@ -434,11 +426,9 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         full_token = '%s-%s%s' % (len(token), token,
                                     token_data['system_token'])
 
-        response = self.client.post(reverse('bulk_message:confirm', kwargs={
-            'conversation_key': conversation.key,
-            }), {
-                'token': full_token,
-            })
+        response = self.client.post(self.get_view_url('confirm'), {
+            'token': full_token,
+        })
 
         self.assertContains(response, conversation.name)
         self.assertContains(response, conversation.description)
@@ -459,39 +449,21 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
 
         batch = conversation.mdb.get_batch(batch_key)
         [tag] = list(batch.tags)
-        [start_cmd, hack_cmd] = self.get_api_commands_sent()
+        [start_cmd] = self.get_api_commands_sent()
 
-        msg_options = {
-            "transport_type": "sms",
-            "transport_name": self.transport_name,
-            "from_addr": "default10001",
-            "helper_metadata": {
-                "tag": {"tag": list(tag)},
-                "go": {"user_account": conversation.user_account.key},
-                },
-            }
         self.assertEqual(start_cmd, VumiApiCommand.command(
                 '%s_application' % (conversation.conversation_type,), 'start',
                 user_account_key=conversation.user_account.key,
                 conversation_key=conversation.key))
-        self.assertEqual(hack_cmd, VumiApiCommand.command(
-                '%s_application' % (conversation.conversation_type,),
-                'initial_action_hack',
-                user_account_key=conversation.user_account.key,
-                conversation_key=conversation.key,
-                is_client_initiated=conversation.is_client_initiated(),
-                batch_id=batch.key, msg_options=msg_options, dedupe=True))
 
         # check token was consumed so it can't be re-used to send the
         # conversation messages again
         self.assertEqual(self.tm.get(token), None)
 
         # check repost fails because token has been deleted
-        response = self.client.post(reverse('bulk_message:confirm', kwargs={
-            'conversation_key': conversation.key,
-            }), {
-                'token': full_token,
-            })
+        response = self.client.post(self.get_view_url('confirm'), {
+            'token': full_token,
+        })
         self.assertEqual(response.status_code, 404)
         self.assertEqual(self.tm.get(token), None)
 
@@ -504,43 +476,42 @@ class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
         self.client = Client()
         self.client.login(username='username', password='password')
 
+    def get_view_url(self, view):
+        conv_def = get_conversation_definition(self.TEST_CONVERSATION_TYPE)
+        finder = ConversationViewFinder(conv_def(None))
+        return finder.get_view_url(view, conversation_key=self.conv_key)
+
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
         return self.user_api.wrap_conversation(conv)
 
     def test_actions_on_inbound_only(self):
         messages = self.put_sample_messages_in_conversation(self.user_api,
-                                                    self.conv_key, 1)
+                                                            self.conv_key, 1)
         [msg_in, msg_out, ack, dr] = messages[0]
 
-        response = self.client.get(reverse('bulk_message:show', kwargs={
-            'conversation_key': self.conv_key
-            }), {'direction': 'inbound'})
+        response = self.client.get(self.get_view_url('show'),
+                                   {'direction': 'inbound'})
         self.assertContains(response, 'Reply')
         self.assertContains(response, 'href="#reply-%s"' % (
             msg_in['message_id'],))
 
-        response = self.client.get(reverse('bulk_message:show', kwargs={
-            'conversation_key': self.conv_key
-            }), {'direction': 'outbound'})
+        response = self.client.get(self.get_view_url('show'),
+                                   {'direction': 'outbound'})
         self.assertNotContains(response, 'Reply')
 
     def test_send_one_off_reply(self):
         self.put_sample_messages_in_conversation(self.user_api,
-                                                    self.conv_key, 1)
+                                                 self.conv_key, 1)
         conversation = self.get_wrapped_conv()
         [msg] = conversation.received_messages()
-        response = self.client.post(reverse('bulk_message:show', kwargs={
-            'conversation_key': self.conv_key
-            }), {
-                'in_reply_to': msg['message_id'],
-                'content': 'foo',
-                'to_addr': 'should be ignored',
-                '_send_one_off_reply': True,
-            })
-        self.assertRedirects(response, reverse('bulk_message:show', kwargs={
-            'conversation_key': self.conv_key,
-            }))
+        response = self.client.post(self.get_view_url('show'), {
+            'in_reply_to': msg['message_id'],
+            'content': 'foo',
+            'to_addr': 'should be ignored',
+            '_send_one_off_reply': True,
+        })
+        self.assertRedirects(response, self.get_view_url('show'))
 
         [start_cmd, hack_cmd, reply_to_cmd] = self.get_api_commands_sent()
         [tag] = conversation.get_tags()
