@@ -436,15 +436,14 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     def test_send_message_command(self):
         command = VumiApiCommand.command(
             'worker', 'send_message',
+            self.account.key,
+            self.conversation.key,
             command_data={
                 u'batch_id': u'batch-id',
                 u'content': u'foo',
                 u'to_addr': u'to_addr',
                 u'msg_options': {
                     u'helper_metadata': {
-                        u'go': {
-                            u'user_account': u'account-key'
-                        },
                         u'tag': {
                             u'tag': [u'longcode', u'default10080']
                         }
@@ -465,7 +464,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(msg.payload['message_type'], "user_message")
         self.assertEqual(
             msg.payload['helper_metadata']['go']['user_account'],
-            'account-key')
+            self.account.key)
         self.assertEqual(
             msg.payload['helper_metadata']['tag']['tag'],
             ['longcode', 'default10080'])
@@ -476,15 +475,14 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.vumi_api.mdb.add_inbound_message(msg)
         command = VumiApiCommand.command(
             'worker', 'send_message',
+            self.account.key,
+            self.conversation.key,
             command_data={
                 u'batch_id': u'batch-id',
                 u'content': u'foo',
                 u'to_addr': u'to_addr',
                 u'msg_options': {
                     u'helper_metadata': {
-                        u'go': {
-                            u'user_account': u'account-key'
-                        },
                         u'tag': {
                             u'tag': [u'longcode', u'default10080']
                         }

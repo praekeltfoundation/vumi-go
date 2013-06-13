@@ -39,9 +39,15 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def end_conversation(self):
-        self.c.end_timestamp = datetime.utcnow()
+        # TODO: `stop' and `archive' should be different operations.
+        self.c.set_status_stopping()
         self.c.set_status_finished()
         yield self.c.save()
+
+        yield self.dispatch_command('stop',
+                                    user_account_key=self.c.user_account.key,
+                                    conversation_key=self.c.key)
+
         yield self._remove_from_routing_table()
         yield self._release_batches()
 
@@ -167,7 +173,7 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def start(self, no_batch_tag=False, batch_id=None, acquire_tag=True,
-                **extra_params):
+              **extra_params):
         """
         Send the start command to this conversations application worker.
 
@@ -223,21 +229,25 @@ class ConversationWrapper(object):
             outbound_only = not acquire_tag  # XXX: Hack for seq send.
             yield self._add_to_routing_table(tag, outbound_only=outbound_only)
 
+        if batch_id not in self.get_batch_keys():
+            self.c.batches.add_key(batch_id)
+        self.c.set_status_starting()
+        yield self.c.save()
+
+        yield self.dispatch_command('start',
+                                    user_account_key=self.c.user_account.key,
+                                    conversation_key=self.c.key)
+
         msg_options = yield self.make_message_options(tag)
 
         is_client_initiated = yield self.is_client_initiated()
-        yield self.dispatch_command('start',
-            batch_id=batch_id,
-            conversation_type=self.c.conversation_type,
-            conversation_key=self.c.key,
-            msg_options=msg_options,
-            is_client_initiated=is_client_initiated,
-            **extra_params)
-
-        if batch_id not in self.get_batch_keys():
-            self.c.batches.add_key(batch_id)
-        self.c.set_status_started()
-        yield self.c.save()
+        yield self.dispatch_command('initial_action_hack',
+                                    user_account_key=self.c.user_account.key,
+                                    conversation_key=self.c.key,
+                                    batch_id=batch_id,
+                                    msg_options=msg_options,
+                                    is_client_initiated=is_client_initiated,
+                                    **extra_params)
 
     @Manager.calls_manager
     def _add_to_routing_table(self, tag, outbound_only=False):
@@ -291,14 +301,17 @@ class ConversationWrapper(object):
         # the token in it.
         yield self._add_to_routing_table(tag)
 
-        yield self.dispatch_command('send_message', command_data={
-            "batch_id": batch_id,
-            "to_addr": msisdn,
-            "conversation_key": self.c.key,
-            "msg_options": msg_options,
-            "content": ("Please visit %s to start your conversation." %
-                        (token_url,)),
-        })
+        yield self.dispatch_command(
+            'send_message',
+            user_account_key=self.c.user_account.key,
+            conversation_key=self.c.key,
+            command_data={
+                "batch_id": batch_id,
+                "to_addr": msisdn,
+                "msg_options": msg_options,
+                "content": ("Please visit %s to start your conversation." %
+                            (token_url,)),
+                })
         self.c.batches.add_key(batch_id)
         yield self.c.save()
 

@@ -1,0 +1,35 @@
+{% extends "app.html" %}
+{% load url from future %}
+
+{% block extra_header %}
+    <link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
+    <link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
+{% endblock %}
+
+{% block main %}
+    <div class="row">
+        <div class="span12">
+            <div id="welcome">
+                <h1><a href="{% url 'conversations:index' %}">Conversations</a> &raquo; {{conversation.name}}</h1>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            <div id="logs">
+                <h1>Logs</h1>
+                <table>
+                  <tbody>
+                  {% if logs %}
+                    {% for msg in logs %}
+                      <tr><td>{{ msg }}</td></tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr><td>No logs yet.</td></tr>
+                  {% endif %}
+                  </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

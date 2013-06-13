@@ -1,0 +1,8 @@
+# These are the requirements for building the docs
+# only, used by readthedocs.org for publishing
+# docs on http://vumi-go.readthedocs.org/
+Sphinx
+Twisted
+zope.interface
+protobuf # riakasaurus needs this
+-r requirements.pip
