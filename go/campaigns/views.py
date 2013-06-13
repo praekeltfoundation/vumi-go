@@ -19,7 +19,7 @@ def details(request, campaign_key=None):
 
     """
     form_general = CampaignGeneralForm()
-    form_config = CampaignConfigurationForm()
+    form_config_new = CampaignConfigurationForm()
 
     if request.method == 'POST':
         form = CampaignGeneralForm(request.POST)
@@ -41,7 +41,7 @@ def details(request, campaign_key=None):
 
     return render(request, 'campaigns/wizard_1_details.html', {
         'form_general': form_general,
-        'form_config': form_config,
+        'form_config_new': form_config_new,
         'campaign_key': campaign_key
     })
 
