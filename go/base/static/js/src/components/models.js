@@ -7,8 +7,7 @@
   var Model = Backbone.RelationalModel.extend({
     rpc: new Backbone.Rpc(),
 
-    // override to specify rpc url
-    url: '',
+    url: '/api/v1/go/api',
 
     // override to specify rpc methods
     methods: {},
@@ -21,7 +20,7 @@
       // model as one of the rpc method params
       options.self = model;
 
-      Backbone.RelationalModel.sync.call(this, method, model, options);
+      Backbone.sync.call(this, method, model, options);
     }
   });
 
