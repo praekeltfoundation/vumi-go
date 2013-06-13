@@ -45,7 +45,6 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
             'conversation_key': conversation.key,
         }))
 
-    @skip("New UI breaks this for now.")
     def test_show_conversation(self):
         [conversation_key] = self.conv_store.list_conversations()
         kwargs = {'conversation_key': conversation_key}
@@ -122,7 +121,6 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(response.content, 'foo')
         self.assertEqual(response.status_code, 200)
 
-    @skip("New UI doesn't have this yet.")
     def test_jsbox_logs(self):
         campaign_key = self.user_api.user_account_key
         [conversation_key] = self.conv_store.list_conversations()
@@ -136,7 +134,6 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         for i in range(10):
             self.assertContains(response, "INFO] test %d" % i)
 
-    @skip("New UI doesn't have this yet.")
     def test_jsbox_empty_logs(self):
         [conversation_key] = self.conv_store.list_conversations()
         kwargs = {'conversation_key': conversation_key}
