@@ -16,7 +16,16 @@ class AmqpConnection(object):
         self.metrics_exchange = Exchange('vumi.metrics', 'direct',
             durable=True)
 
-    def connect(self, dsn):
+    def connect(self, dsn=None):
+        if dsn is None:
+            from django.conf import settings
+            dsn = 'librabbitmq://%s:%s@%s:%s/%s' % (
+                settings.BROKER_USER,
+                settings.BROKER_PASSWORD,
+                settings.BROKER_HOST,
+                settings.BROKER_PORT,
+                settings.BROKER_VHOST)
+
         self.conn = Connection(dsn)
         self.producer = self.conn.Producer()
 
@@ -28,7 +37,7 @@ class AmqpConnection(object):
             routing_key=routing_key)
 
     def publish_command_message(self, command):
-        return self.publish(command.to_json, exchange=self.default_exchange,
+        return self.publish(command.to_json(), exchange=self.default_exchange,
             routing_key='vumi.api')
 
     def publish_metric_message(self, metric):
@@ -46,6 +55,6 @@ class AmqpConnection(object):
 connection = AmqpConnection()
 
 
-def connect(dsn):
+def connect(dsn=None):
     if not connection.is_connected():
         connection.connect(dsn)

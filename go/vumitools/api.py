@@ -23,7 +23,6 @@ from vumi import log
 from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
-from go.vumitools.conversation.models import CONVERSATION_DRAFT
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
 from go.vumitools.middleware import DebitAccountMiddleware
@@ -163,9 +162,9 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def draft_conversations(self):
+        # TODO: Get rid of this once the old UI finally goes away.
         conversations = yield self.active_conversations()
-        returnValue([c for c in conversations
-                        if c.get_status() == CONVERSATION_DRAFT])
+        returnValue([c for c in conversations if c.is_draft()])
 
     @Manager.calls_manager
     def tagpools(self):
@@ -272,7 +271,7 @@ class VumiUserApi(object):
                         'going with most recent: %r' % (conv_keys,))
 
         conversation = sorted(conversations, reverse=True,
-                              key=lambda c: c.start_timestamp)[0]
+                              key=lambda c: c.created_at)[0]
         returnValue(conversation)
 
     @Manager.calls_manager
@@ -314,8 +313,8 @@ class VumiUserApi(object):
         user_account.routing_table = routing_table
         yield user_account.save()
 
-        # Check that we have routing set up for all our active conversations.
-        convs = yield self.active_conversations()
+        # Check that we have routing set up for all our running conversations.
+        convs = yield self.running_conversations()
         for conv in convs:
             conv_conn = str(GoConnector.for_conversation(
                 conv.conversation_type, conv.key))
@@ -471,6 +470,10 @@ class VumiUserApi(object):
 
 class VumiApi(object):
     def __init__(self, manager, redis, sender=None):
+        # local import to avoid circular import since
+        # go.api.go_api needs to access VumiApi
+        from go.api.go_api.session_manager import SessionManager
+
         self.manager = manager
         self.redis = redis
 
@@ -481,6 +484,8 @@ class VumiApi(object):
         self.account_store = AccountStore(self.manager)
         self.token_manager = TokenManager(
                                 self.redis.sub_manager('token_manager'))
+        self.session_manager = SessionManager(
+            self.redis.sub_manager('session_manager'))
         self.mapi = sender
 
     @staticmethod
@@ -490,11 +495,13 @@ class VumiApi(object):
         return riak_config, redis_config
 
     @classmethod
-    def from_config_sync(cls, config):
+    def from_config_sync(cls, config, amqp_client=None):
         riak_config, redis_config = cls._parse_config(config)
         manager = RiakManager.from_config(riak_config)
         redis = RedisManager.from_config(redis_config)
-        sender = SyncMessageSender()
+        sender = None
+        if amqp_client is not None:
+            sender = SyncMessageSender(amqp_client)
         return cls(manager, redis, sender)
 
     @classmethod
@@ -616,13 +623,13 @@ class VumiApi(object):
 
 
 class SyncMessageSender(object):
-    def __init__(self):
-        self.publisher_config = VumiApiCommand.default_routing_config()
-        from go.vumitools import api_celery
-        self.api_celery = api_celery
+    def __init__(self, amqp_client):
+        self.amqp_client = amqp_client
 
     def send_command(self, command):
-        self.api_celery.send_command_task.delay(command, self.publisher_config)
+        if not self.amqp_client.is_connected():
+            self.amqp_client.connect()
+        self.amqp_client.publish_command_message(command)
 
 
 class AsyncMessageSender(object):
@@ -667,6 +674,15 @@ class VumiApiCommand(Message):
                                  # JSON.
             'kwargs': kwargs,
         })
+
+    @classmethod
+    def conversation_command(cls, worker_name, command_name, user_account_key,
+                             conversation_key, *args, **kwargs):
+        kwargs.update({
+            'user_account_key': user_account_key,
+            'conversation_key': conversation_key,
+        })
+        return cls.command(worker_name, command_name, *args, **kwargs)
 
 
 class VumiApiEvent(Message):

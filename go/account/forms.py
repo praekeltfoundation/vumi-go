@@ -35,10 +35,17 @@ class AccountForm(forms.Form):
     email_address = forms.EmailField(label="Email", required=True,
         widget=forms.TextInput(attrs={'autocomplete': 'off'}))
     msisdn = forms.CharField(label='Mobile phone number', required=False)
-    organisation = forms.CharField(label='Organisation name')
-    country = forms.CharField(label='Country of residence')
+    organisation = forms.CharField(label='Organisation name', required=False)
+    country = forms.CharField(label='Country of residence', required=False)
     confirm_start_conversation = forms.BooleanField(
         label='Receive SMS to confirm start of campaign', required=False)
+    email_summary = forms.ChoiceField(
+        label='How often do you want to receive an account summary via email?',
+        required=False, choices=(
+            ('never', 'Never.'),
+            ('daily', 'Once a day.'),
+            ('weekly', 'Once a week.'),
+        ))
 
     def clean_msisdn(self):
         """
