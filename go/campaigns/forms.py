@@ -35,8 +35,6 @@ class CampaignConfigurationForm(forms.Form):
         ('sms', 'SMS'),
     )
 
-    # more than likely a many to many field, or something similair in the riak
-    # world. Whom I kidding, this is probably just a modelform?
     countries = forms.MultipleChoiceField(label="Select a destination",
                                           widget=forms.Select(),
                                           choices=COUNTRY_CHOICES)
@@ -44,7 +42,6 @@ class CampaignConfigurationForm(forms.Form):
     channels = forms.MultipleChoiceField(label="Select a channel",
                                          widget=forms.Select(),
                                          choices=CHANNEL_CHOICES)
-
     keyword = forms.CharField(label="Define a keyword", max_length=100)
 
 

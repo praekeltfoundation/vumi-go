@@ -18,13 +18,18 @@ def details(request, campaign_key=None):
     some kind of workflow.
 
     """
-    form_general = CampaignGeneralForm()
+
+    conversation = conversation_or_404(request.user_api, campaign_key)
+    form_general = CampaignGeneralForm(data={
+        'name': conversation.name,
+        'kind': conversation.conversation_type,
+    })
     form_config_new = CampaignConfigurationForm()
 
     if request.method == 'POST':
         form = CampaignGeneralForm(request.POST)
         if form.is_valid():
-            conversation_type = form.cleaned_data['type']
+            conversation_type = form.cleaned_data['kind']
             conversation = request.user_api.new_conversation(
                 conversation_type, name=form.cleaned_data['name'],
                 description=u'', config={})
@@ -36,8 +41,8 @@ def details(request, campaign_key=None):
                 return redirect('conversations:index')
 
             # TODO save and go to next step.
-            return redirect('campaigns:message',
-                            campaign_key=conversation.key)
+            return redirect('campaigns:message', campaign_key=conversation.key)
+
 
     return render(request, 'campaigns/wizard_1_details.html', {
         'form_general': form_general,
@@ -48,25 +53,14 @@ def details(request, campaign_key=None):
 
 @login_required
 def message(request, campaign_key):
-    # is this for a conversation or bulk?
-    # determine that and redirect.
     conversation = conversation_or_404(request.user_api, campaign_key)
-    return redirect('campaigns:message_conversation',
-                    campaign_key=conversation.key)
+
+    to = 'campaigns:message_%s' % conversation.conversation_type
+    return redirect(to, campaign_key=conversation.key)
 
 
 @login_required
-def message_conversation(request, campaign_key):
-    """Conversations that are difficult:
-        1. Talking to your parents about sex.
-        2. When your wife complains that you've peed on the toilet seat
-            infront of your inlaws.
-        3. People who tell you immigration is a problem... When you're an
-            immigrant.
-
-        Conversations that are VERY difficult:
-        1. This one.
-    """
+def message_survey(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -77,7 +71,7 @@ def message_conversation(request, campaign_key):
         # TODO save and go to next step.
         return redirect('campaigns:contacts', campaign_key=conversation.key)
 
-    return render(request, 'campaigns/wizard_2_conversation.html', {
+    return render(request, 'campaigns/wizard_2_survey.html', {
         'campaign_key': campaign_key
     })
 

@@ -1,41 +1,22 @@
 {% extends "campaigns/wizard_base.html" %}
 
+{% block content_extraclass %}{{ block.super }} wizard-details{% endblock %}
 
 {% block content_title %}New Conversation{% endblock %}
 
 {% block content_main %}
-<form id="frm-conversation-details" class="indent" method="post" action="">
+<form class="indent" method="post" action="">
     {% csrf_token %}
-    <fieldset>
-        {% for field in form_general.visible_fields %}
-        <div class="control-group{% if field.errors %} error{% endif %}">
-            <label class="control-label" for="id_{{ field.name }}">
-                {{ field.label }}
-            </label>
-            <div class="controls">
-                {{ field }}
-                <span class="help-inline">
-                    {% if field.errors %}
-                        {{ field.errors|join:" " }}
-                    {% endif %}
-                    {% if field.help_text %}
-                        ({{ field.help_text }})
-                    {% endif %}
-                </span>
-            </div>
-        </div>
-        {% endfor %}
-    </fieldset>
 
-
+    {{ form_general }}
     
     <div class="configuration">
 
-        <label class="control-label">
+        <label>
             How would you like to reach and interact with users?
         </label>
 
-        {# TODO: This is where Justin's jsPlumb stuff will come? #}
+        {# TODO: Is this where Justin's jsPlumb stuff will come? #}
         <fieldset class="configuration_new row-fluid boxes">
             <div class="span4">
                 <div class="box">
@@ -98,7 +79,7 @@
                       Your existing keywords
                     </label>
 
-                    Dan, Sam, Plan, Rodger.
+                    Dan, Sam, Plan, Rodger, Pink, Rabble.
                 </div>
             </div>
         </fieldset>
@@ -111,7 +92,6 @@
 {% block ondomready %}
     {{ block.super }}
     
-    
     // if a channel is already selected then we should show the
     // configuration view for it.
     $('input[name=channel]:checked').trigger('change')
@@ -123,6 +103,8 @@
         var $el = $('.configuration_' + $(this).attr('value'));
         $el.show();
     });
+
+    // TODO: form validation.
 
 
 {% endblock %}

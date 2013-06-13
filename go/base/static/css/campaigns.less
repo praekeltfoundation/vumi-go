@@ -7,8 +7,38 @@
   }
 }
 
+.campaigns.wizard-details {
+
+  ul, li {
+    list-style-type: none;
+    padding:0;
+    margin:0;
+    width:auto;
+
+    label {
+      font-weight:normal;
+      display:inline;
+    }
+  }
+
+  .configuration {
+
+    margin:18px 0 0 0;
+    display:none;
+
+    ul, li { 
+      padding:0;
+      margin:0;
+      list-style-type: none; 
+    }
+  }
+
+
+}
+
 .campaigns {
 
+  // these are the breadcrumb links at the top.
   .header a {
     color:#878b8e;
     font-weight:bold;
@@ -22,12 +52,13 @@
   .actions .right {
     text-align:right; // cancel, save draft, next step
 
+    // offsets the cancel button a bit.
     a:first-child {
       margin-right:20px;
     }
   }
 
-  .control-label {
+  label {
       color:#000;
       font-weight:bold;
 
@@ -137,18 +168,5 @@
     }
   }
 
-  #frm-conversation-details {
-
-    ul, li { 
-      padding:0;
-      margin:0;
-      list-style-type: none; 
-    }
-
-    .configuration {
-      display:none;
-    }
-    
-  }
 
 }

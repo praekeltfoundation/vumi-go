@@ -204,6 +204,28 @@ button {
 .campaigns.dashboard .status {
   text-transform: capitalize;
 }
+.campaigns.wizard-details ul,
+.campaigns.wizard-details li {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  width: auto;
+}
+.campaigns.wizard-details ul label,
+.campaigns.wizard-details li label {
+  font-weight: normal;
+  display: inline;
+}
+.campaigns.wizard-details .configuration {
+  margin: 18px 0 0 0;
+  display: none;
+}
+.campaigns.wizard-details .configuration ul,
+.campaigns.wizard-details .configuration li {
+  padding: 0;
+  margin: 0;
+  list-style-type: none;
+}
 .campaigns .header a {
   color: #878b8e;
   font-weight: bold;
@@ -219,15 +241,15 @@ button {
 .campaigns .actions .right a:first-child {
   margin-right: 20px;
 }
-.campaigns .control-label {
+.campaigns label {
   color: #000;
   font-weight: bold;
 }
-.campaigns .control-label a:link,
-.campaigns .control-label a:visited {
+.campaigns label a:link,
+.campaigns label a:visited {
   color: #000;
 }
-.campaigns .control-label a:hover {
+.campaigns label a:hover {
   text-decoration: none;
 }
 .campaigns form .boxes {
@@ -316,15 +338,6 @@ button {
 .campaigns #routing-diagram ._jsPlumb_endpoint,
 .campaigns #routing-diagram ._jsPlumb_connector {
   z-index: 200;
-}
-.campaigns #frm-conversation-details ul,
-.campaigns #frm-conversation-details li {
-  padding: 0;
-  margin: 0;
-  list-style-type: none;
-}
-.campaigns #frm-conversation-details .configuration {
-  display: none;
 }
 .accounts {
   color: #c1c1c1;
