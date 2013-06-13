@@ -11,14 +11,14 @@ urlpatterns = patterns(
     url(r'^message/(?P<campaign_key>\w+)/bulk/$', views.message_bulk,
         name='message_bulk_message'),
     url(r'^message/(?P<campaign_key>\w+)/survey/$',
-        views.message_survey, 
+        views.message_survey,
         name='message_survey'),
-
     url(r'^contacts/(?P<campaign_key>\w+)/', views.contacts, name='contacts'),
     url(r'^preview/(?P<campaign_key>\w+)/$', views.preview, name='preview'),
     url(r'^incoming/(?P<campaign_key>\w+)/$', views.incoming_list,
         name='incoming_list'),
     url(r'^incoming/(?P<campaign_key>\w+)/(?P<contact_key>\w+)/$',
         views.incoming_detail, name='incoming_detail'),
+    url(r'^pricing/$', views.pricing, name='pricing'),
     url(r'^routing/(?P<campaign_key>\w+)/$', views.routing, name='routing'),
 )

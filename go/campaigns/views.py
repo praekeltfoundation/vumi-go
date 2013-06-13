@@ -204,6 +204,11 @@ def incoming_detail(request, campaign_key, contact_key):
 
 
 @login_required
+def pricing(request):
+    return render(request, 'campaigns/pricing.html', {
+    })
+
+@login_required
 def routing(request, campaign_key):
     # TODO Get initial routing model data so we can bootstrap it to page load
 
