@@ -350,7 +350,12 @@ PIPELINE_JS = {
             'js/vendor/jquery-1.9.1.js',
             'js/vendor/lodash.underscore-1.2.1.js',
             'js/vendor/backbone-1.0.0.js',
+
+            # NOTE: ordering is important here, switching these around
+            # results in endless recursion
+            'js/vendor/backbone-rpc-0.1.1.js',
             'js/vendor/backbone-relational-0.8.5.js',
+
             'js/vendor/jquery.jsPlumb-1.4.1.js',
             'js/vendor/jquery.ui-1.10.3.js',
             'bootstrap/js/bootstrap.min.js',
@@ -364,6 +369,7 @@ PIPELINE_JS = {
             'js/src/utils.js',
             'js/src/errors.js',
             'js/src/components/components.js',
+            'js/src/components/model.js',
             'js/src/components/views.js',
             'js/src/components/structures.js',
             'js/src/components/stateMachine.js',

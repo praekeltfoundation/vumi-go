@@ -31,9 +31,12 @@
 // server and the views themselves.
 
 (function(exports) {
+  var models = go.components.models,
+      Model = models.Model;
+
   // Model for a 'placeholder' attached to a state that one end of a connection
   // can be hooked onto.
-  var EndpointModel = Backbone.RelationalModel.extend({
+  var EndpointModel = Model.extend({
   });
 
   var idOfConnection = function(sourceId, targetId) {
@@ -41,7 +44,7 @@
   };
 
   // Model for a connection between two endpoint models
-  var ConnectionModel = Backbone.RelationalModel.extend({
+  var ConnectionModel = Model.extend({
     relations: [{
       type: Backbone.HasOne,
       key: 'source',
@@ -67,7 +70,7 @@
   });
 
   // Model for a single state in a state machine
-  var StateModel = Backbone.RelationalModel.extend({
+  var StateModel = Model.extend({
     relations: [{
       type: Backbone.HasMany,
       key: 'endpoints',
@@ -77,7 +80,7 @@
 
   // Model for a state machine. Holds a collection of states and keeps track of
   // the initial state (`state0`).
-  var StateMachineModel = Backbone.RelationalModel.extend({
+  var StateMachineModel = Model.extend({
     relations: [{
       type: Backbone.HasMany,
       key: 'states',
