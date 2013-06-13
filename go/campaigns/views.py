@@ -20,10 +20,7 @@ def details(request, campaign_key=None):
     """
 
     conversation = conversation_or_404(request.user_api, campaign_key)
-    form_general = CampaignGeneralForm(data={
-        'name': conversation.name,
-        'kind': conversation.conversation_type,
-    })
+    form_general = CampaignGeneralForm(data={'name': conversation.name})
     form_config_new = CampaignConfigurationForm()
 
     if request.method == 'POST':
@@ -72,7 +69,8 @@ def message_survey(request, campaign_key):
         return redirect('campaigns:contacts', campaign_key=conversation.key)
 
     return render(request, 'campaigns/wizard_2_survey.html', {
-        'campaign_key': campaign_key
+        'campaign_key': campaign_key,
+        'conversation': conversation
     })
 
 
@@ -92,6 +90,7 @@ def message_bulk(request, campaign_key):
 
     return render(request, 'campaigns/wizard_2_message_bulk.html', {
         'form': form,
+        'conversation': conversation,
         'campaign_key': campaign_key
     })
 

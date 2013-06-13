@@ -1,8 +1,5 @@
-{% extends "campaigns/wizard_base.html" %}
+{% extends "campaigns/wizard_2_survey.html" %}
 
-{% block content_title %}
-    Conversation
-{% endblock %}
 
 {% block extrahead %}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}_demo_/tool.css">
@@ -13,7 +10,6 @@
     <div class="span12">
         <form id="frm-campaign" class="indent" method="post" action="">
             {% csrf_token %}
-            
         </form>
     </div>
 </div>
