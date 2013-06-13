@@ -45,9 +45,3 @@ class WikipediaApplication(WikipediaWorker, GoApplicationMixin):
         return self.send_to(
             msg['from_addr'], sms_content, transport_type='sms',
             endpoint='sms_content', helper_metadata=helper_metadata)
-
-    def process_command_start(self, batch_id, conversation_type,
-                              conversation_key, msg_options,
-                              is_client_initiated, **extra_params):
-        log.debug('Conversation %r has been started, no need to '
-                    'do anything.' % (conversation_key,))

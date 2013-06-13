@@ -251,40 +251,25 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(ussd_command.startswith('twistd'))
         self.assertTrue('TelnetServerTransport' in ussd_command)
 
-    def test_create_app_msg_dispatcher_config(self):
+    def test_create_routing_table_dispatcher_config(self):
         fake_file = FakeFile()
         self.command.open_file = Mock(side_effect=[fake_file])
-        self.command.create_app_msg_dispatcher_config([
-            'app1', 'app2'])
+        self.command.create_routing_table_dispatcher_config(
+            ['app1', 'app2'], ['transport1', 'transport2'])
         fake_file.seek(0)
         config = yaml.load(fake_file)
-        self.assertEqual(config['exposed_names'],
-            ['app1_transport', 'app2_transport'])
-        self.assertEqual(config['conversation_mappings'],
-            {
-                'app1': 'app1_transport',
-                'app2': 'app2_transport',
-            })
-        self.assertEqual(config['redis_manager'], {
-            'key_prefix': 'test',
-        })
-        self.assertEqual(config['riak_manager'], {
-            'bucket_prefix': 'test.',
-        })
 
-    def test_create_vumigo_router_config(self):
-        fake_file = FakeFile()
-        self.command.open_file = Mock(side_effect=[fake_file])
-        self.command.create_vumigo_router_config([
-            'transport1', 'transport2'])
-        fake_file.seek(0)
-        config = yaml.load(fake_file)
-        self.assertEqual(config['transport_names'],
-            ['transport1', 'transport2'])
-        self.assertEqual(config['route_mappings'], {
-            'transport1': ['vumigo_router'],
-            'transport2': ['vumigo_router'],
-        })
+        self.assertEqual(config['receive_inbound_connectors'],
+                         ['transport1', 'transport2'])
+
+        self.assertEqual(config['receive_outbound_connectors'],
+                         ['app1_transport', 'app2_transport'])
+
+        self.assertEqual(config['application_connector_mapping'],
+                         {'app1': 'app1_transport', 'app2': 'app2_transport'})
+
+        self.assertEqual(config['redis_manager'], {'key_prefix': 'test'})
+        self.assertEqual(config['riak_manager'], {'bucket_prefix': 'test.'})
 
     def test_create_command_dispatcher_config(self):
         fake_file = FakeFile()

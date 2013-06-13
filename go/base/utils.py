@@ -8,7 +8,8 @@ from django import forms
 from django.http import Http404
 from django.conf import settings
 
-from go.vumitools.api import VumiUserApi
+from go.base.amqp import connection
+from go.vumitools.api import VumiApi
 
 
 def conversation_or_404(user_api, key):
@@ -18,10 +19,16 @@ def conversation_or_404(user_api, key):
     return user_api.wrap_conversation(conversation)
 
 
-def vumi_api_for_user(user):
+def vumi_api():
+    """Return a Vumi API instance."""
+    return VumiApi.from_config_sync(settings.VUMI_API_CONFIG, connection)
+
+
+def vumi_api_for_user(user, api=None):
     """Return a Vumi API instance for the given user."""
-    return VumiUserApi.from_config_sync(user.get_profile().user_account,
-                                        settings.VUMI_API_CONFIG)
+    if api is None:
+        api = vumi_api()
+    return api.get_user_api(user.get_profile().user_account)
 
 
 def padded_queryset(queryset, size=6, padding=None):
@@ -109,3 +116,12 @@ class UnicodeCSVWriter(object):
 def configured_conversation_types():
     return dict((a['namespace'], a['display_name'])
                 for a in settings.VUMI_INSTALLED_APPS.itervalues())
+
+
+def get_conversation_definition(conversation_type):
+    # HACK: Assume 'namespace' is 'conversation_type'.
+    for module, data in settings.VUMI_INSTALLED_APPS.iteritems():
+        if data['namespace'] == conversation_type:
+            app_pkg = __import__(module, fromlist=['definition'])
+            return app_pkg.definition.ConversationDefinition
+    raise Exception("Can't find conversation_type: %s" % (conversation_type,))

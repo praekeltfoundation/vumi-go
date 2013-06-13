@@ -5,7 +5,7 @@ from datetime import datetime
 
 from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (
-    Unicode, ManyToMany, ForeignKey, Timestamp, Json)
+    Unicode, ManyToMany, ForeignKey, Timestamp, Json, ListOf)
 from vumi.components.message_store import Batch
 
 from twisted.internet.defer import returnValue
@@ -15,15 +15,19 @@ from go.vumitools.contact import ContactGroup
 from go.vumitools.conversation.migrators import ConversationMigrator
 
 
-CONVERSATION_DRAFT = u'draft'
+CONVERSATION_ACTIVE = u'active'
+CONVERSATION_ARCHIVED = u'archived'
+
+CONVERSATION_STARTING = u'starting'
 CONVERSATION_RUNNING = u'running'
-CONVERSATION_FINISHED = u'finished'
+CONVERSATION_STOPPING = u'stopping'
+CONVERSATION_STOPPED = u'stopped'
 
 
 class Conversation(Model):
     """A conversation with an audience"""
 
-    VERSION = 1
+    VERSION = 2
     MIGRATOR = ConversationMigrator
 
     user_account = ForeignKey(UserAccount)
@@ -31,11 +35,13 @@ class Conversation(Model):
     description = Unicode(default=u'')
     conversation_type = Unicode(index=True)
     config = Json(default=dict)
+    extra_endpoints = ListOf(Unicode())
 
     created_at = Timestamp(default=datetime.utcnow, index=True)
-    start_timestamp = Timestamp(index=True)
-    end_timestamp = Timestamp(null=True, index=True)
-    status = Unicode(default=CONVERSATION_DRAFT, index=True)
+    archived_at = Timestamp(null=True, index=True)
+
+    archive_status = Unicode(default=CONVERSATION_ACTIVE, index=True)
+    status = Unicode(default=CONVERSATION_STOPPED, index=True)
 
     groups = ManyToMany(ContactGroup)
     batches = ManyToMany(Batch)
@@ -44,32 +50,54 @@ class Conversation(Model):
     delivery_tag_pool = Unicode(null=True)
     delivery_tag = Unicode(null=True)
 
-    def started(self):
-        return self.running() or self.ended()
+    def active(self):
+        return self.archive_status == CONVERSATION_ACTIVE
+
+    def archived(self):
+        return self.archive_status == CONVERSATION_ARCHIVED
 
     def ended(self):
-        return self.status == CONVERSATION_FINISHED
+        # TODO: Get rid of this once the old UI finally goes away.
+        return self.archived()
 
     def running(self):
         return self.status == CONVERSATION_RUNNING
 
-    def get_status(self):
-        """
-        Get the status of this conversation
+    def is_draft(self):
+        # TODO: Get rid of this once the old UI finally goes away.
+        return self.active() and self.status == CONVERSATION_STOPPED
 
-        :rtype: str, (CONVERSATION_FINISHED, CONVERSATION_RUNNING, or
-            CONVERSATION_DRAFT)
+    def get_status(self):
+        """Get the status of this conversation.
+
+        Possible values are:
+
+          * CONVERSATION_STARTING
+          * CONVERSATION_RUNNING
+          * CONVERSATION_STOPPING
+          * CONVERSATION_STOPPED
+
+        :rtype: str
 
         """
         return self.status
 
     # The following are to keep the implementation of this stuff in the model
     # rather than potentially multiple external places.
+    def set_status_starting(self):
+        self.status = CONVERSATION_STARTING
+
     def set_status_started(self):
         self.status = CONVERSATION_RUNNING
 
+    def set_status_stopping(self):
+        self.status = CONVERSATION_STOPPING
+
+    def set_status_stopped(self):
+        self.status = CONVERSATION_STOPPED
+
     def set_status_finished(self):
-        self.status = CONVERSATION_FINISHED
+        self.archive_status = CONVERSATION_ARCHIVED
 
     def add_group(self, group):
         if isinstance(group, ContactGroup):
@@ -108,9 +136,8 @@ class ConversationStore(PerAccountStore):
 
     @Manager.calls_manager
     def new_conversation(self, conversation_type, name, description, config,
-                         start_timestamp=None, **fields):
+                         **fields):
         conversation_id = uuid4().get_hex()
-        start_timestamp = start_timestamp or datetime.utcnow()
 
         # These are foreign keys.
         groups = fields.pop('groups', [])
@@ -118,8 +145,7 @@ class ConversationStore(PerAccountStore):
         conversation = self.conversations(
             conversation_id, user_account=self.user_account_key,
             conversation_type=conversation_type, name=name,
-            description=description, config=config,
-            start_timestamp=start_timestamp, **fields)
+            description=description, config=config, **fields)
 
         for group in groups:
             conversation.add_group(group)
@@ -129,38 +155,21 @@ class ConversationStore(PerAccountStore):
 
     @Manager.calls_manager
     def list_running_conversations(self):
-        # We need to list things by both the old-style 'end_timestamp' index
-        # and the new-style 'status' index, at least until we've migrated all
-        # old-style conversations to v1.
         keys = yield self.conversations.index_lookup(
             'status', CONVERSATION_RUNNING).get_keys()
-        keys.extend((yield self._list_oldstyle_running_conversations()))
-        returnValue(list(set(keys)))  # Dedupe
-
-    @Manager.calls_manager
-    def _list_oldstyle_running_conversations(self):
-        keys = yield self.conversations.index_lookup(
-            'end_timestamp', None).get_keys()
-        # NOTE: This assumes that we don't have very large numbers of active
-        #       conversations.
-        filtered_keys = []
-        for convs_bunch in self.load_all_bunches(keys):
-            for conv in (yield convs_bunch):
-                if conv.running:
-                    filtered_keys = conv.key
-        returnValue(filtered_keys)
+        returnValue(keys)
 
     @Manager.calls_manager
     def list_active_conversations(self):
-        # We need to list things by both the old-style 'end_timestamp' index
-        # and the new-style 'status' index, at least until we've migrated all
-        # old-style conversations to v1.
+        # We need to list things by both the old-style 'status' index and the
+        # new-style 'archive_status' index, at least until we've migrated all
+        # old-style conversations to v2.
         keys = yield self.conversations.index_lookup(
-            'status', CONVERSATION_RUNNING).get_keys()
+            'archive_status', CONVERSATION_ACTIVE).get_keys()
         keys.extend((yield self.conversations.index_lookup(
-            'status', CONVERSATION_DRAFT).get_keys()))
+            'status', 'draft').get_keys()))  # No more constant for this.
         keys.extend((yield self.conversations.index_lookup(
-            'end_timestamp', None).get_keys()))
+            'status', CONVERSATION_RUNNING).get_keys()))
         returnValue(list(set(keys)))  # Dedupe.
 
     def load_all_bunches(self, keys):

@@ -122,7 +122,6 @@ ROOT_URLCONF = 'go.urls'
 TEMPLATE_DIRS = (
     abspath("templates"),
     abspath("base", "templates"),
-    abspath("conversation", "templates"),
     abspath("contacts", "templates"),
     abspath("account", "templates"),
     abspath("apps", "surveys", "templates"),
@@ -133,6 +132,7 @@ TEMPLATE_DIRS = (
     abspath("apps", "wikipedia", "ussd", "templates"),
     abspath("apps", "jsbox", "templates"),
     abspath("apps", "http_api", "templates"),
+    abspath("conversation", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -186,6 +186,7 @@ DEBUG_TOOLBAR_CONFIG = {
     'ENABLE_STACKTRACES': True,
 }
 
+SESSION_ENGINE = 'go.api.go_api.session'
 
 
 
@@ -379,6 +380,9 @@ PIPELINE_JS = {
             'js/src/campaign/routing/routing.js',
             'js/src/campaign/routing/models.js',
             'js/src/campaign/routing/views.js',
+            'js/src/campaign/dialogue/dialogue.js',
+            'js/src/campaign/dialogue/models.js',
+            'js/src/campaign/dialogue/views.js',
 
             # TODO This is here so we can access the test model data. This
             # gives us the data we need for a 'demo' of the routing screen.

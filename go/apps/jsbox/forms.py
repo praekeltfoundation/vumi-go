@@ -5,9 +5,19 @@ from bootstrap.forms import BootstrapForm
 from go.base.widgets import CodeField, SourceUrlField
 
 
+SOURCE_URL_HELP_TEXT = (
+    'HTTP Basic Authentication is supported. If using GitHub '
+    'please use '
+    '<a href="http://developer.github.com/v3/#authentication">'
+    'OAuth2 access tokens'
+    '</a>.')
+
+
 class JsboxForm(BootstrapForm):
     javascript = CodeField(required=False)
-    source_url = SourceUrlField(code_field='javascript', required=False)
+    source_url = SourceUrlField(code_field='javascript',
+                                help_text=SOURCE_URL_HELP_TEXT,
+                                required=False)
 
     @staticmethod
     def initial_from_metadata(metadata):
@@ -23,7 +33,9 @@ class JsboxForm(BootstrapForm):
 class JsboxAppConfigForm(BootstrapForm):
     key = forms.CharField()
     value = CodeField(required=False)
-    source_url = SourceUrlField(code_field='value', required=False)
+    source_url = SourceUrlField(code_field='value',
+                                help_text=None,
+                                required=False)
 
     @staticmethod
     def initial_from_metadata(metadata):

@@ -109,17 +109,18 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
                 },
             }
 
-        [cmd] = self.get_api_commands_sent()
-        expected_cmd = VumiApiCommand.command(
-            '%s_application' % (conversation.conversation_type,), 'start',
-            batch_id=batch.key,
-            dedupe=False,
-            msg_options=msg_options,
-            conversation_type=conversation.conversation_type,
-            conversation_key=conversation.key,
-            is_client_initiated=conversation.is_client_initiated(),
-            )
-        self.assertEqual(cmd, expected_cmd)
+        [start_cmd, hack_cmd] = self.get_api_commands_sent()
+        self.assertEqual(start_cmd, VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,), 'start',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key))
+        self.assertEqual(hack_cmd, VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,),
+                'initial_action_hack',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key,
+                is_client_initiated=conversation.is_client_initiated(),
+                batch_id=batch.key, msg_options=msg_options, dedupe=False))
 
     def test_start_with_deduplication(self):
         conversation = self.get_wrapped_conv()
@@ -127,16 +128,16 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             reverse('bulk_message:start', kwargs={
                     'conversation_key': conversation.key}),
             {'dedupe': '1'})
-        [cmd] = self.get_api_commands_sent()
-        self.assertEqual(cmd.payload['kwargs']['dedupe'], True)
+        [start_cmd, hack_cmd] = self.get_api_commands_sent()
+        self.assertEqual(hack_cmd.payload['kwargs']['dedupe'], True)
 
     def test_start_without_deduplication(self):
         conversation = self.get_wrapped_conv()
         self.client.post(reverse('bulk_message:start', kwargs={
             'conversation_key': conversation.key}), {
         })
-        [cmd] = self.get_api_commands_sent()
-        self.assertEqual(cmd.payload['kwargs']['dedupe'], False)
+        [start_cmd, hack_cmd] = self.get_api_commands_sent()
+        self.assertEqual(hack_cmd.payload['kwargs']['dedupe'], False)
 
     def test_send_fails(self):
         """
@@ -144,12 +145,11 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """
         conversation = self.get_wrapped_conv()
         self.acquire_all_longcode_tags()
-        consumer = self.get_cmd_consumer()
         response = self.client.post(reverse('bulk_message:start', kwargs={
             'conversation_key': conversation.key}), follow=True)
         self.assertRedirects(response, reverse('bulk_message:start', kwargs={
             'conversation_key': conversation.key}))
-        [] = self.fetch_cmds(consumer)
+        [] = self.get_api_commands_sent()
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "No spare messaging tags.")
 
@@ -161,6 +161,9 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+        # Just to make sure we're not somehow using the other views here.
+        action_url = '/conversations/%s/action/bulk_send' % (conversation.key,)
+        self.assertNotContains(response, action_url)
 
     def test_show_cached_message_pagination(self):
         # Create 21 inbound & 21 outbound messages, since we have
@@ -255,8 +258,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             10)
 
     def test_aggregates(self):
-        self.put_sample_messages_in_conversation(self.user_api,
-            self.conv_key, 10, start_timestamp=date(2012, 1, 1),
+        self.put_sample_messages_in_conversation(
+            self.user_api, self.conv_key, 10, start_date=date(2012, 1, 1),
             time_multiplier=12)
         response = self.client.get(reverse('bulk_message:aggregates', kwargs={
             'conversation_key': self.conv_key
@@ -271,8 +274,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             ]))
 
     def test_export_messages(self):
-        self.put_sample_messages_in_conversation(self.user_api,
-            self.conv_key, 10, start_timestamp=date(2012, 1, 1),
+        self.put_sample_messages_in_conversation(
+            self.user_api, self.conv_key, 10, start_date=date(2012, 1, 1),
             time_multiplier=12)
         conv_url = reverse('bulk_message:show', kwargs={
             'conversation_key': self.conv_key,
@@ -381,10 +384,11 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         expected_cmd = VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
             'send_message',
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
             command_data={
                 'batch_id': batch.key,
                 'msg_options': msg_options,
-                'conversation_key': conversation.key,
                 'content':
                     'Please visit http://%s%s to start your conversation.' % (
                     site.domain, reverse('token', kwargs={'token': 'abcdef'})),
@@ -455,7 +459,7 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
 
         batch = conversation.mdb.get_batch(batch_key)
         [tag] = list(batch.tags)
-        [cmd] = self.get_api_commands_sent()
+        [start_cmd, hack_cmd] = self.get_api_commands_sent()
 
         msg_options = {
             "transport_type": "sms",
@@ -466,18 +470,17 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
                 "go": {"user_account": conversation.user_account.key},
                 },
             }
-
-        expected_cmd = VumiApiCommand.command(
-            '%s_application' % (conversation.conversation_type,), 'start',
-            batch_id=batch.key,
-            dedupe=True,
-            msg_options=msg_options,
-            conversation_type=conversation.conversation_type,
-            conversation_key=conversation.key,
-            is_client_initiated=conversation.is_client_initiated(),
-            )
-
-        self.assertEqual(cmd, expected_cmd)
+        self.assertEqual(start_cmd, VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,), 'start',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key))
+        self.assertEqual(hack_cmd, VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,),
+                'initial_action_hack',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key,
+                is_client_initiated=conversation.is_client_initiated(),
+                batch_id=batch.key, msg_options=msg_options, dedupe=True))
 
         # check token was consumed so it can't be re-used to send the
         # conversation messages again
@@ -539,13 +542,16 @@ class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
             'conversation_key': self.conv_key,
             }))
 
-        [start_cmd, reply_to_cmd] = self.get_api_commands_sent()
+        [start_cmd, hack_cmd, reply_to_cmd] = self.get_api_commands_sent()
         [tag] = conversation.get_tags()
         msg_options = conversation.make_message_options(tag)
         msg_options['in_reply_to'] = msg['message_id']
         self.assertEqual(reply_to_cmd['worker_name'],
                             'bulk_message_application')
         self.assertEqual(reply_to_cmd['command'], 'send_message')
+        self.assertEqual(reply_to_cmd['args'],
+                         [self.conversation.user_account.key,
+                          self.conversation.key])
         self.assertEqual(reply_to_cmd['kwargs']['command_data'], {
             'batch_id': conversation.get_latest_batch_key(),
             'conversation_key': conversation.key,
