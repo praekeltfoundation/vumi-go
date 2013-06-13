@@ -18,6 +18,29 @@
 {% endblock %}
 
 
+{% block modals %}
+<div id="initiateModal" class="modal hide fade in">
+    <form method="post" action="">                    
+        <div class="modal-header">
+            <h3>How do you intend to initiate the campaign?</h3>
+        </div>
+
+        <div class="modal-body">
+            
+                {% csrf_token %}
+                {{ initiate_form }}
+            
+        
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-link" data-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary point-right">Next step</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+
 {% block extrascript %}
 {{ block.super }}
 <script type="text/javascript">
@@ -27,8 +50,7 @@
 
         $('.actions .right button[data-action="save"]').off('click').on('click', function(e) {
             e.preventDefault();
-            
-            console.log('show dialog');
+            $('#initiateModal').modal('show');
         });    
     });
 

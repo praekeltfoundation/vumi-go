@@ -6,7 +6,8 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 
 from go.campaigns.forms import (
-    CampaignGeneralForm, CampaignConfigurationForm, CampaignBulkMessageForm)
+    CampaignGeneralForm, CampaignConfigurationForm, CampaignBulkMessageForm,
+    CampaignSurveryInitiateForm)
 from go.base.utils import conversation_or_404
 
 
@@ -59,7 +60,9 @@ def message(request, campaign_key):
 @login_required
 def message_survey(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
+    initiate_form = CampaignSurveryInitiateForm()
     if request.method == 'POST':
+        initiate_form = CampaignSurveryInitiateForm(request.POST)
         action = request.POST.get('action')
         if action == 'draft':
             # save and go back to list.
@@ -70,7 +73,8 @@ def message_survey(request, campaign_key):
 
     return render(request, 'campaigns/wizard_2_survey.html', {
         'campaign_key': campaign_key,
-        'conversation': conversation
+        'conversation': conversation,
+        'initiate_form': initiate_form
     })
 
 
