@@ -41,9 +41,11 @@ def details(request):
                 params = {
                     'first_name': data['name'],
                     'last_name': data['surname'],
+                    'email_address': data['email_address'],
                     'msisdn': data['msisdn'],
+                    'email_summary': data['email_summary'],
                     'confirm_start_conversation':
-                        data['confirm_start_conversation']
+                        data['confirm_start_conversation'],
                 }
 
                 token = token_manager.generate_callback_token(request.path,
