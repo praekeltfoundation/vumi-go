@@ -157,6 +157,9 @@ def preview(request, campaign_key):
 @login_required
 def incoming_list(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
+
+    # TODO: Where would I get conversation data?
+
     return render(request, 'campaigns/incoming_list.html', {
         'conversation': conversation,
     })
