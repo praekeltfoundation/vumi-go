@@ -52,7 +52,6 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(reverse('jsbox:show', kwargs=kwargs))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "View Sandbox Logs")
-        print response
         self.assertContains(response,
                             reverse('jsbox:jsbox_logs', kwargs=kwargs))
 
