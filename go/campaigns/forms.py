@@ -1,16 +1,26 @@
 from django import forms
+from django.forms.widgets import RadioSelect
+
+from go.base.utils import configured_conversation_types
 
 
 class CampaignGeneralForm(forms.Form):
 
-    TYPE_CHOICES = (
-        ('bulk_message', 'Bulk Message'),
-        ('survey', 'Dialogue'),
+    CHANNEL_CHOICES = (
+        ('new', 'Setup a new channel'),
+        ('existing', 'Use a keyword to route messages over an existing \
+            channel'),
     )
 
-    name = forms.CharField(label="Campaign name", max_length=100)
-    type = forms.ChoiceField(label="Which kind of campaign would you like?",
-                             widget=forms.Select(), choices=TYPE_CHOICES)
+    TYPE_CHOICES = configured_conversation_types().items()
+
+    name = forms.CharField(label="Conversation name", max_length=100)
+    type = forms.ChoiceField(
+        label="Which kind of conversation would you like?",
+        choices=TYPE_CHOICES
+    )
+    channel = forms.ChoiceField(label="Channels", choices=CHANNEL_CHOICES,
+                                required=False, widget=RadioSelect)
 
 
 class CampaignConfigurationForm(forms.Form):
@@ -25,18 +35,25 @@ class CampaignConfigurationForm(forms.Form):
         ('sms', 'SMS'),
     )
 
-    # more than likely a many to many field, or something similair in the riak
-    # world. Whom I kidding, this is probably just a modelform?
-    countries = forms.MultipleChoiceField(label="Destinations",
+    countries = forms.MultipleChoiceField(label="Select a destination",
                                           widget=forms.Select(),
                                           choices=COUNTRY_CHOICES)
-
-    channels = forms.MultipleChoiceField(label="Channels",
+    # TODO: Channels are related to countries.
+    channels = forms.MultipleChoiceField(label="Select a channel",
                                          widget=forms.Select(),
                                          choices=CHANNEL_CHOICES)
-
-    keyword = forms.CharField(label="Keyword", max_length=100)
+    keyword = forms.CharField(label="Define a keyword", max_length=100)
 
 
 class CampaignBulkMessageForm(forms.Form):
     message = forms.CharField(label="Bulk message text", widget=forms.Textarea)
+
+
+class CampaignSurveryInitiateForm(forms.Form):
+    INITIATE_CHOICES = (
+        ('user', 'I will send users a notification message'),
+        ('notification', 'Users will initiate it'),
+    )
+    initiate = forms.ChoiceField(label="", choices=INITIATE_CHOICES)
+    expected_responses = forms.CharField(
+        label="How many responses do you expect?")

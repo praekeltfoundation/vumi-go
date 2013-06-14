@@ -6,7 +6,8 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 
 from go.campaigns.forms import (
-    CampaignGeneralForm, CampaignConfigurationForm, CampaignBulkMessageForm)
+    CampaignGeneralForm, CampaignConfigurationForm, CampaignBulkMessageForm,
+    CampaignSurveryInitiateForm)
 from go.base.utils import conversation_or_404
 
 
@@ -18,8 +19,13 @@ def details(request, campaign_key=None):
     some kind of workflow.
 
     """
+
     form_general = CampaignGeneralForm()
-    form_config = CampaignConfigurationForm()
+    form_config_new = CampaignConfigurationForm()
+
+    if campaign_key:
+        conversation = conversation_or_404(request.user_api, campaign_key)
+        form_general = CampaignGeneralForm(data={'name': conversation.name})
 
     if request.method == 'POST':
         form = CampaignGeneralForm(request.POST)
@@ -36,39 +42,29 @@ def details(request, campaign_key=None):
                 return redirect('conversations:index')
 
             # TODO save and go to next step.
-            return redirect('campaigns:message',
-                            campaign_key=conversation.key)
+            return redirect('campaigns:message', campaign_key=conversation.key)
 
     return render(request, 'campaigns/wizard_1_details.html', {
         'form_general': form_general,
-        'form_config': form_config,
+        'form_config_new': form_config_new,
         'campaign_key': campaign_key
     })
 
 
 @login_required
 def message(request, campaign_key):
-    # is this for a conversation or bulk?
-    # determine that and redirect.
     conversation = conversation_or_404(request.user_api, campaign_key)
-    return redirect('campaigns:message_conversation',
-                    campaign_key=conversation.key)
+
+    to = 'campaigns:message_%s' % conversation.conversation_type
+    return redirect(to, campaign_key=conversation.key)
 
 
 @login_required
-def message_conversation(request, campaign_key):
-    """Conversations that are difficult:
-        1. Talking to your parents about sex.
-        2. When your wife complains that you've peed on the toilet seat
-            infront of your inlaws.
-        3. People who tell you immigration is a problem... When you're an
-            immigrant.
-
-        Conversations that are VERY difficult:
-        1. This one.
-    """
+def message_survey(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
+    initiate_form = CampaignSurveryInitiateForm()
     if request.method == 'POST':
+        initiate_form = CampaignSurveryInitiateForm(request.POST)
         action = request.POST.get('action')
         if action == 'draft':
             # save and go back to list.
@@ -77,8 +73,10 @@ def message_conversation(request, campaign_key):
         # TODO save and go to next step.
         return redirect('campaigns:contacts', campaign_key=conversation.key)
 
-    return render(request, 'campaigns/wizard_2_conversation.html', {
-        'campaign_key': campaign_key
+    return render(request, 'campaigns/wizard_2_survey.html', {
+        'campaign_key': campaign_key,
+        'conversation': conversation,
+        'initiate_form': initiate_form
     })
 
 
@@ -98,6 +96,7 @@ def message_bulk(request, campaign_key):
 
     return render(request, 'campaigns/wizard_2_message_bulk.html', {
         'form': form,
+        'conversation': conversation,
         'campaign_key': campaign_key
     })
 
@@ -164,8 +163,19 @@ def preview(request, campaign_key):
 @login_required
 def incoming_list(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
+
+    # TODO: Conversation data.
+    # FAKE DATA FOR BADLARD.
+    message_list = (
+        {'contact': '07922 539 521', 'threads': 35, 'date': '2013-03-21'},
+        {'contact': '55555 539 521', 'threads': 27, 'date': '2013-03-21'},
+        {'contact': '07922 222 521', 'threads': 51, 'date': '2013-03-21'},
+        {'contact': '22222 539 222', 'threads': 99, 'date': '2013-03-21'},
+    )
+
     return render(request, 'campaigns/incoming_list.html', {
         'conversation': conversation,
+        'message_list': message_list
     })
 
 
@@ -178,11 +188,27 @@ def incoming_detail(request, campaign_key, contact_key):
         # TODO: process sending message from form
         pass
 
+    # TODO: Conversation data.
+    # FAKE DATA FOR BADLARD.
+    message_list = (
+        {'contact': 'You', 'message': 'Thank you'},
+        {'contact': '55555 539 521', 'message': 'Saturday'},
+        {'contact': 'You', 'message': 'What days do you eat?'},
+        {'contact': '55555 539 521', 'message': 'Hotdogs'},
+        {'contact': 'You', 'message': 'What is your favourite meal?'},
+    )
+
     return render(request, 'campaigns/incoming_detail.html', {
         'conversation': conversation,
-        'form': form
+        'form': form,
+        'message_list': message_list
     })
 
+
+@login_required
+def pricing(request):
+    return render(request, 'campaigns/pricing.html', {
+    })
 
 @login_required
 def routing(request, campaign_key):

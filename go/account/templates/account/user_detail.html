@@ -5,7 +5,7 @@
 
 {% block content_extraclass %}accounts{% endblock %}
 {% block content_title %}
-    <a href="{% url 'auth_user_list' %}">Users</a>
+    <a href="{% url 'account:user_list' %}">Users</a>
     &raquo;
     {% if edit_user %}
         {% if edit_user.get_full_name %}

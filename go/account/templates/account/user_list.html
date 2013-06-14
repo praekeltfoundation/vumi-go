@@ -7,7 +7,7 @@
 {% block content_title %}Users{% endblock %}
 
 {% block content_actions_left %}
-    <a href="{% url 'auth_user_create' %}" class="btn btn-primary">New User</a>
+    <a href="{% url 'account:user_create' %}" class="btn btn-primary">New User</a>
 {% endblock %}
 
 {% block content_actions_right %}
@@ -40,7 +40,7 @@
                     <tbody>
                     {% for user in user_list %}
                         {% if is_admin %}
-                        <tr data-url="{% url 'auth_user_detail' user.pk %}">
+                        <tr data-url="{% url 'account:user_list' user.pk %}">
                         {% else %}
                         <tr>
                         {% endif %}

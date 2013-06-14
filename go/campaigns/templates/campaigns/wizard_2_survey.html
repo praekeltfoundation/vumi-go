@@ -1,8 +1,5 @@
 {% extends "campaigns/wizard_base.html" %}
 
-{% block content_title %}
-    Conversation
-{% endblock %}
 
 {% block extrahead %}
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}_demo_/tool.css">
@@ -13,12 +10,31 @@
     <div class="span12">
         <form id="frm-campaign" class="indent" method="post" action="">
             {% csrf_token %}
-            
         </form>
     </div>
 </div>
 
-{% include "campaigns/wizard_2_conversation_tool.html" %}
+{% include "campaigns/wizard_2_survey_tool.html" %}
+{% endblock %}
+
+
+{% block modals %}
+<div id="initiateModal" class="modal hide fade in">
+    <form method="post" action="">                    
+        <div class="modal-header">
+            <h3>How do you intend to initiate the campaign?</h3>
+        </div>
+
+        <div class="modal-body">
+                {% csrf_token %}
+                {{ initiate_form }}
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-link" data-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary point-right">Next step</button>
+        </div>
+    </form>
+</div>
 {% endblock %}
 
 
@@ -29,7 +45,10 @@
         // highlight the breadcrumbs.
         $('.breadcrumbs a').eq(1).addClass('active');
 
-
+        $('.actions .right button[data-action="save"]').off('click').on('click', function(e) {
+            e.preventDefault();
+            $('#initiateModal').modal('show');
+        });    
     });
 
 
