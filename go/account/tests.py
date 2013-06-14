@@ -1,12 +1,11 @@
 import urlparse
-from unittest import skip
 
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.core import mail
 from django.conf import settings
-
+from django.utils.unittest import skip
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.account.utils import send_user_account_summary
