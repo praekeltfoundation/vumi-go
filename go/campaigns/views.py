@@ -20,14 +20,17 @@ def details(request, campaign_key=None):
 
     """
 
-    conversation = conversation_or_404(request.user_api, campaign_key)
-    form_general = CampaignGeneralForm(data={'name': conversation.name})
+    form_general = CampaignGeneralForm()
     form_config_new = CampaignConfigurationForm()
+
+    if campaign_key:
+        conversation = conversation_or_404(request.user_api, campaign_key)
+        form_general = CampaignGeneralForm(data={'name': conversation.name})
 
     if request.method == 'POST':
         form = CampaignGeneralForm(request.POST)
         if form.is_valid():
-            conversation_type = form.cleaned_data['kind']
+            conversation_type = form.cleaned_data['type']
             conversation = request.user_api.new_conversation(
                 conversation_type, name=form.cleaned_data['name'],
                 description=u'', config={})
@@ -40,7 +43,6 @@ def details(request, campaign_key=None):
 
             # TODO save and go to next step.
             return redirect('campaigns:message', campaign_key=conversation.key)
-
 
     return render(request, 'campaigns/wizard_1_details.html', {
         'form_general': form_general,

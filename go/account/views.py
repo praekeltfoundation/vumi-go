@@ -168,7 +168,7 @@ def user_detail(request, user_id=None):
 
 
 def billing(request):
-    # TODO: Does this data exist anywhere?
+    # TODO: Complete once billing data exists.
 
     # FAKE DATA
     statement_list = (
