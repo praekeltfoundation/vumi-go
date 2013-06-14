@@ -3,8 +3,8 @@
 // Reusable, generic structures for Go
 
 (function(exports) {
-  var merge = go.utils.merge,
-      GoError = go.errors.GoError;
+  var utils = go.utils,
+      merge = utils.merge;
 
   // Acts as a 'base' for class-like objects which can be extended (with the
   // prototype chain set up automatically)
@@ -156,13 +156,23 @@
   // situations where views are to be created dynamically (for eg, state views
   // in a state machine diagram).
   //
-  // Arguments:
-  //   - collection: the collection of models to create views for
+  // Options:
+  // - models: the collection of models to create views for
+  // - [type]: The view type to instantiate for each new view.
   //
   // Events emitted:
   //   - 'add' (id, view) - Emitted when a view is added
   //   - 'remove' (id, view) - Emitted when a view is removed
   var ViewCollection = Lookup.extend({
+    type: Backbone.View,
+
+    // The model attribute representing a model subtype. Used to create a
+    // view subtype instance corresponding to the model subtype instance
+    typeAttr: 'type',
+
+    // The default options passed to each new view
+    viewOptions: {},
+
     addDefaults: {
       silent: false,
       render: true,  // render view after adding
@@ -175,21 +185,52 @@
       removeModel: false  // remove the model if it is in the collection
     },
 
-    constructor: function(collection) {
+    constructor: function(options) {
       Lookup.prototype.constructor.call(this);
 
-      this.models = collection;
+      this.models = this.ensureCollection(options.models);
+      this.models.on('add', function(m) { this.add(m); }, this);
+      this.models.on('remove', function(m) { this.remove(m); }, this);
+
+      this.type = options.type || this.type;
+      this.typeAttr = this.type.typeAttr || this.typeAttr;
+
+      this.initialize(options);
 
       this.models.each(
         function(m) { this.add(m, {render: false, silent: true}); },
         this);
-
-      this.models.on('add', function(m) { this.add(m); }, this);
-      this.models.on('remove', function(m) { this.remove(m); }, this);
     },
 
-    // Override to specialise how the view is created
-    create: function(options) { return new Backbone.View(options); },
+    initialize: function() {},
+
+    ensureCollection: function(modelOrCollection) {
+      // If we were given a single model instead of a collection, create a
+      // singleton collection with the model so we can work with things
+      // uniformly
+      return modelOrCollection instanceof Backbone.Model
+        ? new Backbone.Collection([modelOrCollection])
+        : modelOrCollection;
+    },
+
+    typeFromModel: function(model) {
+      var type = this.type,
+          subtypes = type.prototype.subtypes;
+
+      if (!subtypes) { return type; }
+
+      var typeName = model.get(this.typeAttr);
+      return !typeName
+        ? type
+        : subtypes[typeName] || type;
+    },
+
+    // Override to specialise how each view is created
+    create: function(options) {
+      _(options).defaults(_(this).result('viewOptions'));
+      var type = this.typeFromModel(options.model);
+      return new type(options);
+    },
 
     add: function(model, options) {
       options = _(options || {}).defaults(this.addDefaults, {view: {}});
@@ -214,8 +255,7 @@
     _id: function(modelOrId) {
       return modelOrId.id
         ? modelOrId.id
-        : modelOrId.cid
-        || modelOrId;
+        : modelOrId.cid || modelOrId;
     },
 
     remove: function(modelOrId, options) {
@@ -250,41 +290,13 @@
   // - view: The parent view for this collection of subviews
   // - attr: The attr on the parent view's model which holds the associated
   // collection or model
-  // - [type]: The view type to instantiate for each new view.
+  // - ViewCollection options
   var SubviewCollection = ViewCollection.extend({
-    // Override to change the default options used on initialisation
-    defaults: {type: Backbone.View},
-
-    // Override to change the options passed to each new view
-    opts: {},
-
     constructor: function(options) {
       this.view = options.view;
       this.attr = options.attr;
-
-      _(options).defaults(_(this).result('defaults'));
-      this.type = options.type;
-      this.initialize(options);
-
-      ViewCollection.prototype.constructor.call(this, this._models());
-    },
-
-    initialize: function() {},
-
-    _models: function() {
-      var modelOrCollection = this.view.model.get(this.attr);
-
-      // If we were given a single model instead of a collection, create a
-      // singleton collection with the model so we can work with things
-      // uniformly
-      return modelOrCollection instanceof Backbone.Model
-        ? new Backbone.Collection([modelOrCollection])
-        : modelOrCollection;
-    },
-
-    create: function(options) {
-      _(options).defaults(_(this).result('opts'));
-      return new this.type(options);
+      options.models = this.view.model.get(this.attr);
+      ViewCollection.prototype.constructor.call(this, options);
     }
   });
 
@@ -299,7 +311,7 @@
 
     // A list of specs/options, each a subview collection.
     // Override to change the subview collections are created.
-    schema: [{attr: 'subviews', type: Backbone.View}],
+    schema: [{attr: 'subviews'}],
 
     // Defaults to apply to each subview spec/option set
     defaults: {},

@@ -75,7 +75,9 @@
       targetType: EndpointView
     },
 
-    opts: function() { return {diagram: this.diagram, collection: this}; },
+    viewOptions: function() {
+      return {diagram: this.diagram, collection: this};
+    },
 
     constructor: function(options) {
       this.diagram = options.view;

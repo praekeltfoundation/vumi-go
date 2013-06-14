@@ -82,30 +82,28 @@
 
   // A collection of endpoint views attached to a state view
   var EndpointViewCollection = SubviewCollection.extend({
-    defaults: {type: EndpointView},
-    opts: function() { return {state: this.view, collection: this}; }
+    type: EndpointView,
+    viewOptions: function() { return {state: this.view, collection: this}; }
   });
 
   // Derived components
   // ------------------
 
   var PositionableEndpointView = EndpointView.extend({
-    defaults: {
-      side: 'left',
-      offset: function() {
-        return {
-          left: this.$el.outerWidth() * -0.5,
-          top: this.$el.outerHeight() * -0.5
-        };
-      }
+    side: 'left',
+
+    offset: function() {
+      return {
+        left: this.$el.outerWidth() * -0.5,
+        top: this.$el.outerHeight() * -0.5
+      };
     },
 
     initialize: function(options) {
       EndpointView.prototype.initialize.call(this, options);
-      _(options).defaults(_(this).result('defaults'));
 
-      this.side = options.side;
-      this.offset = functor(options.offset);
+      this.side = options.side || this.side;
+      this.offset = functor(options.offset || this.offset);
     },
 
     // Override to specialise how the endpoint is positioned
@@ -214,13 +212,11 @@
       {render: false},
       EndpointViewCollection.prototype.addDefaults),
 
-    defaults: {
-      type: ParametricEndpointView,
-      side: 'left',  // the side of the state the collection is drawn on
-      margin: 0.005  // margin spacing on each end of the state side
-    },
+    type: ParametricEndpointView,
 
-    opts: function() {
+    margin: 0.005,  // margin spacing on each end of the state side
+
+    viewOptions: function() {
       return {
         state: this.view,
         collection: this,
