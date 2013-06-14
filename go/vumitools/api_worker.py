@@ -222,8 +222,7 @@ class GoApplicationRouter(BaseDispatchRouter):
         account_key = batch.metadata['user_account']
         user_api = self.vumi_api.get_user_api(account_key)
         conversations = user_api.conversation_store.conversations
-        mr = conversations.index_lookup('batches', batch.key)
-        [conv_key] = yield mr.get_keys()
+        [conv_key] = yield conversations.index_keys('batches', batch.key)
 
         conv = yield user_api.get_wrapped_conversation(conv_key)
         if conv:
