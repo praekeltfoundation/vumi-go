@@ -38,7 +38,7 @@ class CampaignConfigurationForm(forms.Form):
     countries = forms.MultipleChoiceField(label="Select a destination",
                                           widget=forms.Select(),
                                           choices=COUNTRY_CHOICES)
-
+    # TODO: Channels are related to countries.
     channels = forms.MultipleChoiceField(label="Select a channel",
                                          widget=forms.Select(),
                                          choices=CHANNEL_CHOICES)

@@ -164,7 +164,7 @@ def preview(request, campaign_key):
 def incoming_list(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
 
-    # TODO: Where would I get conversation data?
+    # TODO: Conversation data.
     # FAKE DATA FOR BADLARD.
     message_list = (
         {'contact': '07922 539 521', 'threads': 35, 'date': '2013-03-21'},
@@ -188,7 +188,7 @@ def incoming_detail(request, campaign_key, contact_key):
         # TODO: process sending message from form
         pass
 
-    # TODO: Where would I get conversation data?
+    # TODO: Conversation data.
     # FAKE DATA FOR BADLARD.
     message_list = (
         {'contact': 'You', 'message': 'Thank you'},
