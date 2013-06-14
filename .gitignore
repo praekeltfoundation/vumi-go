@@ -5,6 +5,7 @@
 /.coverage
 /coverage-html/
 /coverage.xml
+/node_modules/
 /nosetests.xml
 /pyflakes.log
 /pep8.log
@@ -23,3 +24,4 @@ distribute-0.6.10.tar.gz
 /.tox/
 /test_results.xml
 /pep8.txt
+/docs/_build/

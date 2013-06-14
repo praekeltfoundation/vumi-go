@@ -1,0 +1,48 @@
+{% extends "app.html" %}
+{% load conversation_tags %}
+{% load url from future %}
+
+{% block extra_header %}
+    <link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
+    <link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
+{% endblock %}
+
+{% block content_main %}
+    <div class="row">
+        <div class="span12">
+            <div id="welcome">
+                <h1><a href="{% url 'conversations:index' %}">Conversations</a> &raquo; {{conversation.name}}</h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+
+    {% include "conversation_views/includes/overview.html" %}
+
+    <div class="row">
+        <div class="span12">
+            {% if actions %}<h2>Conversation actions:</h2>
+            (This is ugly, but it's a short-term hack.)
+            <ul>
+            {% for action in actions %}
+                <li><a href="{% url 'conversations:conversation_action' conversation_key=conversation.key action_name=action.action_name %}">{{action.action_display_name}}</a></li>
+            {% endfor %}
+            </ul>
+            <hr>{% endif %}
+        </div>
+    </div>
+
+    {# {% include "conversation_views/includes/dashboard.html" %} #}
+
+    {% show_conversation_messages conversation direction=request.GET.direction page=request.GET.p query=request.GET.q token=request.GET.token %}
+
+{% endblock %}
+
+{% block extra_js %}
+    {# {% include "conversation_views/includes/charts.html" %} #}
+{% endblock %}

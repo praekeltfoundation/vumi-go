@@ -69,6 +69,51 @@ describe("go.components.plumbing (endpoints)", function() {
     });
   });
 
+  describe(".PositionableEndpointView", function() {
+    var PositionableEndpointView = plumbing.PositionableEndpointView;
+
+    var ToyEndpointView = PositionableEndpointView.extend({
+      reposition: function(p) { this.p = p; },
+      position: function() { return this.p; }
+    });
+
+    var state,
+        endpoint;
+
+    beforeEach(function() {
+      state = diagram.states.get('x');
+
+      endpoint = new ToyEndpointView({
+        state: state,
+        collection: state.endpoints.members.get('endpoints'),
+        model: new EndpointModel({id: 'x4'})
+      });
+
+      state
+        .render()
+        .$el
+        .offset({top: 100, left: 200});
+    });
+
+    describe(".render", function() {
+      it("should position the endpoint relative to the state", function() {
+        endpoint.reposition({top: -25, left: -50});
+        endpoint.render();
+
+        assert.deepEqual(
+          endpoint.$el.offset(),
+          {top: 75, left: 150});
+
+        endpoint.reposition({top: -30, left: -50});
+        endpoint.render();
+
+        assert.deepEqual(
+          endpoint.$el.offset(),
+          {top: 70, left: 150});
+      });
+    });
+  });
+
   describe(".ParametricEndpointView", function() {
     var EndpointModel = stateMachine.EndpointModel,
         ParametricEndpointView = plumbing.ParametricEndpointView;
@@ -79,18 +124,18 @@ describe("go.components.plumbing (endpoints)", function() {
     beforeEach(function() {
       state = diagram.states.get('x');
 
+      endpoint = new ParametricEndpointView({
+        state: state,
+        collection: state.endpoints.members.get('endpoints'),
+        model: new EndpointModel({id: 'x4'})
+      });
+
       state
         .render()
         .$el
         .width(200)
         .height(300)
         .css('padding', 10);
-
-      endpoint = new ParametricEndpointView({
-        state: state,
-        collection: state.endpoints.members.get('endpoints'),
-        model: new EndpointModel({id: 'x4'})
-      });
 
       endpoint
         .$el
@@ -160,6 +205,88 @@ describe("go.components.plumbing (endpoints)", function() {
         assert.deepEqual(
           endpoint.$el.position(),
           {left: -10, top: 27});
+      });
+    });
+  });
+
+  describe(".FollowingEndpointView", function() {
+    var FollowingEndpointView = plumbing.FollowingEndpointView;
+
+    var state,
+        endpoint,
+        $target;
+
+    beforeEach(function() {
+      $target = $('<span></span').attr('id', 'target');
+
+      state = diagram.states.get('x');
+      state.$el.append($target);
+
+      endpoint = new FollowingEndpointView({
+        state: state,
+        target: '#target',
+        collection: state.endpoints.members.get('endpoints'),
+        model: new EndpointModel({id: 'x4'})
+      });
+
+      state
+        .render()
+        .$el
+        .width(200)
+        .height(300)
+        .css('position', 'absolute');
+
+      $target
+        .width(20)
+        .height(40)
+        .css({position: 'absolute', top: 10, left: 20});
+
+      endpoint
+        .$el
+        .width(20)
+        .height(10);
+    });
+
+    describe(".positioners", function() {
+      var positioners;
+
+      beforeEach(function() {
+        positioners = endpoint.positioners;
+      });
+
+      describe(".left", function() {
+        it("should find the position on the left corresponding to the target",
+        function() {
+          assert.deepEqual(
+            positioners.left.call(endpoint),
+            {left: -10, top: 25});
+        });
+      });
+
+      describe(".right", function() {
+        it("should find the position on the right corresponding to the target ",
+        function() {
+          assert.deepEqual(
+            positioners.right.call(endpoint),
+            {left: 190, top: 25});
+        });
+      });
+    });
+
+    describe(".render", function() {
+      it("should follow to its target", function() {
+        endpoint.render();
+
+        assert.deepEqual(
+          endpoint.$el.position(),
+          {top: 25, left: -10});
+
+        $target.css({top: 20, left: 25});
+        endpoint.render();
+
+        assert.deepEqual(
+          endpoint.$el.position(),
+          {top: 35, left: -10});
       });
     });
   });

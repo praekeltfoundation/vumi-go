@@ -1,5 +1,4 @@
 import csv
-from datetime import datetime
 from StringIO import StringIO
 
 from django.conf import settings
@@ -14,9 +13,12 @@ from vumi.persist.redis_manager import RedisManager
 from go.base.utils import (make_read_only_form, make_read_only_formset,
     conversation_or_404)
 from go.vumitools.exceptions import ConversationSendError
-from go.conversation.forms import ConversationForm, ConversationGroupForm
+from go.conversation.forms import (ConversationForm, ConversationGroupForm,
+                                   ReplyToMessageForm)
 from go.apps.surveys import forms
 from go.apps.surveys.views import _clear_empties
+from go.conversation.base import ShowConversationView
+from go.conversation.tasks import export_conversation_messages
 
 from vxpolls.manager import PollManager
 
@@ -78,14 +80,6 @@ def new(request):
             if tag_info[2]:
                 conversation_data['delivery_tag'] = tag_info[2]
 
-            start_date = form.cleaned_data['start_date'] or datetime.utcnow()
-            start_time = (form.cleaned_data['start_time'] or
-                            datetime.utcnow().time())
-            conversation_data['start_timestamp'] = datetime(
-                start_date.year, start_date.month, start_date.day,
-                start_time.hour, start_time.minute, start_time.second,
-                start_time.microsecond)
-
             conversation = request.user_api.new_conversation(
                 u'multi_survey', **conversation_data)
             messages.add_message(request, messages.INFO,
@@ -94,11 +88,7 @@ def new(request):
                 kwargs={'conversation_key': conversation.key}))
 
     else:
-        form = ConversationForm(request.user_api, initial={
-            'start_date': datetime.utcnow().date(),
-            'start_time': datetime.utcnow().time().replace(second=0,
-                                                            microsecond=0),
-        })
+        form = ConversationForm(request.user_api)
     return render(request, 'multi_surveys/new.html', {
         'form': form,
     })
@@ -111,8 +101,8 @@ def surveys(request, conversation_key):
 
     survey_form = make_read_only_form(ConversationForm(request.user_api,
         instance=conversation, initial={
-            'start_date': conversation.start_timestamp.date(),
-            'start_time': conversation.start_timestamp.time(),
+            'start_date': conversation.created_at.date(),
+            'start_time': conversation.created_at.time(),
         }))
 
     return render(request, 'multi_surveys/surveys.html', {
@@ -154,8 +144,8 @@ def new_survey(request, conversation_key):
 
     survey_form = make_read_only_form(ConversationForm(request.user_api,
         instance=conversation, initial={
-            'start_date': conversation.start_timestamp.date(),
-            'start_time': conversation.start_timestamp.time(),
+            'start_date': conversation.created_at.date(),
+            'start_time': conversation.created_at.time(),
         }))
     return render(request, 'multi_surveys/contents.html', {
         'form': form,
@@ -214,8 +204,8 @@ def survey(request, conversation_key, poll_name):
 
     survey_form = make_read_only_form(ConversationForm(request.user_api,
         instance=conversation, initial={
-            'start_date': conversation.start_timestamp.date(),
-            'start_time': conversation.start_timestamp.time(),
+            'start_date': conversation.created_at.date(),
+            'start_time': conversation.created_at.time(),
         }))
 
     return render(request, 'multi_surveys/contents.html', {
@@ -271,8 +261,8 @@ def people(request, conversation_key):
 
     survey_form = make_read_only_form(ConversationForm(request.user_api,
         instance=conversation, initial={
-            'start_date': conversation.start_timestamp.date(),
-            'start_time': conversation.start_timestamp.time(),
+            'start_date': conversation.created_at.date(),
+            'start_time': conversation.created_at.time(),
         }))
     content_form = forms.make_form_set(initial=questions_data, extra=0)
     read_only_content_form = make_read_only_formset(content_form)
@@ -316,6 +306,32 @@ def end(request, conversation_key):
 @login_required
 def show(request, conversation_key):
     conversation = conversation_or_404(request.user_api, conversation_key)
+
+    if '_export_conversation_messages' in request.POST:
+        export_conversation_messages.delay(
+            request.user_api.user_account_key, conversation_key)
+        messages.info(request, 'Conversation messages CSV file export '
+                                'scheduled. CSV file should arrive in your '
+                                'mailbox shortly.')
+        return redirect(reverse('multi_survey:show', kwargs={
+            'conversation_key': conversation.key,
+            }))
+
+    if '_send_one_off_reply' in request.POST:
+        form = ReplyToMessageForm(request.POST)
+        if form.is_valid():
+            in_reply_to = form.cleaned_data['in_reply_to']
+            content = form.cleaned_data['content']
+            ShowConversationView.send_one_off_reply(
+                request.user_api, conversation, in_reply_to, content)
+            messages.info(request, 'Reply scheduled for sending.')
+            return redirect(reverse('multi_survey:show', kwargs={
+                'conversation_key': conversation.key,
+                }))
+        else:
+            messages.error(request,
+                'Something went wrong. Please try again.')
+
     return render(request, 'multi_surveys/show.html', {
         'conversation': conversation,
     })

@@ -293,7 +293,7 @@ class ContactsResource(SandboxResource):
         Creates a new contacts with the given fields of an existing contact.
 
         Command fields:
-            - ``fields``: The fields to be set for the new contact
+            - ``contact``: The contact data to initialise the new contact with.
 
         Success reply fields:
             - ``success``: set to ``true``
@@ -307,7 +307,7 @@ class ContactsResource(SandboxResource):
         .. code-block:: javascript
             api.request(
                 'contacts.new',
-                {fields: {surname: 'Jones', extra: {location: 'CPT'}}},
+                {contact: {surname: 'Jones', extra: {location: 'CPT'}}},
                 function(reply) { api.log_info(reply.key); });
         """
         try:
@@ -388,6 +388,8 @@ class ContactsResource(SandboxResource):
                 user_account=contact_store.user_account_key,
                 **ContactStore.settable_contact_fields(**fields))
 
+            # since we are basically creating a 'new' contact with the same
+            # key, we can be sure that the old groups were removed
             for group in groups:
                 contact.add_to_group(group)
 

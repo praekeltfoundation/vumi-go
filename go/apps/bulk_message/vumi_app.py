@@ -57,43 +57,38 @@ class BulkMessageApplication(GoApplicationWorker):
 
     @inlineCallbacks
     def send_message_via_window(self, conv, window_id, batch_id, to_addr,
-                                msg_options):
+                                msg_options, content):
         yield self.window_manager.create_window(window_id, strict=False)
         yield self.window_manager.add(window_id, {
             'batch_id': batch_id,
             'to_addr': to_addr,
-            'content': conv.description,
+            'content': content,
             'msg_options': msg_options,
             })
 
     @inlineCallbacks
-    def process_command_start(self, batch_id, conversation_type,
-                              conversation_key, msg_options,
-                              is_client_initiated, **extra_params):
+    def process_command_bulk_send(self, user_account_key, conversation_key,
+                                  batch_id, msg_options, content, dedupe,
+                                  **extra_params):
 
-        if is_client_initiated:
-            log.warning('Trying to start a client initiated conversation '
-                'on a bulk message send.')
-            return
-
-        conv = yield self.get_conversation(batch_id, conversation_key)
+        conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:
-            log.warning('Cannot find conversation for batch_id: %s '
-                'and conversation_key: %s' % (batch_id, conversation_key))
+            log.warning("Cannot find conversation '%s' for user '%s'." % (
+                conversation_key, user_account_key))
             return
 
         to_addresses = []
         for contacts_batch in (yield conv.get_opted_in_contact_bunches()):
             for contact in (yield contacts_batch):
                 to_addresses.append(contact.addr_for(conv.delivery_class))
-        if extra_params.get('dedupe'):
+        if dedupe:
             to_addresses = set(to_addresses)
 
         self.add_conv_to_msg_options(conv, msg_options)
         window_id = self.get_window_id(conversation_key, batch_id)
         for to_addr in to_addresses:
             yield self.send_message_via_window(
-                conv, window_id, batch_id, to_addr, msg_options)
+                conv, window_id, batch_id, to_addr, msg_options, content)
 
     def consume_ack(self, event):
         return self.handle_event(event)
@@ -120,16 +115,22 @@ class BulkMessageApplication(GoApplicationWorker):
             yield self.window_manager.remove_key(window_id, flight_key)
 
     @inlineCallbacks
-    def process_command_send_message(self, *args, **kwargs):
-        command_data = kwargs['command_data']
+    def process_command_send_message(self, user_account_key, conversation_key,
+                                     **kwargs):
+        command_data = kwargs.pop('command_data')
+        if kwargs:
+            log.info("Received unexpected command args: %s" % (kwargs,))
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        if conv is None:
+            log.warning("Cannot find conversation '%s' for user '%s'." % (
+                conversation_key, user_account_key))
+            return
+
         log.info('Processing send_message: %s' % kwargs)
-        batch_id = command_data['batch_id']
-        conversation_key = command_data['conversation_key']
         to_addr = command_data['to_addr']
         content = command_data['content']
         msg_options = command_data['msg_options']
         in_reply_to = msg_options.pop('in_reply_to', None)
-        conv = yield self.get_conversation(batch_id, conversation_key)
         self.add_conv_to_msg_options(conv, msg_options)
         if in_reply_to:
             msg = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
@@ -152,3 +153,24 @@ class BulkMessageApplication(GoApplicationWorker):
     def collect_metrics(self, user_api, conversation_key):
         conv = yield user_api.get_wrapped_conversation(conversation_key)
         yield self.collect_message_metrics(conv)
+
+    @inlineCallbacks
+    def process_command_initial_action_hack(self, user_account_key,
+                                            conversation_key, **kwargs):
+        # HACK: This lets us do whatever we used to do when we got a `start'
+        # message without having horrible app-specific view logic.
+        # TODO: Remove this when we've decoupled the various conversation
+        # actions from the lifecycle.
+
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        if conv is None:
+            log.warning("Cannot find conversation '%s' for user '%s'." % (
+                user_account_key, conversation_key))
+            return
+
+        kwargs.setdefault('content', conv.description)
+        kwargs.setdefault('dedupe', False)
+        yield self.process_command_bulk_send(
+            user_account_key=user_account_key,
+            conversation_key=conversation_key,
+            **kwargs)
