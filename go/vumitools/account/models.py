@@ -254,6 +254,9 @@ class PerAccountStore(object):
         """Convenience constructor for using this a UserAccount."""
         return cls(user_account.manager, user_account.key)
 
+    def list_keys(self, model_proxy, field_name='user_account'):
+        return model_proxy.index_keys(field_name, self.user_account_key)
+
     def get_user_account(self):
         store = AccountStore(self.base_manager)
         return store.users.load(self.user_account_key)
