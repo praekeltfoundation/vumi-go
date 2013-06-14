@@ -443,7 +443,7 @@ describe("go.components.structures", function() {
   var SubthingView = Backbone.View.extend();
 
   var SubthingViewCollection = SubviewCollection.extend({
-    defaults: {type: SubthingView},
+    type: SubthingView,
 
     viewOptions: function() { return {id: this.size()}; },
 

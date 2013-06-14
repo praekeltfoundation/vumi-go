@@ -63,7 +63,7 @@
 
   // A collection of state views that form part of a diagram view
   var StateViewCollection = SubviewCollection.extend({
-    defaults: {type: StateView},
+    type: StateView,
     viewOptions: function() { return {diagram: this.view, collection: this}; }
   });
 

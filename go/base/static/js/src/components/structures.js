@@ -223,8 +223,7 @@
     _id: function(modelOrId) {
       return modelOrId.id
         ? modelOrId.id
-        : modelOrId.cid
-        || modelOrId;
+        : modelOrId.cid || modelOrId;
     },
 
     remove: function(modelOrId, options) {
@@ -262,7 +261,7 @@
   // - [type]: The view type to instantiate for each new view.
   var SubviewCollection = ViewCollection.extend({
     // Override to change the default options used on initialisation
-    defaults: {type: Backbone.View},
+    type: Backbone.View,
 
     // Override to change the options passed to each new view
     viewOptions: {},
@@ -271,8 +270,7 @@
       this.view = options.view;
       this.attr = options.attr;
 
-      _(options).defaults(_(this).result('defaults'));
-      this.type = options.type;
+      this.type = options.type || this.type;
       this.initialize(options);
 
       var models = this.view.model.get(this.attr);
