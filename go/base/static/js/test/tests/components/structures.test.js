@@ -434,7 +434,7 @@ describe("go.components.structures", function() {
   var SubthingViewCollection = SubviewCollection.extend({
     defaults: {type: SubthingView},
 
-    opts: function() { return {id: this.size()}; },
+    viewOptions: function() { return {id: this.size()}; },
 
     constructor: function(options) {
       SubviewCollection.prototype.constructor.call(this, options);

@@ -3,8 +3,8 @@
 // Reusable, generic structures for Go
 
 (function(exports) {
-  var merge = go.utils.merge,
-      GoError = go.errors.GoError;
+  var utils = go.utils,
+      merge = utils.merge;
 
   // Acts as a 'base' for class-like objects which can be extended (with the
   // prototype chain set up automatically)
@@ -256,7 +256,7 @@
     defaults: {type: Backbone.View},
 
     // Override to change the options passed to each new view
-    opts: {},
+    viewOptions: {},
 
     constructor: function(options) {
       this.view = options.view;
@@ -283,7 +283,7 @@
     },
 
     create: function(options) {
-      _(options).defaults(_(this).result('opts'));
+      _(options).defaults(_(this).result('viewOptions'));
       return new this.type(options);
     }
   });

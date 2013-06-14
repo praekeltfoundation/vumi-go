@@ -83,7 +83,7 @@
   // A collection of endpoint views attached to a state view
   var EndpointViewCollection = SubviewCollection.extend({
     defaults: {type: EndpointView},
-    opts: function() { return {state: this.view, collection: this}; }
+    viewOptions: function() { return {state: this.view, collection: this}; }
   });
 
   // Derived components
@@ -220,7 +220,7 @@
       margin: 0.005  // margin spacing on each end of the state side
     },
 
-    opts: function() {
+    viewOptions: function() {
       return {
         state: this.view,
         collection: this,
