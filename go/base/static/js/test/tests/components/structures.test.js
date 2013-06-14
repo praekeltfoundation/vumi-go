@@ -361,6 +361,17 @@ describe("go.components.structures", function() {
       });
     });
 
+    it("should be useable with model types", function() {
+      views = new ToyViewCollection(new Backbone.Model({id: 'a'}));
+      assert.deepEqual(views.keys(), ['a']);
+    });
+
+    it("should be useable with collection types", function() {
+      views = new ToyViewCollection(models);
+      assert.deepEqual(views.keys(), ['a', 'b', 'c']);
+    });
+
+
     describe(".add", function() {
       var modelD;
 
@@ -462,24 +473,6 @@ describe("go.components.structures", function() {
         view: view,
         attr: 'subthings'
       });
-    });
-
-    it("should be useable with model type attributes", function() {
-      subviews = new SubthingViewCollection({
-        view: view,
-        attr: 'lonelySubthing'
-      });
-
-      assert.deepEqual(subviews.keys(), ['d']);
-    });
-
-    it("should be useable with collection type attributes", function() {
-      subviews = new SubthingViewCollection({
-        view: view,
-        attr: 'subthings'
-      });
-
-      assert.deepEqual(subviews.keys(), ['a', 'b', 'c']);
     });
 
     describe(".create", function() {

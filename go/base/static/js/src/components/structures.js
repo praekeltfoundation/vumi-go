@@ -175,10 +175,10 @@
       removeModel: false  // remove the model if it is in the collection
     },
 
-    constructor: function(collection) {
+    constructor: function(models) {
       Lookup.prototype.constructor.call(this);
 
-      this.models = collection;
+      this.models = this.ensureCollection(models);
 
       this.models.each(
         function(m) { this.add(m, {render: false, silent: true}); },
@@ -186,6 +186,15 @@
 
       this.models.on('add', function(m) { this.add(m); }, this);
       this.models.on('remove', function(m) { this.remove(m); }, this);
+    },
+
+    ensureCollection: function(modelOrCollection) {
+      // If we were given a single model instead of a collection, create a
+      // singleton collection with the model so we can work with things
+      // uniformly
+      return modelOrCollection instanceof Backbone.Model
+        ? new Backbone.Collection([modelOrCollection])
+        : modelOrCollection;
     },
 
     // Override to specialise how the view is created
@@ -266,21 +275,11 @@
       this.type = options.type;
       this.initialize(options);
 
-      ViewCollection.prototype.constructor.call(this, this._models());
+      var models = this.view.model.get(this.attr);
+      ViewCollection.prototype.constructor.call(this, models);
     },
 
     initialize: function() {},
-
-    _models: function() {
-      var modelOrCollection = this.view.model.get(this.attr);
-
-      // If we were given a single model instead of a collection, create a
-      // singleton collection with the model so we can work with things
-      // uniformly
-      return modelOrCollection instanceof Backbone.Model
-        ? new Backbone.Collection([modelOrCollection])
-        : modelOrCollection;
-    },
 
     create: function(options) {
       _(options).defaults(_(this).result('viewOptions'));
@@ -299,7 +298,7 @@
 
     // A list of specs/options, each a subview collection.
     // Override to change the subview collections are created.
-    schema: [{attr: 'subviews', type: Backbone.View}],
+    schema: [{attr: 'subviews'}],
 
     // Defaults to apply to each subview spec/option set
     defaults: {},
