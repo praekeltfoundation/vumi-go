@@ -84,6 +84,15 @@ class RoutingTableHelper(object):
     def lookup_target(self, src_conn, src_endpoint):
         return self.routing_table.get(src_conn, {}).get(src_endpoint)
 
+    def entries(self):
+        """Iterate over entries in the routing table.
+
+        Yield tuples of (src_conn, src_endpoint, dst_conn, dst_endpoint).
+        """
+        for src_conn, endpoints in self.routing_table.iteritems():
+            for src_endp, (dst_conn, dst_endp) in endpoints.iteritems():
+                yield (src_conn, src_endp, dst_conn, dst_endp)
+
     def add_entry(self, src_conn, src_endpoint, dst_conn, dst_endpoint):
         connector_dict = self.routing_table.setdefault(src_conn, {})
         if src_endpoint in connector_dict:

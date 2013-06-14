@@ -1,5 +1,5 @@
 import csv
-from datetime import datetime
+import logging
 from StringIO import StringIO
 
 from django.views.generic import TemplateView
@@ -15,18 +15,17 @@ from django.conf.urls.defaults import url, patterns
 from django.conf import settings
 from django.http import HttpResponse
 
-from go.vumitools.conversation.models import (
-    CONVERSATION_DRAFT, CONVERSATION_RUNNING, CONVERSATION_FINISHED)
 from go.vumitools.exceptions import ConversationSendError
 from go.base.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConversationForm, ConversationGroupForm,
                                     ConfirmConversationForm,
                                     ReplyToMessageForm)
-from go.conversation.tasks import (export_conversation_messages,
-                                    send_one_off_reply)
+from go.conversation.tasks import export_conversation_messages
 from go.base import message_store_client as ms_client
 from go.base.utils import (make_read_only_form, conversation_or_404,
                             page_range_window)
+
+logger = logging.getLogger(__name__)
 
 
 class ConversationView(TemplateView):
@@ -74,7 +73,7 @@ class ConversationView(TemplateView):
         return self.conversation_form(*args, **kw)
 
     def get_next_view(self, conversation):
-        if conversation.get_status() != CONVERSATION_DRAFT:
+        if not conversation.is_draft():
             return 'show'
         if self.conversation_initiator == 'client':
             return 'start'
@@ -110,9 +109,6 @@ class NewConversationView(ConversationView):
         conversation_data['delivery_tag_pool'] = tag_info[0]
         if tag_info[2]:
             conversation_data['delivery_tag'] = tag_info[2]
-
-        # Ignoring start time, because we don't actually do anything with it.
-        conversation_data['start_timestamp'] = datetime.utcnow()
 
         conversation = request.user_api.new_conversation(
             self.conversation_type, **conversation_data)
@@ -299,19 +295,40 @@ class ShowConversationView(ConversationView):
             'is_editable': (self.edit_conversation_forms is not None),
             'user_api': request.user_api,
             }
-        status = conversation.get_status()
         templ = lambda name: self.get_template_name('includes/%s' % (name,))
 
-        if status == CONVERSATION_FINISHED:
+        if conversation.archived():
+            # HACK: This assumes "stopped" and "archived" are equivalent.
             params['button_template'] = templ('ended-button')
-        elif status == CONVERSATION_RUNNING:
+        elif conversation.running():
             params['button_template'] = templ('end-button')
-        elif status == CONVERSATION_DRAFT:
+        else:
+            # TODO: Figure out better state management.
             params['button_template'] = templ('next-button')
             params['next_url'] = self.get_view_url(
                 self.get_next_view(conversation),
                 conversation_key=conversation.key)
         return self.render_to_response(params)
+
+    @staticmethod
+    def send_one_off_reply(user_api, conversation, in_reply_to, content):
+        inbound_message = user_api.api.mdb.get_inbound_message(in_reply_to)
+        if inbound_message is None:
+            logger.info('Replying to an unknown message: %s' % (in_reply_to,))
+
+        [tag] = conversation.get_tags()
+        msg_options = conversation.make_message_options(tag)
+        msg_options['in_reply_to'] = in_reply_to
+        conversation.dispatch_command(
+            'send_message', user_api.user_account_key, conversation.key,
+            command_data={
+                "batch_id": conversation.get_latest_batch_key(),
+                "conversation_key": conversation.key,
+                "to_addr": inbound_message['from_addr'],
+                "content": content,
+                "msg_options": msg_options,
+           }
+        )
 
     def post(self, request, conversation):
         if '_export_conversation_messages' in request.POST:
@@ -325,9 +342,8 @@ class ShowConversationView(ConversationView):
             if form.is_valid():
                 in_reply_to = form.cleaned_data['in_reply_to']
                 content = form.cleaned_data['content']
-                send_one_off_reply.delay(
-                    request.user_api.user_account_key, conversation.key,
-                    in_reply_to, content)
+                self.send_one_off_reply(request.user_api, conversation,
+                                        in_reply_to, content)
                 messages.info(request, 'Reply scheduled for sending.')
             else:
                 messages.error(request,

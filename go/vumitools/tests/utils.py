@@ -2,15 +2,12 @@
 
 """Utilities for go.vumitools tests."""
 
-import os
 import uuid
-from contextlib import contextmanager
 
-from twisted.python.monkey import MonkeyPatcher
 from twisted.internet.defer import inlineCallbacks, returnValue
-from celery.app import app_or_default
 
-from vumi.persist.fields import ForeignKeyProxy, ManyToManyProxy, DynamicProxy
+from vumi.persist.fields import (
+    ForeignKeyProxy, ManyToManyProxy, DynamicProxy, ListProxy)
 from vumi.message import TransportEvent
 from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import PersistenceMixin
@@ -29,6 +26,8 @@ def field_eq(f1, f2):
         return f1.key == f2.key
     if isinstance(f1, DynamicProxy) and isinstance(f2, DynamicProxy):
         return f1.items() == f2.items()
+    if isinstance(f1, ListProxy) and isinstance(f2, ListProxy):
+        return list(f1) == list(f2)
     return False
 
 
@@ -44,117 +43,29 @@ def model_eq(m1, m2):
     return True
 
 
-class RabbitConsumerFactory(object):
-    def teardown(self):
-        pass
+class FakeAmqpConnection(object):
+    def __init__(self, amqp_client):
+        self._amqp = amqp_client
+        self._connected = False
+        self.commands = []
 
-    def get_consumer(self, app, **options):
-        connection = app.broker_connection()
-        consumer = app.amqp.TaskConsumer(connection=connection,
-                                         **options)
-        # clear out old messages
-        while True:
-            msg = consumer.fetch()
-            if msg is None:
-                break
-        return consumer
+    def is_connected(self):
+        return self._connected
 
+    def connect(self, dsn=None):
+        self._connected = True
 
-class DummyConsumerFactory(object):
+    def publish_command_message(self, command):
+        # This both sends messages via self._amqp and appends them to
+        # self.commands to support to different use cases -- namely,
+        # testing that messages are succesfully routed and testing that
+        # the correct commands are queue for sending.
+        self.commands.append(command)
+        return self._amqp.publish_raw('vumi', 'vumi.api', command.to_json())
 
-    class DummyConsumer(object):
-        def __init__(self, factory):
-            self.factory = factory
-
-        def fetch(self):
-            return self.factory.fetch()
-
-    class DummyPublisher(object):
-        def __init__(self, factory):
-            self.factory = factory
-
-        def publish(self, payload):
-            self.factory.publish(payload)
-
-    class DummyMessage(object):
-        def __init__(self, payload):
-            self.payload = payload
-
-    def __init__(self):
-        import go.vumitools.api_celery
-        self.queue = []
-        self.monkey = MonkeyPatcher((go.vumitools.api_celery, "get_publisher",
-                                     self.get_publisher))
-        self.monkey.patch()
-
-    def teardown(self):
-        self.monkey.restore()
-
-    def publish(self, payload):
-        self.queue.append(self.DummyMessage(payload))
-
-    def fetch(self):
-        if not self.queue:
-            return None
-        return self.queue.pop(0)
-
-    def get_consumer(self, app, **options):
-        return self.DummyConsumer(self)
-
-    @contextmanager
-    def get_publisher(self, app, **options):
-        yield self.DummyPublisher(self)
-
-
-class CeleryTestMixIn(object):
-
-    # set this to RabbitConsumerFactory to send Vumi API
-    # commands over real RabbitMQ
-    VUMI_COMMANDS_CONSUMER = DummyConsumerFactory
-
-    def setup_celery_for_tests(self):
-        """Setup celery for tests."""
-        celery_config = os.environ.get("CELERY_CONFIG_MODULE")
-        os.environ["CELERY_CONFIG_MODULE"] = "celery.tests.config"
-        self._app = app_or_default()
-        always_eager = self._app.conf.CELERY_ALWAYS_EAGER
-        self._app.conf.CELERY_ALWAYS_EAGER = True
-        self._old_celery = celery_config, always_eager
-        self._consumer_factory = self.VUMI_COMMANDS_CONSUMER()
-
-    def restore_celery(self):
-        self._consumer_factory.teardown()
-        celery_config, always_eager = self._old_celery
-        if celery_config is None:
-            del os.environ["CELERY_CONFIG_MODULE"]
-        else:
-            os.environ["CELERY_CONFIG_MODULE"] = celery_config
-        self._app.conf.CELERY_ALWAYS_EAGER = always_eager
-
-    def get_consumer(self, **options):
-        """Create a command message consumer.
-
-        Call this *before* sending any messages otherwise your
-        tests will fail when run against real RabbitMQ because:
-
-        * Messages sent to non-existent consumers will be lost.
-        * RabbitConsumerFactory clears out any remaining commands
-          from old test runs before returning the consumer.
-        """
-        return self._consumer_factory.get_consumer(self._app, **options)
-
-    def get_cmd_consumer(self):
-        return self.get_consumer(**VumiApiCommand.default_routing_config())
-
-    def fetch_cmds(self, consumer):
-        msgs = []
-        while True:
-            msg = consumer.fetch()
-            if msg is not None:
-                msgs.append(msg.payload)
-            else:
-                break
-        return [VumiApiCommand(**payload) for payload in msgs]
+    def get_commands(self):
+        commands, self.commands = self.commands, []
+        return commands
 
 
 class GoPersistenceMixin(PersistenceMixin):
@@ -203,7 +114,7 @@ class GoPersistenceMixin(PersistenceMixin):
 
     @PersistenceMixin.sync_or_async
     def mk_user(self, vumi_api, username):
-        key = "test-%s-user" % (self._users_created,)
+        key = u"test-%s-user" % (self._users_created,)
         self._users_created += 1
         user = vumi_api.account_store.users(key, username=username)
         yield user.save()
@@ -244,7 +155,7 @@ class GoAppWorkerTestMixin(GoPersistenceMixin):
     @inlineCallbacks
     def add_tagpool_permission(self, tagpool, max_keys=None):
         permission = yield self.user_api.api.account_store.tag_permissions(
-           uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
+            uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
         yield permission.save()
         account = yield self.user_api.get_user_account()
         account.tagpools.add(permission)
@@ -279,10 +190,12 @@ class GoAppWorkerTestMixin(GoPersistenceMixin):
 
     @inlineCallbacks
     def start_conversation(self, conversation, *args, **kwargs):
+        old_cmds = len(self.get_dispatcher_commands())
         yield conversation.start(*args, **kwargs)
-        cmd = self.get_dispatcher_commands()[-1].payload
-        yield self.dispatch_command(
-            cmd['command'], *cmd['args'], **cmd['kwargs'])
+        for cmd in self.get_dispatcher_commands()[old_cmds:]:
+            yield self.dispatch_command(
+                cmd.payload['command'], *cmd.payload['args'],
+                **cmd.payload['kwargs'])
 
     def poll_metrics(self, assert_prefix=None, app=None):
         if app is None:

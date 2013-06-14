@@ -122,7 +122,6 @@ ROOT_URLCONF = 'go.urls'
 TEMPLATE_DIRS = (
     abspath("templates"),
     abspath("base", "templates"),
-    abspath("conversation", "templates"),
     abspath("contacts", "templates"),
     abspath("account", "templates"),
     abspath("apps", "surveys", "templates"),
@@ -133,6 +132,7 @@ TEMPLATE_DIRS = (
     abspath("apps", "wikipedia", "ussd", "templates"),
     abspath("apps", "jsbox", "templates"),
     abspath("apps", "http_api", "templates"),
+    abspath("conversation", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -186,6 +186,7 @@ DEBUG_TOOLBAR_CONFIG = {
     'ENABLE_STACKTRACES': True,
 }
 
+SESSION_ENGINE = 'go.api.go_api.session'
 
 
 

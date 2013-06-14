@@ -1,5 +1,4 @@
 import csv
-from datetime import datetime
 from StringIO import StringIO
 
 from django.conf import settings
@@ -14,10 +13,10 @@ from vumi.persist.redis_manager import RedisManager
 from go.base.utils import (make_read_only_form, make_read_only_formset,
     conversation_or_404)
 from go.vumitools.exceptions import ConversationSendError
+from go.conversation.base import ShowConversationView
 from go.conversation.forms import (ConversationForm, ConversationGroupForm,
                                     ReplyToMessageForm)
-from go.conversation.tasks import (export_conversation_messages,
-                                    send_one_off_reply)
+from go.conversation.tasks import export_conversation_messages
 from go.apps.surveys import forms
 
 from vxpolls.manager import PollManager
@@ -55,14 +54,6 @@ def new(request):
             if tag_info[2]:
                 conversation_data['delivery_tag'] = tag_info[2]
 
-            start_date = form.cleaned_data['start_date'] or datetime.utcnow()
-            start_time = (form.cleaned_data['start_time'] or
-                            datetime.utcnow().time())
-            conversation_data['start_timestamp'] = datetime(
-                start_date.year, start_date.month, start_date.day,
-                start_time.hour, start_time.minute, start_time.second,
-                start_time.microsecond)
-
             conversation = request.user_api.new_conversation(
                 u'survey', **conversation_data)
             messages.add_message(request, messages.INFO,
@@ -71,11 +62,7 @@ def new(request):
                 kwargs={'conversation_key': conversation.key}))
 
     else:
-        form = ConversationForm(request.user_api, initial={
-            'start_date': datetime.utcnow().date(),
-            'start_time': datetime.utcnow().time().replace(second=0,
-                                                            microsecond=0),
-        })
+        form = ConversationForm(request.user_api)
     return render(request, 'surveys/new.html', {
         'form': form,
     })
@@ -133,8 +120,8 @@ def contents(request, conversation_key):
 
     survey_form = make_read_only_form(ConversationForm(request.user_api,
         instance=conversation, initial={
-            'start_date': conversation.start_timestamp.date(),
-            'start_time': conversation.start_timestamp.time(),
+            'start_date': conversation.created_at.date(),
+            'start_time': conversation.created_at.time(),
         }))
 
     return render(request, 'surveys/contents.html', {
@@ -249,9 +236,8 @@ def show(request, conversation_key):
         if form.is_valid():
             in_reply_to = form.cleaned_data['in_reply_to']
             content = form.cleaned_data['content']
-            send_one_off_reply.delay(
-                request.user_api.user_account_key, conversation.key,
-                in_reply_to, content)
+            ShowConversationView.send_one_off_reply(
+                request.user_api, conversation, in_reply_to, content)
             messages.info(request, 'Reply scheduled for sending.')
             return redirect(reverse('survey:show', kwargs={
                 'conversation_key': conversation.key,

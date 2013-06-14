@@ -41,7 +41,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,
-                            from_addr=u'+27831234567{0}'):
+                           from_addr=u'+27831234567{0}'):
         user_api = self.user_api
         group = yield user_api.contact_store.new_group(u'test group')
 
@@ -66,7 +66,6 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_start(self):
-
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
 
@@ -159,9 +158,12 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
         batch_id = yield conversation.get_latest_batch_key()
-        yield self.dispatch_command("send_message", command_data={
+        yield self.dispatch_command(
+            "send_message",
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            command_data={
             "batch_id": batch_id,
-            "conversation_key": conversation.key,
             "to_addr": "123456",
             "content": "hello world",
             "msg_options": msg_options,
@@ -189,10 +191,12 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         batch_id = yield conversation.get_latest_batch_key()
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
         yield self.store_inbound_msg(msg)
-        command = VumiApiCommand.command('worker', 'send_message',
+        command = VumiApiCommand.command(
+            'worker', 'send_message',
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
             command_data={
                 u'batch_id': batch_id,
-                u'conversation_key': conversation.key,
                 u'content': u'foo',
                 u'to_addr': u'to_addr',
                 u'msg_options': {
@@ -215,10 +219,12 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         batch_id = yield conversation.get_latest_batch_key()
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex, transport_name="bad")
         yield self.store_inbound_msg(msg)
-        command = VumiApiCommand.command('worker', 'send_message',
+        command = VumiApiCommand.command(
+            'worker', 'send_message',
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
             command_data={
                 u'batch_id': batch_id,
-                u'conversation_key': conversation.key,
                 u'content': u'foo',
                 u'to_addr': u'to_addr',
                 u'msg_options': {
