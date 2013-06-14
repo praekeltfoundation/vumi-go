@@ -66,7 +66,7 @@ def details(request):
                 messages.info(request,
                     'Please confirm this change by clicking on the link '
                     'that was just sent to your mailbox.')
-                return redirect('auth_details')
+                return redirect('account:details')
 
         elif '_email' in request.POST:
             email_form = EmailForm(request.POST)
@@ -77,7 +77,7 @@ def details(request):
                 send_mail(subject, message, _from, ['support@vumi.org'])
                 messages.info(request, 'Thanks for your email. We will be in '
                                         'touch shortly.')
-                return redirect(reverse('auth_details'))
+                return redirect(reverse('account:details'))
             else:
                 messages.error(request, 'We didn\'t understand some of the '
                     'values your provided in the email form, please try '
@@ -125,7 +125,6 @@ def user_detail(request, user_id=None):
         return HttpResponseForbidden("You're not an admin.")
 
     # Are they editing a member of the same organisation?
-    
     if user_id:
         # editing
         edit_user = get_object_or_404(User, id=user_id)
@@ -141,21 +140,21 @@ def user_detail(request, user_id=None):
 
     user_form = UserAccountForm(instance=edit_user)
     user_profile_form = UserProfileForm(instance=edit_user_profile,
-        initial={
-            'organisation': user_profile.organisation
-        })
+            initial={
+                'organisation': user_profile.organisation
+            })
 
     if request.method == 'POST':
-        user_form  = UserAccountForm(request.POST, instance=edit_user)
+        user_form = UserAccountForm(request.POST, instance=edit_user)
         user_profile_form = UserProfileForm(request.POST,
-            instance=edit_user_profile)
+                                            instance=edit_user_profile)
 
         if user_form.is_valid() and user_profile_form.is_valid():
             # TODO: This works fine for editing users, but I think
             # creating users is slightly more complicated because
             # it needs to work within riak.
 
-            # TODO: Username isn't required in vumigo, what should we 
+            # TODO: Username isn't required in vumigo, what should we
             # use instead?
             user_form.save()
             user_profile_form.save()
@@ -165,4 +164,20 @@ def user_detail(request, user_id=None):
         'edit_user': edit_user,
         'user_form': user_form,
         'user_profile_form': user_profile_form
+    })
+
+
+def billing(request):
+    # TODO: Complete once billing data exists.
+
+    # FAKE DATA
+    statement_list = (
+        {'date': '2013-03-31'},
+        {'date': '2013-02-28'},
+        {'date': '2013-01-31'},
+        {'date': '2013-12-31'},
+    )
+
+    return render(request, 'account/billing.html', {
+        'statement_list': statement_list
     })
