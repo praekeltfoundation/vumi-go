@@ -9,7 +9,7 @@
   };
 
   var response = function(id, data) {
-    return _({id: id, jsonrpc: '2.0', result: data}).extend(data);
+    return {id: id, jsonrpc: '2.0', result: data};
   };
 
   var fakeServer = function(url) {
@@ -23,8 +23,8 @@
     return {
       requests: requests,
 
-      assertRequest: function(method, params, i) {
-        assertRequest(requests[i || 0], url, method, params);
+      assertRequest: function(method, params) {
+        assertRequest(requests.shift(), url, method, params);
       },
 
       restore: function() {
@@ -32,10 +32,12 @@
       },
 
       respondWith: function(data) {
+        var req = requests.shift();
+
         // deep copy the data to ensure it can't be modified (which may cause
         // obscure test passes/failures)
         data = JSON.parse(JSON.stringify(data));
-        requests[0].success(response(requests[0].data.id, data));
+        req.success(response(req.data.id, data));
       }
     };
   };
