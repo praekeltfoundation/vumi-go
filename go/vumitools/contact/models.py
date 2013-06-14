@@ -243,17 +243,12 @@ class ContactStore(PerAccountStore):
                 manager, result[0], result[1]))
         returnValue(contacts)
 
-    @Manager.calls_manager
     def list_contacts(self):
-        # Not stale, because we're using backlinks.
-        user_account = yield self.get_user_account()
-        returnValue(user_account.backlinks.contacts(self.manager))
+        return self.list_keys(self.contacts)
 
     @Manager.calls_manager
     def list_groups(self):
-        # Not stale, because we're using backlinks.
-        user_account = yield self.get_user_account()
-        group_keys = yield user_account.backlinks.contactgroups(self.manager)
+        group_keys = yield self.list_keys(self.groups)
         # NOTE: This assumes that we don't have very large numbers of groups.
         groups = []
         for groups_bunch in self.groups.load_all_bunches(group_keys):
