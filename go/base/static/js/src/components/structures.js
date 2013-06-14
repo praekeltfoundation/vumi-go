@@ -193,7 +193,7 @@
       this.models.on('remove', function(m) { this.remove(m); }, this);
 
       this.type = options.type || this.type;
-      this.typeAttr = this.type.typeAttr || options.typeAttr || this.typeAttr;
+      this.typeAttr = this.type.typeAttr || this.typeAttr;
 
       this.initialize(options);
 
