@@ -351,8 +351,8 @@ PIPELINE_JS = {
             'js/vendor/lodash.underscore-1.2.1.js',
             'js/vendor/backbone-1.0.0.js',
 
-            # NOTE: ordering is important here, switching these around
-            # results in endless recursion
+            # NOTE: Ordering is important here. Having Backbone.rpc after
+            # Backbone-relational results in endless recursion.
             'js/vendor/backbone-rpc-0.1.1.js',
             'js/vendor/backbone-relational-0.8.5.js',
 
