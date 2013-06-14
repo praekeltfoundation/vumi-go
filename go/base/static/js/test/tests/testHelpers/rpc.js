@@ -38,6 +38,13 @@
         // obscure test passes/failures)
         data = JSON.parse(JSON.stringify(data));
         req.success(response(req.data.id, data));
+      },
+
+      errorWith: function(status, statusText, errorThrown) {
+        var req = requests.shift(),
+            jqXHR = {status: status, statusText: statusText};
+
+        req.error(req, jqXHR, statusText, errorThrown);
       }
     };
   };
