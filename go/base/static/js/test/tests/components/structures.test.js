@@ -309,9 +309,6 @@ describe("go.components.structures", function() {
   describe(".ViewCollection", function() {
     var ViewCollection = structures.ViewCollection;
 
-    var models,
-        views;
-
     var ToyView = Backbone.View.extend({
       initialize: function() {
         this.rendered = false;
@@ -322,8 +319,18 @@ describe("go.components.structures", function() {
       render: function() { this.rendered = true; }
     });
 
+    var ToyPirateView = ToyView.extend(),
+        ToyNinjaView = ToyView.extend();
+
+    ToyView.prototype.subtypes = {
+      pirate: ToyPirateView,
+      ninja: ToyNinjaView
+    };
+
     var ToyViewCollection = ViewCollection.extend({
-      create: function(options) { return new ToyView(options); }
+      type: ToyView,
+      viewOptions: function() { return {id: this.i++}; },
+      initialize: function() { this.i = 0; }
     });
 
     var assertAdded = function(id) {
@@ -334,9 +341,12 @@ describe("go.components.structures", function() {
       assert(!views.has(id));
     };
 
+    var models,
+        views;
+
     beforeEach(function() {
       models = new Backbone.Collection([{id: 'a'}, {id: 'b'}, {id: 'c'}]);
-      views = new ToyViewCollection(models);
+      views = new ToyViewCollection({models: models});
     });
 
     describe("on 'add' model collection events", function() {
@@ -362,12 +372,12 @@ describe("go.components.structures", function() {
     });
 
     it("should be useable with model types", function() {
-      views = new ToyViewCollection(new Backbone.Model({id: 'a'}));
+      views = new ToyViewCollection({models: new Backbone.Model({id: 'a'})});
       assert.deepEqual(views.keys(), ['a']);
     });
 
     it("should be useable with collection types", function() {
-      views = new ToyViewCollection(models);
+      views = new ToyViewCollection({models: models});
       assert.deepEqual(views.keys(), ['a', 'b', 'c']);
     });
 
@@ -429,6 +439,54 @@ describe("go.components.structures", function() {
       });
     });
 
+    describe(".create", function() {
+      it("should create a view of the given type", function() {
+        var model = new Backbone.Model(),
+            view = views.create({model: model});
+
+        assert.instanceOf(view, ToyView);
+        assert.equal(view.model, model);
+      });
+
+      it("should work with views with subtypes", function() {
+        assert.instanceOf(
+          views.create({model: new Backbone.Model({type: 'pirate'})}),
+          ToyPirateView);
+
+        assert.instanceOf(
+          views.create({model: new Backbone.Model({type: 'ninja'})}),
+          ToyNinjaView);
+      });
+
+      it("should default to the base type if no subtypes match the model type",
+      function() {
+        assert.instanceOf(
+          views.create({model: new Backbone.Model({type: 'acid'})}),
+          ToyView);
+      });
+
+      it("should work with views without subtypes", function() {
+        var ViewWithoutSubtypes = Backbone.View.extend();
+
+        var views = new ViewCollection({
+          models: models,
+          type: ViewWithoutSubtypes
+        });
+
+        assert.instanceOf(
+          views.create({model: new Backbone.Model()}),
+          ViewWithoutSubtypes);
+      });
+
+      it("create the view with the specified default options", function() {
+        var v1 = views.create({model: new Backbone.Model()}),
+            v2 = views.create({model: new Backbone.Model()});
+
+        assert.equal(v1.id, '3');
+        assert.equal(v2.id, '4');
+      });
+    });
+
     describe(".render()", function() {
       it("should render all the views in the collection", function() {
         views.values().forEach(function(v) { v.rendered = false; });
@@ -438,22 +496,10 @@ describe("go.components.structures", function() {
     });
   });
 
-  var SubviewCollection = structures.SubviewCollection;
-
-  var SubthingView = Backbone.View.extend();
-
-  var SubthingViewCollection = SubviewCollection.extend({
-    type: SubthingView,
-
-    viewOptions: function() { return {id: this.size()}; },
-
-    constructor: function(options) {
-      SubviewCollection.prototype.constructor.call(this, options);
-      this.options = options;
-    }
-  });
-
   describe(".SubviewCollection", function() {
+    var SubviewCollection = structures.SubviewCollection;
+    var SubthingView = Backbone.View.extend();
+
     var view,
         subviews;
 
@@ -463,37 +509,37 @@ describe("go.components.structures", function() {
           {id: 'a'},
           {id: 'b'},
           {id: 'c'}
-        ]),
-        lonelySubthing: new Backbone.Model({id: 'd'})
+        ])
       });
 
       view = new Backbone.View({model: model});
-
-      subviews = new SubthingViewCollection({
+      subviews = new SubviewCollection({
         view: view,
-        attr: 'subthings'
+        attr: 'subthings',
+        type: SubthingView
       });
     });
 
-    describe(".create", function() {
-      it("should create subviews of the collection's type", function() {
-        subviews.each(function(v) { assert.instanceOf(v, SubthingView); });
-      });
-
-      it("should create the view with options defined by the collection",
-      function() {
-        subviews.each(function(v, i) { assert.equal(v.id, i); });
-      });
+    it("should create a collection of subviews from the given view and attr",
+    function() {
+      assert.deepEqual(subviews.keys(), ['a', 'b', 'c']);
+      subviews.each(function(v) { assert.instanceOf(v, SubthingView); });
     });
   });
 
   describe(".SubviewCollectionGroup", function() {
-    var view,
-        subviews;
+    var SubviewCollection = structures.SubviewCollection,
+        SubviewCollectionGroup = structures.SubviewCollectionGroup;
+
+    var SubthingView = Backbone.View.extend();
+    var SubthingViewCollection = SubviewCollection.extend({
+      type: SubthingView,
+      initialize: function(options) {
+        this.options = options;
+      }
+    });
 
     var LonelySubthingViewCollection = SubthingViewCollection.extend();
-
-    var SubviewCollectionGroup = structures.SubviewCollectionGroup;
 
     var SubthingViewCollections = SubviewCollectionGroup.extend({
       collectionType: SubthingViewCollection,
@@ -505,6 +551,9 @@ describe("go.components.structures", function() {
         collectionType: LonelySubthingViewCollection
       }]
     });
+
+    var view,
+        subviews;
 
     beforeEach(function() {
       var model = new Backbone.Model({
