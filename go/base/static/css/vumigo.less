@@ -13,157 +13,157 @@ a:link, button {
 
 .main-container {
   // prevent wrapping.
-  min-width:650px;
-  padding:0 25px;
+  min-width: 650px;
+  padding: 0 25px;
 }
 
 .footer {
-  color:#aaa;
-  margin:1em;
+  color: #aaa;
+  margin: 1em;
 }
 
 
 .main-nav {
-  margin:0;
-  font-size:15px;
+  margin: 0;
+  font-size: 15px;
 
   .brand {
-    position:relative;
-    width:60px;
-    border:0 !important;
+    position: relative;
+    width: 60px;
+    border: 0 !important;
   }
 
   .logo {
-    position:absolute;
-    top:20px;
-    left:-5px;
+    position: absolute;
+    top: 20px;
+    left: -5px;
   }
 
   li { 
-    height:39px;
-    padding:0 15px;
-    border-right:1px #212527 solid;
+    height: 39px;
+    padding: 0 15px;
+    border-right: 1px #212527 solid;
   }
   ul li:first-child {
     // this is the logo
-    padding:0;
+    padding: 0;
   }
   ul:nth-child(2) li:first-child {
-    border-left:1px #212527 solid;
+    border-left: 1px #212527 solid;
   }
-  li.active a { background:transparent !important; }
+  li.active a { background: transparent !important; }
 
   a {
-    color:#0bcac3 !important;
-    text-shadow:none !important;
-    outline:none;
+    color: #0bcac3 !important;
+    text-shadow: none !important;
+    outline: none;
   }
   a:hover {
-    color:#fff !important;
+    color: #fff !important;
 
     .caret {
-      border-top-color:#fff !important;
-      border-bottom-color:#fff !important;
+      border-top-color: #fff !important;
+      border-bottom-color: #fff !important;
     }
   }
 
   .caret {
-      border-top-color:#0bcac3 !important;
-      border-bottom-color:#0bcac3 !important;
+      border-top-color: #0bcac3 !important;
+      border-bottom-color: #0bcac3 !important;
   }
 
 
   .dropdown.open > a {
-    background:transparent !important;
-    color:#fff !important;
+    background: transparent !important;
+    color: #fff !important;
   }
 
   .dropdown-menu {
-    background:#2f3436;
+    background: #2f3436;
 
     li {
-      padding:0;
-      height:auto;
-      border:0 !important;
+      padding: 0;
+      height: auto;
+      border: 0 !important;
     }
     a:hover {
-      background:transparent;
+      background: transparent;
     }
   }
 
   .dropdown-menu:after {
-    border-top-color:#212527 !important;
-    border-bottom-color:#212527 !important;
+    border-top-color: #212527 !important;
+    border-bottom-color: #212527 !important;
   }
 
   
 }
 
 .content {
-  background:#f2f1ed;
-  border:#212527 solid 5px;
+  background: #f2f1ed;
+  border: #212527 solid 5px;
   .border-radius(5px);
-  min-height:400px;
+  min-height: 400px;
 
   .header {
-    height:54px;
-    line-height:54px;
+    height: 54px;
+    line-height: 54px;
     
     h1 {
-      font-size:24px;
-      line-height:54px;
-      font-weight:bold;
+      font-size: 24px;
+      line-height: 54px;
+      font-weight: bold;
       
-      padding:0 12px;
-      margin:0;
-      color:#2F3436;
+      padding: 0 12px;
+      margin: 0;
+      color: #2F3436;
 
-      a { color:#2F3436; }
+      a { color: #2F3436; }
 
       a:hover {
-        color:#000;
-        text-decoration:none;
+        color: #000;
+        text-decoration: none;
       }
     }
 
 
     .breadcrumbs {
-      text-align:right;
-      padding:0 12px;
+      text-align: right;
+      padding: 0 12px;
 
         .navbar-search {
-          margin:0;
+          margin: 0;
         }
 
     }
   }
 
   .actions {
-    height:50px;
-    line-height:50px;
-    background:#d9d8d3;
-    margin:0 0 5px 0;
+    height: 50px;
+    line-height: 50px;
+    background: #d9d8d3;
+    margin: 0 0 5px 0;
 
     .sidebar {
-      background:#d2d0c7; 
+      background: #d2d0c7; 
       .box-sizing(content-box);
-      border-left:5px #15191a solid;
-      margin-left:-5px !important;
-      height:100%;
+      border-left: 5px #15191a solid;
+      margin-left: -5px !important;
+      height: 100%;
 
       .btn {
-        margin-left:-5px;
-        padding-left:20px;
-        padding-right:20px;
+        margin-left: -5px;
+        padding-left: 20px;
+        padding-right: 20px;
       }
     }
 
     .right {
-      padding:0 20px;
-      overflow:hidden;
+      padding: 0 20px;
+      overflow: hidden;
 
       .navbar-search {
-        margin-top:0;
+        margin-top: 0;
       }
     }
   }
@@ -174,14 +174,14 @@ a:link, button {
   // you'll get visual leaks if you try and indent one of the 
   // above.
   .indent {
-    margin:2em 1em;
+    margin: 2em 1em;
   }
 
   // this is experimental, because the site is fluid the sidebar tends
   // to grow really long and kinda looks a bit ugly.
   // this will prevent the sidebar from growing too long.
   .actions .left, .sidebar {
-    max-width:210px;
+    max-width: 210px;
   }
 
 } // end content
@@ -190,24 +190,24 @@ a:link, button {
 
 .content .sidebar .nav-list {
 
-  a { color:#2f3436; }
+  a { color: #2f3436; }
 
   a:hover {
-    color:#000;
-    background:none;
+    color: #000;
+    background: none;
   }
 
   .active {
-    color:#fff;
-    background:#b41c30;
-    border-left:5px #6f0f1c solid;
-    text-shadow:none;
-    font-weight:bold;
-    margin-left:-20px;
+    color: #fff;
+    background: #b41c30;
+    border-left: 5px #6f0f1c solid;
+    text-shadow: none;
+    font-weight: bold;
+    margin-left: -20px;
   }
   a.active:hover {
-    color:#fff;
-    background:#b41c30;
+    color: #fff;
+    background: #b41c30;
   }
 }
 
@@ -215,18 +215,18 @@ a:link, button {
 
 .content .sidebar .extra-actions {
 
-  margin-bottom:1em;
+  margin-bottom: 1em;
   
-  a, a.active { color:#0088cc; }
+  a, a.active { color: #0088cc; }
   a.active {
-    margin:0;
-    border:0;
-    background:transparent;
+    margin: 0;
+    border: 0;
+    background: transparent;
   }
   a:hover {
-    color:#54a6de !important;
-    background:transparent !important;
-    text-decoration:underline;
+    color: #54a6de !important;
+    background: transparent !important;
+    text-decoration: underline;
   }
 }
 
@@ -235,21 +235,21 @@ a:link, button {
 
 
 .nav-stacked a:hover {
-  background:none !important;
+  background: none !important;
 }
 
 // this is used in forms
 .help-inline .errorlist {
-  list-style:none;
+  list-style: none;
 
   li {
-    padding:0;
-    margin:0;  
+    padding: 0;
+    margin: 0;  
   }
 }
 
 .alert {
-  margin:1em 0;
+  margin: 1em 0;
 }
 
 @import "campaigns.less";

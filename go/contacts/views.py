@@ -287,7 +287,7 @@ def _smart_group(request, contact_store, group):
     selected_contacts = []
     for contacts in contact_store.contacts.load_all_bunches(keys):
         selected_contacts.extend(contacts)
-    return render(request, 'contacts/smart_group.html', {
+    return render(request, 'contacts/group_detail.html', {
         'group': group,
         'selected_contacts': selected_contacts,
         'group_form': smart_group_form,

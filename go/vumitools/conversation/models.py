@@ -124,12 +124,8 @@ class ConversationStore(PerAccountStore):
     def setup_proxies(self):
         self.conversations = self.manager.proxy(Conversation)
 
-    @Manager.calls_manager
     def list_conversations(self):
-        # Not stale, because we're using backlinks.
-        account = yield self.get_user_account()
-        conversations = yield account.backlinks.conversations(self.manager)
-        returnValue(conversations)
+        return self.list_keys(self.conversations)
 
     def get_conversation_by_key(self, key):
         return self.conversations.load(key)
@@ -153,23 +149,21 @@ class ConversationStore(PerAccountStore):
         conversation = yield conversation.save()
         returnValue(conversation)
 
-    @Manager.calls_manager
     def list_running_conversations(self):
-        keys = yield self.conversations.index_lookup(
-            'status', CONVERSATION_RUNNING).get_keys()
-        returnValue(keys)
+        return self.conversations.index_keys(
+            'status', CONVERSATION_RUNNING)
 
     @Manager.calls_manager
     def list_active_conversations(self):
         # We need to list things by both the old-style 'status' index and the
         # new-style 'archive_status' index, at least until we've migrated all
         # old-style conversations to v2.
-        keys = yield self.conversations.index_lookup(
-            'archive_status', CONVERSATION_ACTIVE).get_keys()
-        keys.extend((yield self.conversations.index_lookup(
-            'status', 'draft').get_keys()))  # No more constant for this.
-        keys.extend((yield self.conversations.index_lookup(
-            'status', CONVERSATION_RUNNING).get_keys()))
+        keys = yield self.conversations.index_keys(
+            'archive_status', CONVERSATION_ACTIVE)
+        keys.extend((yield self.conversations.index_keys(
+            'status', 'draft')))  # No more constant for this.
+        keys.extend((yield self.conversations.index_keys(
+            'status', CONVERSATION_RUNNING)))
         returnValue(list(set(keys)))  # Dedupe.
 
     def load_all_bunches(self, keys):

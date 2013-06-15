@@ -7,8 +7,38 @@
   }
 }
 
+.campaigns.wizard-details {
+
+  ul, li {
+    list-style-type:none;
+    padding:0;
+    margin:0;
+    width:auto;
+
+    label {
+      font-weight:normal;
+      display:inline;
+    }
+  }
+
+  .configuration {
+
+    margin:18px 0 0 0;
+    display:none;
+
+    ul, li { 
+      padding:0;
+      margin:0;
+      list-style-type:none; 
+    }
+  }
+
+
+}
+
 .campaigns {
 
+  // these are the breadcrumb links at the top.
   .header a {
     color:#878b8e;
     font-weight:bold;
@@ -22,12 +52,13 @@
   .actions .right {
     text-align:right; // cancel, save draft, next step
 
+    // offsets the cancel button a bit.
     a:first-child {
       margin-right:20px;
     }
   }
 
-  .control-label {
+  label {
       color:#000;
       font-weight:bold;
 
@@ -61,6 +92,7 @@
       text-align:center;
       .border-radius(5px);
       margin-bottom:1em;
+      min-height:70px;
 
       label {
         text-align:left;
@@ -77,62 +109,64 @@
 
   #routing-diagram {
     .column-container {
-      text-align: center;
+      text-align:center;
 
       .title {
-        font-size: 22px;
-        margin: 10px 0;
-        font-family: inherit;
-        font-weight: bold;
-        display: block;
-        color: inherit;
-        text-rendering: optimizelegibility;
+        font-size:22px;
+        margin:10px 0;
+        font-family:inherit;
+        font-weight:bold;
+        display:block;
+        color:inherit;
+        text-rendering:optimizelegibility;
       }
 
       .new {
-        font-size: 35px;
-        line-height: 50px;
-        width: 130px;
-        height: 50px;
+        font-size:35px;
+        line-height:50px;
+        width:130px;
+        height:50px;
       }
 
       .column {
-        margin-top: 15px;
-        display: inline-block;
+        margin-top:15px;
+        display:inline-block;
       }
 
       .state {
-        background: #d2d0c7;
-        color: #333;
-        font-size: 16px;
-        text-align: center;
+        background:#d2d0c7;
+        color:#333;
+        font-size:16px;
+        text-align:center;
         .border-radius(5px);
 
-        width: 150px;
-        min-height: 100px;
+        width:150px;
+        min-height:100px;
 
-        margin: 15px auto;
-        padding-top: 10px;
+        margin:15px auto;
+        padding-top:10px;
 
-        z-index: 0;
-        -webkit-user-select: none;
+        z-index:0;
+        -webkit-user-select:none;
 
         .description {
-          margin: 10px;
+          margin:10px;
         }
       }
 
       .state:hover {
-        cursor: move;
+        cursor:move;
       }
 
       .endpoint:hover {
-        cursor: pointer;
+        cursor:pointer;
       }
     }
 
     ._jsPlumb_endpoint, ._jsPlumb_connector {
-      z-index: 200;
+      z-index:200;
     }
   }
+
+
 }

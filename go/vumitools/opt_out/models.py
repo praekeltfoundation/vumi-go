@@ -42,12 +42,8 @@ class OptOutStore(PerAccountStore):
         if opt_out:
             yield opt_out.delete()
 
-    @Manager.calls_manager
     def list_opt_outs(self):
-        # Not stale, because we're using backlinks.
-        user_account = yield self.get_user_account()
-        opt_outs = yield user_account.backlinks.optouts(self.manager)
-        returnValue(opt_outs)
+        return self.list_keys(self.opt_outs)
 
     def opt_outs_for_addresses(self, addr_type, addresses):
         keys = ["%s:%s" % (addr_type, address) for address in addresses]

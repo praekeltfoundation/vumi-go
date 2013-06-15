@@ -17,7 +17,15 @@
     </div>
 
     <ul class="nav pull-right">
-        <li><a href="">Balance</a></li>
+        <li class="dropdown">
+            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                Balance
+                <b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu" role="menu">
+                <li><a href="{% url 'campaigns:pricing' %}">Pricing</a></li>
+            </ul>
+        </li>
         
         <li class="dropdown">
             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
@@ -25,7 +33,7 @@
                 <b class="caret"></b>
             </a>
             <ul class="dropdown-menu" role="menu">
-                <li><a href="{% url 'auth_details' %}">Details</a></li>
+                <li><a href="{% url 'account:details' %}">Details</a></li>
                 <li><a href="#">Switch account</a></li>
                 <li><a href="{% url 'auth_logout' %}">Logout</a></li>    
             </ul>

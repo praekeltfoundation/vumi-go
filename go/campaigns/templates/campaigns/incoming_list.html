@@ -58,8 +58,8 @@
                 <tbody>
                     {# TODO #}
                     {% for message in message_list %}
-                    <tr data-url="{{ message.get_absolute_url }}">
-                        <td><input type="checkbox" value="{{ conversation.key }}"></td>
+                    <tr data-url="{% url 'campaigns:incoming_detail' conversation.key 1 %}">
+                        <td><input type="checkbox" value="{{ message.key }}"></td>
                         <td>{{ message.contact }}</td>
                         <td>{{ message.threads }}</td>
                         <td>{{ message.messages }}</td>
