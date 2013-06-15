@@ -66,7 +66,7 @@
                             <th>Campaigns</th>
                             <th>Status</th>
                             <!-- TODO: We don't have a backend that provides a friendly name for this yet. -->
-                            <!-- <th>Channel</th> -->
+                            <th>Channel</th>
                             <th>Interactions</th>
                             <!-- TODO: We don't have a backend service yet for this value -->
                             <!-- <th>In Last</th> -->
@@ -78,11 +78,11 @@
                     <tbody>
                         {% if conversations %}
                             {% for conversation in page.object_list %}
-                            <tr data-url="{{ conversation.get_absolute_url }}">
+                            <tr data-url="{% url 'campaigns:details' conversation.key %}">
                                 <td><input type="checkbox" name="conversation_key" value="{{ conversation.key }}"></td>
                                 <td>{{ conversation.name }}</td>
                                 <td class="status {{ conversation.get_status }}">{{ conversation.get_status }}</td>
-                                <!-- <td></td> -->
+                                <td></td>
                                 <td>{{ conversation.count_replies|add:conversation.count_sent_messages }} </td>
                                 <!-- <td></td> -->
                                 <td>{{ conversation.created_at|naturaltime }}</td>

@@ -112,8 +112,8 @@
   });
 
   var RoutingStateCollection = StateViewCollection.extend({
-    opts: function() {
-      var opts = StateViewCollection.prototype.opts.call(this);
+    viewOptions: function() {
+      var opts = StateViewCollection.prototype.viewOptions.call(this);
       return _(opts).extend({columnEl: this.columnEl});
     },
 

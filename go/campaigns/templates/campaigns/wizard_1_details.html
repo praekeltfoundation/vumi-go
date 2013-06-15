@@ -1,121 +1,109 @@
 {% extends "campaigns/wizard_base.html" %}
 
-{% block content_title %}
-    New Campaign
-{% endblock %}
+{% block content_extraclass %}{{ block.super }} wizard-details{% endblock %}
 
+{% block content_title %}New Conversation{% endblock %}
 
 {% block content_main %}
-    <form id="frm-campaign" class="indent" method="post" action="">
-        {% csrf_token %}
-        <fieldset>
-            {% for field in form_general.visible_fields %}
-            <div class="control-group{% if field.errors %} error{% endif %}">
-                <label class="control-label" for="id_{{ field.name }}">
-                    {{ field.label }}
-                </label>
-                <div class="controls">
-                    {{ field }}
-                    <span class="help-inline">
-                        {% if field.errors %}
-                            {{ field.errors|join:" " }}
-                        {% endif %}
-                        {% if field.help_text %}
-                            ({{ field.help_text }})
-                        {% endif %}
-                    </span>
-                </div>
-            </div>
-            {% endfor %}
-        </fieldset>
+<form class="indent" method="post" action="">
+    {% csrf_token %}
 
+    {{ form_general }}
+    
+    <div class="configuration">
 
-        <label class="control-label">
+        <label>
             How would you like to reach and interact with users?
         </label>
 
-        <div class="configuration">
-            <div class="row-fluid title">
-                <div class="span3"></div>
-                <div class="span3">
-                    {{ form_config.countries.label }}
+        <fieldset class="configuration_new row-fluid boxes">
+            <div class="span4">
+                <div class="box">
+                    <label for="id_{{ form_config.countries.name }}">
+                        {{ form_config_new.countries.label }}
+                    </label>
+
+                    {{ form_config_new.countries }}
                 </div>
-                <div class="span3">
-                    {{ form_config.channels.label }}
-                    <a href="#" class="icon-info-sign"
-                        data-toggle="tooltip"
-                        data-original-title="
-                            Short code: a 4 or 5 digit number, from which
-                            SMS messages can be sent or received.
-                            Long code: a 10+ digit number, from which
-                            SMS messages can be sent or received.">
-                    </a>
+                <button class="btn btn-primary">Add country</button>
+            </div>
+
+            <div class="span4">
+                <div class="box">
+                    <label for="id_{{ form_config.keyword.name }}">
+                      {{ form_config_new.channels.label }}
+                    </label>
+                    {{ form_config_new.channels }}
                 </div>
-                <div class="span3">
-                    {{ form_config.keyword.label }}
-                    <a href="#" class="icon-info-sign"
-                        data-toggle="tooltip"
-                        data-original-title="When your number is being shared
-                        by several people, a keyword will ensure that you
-                        receive your users' messages. Eg: &quot;SMS 'drinks'
-                        to 27925551234 to enter the competition.&quot;">
-                    </a>
+                <button class="btn btn-primary">Add channel</button>
+            </div>
+            
+            <div class="span4">
+                <div class="box">
+                    <label for="id_{{ form_config.keyword.name }}">
+                      {{ form_config_new.keyword.label }}
+                    </label>
+                    {{ form_config_new.keyword }}
+                </div>
+            </div>
+        </fieldset>
+
+        {# TODO: This form needs to be built in Django land. #}
+        <fieldset class="configuration_existing row-fluid boxes">
+            <div class="span4">
+                <div class="box">
+                    <label for="id_channel">
+                        Select an existing channel
+                    </label>
+                    <select name="channel" id="id_channel">
+                        <option value=""></option>
+                        <option value="">Channel A</option>
+                        <option value="">Channel B</option>
+                    </select>
                 </div>
             </div>
 
-            <div class="row-fluid boxes">
-                <div class="span3">
-                    <div class="box">
-                        Your campaign
-                    </div>
+            <div class="span4">
+                <div class="box">
+                    <label for="id_keyword">
+                      Define a new keyword
+                    </label>
+                    <input type="text" name="keyword" id="id_keyword">
                 </div>
-
-                <div class="span3">
-
-                    <div class="box">
-                        <label for="id_{{ form_config.countries.name }}">
-                            {{ form_config.countries.label }}
-                        </label>
-
-                        {{ form_config.countries }}
-                    </div>
-
-                    <button class="btn btn-primary">Add country</button>
-                </div>
-
-                <div class="span3">
-                    <div class="box">
-                        {# these need to be populated by something? #}
-
-                        <label for="id_{{ form_config.keyword.name }}">
-                          {{ form_config.channels.label }}
-                        </label>
-
-                        {{ form_config.channels }}
-                    </div>
-
-                    <button class="btn btn-primary">Add channel</button>
-                </div>
-
-
-                
-                <div class="span3">
-                    <div class="box">
-                        <label for="id_{{ form_config.keyword.name }}">
-                          {{ form_config.keyword.label }}
-                        </label>
-                        {{ form_config.keyword }}
-                    </div>
-                </div>
-                
             </div>
-        </div>
-    </form>
+            
+            <div class="span4">
+                <div class="box">
+                    <label for="">
+                      Your existing keywords
+                    </label>
+
+                    Dan, Sam, Plan, Rodger, Pink, Rabble.
+                </div>
+            </div>
+        </fieldset>
+
+    </div>
+</form>
 {% endblock %}
 
 
 {% block ondomready %}
     {{ block.super }}
-    // activate the tooltips
-    $('.icon-info-sign').tooltip();
+    
+    // if a channel is already selected then we should show the
+    // configuration view for it.
+    $('input[name=channel]:checked').trigger('change')
+
+    $('input[name=channel]').on('change', function() {
+        // hide both
+        $('.configuration').show()
+        $('.configuration fieldset').hide();
+        var $el = $('.configuration_' + $(this).attr('value'));
+        $el.show();
+    });
+
+    // TODO: form validation.
+
+
 {% endblock %}
