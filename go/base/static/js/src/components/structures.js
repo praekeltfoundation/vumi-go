@@ -221,7 +221,6 @@
       if (!subtypes) { return type; }
 
       var typeName = model.get(this.typeAttr);
-      if (!typeName) { return type; }
 
       return !typeName
         ? type
