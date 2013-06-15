@@ -4,7 +4,8 @@
 
 (function(exports) {
   var utils = go.utils,
-      merge = utils.merge;
+      merge = utils.merge,
+      ensureObject = utils.ensureObject;
 
   // Acts as a 'base' for class-like objects which can be extended (with the
   // prototype chain set up automatically)
@@ -220,9 +221,11 @@
       if (!subtypes) { return type; }
 
       var typeName = model.get(this.typeAttr);
+      if (!typeName) { return type; }
+
       return !typeName
         ? type
-        : subtypes[typeName] || type;
+        : ensureObject(subtypes[typeName]) || type;
     },
 
     // Override to specialise how each view is created
