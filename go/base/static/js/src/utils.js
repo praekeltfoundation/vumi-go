@@ -28,9 +28,27 @@
       : function() { return obj; };
   };
 
+  // Returns an object given a 'dotted' name like `thing.subthing.Subthing`,
+  // and an optional context to look for the object in
+  var objectByName = function(name, that) {
+    return _(name.split( '.' )).reduce(
+      function(obj, propName) { return obj[propName]; },
+      that || window);
+  };
+
+  // If given a string, gets the object by name, otherwise just returns what
+  // it was given
+  var ensureObject = function(nameOrObj, that) {
+    return typeof nameOrObj === 'string'
+      ? objectByName(nameOrObj, that)
+      : nameOrObj;
+  };
+
   _.extend(exports, {
     merge: merge,
     functor: functor,
+    objectByName: objectByName,
+    ensureObject: ensureObject,
     highlightActiveLinks: highlightActiveLinks
   });
 })(go.utils = {});
