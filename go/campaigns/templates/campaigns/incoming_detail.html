@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content_actions_left %}
-    <button class="btn btn-primary" href="{% url 'campaigns:incoming_list' conversation.key %}">Back to messages</button>
+    <a class="btn btn-primary" href="{% url 'campaigns:incoming_list' conversation.key %}">Back to messages</a>
 {% endblock %}
 
 {% block content_actions_right %}
@@ -31,11 +31,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {# TODO fill in messages. #}
                         {% for message in message_list %}
                         <tr data-url="{{ message.get_absolute_url }}">
                             <td>{{ message.contact }}</td>
-                            <td>{{ message.messages }}</td>
+                            <td>{{ message.message }}</td>
                         </tr>
                         {% empty %}
                             <tr>

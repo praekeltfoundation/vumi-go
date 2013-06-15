@@ -20,12 +20,12 @@ var stateMachine = go.components.stateMachine,
     relations: [{
       type: Backbone.HasOne,
       key: 'source',
-      includeInJSON: 'uuid',
+      includeInJSON: ['uuid'],
       relatedModel: RoutingEndpointModel
     }, {
       type: Backbone.HasOne,
       key: 'target',
-      includeInJSON: 'uuid',
+      includeInJSON: ['uuid'],
       relatedModel: RoutingEndpointModel
     }]
   });
@@ -65,6 +65,11 @@ var stateMachine = go.components.stateMachine,
   });
 
   var CampaignRoutingModel = StateMachineModel.extend({
+    methods: {
+      read: ['routing_table', 'campaign_id'],
+      update: ['update_routing_table', 'campaign_id', 'self']
+    },
+
     idAttribute: 'campaign_id',
 
     relations: [{
