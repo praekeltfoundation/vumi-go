@@ -370,7 +370,7 @@ PIPELINE_JS = {
             'js/src/utils.js',
             'js/src/errors.js',
             'js/src/components/components.js',
-            'js/src/components/model.js',
+            'js/src/components/models.js',
             'js/src/components/views.js',
             'js/src/components/structures.js',
             'js/src/components/stateMachine.js',
