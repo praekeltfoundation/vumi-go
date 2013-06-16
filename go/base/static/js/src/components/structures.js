@@ -149,15 +149,16 @@
     }
   });
 
-  // Accepts a collection of models and maintains a corresponding collection of
-  // views. New views are created when models are added to the collection, old
-  // views are removed when models are removed from the collection. Views can
-  // also be looked up by the id of their corresponding models. Useful in
-  // situations where views are to be created dynamically (for eg, state views
-  // in a state machine diagram).
+  // Maintains a collection of views, allowing views to be created dynamically
+  // and interacted with collectively.
+  //
+  // Optionally accepts a collection of models, maintaining a corresponding
+  // collection of views. New views are created when models are added to the
+  // collection, old views are removed when models are removed from the
+  // collection.
   //
   // Options:
-  // - models: the collection of models to create views for
+  // - [models]: the collection of models to create views for
   // - [type]: The view type to instantiate for each new view.
   //
   // Events emitted:
@@ -188,18 +189,29 @@
     constructor: function(options) {
       Lookup.prototype.constructor.call(this);
 
-      this.models = this.ensureCollection(options.models);
-      this.models.on('add', function(m) { this.add(m); }, this);
-      this.models.on('remove', function(m) { this.remove(m); }, this);
-
+      options = options || {};
       this.type = options.type || this.type;
-      this.typeAttr = this.type.typeAttr || this.typeAttr;
+      this.typeAttr = this.type.prototype.typeAttr || this.typeAttr;
 
       this.initialize(options);
+      this.initModels(options);
+    },
 
-      this.models.each(
-        function(m) { this.add(m, {render: false, silent: true}); },
-        this);
+    initModels: function(options) {
+      if (!options.models) { return; }
+      this._byModelId = {};
+
+      this.models = this.ensureCollection(options.models);
+      this.models.on('add', function(m) { this.add({model: m}); }, this);
+      this.models.on('remove', function(m) { this.removeByModel(m); }, this);
+
+      this.models.each(function(m) {
+        this.add({
+          model: m,
+          render: false,
+          silent: true
+        });
+      }, this);
     },
 
     initialize: function() {},
@@ -213,13 +225,15 @@
         : modelOrCollection;
     },
 
-    typeFromModel: function(model) {
-      var type = this.type,
-          subtypes = type.prototype.subtypes;
+    determineType: function(options) {
+      var type = this.type;
 
+      if (!options.model) { return type; }
+
+      var subtypes = type.prototype.subtypes;
       if (!subtypes) { return type; }
 
-      var typeName = model.get(this.typeAttr);
+      var typeName = options.model.get(this.typeAttr);
       return !typeName
         ? type
         : subtypes[typeName] || type;
@@ -227,46 +241,70 @@
 
     // Override to specialise how each view is created
     create: function(options) {
-      _(options).defaults(_(this).result('viewOptions'));
-      var type = this.typeFromModel(options.model);
+      options = _(options || {}).defaults(_(this).result('viewOptions'));
+      var type = this.determineType(options);
       return new type(options);
     },
 
-    add: function(model, options) {
-      options = _(options || {}).defaults(this.addDefaults, {view: {}});
-
-      if (options.addModel) {
-        // We create a new model before adding to handle cases where id's are
-        // only assigned when the model is initialised (we need the model id
-        // below for using it as the key to lookup the corresponding view)
-        model = new this.models.model(model);
-        this.models.add(model, {silent: true});
-      }
-
-      options.view.model = model;
-      var view = this.create(options.view);
-      Lookup.prototype.add.call(this, model.id, view, options);
-
-      if (options.render) { view.render(); }
-
-      return view;
-    },
-
-    _id: function(modelOrId) {
+    _modelId: function(modelOrId) {
       return modelOrId.id
         ? modelOrId.id
         : modelOrId.cid || modelOrId;
     },
 
-    remove: function(modelOrId, options) {
-      var id = this._id(modelOrId);
+    _viewId: function(viewOrId) {
+      return viewOrId.id
+        ? _(viewOrId).result('id')
+        : viewOrId;
+    },
+
+    add: function(options) {
+      options = _(options || {}).defaults(this.addDefaults);
+
+      var model = options.model;
+      if (model && options.addModel) {
+        // We create a new model before adding to handle cases where id's are
+        // only assigned when the model is initialised (we need the model id
+        // below)
+        model = new this.models.model(options.model);
+        this.models.add(model, {silent: true});
+        options.model = model;
+      }
+
+      var view = this.create(options),
+          id = this._viewId(view) || _.uniqueId();
+
+      if (options.render) { view.render(); }
+
+      if (model) { this._byModelId[this._modelId(model)] = view; }
+      Lookup.prototype.add.call(this, id, view, options);
+      return view;
+    },
+
+    remove: function(viewOrId, options) {
       options = _(options || {}).defaults(this.removeDefaults);
 
-      if (options.removeModel) { this.models.remove(id); }
-      var view = Lookup.prototype.remove.call(this, id, options);
-      if (view && typeof view.destroy === 'function') { view.destroy(); }
+      var id = this._viewId(viewOrId),
+          view = this.get(id);
 
-      return view;
+      if (!view) { return; }
+      if (typeof view.destroy === 'function') { view.destroy(); }
+
+      var model = view.model;
+      if (model) {
+        delete this._byModelId[this._modelId(model)];
+        if (options.removeModel) { this.models.remove(model, {silent: true}); }
+      }
+
+      return Lookup.prototype.remove.call(this, id, options);
+    },
+
+    byModel: function(modelOrId) {
+      return this._byModelId[this._modelId(modelOrId)];
+    },
+
+    removeByModel: function(modelOrId, options) {
+      return this.remove(this.byModel(modelOrId));
     },
 
     render: function() {
