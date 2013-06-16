@@ -263,13 +263,11 @@
         if (options.addModel) { this.models.add(model, {silent: true}); }
       }
 
-      var view = this.create(options),
-          id = this._idOfView(view) || _.uniqueId();
-
+      var view = this.create(options);
       if (options.render) { view.render(); }
 
       if (model) { this._byModelId[this._idOfModel(model)] = view; }
-      Lookup.prototype.add.call(this, id, view, options);
+      Lookup.prototype.add.call(this, this._idOfView(view), view, options);
       return view;
     },
 
