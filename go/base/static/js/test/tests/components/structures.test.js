@@ -171,7 +171,7 @@ describe("go.components.structures", function() {
     beforeEach(function() {
       lookupA = new Lookup({a: 1, b: 2, c: 3});
       lookupB = new Lookup({d: 4, e: 5, f: 6});
-      group = new LookupGroup({'a': lookupA, 'b': lookupB});
+      group = new LookupGroup({a: lookupA, b: lookupB});
     });
 
     describe(".ownerOf", function() {
@@ -186,12 +186,12 @@ describe("go.components.structures", function() {
 
     describe(".add", function() {
       it("should add the key value pair", function() {
-        group.add(lookupA, 'g', 7);
+        group.add('a', 'g', 7);
         assert.equal(group.get('g'), 7);
       });
 
       it("should add the item to the owner lookup", function() {
-        group.add(lookupA, 'g', 7);
+        group.add('a', 'g', 7);
         assert.equal(group.ownerOf('g'), lookupA);
       });
     });

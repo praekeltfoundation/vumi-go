@@ -113,8 +113,8 @@
 
     ownerOf: function(key) { return this._owners[key]; },
 
-    add: function(owner, key, value, options) {
-      this._owners[key] = owner;
+    add: function(memberKey, key, value, options) {
+      this._owners[key] = this.members.get(memberKey);
       return Lookup.prototype.add.call(this, key, value, options);
     },
 
@@ -124,14 +124,13 @@
     },
 
     subscribe: function(key, lookup) {
-      var add = _(this.add).bind(this, lookup);
+      var add = _(this.add).bind(this, key);
       this._memberAdds[key] = add;
+      this.members.add(key, lookup);
 
       lookup.eachItem(add);
       lookup.on('add', add);
       lookup.on('remove', this.remove, this);
-
-      this.members.add(key, lookup);
       return this;
     },
 
