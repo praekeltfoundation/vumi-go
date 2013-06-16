@@ -84,6 +84,22 @@ describe("go.components.structures", function() {
       });
     });
 
+    describe(".where", function() {
+      beforeEach(function() {
+        lookup = new Lookup({
+          a: {x: 1, y: 2},
+          b: {x: 3, y: 2},
+          c: {x: 5, y: 6}
+        });
+      });
+
+      it("should return the items containing the given properties", function() {
+        assert.deepEqual(
+          lookup.where({y: 2}),
+          [lookup.get('a'), lookup.get('b')]);
+      });
+    });
+
     describe(".eachItem", function() {
       it("should iterate through each the lookup's items", function() {
         var items = {};
