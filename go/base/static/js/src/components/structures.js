@@ -191,7 +191,7 @@
       options = options || {};
 
       this._byModelId = {};
-      this.models = this.ensureCollection(options.models);
+      this.models = this._ensureCollection(options.models);
       this.models.on('add', function(m) { this.add({model: m}); }, this);
       this.models.on('remove', function(m) { this.removeByModel(m); }, this);
 
@@ -211,15 +211,28 @@
 
     initialize: function() {},
 
-    ensureCollection: function(modelOrCollection) {
-      if (!modelOrCollection) { return new Backbone.Collection(); }
+    _idOfModel: function(obj) {
+      return obj.id
+        ? obj.id
+        : obj.cid || obj;
+    },
 
-      // If we were given a single model instead of a collection, create a
-      // singleton collection with the model so we can work with things
-      // uniformly
-      return modelOrCollection instanceof Backbone.Model
-        ? new Backbone.Collection([modelOrCollection])
-        : modelOrCollection;
+    _idOfView: function(obj) {
+      return obj.id
+        ? _(obj).result('id')
+        : obj;
+    },
+
+    _ensureModel: function(obj) {
+      return obj instanceof Backbone.Model
+        ? obj
+        : new this.models.model(obj || {});
+    },
+
+    _ensureCollection: function(obj) {
+      if (obj instanceof Backbone.Collection) { return obj; }
+      if (obj instanceof Backbone.Model) { obj = [obj]; }
+      return new Backbone.Collection(obj instanceof Array ? obj : []);
     },
 
     determineType: function(options) {
@@ -241,37 +254,21 @@
       return new type(options);
     },
 
-    _modelId: function(modelOrId) {
-      return modelOrId.id
-        ? modelOrId.id
-        : modelOrId.cid || modelOrId;
-    },
-
-    _viewId: function(viewOrId) {
-      return viewOrId.id
-        ? _(viewOrId).result('id')
-        : viewOrId;
-    },
-
     add: function(options) {
       options = _(options || {}).defaults(this.addDefaults);
 
       var model = options.model;
-      if (model && options.addModel) {
-        // We create a new model before adding to handle cases where id's are
-        // only assigned when the model is initialised (we need the model id
-        // below)
-        model = new this.models.model(options.model);
-        this.models.add(model, {silent: true});
-        options.model = model;
+      if (model) {
+        options.model = model = this._ensureModel(model);
+        if (options.addModel) { this.models.add(model, {silent: true}); }
       }
 
       var view = this.create(options),
-          id = this._viewId(view) || _.uniqueId();
+          id = this._idOfView(view) || _.uniqueId();
 
       if (options.render) { view.render(); }
 
-      if (model) { this._byModelId[this._modelId(model)] = view; }
+      if (model) { this._byModelId[this._idOfModel(model)] = view; }
       Lookup.prototype.add.call(this, id, view, options);
       return view;
     },
@@ -279,7 +276,7 @@
     remove: function(viewOrId, options) {
       options = _(options || {}).defaults(this.removeDefaults);
 
-      var id = this._viewId(viewOrId),
+      var id = this._idOfView(viewOrId),
           view = this.get(id);
 
       if (!view) { return; }
@@ -287,7 +284,7 @@
 
       var model = view.model;
       if (model) {
-        delete this._byModelId[this._modelId(model)];
+        delete this._byModelId[this._idOfModel(model)];
         if (options.removeModel) { this.models.remove(model, {silent: true}); }
       }
 
@@ -295,7 +292,7 @@
     },
 
     byModel: function(modelOrId) {
-      return this._byModelId[this._modelId(modelOrId)];
+      return this._byModelId[this._idOfModel(modelOrId)];
     },
 
     removeByModel: function(modelOrId, options) {

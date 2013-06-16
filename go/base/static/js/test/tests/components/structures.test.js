@@ -334,14 +334,6 @@ describe("go.components.structures", function() {
       initialize: function() { this.i = 0; }
     });
 
-    var assertAdded = function(id) {
-      assert.equal(views.get(id).model, models.get(id));
-    };
-
-    var assertRemoved = function(id) {
-      assert(!views.has(id));
-    };
-
     var models,
         views;
 
@@ -352,8 +344,8 @@ describe("go.components.structures", function() {
 
     describe("on 'add' model collection events", function() {
       it("should add a view corresponding to the model", function(done) {
-        models.on('add', function() {
-          assertAdded('d');
+        models.on('add', function(m) {
+          assert.equal(views.get('d').model, models.get('d'));
           done();
         });
 
@@ -364,7 +356,7 @@ describe("go.components.structures", function() {
     describe("on 'remove' collection events", function() {
       it("should remove the corresponding view", function(done) {
         models.on('remove', function() {
-          assertRemoved('c');
+          assert(!views.has('c'));
           done();
         });
 
@@ -429,12 +421,12 @@ describe("go.components.structures", function() {
     describe(".remove", function() {
       it("should remove a view by it's id", function() {
         views.remove('c');
-        assertRemoved('c');
+        assert(!views.has('c'));
       });
 
       it("should remove the given view", function() {
         views.remove(views.get('c'));
-        assertRemoved('c');
+        assert(!views.has('c'));
       });
 
       it("should emit a 'remove' event", function(done) {
