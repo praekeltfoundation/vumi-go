@@ -188,22 +188,17 @@
 
     constructor: function(options) {
       Lookup.prototype.constructor.call(this);
-
       options = options || {};
+
+      this._byModelId = {};
+      this.models = this.ensureCollection(options.models);
+      this.models.on('add', function(m) { this.add({model: m}); }, this);
+      this.models.on('remove', function(m) { this.removeByModel(m); }, this);
+
       this.type = options.type || this.type;
       this.typeAttr = this.type.prototype.typeAttr || this.typeAttr;
 
       this.initialize(options);
-      this.initModels(options);
-    },
-
-    initModels: function(options) {
-      if (!options.models) { return; }
-      this._byModelId = {};
-
-      this.models = this.ensureCollection(options.models);
-      this.models.on('add', function(m) { this.add({model: m}); }, this);
-      this.models.on('remove', function(m) { this.removeByModel(m); }, this);
 
       this.models.each(function(m) {
         this.add({
@@ -217,6 +212,8 @@
     initialize: function() {},
 
     ensureCollection: function(modelOrCollection) {
+      if (!modelOrCollection) { return new Backbone.Collection(); }
+
       // If we were given a single model instead of a collection, create a
       // singleton collection with the model so we can work with things
       // uniformly
