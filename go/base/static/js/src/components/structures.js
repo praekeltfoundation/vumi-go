@@ -223,12 +223,10 @@
     },
 
     determineType: function(options) {
-      var type = this.type;
+      var type = this.type,
+          subtypes = type.prototype.subtypes;
 
-      if (!options.model) { return type; }
-
-      var subtypes = type.prototype.subtypes;
-      if (!subtypes) { return type; }
+      if (!options.model || !subtypes) { return type; }
 
       var typeName = options.model.get(this.typeAttr);
       return !typeName
