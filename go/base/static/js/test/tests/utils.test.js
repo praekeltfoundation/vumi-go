@@ -1,4 +1,8 @@
 describe("go.utils", function() {
+  var testHelpers = go.testHelpers,
+      oneElExists = testHelpers.oneElExists,
+      noElExists = testHelpers.noElExists;
+
   describe(".merge", function() {
     var merge = go.utils.merge;
 
@@ -56,6 +60,41 @@ describe("go.utils", function() {
 
     it("should return what it was given if it was a non-string", function() {
       assert.equal(ensureObject(23), 23);
+    });
+  });
+
+  describe(".switchViews", function() {
+    var switchViews = go.utils.switchViews;
+
+    var ToyView = Backbone.View.extend({
+    });
+
+    var $dummy = $("<div id='dummy'></div>");
+
+    beforeEach(function() {
+      $('body').append($dummy);
+    });
+
+    afterEach(function() {
+      $('#dummy').remove();
+    });
+
+    it("should replace the `from` element with the `to` element in the DOM",
+    function() {
+      var from = new ToyView({id: 'from'}),
+          to = new ToyView({id: 'to'});
+
+      from.render();
+      to.render();
+      $dummy.append(from.$el);
+
+      assert(oneElExists('#dummy #from'));
+      assert(noElExists('#dummy #to'));
+
+      switchViews(from, to);
+
+      assert(oneElExists('#dummy #to'));
+      assert(noElExists('#dummy #from'));
     });
   });
 });
