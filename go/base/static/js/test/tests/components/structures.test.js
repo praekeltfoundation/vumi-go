@@ -375,10 +375,12 @@ describe("go.components.structures", function() {
     });
 
     it("should be useable without models", function() {
-      views = new ViewCollection();
-      views.add({id: 'a'});
-      views.add({id: 'b'});
-      views.add({id: 'c'});
+      views = new ViewCollection({
+        views: [
+          {id: 'a'},
+          {id: 'b'},
+          {id: 'c'}]
+      });
 
       assert.deepEqual(views.keys(), ['a', 'b', 'c']);
     });
