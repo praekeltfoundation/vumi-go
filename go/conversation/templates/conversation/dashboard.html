@@ -10,7 +10,7 @@
 
 
 {% block content_actions_left %}
-    <a href="{% url 'campaigns:details' %}" class="btn btn-primary">New Campaign</a>
+    <a href="{% url 'conversations_tmp:details' %}" class="btn btn-primary">New conversation</a>
 {% endblock %}
 
 {% block content_actions_right %}
@@ -78,7 +78,7 @@
                     <tbody>
                         {% if conversations %}
                             {% for conversation in page.object_list %}
-                            <tr data-url="{% url 'campaigns:details' conversation.key %}">
+                            <tr data-url="{% url 'conversations_tmp:details' conversation.key %}">
                                 <td><input type="checkbox" name="conversation_key" value="{{ conversation.key }}"></td>
                                 <td>{{ conversation.name }}</td>
                                 <td class="status {{ conversation.get_status }}">{{ conversation.get_status }}</td>
@@ -87,7 +87,7 @@
                                 <!-- <td></td> -->
                                 <td>{{ conversation.created_at|naturaltime }}</td>
                                 <td>
-                                    <a href="{% url 'campaigns:incoming_list' conversation.key %}">Messages</a>
+                                    <a href="{% url 'conversations_tmp:incoming_list' conversation.key %}">Messages</a>
                                     <a href="{% url 'todo' %}">Reports</a>
                                 </td>
                             </tr>
