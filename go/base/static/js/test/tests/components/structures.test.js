@@ -174,6 +174,46 @@ describe("go.components.structures", function() {
       group = new LookupGroup({a: lookupA, b: lookupB});
     });
 
+    describe("on member 'add' events", function() {
+      it("should add the key value pair", function(done) {
+        lookupA.on('add', function() {
+          assert.equal(group.get('g'), 7);
+          done();
+        });
+
+        lookupA.add('g', 7);
+      });
+
+      it("should add the item to the owner lookup", function(done) {
+        lookupA.on('add', function() {
+          assert.equal(group.ownerOf('g'), lookupA);
+          done();
+        });
+
+        lookupA.add('g', 7);
+      });
+    });
+
+    describe("on member 'remove' events", function() {
+      it("should remove the key value pair", function(done) {
+        lookupA.on('remove', function() {
+          assert(!group.has('b'));
+          done();
+        });
+
+        lookupA.remove('b');
+      });
+
+      it("should remove the item from the owner lookup", function(done) {
+        lookupA.on('remove', function() {
+          assert.isUndefined(group.ownerOf('b'));
+          done();
+        });
+
+        lookupA.remove('b');
+      });
+    });
+
     describe(".ownerOf", function() {
       it("should retrieve the member that owns an item", function() {
         assert.equal(group.ownerOf('c'), lookupA);
@@ -185,26 +225,28 @@ describe("go.components.structures", function() {
     });
 
     describe(".add", function() {
-      it("should add the key value pair", function() {
-        group.add('a', 'g', 7);
-        assert.equal(group.get('g'), 7);
-      });
+      it("should delegate the add operation to the relevant member",
+      function(done) {
+        lookupA.on('add', function(k, v) {
+          assert.equal(k, 'g');
+          assert.equal(v, 7);
+          done();
+        });
 
-      it("should add the item to the owner lookup", function() {
         group.add('a', 'g', 7);
-        assert.equal(group.ownerOf('g'), lookupA);
       });
     });
 
     describe(".remove", function() {
-      it("should remove the key value pair", function() {
-        assert.equal(group.remove('b'), 2);
-        assert.isFalse(group.has('b'));
-      });
+      it("should delegate the remove operation to the relevant member",
+      function(done) {
+        lookupA.on('remove', function(k, v) {
+          assert.equal(k, 'b');
+          assert.equal(v, 2);
+          done();
+        });
 
-      it("should remove the item from the owner lookup", function() {
         group.remove('b');
-        assert.isUndefined(group.ownerOf('b'));
       });
     });
 

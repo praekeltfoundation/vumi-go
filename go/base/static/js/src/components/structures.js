@@ -113,24 +113,34 @@
 
     ownerOf: function(key) { return this._owners[key]; },
 
-    add: function(memberKey, key, value, options) {
-      this._owners[key] = this.members.get(memberKey);
+    onMemberAdd: function(member, key, value, options) {
+      this._owners[key] = member;
       return Lookup.prototype.add.call(this, key, value, options);
     },
 
-    remove: function(key, options) {
+    onMemberRemove: function(key, options) {
       delete this._owners[key];
       return Lookup.prototype.remove.call(this, key, options);
     },
 
+    add: function(memberKey, key, value, options) {
+      var member = this.members.get(memberKey);
+      return member.add(key, value, options);
+    },
+
+    remove: function(key, options) {
+      var member = this.ownerOf(key);
+      return member.remove(key, options);
+    },
+
     subscribe: function(key, lookup) {
-      var add = _(this.add).bind(this, key);
+      var add = _(this.onMemberAdd).bind(this, lookup);
       this._memberAdds[key] = add;
       this.members.add(key, lookup);
 
       lookup.eachItem(add);
       lookup.on('add', add);
-      lookup.on('remove', this.remove, this);
+      lookup.on('remove', this.onMemberRemove, this);
       return this;
     },
 
@@ -140,13 +150,25 @@
 
       delete this._memberAdds[key];
       lookup.off('add', add);
-      lookup.off('remove', this.remove, this);
+      lookup.off('remove', this.onMemberRemove, this);
 
-      lookup.keys().forEach(this.remove, this);
+      lookup.keys().forEach(this.onMemberRemove, this);
       this.members.remove(key);
       return lookup;
     }
   });
+
+  var idOfModel = function(obj) {
+    return obj.id
+      ? obj.id
+      : obj.cid || obj;
+  };
+
+  var idOfView = function(obj) {
+    return obj.id
+      ? _(obj).result('id')
+      : obj;
+  };
 
   // Maintains a collection of views, allowing views to be created dynamically
   // and interacted with collectively.
@@ -210,18 +232,6 @@
 
     initialize: function() {},
 
-    _idOfModel: function(obj) {
-      return obj.id
-        ? obj.id
-        : obj.cid || obj;
-    },
-
-    _idOfView: function(obj) {
-      return obj.id
-        ? _(obj).result('id')
-        : obj;
-    },
-
     _ensureModel: function(obj) {
       return obj instanceof Backbone.Model
         ? obj
@@ -265,15 +275,15 @@
       var view = this.create(options);
       if (options.render) { view.render(); }
 
-      if (model) { this._byModelId[this._idOfModel(model)] = view; }
-      Lookup.prototype.add.call(this, this._idOfView(view), view, options);
+      if (model) { this._byModelId[idOfModel(model)] = view; }
+      Lookup.prototype.add.call(this, idOfView(view), view, options);
       return view;
     },
 
     remove: function(viewOrId, options) {
       options = _(options || {}).defaults(this.removeDefaults);
 
-      var id = this._idOfView(viewOrId),
+      var id = idOfView(viewOrId),
           view = this.get(id);
 
       if (!view) { return; }
@@ -281,7 +291,7 @@
 
       var model = view.model;
       if (model) {
-        delete this._byModelId[this._idOfModel(model)];
+        delete this._byModelId[idOfModel(model)];
         if (options.removeModel) { this.models.remove(model, {silent: true}); }
       }
 
@@ -289,7 +299,7 @@
     },
 
     byModel: function(modelOrId) {
-      return this._byModelId[this._idOfModel(modelOrId)];
+      return this._byModelId[idOfModel(modelOrId)];
     },
 
     removeByModel: function(modelOrId, options) {
