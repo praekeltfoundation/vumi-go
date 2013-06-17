@@ -8,7 +8,7 @@ from django.contrib.sites.models import Site
 from go.vumitools.tests.utils import VumiApiCommand
 from go.vumitools.token_manager import TokenManager
 from go.conversation.conversation_views import ConversationViewFinder
-from go.base.utils import get_conversation_definition
+from go.base.utils import get_conversation_view_definition
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
 
@@ -27,8 +27,9 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
     def get_view_url(self, view, conv_key=None):
         if conv_key is None:
             conv_key = self.conv_key
-        conv_def = get_conversation_definition(self.TEST_CONVERSATION_TYPE)
-        finder = ConversationViewFinder(conv_def(None))
+        view_def = get_conversation_view_definition(
+            self.TEST_CONVERSATION_TYPE)
+        finder = ConversationViewFinder(view_def)
         return finder.get_view_url(view, conversation_key=conv_key)
 
     def get_new_view_url(self):
@@ -308,10 +309,13 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         self.redis = self.get_redis_manager()
         self.tm = TokenManager(self.redis.sub_manager('token_manager'))
 
-    def get_view_url(self, view):
-        conv_def = get_conversation_definition(self.TEST_CONVERSATION_TYPE)
-        finder = ConversationViewFinder(conv_def(None))
-        return finder.get_view_url(view, conversation_key=self.conv_key)
+    def get_view_url(self, view, conv_key=None):
+        if conv_key is None:
+            conv_key = self.conv_key
+        view_def = get_conversation_view_definition(
+            self.TEST_CONVERSATION_TYPE)
+        finder = ConversationViewFinder(view_def)
+        return finder.get_view_url(view, conversation_key=conv_key)
 
     def test_confirm_start_conversation_get(self):
         """
@@ -476,10 +480,13 @@ class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
         self.client = Client()
         self.client.login(username='username', password='password')
 
-    def get_view_url(self, view):
-        conv_def = get_conversation_definition(self.TEST_CONVERSATION_TYPE)
-        finder = ConversationViewFinder(conv_def(None))
-        return finder.get_view_url(view, conversation_key=self.conv_key)
+    def get_view_url(self, view, conv_key=None):
+        if conv_key is None:
+            conv_key = self.conv_key
+        view_def = get_conversation_view_definition(
+            self.TEST_CONVERSATION_TYPE)
+        finder = ConversationViewFinder(view_def)
+        return finder.get_view_url(view, conversation_key=conv_key)
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
