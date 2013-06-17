@@ -48,7 +48,9 @@
                                 <input type="checkbox" name="user" value="{{ user.id }}">
                             </td>
                             <td>
-                                {{ user.email }}
+                                <a href="{% url 'account:user_list' user.pk %}">
+                                    {{ user.email }}
+                                </a>
                             </td>
                             <td>
                                 {{ user.get_full_name }}
