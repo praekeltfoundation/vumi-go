@@ -233,7 +233,7 @@ describe("go.components.structures", function() {
           done();
         });
 
-        group.add('a', 'g', 7);
+        assert.equal(group.add('a', 'g', 7), group);
       });
     });
 
@@ -246,7 +246,7 @@ describe("go.components.structures", function() {
           done();
         });
 
-        group.remove('b');
+        assert.equal(group.remove('b'), 2);
       });
     });
 

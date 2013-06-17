@@ -125,7 +125,8 @@
 
     add: function(memberKey, key, value, options) {
       var member = this.members.get(memberKey);
-      return member.add(key, value, options);
+      member.add(key, value, options);
+      return this;
     },
 
     remove: function(key, options) {
