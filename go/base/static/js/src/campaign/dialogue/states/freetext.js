@@ -18,7 +18,11 @@
 
   var FreeTextStateView = DialogueStateView.extend({
     editorType: FreeTextStateEditView,
-    previewerType: FreeTextStatePreviewView
+    previewerType: FreeTextStatePreviewView,
+
+    endpointSchema: [
+      {attr: 'entry_endpoint'},
+      {attr: 'exit_endpoint'}]
   });
 
   _(exports).extend({

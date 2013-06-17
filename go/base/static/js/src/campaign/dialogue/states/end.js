@@ -19,7 +19,11 @@
 
   var EndStateView = DialogueStateView.extend({
     editorType: EndStateEditView,
-    previewerType: EndStatePreviewView
+    previewerType: EndStatePreviewView,
+
+    endpointSchema: [
+      {attr: 'entry_endpoint'},
+      {attr: 'choice_endpoints'}]
   });
 
   _(exports).extend({
