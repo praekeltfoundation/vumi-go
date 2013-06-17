@@ -156,9 +156,10 @@ INSTALLED_APPS = (
     'djcelery_email',
     'go.base',
     'go.conversation',
+    'go.conversation_tmp',
     'go.contacts',
     'go.account',
-    'go.campaigns',
+
 
     'vxpolls.djdashboard',
     'registration',
