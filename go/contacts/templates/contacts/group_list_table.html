@@ -15,7 +15,9 @@
                 <input type="checkbox" name="group" value="{{ group.key }}">
             </td>
             <td>
-                {{ group.name }}
+                <a href="{% url 'contacts:group' group_key=group.key %}">
+                    {{ group.name }}
+                </a>
             </td>
             <td>
                 {# TODO; length is bad #}

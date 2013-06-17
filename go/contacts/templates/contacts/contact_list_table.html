@@ -18,7 +18,10 @@
                 <input type="checkbox" name="contact" value="{{ contact.key }}">
             </td>
             <td>
-                {{ contact.msisdn }}
+                <a href="{% url 'contacts:person' contact.key %}">
+                    {# NOTE: Is a MSISDN always available on a contact? #}
+                    {{ contact.msisdn }}
+                </a>
             </td>
             <td>
                 {{ contact.name }}
