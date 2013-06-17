@@ -14,6 +14,7 @@
       mocha.ui('bdd');
       mocha.reporter('html');
       window.assert = chai.assert;
+      window.JST = {};
     </script>
 
     <script src="../vendor/jquery-1.9.1.js"></script>
@@ -54,6 +55,7 @@
     <script src="../src/campaign/dialogue/views.js"></script>
 
     <script src="tests/testHelpers/testHelpers.js"></script>
+    <script src="tests/testHelpers/testHelpers.test.js"></script>
     <script src="tests/testHelpers/rpc.js"></script>
     <script src="tests/errors.test.js"></script>
     <script src="tests/utils.test.js"></script>
