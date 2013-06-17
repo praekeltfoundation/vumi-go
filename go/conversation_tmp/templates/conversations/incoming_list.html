@@ -36,7 +36,7 @@
 
             <ul class="nav nav-list">
                 <li>
-                    <a href="{% url 'campaigns:incoming_list' conversation.key %}" class="active">All messages</a>
+                    <a href="{% url 'conversations_tmp:incoming_list' conversation.key %}" class="active">All messages</a>
                 </li>
             </ul>
 
@@ -58,7 +58,7 @@
                 <tbody>
                     {# TODO #}
                     {% for message in message_list %}
-                    <tr data-url="{% url 'campaigns:incoming_detail' conversation.key 1 %}">
+                    <tr data-url="{% url 'conversations_tmp:incoming_detail' conversation.key 1 %}">
                         <td><input type="checkbox" value="{{ message.key }}"></td>
                         <td>{{ message.contact }}</td>
                         <td>{{ message.threads }}</td>

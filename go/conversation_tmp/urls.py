@@ -1,5 +1,5 @@
 from django.conf.urls.defaults import patterns, url
-from go.campaigns import views
+from go.conversation_tmp import views
 
 urlpatterns = patterns(
     '',
