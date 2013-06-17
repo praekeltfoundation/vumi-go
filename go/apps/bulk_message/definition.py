@@ -1,23 +1,10 @@
-from bootstrap.forms import BootstrapForm
-from django import forms
-
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
-
-# NOTE: All of this stuff is assumed to be sync, so we don't yield.
-
-
-class MessageForm(BootstrapForm):
-    message = forms.CharField()
-    dedupe = forms.BooleanField(required=False)
 
 
 class BulkSendAction(ConversationAction):
     action_name = 'bulk_send'
     action_display_name = 'Send Bulk Message'
-
-    def get_action_form(self):
-        return MessageForm
 
     def perform_action(self, action_data):
         return self.send_command(
