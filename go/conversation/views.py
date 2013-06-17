@@ -5,7 +5,7 @@ from django.shortcuts import render
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from go.conversation.forms import ConversationSearchForm
-from go.base.utils import get_conversation_definition, conversation_or_404
+from go.base.utils import get_conversation_view_definition, conversation_or_404
 from go.conversation.conversation_views import ConversationViewFinder
 
 
@@ -74,8 +74,9 @@ def index(request):
 @login_required
 def conversation(request, conversation_key, path_suffix):
     conv = conversation_or_404(request.user_api, conversation_key)
-    conv_def = get_conversation_definition(conv.conversation_type)
-    finder = ConversationViewFinder(conv_def(conv))
+    view_def = get_conversation_view_definition(
+        conv.conversation_type, conv)
+    finder = ConversationViewFinder(view_def)
     view = finder.get_view(path_suffix)
     return view(request, conv)
 
@@ -83,15 +84,16 @@ def conversation(request, conversation_key, path_suffix):
 @login_required
 def conversation_action(request, conversation_key, action_name):
     conv = conversation_or_404(request.user_api, conversation_key)
-    conv_def = get_conversation_definition(conv.conversation_type)
-    finder = ConversationViewFinder(conv_def(conv))
+    view_def = get_conversation_view_definition(
+        conv.conversation_type, conv)
+    finder = ConversationViewFinder(view_def)
     view = finder.get_action_view(action_name)
     return view(request, conv)
 
 
 @login_required
 def new_conversation(request, conversation_type):
-    conv_def = get_conversation_definition(conversation_type)
-    finder = ConversationViewFinder(conv_def(None))
+    view_def = get_conversation_view_definition(conversation_type)
+    finder = ConversationViewFinder(view_def)
     view = finder.get_new_conversation_view()
     return view(request, conversation_type)
