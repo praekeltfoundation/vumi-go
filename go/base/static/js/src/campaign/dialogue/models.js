@@ -22,6 +22,11 @@
       choice: 'ChoiceStateModel',
       freetext: 'FreeTextStateModel',
       end: 'EndStateModel'
+    },
+
+    initialize: function() {
+      // TODO replace _.uniqueId() with a more universally unique id generator
+      if (!this.has('uuid')) { this.set('uuid', _.uniqueId()); }
     }
   });
 
@@ -72,11 +77,11 @@
   });
 
   var DialogueModel = Backbone.RelationalModel.extend({
-    idAttribute: 'uuid',
+    idAttribute: 'conversation',
     relations: [{
       type: Backbone.HasMany,
       key: 'states',
-      relatedModel: 'go.components.stateMachine.StateModel'
+      relatedModel: DialogueStateModel
     }, {
       type: Backbone.HasOne,
       key: 'start_state',
