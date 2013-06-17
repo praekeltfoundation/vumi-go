@@ -56,11 +56,15 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {# TODO #}
+                    {# TODO the message key here is fake. #}
                     {% for message in message_list %}
                     <tr data-url="{% url 'conversations_tmp:incoming_detail' conversation.key 1 %}">
                         <td><input type="checkbox" value="{{ message.key }}"></td>
-                        <td>{{ message.contact }}</td>
+                        <td>
+                            <a href="{% url 'conversations_tmp:incoming_detail' conversation.key 1 %}">
+                                {{ message.contact }}
+                            </a>
+                        </td>
                         <td>{{ message.threads }}</td>
                         <td>{{ message.messages }}</td>
                         <td>{{ message.date }}</td>

@@ -80,7 +80,11 @@
                             {% for conversation in page.object_list %}
                             <tr data-url="{% url 'conversations_tmp:details' conversation.key %}">
                                 <td><input type="checkbox" name="conversation_key" value="{{ conversation.key }}"></td>
-                                <td>{{ conversation.name }}</td>
+                                <td>
+                                    <a href="{% url 'conversations_tmp:details' conversation.key %}">
+                                        {{ conversation.name }}
+                                    </a>
+                                </td>
                                 <td class="status {{ conversation.get_status }}">{{ conversation.get_status }}</td>
                                 <td></td>
                                 <td>{{ conversation.count_replies|add:conversation.count_sent_messages }} </td>
