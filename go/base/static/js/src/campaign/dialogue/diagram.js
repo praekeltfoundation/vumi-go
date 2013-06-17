@@ -38,4 +38,4 @@
   _(exports).extend({
     DialogueDiagramView: DialogueDiagramView
   });
-})(go.campaign.dialogue.views = {});
+})(go.campaign.dialogue.diagram = {});

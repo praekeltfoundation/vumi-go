@@ -18,14 +18,17 @@
   // new state model).
   var DialogueStateShellView = Backbone.View.extend({
     type: 'choice',
+    resetDefaults: {render: true},
 
-    intialize: function(options) {
+    initialize: function(options) {
       this.diagram = options.diagram;
-      this.reset(options.type || this.type);
+      this.reset(options.type || this.type, {render: false});
     },
 
     // Reset the view and set it to a new state type
-    reset: function(type) {
+    reset: function(type, options) {
+      options = _(options || {}).defaults(this.resetDefaults);
+
       // TODO ui warnings about the descruction involved
       this.type = type;
 
@@ -34,27 +37,24 @@
       }
 
       this.state = this.diagram.states.add(
+        'states',
         {shell: this, model: {type: type}},
-        {addModel: true});
+        {addModel: true, render: options.render});
+
+      return this;
     },
 
     render: function() { this.state.render(); }
-  });
-
-  var DialogueStateShellCollection = ViewCollection.extend({
-    type: DialogueStateShellView,
-    viewOptions: function() { return {diagram: this.diagram}; },
-    initialize: function(options) { this.diagram = options.diagram; }
   });
 
   // Base 'mode' for state views. Each mode acts as a 'delegate view',
   // targeting a dialogue view's element and acting according to the mode type
   // (for eg, `edit`) and state type (for eg, `freetext`).
   var DialogueStateModeView = Backbone.View.extend({
-    template: null,
+    template: _.template(''),
 
     // The data passed to the template
-    templateData: function() { return {model: this.model.toJSON()}; },
+    templateData: function() { return {model: this.state.model.toJSON()}; },
 
     initialize: function(options) {
       this.state = options.state;
@@ -68,19 +68,25 @@
     }
   });
 
-  // Mode for a 'read-only' preview of the dialogue state. Acts as a base for
-  // each state type's `preview` mode
-  var DialogueStatePreviewView = DialogueStateModeView.extend();
+  var DialogueStateShellCollection = ViewCollection.extend({
+    type: DialogueStateShellView,
+    viewOptions: function() { return {diagram: this.diagram}; },
+    initialize: function(options) { this.diagram = options.diagram; }
+  });
 
   // Mode allowing the user to make changes to the dialogue state. Acts as a
   // base for each state type's `edit` mode
   var DialogueStateEditView = DialogueStateModeView.extend();
 
+  // Mode for a 'read-only' preview of the dialogue state. Acts as a base for
+  // each state type's `preview` mode
+  var DialogueStatePreviewView = DialogueStateModeView.extend();
+
   // Base view for dialogue states. Dynamically switches between modes
   // (`edit`, `preview`).
   var DialogueStateView = StateView.extend({
-    editorType: null,
-    previewerType: null,
+    editorType: DialogueStateEditView,
+    previewerType: DialogueStatePreviewView,
 
     subtypes: {
       choice: 'go.campaign.dialogue.states.choice.ChoiceStateView',
@@ -88,7 +94,10 @@
       end: 'go.campaign.dialogue.states.end.EndStateView'
     },
 
+    id: function() { return this.model.id; },
+
     initialize: function(options) {
+      StateView.prototype.initialize.call(this, options);
       this.shell = options.shell;
 
       this.previewer = new this.editorType({state: this});
