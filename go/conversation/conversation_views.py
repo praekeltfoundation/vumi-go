@@ -30,8 +30,9 @@ class ConversationView(TemplateView):
     template_base = 'conversation_views'
     csrf_exempt = False
 
-    # Theis is set in the constructor, but the attribute must exist already.
+    # These are set in the constructor, but the attribute must exist already.
     conversation_views = None
+    conv_def = None
 
     def get_template_names(self):
         return [self.get_template_name(self.view_name)]
@@ -92,7 +93,7 @@ class NewConversationView(ConversationView):
         conversation = request.user_api.new_conversation(
             conversation_type, **conversation_data)
         messages.add_message(request, messages.INFO, '%s Created' % (
-            self.conversation_views.conversation_display_name,))
+            self.conv_def.conversation_display_name,))
 
         next_view = self.get_next_view(conversation)
         if self.conversation_views.edit_conversation_forms is not None:
@@ -179,7 +180,7 @@ class StartConversationView(ConversationView):
             messages.add_message(request, messages.ERROR, str(error))
             return self.redirect_to('start', conversation_key=conversation.key)
         messages.add_message(request, messages.INFO, '%s started' % (
-            self.conversation_views.conversation_display_name,))
+            self.conv_def.conversation_display_name,))
         return self.redirect_to('show', conversation_key=conversation.key)
 
     def _start_via_confirmation(self, request, account, conversation):
@@ -251,7 +252,7 @@ class ConfirmConversationView(ConversationView):
                 if token_manager.delete(user_token):
                     conversation.start(batch_id=batch_id, **params)
                     messages.info(request, '%s started succesfully!' % (
-                        self.conversation_views.conversation_display_name,))
+                        self.conv_def.conversation_display_name,))
                     success = True
                 else:
                     messages.warning("Conversation already confirmed!")
@@ -277,7 +278,7 @@ class ShowConversationView(ConversationView):
             'is_editable': (
                 self.conversation_views.edit_conversation_forms is not None),
             'user_api': request.user_api,
-            'actions': self.conversation_views.actions,
+            'actions': self.conv_def.get_actions(),
         }
         templ = lambda name: self.get_template_name('includes/%s' % (name,))
 
@@ -428,7 +429,7 @@ class EndConversationView(ConversationView):
         conversation.end_conversation()
         messages.add_message(
             request, messages.INFO, '%s ended' % (
-                self.conversation_views.conversation_display_name,))
+                self.conv_def.conversation_display_name,))
         return self.redirect_to('show', conversation_key=conversation.key)
 
 
@@ -497,15 +498,17 @@ class ConversationActionView(ConversationView):
         })
 
     def get(self, request, conversation):
-        form = self.action.get_action_form()
-        if form is None:
+        form_cls = self.action.get_action_form(
+            self.conversation_views.view_def)
+        if form_cls is None:
             # We have no form, so assume we're just redirecting elsewhere.
             return self.action_done(conversation)
-        return self._render_form(request, conversation, form)
+        return self._render_form(request, conversation, form_cls)
 
     def post(self, request, conversation):
         action_data = {}
-        form_cls = self.action.get_action_form()
+        form_cls = self.action.get_action_form(
+            self.conversation_views.view_def)
         if form_cls is not None:
             form = form_cls(request.POST)
             print "POST:", request.POST
@@ -573,7 +576,7 @@ class ConversationViewFinder(object):
         in the conversation metadata field. See :class:`EditConversationView`
         for details.
 
-    :param conversation_display_name:
+    :param conversation_start_params:
         A dict containing default parameters to send with the conversation
         start command.
     """
@@ -601,11 +604,12 @@ class ConversationViewFinder(object):
     conversation_start_params = None
     draft_view = None
 
-    def __init__(self, conv_def):
+    def __init__(self, view_def):
+        self.view_def = view_def
+        self.conv_def = view_def.conv_def
 
-        self.tagpool_filter = conv_def.tagpool_filter
-        self.conversation_initiator = conv_def.conversation_initiator
-        self.conversation_display_name = conv_def.conversation_display_name
+        self.tagpool_filter = view_def.tagpool_filter
+        self.conversation_initiator = view_def.conversation_initiator
 
         if self.tagpool_filter is None:
             self.tagpool_filter = {
@@ -614,31 +618,29 @@ class ConversationViewFinder(object):
                 None: None,
             }[self.conversation_initiator]
 
-        if conv_def.conversation_form is not None:
-            self.conversation_form = conv_def.conversation_form
-        if conv_def.conversation_group_form is not None:
-            self.conversation_group_form = conv_def.conversation_group_form
-        if conv_def.edit_conversation_forms is not None:
-            self.edit_conversation_forms = conv_def.edit_conversation_forms
-        if conv_def.conversation_start_params is not None:
-            self.conversation_start_params = conv_def.conversation_start_params
-        if conv_def.draft_view is not None:
-            self.draft_view = conv_def.draft_view
+        if view_def.conversation_form is not None:
+            self.conversation_form = view_def.conversation_form
+        if view_def.conversation_group_form is not None:
+            self.conversation_group_form = view_def.conversation_group_form
+        if view_def.edit_conversation_forms is not None:
+            self.edit_conversation_forms = view_def.edit_conversation_forms
+        if view_def.conversation_start_params is not None:
+            self.conversation_start_params = view_def.conversation_start_params
+        if view_def.draft_view is not None:
+            self.draft_view = view_def.draft_view
 
         views = list(self.DEFAULT_CONVERSATION_VIEWS)
         if self.conversation_initiator == 'client':
             views.remove(PeopleConversationView)
         if self.edit_conversation_forms is None:
             views.remove(EditConversationView)
-        views.extend(conv_def.extra_views)
+        views.extend(view_def.extra_views)
 
         self.view_mapping = {}
         self.path_suffix_mapping = {}
         for view in views:
             self.view_mapping[view.view_name] = view
             self.path_suffix_mapping[view.path_suffix] = view
-
-        self.actions = [action(conv_def.conv) for action in conv_def.actions]
 
     def get_view_url(self, view_name, **kwargs):
         kwargs['path_suffix'] = self.view_mapping[view_name].path_suffix
@@ -648,17 +650,20 @@ class ConversationViewFinder(object):
         if path_suffix not in self.path_suffix_mapping:
             raise Http404
         view_cls = self.path_suffix_mapping[path_suffix]
-        view = view_cls.as_view(conversation_views=self)
+        view = view_cls.as_view(
+            conversation_views=self, conv_def=self.conv_def)
         if view_cls.csrf_exempt:
             view = csrf_exempt(view)
         return view
 
     def get_action_view(self, action_name):
-        for action in self.actions:
+        for action in self.conv_def.get_actions():
             if action.action_name == action_name:
                 return ConversationActionView.as_view(
-                    conversation_views=self, action=action)
+                    conversation_views=self, conv_def=self.conv_def,
+                    action=action)
         raise Http404
 
     def get_new_conversation_view(self):
-        return NewConversationView.as_view(conversation_views=self)
+        return NewConversationView.as_view(
+            conversation_views=self, conv_def=self.conv_def)
