@@ -24,7 +24,7 @@ describe("go.components.plumbing (diagrams)", function() {
         DiagramViewEndpoints = plumbing.DiagramViewEndpoints;
 
     var endpoints,
-        a3, modelA3,
+        a3,
         a1;
 
     var assertSubscribed = function(id, subscriber) {
@@ -40,7 +40,7 @@ describe("go.components.plumbing (diagrams)", function() {
     beforeEach(function() {
       endpoints = new DiagramViewEndpoints(diagram);
 
-      modelA3 = new StateModel({
+      var modelA3 = new StateModel({
         id: 'a3',
         left: [{id: 'a3L1'}, {id: 'a3L2'}],
         right: [{id: 'a3R1'}, {id: 'a3R2'}]
@@ -58,10 +58,7 @@ describe("go.components.plumbing (diagrams)", function() {
           done();
         });
 
-        diagram.states.members.get('apples').add({
-          diagram: diagram,
-          model: modelA3
-        });
+        diagram.states.add('apples', a3);
       });
     });
 

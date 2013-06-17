@@ -375,7 +375,7 @@ describe("go.components.structures", function() {
     });
 
     describe(".add", function() {
-      it("should delegate the add operation to the relevant member",
+      it("should delegate the add operation to the relevant collection",
       function(done) {
         var g = new Backbone.View({id: 'g'});
 
@@ -390,7 +390,7 @@ describe("go.components.structures", function() {
     });
 
     describe(".remove", function() {
-      it("should delegate the remove operation to the relevant member",
+      it("should delegate the remove operation to the relevant collection",
       function(done) {
         var b = group.get('b');
 
