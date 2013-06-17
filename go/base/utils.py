@@ -10,6 +10,7 @@ from django.conf import settings
 
 from go.base.amqp import connection
 from go.vumitools.api import VumiApi
+from go.vumitools.conversation.definition import ConversationViewDefinitionBase
 
 
 def conversation_or_404(user_api, key):
@@ -118,10 +119,14 @@ def configured_conversation_types():
                 for a in settings.VUMI_INSTALLED_APPS.itervalues())
 
 
-def get_conversation_definition(conversation_type):
+def get_conversation_view_definition(conversation_type, conv=None):
     # HACK: Assume 'namespace' is 'conversation_type'.
     for module, data in settings.VUMI_INSTALLED_APPS.iteritems():
         if data['namespace'] == conversation_type:
-            app_pkg = __import__(module, fromlist=['definition'])
-            return app_pkg.definition.ConversationDefinition
+            app_pkg = __import__(module,
+                                 fromlist=['definition', 'view_definition'])
+            conv_def = app_pkg.definition.ConversationDefinition(conv)
+            if not hasattr(app_pkg, 'view_definition'):
+                return ConversationViewDefinitionBase(conv_def)
+            return app_pkg.view_definition.ConversationViewDefinition(conv_def)
     raise Exception("Can't find conversation_type: %s" % (conversation_type,))
