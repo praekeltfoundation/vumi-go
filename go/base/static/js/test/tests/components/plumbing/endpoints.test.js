@@ -70,8 +70,6 @@ describe("go.components.plumbing (endpoints)", function() {
   });
 
   describe(".EndpointViewCollection", function() {
-    var EndpointViewCollection = plumbing.EndpointViewCollection;
-
     var collectionX,
         collectionY;
 

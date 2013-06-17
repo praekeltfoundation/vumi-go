@@ -83,6 +83,7 @@
   // A collection of endpoint views attached to a state view
   var EndpointViewCollection = SubviewCollection.extend({
     type: EndpointView,
+
     viewOptions: function() { return {state: this.state, collection: this}; },
 
     initialize: function() { this.state = this.view; },

@@ -4,6 +4,7 @@ describe("go.components.plumbing (states)", function() {
 
   var testHelpers = plumbing.testHelpers,
       setUp = testHelpers.setUp,
+      newSimpleDiagram = testHelpers.newSimpleDiagram,
       newComplexDiagram = testHelpers.newComplexDiagram,
       tearDown = testHelpers.tearDown;
 
@@ -59,6 +60,42 @@ describe("go.components.plumbing (states)", function() {
         a1.endpoints.each(function(e) { assert(!e.rendered); });
         a1.render();
         a1.endpoints.each(function(e) { assert(e.rendered); });
+      });
+    });
+  });
+
+  describe(".StateViewCollection", function() {
+    var diagram,
+        collection;
+
+    beforeEach(function() {
+      diagram = newSimpleDiagram();
+      collection = diagram.states.members.get('states');
+    });
+
+    describe(".remove", function() {
+      beforeEach(function() {
+        diagram.render();
+      });
+
+      it("should remove the state", function(done) {
+        collection.on('remove', function() {
+          assert(!collection.has('x'));
+          done();
+        });
+
+        collection.remove('x');
+      });
+
+      it("should remove the state's endpoints", function(done) {
+        var state = collection.get('x');
+
+        collection.on('remove', function() {
+          assert(_.isEmpty(state.endpoints.values()));
+          done();
+        });
+
+        collection.remove('x');
       });
     });
   });
