@@ -239,6 +239,9 @@
 
     initialize: function() {},
 
+    idOfModel: idOfModel,
+    idOfView: idOfView,
+
     _ensureModel: function(obj) {
       return obj instanceof Backbone.Model
         ? obj
@@ -289,15 +292,15 @@
       view = this._ensureView(view);
       if (options.render) { view.render(); }
 
-      if (model) { this._byModelId[idOfModel(model)] = view; }
-      Lookup.prototype.add.call(this, idOfView(view), view, options);
+      if (model) { this._byModelId[this.idOfModel(model)] = view; }
+      Lookup.prototype.add.call(this, this.idOfView(view), view, options);
       return view;
     },
 
     remove: function(viewOrId, options) {
       options = _(options || {}).defaults(this.removeDefaults);
 
-      var id = idOfView(viewOrId),
+      var id = this.idOfView(viewOrId),
           view = this.get(id);
 
       if (!view) { return; }
@@ -305,7 +308,7 @@
 
       var model = view.model;
       if (model) {
-        delete this._byModelId[idOfModel(model)];
+        delete this._byModelId[this.idOfModel(model)];
         if (options.removeModel) { this.models.remove(model, {silent: true}); }
       }
 
@@ -313,7 +316,7 @@
     },
 
     byModel: function(modelOrId) {
-      return this._byModelId[idOfModel(modelOrId)];
+      return this._byModelId[this.idOfModel(modelOrId)];
     },
 
     removeByModel: function(modelOrId, options) {
@@ -329,13 +332,16 @@
   // A self-maintaining, 'flattened' lookup of the views in a group of view
   // collections.
   var ViewCollectionGroup = LookupGroup.extend({
+    idOfModel: idOfModel,
+    idOfView: idOfView,
+
     add: function(memberKey, view, options) {
       var member = this.members.get(memberKey);
       return member.add(view, options);
     },
 
     remove: function(viewOrId, options) {
-      var id = idOfView(viewOrId),
+      var id = this.idOfView(viewOrId),
           member = this.ownerOf(id);
 
       return member.remove(viewOrId, options);
