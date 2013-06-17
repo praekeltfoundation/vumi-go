@@ -88,16 +88,14 @@
     initialize: function() { this.state = this.view; },
 
     remove: function(viewOrId, options) {
-      var view = SubviewCollection
-        .prototype
-        .remove
-        .call(this, viewOrId, options);
-
-      var connections = this.state.diagram.connections,
+      var view = this.get(this.idOfView(viewOrId)),
+          connections = this.state.diagram.connections,
           remove = function(c) { connections.remove(c, options); };
 
       connections.where({source: view}).forEach(remove);
       connections.where({target: view}).forEach(remove);
+
+      return SubviewCollection.prototype.remove.call(this, view, options);
     }
   });
 
