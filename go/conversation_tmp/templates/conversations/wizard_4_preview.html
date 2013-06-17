@@ -1,4 +1,4 @@
-{% extends "campaigns/wizard_base.html" %}
+{% extends "conversations/wizard_base.html" %}
 {% load url from future %}
 
 {% block content_title %}
@@ -7,7 +7,7 @@
 
 {% block content_actions_right %}
     <a href="{% url 'conversations:index' %}">Cancel</a>
-    <a href="{% url 'campaigns:incoming_list' conversation.key %}" class="btn btn-primary">Start</a>
+    <a href="{% url 'conversations_tmp:incoming_list' conversation.key %}" class="btn btn-primary">Start</a>
 {% endblock %}
 
 {% block content_main %}
@@ -15,7 +15,7 @@
     <div class="span7">
 
         <h4 class="control-label">
-            <a href="{% url 'campaigns:details' campaign_key %}">
+            <a href="{% url 'conversations_tmp:details' campaign_key %}">
                 Details
                 <button class="btn btn-primary btn-mini">Edit</button>
             </a>
@@ -40,7 +40,7 @@
 
         <hr>
         <h4 class="control-label">
-            <a href="{% url 'campaigns:message' campaign_key %}">
+            <a href="{% url 'conversations_tmp:message' campaign_key %}">
                 Messages
                 <button class="btn btn-primary btn-mini">Edit</button>
             </a>
@@ -53,7 +53,7 @@
 
         <hr>
         <h4 class="control-label">
-            <a href="{% url 'campaigns:contacts' campaign_key %}">
+            <a href="{% url 'conversations_tmp:contacts' campaign_key %}">
                 Contacts
                 <button class="btn btn-primary btn-mini">Edit</button>
             </a>
