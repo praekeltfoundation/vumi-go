@@ -9,8 +9,6 @@ from go.apps.jsbox.log import LogManager
 
 from urlparse import urlparse, urlunparse
 
-# NOTE: All of this stuff is assumed to be sync, so we don't yield.
-
 
 class CrossDomainXHRView(ConversationView):
     view_name = 'cross_domain_xhr'

@@ -12,8 +12,6 @@ from go.conversation.forms import ConversationForm
 from go.base.utils import make_read_only_form
 from go.apps.surveys import forms
 
-# NOTE: All of this stuff is assumed to be sync, so we don't yield.
-
 
 def get_poll_config(poll_id):
     # FIXME: Do we really need this?
