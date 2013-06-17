@@ -417,10 +417,12 @@ describe("go.components.structures", function() {
     });
 
     it("should be useable without models", function() {
-      views = new ViewCollection();
-      views.add({id: 'a'});
-      views.add({id: 'b'});
-      views.add({id: 'c'});
+      views = new ViewCollection({
+        views: [
+          {id: 'a'},
+          {id: 'b'},
+          {id: 'c'}]
+      });
 
       assert.deepEqual(views.keys(), ['a', 'b', 'c']);
     });
@@ -450,13 +452,19 @@ describe("go.components.structures", function() {
 
       it("should add the model if 'addModel' is true", function() {
         model = new Backbone.Model({id: 'e'});
-        views.add({model: model, addModel: true});
+        views.add({model: model}, {addModel: true});
         assert(views.models.get('e'));
       });
 
       it("should add the view to the 'by model' lookup", function() {
         views.add({model: model});
         assert(views.byModel(model), views.get('d'));
+      });
+
+      it("should accept a view instance", function() {
+        var v = new ToyView({id: '23'});
+        views.add(v);
+        assert.equal(views.get('23'), v);
       });
     });
 
