@@ -348,6 +348,63 @@ describe("go.components.structures", function() {
     });
   });
 
+  describe(".ViewCollectionGroup", function() {
+    var ViewCollection = structures.ViewCollection,
+        ViewCollectionGroup = structures.ViewCollectionGroup;
+
+    var collectionA,
+        collectionB,
+        group;
+
+    beforeEach(function() {
+      collectionA = new ViewCollection({
+        views: [
+          {id: 'a'},
+          {id: 'b'},
+          {id: 'c'}]
+      });
+
+      collectionB = new ViewCollection({
+        views: [
+          {id: 'd'},
+          {id: 'e'},
+          {id: 'f'}]
+      });
+
+      group = new ViewCollectionGroup({a: collectionA, b: collectionB});
+    });
+
+    describe(".add", function() {
+      it("should delegate the add operation to the relevant member",
+      function(done) {
+        var g = new Backbone.View({id: 'g'});
+
+        collectionA.on('add', function(id, view) {
+          assert.equal(id, 'g');
+          assert.equal(view, g);
+          done();
+        });
+
+        assert.equal(group.add('a', g), g);
+      });
+    });
+
+    describe(".remove", function() {
+      it("should delegate the remove operation to the relevant member",
+      function(done) {
+        var b = group.get('b');
+
+        collectionA.on('remove', function(id, view) {
+          assert.equal(id, 'b');
+          assert.equal(view, b);
+          done();
+        });
+
+        assert.equal(group.remove('b'), b);
+      });
+    });
+  });
+
   describe(".ViewCollection", function() {
     var ViewCollection = structures.ViewCollection;
 

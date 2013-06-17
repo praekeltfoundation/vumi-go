@@ -327,6 +327,18 @@
   // A self-maintaining, 'flattened' lookup of the views in a group of view
   // collections.
   var ViewCollectionGroup = LookupGroup.extend({
+    add: function(memberKey, view, options) {
+      var member = this.members.get(memberKey);
+      return member.add(view, options);
+    },
+
+    remove: function(viewOrId, options) {
+      var id = idOfView(viewOrId),
+          member = this.ownerOf(id);
+
+      return member.remove(viewOrId, options);
+    },
+
     render: function() {
       this.members.each(function(collection) { collection.render(); });
       return this;
