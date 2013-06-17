@@ -69,6 +69,58 @@ describe("go.components.plumbing (endpoints)", function() {
     });
   });
 
+  describe(".EndpointViewCollection", function() {
+    var EndpointViewCollection = plumbing.EndpointViewCollection;
+
+    var collectionX,
+        collectionY;
+
+    beforeEach(function() {
+      collectionX = diagram.states
+        .get('x')
+        .endpoints
+        .members
+        .get('endpoints');
+
+      collectionY = diagram.states
+        .get('y')
+        .endpoints
+        .members
+        .get('endpoints');
+    });
+
+    describe(".remove", function() {
+      it("should remove the endpoint", function(done) {
+        collectionX.on('remove', function() {
+          assert(!collectionX.has('x1'));
+          done();
+        });
+
+        collectionX.remove('x1');
+      });
+
+      it("should remove connections where the endpoint is the source",
+      function(done) {
+        diagram.connections.on('remove', function() {
+          assert(!diagram.connections.has('x3-y2'));
+          done();
+        });
+
+        collectionX.remove('x3');
+      });
+
+      it("should remove connections where the endpoint is the target",
+      function(done) {
+        diagram.connections.on('remove', function() {
+          assert(!diagram.connections.has('x3-y2'));
+          done();
+        });
+
+        collectionY.remove('y2');
+      });
+    });
+  });
+
   describe(".PositionableEndpointView", function() {
     var PositionableEndpointView = plumbing.PositionableEndpointView;
 
