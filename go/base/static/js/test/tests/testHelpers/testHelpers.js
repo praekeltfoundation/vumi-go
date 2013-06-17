@@ -27,6 +27,7 @@
   var unloadTemplates = function() { JST = {}; };
 
   _.extend(exports, {
+    loadTemplate: loadTemplate,
     oneElExists: oneElExists,
     noElExists: noElExists,
     loadTemplate: loadTemplate,

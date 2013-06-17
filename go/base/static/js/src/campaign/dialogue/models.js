@@ -1,5 +1,5 @@
-// go.campaign.dialogue (models)
-// =============================
+// go.campaign.dialogue.models
+// ===========================
 // Models for dialogue screen.
 
 (function(exports) {
@@ -101,4 +101,4 @@
     FreeTextStateModel: FreeTextStateModel,
     EndStateModel: EndStateModel
   });
-})(go.campaign.dialogue);
+})(go.campaign.dialogue.models = {});
