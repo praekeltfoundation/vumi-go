@@ -115,11 +115,12 @@
       }
 
       collection.add({
-        source: source.model,
-        target: target.model
-      }, {
-        addModel: true,
-        view: {plumbConnection: e.connection}
+        model: {
+          source: source.model,
+          target: target.model
+        },
+        plumbConnection: e.connection,
+        addModel: true
       });
     },
 
