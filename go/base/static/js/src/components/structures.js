@@ -158,7 +158,7 @@
   // collection.
   //
   // Options:
-  // - [models]: the collection of models to create views for
+  // - [models]: a collection of models to create views for
   // - [type]: The view type to instantiate for each new view.
   //
   // Events emitted:
@@ -201,11 +201,9 @@
       this.initialize(options);
 
       this.models.each(function(m) {
-        this.add({
-          model: m,
-          render: false,
-          silent: true
-        });
+        this.add(
+          {model: m},
+          {render: false, silent: true});
       }, this);
     },
 
@@ -222,6 +220,8 @@
         ? _(obj).result('id')
         : obj;
     },
+
+    _isView: function(obj) { return obj instanceof Backbone.View; },
 
     _ensureModel: function(obj) {
       return obj instanceof Backbone.Model
@@ -254,16 +254,17 @@
       return new type(options);
     },
 
-    add: function(options) {
+    add: function(view, options) {
+      view = view || {};
       options = _(options || {}).defaults(this.addDefaults);
 
-      var model = options.model;
+      var model = view.model;
       if (model) {
-        options.model = model = this._ensureModel(model);
+        view.model = model = this._ensureModel(model);
         if (options.addModel) { this.models.add(model, {silent: true}); }
       }
 
-      var view = this.create(options);
+      if (!this._isView(view)) { view = this.create(view); }
       if (options.render) { view.render(); }
 
       if (model) { this._byModelId[this._idOfModel(model)] = view; }
