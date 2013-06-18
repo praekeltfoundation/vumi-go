@@ -83,14 +83,11 @@
   // A collection of endpoint views attached to a state view
   var EndpointViewCollection = SubviewCollection.extend({
     type: EndpointView,
-
-    viewOptions: function() { return {state: this.state, collection: this}; },
-
-    initialize: function() { this.state = this.view; },
+    viewOptions: function() { return {state: this.view, collection: this}; },
 
     remove: function(viewOrId, options) {
       var view = this.get(this.idOfView(viewOrId)),
-          connections = this.state.diagram.connections,
+          connections = this.view.diagram.connections,
           remove = function(c) { connections.remove(c, options); };
 
       connections.where({source: view}).forEach(remove);
