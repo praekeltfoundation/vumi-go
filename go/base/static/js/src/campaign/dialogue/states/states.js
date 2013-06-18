@@ -64,7 +64,10 @@
       this.state = options.state;
     },
 
-    destroy: function() { this.$el.remove(); },
+    destroy: function() {
+      this.$el.remove();
+      return this;
+    },
 
     render: function() {
       this.state.$el.append(this.$el);
@@ -98,8 +101,7 @@
     subtypes: {
       choice: 'go.campaign.dialogue.states.choice.ChoiceStateView',
       freetext: 'go.campaign.dialogue.states.freetext.FreeStateView',
-      end: 'go.campaign.dialogue.states.end.EndStateView',
-      dummy: 'go.campaign.dialogue.states.DummyStateView'
+      end: 'go.campaign.dialogue.states.end.EndStateView'
     },
 
     id: function() { return this.model.id; },
@@ -136,11 +138,11 @@
   });
 
   var DummyStateEditView = DialogueStateEditView.extend({
-    template: _.template("<div>dummy-edit</div>")
+    template: _.template("dummy edit mode")
   });
 
   var DummyStatePreviewView = DialogueStatePreviewView.extend({
-    template: _.template("<div>dummy-preview</div>")
+    template: _.template("dummy preview mode")
   });
 
   // A state view type that does nothing. Useful for testing.

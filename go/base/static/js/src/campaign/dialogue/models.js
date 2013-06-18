@@ -21,26 +21,13 @@
     subModelTypes: {
       choice: 'ChoiceStateModel',
       freetext: 'FreeTextStateModel',
-      end: 'EndStateModel',
-      dummy: 'DummyStateModel'
+      end: 'EndStateModel'
     },
 
     initialize: function() {
       // TODO replace _.uniqueId() with a more universally unique id generator
       if (!this.has('uuid')) { this.set('uuid', _.uniqueId()); }
     }
-  });
-
-  var DummyStateModel = DialogueStateModel.extend({
-    relations: [{
-      type: Backbone.HasOne,
-      key: 'entry_endpoint',
-      relatedModel: DialogueEndpointModel
-    }, {
-      type: Backbone.HasOne,
-      key: 'exit_endpoint',
-      relatedModel: DialogueEndpointModel
-    }]
   });
 
   var ChoiceStateModel = DialogueStateModel.extend({
@@ -115,7 +102,6 @@
     ChoiceEndpointModel: ChoiceEndpointModel,
 
     DialogueStateModel: DialogueStateModel,
-    DummyStateModel: DummyStateModel,
     ChoiceStateModel: ChoiceStateModel,
     FreeTextStateModel: FreeTextStateModel,
     EndStateModel: EndStateModel

@@ -4,7 +4,48 @@
 (function(exports) {
   var dialogue = go.campaign.dialogue,
       DialogueModel = dialogue.models.DialogueModel,
+      DialogueStateModel = dialogue.models.DialogueStateModel,
+      DialogueEndpointModel = dialogue.models.DialogueEndpointModel,
       DialogueDiagramView = dialogue.diagram.DialogueDiagramView;
+
+  var states = dialogue.states,
+      DialogueStateView = states.DialogueStateView,
+      DialogueStateEditView = states.DialogueStateEditView,
+      DialogueStatePreviewView = states.DialogueStatePreviewView;
+
+  var ToyStateModel = DialogueStateModel.extend({
+    relations: [{
+      type: Backbone.HasOne,
+      key: 'entry_endpoint',
+      relatedModel: DialogueEndpointModel
+    }, {
+      type: Backbone.HasOne,
+      key: 'exit_endpoint',
+      relatedModel: DialogueEndpointModel
+    }]
+  });
+
+  var ToyStateEditView = DialogueStateEditView.extend({
+    template: _.template("toy edit mode")
+  });
+
+  var ToyStatePreviewView = DialogueStatePreviewView.extend({
+    template: _.template("toy preview mode")
+  });
+
+  // A state view type that does nothing. Useful for testing.
+  var ToyStateView = DialogueStateView.extend({
+    editorType: ToyStateEditView,
+    previewerType: ToyStatePreviewView,
+
+    endpointSchema: [
+      {attr: 'entry_endpoint'},
+      {attr: 'exit_endpoint'}]
+  });
+
+  // Make toy state subtype to use for testing
+  DialogueStateModel.prototype.subModelTypes.toy = 'ToyStateModel';
+  DialogueStateView.prototype.subtypes.toy = ToyStateView;
 
   var modelData = {
     conversation: 'conversation-key',
@@ -33,8 +74,8 @@
       text: 'Thank you for taking our survey'
     }, {
       uuid: 'state-4',
-      name: 'Dummy Message 1',
-      type: 'dummy',
+      name: 'Toy Message 1',
+      type: 'toy',
       entry_endpoint: {uuid: 'endpoint-6'},
       exit_endpoint: {uuid: 'endpoint-7'}
     }],
@@ -72,6 +113,11 @@
   };
 
   _.extend(exports, {
+    ToyStateModel: ToyStateModel,
+    ToyStateEditView: ToyStateEditView,
+    ToyStatePreviewView: ToyStatePreviewView,
+    ToyStateView: ToyStateView,
+
     setUp: setUp,
     tearDown: tearDown,
     modelData: modelData,
