@@ -299,6 +299,7 @@ describe("go.components.plumbing (endpoints)", function() {
       = plumbing.AligningEndpointCollection;
 
     var MockAligningEndpointCollection = AligningEndpointCollection.extend({
+      margin: 0,
       render: function() {
         AligningEndpointCollection.prototype.render.call(this);
         this.rendered = true;

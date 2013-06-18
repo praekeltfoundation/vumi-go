@@ -310,11 +310,12 @@ describe("go.components.structures", function() {
     var ViewCollection = structures.ViewCollection;
 
     var ToyView = Backbone.View.extend({
-      initialize: function() {
-        this.rendered = false;
+      id: function() { return this.model.id; },
+      initialize: function(options) {
+        this.i = options.i;
         this.destroyed = false;
+        this.rendered = false;
       },
-
       destroy: function() { this.destroyed = true; },
       render: function() { this.rendered = true; }
     });
@@ -329,17 +330,9 @@ describe("go.components.structures", function() {
 
     var ToyViewCollection = ViewCollection.extend({
       type: ToyView,
-      viewOptions: function() { return {id: this.i++}; },
+      viewOptions: function() { return {i: this.i++}; },
       initialize: function() { this.i = 0; }
     });
-
-    var assertAdded = function(id) {
-      assert.equal(views.get(id).model, models.get(id));
-    };
-
-    var assertRemoved = function(id) {
-      assert(!views.has(id));
-    };
 
     var models,
         views;
@@ -351,8 +344,8 @@ describe("go.components.structures", function() {
 
     describe("on 'add' model collection events", function() {
       it("should add a view corresponding to the model", function(done) {
-        models.on('add', function() {
-          assertAdded('d');
+        models.on('add', function(m) {
+          assert.equal(views.get('d').model, models.get('d'));
           done();
         });
 
@@ -363,7 +356,7 @@ describe("go.components.structures", function() {
     describe("on 'remove' collection events", function() {
       it("should remove the corresponding view", function(done) {
         models.on('remove', function() {
-          assertRemoved('c');
+          assert(!views.has('c'));
           done();
         });
 
@@ -371,23 +364,31 @@ describe("go.components.structures", function() {
       });
     });
 
-    it("should be useable with model types", function() {
+    it("should be useable with a single model", function() {
       views = new ToyViewCollection({models: new Backbone.Model({id: 'a'})});
       assert.deepEqual(views.keys(), ['a']);
     });
 
-    it("should be useable with collection types", function() {
+    it("should be useable with model collections", function() {
       views = new ToyViewCollection({models: models});
       assert.deepEqual(views.keys(), ['a', 'b', 'c']);
     });
 
+    it("should be useable without models", function() {
+      views = new ViewCollection();
+      views.add({id: 'a'});
+      views.add({id: 'b'});
+      views.add({id: 'c'});
+
+      assert.deepEqual(views.keys(), ['a', 'b', 'c']);
+    });
 
     describe(".add", function() {
-      var modelD;
+      var model;
 
       beforeEach(function() {
-        modelD = new Backbone.Model({id: 'd'});
-        models.add(modelD, {silent: true});
+        model = new Backbone.Model({id: 'd'});
+        models.add(model, {silent: true});
       });
 
       it("should emit an 'add' event", function(done) {
@@ -397,24 +398,35 @@ describe("go.components.structures", function() {
           done();
         });
 
-        views.add(modelD);
+        views.add({model: model});
       });
 
       it("should render the added view", function() {
-        views.add(modelD);
+        views.add({model: model});
         assert(views.get('d').rendered);
       });
 
       it("should add the model if 'addModel' is true", function() {
-        views.add(modelD, {addModel: true});
-        assert(views.models.get('d'));
+        model = new Backbone.Model({id: 'e'});
+        views.add({model: model, addModel: true});
+        assert(views.models.get('e'));
+      });
+
+      it("should add the view to the 'by model' lookup", function() {
+        views.add({model: model});
+        assert(views.byModel(model), views.get('d'));
       });
     });
 
     describe(".remove", function() {
-      it("should remove the view", function() {
+      it("should remove a view by it's id", function() {
         views.remove('c');
-        assertRemoved('c');
+        assert(!views.has('c'));
+      });
+
+      it("should remove the given view", function() {
+        views.remove(views.get('c'));
+        assert(!views.has('c'));
       });
 
       it("should emit a 'remove' event", function(done) {
@@ -433,9 +445,15 @@ describe("go.components.structures", function() {
         assert(views.remove('c').destroyed);
       });
 
-      it("should remove the model if 'removeModel' is true", function() {
+      it("should remove the view's model if 'removeModel' is true", function() {
         views.remove('c', {removeModel: true});
         assert.isUndefined(views.models.get('c'));
+      });
+
+      it("should remove the view from the 'by model' lookup", function() {
+        var model = views.models.get('c');
+        views.remove('c');
+        assert.isUndefined(views.byModel(model));
       });
     });
 
@@ -504,8 +522,32 @@ describe("go.components.structures", function() {
         var v1 = views.create({model: new Backbone.Model()}),
             v2 = views.create({model: new Backbone.Model()});
 
-        assert.equal(v1.id, '3');
-        assert.equal(v2.id, '4');
+        assert.equal(v1.i, '3');
+        assert.equal(v2.i, '4');
+      });
+    });
+
+    describe(".byModel", function() {
+      it("should look up a view by its model's id", function() {
+        assert.equal(views.byModel('a'), views.get('a'));
+      });
+
+      it("should look up a view by its model", function() {
+        assert.equal(views.byModel(views.models.get('a')), views.get('a'));
+      });
+    });
+
+    describe(".removeByModel", function() {
+      it("should remove a view by its model's id", function() {
+        var a = views.get('a');
+        assert.equal(views.removeByModel('a'), a);
+        assert(!views.has('a'));
+      });
+
+      it("should remove a view by its model", function() {
+        var a = views.get('a');
+        assert.equal(views.removeByModel(views.models.get('a')), a);
+        assert(!views.has('a'));
       });
     });
 
@@ -520,7 +562,10 @@ describe("go.components.structures", function() {
 
   describe(".SubviewCollection", function() {
     var SubviewCollection = structures.SubviewCollection;
-    var SubthingView = Backbone.View.extend();
+
+    var SubthingView = Backbone.View.extend({
+      id: function() { return this.model.id; }
+    });
 
     var view,
         subviews;
@@ -553,12 +598,13 @@ describe("go.components.structures", function() {
     var SubviewCollection = structures.SubviewCollection,
         SubviewCollectionGroup = structures.SubviewCollectionGroup;
 
-    var SubthingView = Backbone.View.extend();
+    var SubthingView = Backbone.View.extend({
+      id: function() { return this.model.id; }
+    });
+
     var SubthingViewCollection = SubviewCollection.extend({
       type: SubthingView,
-      initialize: function(options) {
-        this.options = options;
-      }
+      initialize: function(options) { this.options = options; }
     });
 
     var LonelySubthingViewCollection = SubthingViewCollection.extend();
