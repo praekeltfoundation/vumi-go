@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.base.utils import get_conversation_definition
+from go.base.utils import get_conversation_view_definition
 from go.conversation.conversation_views import ConversationViewFinder
 
 
@@ -19,8 +19,9 @@ class SubscriptionTestCase(DjangoGoApplicationTestCase):
     def get_view_url(self, view, conv_key=None):
         if conv_key is None:
             conv_key = self.conv_key
-        conv_def = get_conversation_definition(self.TEST_CONVERSATION_TYPE)
-        finder = ConversationViewFinder(conv_def(None))
+        view_def = get_conversation_view_definition(
+            self.TEST_CONVERSATION_TYPE)
+        finder = ConversationViewFinder(view_def)
         return finder.get_view_url(view, conversation_key=conv_key)
 
     def get_new_view_url(self):

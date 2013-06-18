@@ -589,6 +589,28 @@ describe("go.components.structures", function() {
         assert.equal(view.model, model);
       });
 
+      it("should allow views to define subtypes by name", function() {
+        var StarWarsView = Backbone.View.extend({
+          subtypes: {
+            jedi: 'globals.JediView',
+            sith: 'globals.SithView'
+          }
+        });
+
+        var views = new ViewCollection({type: StarWarsView, models: models});
+
+        globals.JediView = StarWarsView.extend();
+        globals.SithView = StarWarsView.extend();
+
+        assert.instanceOf(
+          views.create({model: new Backbone.Model({type: 'jedi'})}),
+          globals.JediView);
+
+        assert.instanceOf(
+          views.create({model: new Backbone.Model({type: 'sith'})}),
+          globals.SithView);
+      });
+
       it("should work with views with subtypes", function() {
         assert.instanceOf(
           views.create({model: new Backbone.Model({type: 'pirate'})}),
