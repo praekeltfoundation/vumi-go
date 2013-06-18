@@ -1,4 +1,4 @@
-describe("go.campaign", function() {
+describe("go.components", function() {
 
   describe(".bulkMessage", function() {
 
@@ -6,7 +6,7 @@ describe("go.campaign", function() {
     var text = 'Margle. The. World.';
     var $textarea = $('<textarea>' + text + '</textarea>');
     $div.append($textarea);
-    view = new go.campaign.bulkMessage.TextareaView({el: $textarea});
+    view = new go.components.bulkMessage.TextareaView({el: $textarea});
 
     it("should append an element `.textarea-char-count`", function() {
         $textarea.trigger('keyup');

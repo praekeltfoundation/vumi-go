@@ -1,6 +1,6 @@
 // go.campaign.bulkMessage
 // ==============================
-// Models, Views and other stuff for the bulk message composition screen
+// Views and other stuff for the bulk message composition screen
 
 (function(exports) {
 
@@ -10,7 +10,8 @@
             'keyup': 'render'
         },
         initialize: function() {
-            _.bindAll(this, 'render');
+            // we call render to output "0 characters used, 0 smses."
+            this.render();
         },
         render: function() {
             var $p = this.$el.next();
@@ -29,4 +30,4 @@
     _.extend(exports, {
       TextareaView: TextareaView
     });
-})(go.campaign.bulkMessage = {});
+})(go.components.bulkMessage = {});
