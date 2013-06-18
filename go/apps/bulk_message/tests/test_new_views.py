@@ -4,6 +4,7 @@ from django.test.client import Client
 from django.core import mail
 from django.core.urlresolvers import reverse
 from django.contrib.sites.models import Site
+from django.utils.unittest import skip
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.vumitools.token_manager import TokenManager
@@ -137,6 +138,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertContains(response, 'Send Bulk Message')
         self.assertContains(response, self.get_action_view_url('bulk_send'))
 
+    @skip("The new views don't have this.")
     def test_show_cached_message_pagination(self):
         # Create 21 inbound & 21 outbound messages, since we have
         # 20 messages per page it should give us 2 pages
@@ -158,6 +160,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         # the first page.
         self.assertContains(response, '&amp;p=0', 0)
 
+    @skip("The new views don't have this.")
     def test_show_cached_message_overview(self):
         self.put_sample_messages_in_conversation(self.user_api,
                                                  self.conv_key, 10)
@@ -168,6 +171,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             '10 accepted for delivery by the networks.')
         self.assertContains(response, '10 delivered.')
 
+    @skip("The new views don't have this.")
     @patch('go.base.message_store_client.MatchResult')
     @patch('go.base.message_store_client.Client')
     def test_message_search(self, Client, MatchResult):
@@ -492,6 +496,7 @@ class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
         return self.user_api.wrap_conversation(conv)
 
+    @skip("The new views don't have this.")
     def test_actions_on_inbound_only(self):
         messages = self.put_sample_messages_in_conversation(self.user_api,
                                                             self.conv_key, 1)
