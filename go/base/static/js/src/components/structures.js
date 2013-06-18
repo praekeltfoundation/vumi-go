@@ -330,7 +330,6 @@
   // A self-maintaining, 'flattened' lookup of the views in a group of view
   // collections.
   var ViewCollectionGroup = LookupGroup.extend({
-    idOfModel: idOfModel,
     idOfView: idOfView,
 
     add: function(memberKey, view, options) {
