@@ -8,7 +8,17 @@
 
 {% block content_actions_right %}
     <a href="{% url 'conversations:index' %}">Cancel</a>
-    <a href="{% url 'conversations_tmp:incoming_list' conversation.key %}" class="btn btn-primary">Start</a>
+    {% if is_editable %}
+        <a href="{% conversation_screen conversation 'edit' %}" class="btn btn-primary">Edit</a>
+    {% endif %}
+    {# TODO: Proper lifecycle stuff. #}
+    {% if conversation.stopped %}
+        <a href="{% url 'conversations_tmp:incoming_list' conversation.key %}" class="btn btn-primary">Start</a>
+    {% elif conversation.running %}
+        <a href="{% url 'conversations_tmp:incoming_list' conversation.key %}" class="btn btn-primary">Stop</a>
+    {% else %}
+        <a href="{% conversation_screen conversation %}" class="btn btn-primary">???</a>
+    {% endif %}
 {% endblock %}
 
 {% block content_main %}
