@@ -35,8 +35,8 @@
 
   // A state view type that does nothing. Useful for testing.
   var ToyStateView = DialogueStateView.extend({
-    editorType: ToyStateEditView,
-    previewerType: ToyStatePreviewView,
+    editModeType: ToyStateEditView,
+    previewModeType: ToyStatePreviewView,
 
     endpointSchema: [
       {attr: 'entry_endpoint'},

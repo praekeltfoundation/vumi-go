@@ -51,8 +51,8 @@
   var DialogueStateView = StateView.extend({
     className: 'state',
 
-    editorType: DialogueStateEditView,
-    previewerType: DialogueStatePreviewView,
+    editModeType: DialogueStateEditView,
+    previewModeType: DialogueStatePreviewView,
 
     subtypes: {
       choice: 'go.campaign.dialogue.states.choice.ChoiceStateView',
@@ -65,9 +65,9 @@
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
 
-      this.previewer = new this.previewerType({state: this});
-      this.editor = new this.editorType({state: this});
-      this.mode = this.editor;
+      this.editMode = new this.editModeType({state: this});
+      this.previewMode = new this.previewModeType({state: this});
+      this.mode = this.editMode;
 
       // If we weren't given a position, ask the grid for one. This case
       // happens when new states are fetched from the server.
@@ -84,14 +84,14 @@
     // Switch to preview mode
     preview: function() {
       this.mode.destroy();
-      this.mode = this.previewer;
+      this.mode = this.previewMode;
       this.render();
     },
 
     // Switch to edit mode
     edit: function() {
       this.mode.destroy();
-      this.mode = this.editor;
+      this.mode = this.editMode;
       this.render();
     },
 

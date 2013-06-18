@@ -18,8 +18,8 @@
   });
 
   var EndStateView = DialogueStateView.extend({
-    editorType: EndStateEditView,
-    previewerType: EndStatePreviewView,
+    editModeType: EndStateEditView,
+    previewModeType: EndStatePreviewView,
 
     endpointSchema: [
       {attr: 'entry_endpoint'},

@@ -17,8 +17,8 @@
   });
 
   var FreeTextStateView = DialogueStateView.extend({
-    editorType: FreeTextStateEditView,
-    previewerType: FreeTextStatePreviewView,
+    editModeType: FreeTextStateEditView,
+    previewModeType: FreeTextStatePreviewView,
 
     endpointSchema: [
       {attr: 'entry_endpoint'},

@@ -109,9 +109,9 @@ describe("go.campaign.dialogue.states", function() {
 
       it("should switch from the currently active mode to the preview mode",
       function() {
-        assert.notEqual(state.mode, state.previewer);
+        assert.notEqual(state.mode, state.previewMode);
         state.preview();
-        assert.equal(state.mode, state.previewer);
+        assert.equal(state.mode, state.previewMode);
       });
 
       it("should render the new mode", function() {
@@ -123,7 +123,7 @@ describe("go.campaign.dialogue.states", function() {
 
     describe(".preview", function() {
       beforeEach(function() {
-        state.mode = state.previewer;
+        state.mode = state.previewMode;
         state.render();
       });
 
@@ -135,9 +135,9 @@ describe("go.campaign.dialogue.states", function() {
 
       it("should switch from the currently active mode to the edit mode",
       function() {
-        assert.notEqual(state.mode, state.editor);
+        assert.notEqual(state.mode, state.editMode);
         state.edit();
-        assert.equal(state.mode, state.editor);
+        assert.equal(state.mode, state.editMode);
       });
 
       it("should render the new mode", function() {
