@@ -11,6 +11,8 @@
   var DialogueConnectionView = ConnectionView.extend();
 
   var DialogueConnectionCollection = ConnectionViewCollection.extend({
+    type: DialogueConnectionView,
+
     accepts: function(source, target) {
       // TODO scary connection acceptance rules go here
       return true;

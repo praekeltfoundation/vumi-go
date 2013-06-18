@@ -3,53 +3,9 @@
 // Structures for each dialogue state type
 
 (function(exports) {
-  var structures = go.components.structures,
-      ViewCollection = structures.ViewCollection;
-
   var plumbing = go.components.plumbing,
-      StateView = plumbing.StateView;
-
-  // Resides on a grid point and contains a dialogue state. It can dynamically
-  // change the state type by removing the currently contained view (and its
-  // model), and creating a new state view of a different type (representing a
-  // new state model).
-  var DialogueStateShellView = Backbone.View.extend({
-    resetDefaults: {render: true},
-    type: 'choice',
-
-    initialize: function(options) {
-      this.diagram = options.diagram;
-      this.reset(options.type || this.type, {render: false});
-    },
-
-    // Reset the view and set it to a new state type
-    reset: function(type, options) {
-      options = _(options || {}).defaults(this.resetDefaults);
-
-      // TODO ui warnings about the descruction involved
-      this.type = type;
-
-      if (this.state) { this.diagram.states.remove(this.state); }
-
-      this.state = this.diagram.states.add(
-        'states',
-        {shell: this, model: {type: type}},
-        {render: options.render});
-
-      return this;
-    },
-
-    render: function() {
-      this.state.render();
-      return this;
-    }
-  });
-
-  var DialogueStateShellCollection = ViewCollection.extend({
-    type: DialogueStateShellView,
-    viewOptions: function() { return {diagram: this.diagram}; },
-    initialize: function(options) { this.diagram = options.diagram; }
-  });
+      StateView = plumbing.StateView,
+      StateViewCollection = plumbing.StateViewCollection;
 
   // Base 'mode' for state views. Each mode acts as a 'delegate view',
   // targeting a dialogue view's element and acting according to the mode type
@@ -108,11 +64,21 @@
 
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
-      this.shell = options.shell;
 
       this.previewer = new this.previewerType({state: this});
       this.editor = new this.editorType({state: this});
       this.mode = this.editor;
+
+      // If we weren't given a position, ask the grid for one. This case
+      // happens when new states are fetched from the server.
+      this.position = options.position || this.diagram.grid.nextPosition();
+    },
+
+    // 'Resets' a state to a new type by removing the current state, and
+    // replacing it with a new state in the same position
+    reset: function(type) {
+      // TODO warn the user of the destruction involved
+      this.collection.reset(this, type);
     },
 
     // Switch to preview mode
@@ -130,39 +96,32 @@
     },
 
     render: function() {
-      this.shell.$el.append(this.$el);
+      // TODO position state
+      this.diagram.$el.append(this.$el);
       this.mode.render();
       this.endpoints.render();
       return this;
     }
   });
 
-  var DummyStateEditView = DialogueStateEditView.extend({
-    template: _.template("dummy edit mode")
-  });
+  var DialogueStateCollection = StateViewCollection.extend({
+    type: DialogueStateView,
 
-  var DummyStatePreviewView = DialogueStatePreviewView.extend({
-    template: _.template("dummy preview mode")
-  });
-
-  // A state view type that does nothing. Useful for testing.
-  var DummyStateView = DialogueStateView.extend({
-    editorType: DummyStateEditView,
-    previewerType: DummyStatePreviewView,
-
-    endpointSchema: [
-      {attr: 'entry_endpoint'},
-      {attr: 'exit_endpoint'}]
+    // Removes a state and creates a new state of a different type in the same
+    // position as the old state
+    reset: function(state, type) {
+      this.remove(state);
+      this.add({position: state.position, model: {type: type}});
+      return this;
+    }
   });
 
   _(exports).extend({
-    DialogueStateShellView: DialogueStateShellView,
-    DialogueStateShellCollection: DialogueStateShellCollection,
-
     DialogueStateModeView: DialogueStateModeView,
     DialogueStatePreviewView: DialogueStatePreviewView,
     DialogueStateEditView: DialogueStateEditView,
 
-    DialogueStateView: DialogueStateView
+    DialogueStateView: DialogueStateView,
+    DialogueStateCollection: DialogueStateCollection
   });
 })(go.campaign.dialogue.states = {});

@@ -11,25 +11,22 @@
       states = dialogue.states,
       grid = dialogue.grid;
 
-  var DialogueStateShellCollection = states.DialogueStateShellCollection;
-
   // The main view containing all the dialogue states and connections
   var DialogueDiagramView = DiagramView.extend({
     stateType: states.DialogueStateView,
+    stateCollectionType: states.DialogueStateCollection,
 
     connectionType: connections.DialogueConnectionView,
     connectionCollectionType: connections.DialogueConnectionCollection,
 
     initialize: function(options) {
-      DiagramView.prototype.initialize.call(this, options);
-
       this.grid = new grid.DialogueGridView({diagram: this});
-      this.stateShells = new DialogueStateShellCollection({diagram: this});
+      DiagramView.prototype.initialize.call(this, options);
     },
 
     render: function() {
       this.grid.render();
-      this.stateShells.render();
+      this.states.render();
       this.connections.render();
       return this;
     }
