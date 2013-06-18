@@ -62,9 +62,9 @@ def message(request, campaign_key):
 @login_required
 def message_survey(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
-    initiate_form = conversations_tmpurveryInitiateForm()
+    initiate_form = CampaignSurveryInitiateForm()
     if request.method == 'POST':
-        initiate_form = conversations_tmpurveryInitiateForm(request.POST)
+        initiate_form = CampaignSurveryInitiateForm(request.POST)
         action = request.POST.get('action')
         if action == 'draft':
             # save and go back to list.

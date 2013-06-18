@@ -1,48 +1,101 @@
-{% extends "app.html" %}
-{% load conversation_tags %}
+{% extends "conversation_views/conversation_base.html" %}
 {% load url from future %}
+{% load conversation_tags %}
 
-{% block extra_header %}
-    <link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
-    <link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
+{% block content_title %}
+    Preview &amp; Activate
+{% endblock %}
+
+{% block content_actions_right %}
+    <a href="{% url 'conversations:index' %}">Cancel</a>
+    <a href="{% url 'conversations_tmp:incoming_list' conversation.key %}" class="btn btn-primary">Start</a>
 {% endblock %}
 
 {% block content_main %}
-    <div class="row">
-        <div class="span12">
-            <div id="welcome">
-                <h1><a href="{% url 'conversations:index' %}">Conversations</a> &raquo; {{conversation.name}}</h1>
-            </div>
-        </div>
+<div class="row-fluid indent">
+    <div class="span7">
+
+        <h4 class="control-label">
+            <a href="{% url 'conversations:conversation' conversation_key=conversation.key path_suffix='' %}">
+                Details
+                <button class="btn btn-primary btn-mini">Edit</button>
+            </a>
+        </h4>
+
+        <p>
+            NAME<br>
+            {{ conversation.name }}
+        </p>
+        <p>
+            TYPE<br>
+            {{ conversation.type }}
+        </p>
+
+        <p>
+            CHANNELS<br>
+            <!-- TODO:  update the routing table metadata helpers to
+                        be able to answer questions like this.
+            -->
+            USSD
+        </p>
+
+        <h4 class="control-label">
+            Actions
+        </h4>
+
+        <p>
+            {# TODO: Make this pretty #}
+            {% if actions %}
+                <ol>
+                {% for action in actions %}
+                    <li><a href="{% url 'conversations:conversation_action' conversation_key=conversation.key action_name=action.action_name %}">{{action.action_display_name}}</a></li>
+                {% endfor %}
+                </ol>
+            {% else %}
+                This conversation has no actions.
+            {% endif %}
+        </p>
+
+        <hr>
+        <h4 class="control-label">
+            <a href="{% url 'conversations_tmp:message' conversation.key %}">
+                Messages
+                <button class="btn btn-primary btn-mini">Edit</button>
+            </a>
+        </h4>
+
+        <p class="message">
+            {{ conversation.description }}
+        </p>
+
+
+        <hr>
+        <h4 class="control-label">
+            <a href="{% url 'conversations_tmp:contacts' conversation.key %}">
+                Contacts
+                <button class="btn btn-primary btn-mini">Edit</button>
+            </a>
+        </h4>
+        <p class="message">
+            {# TODO: List of groups contacts #}
+            {% if groups %}
+                <ol>
+                {% for group, member_count in groups.items %}
+                    <li>{{group}} ({{member_count}} member{{member_count|pluralize}})</li>
+                {% endfor %}
+                </ol>
+            {% else %}
+                You have not specified any contacts.
+            {% endif %}
+        </p>
+
     </div>
-
-    <div class="row">
-        <div class="span12">
-            {% include "base/includes/messages.html" %}
-        </div>
-    </div>
-
-    {% include "conversation_views/includes/overview.html" %}
-
-    <div class="row">
-        <div class="span12">
-            {% if actions %}<h2>Conversation actions:</h2>
-            (This is ugly, but it's a short-term hack.)
-            <ul>
-            {% for action in actions %}
-                <li><a href="{% url 'conversations:conversation_action' conversation_key=conversation.key action_name=action.action_name %}">{{action.action_display_name}}</a></li>
-            {% endfor %}
-            </ul>
-            <hr>{% endif %}
-        </div>
-    </div>
-
-    {# {% include "conversation_views/includes/dashboard.html" %} #}
-
-    {% show_conversation_messages conversation direction=request.GET.direction page=request.GET.p query=request.GET.q token=request.GET.token %}
-
+</div>
 {% endblock %}
 
-{% block extra_js %}
-    {# {% include "conversation_views/includes/charts.html" %} #}
+
+{% block ondomready %}
+    {{ block.super }}
+    // highlight the breadcrumbs.
+    $('.breadcrumbs a').eq(3).addClass('active');
 {% endblock %}
