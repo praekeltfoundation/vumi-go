@@ -55,6 +55,8 @@
 
     map: function(fn, that) { return this.values().map(fn, that); },
 
+    where: function(props) { return _.where(this.values(), props); },
+
     eachItem: function(fn, that) {
       var items = this.items();
       for (var k in items) { fn.call(that, k, items[k]); }

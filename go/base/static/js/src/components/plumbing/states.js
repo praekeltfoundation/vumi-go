@@ -64,7 +64,16 @@
   // A collection of state views that form part of a diagram view
   var StateViewCollection = SubviewCollection.extend({
     type: StateView,
-    viewOptions: function() { return {diagram: this.view, collection: this}; }
+
+    viewOptions: function() { return {diagram: this.view, collection: this}; },
+
+    remove: function(viewOrId, options) {
+      var view = this.get(this.idOfView(viewOrId)),
+          endpoints = view.endpoints;
+
+      endpoints.each(function(e) { endpoints.remove(e, options); });
+      return SubviewCollection.prototype.remove.call(this, view, options);
+    }
   });
 
   _.extend(exports, {
