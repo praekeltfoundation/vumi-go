@@ -4,7 +4,6 @@ from django.core.urlresolvers import reverse
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.utils import get_conversation_view_definition
-from go.conversation.conversation_views import ConversationViewFinder
 
 
 class SubscriptionTestCase(DjangoGoApplicationTestCase):
@@ -21,36 +20,28 @@ class SubscriptionTestCase(DjangoGoApplicationTestCase):
             conv_key = self.conv_key
         view_def = get_conversation_view_definition(
             self.TEST_CONVERSATION_TYPE)
-        finder = ConversationViewFinder(view_def)
-        return finder.get_view_url(view, conversation_key=conv_key)
+        return view_def.get_view_url(view, conversation_key=conv_key)
 
     def get_new_view_url(self):
-        return reverse('conversations:new_conversation', kwargs={
-            'conversation_type': self.TEST_CONVERSATION_TYPE})
+        return reverse('conversations:new_conversation')
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
         return self.user_api.wrap_conversation(conv)
 
     def run_new_conversation(self, selected_option, pool, tag):
-        # render the form
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        response = self.client.get(self.get_new_view_url())
-        self.assertEqual(response.status_code, 200)
         # post the form
         response = self.client.post(self.get_new_view_url(), {
-            'subject': 'the subject',
-            'message': 'the message',
-            'delivery_class': 'sms',
-            'delivery_tag_pool': selected_option,
+            'name': 'conversation name',
+            'type': self.TEST_CONVERSATION_TYPE,
         })
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
-        conversation = self.get_latest_conversation()
-        self.assertEqual(conversation.delivery_class, 'sms')
-        self.assertEqual(conversation.delivery_tag_pool, pool)
-        self.assertEqual(conversation.delivery_tag, tag)
-        self.assertRedirects(
-            response, self.get_view_url('edit', conversation.key))
+        conv = self.get_latest_conversation()
+        # self.assertEqual(conv.delivery_class, 'sms')
+        # self.assertEqual(conv.delivery_tag_pool, pool)
+        # self.assertEqual(conv.delivery_tag, tag)
+        self.assertRedirects(response, self.get_view_url('edit', conv.key))
 
     def test_new_conversation(self):
         """test the creation of a new conversation"""
@@ -63,18 +54,19 @@ class SubscriptionTestCase(DjangoGoApplicationTestCase):
         self.run_new_conversation('longcode:default10001', 'longcode',
                                   'default10001')
 
-    def test_end(self):
+    def test_stop(self):
         """
         Test ending the conversation
         """
         conversation = self.get_wrapped_conv()
-        self.assertFalse(conversation.ended())
-        response = self.client.post(self.get_view_url('end'), follow=True)
+        conversation.set_status_started()
+        conversation.save()
+        response = self.client.post(self.get_view_url('stop'), follow=True)
         self.assertRedirects(response, self.get_view_url('show'))
         [msg] = response.context['messages']
-        self.assertEqual(str(msg), "Conversation ended")
+        self.assertEqual(str(msg), "Conversation stopped")
         conversation = self.get_wrapped_conv()
-        self.assertTrue(conversation.ended())
+        self.assertTrue(conversation.stopping())
 
     def test_start(self):
         """
@@ -95,17 +87,6 @@ class SubscriptionTestCase(DjangoGoApplicationTestCase):
                 '%s_application' % (conversation.conversation_type,), 'start',
                 user_account_key=conversation.user_account.key,
                 conversation_key=conversation.key))
-
-    def test_send_fails(self):
-        """
-        Test failure to send messages
-        """
-        self.acquire_all_longcode_tags()
-        response = self.client.post(self.get_view_url('start'), follow=True)
-        self.assertRedirects(response, self.get_view_url('start'))
-        [] = self.get_api_commands_sent()
-        [msg] = response.context['messages']
-        self.assertEqual(str(msg), "No spare messaging tags.")
 
     def test_show(self):
         """

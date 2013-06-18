@@ -1,7 +1,7 @@
 from django import forms
 from bootstrap.forms import BootstrapForm
 
-from go.vumitools.conversation.definition import ConversationViewDefinitionBase
+from go.conversation.view_definition import ConversationViewDefinitionBase
 
 
 class SubscriptionForm(BootstrapForm):
