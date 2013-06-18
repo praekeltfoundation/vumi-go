@@ -42,7 +42,31 @@
     }
   });
 
+  var MessageTextView = Backbone.View.extend({
+    SMS_MAX_CHARS: 160,
+    events: {
+      'keyup': 'render'
+    },
+    initialize: function() {
+      // we call render to output "0 characters used, 0 smses."
+      this.render();
+    },
+    render: function() {
+      var $p = this.$el.next();
+      if (!$p.hasClass('textarea-char-count')) {
+          $p = $('<p class="textarea-char-count"/>');
+          this.$el.after($p);
+      }
+      this.totalChars = this.$el.val().length;
+      this.totalSMS = Math.ceil(this.totalChars / this.SMS_MAX_CHARS);
+      $p.html(this.totalChars + ' characters used<br>' + this.totalSMS + ' smses');
+
+      return this;
+    }
+  });
+
   _.extend(exports, {
-    LabelView: LabelView
+    LabelView: LabelView,
+    MessageTextView: MessageTextView
   });
 })(go.components.views = {});

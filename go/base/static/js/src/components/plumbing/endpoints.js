@@ -83,7 +83,18 @@
   // A collection of endpoint views attached to a state view
   var EndpointViewCollection = SubviewCollection.extend({
     type: EndpointView,
-    viewOptions: function() { return {state: this.view, collection: this}; }
+    viewOptions: function() { return {state: this.view, collection: this}; },
+
+    remove: function(viewOrId, options) {
+      var view = this.get(this.idOfView(viewOrId)),
+          connections = this.view.diagram.connections,
+          remove = function(c) { connections.remove(c, options); };
+
+      connections.where({source: view}).forEach(remove);
+      connections.where({target: view}).forEach(remove);
+
+      return SubviewCollection.prototype.remove.call(this, view, options);
+    }
   });
 
   // Derived components
@@ -226,6 +237,8 @@
     },
 
     initialize: function(options) {
+      EndpointViewCollection.prototype.initialize.call(this, options);
+
       this.side = options.side || this.side;
       this.margin = options.margin || this.margin;
 

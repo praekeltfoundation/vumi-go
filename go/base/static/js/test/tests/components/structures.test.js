@@ -84,6 +84,22 @@ describe("go.components.structures", function() {
       });
     });
 
+    describe(".where", function() {
+      beforeEach(function() {
+        lookup = new Lookup({
+          a: {x: 1, y: 2},
+          b: {x: 3, y: 2},
+          c: {x: 5, y: 6}
+        });
+      });
+
+      it("should return the items containing the given properties", function() {
+        assert.deepEqual(
+          lookup.where({y: 2}),
+          [lookup.get('a'), lookup.get('b')]);
+      });
+    });
+
     describe(".eachItem", function() {
       it("should iterate through each the lookup's items", function() {
         var items = {};
@@ -171,7 +187,47 @@ describe("go.components.structures", function() {
     beforeEach(function() {
       lookupA = new Lookup({a: 1, b: 2, c: 3});
       lookupB = new Lookup({d: 4, e: 5, f: 6});
-      group = new LookupGroup({'a': lookupA, 'b': lookupB});
+      group = new LookupGroup({a: lookupA, b: lookupB});
+    });
+
+    describe("on member 'add' events", function() {
+      it("should add the key value pair", function(done) {
+        lookupA.on('add', function() {
+          assert.equal(group.get('g'), 7);
+          done();
+        });
+
+        lookupA.add('g', 7);
+      });
+
+      it("should add the item to the owner lookup", function(done) {
+        lookupA.on('add', function() {
+          assert.equal(group.ownerOf('g'), lookupA);
+          done();
+        });
+
+        lookupA.add('g', 7);
+      });
+    });
+
+    describe("on member 'remove' events", function() {
+      it("should remove the key value pair", function(done) {
+        lookupA.on('remove', function() {
+          assert(!group.has('b'));
+          done();
+        });
+
+        lookupA.remove('b');
+      });
+
+      it("should remove the item from the owner lookup", function(done) {
+        lookupA.on('remove', function() {
+          assert.isUndefined(group.ownerOf('b'));
+          done();
+        });
+
+        lookupA.remove('b');
+      });
     });
 
     describe(".ownerOf", function() {
@@ -185,26 +241,28 @@ describe("go.components.structures", function() {
     });
 
     describe(".add", function() {
-      it("should add the key value pair", function() {
-        group.add(lookupA, 'g', 7);
-        assert.equal(group.get('g'), 7);
-      });
+      it("should delegate the add operation to the relevant member",
+      function(done) {
+        lookupA.on('add', function(k, v) {
+          assert.equal(k, 'g');
+          assert.equal(v, 7);
+          done();
+        });
 
-      it("should add the item to the owner lookup", function() {
-        group.add(lookupA, 'g', 7);
-        assert.equal(group.ownerOf('g'), lookupA);
+        assert.equal(group.add('a', 'g', 7), group);
       });
     });
 
     describe(".remove", function() {
-      it("should remove the key value pair", function() {
-        assert.equal(group.remove('b'), 2);
-        assert.isFalse(group.has('b'));
-      });
+      it("should delegate the remove operation to the relevant member",
+      function(done) {
+        lookupA.on('remove', function(k, v) {
+          assert.equal(k, 'b');
+          assert.equal(v, 2);
+          done();
+        });
 
-      it("should remove the item from the owner lookup", function() {
-        group.remove('b');
-        assert.isUndefined(group.ownerOf('b'));
+        assert.equal(group.remove('b'), 2);
       });
     });
 
@@ -306,6 +364,63 @@ describe("go.components.structures", function() {
     });
   });
 
+  describe(".ViewCollectionGroup", function() {
+    var ViewCollection = structures.ViewCollection,
+        ViewCollectionGroup = structures.ViewCollectionGroup;
+
+    var collectionA,
+        collectionB,
+        group;
+
+    beforeEach(function() {
+      collectionA = new ViewCollection({
+        views: [
+          {id: 'a'},
+          {id: 'b'},
+          {id: 'c'}]
+      });
+
+      collectionB = new ViewCollection({
+        views: [
+          {id: 'd'},
+          {id: 'e'},
+          {id: 'f'}]
+      });
+
+      group = new ViewCollectionGroup({a: collectionA, b: collectionB});
+    });
+
+    describe(".add", function() {
+      it("should delegate the add operation to the relevant collection",
+      function(done) {
+        var g = new Backbone.View({id: 'g'});
+
+        collectionA.on('add', function(id, view) {
+          assert.equal(id, 'g');
+          assert.equal(view, g);
+          done();
+        });
+
+        assert.equal(group.add('a', g), g);
+      });
+    });
+
+    describe(".remove", function() {
+      it("should delegate the remove operation to the relevant collection",
+      function(done) {
+        var b = group.get('b');
+
+        collectionA.on('remove', function(id, view) {
+          assert.equal(id, 'b');
+          assert.equal(view, b);
+          done();
+        });
+
+        assert.equal(group.remove('b'), b);
+      });
+    });
+  });
+
   describe(".ViewCollection", function() {
     var ViewCollection = structures.ViewCollection;
 
@@ -375,10 +490,12 @@ describe("go.components.structures", function() {
     });
 
     it("should be useable without models", function() {
-      views = new ViewCollection();
-      views.add({id: 'a'});
-      views.add({id: 'b'});
-      views.add({id: 'c'});
+      views = new ViewCollection({
+        views: [
+          {id: 'a'},
+          {id: 'b'},
+          {id: 'c'}]
+      });
 
       assert.deepEqual(views.keys(), ['a', 'b', 'c']);
     });
@@ -408,13 +525,19 @@ describe("go.components.structures", function() {
 
       it("should add the model if 'addModel' is true", function() {
         model = new Backbone.Model({id: 'e'});
-        views.add({model: model, addModel: true});
+        views.add({model: model}, {addModel: true});
         assert(views.models.get('e'));
       });
 
       it("should add the view to the 'by model' lookup", function() {
         views.add({model: model});
         assert(views.byModel(model), views.get('d'));
+      });
+
+      it("should accept a view instance", function() {
+        var v = new ToyView({id: '23'});
+        views.add(v);
+        assert.equal(views.get('23'), v);
       });
     });
 
