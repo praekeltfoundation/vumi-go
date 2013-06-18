@@ -96,7 +96,7 @@
     },
 
     render: function() {
-      // TODO position state
+      // TODO position the state
       this.diagram.$el.append(this.$el);
       this.mode.render();
       this.endpoints.render();
