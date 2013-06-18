@@ -226,8 +226,8 @@
     },
 
     initialize: function(options) {
-      this.side = options.side;
-      this.margin = options.margin;
+      this.side = options.side || this.side;
+      this.margin = options.margin || this.margin;
 
       this.on('add', this.render, this);
       this.on('remove', this.render, this);

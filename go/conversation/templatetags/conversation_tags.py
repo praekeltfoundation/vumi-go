@@ -4,18 +4,38 @@ from copy import copy
 from django.conf import settings
 from django import template
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.core.urlresolvers import reverse
 from django.contrib.sites.models import Site
 from django.template.defaultfilters import stringfilter
 
 from go.conversation.utils import PagedMessageCache
 from go.conversation.forms import ReplyToMessageForm
 from go.base import message_store_client as ms_client
-from go.base.utils import page_range_window
+from go.base.utils import page_range_window, get_conversation_view_definition
+from go.conversation.conversation_views import ConversationViewFinder
 
 from vumi.message import TransportUserMessage
 
 
 register = template.Library()
+
+
+@register.simple_tag
+def conversation_screen(conv, view_name='show'):
+    # FIXME: Unhack this when all apps have definition modules.
+    try:
+        view_def = get_conversation_view_definition(
+            conv.conversation_type, conv)
+    except AttributeError:
+        return '/conversations/%s/' % (conv.key,)
+    finder = ConversationViewFinder(view_def)
+    return finder.get_view_url(view_name, conversation_key=conv.key)
+
+
+@register.simple_tag
+def conversation_action(conv, action_name):
+    return reverse('conversations:conversation_action', kwargs={
+        'conversation_key': conv.key, 'action_name': action_name})
 
 
 @register.inclusion_tag(

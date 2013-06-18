@@ -117,7 +117,7 @@
       collection.add({
         model: {source: source.model, target: target.model},
         plumbConnection: e.connection
-      }, {addModel: true});
+      });
     },
 
     onPlumbDisconnect: function(e) {

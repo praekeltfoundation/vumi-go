@@ -4,7 +4,8 @@
 
 (function(exports) {
   var utils = go.utils,
-      merge = utils.merge;
+      merge = utils.merge,
+      maybeByName = utils.maybeByName;
 
   // Acts as a 'base' for class-like objects which can be extended (with the
   // prototype chain set up automatically)
@@ -201,13 +202,13 @@
     addDefaults: {
       silent: false,
       render: true,  // render view after adding
-      addModel: false  // add the model if it is not in the collection
+      addModel: true  // add the model if it is not in the collection
     },
 
     removeDefaults: {
       silent: false,
       render: true,  // render view after adding
-      removeModel: false  // remove the model if it is in the collection
+      removeModel: true  // remove the model if it is in the collection
     },
 
     constructor: function(options) {
@@ -231,7 +232,7 @@
       }, this);
 
       (options.views || []).forEach(function(v) {
-        this.add(v, {render: false, silent: true, addModel: true});
+        this.add(v, {render: false, silent: true});
       }, this);
     },
 
@@ -267,7 +268,7 @@
       var typeName = options.model.get(this.typeAttr);
       return !typeName
         ? type
-        : subtypes[typeName] || type;
+        : maybeByName(subtypes[typeName]) || type;
     },
 
     // Override to specialise how each view is created

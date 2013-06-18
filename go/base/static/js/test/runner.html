@@ -11,9 +11,13 @@
     <script src="vendor/chai.js"></script>
     <script src="vendor/sinon.js"></script>
     <script>
-      mocha.ui('bdd');
-      mocha.reporter('html');
+      mocha
+        .ui('bdd')
+        .reporter('html');
+
       window.assert = chai.assert;
+      window.globals = {};
+      window.JST = {};
     </script>
 
     <script src="../vendor/jquery-1.9.1.js"></script>
@@ -54,6 +58,7 @@
     <script src="../src/campaign/dialogue/views.js"></script>
 
     <script src="tests/testHelpers/testHelpers.js"></script>
+    <script src="tests/testHelpers/testHelpers.test.js"></script>
     <script src="tests/testHelpers/rpc.js"></script>
     <script src="tests/errors.test.js"></script>
     <script src="tests/utils.test.js"></script>

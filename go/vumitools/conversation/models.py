@@ -63,6 +63,9 @@ class Conversation(Model):
     def running(self):
         return self.status == CONVERSATION_RUNNING
 
+    def stopped(self):
+        return self.status == CONVERSATION_STOPPED
+
     def is_draft(self):
         # TODO: Get rid of this once the old UI finally goes away.
         return self.active() and self.status == CONVERSATION_STOPPED

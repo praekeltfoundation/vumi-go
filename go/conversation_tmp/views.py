@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 
-from go.campaigns.forms import (
+from go.conversation_tmp.forms import (
     CampaignGeneralForm, CampaignConfigurationForm, CampaignBulkMessageForm,
     CampaignSurveryInitiateForm)
 from go.base.utils import conversation_or_404
@@ -39,12 +39,12 @@ def details(request, campaign_key=None):
             action = request.POST.get('action')
             if action == 'draft':
                 # save and go back to list.
-                return redirect('conversations:index')
+                return redirect('conversations_tmp:index')
 
             # TODO save and go to next step.
-            return redirect('campaigns:message', campaign_key=conversation.key)
+            return redirect('conversations_tmp:message', campaign_key=conversation.key)
 
-    return render(request, 'campaigns/wizard_1_details.html', {
+    return render(request, 'wizard_views/wizard_1_details.html', {
         'form_general': form_general,
         'form_config_new': form_config_new,
         'campaign_key': campaign_key
@@ -55,7 +55,7 @@ def details(request, campaign_key=None):
 def message(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
 
-    to = 'campaigns:message_%s' % conversation.conversation_type
+    to = 'conversations_tmp:message_%s' % conversation.conversation_type
     return redirect(to, campaign_key=conversation.key)
 
 
@@ -68,12 +68,12 @@ def message_survey(request, campaign_key):
         action = request.POST.get('action')
         if action == 'draft':
             # save and go back to list.
-            return redirect('conversations:index')
+            return redirect('conversations_tmp:index')
 
         # TODO save and go to next step.
-        return redirect('campaigns:contacts', campaign_key=conversation.key)
+        return redirect('conversations_tmp:contacts', campaign_key=conversation.key)
 
-    return render(request, 'campaigns/wizard_2_survey.html', {
+    return render(request, 'wizard_views/wizard_2_survey.html', {
         'campaign_key': campaign_key,
         'conversation': conversation,
         'initiate_form': initiate_form
@@ -89,12 +89,12 @@ def message_bulk(request, campaign_key):
         action = request.POST.get('action')
         if action == 'draft':
             # save and go back to list.
-            return redirect('conversations:index')
+            return redirect('conversations_tmp:index')
 
         # TODO save and go to next step.
-        return redirect('campaigns:contacts', campaign_key=conversation.key)
+        return redirect('conversations_tmp:contacts', campaign_key=conversation.key)
 
-    return render(request, 'campaigns/wizard_2_message_bulk.html', {
+    return render(request, 'wizard_views/wizard_2_message_bulk.html', {
         'form': form,
         'conversation': conversation,
         'campaign_key': campaign_key
@@ -108,7 +108,7 @@ def contacts(request, campaign_key):
         action = request.POST.get('action')
         if action == 'draft':
             # save and go back to list.
-            return redirect('conversations:index')
+            return redirect('conversations_tmp:index')
 
         group_keys = request.POST.getlist('group')
         for group_key in group_keys:
@@ -116,7 +116,7 @@ def contacts(request, campaign_key):
         conversation.save()
 
         # TODO save and go to next step.
-        return redirect('campaigns:preview', campaign_key=conversation.key)
+        return redirect('conversations_tmp:preview', campaign_key=conversation.key)
 
     groups = sorted(request.user_api.list_groups(),
                     key=lambda group: group.created_at,
@@ -137,7 +137,7 @@ def contacts(request, campaign_key):
         'query': query,
     })
 
-    return render(request, 'campaigns/wizard_3_contacts.html', {
+    return render(request, 'wizard_views/wizard_3_contacts.html', {
         'paginator': paginator,
         'page': page,
         'pagination_params': pagination_params,
@@ -153,7 +153,7 @@ def preview(request, campaign_key):
     groups = dict((group.name, contact_store.count_contacts_for_group(group))
                   for group in conversation.get_groups())
 
-    return render(request, 'campaigns/wizard_4_preview.html', {
+    return render(request, 'wizard_views/wizard_4_preview.html', {
         'conversation': conversation,
         'campaign_key': campaign_key,
         'groups': groups,
@@ -173,7 +173,7 @@ def incoming_list(request, campaign_key):
         {'contact': '22222 539 222', 'threads': 99, 'date': '2013-03-21'},
     )
 
-    return render(request, 'campaigns/incoming_list.html', {
+    return render(request, 'conversations/incoming_list.html', {
         'conversation': conversation,
         'message_list': message_list
     })
@@ -198,7 +198,7 @@ def incoming_detail(request, campaign_key, contact_key):
         {'contact': 'You', 'message': 'What is your favourite meal?'},
     )
 
-    return render(request, 'campaigns/incoming_detail.html', {
+    return render(request, 'conversations/incoming_detail.html', {
         'conversation': conversation,
         'form': form,
         'message_list': message_list
@@ -207,7 +207,7 @@ def incoming_detail(request, campaign_key, contact_key):
 
 @login_required
 def pricing(request):
-    return render(request, 'campaigns/pricing.html', {
+    return render(request, 'conversations/pricing.html', {
     })
 
 @login_required
@@ -215,5 +215,5 @@ def routing(request, campaign_key):
     # TODO Get initial routing model data so we can bootstrap it to page load
 
     # TODO give stuff to the template
-    return render(request, 'campaigns/routing.html', {
+    return render(request, 'conversations/routing.html', {
     })
