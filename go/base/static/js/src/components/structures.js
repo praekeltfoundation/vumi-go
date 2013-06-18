@@ -179,13 +179,13 @@
     addDefaults: {
       silent: false,
       render: true,  // render view after adding
-      addModel: false  // add the model if it is not in the collection
+      addModel: true  // add the model if it is not in the collection
     },
 
     removeDefaults: {
       silent: false,
       render: true,  // render view after adding
-      removeModel: false  // remove the model if it is in the collection
+      removeModel: true  // remove the model if it is in the collection
     },
 
     constructor: function(options) {
@@ -209,7 +209,7 @@
       }, this);
 
       (options.views || []).forEach(function(v) {
-        this.add(v, {render: false, silent: true, addModel: true});
+        this.add(v, {render: false, silent: true});
       }, this);
     },
 
