@@ -381,7 +381,6 @@ PIPELINE_JS = {
             'js/src/components/plumbing/connections.js',
             'js/src/components/plumbing/diagrams.js',
             'js/src/components/tables.js',
-            'js/src/components/bulkMessage.js',
             'js/src/campaign/campaign.js',
             'js/src/campaign/interactive.js',
             'js/src/campaign/routing/routing.js',

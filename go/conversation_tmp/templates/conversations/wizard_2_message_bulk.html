@@ -14,5 +14,5 @@
 {% block ondomready %}
     {{ block.super }}
     $('.breadcrumbs a').eq(1).addClass('active');
-    new go.components.bulkMessage.TextareaView({el: $('#frm-campaign textarea')});
+    new go.components.views.MessageTextView({el: $('#frm-campaign textarea')});
 {% endblock %}

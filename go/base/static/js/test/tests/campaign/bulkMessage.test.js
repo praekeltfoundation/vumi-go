@@ -6,7 +6,7 @@ describe("go.components", function() {
     var text = 'Margle. The. World.';
     var $textarea = $('<textarea>' + text + '</textarea>');
     $div.append($textarea);
-    view = new go.components.bulkMessage.TextareaView({el: $textarea});
+    view = new go.components.views.MessageTextView({el: $textarea});
 
     it("should append an element `.textarea-char-count`", function() {
         $textarea.trigger('keyup');
