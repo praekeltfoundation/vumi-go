@@ -1,6 +1,7 @@
 {% extends "app.html" %}
 {% load url from future %}
 {% load humanize %}
+{% load conversation_tags %}
 
 
 {% block content_extraclass %}dashboard campaigns{% endblock %}
@@ -78,10 +79,10 @@
                     <tbody>
                         {% if conversations %}
                             {% for conversation in page.object_list %}
-                            <tr data-url="{% url 'conversations_tmp:details' conversation.key %}">
+                            <tr data-url="{% conversation_screen conversation %}">
                                 <td><input type="checkbox" name="conversation_key" value="{{ conversation.key }}"></td>
                                 <td>
-                                    <a href="{% url 'conversations_tmp:details' conversation.key %}">
+                                    <a href="{% conversation_screen conversation %}">
                                         {{ conversation.name }}
                                     </a>
                                 </td>

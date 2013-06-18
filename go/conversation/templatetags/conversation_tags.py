@@ -21,7 +21,12 @@ register = template.Library()
 
 @register.simple_tag
 def conversation_screen(conv, view_name='show'):
-    view_def = get_conversation_view_definition(conv.conversation_type, conv)
+    # FIXME: Unhack this when all apps have definition modules.
+    try:
+        view_def = get_conversation_view_definition(
+            conv.conversation_type, conv)
+    except AttributeError:
+        return '/conversations/%s/' % (conv.key,)
     finder = ConversationViewFinder(view_def)
     return finder.get_view_url(view_name, conversation_key=conv.key)
 

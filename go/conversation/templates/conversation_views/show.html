@@ -16,7 +16,7 @@
     <div class="span7">
 
         <h4 class="control-label">
-            <a href="{% url 'conversations:conversation' conversation_key=conversation.key path_suffix='' %}">
+            <a href="{% conversation_screen conversation %}">
                 Details
                 <button class="btn btn-primary btn-mini">Edit</button>
             </a>
