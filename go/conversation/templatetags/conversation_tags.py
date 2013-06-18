@@ -10,12 +10,20 @@ from django.template.defaultfilters import stringfilter
 from go.conversation.utils import PagedMessageCache
 from go.conversation.forms import ReplyToMessageForm
 from go.base import message_store_client as ms_client
-from go.base.utils import page_range_window
+from go.base.utils import page_range_window, get_conversation_view_definition
+from go.conversation.conversation_views import ConversationViewFinder
 
 from vumi.message import TransportUserMessage
 
 
 register = template.Library()
+
+
+@register.simple_tag
+def conversation_screen(conv, view_name='show'):
+    view_def = get_conversation_view_definition(conv.conversation_type, conv)
+    finder = ConversationViewFinder(view_def)
+    return finder.get_view_url(view_name, conversation_key=conv.key)
 
 
 @register.inclusion_tag(
