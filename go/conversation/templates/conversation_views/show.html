@@ -48,7 +48,7 @@
             {% if actions %}
                 <ol>
                 {% for action in actions %}
-                    <li><a href="{% url 'conversations:conversation_action' conversation_key=conversation.key action_name=action.action_name %}">{{action.action_display_name}}</a></li>
+                    <li><a href="{% conversation_action conversation action.action_name %}">{{action.action_display_name}}</a></li>
                 {% endfor %}
                 </ol>
             {% else %}
