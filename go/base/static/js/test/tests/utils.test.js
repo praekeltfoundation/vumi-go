@@ -28,4 +28,34 @@ describe("go.utils", function() {
       assert.deepEqual(c, {c: 3});
     });
   });
+
+  describe(".objectByName", function() {
+    var objectByName = go.utils.objectByName;
+
+    it("should get an object defined directly on the context object",
+    function() {
+      assert.equal(objectByName('thing', {thing: 3}), 3);
+    });
+
+    it("should get an object defined on a property of the context object",
+    function() {
+      assert.equal(
+        objectByName('thing.subthing', {thing: {subthing: 23}}),
+        23);
+    });
+  });
+
+  describe(".maybeByName", function() {
+    var maybeByName = go.utils.maybeByName;
+
+    it("should get the object by name if a string was given", function() {
+      assert.equal(
+        maybeByName('thing.subthing', {thing: {subthing: 23}}),
+        23);
+    });
+
+    it("should return what it was given if it was a non-string", function() {
+      assert.equal(maybeByName(23), 23);
+    });
+  });
 });

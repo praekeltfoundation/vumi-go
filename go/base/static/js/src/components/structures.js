@@ -4,7 +4,8 @@
 
 (function(exports) {
   var utils = go.utils,
-      merge = utils.merge;
+      merge = utils.merge,
+      maybeByName = utils.maybeByName;
 
   // Acts as a 'base' for class-like objects which can be extended (with the
   // prototype chain set up automatically)
@@ -254,7 +255,7 @@
       var typeName = options.model.get(this.typeAttr);
       return !typeName
         ? type
-        : subtypes[typeName] || type;
+        : maybeByName(subtypes[typeName]) || type;
     },
 
     // Override to specialise how each view is created
