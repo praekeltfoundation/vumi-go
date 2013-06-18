@@ -5,6 +5,7 @@ from StringIO import StringIO
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.core import mail
+from django.utils.unittest import skip
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
@@ -294,6 +295,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(22, len(csv_contents.split('\n')))
         self.assertEqual(mime_type, 'application/zip')
 
+    @skip("The new views don't have this.")
     @patch('go.base.message_store_client.MatchResult')
     @patch('go.base.message_store_client.Client')
     def test_message_search(self, Client, MatchResult):

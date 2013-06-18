@@ -44,7 +44,7 @@ def details(request, campaign_key=None):
             # TODO save and go to next step.
             return redirect('conversations_tmp:message', campaign_key=conversation.key)
 
-    return render(request, 'conversations/wizard_1_details.html', {
+    return render(request, 'wizard_views/wizard_1_details.html', {
         'form_general': form_general,
         'form_config_new': form_config_new,
         'campaign_key': campaign_key
@@ -62,9 +62,9 @@ def message(request, campaign_key):
 @login_required
 def message_survey(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
-    initiate_form = conversations_tmpurveryInitiateForm()
+    initiate_form = CampaignSurveryInitiateForm()
     if request.method == 'POST':
-        initiate_form = conversations_tmpurveryInitiateForm(request.POST)
+        initiate_form = CampaignSurveryInitiateForm(request.POST)
         action = request.POST.get('action')
         if action == 'draft':
             # save and go back to list.
@@ -73,7 +73,7 @@ def message_survey(request, campaign_key):
         # TODO save and go to next step.
         return redirect('conversations_tmp:contacts', campaign_key=conversation.key)
 
-    return render(request, 'conversations/wizard_2_survey.html', {
+    return render(request, 'wizard_views/wizard_2_survey.html', {
         'campaign_key': campaign_key,
         'conversation': conversation,
         'initiate_form': initiate_form
@@ -94,7 +94,7 @@ def message_bulk(request, campaign_key):
         # TODO save and go to next step.
         return redirect('conversations_tmp:contacts', campaign_key=conversation.key)
 
-    return render(request, 'conversations/wizard_2_message_bulk.html', {
+    return render(request, 'wizard_views/wizard_2_message_bulk.html', {
         'form': form,
         'conversation': conversation,
         'campaign_key': campaign_key
@@ -137,7 +137,7 @@ def contacts(request, campaign_key):
         'query': query,
     })
 
-    return render(request, 'conversations/wizard_3_contacts.html', {
+    return render(request, 'wizard_views/wizard_3_contacts.html', {
         'paginator': paginator,
         'page': page,
         'pagination_params': pagination_params,
@@ -153,7 +153,7 @@ def preview(request, campaign_key):
     groups = dict((group.name, contact_store.count_contacts_for_group(group))
                   for group in conversation.get_groups())
 
-    return render(request, 'conversations/wizard_4_preview.html', {
+    return render(request, 'wizard_views/wizard_4_preview.html', {
         'conversation': conversation,
         'campaign_key': campaign_key,
         'groups': groups,
