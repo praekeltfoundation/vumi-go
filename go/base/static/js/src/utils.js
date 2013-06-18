@@ -44,14 +44,11 @@
       : nameOrObj;
   };
 
-  var switchViews = function(from, to) { from.$el.replaceWith(to.$el); };
-
   _.extend(exports, {
     merge: merge,
     functor: functor,
     objectByName: objectByName,
     ensureObject: ensureObject,
-    switchViews: switchViews,
     highlightActiveLinks: highlightActiveLinks
   });
 })(go.utils = {});
