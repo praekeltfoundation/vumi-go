@@ -5,7 +5,7 @@
 (function(exports) {
   var utils = go.utils,
       merge = utils.merge,
-      ensureObject = utils.ensureObject;
+      maybeByName = utils.maybeByName;
 
   // Acts as a 'base' for class-like objects which can be extended (with the
   // prototype chain set up automatically)
@@ -224,7 +224,7 @@
 
       return !typeName
         ? type
-        : ensureObject(subtypes[typeName]) || type;
+        : maybeByName(subtypes[typeName]) || type;
     },
 
     // Override to specialise how each view is created
