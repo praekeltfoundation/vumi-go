@@ -3,9 +3,6 @@
 // Structures for each dialogue state type
 
 (function(exports) {
-  var utils = go.utils,
-      switchViews = utils.switchViews;
-
   var structures = go.components.structures,
       ViewCollection = structures.ViewCollection;
 
@@ -17,8 +14,8 @@
   // model), and creating a new state view of a different type (representing a
   // new state model).
   var DialogueStateShellView = Backbone.View.extend({
-    type: 'choice',
     resetDefaults: {render: true},
+    type: 'choice',
 
     initialize: function(options) {
       this.diagram = options.diagram;
@@ -32,19 +29,26 @@
       // TODO ui warnings about the descruction involved
       this.type = type;
 
-      if (this.state) {
-        this.diagram.states.remove(this.state, {removeModel: true});
-      }
+      if (this.state) { this.diagram.states.remove(this.state); }
 
       this.state = this.diagram.states.add(
         'states',
         {shell: this, model: {type: type}},
-        {addModel: true, render: options.render});
+        {render: options.render});
 
       return this;
     },
 
-    render: function() { this.state.render(); }
+    render: function() {
+      this.state.render();
+      return this;
+    }
+  });
+
+  var DialogueStateShellCollection = ViewCollection.extend({
+    type: DialogueStateShellView,
+    viewOptions: function() { return {diagram: this.diagram}; },
+    initialize: function(options) { this.diagram = options.diagram; }
   });
 
   // Base 'mode' for state views. Each mode acts as a 'delegate view',
@@ -60,38 +64,42 @@
       this.state = options.state;
     },
 
+    destroy: function() { this.$el.remove(); },
+
     render: function() {
-      switchViews(this.state, this);
+      this.state.$el.append(this.$el);
 
-      var html = this.template(_(this).result('templateData'));
-      this.$el.replaceWith(html);
+      var data = _(this).result('templateData');
+      this.$el.html(this.template(data));
+      return this;
     }
-  });
-
-  var DialogueStateShellCollection = ViewCollection.extend({
-    type: DialogueStateShellView,
-    viewOptions: function() { return {diagram: this.diagram}; },
-    initialize: function(options) { this.diagram = options.diagram; }
   });
 
   // Mode allowing the user to make changes to the dialogue state. Acts as a
   // base for each state type's `edit` mode
-  var DialogueStateEditView = DialogueStateModeView.extend();
+  var DialogueStateEditView = DialogueStateModeView.extend({
+    className: 'edit mode'
+  });
 
   // Mode for a 'read-only' preview of the dialogue state. Acts as a base for
   // each state type's `preview` mode
-  var DialogueStatePreviewView = DialogueStateModeView.extend();
+  var DialogueStatePreviewView = DialogueStateModeView.extend({
+    className: 'preview mode'
+  });
 
   // Base view for dialogue states. Dynamically switches between modes
   // (`edit`, `preview`).
   var DialogueStateView = StateView.extend({
+    className: 'state',
+
     editorType: DialogueStateEditView,
     previewerType: DialogueStatePreviewView,
 
     subtypes: {
       choice: 'go.campaign.dialogue.states.choice.ChoiceStateView',
       freetext: 'go.campaign.dialogue.states.freetext.FreeStateView',
-      end: 'go.campaign.dialogue.states.end.EndStateView'
+      end: 'go.campaign.dialogue.states.end.EndStateView',
+      dummy: 'go.campaign.dialogue.states.DummyStateView'
     },
 
     id: function() { return this.model.id; },
@@ -100,28 +108,49 @@
       StateView.prototype.initialize.call(this, options);
       this.shell = options.shell;
 
-      this.previewer = new this.editorType({state: this});
-      this.editor = new this.previewerType({state: this});
+      this.previewer = new this.previewerType({state: this});
+      this.editor = new this.editorType({state: this});
       this.mode = this.editor;
     },
 
     // Switch to preview mode
     preview: function() {
+      this.mode.destroy();
       this.mode = this.previewer;
       this.render();
     },
 
     // Switch to edit mode
     edit: function() {
+      this.mode.destroy();
       this.mode = this.editor;
       this.render();
     },
 
     render: function() {
-      switchViews(this.shell, this);
+      this.shell.$el.append(this.$el);
       this.mode.render();
       this.endpoints.render();
+      return this;
     }
+  });
+
+  var DummyStateEditView = DialogueStateEditView.extend({
+    template: _.template("<div>dummy-edit</div>")
+  });
+
+  var DummyStatePreviewView = DialogueStatePreviewView.extend({
+    template: _.template("<div>dummy-preview</div>")
+  });
+
+  // A state view type that does nothing. Useful for testing.
+  var DummyStateView = DialogueStateView.extend({
+    editorType: DummyStateEditView,
+    previewerType: DummyStatePreviewView,
+
+    endpointSchema: [
+      {attr: 'entry_endpoint'},
+      {attr: 'exit_endpoint'}]
   });
 
   _(exports).extend({
