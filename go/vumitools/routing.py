@@ -34,8 +34,7 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
         "Connector to publish opt-out messages on.",
         static=True, required=True)
     user_account_key = ConfigText(
-        "Key of the user account the message is from.",
-        required=True)
+        "Key of the user account the message is from.")
 
 
 class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
@@ -118,18 +117,16 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         """Determine the config (primarily the routing table) for the given
         event or transport user message.
 
-        If the message is an event, we first look up the original message.
+        If the message is an event, we skip looking up the account since
+        events largely ignore the routing table.
 
         For a given message there are two cases. Either it already has
         a user account key in the Vumi Go helper metadata, or it is from
         a transport and has a tag.
         """
         if isinstance(msg, TransportEvent):
-            event = msg
-            msg = yield self.find_message_for_event(event)
-            if msg is None:
-                raise UnroutableMessageError(
-                    "Could not find transport user message for event", event)
+            config_dict = self.config.copy()
+            returnValue(self.CONFIG_CLASS(config_dict))
 
         msg_mdh = self.get_metadata_helper(msg)
 
@@ -166,6 +163,17 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     def get_router_connector(self, router_type):
         return self.router_connector_mapping.get(router_type)
 
+    def push_hop(self, msg, connector_name, endpoint):
+        hops = msg['routing_metadata'].setdefault('hops', [])
+        hops.append([connector_name, endpoint])
+
+    def next_hop_for_event(self, event, outbound_msg):
+        event_hops = event['routing_metadata'].setdefault('hops', [])
+        outbound_hops = event['routing_metadata'].setdefault('hops', [])
+        if len(event_hops) >= len(outbound_hops):
+            return None
+        return outbound_hops[-(len(event_hops) + 1)]
+
     @inlineCallbacks
     def process_inbound(self, config, msg, connector_name):
         """Process an inbound message.
@@ -188,6 +196,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         connector_type = self.connector_type(connector_name)
 
         if connector_type == self.TRANSPORT and msg_mdh.is_optout_message():
+            # TODO: append route in to metadata
             yield self.publish_inbound(
                 msg, config.opt_out_connector, 'default')
             return
@@ -226,6 +235,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 " Source was: %r. Target was: %r."
                 % (connector_name, target[0]), msg)
 
+        # TODO: append route in to metadata
         yield self.publish_inbound(msg, dst_connector_name, target[1])
 
     @inlineCallbacks
@@ -250,7 +260,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         connector_type = self.connector_type(connector_name)
 
         if connector_type == self.OPT_OUT:
-            pass  # TODO
+            pass  # TODO: pop route out from metadata & publish
         elif connector_type == self.CONVERSATION:
             conv_info = msg_mdh.get_conversation_info()
             src_conn = str(GoConnector.for_routing_block(
@@ -293,14 +303,37 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 " Source was: %r. Target was: %r."
                 % (connector_name, target[0]), msg)
 
+        self.push_hop(msg, dst_connector_name, target[1])
         yield self.publish_outbound(msg, dst_connector_name, target[1])
 
+    @inlineCallbacks
     def process_event(self, config, event, connector_name):
+        """Process an event message.
+
+        Events must trace back the path through the routing blocks
+        and conversations that was taken by the associated outbound
+        message.
+
+        Events thus ignore the routing table itself.
+
+        Events can be from:
+
+        * transports
+        * routing blocks
+
+        And may go to:
+
+        * routing blocks
+        * conversations
+        * the opt-out worker
+        """
         log.debug("Processing event: %s" % (event,))
-        if not config.conversation_info:
-            log.warning("No conversation info found on outbound message "
-                        "for event: %s" % (event,))
-            return
-        conv_type = config.conversation_info['conversation_type']
-        conv_connector = self.get_application_connector(conv_type)
-        return self.publish_event(event, conv_connector, "default")
+
+        msg = yield self.find_message_for_event(event)
+        if msg is None:
+            raise UnroutableMessageError(
+                "Could not find transport user message for event", event)
+
+        dst_connector_name, dst_endpoint = self.next_hop_for_event(event, msg)
+        self.push_hop(event, dst_connector_name, dst_endpoint)
+        yield self.publish_event(event, dst_connector_name, dst_endpoint)
