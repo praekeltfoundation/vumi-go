@@ -45,4 +45,5 @@ def go_api_proxy(request):
 
     logger.debug('Response data: %r' % (out,))
 
-    return HttpResponse(out, status=r.status_code)
+    return HttpResponse(out, status=r.status_code,
+                        content_type=r.headers['content-type'])
