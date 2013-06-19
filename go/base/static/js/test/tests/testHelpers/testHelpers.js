@@ -10,24 +10,26 @@
     return $(selector).get().length === 0;
   };
 
-  var loadTemplate = function(path, root) {
+  var loadTemplate = function(path, root, done) {
     var name = path
       .replace(/\..+$/, '')
       .split('/')
       .join('_');
 
     $.ajax({
-        type : 'GET',
-        url: (root || '/../../templates/') + path,
-        async: false,
-        success : function(raw) { JST[name] = _.template(raw); }
+      type : 'GET',
+      url: (root || '../../templates/') + path,
+      success : function(raw) {
+        var compiled = _.template(raw);
+        JST[name] = compiled;
+        done(name, compiled);
+      }
     });
   };
 
   var unloadTemplates = function() { JST = {}; };
 
   _.extend(exports, {
-    loadTemplate: loadTemplate,
     oneElExists: oneElExists,
     noElExists: noElExists,
     loadTemplate: loadTemplate,

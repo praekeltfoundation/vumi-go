@@ -96,12 +96,7 @@
   // --------------
 
   var setUp = function() {
-    $('body').append([
-      "<div id='dialogue-diagram'>",
-        "<div class='grid'>",
-        "</div>",
-      "</div>"
-    ].join(''));
+    $('body').append("<div id='dialogue-diagram'></div>");
   };
 
   var tearDown = function() {
