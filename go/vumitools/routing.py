@@ -166,6 +166,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     def get_router_connector(self, router_type):
         return self.router_connector_mapping.get(router_type)
 
+    @inlineCallbacks
     def process_inbound(self, config, msg, connector_name):
         """Process an inbound message.
 
@@ -187,13 +188,16 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         connector_type = self.connector_type(connector_name)
 
         if connector_type == self.TRANSPORT and msg_mdh.is_optout_message():
-            return self.publish_inbound(
+            yield self.publish_inbound(
                 msg, config.opt_out_connector, 'default')
+            return
 
         if connector_type == self.TRANSPORT:
             src_conn = str(GoConnector.for_transport_tag(*msg_mdh.tag))
         elif connector_type == self.ROUTER:
-            src_conn = str(GoConnector.for_routing_block())
+            router_info = msg_mdh.get_router_info()
+            src_conn = str(GoConnector.for_routing_block(
+                router_info['router_type'], router_info['router_key']))
         else:
             raise UnroutableMessageError(
                 "Inbound message from a source other than a transport"
@@ -222,43 +226,74 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 " Source was: %r. Target was: %r."
                 % (connector_name, target[0]), msg)
 
-        return self.publish_inbound(msg, dst_connector_name, target[1])
+        yield self.publish_inbound(msg, dst_connector_name, target[1])
 
+    @inlineCallbacks
     def process_outbound(self, config, msg, connector_name):
+        """Process an outbound message.
+
+        Outbound messages can be from:
+
+        * conversations
+        * routing blocks
+        * the opt-out worker
+
+        And may go to:
+
+        * routing blocks
+        * transports
+        """
         log.debug("Processing outbound: %s" % (msg,))
-        if not config.conversation_info:
-            log.warning(
-                "No conversation info found for outbound message: %s" % (msg,))
-            return
+        msg_mdh = self.get_metadata_helper(msg)
+        msg_mdh.set_user_account(config.user_account_key)
 
-        if OptOutMiddleware.is_optout_message(msg):
-            return self.handle_outbound_opt_out(msg)
+        connector_type = self.connector_type(connector_name)
 
-        conv_conn = str(GoConnector.for_conversation(
-            config.conversation_info['conversation_type'],
-            config.conversation_info['conversation_key']))
-        target = self.find_target(config, msg, conv_conn)
+        if connector_type == self.OPT_OUT:
+            pass  # TODO
+        elif connector_type == self.CONVERSATION:
+            conv_info = msg_mdh.get_conversation_info()
+            src_conn = str(GoConnector.for_routing_block(
+                conv_info['conversation_type'], conv_info['conversation_key']))
+        elif connector_type == self.ROUTING_BLOCK:
+            router_info = msg_mdh.get_router_info()
+            src_conn = str(GoConnector.for_routing_block(
+                router_info['router_type'], router_info['router_key']))
+        else:
+            raise UnroutableMessageError(
+                "Outbound message from a source other than a conversation,"
+                " routing block or the opt-out worker. Source was: %r"
+                % connector_name, msg)
+
+        target = self.find_target(config, msg, src_conn)
         if target is None:
             log.debug("No target found for message from '%s': %s" % (
                 connector_name, msg))
             return
 
-        conn = GoConnector.parse(target[0])
-        assert conn.ctype == conn.TRANSPORT_TAG
-        tag = [conn.tagpool, conn.tagname]
-        msg['helper_metadata'].setdefault('tag', {})['tag'] = tag
-
-        def publish_cb(tagpool_metadata):
+        dst_conn = GoConnector.parse(target[0])
+        if dst_conn.ctype == dst_conn.ROUTING_BLOCK:
+            msg_mdh.set_router_info(
+                dst_conn.rblock_type, dst_conn.rblock_key)
+            dst_connector_name = self.get_router_connector(
+                dst_conn.rblock_type)
+        elif dst_conn.ctype == dst_conn.TRANSPORT_TAG:
+            msg_mdh.set_tag([dst_conn.tagpool, dst_conn.tagname])
+            tagpool_metadata = yield self.vumi_api.tpm.get_metadata(
+                dst_conn.tagpool)
             transport_name = tagpool_metadata.get('transport_name')
             if transport_name is None:
-                log.warning("No transport_name for tag: %r" % (tag,))
-                return
+                raise UnroutableMessageError(
+                    "No transport name found for tagpool %r"
+                    % dst_conn.tagpool, msg)
+            dst_connector_name = transport_name
+        else:
+            raise UnroutableMessageError(
+                "Inbound message being routed towards invalid target."
+                " Source was: %r. Target was: %r."
+                % (connector_name, target[0]), msg)
 
-            return self.publish_outbound(msg, transport_name, target[1])
-
-        d = self.vumi_api.tpm.get_metadata(tag[0])
-        d.addCallback(publish_cb)
-        return d
+        yield self.publish_outbound(msg, dst_connector_name, target[1])
 
     def process_event(self, config, event, connector_name):
         log.debug("Processing event: %s" % (event,))
