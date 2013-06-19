@@ -10,20 +10,17 @@
     return $(selector).get().length === 0;
   };
 
-  var loadTemplate = function(path, root, done) {
+  var loadTemplate = function(path, root) {
     var name = path
       .replace(/\..+$/, '')
       .split('/')
       .join('_');
 
     $.ajax({
-      type : 'GET',
-      url: (root || '../../templates/') + path,
-      success : function(raw) {
-        var compiled = _.template(raw);
-        JST[name] = compiled;
-        done(name, compiled);
-      }
+        type : 'GET',
+        url: (root || '/../../templates/') + path,
+        async: false,
+        success : function(raw) { JST[name] = _.template(raw); }
     });
   };
 
