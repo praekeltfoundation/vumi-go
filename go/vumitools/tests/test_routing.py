@@ -5,7 +5,6 @@ from go.vumitools.tests.utils import AppWorkerTestCase
 
 
 class TestRoutingTableDispatcher(AppWorkerTestCase):
-    timeout = 1
 
     @inlineCallbacks
     def setUp(self):
