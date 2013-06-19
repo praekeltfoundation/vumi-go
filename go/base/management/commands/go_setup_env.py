@@ -109,6 +109,11 @@ class Command(BaseCommand):
             default='127.0.0.1:8000',
             help='The host:addr that the Django webapp should bind to.'),
         make_option(
+            '--go-api-endpoint',
+            dest='go_api_endpoint',
+            default='tcp:interface=127.0.0.1:port=8001',
+            help='The Twisted endpoint that the Go API worker should use.'),
+        make_option(
             '--skip-startup-script',
             dest='write_startup_script',
             default=True,
@@ -131,6 +136,7 @@ class Command(BaseCommand):
         self.supervisord_host = options['supervisord_host']
         self.supervisord_port = options['supervisord_port']
         self.webapp_bind = options['webapp_bind']
+        self.go_api_endpoint = options['go_api_endpoint']
 
         self.contact_group_info = []
         self.conversation_info = []
@@ -167,6 +173,10 @@ class Command(BaseCommand):
             self.write_supervisor_config_file(
                 'routing_table_dispatcher',
                 'go.vumitools.routing.AccountRoutingTableDispatcher')
+            self.create_go_api_worker_config()
+            self.write_supervisor_config_file(
+                'go_api_worker',
+                'go.api.go_api.GoApiWorker')
 
         if options['write_supervisord_config']:
             self.write_supervisord_conf()
@@ -413,6 +423,22 @@ class Command(BaseCommand):
             templ = 'command_dispatcher.yaml.template'
             data = self.render_template(templ, {
                 'applications': applications
+            })
+            fp.write(self.auto_gen_warning)
+            fp.write(data)
+
+        self.stdout.write('Wrote %s.\n' % (fn,))
+
+    def create_go_api_worker_config(self):
+        fn = self.mk_filename('go_api_worker', 'yaml')
+        with self.open_file(fn, 'w') as fp:
+            templ = 'go_api_worker.yaml.template'
+            data = self.render_template(templ, {
+                'twisted_endpoint': self.go_api_endpoint,
+                'redis_manager': self.dump_yaml_block(
+                    self.config['redis_manager'], 1),
+                'riak_manager': self.dump_yaml_block(
+                    self.config['riak_manager'], 1),
             })
             fp.write(self.auto_gen_warning)
             fp.write(data)
