@@ -49,17 +49,17 @@ describe("go.utils", function() {
     });
   });
 
-  describe(".ensureObject", function() {
-    var ensureObject = go.utils.ensureObject;
+  describe(".maybeByName", function() {
+    var maybeByName = go.utils.maybeByName;
 
     it("should get the object by name if a string was given", function() {
       assert.equal(
-        ensureObject('thing.subthing', {thing: {subthing: 23}}),
+        maybeByName('thing.subthing', {thing: {subthing: 23}}),
         23);
     });
 
     it("should return what it was given if it was a non-string", function() {
-      assert.equal(ensureObject(23), 23);
+      assert.equal(maybeByName(23), 23);
     });
   });
 });

@@ -4,10 +4,10 @@ from django.test.client import Client
 from django.core import mail
 from django.core.urlresolvers import reverse
 from django.contrib.sites.models import Site
+from django.utils.unittest import skip
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.vumitools.token_manager import TokenManager
-from go.conversation.conversation_views import ConversationViewFinder
 from go.base.utils import get_conversation_view_definition
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
@@ -29,12 +29,10 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             conv_key = self.conv_key
         view_def = get_conversation_view_definition(
             self.TEST_CONVERSATION_TYPE)
-        finder = ConversationViewFinder(view_def)
-        return finder.get_view_url(view, conversation_key=conv_key)
+        return view_def.get_view_url(view, conversation_key=conv_key)
 
     def get_new_view_url(self):
-        return reverse('conversations:new_conversation', kwargs={
-            'conversation_type': 'bulk_message'})
+        return reverse('conversations:new_conversation')
 
     def get_action_view_url(self, action_name, conv_key=None):
         if conv_key is None:
@@ -49,21 +47,17 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
     def run_new_conversation(self, selected_option, pool, tag):
         # render the form
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        response = self.client.get(self.get_new_view_url())
-        self.assertEqual(response.status_code, 200)
         # post the form
         response = self.client.post(self.get_new_view_url(), {
-            'subject': 'the subject',
-            'message': 'the message',
-            'delivery_class': 'sms',
-            'delivery_tag_pool': selected_option,
+            'name': 'conversation name',
+            'type': self.TEST_CONVERSATION_TYPE,
         })
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
         conv = self.get_latest_conversation()
-        self.assertEqual(conv.delivery_class, 'sms')
-        self.assertEqual(conv.delivery_tag_pool, pool)
-        self.assertEqual(conv.delivery_tag, tag)
-        self.assertRedirects(response, self.get_view_url('people', conv.key))
+        # self.assertEqual(conv.delivery_class, 'sms')
+        # self.assertEqual(conv.delivery_tag_pool, pool)
+        # self.assertEqual(conv.delivery_tag, tag)
+        self.assertRedirects(response, self.get_view_url('show', conv.key))
 
     def test_new_conversation(self):
         """test the creation of a new conversation"""
@@ -76,19 +70,21 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.run_new_conversation(u'longcode:default10001', u'longcode',
                                   u'default10001')
 
-    def test_end(self):
+    def test_stop(self):
         """
         Test ending the conversation
         """
         conversation = self.get_wrapped_conv()
-        self.assertFalse(conversation.ended())
-        response = self.client.post(self.get_view_url('end'), follow=True)
+        conversation.set_status_started()
+        conversation.save()
+        response = self.client.post(self.get_view_url('stop'), follow=True)
         self.assertRedirects(response, self.get_view_url('show'))
         [msg] = response.context['messages']
-        self.assertEqual(str(msg), "Conversation ended")
+        self.assertEqual(str(msg), "Conversation stopped")
         conversation = self.get_wrapped_conv()
-        self.assertTrue(conversation.ended())
+        self.assertTrue(conversation.stopping())
 
+    @skip("The new views don't have this yet.")
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
         conversation"""
@@ -116,17 +112,6 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
                 user_account_key=conversation.user_account.key,
                 conversation_key=conversation.key))
 
-    def test_send_fails(self):
-        """
-        Test failure to send messages
-        """
-        self.acquire_all_longcode_tags()
-        response = self.client.post(self.get_view_url('start'), follow=True)
-        self.assertRedirects(response, self.get_view_url('start'))
-        [] = self.get_api_commands_sent()
-        [msg] = response.context['messages']
-        self.assertEqual(str(msg), "No spare messaging tags.")
-
     def test_show(self):
         """
         Test showing the conversation
@@ -137,6 +122,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertContains(response, 'Send Bulk Message')
         self.assertContains(response, self.get_action_view_url('bulk_send'))
 
+    @skip("The new views don't have this.")
     def test_show_cached_message_pagination(self):
         # Create 21 inbound & 21 outbound messages, since we have
         # 20 messages per page it should give us 2 pages
@@ -158,6 +144,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         # the first page.
         self.assertContains(response, '&amp;p=0', 0)
 
+    @skip("The new views don't have this.")
     def test_show_cached_message_overview(self):
         self.put_sample_messages_in_conversation(self.user_api,
                                                  self.conv_key, 10)
@@ -168,6 +155,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             '10 accepted for delivery by the networks.')
         self.assertContains(response, '10 delivered.')
 
+    @skip("The new views don't have this.")
     @patch('go.base.message_store_client.MatchResult')
     @patch('go.base.message_store_client.Client')
     def test_message_search(self, Client, MatchResult):
@@ -185,6 +173,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             'generic/includes/message-load-results.html' in template_names)
         self.assertEqual(response.context['token'], fake_client.token)
 
+    @skip("The new views don't have this.")
     @patch('go.base.message_store_client.MatchResult')
     @patch('go.base.message_store_client.Client')
     def test_message_results(self, Client, MatchResult):
@@ -296,6 +285,18 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             batch_id=conversation.get_batches()[0].key, msg_options={},
             content='I am ham, not spam.', dedupe=False))
 
+    @skip("The new views don't handle this kind of thing very well yet.")
+    def test_action_bulk_send_fails(self):
+        """
+        Test failure to send messages
+        """
+        self.acquire_all_longcode_tags()
+        response = self.client.post(self.get_view_url('start'), follow=True)
+        self.assertRedirects(response, self.get_view_url('start'))
+        [] = self.get_api_commands_sent()
+        [msg] = response.context['messages']
+        self.assertEqual(str(msg), "No spare messaging tags.")
+
 
 class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
 
@@ -314,25 +315,7 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
             conv_key = self.conv_key
         view_def = get_conversation_view_definition(
             self.TEST_CONVERSATION_TYPE)
-        finder = ConversationViewFinder(view_def)
-        return finder.get_view_url(view, conversation_key=conv_key)
-
-    def test_confirm_start_conversation_get(self):
-        """
-        Test the start conversation view with the confirm_start_conversation
-        enabled for the account's profile.
-        """
-        profile = self.user.get_profile()
-        account = profile.get_user_account()
-        account.confirm_start_conversation = True
-        account.save()
-
-        response = self.client.get(self.get_view_url('start'))
-
-        self.assertEqual(response.context['confirm_start_conversation'], True)
-        template_names = [t.name for t in response.templates]
-        self.assertTrue('generic/includes/conversation_start_confirmation.html'
-                        in template_names)
+        return view_def.get_view_url(view, conversation_key=conv_key)
 
     def test_confirm_start_conversation_post(self):
         """
@@ -485,13 +468,13 @@ class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
             conv_key = self.conv_key
         view_def = get_conversation_view_definition(
             self.TEST_CONVERSATION_TYPE)
-        finder = ConversationViewFinder(view_def)
-        return finder.get_view_url(view, conversation_key=conv_key)
+        return view_def.get_view_url(view, conversation_key=conv_key)
 
     def get_wrapped_conv(self):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
         return self.user_api.wrap_conversation(conv)
 
+    @skip("The new views don't have this.")
     def test_actions_on_inbound_only(self):
         messages = self.put_sample_messages_in_conversation(self.user_api,
                                                             self.conv_key, 1)

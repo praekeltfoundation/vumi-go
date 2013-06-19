@@ -1,12 +1,15 @@
 from urllib import urlencode
 
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.views.decorators.http import require_POST
+from django.contrib import messages
+from django.http import HttpResponse
 
 from go.conversation.forms import ConversationSearchForm
 from go.base.utils import get_conversation_view_definition, conversation_or_404
-from go.conversation.conversation_views import ConversationViewFinder
+from go.conversation_tmp.forms import CampaignGeneralForm
 
 
 CONVERSATIONS_PER_PAGE = 12
@@ -76,8 +79,7 @@ def conversation(request, conversation_key, path_suffix):
     conv = conversation_or_404(request.user_api, conversation_key)
     view_def = get_conversation_view_definition(
         conv.conversation_type, conv)
-    finder = ConversationViewFinder(view_def)
-    view = finder.get_view(path_suffix)
+    view = view_def.get_view(path_suffix)
     return view(request, conv)
 
 
@@ -86,14 +88,37 @@ def conversation_action(request, conversation_key, action_name):
     conv = conversation_or_404(request.user_api, conversation_key)
     view_def = get_conversation_view_definition(
         conv.conversation_type, conv)
-    finder = ConversationViewFinder(view_def)
-    view = finder.get_action_view(action_name)
+    view = view_def.get_action_view(action_name)
     return view(request, conv)
 
 
 @login_required
-def new_conversation(request, conversation_type):
-    view_def = get_conversation_view_definition(conversation_type)
-    finder = ConversationViewFinder(view_def)
-    view = finder.get_new_conversation_view()
-    return view(request, conversation_type)
+@require_POST
+def new_conversation(request):
+    # TODO: description?
+    form = CampaignGeneralForm(request.POST)
+    if not form.is_valid():
+        # TODO: Something more sensible here?
+        return HttpResponse(
+            "Invalid form: %s" % (form.errors,), status=400)
+    conversation_type = form.cleaned_data['type']
+    conv = request.user_api.new_conversation(
+        conversation_type, name=form.cleaned_data['name'],
+        description=u'', config={})
+    messages.info(request, 'Conversation created successfully.')
+
+    view_def = get_conversation_view_definition(
+        conv.conversation_type, conv)
+
+    # TODO: Better workflow here?
+
+    next_view = 'show'
+    action = request.POST.get('action')
+    if action == 'draft':
+        # save and go back to list.
+        return redirect('conversations:index')
+    elif view_def.edit_conversation_forms is not None:
+        next_view = 'edit'
+
+    return redirect(view_def.get_view_url(
+        next_view, conversation_key=conv.key))

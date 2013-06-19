@@ -38,7 +38,7 @@
 
   // If given a string, gets the object by name, otherwise just returns what
   // it was given
-  var ensureObject = function(nameOrObj, that) {
+  var maybeByName = function(nameOrObj, that) {
     return typeof nameOrObj === 'string'
       ? objectByName(nameOrObj, that)
       : nameOrObj;
@@ -48,7 +48,7 @@
     merge: merge,
     functor: functor,
     objectByName: objectByName,
-    ensureObject: ensureObject,
+    maybeByName: maybeByName,
     highlightActiveLinks: highlightActiveLinks
   });
 })(go.utils = {});

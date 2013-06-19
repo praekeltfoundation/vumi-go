@@ -1,5 +1,4 @@
 import logging
-from unittest import skip
 
 from django.test.client import Client
 from django.core.urlresolvers import reverse

@@ -5,13 +5,13 @@ from StringIO import StringIO
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.core import mail
+from django.utils.unittest import skip
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.apps.surveys.views import get_poll_config
 from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
 from go.base.utils import get_conversation_view_definition
-from go.conversation.conversation_views import ConversationViewFinder
 
 from mock import patch
 
@@ -33,12 +33,10 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             conv_key = self.conv_key
         view_def = get_conversation_view_definition(
             self.TEST_CONVERSATION_TYPE)
-        finder = ConversationViewFinder(view_def)
-        return finder.get_view_url(view, conversation_key=conv_key)
+        return view_def.get_view_url(view, conversation_key=conv_key)
 
     def get_new_view_url(self):
-        return reverse('conversations:new_conversation', kwargs={
-            'conversation_type': self.TEST_CONVERSATION_TYPE})
+        return reverse('conversations:new_conversation')
 
     def get_action_view_url(self, action_name, conv_key=None):
         if conv_key is None:
@@ -57,23 +55,18 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         return pm, pm.register(poll_id, config)
 
     def run_new_conversation(self, selected_option, pool, tag):
-        # render the form
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        response = self.client.get(self.get_new_view_url())
-        self.assertEqual(response.status_code, 200)
         # post the form
         response = self.client.post(self.get_new_view_url(), {
-            'subject': 'the subject',
-            'message': 'the message',
-            'delivery_class': 'sms',
-            'delivery_tag_pool': selected_option,
+            'name': 'conversation name',
+            'type': self.TEST_CONVERSATION_TYPE,
         })
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
         conv = self.get_latest_conversation()
-        self.assertEqual(conv.delivery_class, 'sms')
-        self.assertEqual(conv.delivery_tag_pool, pool)
-        self.assertEqual(conv.delivery_tag, tag)
-        self.assertRedirects(response, self.get_view_url('contents', conv.key))
+        # self.assertEqual(conv.delivery_class, 'sms')
+        # self.assertEqual(conv.delivery_tag_pool, pool)
+        # self.assertEqual(conv.delivery_tag, tag)
+        self.assertRedirects(response, self.get_view_url('show', conv.key))
 
     def test_new_conversation(self):
         """test the creation of a new conversation"""
@@ -86,41 +79,19 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.run_new_conversation('longcode:default10001', 'longcode',
                                   'default10001')
 
-    def test_end(self):
+    def test_stop(self):
         """
         Test ending the conversation
         """
         conversation = self.get_wrapped_conv()
-        self.assertFalse(conversation.ended())
-        response = self.client.post(self.get_view_url('end'), follow=True)
+        conversation.set_status_started()
+        conversation.save()
+        response = self.client.post(self.get_view_url('stop'), follow=True)
         self.assertRedirects(response, self.get_view_url('show'))
         [msg] = response.context['messages']
-        self.assertEqual(str(msg), "Conversation ended")
+        self.assertEqual(str(msg), "Conversation stopped")
         conversation = self.get_wrapped_conv()
-        self.assertTrue(conversation.ended())
-
-    def test_client_or_server_init_distinction(self):
-        """A survey should never ask for recipients.
-        We can use the new conversation action to send if necessary."""
-
-        self.api.tpm.set_metadata("pool1", {
-            "delivery_class": "sms",
-            "server_initiated": True,
-            })
-
-        self.api.tpm.set_metadata("pool2", {
-            "delivery_class": "ussd",
-            "client_initiated": True,
-            })
-
-        def get_people_page(tag_pool):
-            conversation = self.get_wrapped_conv()
-            conversation.c.delivery_tag_pool = tag_pool
-            conversation.save()
-            return self.client.get(self.get_view_url('people'))
-
-        self.assertNotContains(get_people_page(u'pool1'), 'Survey Recipients')
-        self.assertNotContains(get_people_page(u'pool2'), 'Survey Recipients')
+        self.assertTrue(conversation.stopping())
 
     def test_action_send_survey_get(self):
         response = self.client.get(self.get_action_view_url('send_survey'))
@@ -145,6 +116,19 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             batch_id=conversation.get_batches()[0].key, msg_options={},
             is_client_initiated=False))
 
+    @skip("The new views don't handle this kind of thing very well yet.")
+    def test_action_send_survey_fails(self):
+        """
+        Test failure to send messages
+        """
+        self.acquire_all_longcode_tags()
+        response = self.client.post(self.get_view_url('start'), follow=True)
+        self.assertRedirects(response, self.get_view_url('start'))
+        [] = self.get_api_commands_sent()
+        [msg] = response.context['messages']
+        self.assertEqual(str(msg), "No spare messaging tags.")
+
+    @skip("The new views don't have this yet.")
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
         conversation"""
@@ -171,17 +155,6 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             '%s_application' % (conversation.conversation_type,), 'start',
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key))
-
-    def test_send_fails(self):
-        """
-        Test failure to send messages
-        """
-        self.acquire_all_longcode_tags()
-        response = self.client.post(self.get_view_url('start'), follow=True)
-        self.assertRedirects(response, self.get_view_url('start'))
-        [] = self.get_api_commands_sent()
-        [msg] = response.context['messages']
-        self.assertEqual(str(msg), "No spare messaging tags.")
 
     def test_show(self):
         """
@@ -294,6 +267,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(22, len(csv_contents.split('\n')))
         self.assertEqual(mime_type, 'application/zip')
 
+    @skip("The new views don't have this.")
     @patch('go.base.message_store_client.MatchResult')
     @patch('go.base.message_store_client.Client')
     def test_message_search(self, Client, MatchResult):
@@ -311,6 +285,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
                         template_names)
         self.assertEqual(response.context['token'], fake_client.token)
 
+    @skip("The new views don't have this.")
     @patch('go.base.message_store_client.MatchResult')
     @patch('go.base.message_store_client.Client')
     def test_message_results(self, Client, MatchResult):

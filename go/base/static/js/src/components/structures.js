@@ -5,7 +5,7 @@
 (function(exports) {
   var utils = go.utils,
       merge = utils.merge,
-      ensureObject = utils.ensureObject;
+      maybeByName = utils.maybeByName;
 
   // Acts as a 'base' for class-like objects which can be extended (with the
   // prototype chain set up automatically)
@@ -54,6 +54,8 @@
     each: function(fn, that) { return this.values().forEach(fn, that); },
 
     map: function(fn, that) { return this.values().map(fn, that); },
+
+    where: function(props) { return _.where(this.values(), props); },
 
     eachItem: function(fn, that) {
       var items = this.items();
@@ -202,13 +204,13 @@
     addDefaults: {
       silent: false,
       render: true,  // render view after adding
-      addModel: false  // add the model if it is not in the collection
+      addModel: true  // add the model if it is not in the collection
     },
 
     removeDefaults: {
       silent: false,
       render: true,  // render view after adding
-      removeModel: false  // remove the model if it is in the collection
+      removeModel: true  // remove the model if it is in the collection
     },
 
     constructor: function(options) {
@@ -232,7 +234,7 @@
       }, this);
 
       (options.views || []).forEach(function(v) {
-        this.add(v, {render: false, silent: true, addModel: true});
+        this.add(v, {render: false, silent: true});
       }, this);
     },
 
@@ -268,7 +270,7 @@
       var typeName = options.model.get(this.typeAttr);
       return !typeName
         ? type
-        : ensureObject(subtypes[typeName]) || type;
+        : maybeByName(subtypes[typeName]) || type;
     },
 
     // Override to specialise how each view is created
@@ -331,7 +333,6 @@
   // A self-maintaining, 'flattened' lookup of the views in a group of view
   // collections.
   var ViewCollectionGroup = LookupGroup.extend({
-    idOfModel: idOfModel,
     idOfView: idOfView,
 
     add: function(memberKey, view, options) {

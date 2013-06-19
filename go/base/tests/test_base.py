@@ -5,8 +5,8 @@ from django.core.paginator import Paginator
 
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base import utils
-from go.vumitools.conversation.definition import (
-    ConversationDefinitionBase, ConversationViewDefinitionBase)
+from go.vumitools.conversation.definition import ConversationDefinitionBase
+from go.conversation.view_definition import ConversationViewDefinitionBase
 from go.vumitools.api import VumiApi, VumiUserApi
 
 
@@ -102,7 +102,7 @@ class UtilsTestCase(VumiGoDjangoTestCase):
 
     def test_get_conversation_view_definition(self):
         view_def = utils.get_conversation_view_definition('bulk_message', None)
-        conv_def = view_def.conv_def
+        conv_def = view_def._conv_def
         self.assertTrue(isinstance(view_def, ConversationViewDefinitionBase))
         self.assertTrue(isinstance(conv_def, ConversationDefinitionBase))
         self.assertEqual('bulk_message', conv_def.conversation_type)
