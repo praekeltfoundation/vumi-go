@@ -39,17 +39,22 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def end_conversation(self):
-        # TODO: `stop' and `archive' should be different operations.
-        self.c.set_status_stopping()
+        # TODO: Remove this once the old UI is gone.
+        # Pretend we're archived, stop_conversation() saves for us.
         self.c.set_status_finished()
-        yield self.c.save()
+        # Stop as normal
+        yield self.stop_conversation()
+        # Clean up all the things
+        yield self._remove_from_routing_table()
+        yield self._release_batches()
 
+    @Manager.calls_manager
+    def stop_conversation(self):
+        self.c.set_status_stopping()
+        yield self.c.save()
         yield self.dispatch_command('stop',
                                     user_account_key=self.c.user_account.key,
                                     conversation_key=self.c.key)
-
-        yield self._remove_from_routing_table()
-        yield self._release_batches()
 
     @Manager.calls_manager
     def _release_batches(self):

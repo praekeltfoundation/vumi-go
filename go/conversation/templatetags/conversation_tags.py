@@ -12,7 +12,6 @@ from go.conversation.utils import PagedMessageCache
 from go.conversation.forms import ReplyToMessageForm
 from go.base import message_store_client as ms_client
 from go.base.utils import page_range_window, get_conversation_view_definition
-from go.conversation.conversation_views import ConversationViewFinder
 
 from vumi.message import TransportUserMessage
 
@@ -28,8 +27,7 @@ def conversation_screen(conv, view_name='show'):
             conv.conversation_type, conv)
     except AttributeError:
         return '/conversations/%s/' % (conv.key,)
-    finder = ConversationViewFinder(view_def)
-    return finder.get_view_url(view_name, conversation_key=conv.key)
+    return view_def.get_view_url(view_name, conversation_key=conv.key)
 
 
 @register.simple_tag
