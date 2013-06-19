@@ -98,6 +98,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield super(AccountRoutingTableDispatcher, self).setup_dispatcher()
         yield self._go_setup_worker()
         config = self.get_static_config()
+        self.opt_out_connector = config.opt_out_connector
         self.router_connector_mapping = config.router_connector_mapping
         self.router_connectors = set(
             config.router_connector_mapping.itervalues())
@@ -125,6 +126,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         """
         if isinstance(msg, TransportEvent):
             config_dict = self.config.copy()
+            config_dict['user_account_key'] = None
+            config_dict['routing_table'] = {}
             returnValue(self.CONFIG_CLASS(config_dict))
 
         msg_mdh = self.get_metadata_helper(msg)
@@ -150,7 +153,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     def connector_type(self, connector_name):
         if connector_name in self.application_connectors:
             return self.CONVERSATION
-        elif connector_name in self.routing_connectors:
+        elif connector_name in self.router_connectors:
             return self.ROUTING_BLOCK
         elif connector_name == self.opt_out_connector:
             return self.OPT_OUT
@@ -168,7 +171,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
     def next_hop_for_event(self, event, outbound_msg):
         event_hops = event['routing_metadata'].setdefault('hops', [])
-        outbound_hops = event['routing_metadata'].setdefault('hops', [])
+        outbound_hops = outbound_msg['routing_metadata'].setdefault('hops', [])
         if len(event_hops) >= len(outbound_hops):
             return None
         return outbound_hops[-(len(event_hops) + 1)]
@@ -208,7 +211,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 " but unknown. Bad connector is: %s" % conn, msg)
 
         self.push_hop(msg, dst_connector_name, target[1])
-        returnValue(dst_connector_name, target[1])
+        returnValue((dst_connector_name, target[1]))
 
     def acquire_source(self, msg, connector_type, allowed_types):
         msg_mdh = self.get_metadata_helper(msg)
@@ -219,10 +222,10 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         if connector_type == self.CONVERSATION:
             conv_info = msg_mdh.get_conversation_info()
-            src_conn = str(GoConnector.for_routing_block(
+            src_conn = str(GoConnector.for_conversation(
                 conv_info['conversation_type'], conv_info['conversation_key']))
 
-        elif connector_type == self.ROUTER:
+        elif connector_type == self.ROUTING_BLOCK:
             router_info = msg_mdh.get_router_info()
             src_conn = str(GoConnector.for_routing_block(
                 router_info['router_type'], router_info['router_key']))
@@ -374,6 +377,12 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             raise UnroutableMessageError(
                 "Could not find transport user message for event", event)
 
-        dst_connector_name, dst_endpoint = self.next_hop_for_event(event, msg)
+        next_hop = self.next_hop_for_event(event, msg)
+        if next_hop is None:
+            raise UnroutableMessageError(
+                "Could not find next hop for event"
+                " (user message was: %s)" % (msg,), event)
+
+        dst_connector_name, dst_endpoint = next_hop
         self.push_hop(event, dst_connector_name, dst_endpoint)
         yield self.publish_event(event, dst_connector_name, dst_endpoint)
