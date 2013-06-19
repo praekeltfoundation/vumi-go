@@ -230,7 +230,7 @@ def routing(request):
     r = requests.post(url, auth=auth, data=data)
 
     model_data = {
-        'campaign_key': request.user_api.user_account_key,
+        'campaign_id': request.user_api.user_account_key,
     }
     model_data.update(r.json['result'])
 

@@ -30,6 +30,7 @@ urlpatterns = patterns('',
     url(r'^contacts/', include('go.contacts.urls', namespace='contacts')),
     url(r'^account/', include('go.account.urls', namespace='account')),
     url(r'^accounts/', include('registration.backends.default.urls')),
+    url(r'^api/', include('go.api.urls', namespace='api')),
 )
 
 urlpatterns += patterns('django.contrib.flatpages.views',
