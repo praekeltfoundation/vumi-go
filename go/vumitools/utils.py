@@ -119,5 +119,5 @@ class MessageMetadataHelper(object):
         })
 
     def set_tag(self, tag):
-        TaggingMiddleware.add_tag_to_msg(self.message)
+        TaggingMiddleware.add_tag_to_msg(self.message, tag)
         self.tag = TaggingMiddleware.map_msg_to_tag(self.message)
