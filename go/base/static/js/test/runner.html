@@ -28,7 +28,7 @@
         .ui('bdd')
         .reporter('html');
 
-      var templates = [
+      window.templates = [
         'campaign/dialogue/states/choice/edit.jst',
         'campaign/dialogue/states/choice/preview.jst',
         'campaign/dialogue/states/freetext/edit.jst',
@@ -37,7 +37,7 @@
         'campaign/dialogue/states/end/preview.jst'
       ];
 
-      templates.forEach(helpers.loadTemplate);
+      window.templates.forEach(helpers.loadTemplate);
     </script>
 
     <!--
