@@ -78,9 +78,6 @@ class Router(Model):
     def __unicode__(self):
         return self.name
 
-    def get_routing_name(self):
-        return ':'.join((self.conversation_type, self.key))
-
 
 class RouterStore(PerAccountStore):
     def setup_proxies(self):
