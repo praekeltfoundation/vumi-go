@@ -1,8 +1,4 @@
 describe("go.utils", function() {
-  var testHelpers = go.testHelpers,
-      oneElExists = testHelpers.oneElExists,
-      noElExists = testHelpers.noElExists;
-
   describe(".merge", function() {
     var merge = go.utils.merge;
 
