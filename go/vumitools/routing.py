@@ -8,7 +8,6 @@ from vumi.message import TransportEvent
 from vumi import log
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
-from go.vumitools.middleware import OptOutMiddleware
 from go.vumitools.account import GoConnector
 
 
