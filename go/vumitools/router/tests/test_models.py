@@ -2,15 +2,60 @@
 
 """Tests for go.vumitools.router.models."""
 
-from uuid import uuid4
-from datetime import datetime
-
 from twisted.internet.defer import inlineCallbacks
 from twisted.trial.unittest import TestCase
 
 from go.vumitools.tests.utils import model_eq, GoPersistenceMixin
 from go.vumitools.account import AccountStore
 from go.vumitools.router.models import RouterStore
+
+
+class TestRouter(GoPersistenceMixin, TestCase):
+    use_riak = True
+    timeout = 5
+
+    @inlineCallbacks
+    def setUp(self):
+        yield self._persist_setUp()
+        self.manager = self.get_riak_manager()
+        self.account_store = AccountStore(self.manager)
+        self.account = yield self.mk_user(self, u'user')
+        self.router_store = RouterStore.from_user_account(self.account)
+
+    def tearDown(self):
+        return self._persist_tearDown()
+
+    def assert_status(self, router, expected_status_name, archived=False):
+        for status_name in ['starting', 'running', 'stopping', 'stopped']:
+            status_method = getattr(router, status_name)
+            if status_name == expected_status_name:
+                self.assertTrue(status_method(), 'Expected %s() to be True.')
+            else:
+                self.assertFalse(status_method(), 'Expected %s() to be False.')
+
+        if archived:
+            self.assertTrue(router.archived(), 'Expected archived.')
+            self.assertFalse(router.active(), 'Expected not active.')
+        else:
+            self.assertTrue(router.active(), 'Expected active.')
+            self.assertFalse(router.archived(), 'Expected not archived.')
+
+    @inlineCallbacks
+    def test_status_helpers(self):
+        router = yield self.router_store.new_router(
+            u'keyword_router', u'name', u'desc', {})
+        # A new router is "stopped" and "active".
+        self.assert_status(router, 'stopped')
+        router.set_status_starting()
+        self.assert_status(router, 'starting')
+        router.set_status_started()
+        self.assert_status(router, 'running')
+        router.set_status_stopping()
+        self.assert_status(router, 'stopping')
+        router.set_status_stopped()
+        self.assert_status(router, 'stopped')
+        router.set_status_finished()
+        self.assert_status(router, 'stopped', archived=True)
 
 
 class TestRouterStore(GoPersistenceMixin, TestCase):
