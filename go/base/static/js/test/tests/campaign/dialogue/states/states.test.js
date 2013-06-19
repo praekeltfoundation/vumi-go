@@ -54,8 +54,7 @@ describe("go.campaign.dialogue.states", function() {
   });
 
   describe(".DialogueStateView", function() {
-    var ToyStateModel = dialogue.testHelpers.ToyStateModel,
-        ToyStateView = dialogue.testHelpers.ToyStateView;
+    var ToyStateModel = dialogue.testHelpers.ToyStateModel;
 
     var state;
 
@@ -144,6 +143,41 @@ describe("go.campaign.dialogue.states", function() {
         assert(noElExists(state.$('.edit.mode')));
         state.edit();
         assert(oneElExists(diagram.$('.edit.mode')));
+      });
+    });
+  });
+
+  describe(".DialogueStateCollection", function() {
+    var ToyStateView = dialogue.testHelpers.ToyStateView,
+        DialogueStateCollection = states.DialogueStateCollection;
+
+    var collection;
+
+    beforeEach(function() {
+      collection = new DialogueStateCollection({
+        view: diagram,
+        attr: 'states'
+      });
+    });
+
+    describe(".reset", function() {
+      it("should remove the old state", function(){
+        assert(collection.has('state-3'));
+        collection.reset(collection.get('state-3'), 'toy');
+        assert(!collection.has('state-3'));
+      });
+
+      it("should add a new state at the same position as the old state",
+      function(done){
+        var old = collection.get('state-3');
+
+        collection.on('add', function(id, state) {
+          assert(state instanceof ToyStateView);
+          assert.equal(state.position, old.position);
+          done();
+        });
+
+        collection.reset(collection.get('state-3'), 'toy');
       });
     });
   });
