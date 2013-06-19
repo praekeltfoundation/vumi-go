@@ -4,7 +4,6 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 
 from go.base.utils import get_conversation_view_definition
-from go.conversation.conversation_views import ConversationViewFinder
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.apps.jsbox.log import LogManager
 from go.apps.jsbox.views import JsboxConversationViews
@@ -27,12 +26,10 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
             conv_key = self.conv_key
         view_def = get_conversation_view_definition(
             self.TEST_CONVERSATION_TYPE)
-        finder = ConversationViewFinder(view_def)
-        return finder.get_view_url(view, conversation_key=conv_key)
+        return view_def.get_view_url(view, conversation_key=conv_key)
 
     def get_new_view_url(self):
-        return reverse('conversations:new_conversation', kwargs={
-            'conversation_type': self.VIEWS_CLASS.conversation_type})
+        return reverse('conversations:new_conversation')
 
     def get_action_view_url(self, action_name, conv_key=None):
         if conv_key is None:
@@ -41,26 +38,21 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
             'conversation_key': conv_key, 'action_name': action_name})
 
     def test_new_conversation(self):
-        # render the form
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        response = self.client.get(self.get_new_view_url())
-        self.assertEqual(response.status_code, 200)
-        # post the form
         response = self.client.post(self.get_new_view_url(), {
-            'subject': 'the subject',
-            'message': 'the message',
-            'delivery_class': 'sms',
-            'delivery_tag_pool': 'longcode',
+            'name': 'conversation name',
+            'type': self.TEST_CONVERSATION_TYPE,
         })
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
-        conv = self.get_latest_conversation()
-        self.assertEqual(conv.name, 'the subject')
-        self.assertEqual(conv.description, 'the message')
-        self.assertEqual(conv.delivery_class, 'sms')
-        self.assertEqual(conv.delivery_tag_pool, 'longcode')
-        self.assertEqual(conv.delivery_tag, None)
-        self.assertEqual(conv.config, {})
-        self.assertRedirects(response, self.get_view_url('edit', conv.key))
+        conversation = self.get_latest_conversation()
+        # self.assertEqual(conversation.delivery_class, 'sms')
+        # self.assertEqual(conversation.delivery_tag_pool, 'longcode')
+        # self.assertEqual(conversation.delivery_tag, None)
+        self.assertEqual(conversation.name, 'conversation name')
+        self.assertEqual(conversation.description, '')
+        self.assertEqual(conversation.config, {})
+        self.assertRedirects(
+            response, self.get_view_url('edit', conversation.key))
 
     def test_show_conversation(self):
         [conversation_key] = self.conv_store.list_conversations()
@@ -83,7 +75,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
             'jsbox_app_config-INITIAL_FORMS': '0',
             'jsbox_app_config-MAX_NUM_FORMS': u''
         })
-        self.assertRedirects(response, self.get_view_url('people'))
+        self.assertRedirects(response, self.get_view_url('show'))
         conversation = self.get_latest_conversation()
         self.assertEqual(conversation.config, {
             'jsbox': {

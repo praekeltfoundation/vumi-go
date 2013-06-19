@@ -6,8 +6,8 @@ from django.http import HttpResponse
 from vumi.persist.redis_manager import RedisManager
 from vxpolls.manager import PollManager
 
-from go.conversation.conversation_views import ConversationView
-from go.vumitools.conversation.definition import ConversationViewDefinitionBase
+from go.conversation.view_definition import (
+    ConversationViewDefinitionBase, ConversationTemplateView)
 from go.conversation.forms import ConversationForm
 from go.base.utils import make_read_only_form
 from go.apps.surveys import forms
@@ -37,7 +37,7 @@ def _clear_empties(cleaned_data):
     return [cd for cd in cleaned_data if cd.get('copy')]
 
 
-class SurveyContentsView(ConversationView):
+class SurveyContentsView(ConversationTemplateView):
     """This app is a unique and special snowflake, so it gets special views.
     """
     view_name = 'contents'
@@ -106,7 +106,7 @@ class SurveyContentsView(ConversationView):
         })
 
 
-class SurveyEditView(ConversationView):
+class SurveyEditView(ConversationTemplateView):
     """This app is a unique and special snowflake, so it gets special views.
     """
     view_name = 'edit'
@@ -170,7 +170,7 @@ class SurveyEditView(ConversationView):
         })
 
 
-class UserDataView(ConversationView):
+class UserDataView(ConversationTemplateView):
     view_name = 'user_data'
     path_suffix = 'users.csv'
 
