@@ -1,6 +1,7 @@
 # -*- test-case-name: go.vumitools.tests.test_utils -*-
 
 from vumi.middleware.tagger import TaggingMiddleware
+from go.vumitools.middleware import OptOutMiddleware
 
 
 class MessageMetadataHelper(object):
@@ -88,3 +89,35 @@ class MessageMetadataHelper(object):
         self._go_metadata.update({
             'user_account': user_account,
         })
+
+    def is_optout_message(self):
+        return OptOutMiddleware.is_optout_message(self.message)
+
+    def get_router_key(self):
+        # TODO: Better exception.
+        return self._go_metadata['router_key']
+
+    def get_router(self):
+        return self.get_user_api().get_router(
+            self.get_router_key())
+
+    def get_router_info(self):
+        router_info = {}
+
+        for field in ['user_account', 'router_type', 'router_key']:
+            if field in self._go_metadata:
+                router_info[field] = self._go_metadata[field]
+
+        if len(router_info) != 3:
+            return None
+        return router_info
+
+    def set_router_info(self, router_type, router_key):
+        self._go_metadata.update({
+            'router_type': router_type,
+            'router_key': router_key,
+        })
+
+    def set_tag(self, tag):
+        TaggingMiddleware.add_tag_to_msg(self.message)
+        self.tag = TaggingMiddleware.map_msg_to_tag(self.message)
