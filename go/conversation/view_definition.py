@@ -55,7 +55,6 @@ class StartConversationView(ConversationApiView):
     path_suffix = 'start/'
 
     def post(self, request, conversation):
-        # raise NotImplementedError("TODO: Finish implementing this.")
         profile = request.user.get_profile()
         account = profile.get_user_account()
         if account.confirm_start_conversation:
