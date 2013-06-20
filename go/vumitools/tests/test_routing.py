@@ -31,6 +31,11 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
             "CONVERSATION:app2:conv2": {
                 "default": ["TRANSPORT_TAG:pool1:9012", "default"],
             },
+            # Routers
+            "ROUTING_BLOCK:router:router1": {
+                "default": ["TRANSPORT_TAG:pool1:1234", "default"],
+                "other": ["TRANSPORT_TAG:pool1:5678", "default"],
+            },
         }
         yield user_account.save()
 
@@ -45,14 +50,22 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
     @inlineCallbacks
     def get_dispatcher(self, **config_extras):
         config = {
-            "receive_inbound_connectors": ["sphex"],
-            "receive_outbound_connectors": ["app1", "app2", "optout"],
+            "receive_inbound_connectors": [
+                "sphex", "router_ri",
+            ],
+            "receive_outbound_connectors": [
+                "app1", "app2", "router_ro", "optout",
+            ],
             "metrics_prefix": "foo",
             "application_connector_mapping": {
                 "app1": "app1",
                 "app2": "app2",
             },
-            "router_connector_mapping": {
+            "router_inbound_connector_mapping": {
+                "router": "router_ro",
+            },
+            "router_outbound_connector_mapping": {
+                "router": "router_ri",
             },
             "opt_out_connector": "optout",
         }
@@ -61,14 +74,18 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
             self.mk_config(config), AccountRoutingTableDispatcher)
         returnValue(dispatcher)
 
-    def with_md(self, msg, user_account=None, conv=None, endpoint=None,
-                tag=None, hops=None):
+    def with_md(self, msg, user_account=None, conv=None, router=None,
+                endpoint=None, tag=None, hops=None):
         md = MessageMetadataHelper(self.vumi_api, msg)
         if user_account is not None:
             md.set_user_account(user_account)
         if conv is not None:
             conv_type, conv_key = conv
             md.set_conversation_info(conv_type, conv_key)
+            md.set_user_account(self.user_account_key)
+        if router is not None:
+            router_type, router_key = router
+            md.set_router_info(router_type, router_key)
             md.set_user_account(self.user_account_key)
         if endpoint is None:
             endpoint = msg.get_routing_endpoint()
@@ -171,6 +188,25 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                            endpoint='other')
         yield self.dispatch_outbound(msg, 'app1')
         self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
+        self.with_md(msg, tag=("pool1", "5678"), endpoint='default',
+                     hops=[['sphex', 'default']])
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+    @inlineCallbacks
+    def test_outbound_message_from_router(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'))
+        yield self.dispatch_outbound(msg, 'router_ro')
+        self.assert_rkeys_used('router_ro.outbound', 'sphex.outbound')
+        self.with_md(msg, tag=("pool1", "1234"),
+                     hops=[['sphex', 'default']])
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
+
+        self.clear_all_dispatched()
+        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'),
+                           endpoint='other')
+        yield self.dispatch_outbound(msg, 'router_ro')
+        self.assert_rkeys_used('router_ro.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "5678"), endpoint='default',
                      hops=[['sphex', 'default']])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))

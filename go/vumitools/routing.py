@@ -26,8 +26,13 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
     application_connector_mapping = ConfigDict(
         "Mapping from conversation_type to connector name.",
         static=True, required=True)
-    router_connector_mapping = ConfigDict(
-        "Mapping from router_type to connector name.",
+    router_inbound_connector_mapping = ConfigDict(
+        "Mapping from router_type to connector name to publish inbound"
+        " messages on.",
+        static=True, required=True)
+    router_outbound_connector_mapping = ConfigDict(
+        "Mapping from router_type to connector name to publish outbound"
+        " messages on.",
         static=True, required=True)
     opt_out_connector = ConfigText(
         "Connector to publish opt-out messages on.",
@@ -84,15 +89,25 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     TRANSPORT = "TRANSPORT"
     OPT_OUT = "OPT_OUT"
 
+    # directions
+    INBOUND = "inbound"
+    OUTBOUND = "outbound"
+
     @inlineCallbacks
     def setup_dispatcher(self):
         yield super(AccountRoutingTableDispatcher, self).setup_dispatcher()
         yield self._go_setup_worker()
         config = self.get_static_config()
         self.opt_out_connector = config.opt_out_connector
-        self.router_connector_mapping = config.router_connector_mapping
-        self.router_connectors = set(
-            config.router_connector_mapping.itervalues())
+        self.router_inbound_connector_mapping = (
+            config.router_inbound_connector_mapping)
+        self.router_outbound_connecor_mapping = (
+            config.router_outbound_connector_mapping)
+        self.router_connectors = set()
+        self.router_connectors.update(
+            config.router_inbound_connector_mapping.itervalues())
+        self.router_connectors.update(
+            config.router_outbound_connector_mapping.itervalues())
         self.application_connector_mapping = (
             config.application_connector_mapping)
         self.application_connectors = set(
@@ -153,8 +168,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     def get_application_connector(self, conversation_type):
         return self.application_connector_mapping.get(conversation_type)
 
-    def get_router_connector(self, router_type):
-        return self.router_connector_mapping.get(router_type)
+    def get_router_connector(self, router_type, direction):
+        if direction == self.INBOUND:
+            return self.router_inbound_connector_mapping.get(router_type)
+        else:
+            return self.router_outbound_connecor_mapping.get(router_type)
 
     def push_hop(self, msg, connector_name, endpoint):
         hops = msg['routing_metadata'].setdefault('hops', [])
@@ -172,18 +190,25 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         return outbound_hops[-(len(event_hops) + 1)]
 
     @inlineCallbacks
-    def set_destination(self, msg, target, allowed_types):
+    def set_destination(self, msg, target, direction):
         """Parse a target `(str(go_connector), endpoint)` pair and determine
         the corresponding dispatcher connector to publish on. Set any
         appropriate Go helper_metadata required by the destination.
 
         Raises `UnroutableMessageError` if the parsed `GoConnector` has a
-        connector type not in `allowed_types`.
+        connector type not approriate to the message direction.
 
         Note: `str(go_connector)` is what is stored in Go routing tables.
         """
         msg_mdh = self.get_metadata_helper(msg)
         conn = GoConnector.parse(target[0])
+
+        if direction == self.INBOUND:
+            allowed_types = (
+                GoConnector.CONVERSATION, GoConnector.ROUTING_BLOCK)
+        else:
+            allowed_types = (
+                GoConnector.ROUTING_BLOCK, GoConnector.TRANSPORT_TAG)
 
         if conn.ctype not in allowed_types:
             raise UnroutableMessageError(
@@ -195,7 +220,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         elif conn.ctype == conn.ROUTING_BLOCK:
             msg_mdh.set_router_info(conn.rblock_type, conn.rblock_key)
-            dst_connector_name = self.get_router_connector(conn.rblock_type)
+            dst_connector_name = self.get_router_connector(
+                conn.rblock_type, direction)
 
         elif conn.ctype == conn.TRANSPORT_TAG:
             msg_mdh.set_tag([conn.tagpool, conn.tagname])
@@ -217,17 +243,22 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         self.push_hop(msg, dst_connector_name, target[1])
         returnValue((dst_connector_name, target[1]))
 
-    def acquire_source(self, msg, connector_type, allowed_types):
+    def acquire_source(self, msg, connector_type, direction):
         """Determine the `str(go_connector)` value that a msg came
         in on by looking at the connector_type and fetching the
         appropriate values from the `msg` helper_metadata.
 
         Raises `UnroutableMessageError` if the connector_type has a
-        value not in `allowed_types`.
+        value not appropriate for the direction.
 
         Note: `str(go_connector)` is what is stored in Go routing tables.
         """
         msg_mdh = self.get_metadata_helper(msg)
+
+        if direction == self.INBOUND:
+            allowed_types = (self.TRANSPORT, self.ROUTING_BLOCK)
+        else:
+            allowed_types = (self.CONVERSATION, self.ROUTING_BLOCK)
 
         if connector_type not in allowed_types:
             raise UnroutableMessageError(
@@ -280,7 +311,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 " from the opt-out worker", msg)
         dst_conn = GoConnector.for_transport_tag(*orig_msg_mdh.tag)
         dst_connector_name, dst_endpoint = yield self.set_destination(
-            msg, [str(dst_conn), 'default'], (GoConnector.TRANSPORT_TAG,))
+            msg, [str(dst_conn), 'default'], self.OUTBOUND)
         yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
 
     @inlineCallbacks
@@ -308,8 +339,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             self.publish_inbound_optout(config, msg)
             return
 
-        src_conn = self.acquire_source(msg, connector_type,
-                                       (self.TRANSPORT, self.ROUTING_BLOCK))
+        src_conn = self.acquire_source(msg, connector_type, self.INBOUND)
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
@@ -318,8 +348,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             return
 
         dst_connector_name, dst_endpoint = yield self.set_destination(
-            msg, target,
-            (GoConnector.CONVERSATION, GoConnector.ROUTING_BLOCK))
+            msg, target, self.INBOUND)
 
         yield self.publish_inbound(msg, dst_connector_name, dst_endpoint)
 
@@ -348,8 +377,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             yield self.publish_outbound_optout(config, msg)
             return
 
-        src_conn = self.acquire_source(msg, connector_type,
-                                       (self.CONVERSATION, self.ROUTING_BLOCK))
+        src_conn = self.acquire_source(msg, connector_type, self.OUTBOUND)
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
@@ -358,8 +386,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             return
 
         dst_connector_name, dst_endpoint = yield self.set_destination(
-            msg, target,
-            (GoConnector.ROUTING_BLOCK, GoConnector.TRANSPORT_TAG))
+            msg, target, self.OUTBOUND)
 
         yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
 
