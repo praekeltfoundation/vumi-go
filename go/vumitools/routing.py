@@ -27,7 +27,7 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
         "Mapping from conversation_type to connector name.",
         static=True, required=True)
     router_connector_mapping = ConfigDict(
-        "Mapping from routing block type to connector name.",
+        "Mapping from router_type to connector name.",
         static=True, required=True)
     opt_out_connector = ConfigText(
         "Connector to publish opt-out messages on.",
