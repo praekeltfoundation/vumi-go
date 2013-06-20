@@ -20,5 +20,5 @@ urlpatterns = patterns(
     url(r'^incoming/(?P<campaign_key>\w+)/(?P<contact_key>\w+)/$',
         views.incoming_detail, name='incoming_detail'),
     url(r'^pricing/$', views.pricing, name='pricing'),
-    url(r'^routing/(?P<campaign_key>\w+)/$', views.routing, name='routing'),
+    url(r'^routing/$', views.routing, name='routing'),
 )

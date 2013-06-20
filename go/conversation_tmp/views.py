@@ -1,9 +1,12 @@
 from urllib import urlencode
+import json
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
+from django.conf import settings
+import requests
 
 from go.conversation_tmp.forms import (
     CampaignGeneralForm, CampaignConfigurationForm, CampaignBulkMessageForm,
@@ -210,10 +213,28 @@ def pricing(request):
     return render(request, 'conversations/pricing.html', {
     })
 
-@login_required
-def routing(request, campaign_key):
-    # TODO Get initial routing model data so we can bootstrap it to page load
 
-    # TODO give stuff to the template
+@login_required
+def routing(request):
+    # TODO: Better Go API client.
+
+    url = settings.GO_API_URL
+    auth = ('session_id', request.COOKIES['sessionid'])
+    req_data = {
+        "params": [request.user_api.user_account_key],
+        "jsonrpc": "2.0",
+        "method": "routing_table",
+        "id": None,
+    }
+    data = json.dumps(req_data)
+
+    r = requests.post(url, auth=auth, data=data)
+
+    model_data = {
+        'campaign_id': request.user_api.user_account_key,
+    }
+    model_data.update(r.json['result'])
+
     return render(request, 'conversations/routing.html', {
+        'model_data': json.dumps(model_data),
     })

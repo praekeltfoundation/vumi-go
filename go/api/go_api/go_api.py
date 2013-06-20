@@ -208,7 +208,7 @@ class GoApiServer(JSONRPC):
                 else:
                     raise InvalidRoutingTable("Unknown source endpoint %r"
                                               % (source,))
-                return routing_entries
+            return routing_entries
 
         def populate_routing_table(routing_entries):
             routing_table = {}
