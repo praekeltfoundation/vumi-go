@@ -109,8 +109,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
     @inlineCallbacks
     def teardown_dispatcher(self):
-        yield super(AccountRoutingTableDispatcher, self).teardown_dispatcher()
         yield self._go_teardown_worker()
+        yield super(AccountRoutingTableDispatcher, self).teardown_dispatcher()
 
     @inlineCallbacks
     def get_config(self, msg):
