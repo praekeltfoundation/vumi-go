@@ -38,9 +38,9 @@ describe("go.components.plumbing (endpoints)", function() {
 
     describe(".destroy", function() {
       it("should remove the element", function() {
-        assert(oneElExists('#x #x1'));
+        assert(oneElExists('[data-uuid="x1"]'));
         x1.destroy();
-        assert(noElExists('#x #x1'));
+        assert(noElExists('[data-uuid="x1"]'));
       });
     });
 
@@ -56,15 +56,15 @@ describe("go.components.plumbing (endpoints)", function() {
       });
 
       it("should append the endpoint to the state element", function() {
-        assert(noElExists('#x #x4'));
+        assert(noElExists('[data-uuid="x4"]'));
         x4.render();
-        assert(oneElExists('#x #x4'));
+        assert(oneElExists('[data-uuid="x4"]'));
       });
 
       it("should add a label to the endpoint if labelling is enabled",
       function() {
         x4.render();
-        assert(oneElExists('#x #x4 .label'));
+        assert(oneElExists('[data-uuid="x4"] .label'));
       });
     });
   });

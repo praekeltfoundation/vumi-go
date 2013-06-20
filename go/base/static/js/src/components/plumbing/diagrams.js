@@ -87,8 +87,8 @@
     },
 
     onPlumbConnect: function(e) {
-      var sourceId = e.source.attr('id'),
-          targetId = e.target.attr('id'),
+      var sourceId = e.source.attr('data-uuid'),
+          targetId = e.target.attr('data-uuid'),
           connectionId = idOfConnection(sourceId, targetId);
 
       // Case 1:
@@ -121,8 +121,8 @@
     },
 
     onPlumbDisconnect: function(e) {
-      var sourceId = e.source.attr('id'),
-          targetId = e.target.attr('id'),
+      var sourceId = e.source.attr('data-uuid'),
+          targetId = e.target.attr('data-uuid'),
           connectionId = idOfConnection(sourceId, targetId);
 
       // Case 1:

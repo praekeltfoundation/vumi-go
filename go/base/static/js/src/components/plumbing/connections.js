@@ -4,6 +4,9 @@
 // 'plumbing view') in Go
 
 (function(exports) {
+  var views = go.components.views,
+      UniqueView = views.UniqueView;
+
   var structures = go.components.structures,
       SubviewCollection = structures.SubviewCollection;
 
@@ -17,11 +20,11 @@
   //
   // Options:
   // - diagram: The diagram this connection is part of
-  var ConnectionView = Backbone.View.extend({
+  var ConnectionView = UniqueView.extend({
     // Override to change what params are passed to jsPlumb
     plumbOptions: {},
 
-    id: function() { return this.model.id; },
+    uuid: function() { return this.model.id; },
 
     initialize: function(options) {
       // the diagram view that this connection is part of

@@ -48,13 +48,11 @@ describe("go.campaign.routing (views)", function() {
       });
 
       it("should display the endpoint name", function() {
-        var el = '#routing-diagram #channels #channel1 #endpoint80';
-
-        assert(noElExists(el));
+        assert(noElExists('[data-uuid="endpoint80"]'));
         endpoint.render();
 
-        assert(oneElExists(el));
-        assert.equal($(el).text(), 'default');
+        assert(oneElExists('[data-uuid="endpoint80"]'));
+        assert.equal($('[data-uuid="endpoint80"]').text(), 'default');
       });
     });
   });
@@ -105,7 +103,8 @@ describe("go.campaign.routing (views)", function() {
     var ChannelModel = routing.ChannelModel,
         RoutingStateView = routing.RoutingStateView;
 
-    var state;
+    var state,
+        $column;
 
     beforeEach(function() {
       var model = new ChannelModel({
@@ -129,31 +128,30 @@ describe("go.campaign.routing (views)", function() {
     describe(".render", function() {
       beforeEach(function() {
         diagram.render();
+        $column = $('#routing-diagram #channels');
       });
 
       it("should append the state to its column", function() {
-        var stateEl = '#routing-diagram #channels #channel4';
-
-        assert(noElExists(stateEl));
+        assert(noElExists($column.find('[data-uuid="channel4"]')));
         state.render();
-        assert(oneElExists(stateEl));
+        assert(oneElExists($column.find('[data-uuid="channel4"]')));
       });
 
       it("should render its endpoints", function() {
-        assert(noElExists('#routing-diagram #channels #channel4 .endpoint'));
+        assert(noElExists($column.find('[data-uuid="channel4"] .endpoint')));
         state.render();
-        assert(oneElExists('#routing-diagram #channels #channel4 #endpoint80'));
-        assert(oneElExists('#routing-diagram #channels #channel4 #endpoint81'));
+        assert(oneElExists('[data-uuid="channel4"] [data-uuid="endpoint80"]'));
+        assert(oneElExists('[data-uuid="channel4"] [data-uuid="endpoint81"]'));
       });
 
       it("should display the state's description", function() {
-        var descriptionEl = '#routing-diagram #channels #channel4 .description';
-
-        assert(noElExists(descriptionEl));
+        assert(noElExists('[data-uuid="channel4"] .description'));
         state.render();
 
-        assert(oneElExists(descriptionEl));
-        assert.equal($(descriptionEl).text(), 'Invisible Sms: *181#');
+        assert(oneElExists('[data-uuid="channel4"] .description'));
+        assert.equal(
+          $('[data-uuid="channel4"] .description').text(),
+          'Invisible Sms: *181#');
       });
     });
   });
@@ -175,12 +173,12 @@ describe("go.campaign.routing (views)", function() {
 
     describe(".render", function() {
       it("should render the states it contains", function() {
-        assert(noElExists('#routing-diagram #channels .state'));
+        assert(noElExists(column.$('.state')));
         column.render();
 
-        assert(oneElExists('#routing-diagram #channels #channel1'));
-        assert(oneElExists('#routing-diagram #channels #channel2'));
-        assert(oneElExists('#routing-diagram #channels #channel3'));
+        assert(oneElExists(column.$('[data-uuid="channel1"]')));
+        assert(oneElExists(column.$('[data-uuid="channel2"]')));
+        assert(oneElExists(column.$('[data-uuid="channel3"]')));
       });
     });
   });
@@ -214,28 +212,34 @@ describe("go.campaign.routing (views)", function() {
 
     describe(".render", function() {
       it("should render the states in its channels column", function() {
-        assert(noElExists('#routing-diagram #channels .state'));
+        var $channels = $('#routing-diagram #channels');
+
+        assert(noElExists($channels.find('.state')));
         diagram.render();
 
-        assert(oneElExists('#routing-diagram #channels #channel1'));
-        assert(oneElExists('#routing-diagram #channels #channel2'));
-        assert(oneElExists('#routing-diagram #channels #channel3'));
+        assert(oneElExists($channels.find('[data-uuid="channel1"]')));
+        assert(oneElExists($channels.find('[data-uuid="channel2"]')));
+        assert(oneElExists($channels.find('[data-uuid="channel3"]')));
       });
 
       it("should render the states in its routing blocks column", function() {
-        assert(noElExists('#routing-diagram #routing-blocks .state'));
+        var $blocks = $('#routing-diagram #routing-blocks');
+
+        assert(noElExists($blocks.find('.state')));
         diagram.render();
 
-        assert(oneElExists('#routing-diagram #routing-blocks #routing-block1'));
-        assert(oneElExists('#routing-diagram #routing-blocks #routing-block2'));
+        assert(oneElExists($blocks.find('[data-uuid="routing-block1"]')));
+        assert(oneElExists($blocks.find('[data-uuid="routing-block2"]')));
       });
 
       it("should render the states in its conversations column", function() {
-        assert(noElExists('#routing-diagram #conversations .state'));
+        var $conversations = $('#routing-diagram #conversations');
+
+        assert(noElExists($conversations.find('.state')));
         diagram.render();
 
-        assert(oneElExists('#routing-diagram #conversations #conversation1'));
-        assert(oneElExists('#routing-diagram #conversations #conversation2'));
+        assert(oneElExists($conversations.find('[data-uuid="conversation1"]')));
+        assert(oneElExists($conversations.find('[data-uuid="conversation2"]')));
       });
 
       it("should render the connections between states across columns",
