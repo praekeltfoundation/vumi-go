@@ -2,6 +2,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from go.vumitools.routing import AccountRoutingTableDispatcher
 from go.vumitools.tests.utils import AppWorkerTestCase
+from go.vumitools.utils import MessageMetadataHelper
 
 
 class TestRoutingTableDispatcher(AppWorkerTestCase):
@@ -60,33 +61,23 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
             self.mk_config(config), AccountRoutingTableDispatcher)
         returnValue(dispatcher)
 
-    def with_endpoint(self, msg, endpoint=None):
+    def with_md(self, msg, user_account=None, conv=None, endpoint=None,
+                tag=None, hops=None):
+        md = MessageMetadataHelper(self.vumi_api, msg)
+        if user_account is not None:
+            md.set_user_account(user_account)
+        if conv is not None:
+            conv_type, conv_key = conv
+            md.set_conversation_info(conv_type, conv_key)
+            md.set_user_account(self.user_account_key)
         if endpoint is None:
             endpoint = msg.get_routing_endpoint()
         msg.set_routing_endpoint(endpoint)
-        return msg
-
-    def with_tag(self, msg, tag, ep=None):
-        """Convenience method for adding a tag to a message."""
-        tag_metadata = msg['helper_metadata'].setdefault('tag', {})
-        # convert tag to list so that msg == json.loads(json.dumps(msg))
-        tag_metadata['tag'] = list(tag)
-        return self.with_endpoint(msg, ep)
-
-    def with_conv(self, msg, conv_type, conv_key, ep=None):
-        """Convenience method for adding conversation data to a message."""
-        go_metadata = msg['helper_metadata'].setdefault('go', {})
-        go_metadata.update({
-            'user_account': self.user_account_key,
-            'conversation_type': conv_type,
-            'conversation_key': conv_key,
-        })
-        return self.with_endpoint(msg, ep)
-
-    def with_hops(self, msg, hops):
-        """Convenience method for adding routing hops to a message."""
-        routes = msg['routing_metadata'].setdefault('hops', [])
-        routes[:] = hops
+        if tag is not None:
+            md.set_tag(tag)
+        if hops is not None:
+            routes = msg['routing_metadata'].setdefault('hops', [])
+            routes[:] = hops
         return msg
 
     def assert_rkeys_used(self, *rkeys):
@@ -95,50 +86,45 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
     @inlineCallbacks
     def test_inbound_message_routing(self):
         yield self.get_dispatcher()
-        msg = self.with_tag(self.mkmsg_in(), ("pool1", "1234"))
+        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app1.inbound')
-        msg = self.with_conv(msg, 'app1', 'conv1')
-        msg = self.with_hops(msg, [['app1', 'default']])
+        self.with_md(msg, conv=('app1', 'conv1'),
+                     hops=[['app1', 'default']])
         self.assertEqual([msg], self.get_dispatched_inbound('app1'))
 
         self.clear_all_dispatched()
-        msg = self.with_tag(self.mkmsg_in(), ("pool1", "5678"))
+        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "5678"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app1.inbound')
-        msg = self.with_conv(msg, 'app1', 'conv1', ep='other')
-        msg = self.with_hops(msg, [['app1', 'other']])
+        self.with_md(msg, conv=('app1', 'conv1'), endpoint='other',
+                     hops=[['app1', 'other']])
         self.assertEqual([msg], self.get_dispatched_inbound('app1'))
 
         self.clear_all_dispatched()
-        msg = self.with_tag(self.mkmsg_in(), ("pool1", "9012"))
+        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "9012"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app2.inbound')
-        msg = self.with_conv(msg, 'app2', 'conv2')
-        msg = self.with_hops(msg, [['app2', 'default']])
+        self.with_md(msg, conv=('app2', 'conv2'),
+                     hops=[['app2', 'default']])
         self.assertEqual([msg], self.get_dispatched_inbound('app2'))
 
     @inlineCallbacks
     def test_opt_out_message_routing(self):
         yield self.get_dispatcher()
         tag = ("pool1", "1234")
-        msg = self.with_tag(self.mkmsg_in(), tag)
+        msg = self.with_md(self.mkmsg_in(), tag=tag)
         msg['helper_metadata']['optout'] = {'optout': True}
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'optout.inbound')
-        msg = self.with_tag(msg, tag)
-        msg = self.with_hops(msg, [['optout', 'default']])
-        msg['helper_metadata']['go'] = {
-            'user_account': self.user_account_key,
-        }
+        self.with_md(msg, user_account=self.user_account_key,
+                     hops=[['optout', 'default']])
         self.assertEqual([msg], self.get_dispatched_inbound('optout'))
 
     @inlineCallbacks
-    def mk_msg_reply(self, tag=None):
+    def mk_msg_reply(self, **kw):
         "Create and store an outbound message, then create a reply for it."
-        msg = self.mkmsg_in()
-        if tag is not None:
-            msg = self.with_tag(msg, tag)
+        msg = self.with_md(self.mkmsg_in(), **kw)
         yield self.vumi_api.mdb.add_inbound_message(msg)
         reply = msg.reply(content="Reply")
         returnValue((msg, reply))
@@ -147,55 +133,46 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
     def test_opt_out_reply_routing(self):
         yield self.get_dispatcher()
         tag = ("pool1", "1234")
-        msg, reply = yield self.mk_msg_reply(tag)
+        msg, reply = yield self.mk_msg_reply(tag=tag)
         yield self.dispatch_outbound(reply, 'optout')
         self.assert_rkeys_used('optout.outbound', 'sphex.outbound')
-        reply = self.with_tag(reply, tag)
-        reply = self.with_hops(reply, [['sphex', 'default']])
-        msg['helper_metadata']['go'] = {
-            'user_account': self.user_account_key,
-        }
+        self.with_md(reply, tag=tag, user_account=self.user_account_key,
+                     hops=[['sphex', 'default']])
         self.assertEqual([reply], self.get_dispatched_outbound('sphex'))
 
     @inlineCallbacks
     def test_outbound_message_routing(self):
         yield self.get_dispatcher()
-        msg = self.with_conv(self.mkmsg_out(), 'app1', 'conv1')
+        msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'))
         yield self.dispatch_outbound(msg, 'app1')
         self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
-        msg = self.with_tag(msg, ("pool1", "1234"))
-        msg = self.with_hops(msg, [['sphex', 'default']])
+        self.with_md(msg, tag=("pool1", "1234"),
+                     hops=[['sphex', 'default']])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
         self.clear_all_dispatched()
-        msg = self.with_conv(self.mkmsg_out(), 'app2', 'conv2')
+        msg = self.with_md(self.mkmsg_out(), conv=('app2', 'conv2'))
         yield self.dispatch_outbound(msg, 'app2')
         self.assert_rkeys_used('app2.outbound', 'sphex.outbound')
-        msg = self.with_tag(msg, ("pool1", "9012"))
-        msg = self.with_hops(msg, [['sphex', 'default']])
+        self.with_md(msg, tag=("pool1", "9012"),
+                     hops=[['sphex', 'default']])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
         self.clear_all_dispatched()
-        msg = self.with_conv(self.mkmsg_out(), 'app1', 'conv1', ep='other')
+        msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'),
+                           endpoint='other')
         yield self.dispatch_outbound(msg, 'app1')
         self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
-        msg = self.with_tag(msg, ("pool1", "5678"), ep='default')
-        msg = self.with_hops(msg, [['sphex', 'default']])
+        self.with_md(msg, tag=("pool1", "5678"), endpoint='default',
+                     hops=[['sphex', 'default']])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
     @inlineCallbacks
-    def mk_msg_ack(self, ep=None, hops=None):
+    def mk_msg_ack(self, **kw):
         "Create and store an outbound message, then create an ack for it."
-        msg = self.mkmsg_out()
-        if ep is not None:
-            msg = self.with_endpoint(msg, ep)
-        if hops is not None:
-            msg = self.with_hops(msg, hops)
+        msg = self.with_md(self.mkmsg_out(), **kw)
         yield self.vumi_api.mdb.add_outbound_message(msg)
-
-        ack = self.mkmsg_ack(
-            user_message_id=msg['message_id'])
-
+        ack = self.mkmsg_ack(user_message_id=msg['message_id'])
         returnValue((msg, ack))
 
     @inlineCallbacks
@@ -208,18 +185,17 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         ])
         yield self.dispatch_event(ack, 'sphex')
         self.assert_rkeys_used('sphex.event', 'app1.event')
-        ack = self.with_endpoint(ack)
-        ack = self.with_hops(ack, [['app1', 'default']])
+        self.with_md(ack, hops=[['app1', 'default']])
         self.assertEqual([ack], self.get_dispatched_events('app1'))
 
         self.clear_all_dispatched()
-        msg, ack = yield self.mk_msg_ack(ep='other', hops=[
+        msg, ack = yield self.mk_msg_ack(endpoint='other', hops=[
             ['app1', 'other'],
         ])
         yield self.dispatch_event(ack, 'sphex')
         self.assert_rkeys_used('sphex.event', 'app1.event')
-        ack = self.with_endpoint(ack, 'other')
-        ack = self.with_hops(ack, [['app1', 'other']])
+        self.with_md(ack, endpoint='other',
+                     hops=[['app1', 'other']])
         self.assertEqual([ack], self.get_dispatched_events('app1'))
 
         self.clear_all_dispatched()
@@ -228,6 +204,5 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         ])
         yield self.dispatch_event(ack, 'sphex')
         self.assert_rkeys_used('sphex.event', 'app2.event')
-        ack = self.with_endpoint(ack)
-        ack = self.with_hops(ack, [['app2', 'default']])
+        self.with_md(ack, hops=[['app2', 'default']])
         self.assertEqual([ack], self.get_dispatched_events('app2'))
