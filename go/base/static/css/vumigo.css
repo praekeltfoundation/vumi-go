@@ -204,27 +204,50 @@ button {
 .campaigns.dashboard .status {
   text-transform: capitalize;
 }
-.campaigns.wizard-details ul,
-.campaigns.wizard-details li {
+.campaigns.details ul,
+.campaigns.details li {
   list-style-type: none;
   padding: 0;
   margin: 0;
   width: auto;
 }
-.campaigns.wizard-details ul label,
-.campaigns.wizard-details li label {
+.campaigns.details ul label,
+.campaigns.details li label {
   font-weight: normal;
   display: inline;
 }
-.campaigns.wizard-details .configuration {
+.campaigns.details .configuration {
   margin: 18px 0 0 0;
   display: none;
 }
-.campaigns.wizard-details .configuration ul,
-.campaigns.wizard-details .configuration li {
+.campaigns.details .configuration ul,
+.campaigns.details .configuration li {
   padding: 0;
   margin: 0;
   list-style-type: none;
+}
+.campaigns.summary .sub-details,
+.campaigns.summary .sub-actions,
+.campaigns.summary .sub-messages {
+  border-bottom: 1px #c9c9c9 solid;
+  margin: 0 0 18px 0;
+  padding: 0 0 18px 0;
+}
+.campaigns.summary h6 {
+  font-weight: bold;
+  color: #878b8e;
+}
+.campaigns.summary h4 {
+  font-size: 20px;
+  margin: 0 0 18px 0;
+}
+.campaigns.summary ol,
+.campaigns.summary ul,
+.campaigns.summary li {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  width: auto;
 }
 .campaigns .header a {
   color: #878b8e;

@@ -1,76 +1,104 @@
-{% extends "wizard_views/wizard_base.html" %}
+{% extends "conversation_views/conversation_base.html" %}
 {% load url from future %}
+{% load conversation_tags %}
 
-{% block content_title %}
-    Preview &amp; Activate
-{% endblock %}
+{% block content_extraclass %}campaigns summary{% endblock %}
+
+{% block content_title %}Preview &amp; Activate{% endblock %}
+
 
 {% block content_actions_right %}
     <a href="{% url 'conversations:index' %}">Cancel</a>
-    <a href="{% url 'conversations_tmp:incoming_list' conversation.key %}" class="btn btn-primary">Start</a>
+    {% if is_editable %}
+        <a href="{% conversation_screen conversation 'edit' %}" class="btn btn-primary">Edit</a>
+    {% endif %}
+    {# TODO: Proper lifecycle stuff. #}
+    {% if conversation.stopped %}
+        <a href="{% url 'conversations_tmp:incoming_list' conversation.key %}" class="btn btn-primary">Start</a>
+    {% elif conversation.running %}
+        <a href="{% url 'conversations_tmp:incoming_list' conversation.key %}" class="btn btn-primary">Stop</a>
+    {% else %}
+        <a href="{% conversation_screen conversation %}" class="btn btn-primary">???</a>
+    {% endif %}
 {% endblock %}
 
 {% block content_main %}
 <div class="row-fluid indent">
     <div class="span7">
 
-        <h4 class="control-label">
-            <a href="{% url 'conversations_tmp:details' campaign_key %}">
+        <div class="sub-details">
+            <h4>
                 Details
-                <button class="btn btn-primary btn-mini">Edit</button>
-            </a>
-        </h4>
+                <a href="{% conversation_screen conversation %}" class="btn btn-primary btn-mini">
+                    Edit
+                </a>
+            </h4>
 
-        <p>
-            NAME<br>
-            {{ conversation.name }}
-        </p>
-        <p>
-            TYPE<br>
-            {{ conversation.type }}
-        </p>
+            <p>
+                <h6>NAME</h6>
+                {{ conversation.name }}<br>
+            </p>
+            <p>
+                <h6>TYPE</h6>
+                {{ conversation.type }}<br>
+            </p>
 
-        <p>
-            CHANNELS<br>
-            <!-- TODO:  update the routing table metadata helpers to
-                        be able to answer questions like this.
-            -->
-            USSD
-        </p>
+            <p>
+                <h6>CHANNELS</h6>
+                <!-- TODO:  update the routing table metadata helpers to
+                            be able to answer questions like this.
+                -->
+                USSD<br>
+            </p>
+        </div>
 
-        <hr>
-        <h4 class="control-label">
-            <a href="{% url 'conversations_tmp:message' campaign_key %}">
+
+        <div class="sub-actions">
+            <h4>Actions</h4>
+
+            <p>
+                <ol>
+                {% for action in actions %}
+                    <li><a href="{% conversation_action conversation action.action_name %}">{{action.action_display_name}}</a></li>
+                {% empty %}
+                    <li>This conversation has no actions.</li>
+                {% endfor %}
+                </ol>
+            </p>
+        </div>
+
+
+        <div class="sub-messages">
+            <h4>
                 Messages
-                <button class="btn btn-primary btn-mini">Edit</button>
-            </a>
-        </h4>
+                <a href="{% url 'conversations_tmp:message' conversation.key %}" class="btn btn-primary btn-mini">Edit</a>
+            </h4>
 
-        <p class="message">
-            {{ conversation.description }}
-        </p>
+            <p class="message">
+
+                {{ conversation.description }}
+            </p>
+        </div>
 
 
-        <hr>
-        <h4 class="control-label">
-            <a href="{% url 'conversations_tmp:contacts' campaign_key %}">
+        
+        
+        <div class="sub-contacts">
+            <h4 class="control-label">
                 Contacts
-                <button class="btn btn-primary btn-mini">Edit</button>
-            </a>
-        </h4>
-        <p class="message">
-            {# TODO: List of groups contacts #}
-            {% if groups %}
+                <a href="{% url 'conversations_tmp:contacts' conversation.key %}" class="btn btn-primary btn-mini">Edit</a>
+            </h4>
+            <p class="contacts">
+                {# TODO: List of groups contacts #}
                 <ol>
                 {% for group, member_count in groups.items %}
                     <li>{{group}} ({{member_count}} member{{member_count|pluralize}})</li>
+                {% empty %}
+                    <li>You have not specified any contacts.</li>
                 {% endfor %}
                 </ol>
-            {% else %}
-                You have not specified any contacts.
-            {% endif %}
-        </p>
-
+            </p>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -79,5 +107,4 @@
 {% block ondomready %}
     {{ block.super }}
     // highlight the breadcrumbs.
-    $('.breadcrumbs a').eq(3).addClass('active');
 {% endblock %}
