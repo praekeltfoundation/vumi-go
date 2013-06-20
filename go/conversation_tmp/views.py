@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
+from django.conf import settings
 import requests
 
 from go.conversation_tmp.forms import (
@@ -217,7 +218,7 @@ def pricing(request):
 def routing(request):
     # TODO: Better Go API client.
 
-    url = 'http://localhost:8001/api/v1/go/api'
+    url = settings.GO_API_URL
     auth = ('session_id', request.COOKIES['sessionid'])
     req_data = {
         "params": [request.user_api.user_account_key],
