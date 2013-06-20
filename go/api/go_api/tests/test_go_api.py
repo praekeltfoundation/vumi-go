@@ -1,7 +1,5 @@
 """Tests for go.api.go_api.go_api"""
 
-import hashlib
-
 from txjsonrpc.web.jsonrpc import Proxy
 from txjsonrpc.jsonrpclib import Fault
 
@@ -70,8 +68,6 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
             u'jsbox', u'My Conversation', u'A description', {})
         result = yield self.proxy.callRemote(
             "conversations", self.campaign_key)
-        conv_uuid = unicode(hashlib.md5(
-            'CONVERSATION:jsbox:%s:default' % conv.key).hexdigest())
         self.assertEqual(result, [
             {
                 'uuid': conv.key,
@@ -81,7 +77,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
                 'endpoints': [
                     {
                         u'name': u'default',
-                        u'uuid': conv_uuid,
+                        u'uuid': u'CONVERSATION:jsbox:%s:default' % conv.key,
                     },
                 ],
             },
@@ -99,18 +95,16 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         yield self.user_api.acquire_tag(u"pool")  # acquires tag1
         result = yield self.proxy.callRemote(
             "channels", self.campaign_key)
-        channel_uuid = unicode(hashlib.md5(
-            'TRANSPORT_TAG:pool:tag1:default').hexdigest())
         self.assertEqual(result, [
             {
-                u'uuid': unicode(hashlib.md5('pool:tag1').hexdigest()),
+                u'uuid': u'pool:tag1',
                 u'name': u'tag1',
                 u'tag': [u'pool', u'tag1'],
                 u'description': u'Pool: tag1',
                 u'endpoints': [
                     {
                         u'name': u'default',
-                        u'uuid': channel_uuid,
+                        u'uuid': u'TRANSPORT_TAG:pool:tag1:default'
                     },
                 ],
             },
@@ -125,7 +119,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
     @inlineCallbacks
     def _connect_conversation_to_tag(self, conv, tag):
         conv_conn = str(GoConnector.for_conversation(
-            conv.conversation_type, conv.key))
+        conv.conversation_type, conv.key))
         channel_conn = str(GoConnector.for_transport_tag(*tag))
         user_account = yield self.user_api.get_user_account()
         rt_helper = RoutingTableHelper(user_account.routing_table)
@@ -148,22 +142,18 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         result = yield self.proxy.callRemote(
             "routing_entries", self.campaign_key)
         result.sort(key=lambda x: x['source']['uuid'])
-        channel_uuid = unicode(hashlib.md5(
-            'TRANSPORT_TAG:pool:tag1:default').hexdigest())
-        conv_uuid = unicode(hashlib.md5(
-            'CONVERSATION:jsbox:%s:default' % conv.key).hexdigest())
-        expected = [
+        self.assertEqual(result, [
             {
-                u'source': {u'uuid': conv_uuid},
-                u'target': {u'uuid': channel_uuid},
+                u'source': {u'uuid': u'CONVERSATION:jsbox:%s:default'
+                            % conv.key},
+                u'target': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'}
             },
             {
-                u'source': {u'uuid': channel_uuid},
-                u'target': {u'uuid': conv_uuid},
+                u'source': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'},
+                u'target': {u'uuid': u'CONVERSATION:jsbox:%s:default'
+                            % conv.key},
             },
-        ]
-        expected.sort(key=lambda x: x['source']['uuid'])
-        self.assertEqual(result, expected)
+        ])
 
     @inlineCallbacks
     def test_routing_table(self):
@@ -171,32 +161,17 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         result = yield self.proxy.callRemote(
             "routing_table", self.campaign_key)
         result['routing_entries'].sort(key=lambda x: x['source']['uuid'])
-        channel_uuid = unicode(hashlib.md5(
-            'TRANSPORT_TAG:pool:tag1:default').hexdigest())
-        conv_uuid = unicode(hashlib.md5(
-            'CONVERSATION:jsbox:%s:default' % conv.key).hexdigest())
-        expected_entries = [
-            {
-                u'source': {u'uuid': conv_uuid},
-                u'target': {u'uuid': channel_uuid},
-            },
-            {
-                u'source': {u'uuid': channel_uuid},
-                u'target': {u'uuid': conv_uuid},
-            },
-        ]
-        expected_entries.sort(key=lambda x: x['source']['uuid'])
         self.assertEqual(result, {
             u'channels': [
                 {
-                    u'uuid': unicode(hashlib.md5('pool:tag1').hexdigest()),
+                    u'uuid': u'pool:tag1',
                     u'name': u'tag1',
                     u'tag': [u'pool', u'tag1'],
                     u'description': u'Pool: tag1',
                     u'endpoints': [
                         {
                             u'name': u'default',
-                            u'uuid': channel_uuid,
+                            u'uuid': u'TRANSPORT_TAG:pool:tag1:default',
                         }
                     ],
                 }
@@ -210,14 +185,26 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
                     u'endpoints': [
                         {
                             u'name': u'default',
-                            u'uuid': conv_uuid,
+                            u'uuid': u'CONVERSATION:jsbox:%s:default'
+                            % conv.key,
                         },
                     ],
                 }
             ],
             u'routing_blocks': [
             ],
-            u'routing_entries': expected_entries,
+            u'routing_entries': [
+                {
+                    u'source': {u'uuid': u'CONVERSATION:jsbox:%s:default'
+                                % conv.key},
+                    u'target': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'}
+                },
+                {
+                    u'source': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'},
+                    u'target': {u'uuid': u'CONVERSATION:jsbox:%s:default'
+                                % conv.key},
+                },
+            ]
         })
 
     def mk_routing_entry(self, source_uuid, target_uuid):
@@ -237,9 +224,8 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         ])
         d = self.proxy.callRemote(
                 "update_routing_table", self.campaign_key, routing_table)
-        uuid = hashlib.md5('foo').hexdigest()
         yield self.assert_faults(
-            d, 400, "Unknown source endpoint {u'uuid': u'%s'}" % (uuid,))
+            d, 400, "Unknown source endpoint {u'uuid': u'foo'}")
 
     @inlineCallbacks
     def test_update_routing_table_with_bad_target_endpoint(self):
@@ -249,13 +235,11 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         ])
         d = self.proxy.callRemote(
                 "update_routing_table", self.campaign_key, routing_table)
-        s_uuid = hashlib.md5('TRANSPORT_TAG:pool:tag1:default').hexdigest()
-        d_uuid = hashlib.md5('bar').hexdigest()
         yield self.assert_faults(
             d, 400, u"Source outbound-receiving endpoint {u'uuid':"
-            " u'%s'}"
+            " u'TRANSPORT_TAG:pool:tag1:default'}"
             " should link to an inbound-receiving endpoint"
-            " but links to {u'uuid': u'%s'}" % (s_uuid, d_uuid))
+            " but links to {u'uuid': u'bar'}")
 
     @inlineCallbacks
     def test_update_routing_table_with_channel_linked_to_itself(self):
@@ -266,12 +250,11 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         ])
         d = self.proxy.callRemote(
                 "update_routing_table", self.campaign_key, routing_table)
-        uuid = hashlib.md5('TRANSPORT_TAG:pool:tag1:default').hexdigest()
         yield self.assert_faults(
             d, 400, u"Source outbound-receiving endpoint"
-            " {u'uuid': u'%s'} should link"
+            " {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'} should link"
             " to an inbound-receiving endpoint but links to {u'uuid':"
-            " u'%s'}" % (uuid, uuid))
+            " u'TRANSPORT_TAG:pool:tag1:default'}")
 
     @inlineCallbacks
     def test_update_routing_table_with_conversation_linked_to_itself(self):
@@ -283,7 +266,6 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         ])
         d = self.proxy.callRemote(
                 "update_routing_table", self.campaign_key, routing_table)
-        endpoint_uuid = unicode(hashlib.md5(endpoint_uuid).hexdigest())
         yield self.assert_faults(
             d, 400, u"Source inbound-receiving endpoint"
             " {u'uuid': %r} should link"
