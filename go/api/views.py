@@ -24,9 +24,6 @@ def go_api_proxy(request):
     # XXX: Extract the 'id' from the request to put in the response.
     #      Is this necessary? If so, the API worker should handle it.
     req_id = req_data['id']
-    # XXX: Strip leading slashes off the method name.
-    #      The JS and the API worker need to agree on this.
-    req_data['method'] = req_data['method'].lstrip('/')
     data = json.dumps(req_data)
 
     logger.debug('Request data: %s %s %r' % (url, auth, data))

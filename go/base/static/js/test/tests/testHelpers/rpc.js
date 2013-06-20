@@ -4,7 +4,7 @@
 (function(exports) {
   var assertRequest = function(req, url, method, params) {
     assert.equal(req.url, url);
-    assert.equal(req.data.method, '/' + method);
+    assert.equal(req.data.method, method);
     assert.deepEqual(req.data.params, params || []);
   };
 
