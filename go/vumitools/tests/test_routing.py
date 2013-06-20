@@ -84,7 +84,23 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assertEqual(set(rkeys), set(self._amqp.dispatched['vumi'].keys()))
 
     @inlineCallbacks
-    def test_inbound_message_routing(self):
+    def mk_msg_reply(self, **kw):
+        "Create and store an outbound message, then create a reply for it."
+        msg = self.with_md(self.mkmsg_in(), **kw)
+        yield self.vumi_api.mdb.add_inbound_message(msg)
+        reply = msg.reply(content="Reply")
+        returnValue((msg, reply))
+
+    @inlineCallbacks
+    def mk_msg_ack(self, **kw):
+        "Create and store an outbound message, then create an ack for it."
+        msg = self.with_md(self.mkmsg_out(), **kw)
+        yield self.vumi_api.mdb.add_outbound_message(msg)
+        ack = self.mkmsg_ack(user_message_id=msg['message_id'])
+        returnValue((msg, ack))
+
+    @inlineCallbacks
+    def test_inbound_message_from_transport(self):
         yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
         yield self.dispatch_inbound(msg, 'sphex')
@@ -110,7 +126,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assertEqual([msg], self.get_dispatched_inbound('app2'))
 
     @inlineCallbacks
-    def test_opt_out_message_routing(self):
+    def test_inbound_message_from_transport_to_optout(self):
         yield self.get_dispatcher()
         tag = ("pool1", "1234")
         msg = self.with_md(self.mkmsg_in(), tag=tag)
@@ -122,15 +138,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assertEqual([msg], self.get_dispatched_inbound('optout'))
 
     @inlineCallbacks
-    def mk_msg_reply(self, **kw):
-        "Create and store an outbound message, then create a reply for it."
-        msg = self.with_md(self.mkmsg_in(), **kw)
-        yield self.vumi_api.mdb.add_inbound_message(msg)
-        reply = msg.reply(content="Reply")
-        returnValue((msg, reply))
-
-    @inlineCallbacks
-    def test_opt_out_reply_routing(self):
+    def test_outbound_message_from_optout_to_transport(self):
         yield self.get_dispatcher()
         tag = ("pool1", "1234")
         msg, reply = yield self.mk_msg_reply(tag=tag)
@@ -141,7 +149,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assertEqual([reply], self.get_dispatched_outbound('sphex'))
 
     @inlineCallbacks
-    def test_outbound_message_routing(self):
+    def test_outbound_message_from_converation(self):
         yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'))
         yield self.dispatch_outbound(msg, 'app1')
@@ -166,14 +174,6 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.with_md(msg, tag=("pool1", "5678"), endpoint='default',
                      hops=[['sphex', 'default']])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
-
-    @inlineCallbacks
-    def mk_msg_ack(self, **kw):
-        "Create and store an outbound message, then create an ack for it."
-        msg = self.with_md(self.mkmsg_out(), **kw)
-        yield self.vumi_api.mdb.add_outbound_message(msg)
-        ack = self.mkmsg_ack(user_message_id=msg['message_id'])
-        returnValue((msg, ack))
 
     @inlineCallbacks
     def test_event_routing(self):
