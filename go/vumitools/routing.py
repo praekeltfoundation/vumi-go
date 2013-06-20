@@ -38,50 +38,41 @@ class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
 
 class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     """
+    Provides routing dispatching for Vumi Go accounts.
 
-    inbound:
-      * from transport:
-      * from routing block:
-      * to routing block
-      * to conversation
-      * to opt out
+    Broadly, the strategy is to determine a user account key for the message
+    and look up it's assocaited routing table. The user account key is
+    determined either based on the tag (if the message is inbound from
+    a transport) or retrieved from the Vumi Go metadata.
 
-    outbound:
-      * from conversation:
-      * from routing block:
-      * from opt out:
-      * to routing block
-      * to transport
+    Events ignore the routing table and follow the reverse of the route
+    that the associated outbound message was sent out via.
 
-    event:
-      * trace back path of outbound message
-      * from transport:
-      * from routing blwock:
-      * to routing block
-      * to conversation
-      * to opt out
+    Messages from transports that look like opt-out messages are routed
+    straight to the opt-out worker and replies from the opt-out worker
+    go straight back to the transport the original message came from.
 
-    from transport:
-      * tag used to determine account id
+    Summary of message sources and destinations:
 
-    from routing block:
-      * account info in message
+    * inbound messages:
+      * from: transports or routing blocks
+      * to: routing blocks, conversations or the opt-out worker
 
-    from conversation:
-      * account info in message
+    * outbound messages:
+      * from: conversations, routing blocks or the opt-out worker
+      * to: routing blocks or transports
 
-    from opt out:
-      * account info in message
+    * events:
+      * from: transports or routing blocks
+      * to: routing blocks, conversations or the opt-out worker
 
-    also stores messages in the appropriate batch
-    for conversations and routing blocks
-    (storage middleware does this at the transport
-     for transports)
+    Summary of how user account keys are determined:
 
-    TODO: decide what happens at transports to tags
-    without an associated batch / account
-    (I guess we should log an error and put them in
-     a generic batch bucket for later analysis).
+    * for messages from transports:
+      * tag is used to determine the user account id
+
+    * for routing blocks, conversations and the opt-out worker:
+      * the user account id is read from the Vumi Go helper_metadata.
     """
 
     CONFIG_CLASS = AccountRoutingTableDispatcherConfig
@@ -170,6 +161,10 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         hops.append([connector_name, endpoint])
 
     def next_hop_for_event(self, event, outbound_msg):
+        """Compares the current hops taken by an event and its corresponding
+        outbound message and determines the next destination the event should
+        visit.
+        """
         event_hops = event['routing_metadata'].setdefault('hops', [])
         outbound_hops = outbound_msg['routing_metadata'].setdefault('hops', [])
         if len(event_hops) >= len(outbound_hops):
@@ -178,6 +173,15 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
     @inlineCallbacks
     def set_destination(self, msg, target, allowed_types):
+        """Parse a target `(str(go_connector), endpoint)` pair and determine
+        the corresponding dispatcher connector to publish on. Set any
+        appropriate Go helper_metadata required by the destination.
+
+        Raises `UnroutableMessageError` if the parsed `GoConnector` has a
+        connector type not in `allowed_types`.
+
+        Note: `str(go_connector)` is what is stored in Go routing tables.
+        """
         msg_mdh = self.get_metadata_helper(msg)
         conn = GoConnector.parse(target[0])
 
@@ -214,6 +218,15 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         returnValue((dst_connector_name, target[1]))
 
     def acquire_source(self, msg, connector_type, allowed_types):
+        """Determine the `str(go_connector)` value that a msg came
+        in on by looking at the connector_type and fetching the
+        appropriate values from the `msg` helper_metadata.
+
+        Raises `UnroutableMessageError` if the connector_type has a
+        value not in `allowed_types`.
+
+        Note: `str(go_connector)` is what is stored in Go routing tables.
+        """
         msg_mdh = self.get_metadata_helper(msg)
 
         if connector_type not in allowed_types:
@@ -243,6 +256,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         return str(src_conn)
 
     def publish_inbound_optout(self, config, msg):
+        """Publish an inbound opt-out request to the opt-out worker."""
         self.push_hop(msg, config.opt_out_connector, 'default')
         return self.publish_inbound(msg, config.opt_out_connector, 'default')
 
