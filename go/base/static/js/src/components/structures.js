@@ -169,9 +169,9 @@
   };
 
   var idOfView = function(obj) {
-    return obj.id
-      ? _(obj).result('id')
-      : obj;
+    return obj.uuid
+      ? _(obj).result('uuid')
+      : _(obj).result('id') || obj;
   };
 
   // Maintains a collection of views, allowing views to be created dynamically

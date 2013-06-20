@@ -41,9 +41,9 @@ describe("go.components.plumbing (diagrams)", function() {
       endpoints = new DiagramViewEndpoints(diagram);
 
       var modelA3 = new StateModel({
-        id: 'a3',
-        left: [{id: 'a3L1'}, {id: 'a3L2'}],
-        right: [{id: 'a3R1'}, {id: 'a3R2'}]
+        uuid: 'a3',
+        left: [{uuid: 'a3L1'}, {uuid: 'a3L2'}],
+        right: [{uuid: 'a3R1'}, {uuid: 'a3R2'}]
       });
       a3 = new StateView({diagram: diagram, model: modelA3});
 

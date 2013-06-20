@@ -45,15 +45,15 @@ describe("go.components.plumbing (states)", function() {
 
     describe(".render", function() {
       it("should add the state view to the diagram", function() {
-        assert(_.isEmpty($('#diagram #a1').get()));
+        assert(_.isEmpty(diagram.$('[data-uuid="a1"]').get()));
         a1.render();
-        assert(!_.isEmpty($('#diagram #a1').get()));
+        assert(!_.isEmpty(diagram.$('[data-uuid="a1"]').get()));
       });
 
       it("shouldn't render duplicates", function() {
         a1.render();
         a1.render();
-        assert.equal($('#diagram #a1').length, 1);
+        assert.equal(diagram.$('[data-uuid="a1"]').length, 1);
       });
 
       it("should render its endpoints", function() {

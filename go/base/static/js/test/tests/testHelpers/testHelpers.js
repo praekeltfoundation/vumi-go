@@ -3,11 +3,11 @@
 
 (function(exports) {
   var oneElExists = function(selector) {
-    return $(selector).get().length === 1;
+    return $(selector).length === 1;
   };
 
   var noElExists = function(selector) {
-    return $(selector).get().length === 0;
+    return $(selector).length === 0;
   };
 
   _.extend(exports, {

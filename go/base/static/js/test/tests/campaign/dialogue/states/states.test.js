@@ -75,9 +75,9 @@ describe("go.campaign.dialogue.states", function() {
 
     describe(".render", function() {
       it("should append the state to the diagram", function() {
-        assert(noElExists(diagram.$('#luke-the-state')));
+        assert(noElExists(diagram.$('[data-uuid="luke-the-state"]')));
         state.render();
-        assert(oneElExists(diagram.$('#luke-the-state')));
+        assert(oneElExists(diagram.$('[data-uuid="luke-the-state"]')));
       });
 
       it("should render the currently active mode", function() {
@@ -87,11 +87,11 @@ describe("go.campaign.dialogue.states", function() {
       });
 
       it("should render its endpoints", function() {
-        assert(noElExists(state.$('#lukes-entry-endpoint')));
-        assert(noElExists(state.$('#lukes-exit-endpoint')));
+        assert(noElExists(state.$('[data-uuid="lukes-entry-endpoint"]')));
+        assert(noElExists(state.$('[data-uuid="lukes-exit-endpoint"]')));
         state.render();
-        assert(oneElExists(state.$('#lukes-entry-endpoint')));
-        assert(oneElExists(state.$('#lukes-exit-endpoint')));
+        assert(oneElExists(state.$('[data-uuid="lukes-entry-endpoint"]')));
+        assert(oneElExists(state.$('[data-uuid="lukes-exit-endpoint"]')));
       });
     });
 

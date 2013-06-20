@@ -9,14 +9,10 @@ describe("go.components.stateMachine", function() {
     var EndpointModel = stateMachine.EndpointModel,
         ConnectionModel = stateMachine.ConnectionModel;
 
-    var ToyConnectionModel = ConnectionModel.extend({
-      idAttribute: 'uuid'
-    });
-
     it("should assign a unique id from its source and target", function() {
-      var endpoint = new ToyConnectionModel({
-        source: new EndpointModel({id: 'a'}),
-        target: new EndpointModel({id: 'b'})
+      var endpoint = new ConnectionModel({
+        source: new EndpointModel({uuid: 'a'}),
+        target: new EndpointModel({uuid: 'b'})
       });
 
       assert.equal(endpoint.id, 'a-b');

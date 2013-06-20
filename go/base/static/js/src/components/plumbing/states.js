@@ -3,6 +3,9 @@
 // Components for states in a state diagram (or 'plumbing view') in Go
 
 (function(exports) {
+  var views = go.components.views,
+      UniqueView = views.UniqueView;
+
   var structures = go.components.structures,
       SubviewCollection = structures.SubviewCollection,
       SubviewCollectionGroup = structures.SubviewCollectionGroup;
@@ -23,7 +26,7 @@
     }
   });
 
-  var StateView = Backbone.View.extend({
+  var StateView = UniqueView.extend({
     // A list of configuration objects, where each corresponds to a group of
     // endpoints or a single endpoint. Override to change the state schema.
     endpointSchema: [{attr: 'endpoints'}],
@@ -34,7 +37,7 @@
     // Override to change the default endpoint view collection type
     endpointCollectionType: EndpointViewCollection,
 
-    id: function() { return this.model.id; },
+    uuid: function() { return this.model.id; },
 
     initialize: function(options) {
       // the diagram view that this state is part of
