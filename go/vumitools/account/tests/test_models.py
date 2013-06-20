@@ -108,11 +108,13 @@ class GoConnectorTestCase(TestCase):
         self.assertEqual(str(c), "CONVERSATION:conv_type_1:12345")
 
     def test_create_routing_block_connector(self):
-        c = GoConnector.for_routing_block("rb_type_1", "12345")
+        c = GoConnector.for_routing_block("rb_type_1", "12345",
+                                          GoConnector.INBOUND)
         self.assertEqual(c.ctype, GoConnector.ROUTING_BLOCK)
         self.assertEqual(c.rblock_type, "rb_type_1")
         self.assertEqual(c.rblock_key, "12345")
-        self.assertEqual(str(c), "ROUTING_BLOCK:rb_type_1:12345")
+        self.assertEqual(c.direction, GoConnector.INBOUND)
+        self.assertEqual(str(c), "ROUTING_BLOCK:rb_type_1:12345:INBOUND")
 
     def test_create_transport_tag_connector(self):
         c = GoConnector.for_transport_tag("tagpool_1", "tag_1")
@@ -128,10 +130,11 @@ class GoConnectorTestCase(TestCase):
         self.assertEqual(c.conv_key, "12345")
 
     def test_parse_routing_block_connector(self):
-        c = GoConnector.parse("ROUTING_BLOCK:rb_type_1:12345")
+        c = GoConnector.parse("ROUTING_BLOCK:rb_type_1:12345:OUTBOUND")
         self.assertEqual(c.ctype, GoConnector.ROUTING_BLOCK)
         self.assertEqual(c.rblock_type, "rb_type_1")
         self.assertEqual(c.rblock_key, "12345")
+        self.assertEqual(c.direction, GoConnector.OUTBOUND)
 
     def test_parse_transport_tag_connector(self):
         c = GoConnector.parse("TRANSPORT_TAG:tagpool_1:tag_1")

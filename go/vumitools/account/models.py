@@ -172,6 +172,11 @@ class GoConnector(object):
     ROUTING_BLOCK = "ROUTING_BLOCK"
     TRANSPORT_TAG = "TRANSPORT_TAG"
 
+    # Directions for routing block entries
+
+    INBOUND = "INBOUND"
+    OUTBOUND = "OUTBOUND"
+
     def __init__(self, ctype, names, parts):
         self.ctype = ctype
         self._names = names
@@ -190,9 +195,10 @@ class GoConnector(object):
                    [conv_type, conv_key])
 
     @classmethod
-    def for_routing_block(cls, rblock_type, rblock_key):
-        return cls(cls.ROUTING_BLOCK, ["rblock_type", "rblock_key"],
-                   [rblock_type, rblock_key])
+    def for_routing_block(cls, rblock_type, rblock_key, direction):
+        return cls(cls.ROUTING_BLOCK,
+                   ["rblock_type", "rblock_key", "direction"],
+                   [rblock_type, rblock_key, direction])
 
     @classmethod
     def for_transport_tag(cls, tagpool, tagname):
