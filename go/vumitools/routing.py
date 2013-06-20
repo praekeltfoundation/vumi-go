@@ -90,8 +90,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     OPT_OUT = "OPT_OUT"
 
     # directions
-    INBOUND = "inbound"
-    OUTBOUND = "outbound"
+    INBOUND = GoConnector.INBOUND
+    OUTBOUND = GoConnector.OUTBOUND
 
     @inlineCallbacks
     def setup_dispatcher(self):
@@ -174,6 +174,17 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         else:
             return self.router_outbound_connecor_mapping.get(router_type)
 
+    def router_direction(self, direction):
+        """Converts an connector direction (as seen from the perspective of
+        this app) into the direction as seen by a routing block (i.e. the
+        reverse).
+        """
+        router_direction = {
+            self.INBOUND: self.OUTBOUND,
+            self.OUTBOUND: self.INBOUND,
+        }.get(direction)
+        return router_direction
+
     def push_hop(self, msg, connector_name, endpoint):
         hops = msg['routing_metadata'].setdefault('hops', [])
         hops.append([connector_name, endpoint])
@@ -221,7 +232,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         elif conn.ctype == conn.ROUTING_BLOCK:
             msg_mdh.set_router_info(conn.rblock_type, conn.rblock_key)
             dst_connector_name = self.get_router_connector(
-                conn.rblock_type, direction)
+                conn.rblock_type, self.router_direction(direction))
 
         elif conn.ctype == conn.TRANSPORT_TAG:
             msg_mdh.set_tag([conn.tagpool, conn.tagname])
@@ -272,7 +283,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         elif connector_type == self.ROUTING_BLOCK:
             router_info = msg_mdh.get_router_info()
             src_conn = str(GoConnector.for_routing_block(
-                router_info['router_type'], router_info['router_key']))
+                router_info['router_type'], router_info['router_key'],
+                self.router_direction(direction)))
 
         elif connector_type == self.TRANSPORT:
             src_conn = str(GoConnector.for_transport_tag(*msg_mdh.tag))

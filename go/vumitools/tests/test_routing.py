@@ -31,10 +31,15 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
             "CONVERSATION:app2:conv2": {
                 "default": ["TRANSPORT_TAG:pool1:9012", "default"],
             },
-            # Routers
-            "ROUTING_BLOCK:router:router1": {
+            # Router outbound
+            "ROUTING_BLOCK:router:router1:INBOUND": {
                 "default": ["TRANSPORT_TAG:pool1:1234", "default"],
                 "other": ["TRANSPORT_TAG:pool1:5678", "default"],
+            },
+            # Router inbound
+            "ROUTING_BLOCK:router:router1:OUTBOUND": {
+                "default": ["CONVERSATION:app1:conv1", "default"],
+                "other": ["CONVERSATION:app2:conv2", "yet-another"],
             },
         }
         yield user_account.save()
@@ -51,10 +56,10 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
     def get_dispatcher(self, **config_extras):
         config = {
             "receive_inbound_connectors": [
-                "sphex", "router_ri",
+                "sphex", "router_ro",
             ],
             "receive_outbound_connectors": [
-                "app1", "app2", "router_ro", "optout",
+                "app1", "app2", "router_ri", "optout",
             ],
             "metrics_prefix": "foo",
             "application_connector_mapping": {
@@ -155,6 +160,25 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assertEqual([msg], self.get_dispatched_inbound('optout'))
 
     @inlineCallbacks
+    def test_inbound_message_from_router(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'))
+        yield self.dispatch_inbound(msg, 'router_ro')
+        self.assert_rkeys_used('router_ro.inbound', 'app1.inbound')
+        self.with_md(msg, conv=("app1", "conv1"),
+                     hops=[['app1', 'default']])
+        self.assertEqual([msg], self.get_dispatched_inbound('app1'))
+
+        self.clear_all_dispatched()
+        msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'),
+                           endpoint='other')
+        yield self.dispatch_inbound(msg, 'router_ro')
+        self.assert_rkeys_used('router_ro.inbound', 'app2.inbound')
+        self.with_md(msg, conv=("app2", "conv2"), endpoint='yet-another',
+                     hops=[['app2', 'yet-another']])
+        self.assertEqual([msg], self.get_dispatched_inbound('app2'))
+
+    @inlineCallbacks
     def test_outbound_message_from_optout_to_transport(self):
         yield self.get_dispatcher()
         tag = ("pool1", "1234")
@@ -196,8 +220,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
     def test_outbound_message_from_router(self):
         yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'))
-        yield self.dispatch_outbound(msg, 'router_ro')
-        self.assert_rkeys_used('router_ro.outbound', 'sphex.outbound')
+        yield self.dispatch_outbound(msg, 'router_ri')
+        self.assert_rkeys_used('router_ri.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "1234"),
                      hops=[['sphex', 'default']])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
@@ -205,8 +229,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.clear_all_dispatched()
         msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'),
                            endpoint='other')
-        yield self.dispatch_outbound(msg, 'router_ro')
-        self.assert_rkeys_used('router_ro.outbound', 'sphex.outbound')
+        yield self.dispatch_outbound(msg, 'router_ri')
+        self.assert_rkeys_used('router_ri.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "5678"), endpoint='default',
                      hops=[['sphex', 'default']])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
