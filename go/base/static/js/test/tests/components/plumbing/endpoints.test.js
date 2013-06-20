@@ -51,7 +51,7 @@ describe("go.components.plumbing (endpoints)", function() {
         x4 = new ToyEndpointView({
           state: x,
           collection: x.endpoints.members.get('endpoints'),
-          model: new EndpointModel({id: 'x4'})
+          model: new EndpointModel({uuid: 'x4'})
         });
       });
 
@@ -136,7 +136,7 @@ describe("go.components.plumbing (endpoints)", function() {
       endpoint = new ToyEndpointView({
         state: state,
         collection: state.endpoints.members.get('endpoints'),
-        model: new EndpointModel({id: 'x4'})
+        model: new EndpointModel({uuid: 'x4'})
       });
 
       state
@@ -177,7 +177,7 @@ describe("go.components.plumbing (endpoints)", function() {
       endpoint = new ParametricEndpointView({
         state: state,
         collection: state.endpoints.members.get('endpoints'),
-        model: new EndpointModel({id: 'x4'})
+        model: new EndpointModel({uuid: 'x4'})
       });
 
       state
@@ -276,7 +276,7 @@ describe("go.components.plumbing (endpoints)", function() {
         state: state,
         target: '#target',
         collection: state.endpoints.members.get('endpoints'),
-        model: new EndpointModel({id: 'x4'})
+        model: new EndpointModel({uuid: 'x4'})
       });
 
       state
@@ -400,7 +400,7 @@ describe("go.components.plumbing (endpoints)", function() {
         });
 
         assert(!endpoints.rendered);
-        endpoints.add({id: 'x4'}, {addModel: true});
+        endpoints.add({model: {uuid: 'x4'}});
       });
     });
 
@@ -427,7 +427,7 @@ describe("go.components.plumbing (endpoints)", function() {
         endpoints.realign();
         assertAlignment(1/4, 1/2, 3/4);
 
-        endpoints.add({id: 'x4'}, {addModel: true});
+        endpoints.add({model: {uuid: 'x4'}});
         endpoints.realign();
         assertAlignment(1/5, 2/5, 3/5, 4/5);
 

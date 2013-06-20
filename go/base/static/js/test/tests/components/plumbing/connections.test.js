@@ -54,9 +54,9 @@ describe("go.components.plumbing (connections)", function() {
         var x1_y1 = new ConnectionView({
           diagram: diagram,
           model: new ConnectionModel({
-            id: 'x1-y1',
-            source: {id: 'x1'},
-            target: {id: 'y1'}
+            uuid: 'x1-y1',
+            source: {uuid: 'x1'},
+            target: {uuid: 'y1'}
           })
         });
 

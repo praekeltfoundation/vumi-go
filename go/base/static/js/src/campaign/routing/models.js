@@ -13,7 +13,6 @@ var stateMachine = go.components.stateMachine,
 
 (function(exports) {
   var RoutingEndpointModel = EndpointModel.extend({
-    idAttribute: 'uuid'
   });
 
   var RoutingEntryModel = ConnectionModel.extend({
@@ -31,8 +30,6 @@ var stateMachine = go.components.stateMachine,
   });
 
   var ChannelModel = StateModel.extend({
-    idAttribute: 'uuid',
-
     relations: [{
       type: Backbone.HasMany,
       key: 'endpoints',
@@ -41,8 +38,6 @@ var stateMachine = go.components.stateMachine,
   });
 
   var RoutingBlockModel = StateModel.extend({
-    idAttribute: 'uuid',
-
     relations: [{
       type: Backbone.HasMany,
       key: 'conversation_endpoints',
@@ -55,8 +50,6 @@ var stateMachine = go.components.stateMachine,
   });
 
   var ConversationModel = StateModel.extend({
-    idAttribute: 'uuid',
-
     relations: [{
       type: Backbone.HasMany,
       key: 'endpoints',
