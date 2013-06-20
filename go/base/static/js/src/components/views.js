@@ -8,14 +8,15 @@
 
   // A view that can be uniquely identified by its `uuid` property.
   var UniqueView = Backbone.View.extend({
-    // We need a way to uniquely identify a view (and its element) without
-    // using its `id`, since this maps to the html id attribute. This causes
-    // problems when set the id attribute to a uuid value which isn't a valid
-    // html id attribute (for example, if it begins with a digit).
     constructor: function(options) {
       Backbone.View.prototype.constructor.call(this, options);
 
       this.uuid = options.uuid || this.uuid || uuid.v4();
+
+      // We need a way to uniquely identify a view (and its element) without
+      // using its `id`, since this maps to the html id attribute. This causes
+      // problems when set the id attribute to a uuid value which isn't a valid
+      // html id attribute (for example, if it begins with a digit).
       this.$el.attr('data-uuid', _(this).result('uuid'));
     }
   });
