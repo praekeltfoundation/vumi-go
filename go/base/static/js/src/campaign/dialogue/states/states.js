@@ -68,10 +68,6 @@
       this.editMode = new this.editModeType({state: this});
       this.previewMode = new this.previewModeType({state: this});
       this.mode = this.editMode;
-
-      // If we weren't given a position, ask the grid for one. This case
-      // happens when new states are fetched from the server.
-      this.position = options.position || this.diagram.grid.nextPosition();
     },
 
     // 'Resets' a state to a new type by removing the current state, and
@@ -96,7 +92,6 @@
     },
 
     render: function() {
-      // TODO position the state
       this.diagram.$el.append(this.$el);
       this.mode.render();
       this.endpoints.render();

@@ -8,8 +8,7 @@
 
   var dialogue = go.campaign.dialogue,
       connections = dialogue.connections,
-      states = dialogue.states,
-      grid = dialogue.grid;
+      states = dialogue.states;
 
   // The main view containing all the dialogue states and connections
   var DialogueDiagramView = DiagramView.extend({
@@ -20,15 +19,7 @@
     connectionCollectionType: connections.DialogueConnectionCollection,
 
     initialize: function(options) {
-      this.grid = new grid.DialogueGridView({diagram: this});
       DiagramView.prototype.initialize.call(this, options);
-    },
-
-    render: function() {
-      this.grid.render();
-      this.states.render();
-      this.connections.render();
-      return this;
     }
   });
 
