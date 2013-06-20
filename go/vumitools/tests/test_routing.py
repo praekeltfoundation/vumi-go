@@ -123,15 +123,39 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.get_dispatcher()
         tag = ("pool1", "1234")
         msg = self.with_tag(self.mkmsg_in(), tag)
-        msg['helper_metadata']['go'] = {
-            'user_account': self.user_account_key,
-        }
         msg['helper_metadata']['optout'] = {'optout': True}
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'optout.inbound')
         msg = self.with_tag(msg, tag)
         msg = self.with_hops(msg, [['optout', 'default']])
+        msg['helper_metadata']['go'] = {
+            'user_account': self.user_account_key,
+        }
         self.assertEqual([msg], self.get_dispatched_inbound('optout'))
+
+    @inlineCallbacks
+    def mk_msg_reply(self, tag=None):
+        "Create and store an outbound message, then create a reply for it."
+        msg = self.mkmsg_in()
+        if tag is not None:
+            msg = self.with_tag(msg, tag)
+        yield self.vumi_api.mdb.add_inbound_message(msg)
+        reply = msg.reply(content="Reply")
+        returnValue((msg, reply))
+
+    @inlineCallbacks
+    def test_opt_out_reply_routing(self):
+        yield self.get_dispatcher()
+        tag = ("pool1", "1234")
+        msg, reply = yield self.mk_msg_reply(tag)
+        yield self.dispatch_outbound(reply, 'optout')
+        self.assert_rkeys_used('optout.outbound', 'sphex.outbound')
+        reply = self.with_tag(reply, tag)
+        reply = self.with_hops(reply, [['sphex', 'default']])
+        msg['helper_metadata']['go'] = {
+            'user_account': self.user_account_key,
+        }
+        self.assertEqual([reply], self.get_dispatched_outbound('sphex'))
 
     @inlineCallbacks
     def test_outbound_message_routing(self):
@@ -160,9 +184,11 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
     @inlineCallbacks
-    def mk_msg_ack(self, conv_type, conv_key, ep=None, hops=None):
+    def mk_msg_ack(self, ep=None, hops=None):
         "Create and store an outbound message, then create an ack for it."
-        msg = self.with_conv(self.mkmsg_out(), conv_type, conv_key, ep=ep)
+        msg = self.mkmsg_out()
+        if ep is not None:
+            msg = self.with_endpoint(msg, ep)
         if hops is not None:
             msg = self.with_hops(msg, hops)
         yield self.vumi_api.mdb.add_outbound_message(msg)
@@ -177,7 +203,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         dispatcher = yield self.get_dispatcher()
         self.vumi_api = dispatcher.vumi_api
 
-        msg, ack = yield self.mk_msg_ack('app1', 'conv1', hops=[
+        msg, ack = yield self.mk_msg_ack(hops=[
             ['app1', 'default'],
         ])
         yield self.dispatch_event(ack, 'sphex')
@@ -187,7 +213,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assertEqual([ack], self.get_dispatched_events('app1'))
 
         self.clear_all_dispatched()
-        msg, ack = yield self.mk_msg_ack('app1', 'conv1', ep='other', hops=[
+        msg, ack = yield self.mk_msg_ack(ep='other', hops=[
             ['app1', 'other'],
         ])
         yield self.dispatch_event(ack, 'sphex')
@@ -197,7 +223,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assertEqual([ack], self.get_dispatched_events('app1'))
 
         self.clear_all_dispatched()
-        msg, ack = yield self.mk_msg_ack('app2', 'conv2', hops=[
+        msg, ack = yield self.mk_msg_ack(hops=[
             ['app2', 'default'],
         ])
         yield self.dispatch_event(ack, 'sphex')
