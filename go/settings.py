@@ -349,6 +349,7 @@ PIPELINE_CSS = {
 PIPELINE_JS = {
     'lib': {
         'source_filenames': (
+            'js/vendor/uuid-1.4.0.js',
             'js/vendor/jquery-1.9.1.js',
             'js/vendor/lodash.underscore-1.2.1.js',
             'js/vendor/backbone-1.0.0.js',
