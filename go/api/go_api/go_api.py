@@ -3,8 +3,7 @@
 
 """JSON RPC API for Vumi Go front-end and others."""
 
-# TODO: Get rid of all the md5 stuff when we can.
-import hashlib
+import itertools
 
 from twisted.application.internet import StreamServerEndpointService
 from twisted.internet.defer import inlineCallbacks, succeed, DeferredList
@@ -23,7 +22,7 @@ from go.api.go_api.api_types import (
     CampaignType, ConversationType, ChannelType, RoutingBlockType,
     RoutingEntryType, RoutingType)
 from go.api.go_api.auth import GoUserRealm, GoUserAuthSessionWrapper
-from go.vumitools.account import RoutingTableHelper, GoConnector
+from go.vumitools.account import RoutingTableHelper
 from go.vumitools.api import VumiApi
 
 
@@ -167,44 +166,30 @@ class GoApiServer(JSONRPC):
             results = [r[1] for r in results]
             channels, routing_blocks, conversations = results
 
-            ro_endpoints = {}
-            ri_endpoints = {}
+            recv_outbound_endpoints = set(
+                endpoint['uuid'] for endpoint in itertools.chain(
+                    (e for c in channels for e in c['endpoints']),
+                    (e for r in routing_blocks
+                     for e in r['conversation_endpoints']),
+                )
+            )
+            recv_inbound_endpoints = set(
+                endpoint['uuid'] for endpoint in itertools.chain(
+                    (e for c in conversations for e in c['endpoints']),
+                    (e for r in routing_blocks
+                     for e in r['channel_endpoints'])
+                )
+            )
 
-            def mk_ep(conn, endpoint):
-                ep = u'%s:%s' % (conn, endpoint['name'])
-                # TODO: Better exception
-                assert endpoint['uuid'] == hashlib.md5(ep).hexdigest()
-                return ep
+            return recv_outbound_endpoints, recv_inbound_endpoints
 
-            for channel in channels:
-                conn = GoConnector.for_transport_tag(*channel['tag'])
-                for endpoint in channel['endpoints']:
-                    ro_endpoints[endpoint['uuid']] = mk_ep(conn, endpoint)
-
-            for router in routing_blocks:
-                conn = GoConnector.for_routing_block(
-                    router['type'], router['uuid'])
-                for endpoint in r['conversation_endpoints']:
-                    ro_endpoints[endpoint['uuid']] = mk_ep(conn, endpoint)
-                for endpoint in r['channel_endpoints']:
-                    ri_endpoints[endpoint['uuid']] = mk_ep(conn, endpoint)
-
-            for conv in conversations:
-                conn = GoConnector.for_conversation(
-                    conv['type'], conv['uuid'])
-                for endpoint in conv['endpoints']:
-                    ri_endpoints[endpoint['uuid']] = mk_ep(conn, endpoint)
-
-            return ro_endpoints, ri_endpoints
-
-        def check_routing_table(endpoint_dicts):
+        def check_routing_table(endpoint_sets):
             """Check that endpoints link from known receives-outbound (right)
             endpoints to known receives-inbound (left) endpoints or vice
             versa.
             """
-            recv_outbound_endpoints, recv_inbound_endpoints = endpoint_dicts
+            recv_outbound_endpoints, recv_inbound_endpoints = endpoint_sets
             routing_entries = routing['routing_entries']
-            translated_entries = []
             for entry in routing_entries:
                 source, target = entry['source'], entry['target']
                 src_uuid, dst_uuid = source['uuid'], target['uuid']
@@ -214,24 +199,16 @@ class GoApiServer(JSONRPC):
                             "Source outbound-receiving endpoint %r should"
                             " link to an inbound-receiving endpoint but links"
                             " to %r" % (source, target))
-                    translated_entries.append({
-                        'source': {'uuid': recv_outbound_endpoints[src_uuid]},
-                        'target': {'uuid': recv_inbound_endpoints[dst_uuid]},
-                    })
                 elif src_uuid in recv_inbound_endpoints:
                     if dst_uuid not in recv_outbound_endpoints:
                         raise InvalidRoutingTable(
                             "Source inbound-receiving endpoint %r should"
                             " link to an outbound-receiving endpoint but links"
                             " to %r" % (source, target))
-                    translated_entries.append({
-                        'source': {'uuid': recv_inbound_endpoints[src_uuid]},
-                        'target': {'uuid': recv_outbound_endpoints[dst_uuid]},
-                    })
                 else:
                     raise InvalidRoutingTable("Unknown source endpoint %r"
                                               % (source,))
-            return translated_entries
+            return routing_entries
 
         def populate_routing_table(routing_entries):
             routing_table = {}
