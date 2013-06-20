@@ -175,6 +175,17 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
             'TRANSPORT_TAG:pool:tag1:default').hexdigest())
         conv_uuid = unicode(hashlib.md5(
             'CONVERSATION:jsbox:%s:default' % conv.key).hexdigest())
+        expected_entries = [
+            {
+                u'source': {u'uuid': conv_uuid},
+                u'target': {u'uuid': channel_uuid},
+            },
+            {
+                u'source': {u'uuid': channel_uuid},
+                u'target': {u'uuid': conv_uuid},
+            },
+        ]
+        expected_entries.sort(key=lambda x: x['source']['uuid'])
         self.assertEqual(result, {
             u'channels': [
                 {
@@ -206,16 +217,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
             ],
             u'routing_blocks': [
             ],
-            u'routing_entries': [
-                {
-                    u'source': {u'uuid': conv_uuid},
-                    u'target': {u'uuid': channel_uuid},
-                },
-                {
-                    u'source': {u'uuid': channel_uuid},
-                    u'target': {u'uuid': conv_uuid},
-                },
-            ]
+            u'routing_entries': expected_entries,
         })
 
     def mk_routing_entry(self, source_uuid, target_uuid):
