@@ -3,6 +3,9 @@
 
 """Types for the JSON RPC API for Vumi Go."""
 
+# TODO: Get rid of all the md5 stuff when we can.
+import hashlib
+
 from vumi.rpc import Unicode, List, Dict, Tag
 
 from go.vumitools.account.models import GoConnector
@@ -42,6 +45,7 @@ class EndpointType(Dict):
 
     @classmethod
     def format_endpoint(cls, uuid, name):
+        uuid = unicode(hashlib.md5(uuid).hexdigest())
         return {'uuid': uuid, 'name': name}
 
 
@@ -111,6 +115,7 @@ class ChannelType(Dict):
     def format_channel(cls, tag):
         pool, tagname = tag
         uuid = u":".join(tag)
+        uuid = unicode(hashlib.md5(uuid).hexdigest())
         conn = GoConnector.for_transport_tag(pool, tagname)
         return {
             'uuid': uuid, 'tag': tag, 'name': tagname,
@@ -183,6 +188,8 @@ class RoutingEntryType(Dict):
 
     @classmethod
     def format_entry(cls, source_uuid, target_uuid):
+        source_uuid = unicode(hashlib.md5(source_uuid).hexdigest())
+        target_uuid = unicode(hashlib.md5(target_uuid).hexdigest())
         return {
             'source': {'uuid': source_uuid},
             'target': {'uuid': target_uuid},

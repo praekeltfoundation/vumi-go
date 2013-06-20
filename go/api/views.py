@@ -37,10 +37,12 @@ def go_api_proxy(request):
 
     r = request_method(url, auth=auth, data=data)
 
-    # FIXME: Once we don't need to juggle the 'id' field we can just return the
-    #        raw response data.
+    # FIXME: Once we don't need to juggle the 'id' and 'error' fields we can
+    #        just return the raw response data.
     resp_data = r.json
     resp_data['id'] = req_id
+    if not resp_data['error']:
+        resp_data.pop('error')
     out = json.dumps(resp_data)
 
     logger.debug('Response data: %r' % (out,))
