@@ -48,12 +48,12 @@
     relations: [{
       type: Backbone.HasOne,
       key: 'source',
-      includeInJSON: 'id',
+      includeInJSON: ['uuid'],
       relatedModel: 'go.components.stateMachine.EndpointModel'
     }, {
       type: Backbone.HasOne,
       key: 'target',
-      includeInJSON: 'id',
+      includeInJSON: ['uuid'],
       relatedModel: 'go.components.stateMachine.EndpointModel'
     }],
 
@@ -88,7 +88,7 @@
     }, {
       type: Backbone.HasOne,
       key: 'state0',
-      includeInJSON: 'id',
+      includeInJSON: ['uuid'],
       relatedModel: 'go.components.stateMachine.StateModel'
     }, {
       type: Backbone.HasMany,

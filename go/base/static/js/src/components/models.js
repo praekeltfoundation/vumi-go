@@ -5,6 +5,7 @@
 (function(exports) {
   // Base model for syncing with our api.
   var Model = Backbone.RelationalModel.extend({
+    idAttribute: 'uuid',
     rpc: new Backbone.Rpc(),
 
     url: '/api/v1/go/api',

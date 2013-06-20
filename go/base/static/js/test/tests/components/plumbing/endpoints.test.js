@@ -38,9 +38,9 @@ describe("go.components.plumbing (endpoints)", function() {
 
     describe(".destroy", function() {
       it("should remove the element", function() {
-        assert(oneElExists('#x #x1'));
+        assert(oneElExists('[data-uuid="x1"]'));
         x1.destroy();
-        assert(noElExists('#x #x1'));
+        assert(noElExists('[data-uuid="x1"]'));
       });
     });
 
@@ -51,20 +51,20 @@ describe("go.components.plumbing (endpoints)", function() {
         x4 = new ToyEndpointView({
           state: x,
           collection: x.endpoints.members.get('endpoints'),
-          model: new EndpointModel({id: 'x4'})
+          model: new EndpointModel({uuid: 'x4'})
         });
       });
 
       it("should append the endpoint to the state element", function() {
-        assert(noElExists('#x #x4'));
+        assert(noElExists('[data-uuid="x4"]'));
         x4.render();
-        assert(oneElExists('#x #x4'));
+        assert(oneElExists('[data-uuid="x4"]'));
       });
 
       it("should add a label to the endpoint if labelling is enabled",
       function() {
         x4.render();
-        assert(oneElExists('#x #x4 .label'));
+        assert(oneElExists('[data-uuid="x4"] .label'));
       });
     });
   });
@@ -136,7 +136,7 @@ describe("go.components.plumbing (endpoints)", function() {
       endpoint = new ToyEndpointView({
         state: state,
         collection: state.endpoints.members.get('endpoints'),
-        model: new EndpointModel({id: 'x4'})
+        model: new EndpointModel({uuid: 'x4'})
       });
 
       state
@@ -177,7 +177,7 @@ describe("go.components.plumbing (endpoints)", function() {
       endpoint = new ParametricEndpointView({
         state: state,
         collection: state.endpoints.members.get('endpoints'),
-        model: new EndpointModel({id: 'x4'})
+        model: new EndpointModel({uuid: 'x4'})
       });
 
       state
@@ -276,7 +276,7 @@ describe("go.components.plumbing (endpoints)", function() {
         state: state,
         target: '#target',
         collection: state.endpoints.members.get('endpoints'),
-        model: new EndpointModel({id: 'x4'})
+        model: new EndpointModel({uuid: 'x4'})
       });
 
       state
@@ -400,7 +400,7 @@ describe("go.components.plumbing (endpoints)", function() {
         });
 
         assert(!endpoints.rendered);
-        endpoints.add({id: 'x4'}, {addModel: true});
+        endpoints.add({model: {uuid: 'x4'}});
       });
     });
 
@@ -427,7 +427,7 @@ describe("go.components.plumbing (endpoints)", function() {
         endpoints.realign();
         assertAlignment(1/4, 1/2, 3/4);
 
-        endpoints.add({id: 'x4'}, {addModel: true});
+        endpoints.add({model: {uuid: 'x4'}});
         endpoints.realign();
         assertAlignment(1/5, 2/5, 3/5, 4/5);
 

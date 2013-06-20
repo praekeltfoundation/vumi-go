@@ -1,28 +1,38 @@
 describe("go.testHelpers", function() {
-  var testHelpers = go.testHelpers,
-      unloadTemplates = testHelpers.unloadTemplates;
+  var testHelpers = go.testHelpers;
 
-  describe(".loadTemplate", function() {
-    var loadTemplate = testHelpers.loadTemplate;
+  beforeEach(function() {
+    $('body').append([
+      "<div id='dummy'>",
+        "<div id='a' class='thing'></div>",
+        "<div id='b' class='thing'></div>",
+        "<div id='c' class='different-thing'></div>",
+      "</div>"
+    ].join(''));
+  });
 
-    afterEach(function() {
-      unloadTemplates();
-    });
+  afterEach(function() {
+    $('#dummy').remove();
+  });
 
-    it("should load the template in the same way Django pipelines does",
-    function() {
-      loadTemplate('tests/testHelpers/dummy.jst', './');
-      assert.equal(
-        JST.tests_testHelpers_dummy({name: 'Anakin'}),
-        'Hi! I am a dummy template. My name is Anakin.\n');
+  describe(".oneElExists", function() {
+    var oneElExists = testHelpers.oneElExists;
+
+    it("should determine whether one element exists", function() {
+      assert(oneElExists('#a'));
+      assert(oneElExists('.different-thing'));
+
+      assert(!oneElExists('.thing'));
+      assert(!oneElExists('.kjhfsdfsdf'));
     });
   });
 
-  describe("unloadTemplate", function() {
-    it("should empty the global template holder object", function() {
-      JST.thing = 23;
-      unloadTemplates();
-      assert(_.isEmpty(JST));
+  describe(".noElExists", function() {
+    var noElExists = testHelpers.noElExists;
+
+    it("should determine whether no element exists", function() {
+      assert(noElExists('.kjhfsdfsdf'));
+      assert(!noElExists('#a'));
     });
   });
 });

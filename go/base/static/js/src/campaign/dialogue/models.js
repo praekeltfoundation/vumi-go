@@ -10,14 +10,11 @@
       StateMachineModel = stateMachine.StateMachineModel;
 
   var DialogueEndpointModel = EndpointModel.extend({
-    idAttribute: 'uuid'
   });
 
   var ChoiceEndpointModel = DialogueEndpointModel.extend();
 
   var DialogueStateModel = StateModel.extend({
-    idAttribute: 'uuid',
-
     subModelTypes: {
       choice: 'ChoiceStateModel',
       freetext: 'FreeTextStateModel',

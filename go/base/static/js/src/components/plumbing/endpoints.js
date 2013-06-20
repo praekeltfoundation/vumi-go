@@ -10,8 +10,9 @@
   var structures = go.components.structures,
       SubviewCollection = structures.SubviewCollection;
 
-  var view = go.components.views,
-      LabelView = view.LabelView;
+  var views = go.components.views,
+      UniqueView = views.UniqueView,
+      LabelView = views.LabelView;
 
   // Base components
   // ---------------
@@ -20,9 +21,10 @@
   //
   // Options:
   // - state: The view to which this endpoint is to be attached
-  var EndpointView = Backbone.View.extend({
-    id: function() { return this.model.id; },
+  var EndpointView = UniqueView.extend({
     className: 'endpoint',
+
+    uuid: function() { return this.model.id; },
 
     // Override to set whether the endpoint can source connections
     isSource: true,

@@ -73,23 +73,23 @@
 
   var simpleModelData = {
     states: [{
-      id: 'x',
+      uuid: 'x',
       endpoints: [
-        {id: 'x1'},
-        {id: 'x2'},
-        {id: 'x3'}]
+        {uuid: 'x1'},
+        {uuid: 'x2'},
+        {uuid: 'x3'}]
     }, {
-      id: 'y',
+      uuid: 'y',
       endpoints: [
-        {id: 'y1'},
-        {id: 'y2'},
-        {id: 'y3'}]
+        {uuid: 'y1'},
+        {uuid: 'y2'},
+        {uuid: 'y3'}]
     }],
 
     connections: [{
-      id: 'x3-y2',
-      source: {id: 'x3'},
-      target: {id: 'y2'}
+      uuid: 'x3-y2',
+      source: {uuid: 'x3'},
+      target: {uuid: 'y2'}
     }]
   };
 
@@ -172,35 +172,35 @@
 
   var complexModelData = {
     apples: [{
-      id: 'a1',
-      left: [{id: 'a1L1'}, {id: 'a1L2'}],
-      right: [{id: 'a1R1'}, {id: 'a1R2'}]
+      uuid: 'a1',
+      left: [{uuid: 'a1L1'}, {uuid: 'a1L2'}],
+      right: [{uuid: 'a1R1'}, {uuid: 'a1R2'}]
     }, {
-      id: 'a2',
-      left: [{id: 'a2L1'}, {id: 'a2L2'}],
-      right: [{id: 'a2R1'}, {id: 'a2R2'}]
+      uuid: 'a2',
+      left: [{uuid: 'a2L1'}, {uuid: 'a2L2'}],
+      right: [{uuid: 'a2R1'}, {uuid: 'a2R2'}]
     }],
 
     bananas: [{
-      id: 'b1',
-      left: [{id: 'b1L1'}, {id: 'b1L2'}],
-      right: [{id: 'b1R1'}, {id: 'b1R2'}]
+      uuid: 'b1',
+      left: [{uuid: 'b1L1'}, {uuid: 'b1L2'}],
+      right: [{uuid: 'b1R1'}, {uuid: 'b1R2'}]
     }, {
-      id: 'b2',
-      left: [{id: 'b2L1'}, {id: 'b2L2'}],
-      right: [{id: 'b2R1'}, {id: 'b2R2'}]
+      uuid: 'b2',
+      left: [{uuid: 'b2L1'}, {uuid: 'b2L2'}],
+      right: [{uuid: 'b2R1'}, {uuid: 'b2R2'}]
     }],
 
     leftToRight: [{
-      id: 'a1L2-b2R2',
-      source: {id: 'a1L2'},
-      target: {id: 'b2R2'}
+      uuid: 'a1L2-b2R2',
+      source: {uuid: 'a1L2'},
+      target: {uuid: 'b2R2'}
     }],
 
     rightToLeft: [{
-      id: 'b1R2-a2L2',
-      source: {id: 'b1R2'},
-      target: {id: 'a2L2'}
+      uuid: 'b1R2-a2L2',
+      source: {uuid: 'b1R2'},
+      target: {uuid: 'a2L2'}
     }]
   };
 
