@@ -191,17 +191,23 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         }.get(direction)
         return router_direction
 
-    def push_hop(self, msg, connector_name, endpoint):
+    def get_hops(self, msg):
+        """Return a reference to the hops list for the given message."""
         hops = msg['routing_metadata'].setdefault('hops', [])
-        hops.append([connector_name, endpoint])
+        return hops
+
+    def push_hop(self, msg, go_connector_str, endpoint):
+        """Add a new hop to the hops list for the given message."""
+        hops = self.get_hops(msg)
+        hops.append([go_connector_str, endpoint])
 
     def next_hop_for_event(self, event, outbound_msg):
         """Compares the current hops taken by an event and its corresponding
         outbound message and determines the next destination the event should
         visit.
         """
-        event_hops = event['routing_metadata'].setdefault('hops', [])
-        outbound_hops = outbound_msg['routing_metadata'].setdefault('hops', [])
+        event_hops = self.get_hops(event)
+        outbound_hops = self.get_hops(outbound_msg)
         if len(event_hops) >= len(outbound_hops):
             return None
         return outbound_hops[-(len(event_hops) + 1)]
@@ -278,7 +284,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         if direction == self.INBOUND:
             allowed_types = (self.TRANSPORT_TAG, self.ROUTING_BLOCK)
         else:
-            allowed_types = (self.CONVERSATION, self.ROUTING_BLOCK)
+            allowed_types = (self.CONVERSATION, self.ROUTING_BLOCK,
+                             self.OPT_OUT)
 
         if connector_type not in allowed_types:
             raise UnroutableMessageError(
@@ -298,6 +305,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         elif connector_type == self.TRANSPORT_TAG:
             src_conn = str(GoConnector.for_transport_tag(*msg_mdh.tag))
 
+        elif connector_type == self.OPT_OUT:
+            src_conn = str(GoConnector.for_opt_out())
+
         else:
             raise UnroutableMessageError(
                 "Serious error. Reached apparently unreachable state"
@@ -305,7 +315,10 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 " but unknown. Bad connector type is: %s"
                 % connector_type, msg)
 
-        return str(src_conn)
+        src_conn_str = str(src_conn)
+        if not self.get_hops(msg):
+            self.push_hop(msg, src_conn_str, msg.get_routing_endpoint())
+        return src_conn_str
 
     @inlineCallbacks
     def publish_inbound_optout(self, config, msg):
@@ -358,13 +371,12 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         msg_mdh.set_user_account(config.user_account_key)
 
         connector_type = self.connector_type(connector_name)
+        src_conn = self.acquire_source(msg, connector_type, self.INBOUND)
 
         if (connector_type == self.TRANSPORT_TAG
                 and msg_mdh.is_optout_message()):
             yield self.publish_inbound_optout(config, msg)
             return
-
-        src_conn = self.acquire_source(msg, connector_type, self.INBOUND)
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
@@ -397,12 +409,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         msg_mdh.set_user_account(config.user_account_key)
 
         connector_type = self.connector_type(connector_name)
+        src_conn = self.acquire_source(msg, connector_type, self.OUTBOUND)
 
         if connector_type == self.OPT_OUT:
             yield self.publish_outbound_optout(config, msg)
             return
-
-        src_conn = self.acquire_source(msg, connector_type, self.OUTBOUND)
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
@@ -438,10 +449,36 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         """
         log.debug("Processing event: %s" % (event,))
 
+        # events are in same direction as inbound messages so
+        # we use INBOUND as the direction in this method.
+
         msg = yield self.find_message_for_event(event)
+        msg_mdh = self.get_metadata_helper(msg)
         if msg is None:
             raise UnroutableMessageError(
                 "Could not find transport user message for event", event)
+        if not msg_mdh.has_user_account():
+            raise UnroutableMessageError(
+                "Outbound message for event has no associated"
+                " user account: %r" % (msg,), event)
+        if msg_mdh.tag is None:
+            raise UnroutableMessageError(
+                "Outbound message for event has no tag set: %r" % (msg,),
+                event)
+
+        # set the tag on the event so that if it is from a transport
+        # we can set the source of the message correctly in acquire_source.
+        msg_mdh = self.get_metadata_helper(msg)
+        # TODO: add helper_metadata to events
+        event.payload.setdefault('helper_metadata', {})
+        event_mdh = self.get_metadata_helper(event)
+        event_mdh.set_tag(msg_mdh.tag)
+        event_mdh.set_user_account(msg_mdh.get_account_key())
+
+        connector_type = self.connector_type(connector_name)
+        # we ignore the source connector but acquire_sources sets the initial
+        # hop if needed
+        self.acquire_source(event, connector_type, self.INBOUND)
 
         target = self.next_hop_for_event(event, msg)
         if target is None:
@@ -449,7 +486,6 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 "Could not find next hop for event"
                 " (user message was: %s)" % (msg,), event)
 
-        # events are in the INBOUND direction
         dst_connector_name, dst_endpoint = yield self.set_destination(
             event, target, self.INBOUND)
         yield self.publish_event(event, dst_connector_name, dst_endpoint)
