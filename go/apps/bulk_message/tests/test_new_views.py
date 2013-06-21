@@ -303,6 +303,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """
         Test action with confirmation required
         """
+        # TODO: Break this test into smaller bits and move them to a more
+        #       appropriate module.
         profile = self.user.get_profile()
         account = profile.get_user_account()
         account.msisdn = u'+27761234567'
@@ -340,15 +342,14 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             ),
             token_send_cmd)
 
-        # POST the confirmation
-        confirm_response = self.client.post(
+        # GET the token URL
+        confirm_response = self.client.get(
             reverse('token', kwargs={'token': 'abcdef'}))
         self.assertRedirects(
             confirm_response,
             self.get_view_url('confirm') + '?token=6-abcdef123456')
 
-        # POST the second confirmation
-
+        # POST the full token to the confirmation URL
         final_response = self.client.post(self.get_view_url('confirm'), {
             'token': '6-abcdef123456',
         })
