@@ -71,6 +71,12 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
       * from: transports or routing blocks
       * to: routing blocks, conversations or the opt-out worker
 
+    Further complexities arise because routing blocks can be sources
+    and destinations of both inbound and outbound messages (and events)
+    so care has to be taken to keep track of which direction a message
+    is travelling in in order to select the correct routing table
+    entry when routing messages from dispatchers.
+
     Summary of how user account keys are determined:
 
     * for messages from transports:
@@ -251,7 +257,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 " in which destination connector type is both valid"
                 " but unknown. Bad connector is: %s" % conn, msg)
 
-        self.push_hop(msg, dst_connector_name, target[1])
+        self.push_hop(msg, str(conn), target[1])
         returnValue((dst_connector_name, target[1]))
 
     def acquire_source(self, msg, connector_type, direction):
@@ -430,12 +436,13 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             raise UnroutableMessageError(
                 "Could not find transport user message for event", event)
 
-        next_hop = self.next_hop_for_event(event, msg)
-        if next_hop is None:
+        target = self.next_hop_for_event(event, msg)
+        if target is None:
             raise UnroutableMessageError(
                 "Could not find next hop for event"
                 " (user message was: %s)" % (msg,), event)
 
-        dst_connector_name, dst_endpoint = next_hop
-        self.push_hop(event, dst_connector_name, dst_endpoint)
+        # events are in the INBOUND direction
+        dst_connector_name, dst_endpoint = yield self.set_destination(
+            event, target, self.INBOUND)
         yield self.publish_event(event, dst_connector_name, dst_endpoint)

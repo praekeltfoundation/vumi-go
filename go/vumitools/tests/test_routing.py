@@ -128,7 +128,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app1.inbound')
         self.with_md(msg, conv=('app1', 'conv1'),
-                     hops=[['app1', 'default']])
+                     hops=[['CONVERSATION:app1:conv1', 'default']])
         self.assertEqual([msg], self.get_dispatched_inbound('app1'))
 
         self.clear_all_dispatched()
@@ -136,7 +136,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app1.inbound')
         self.with_md(msg, conv=('app1', 'conv1'), endpoint='other',
-                     hops=[['app1', 'other']])
+                     hops=[['CONVERSATION:app1:conv1', 'other']])
         self.assertEqual([msg], self.get_dispatched_inbound('app1'))
 
         self.clear_all_dispatched()
@@ -144,7 +144,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app2.inbound')
         self.with_md(msg, conv=('app2', 'conv2'),
-                     hops=[['app2', 'default']])
+                     hops=[['CONVERSATION:app2:conv2', 'default']])
         self.assertEqual([msg], self.get_dispatched_inbound('app2'))
 
     @inlineCallbacks
@@ -166,7 +166,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_rkeys_used('router_ro.inbound', 'app1.inbound')
         self.with_md(msg, conv=("app1", "conv1"),
-                     hops=[['app1', 'default']])
+                     hops=[['CONVERSATION:app1:conv1', 'default']])
         self.assertEqual([msg], self.get_dispatched_inbound('app1'))
 
         self.clear_all_dispatched()
@@ -175,7 +175,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.dispatch_inbound(msg, 'router_ro')
         self.assert_rkeys_used('router_ro.inbound', 'app2.inbound')
         self.with_md(msg, conv=("app2", "conv2"), endpoint='yet-another',
-                     hops=[['app2', 'yet-another']])
+                     hops=[['CONVERSATION:app2:conv2', 'yet-another']])
         self.assertEqual([msg], self.get_dispatched_inbound('app2'))
 
     @inlineCallbacks
@@ -186,7 +186,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.dispatch_outbound(reply, 'optout')
         self.assert_rkeys_used('optout.outbound', 'sphex.outbound')
         self.with_md(reply, tag=tag, user_account=self.user_account_key,
-                     hops=[['sphex', 'default']])
+                     hops=[['TRANSPORT_TAG:pool1:1234', 'default']])
         self.assertEqual([reply], self.get_dispatched_outbound('sphex'))
 
     @inlineCallbacks
@@ -196,7 +196,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.dispatch_outbound(msg, 'app1')
         self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "1234"),
-                     hops=[['sphex', 'default']])
+                     hops=[['TRANSPORT_TAG:pool1:1234', 'default']])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
         self.clear_all_dispatched()
@@ -204,7 +204,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.dispatch_outbound(msg, 'app2')
         self.assert_rkeys_used('app2.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "9012"),
-                     hops=[['sphex', 'default']])
+                     hops=[['TRANSPORT_TAG:pool1:9012', 'default']])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
         self.clear_all_dispatched()
@@ -213,7 +213,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.dispatch_outbound(msg, 'app1')
         self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "5678"), endpoint='default',
-                     hops=[['sphex', 'default']])
+                     hops=[['TRANSPORT_TAG:pool1:5678', 'default']])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
     @inlineCallbacks
@@ -223,7 +223,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.dispatch_outbound(msg, 'router_ri')
         self.assert_rkeys_used('router_ri.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "1234"),
-                     hops=[['sphex', 'default']])
+                     hops=[['TRANSPORT_TAG:pool1:1234', 'default']])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
         self.clear_all_dispatched()
@@ -232,7 +232,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.dispatch_outbound(msg, 'router_ri')
         self.assert_rkeys_used('router_ri.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "5678"), endpoint='default',
-                     hops=[['sphex', 'default']])
+                     hops=[['TRANSPORT_TAG:pool1:5678', 'default']])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
     @inlineCallbacks
@@ -241,28 +241,28 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.vumi_api = dispatcher.vumi_api
 
         msg, ack = yield self.mk_msg_ack(hops=[
-            ['app1', 'default'],
+            ['CONVERSATION:app1:conv1', 'default'],
         ])
         yield self.dispatch_event(ack, 'sphex')
         self.assert_rkeys_used('sphex.event', 'app1.event')
-        self.with_md(ack, hops=[['app1', 'default']])
+        self.with_md(ack, hops=[['CONVERSATION:app1:conv1', 'default']])
         self.assertEqual([ack], self.get_dispatched_events('app1'))
 
         self.clear_all_dispatched()
         msg, ack = yield self.mk_msg_ack(endpoint='other', hops=[
-            ['app1', 'other'],
+            ['CONVERSATION:app1:conv1', 'other'],
         ])
         yield self.dispatch_event(ack, 'sphex')
         self.assert_rkeys_used('sphex.event', 'app1.event')
         self.with_md(ack, endpoint='other',
-                     hops=[['app1', 'other']])
+                     hops=[['CONVERSATION:app1:conv1', 'other']])
         self.assertEqual([ack], self.get_dispatched_events('app1'))
 
         self.clear_all_dispatched()
         msg, ack = yield self.mk_msg_ack(hops=[
-            ['app2', 'default'],
+            ['CONVERSATION:app2:conv2', 'default'],
         ])
         yield self.dispatch_event(ack, 'sphex')
         self.assert_rkeys_used('sphex.event', 'app2.event')
-        self.with_md(ack, hops=[['app2', 'default']])
+        self.with_md(ack, hops=[['CONVERSATION:app2:conv2', 'default']])
         self.assertEqual([ack], self.get_dispatched_events('app2'))
