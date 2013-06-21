@@ -89,13 +89,13 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     CONFIG_CLASS = AccountRoutingTableDispatcherConfig
     worker_name = 'account_routing_table_dispatcher'
 
-    # connector types
+    # connector types (references to GoConnector constants for convenience)
     CONVERSATION = GoConnector.CONVERSATION
     ROUTING_BLOCK = GoConnector.ROUTING_BLOCK
     TRANSPORT_TAG = GoConnector.TRANSPORT_TAG
     OPT_OUT = GoConnector.OPT_OUT
 
-    # directions
+    # directions (references to GoConnector constants for convenience)
     INBOUND = GoConnector.INBOUND
     OUTBOUND = GoConnector.OUTBOUND
 
