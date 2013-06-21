@@ -99,7 +99,7 @@ class UsedTagConversationForm(VumiModelForm):
             display_name = conv.name
             delivery_classes.append((conv.key, [
                         (display_name, self.tag_options[conv.key])]))
-            return delivery_classes
+        return delivery_classes
 
     def delivery_class_widgets(self):
         # Backported hack from Django 1.4 to allow me to iterate
