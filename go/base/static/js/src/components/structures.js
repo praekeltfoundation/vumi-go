@@ -5,7 +5,9 @@
 (function(exports) {
   var utils = go.utils,
       merge = utils.merge,
-      maybeByName = utils.maybeByName;
+      maybeByName = utils.maybeByName,
+      idOfModel = utils.idOfModel,
+      idOfView = utils.idOfView;
 
   // Acts as a 'base' for class-like objects which can be extended (with the
   // prototype chain set up automatically)
@@ -161,18 +163,6 @@
       return lookup;
     }
   });
-
-  var idOfModel = function(obj) {
-    return obj.id
-      ? obj.id
-      : obj.cid || obj;
-  };
-
-  var idOfView = function(obj) {
-    return obj.uuid
-      ? _(obj).result('uuid')
-      : _(obj).result('id') || obj;
-  };
 
   // Maintains a collection of views, allowing views to be created dynamically
   // and interacted with collectively.
