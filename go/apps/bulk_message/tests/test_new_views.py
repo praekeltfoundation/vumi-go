@@ -6,6 +6,8 @@ from django.core.urlresolvers import reverse
 from django.contrib.sites.models import Site
 from django.utils.unittest import skip
 
+from vumi.tests.utils import RegexMatcher
+
 from go.vumitools.tests.utils import VumiApiCommand
 from go.vumitools.token_manager import TokenManager
 from go.base.utils import get_conversation_view_definition
@@ -297,162 +299,69 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "No spare messaging tags.")
 
-
-class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
-
-    TEST_CONVERSATION_TYPE = u'bulk_message'
-
-    def setUp(self):
-        super(ConfirmBulkMessageTestCase, self).setUp()
-        self.setup_riak_fixtures()
-        self.client = Client()
-        self.client.login(username='username', password='password')
-        self.redis = self.get_redis_manager()
-        self.tm = TokenManager(self.redis.sub_manager('token_manager'))
-
-    def get_view_url(self, view, conv_key=None):
-        if conv_key is None:
-            conv_key = self.conv_key
-        view_def = get_conversation_view_definition(
-            self.TEST_CONVERSATION_TYPE)
-        return view_def.get_view_url(view, conversation_key=conv_key)
-
-    def test_confirm_start_conversation_post(self):
+    def test_action_bulk_send_confirm(self):
         """
-        Test the start conversation view with the confirm_start_conversation
-        enabled for the account's profile.
-
-        A POST to this should send out the confirmation message, not the full
-        bulk send.
+        Test action with confirmation required
         """
-
         profile = self.user.get_profile()
         account = profile.get_user_account()
         account.msisdn = u'+27761234567'
         account.confirm_start_conversation = True
         account.save()
 
-        conversation = self.user_api.get_wrapped_conversation(self.conv_key)
+        # Start the conversation
+        self.client.post(self.get_view_url('start'))
+        self.assertEqual(1, len(self.get_api_commands_sent()))
 
-        # mock the token generation
+        # POST the action with a mock token manager
         with patch.object(TokenManager, 'generate_token') as mock_method:
             mock_method.return_value = ('abcdef', '123456')
-            response = self.client.post(self.get_view_url('start'))
-
+            response = self.client.post(
+                self.get_action_view_url('bulk_send'),
+                {'message': 'I am ham, not spam.', 'dedupe': True})
         self.assertRedirects(response, self.get_view_url('show'))
 
+        # Check that we get a confirmation message
+        [token_send_cmd] = self.get_api_commands_sent()
         conversation = self.user_api.get_wrapped_conversation(self.conv_key)
-        [batch] = conversation.get_batches()
-        [tag] = list(batch.tags)
-        [contact] = self.get_contacts_for_conversation(conversation)
-        msg_options = {
-            "transport_type": "sms",
-            "transport_name": self.transport_name,
-            "from_addr": "default10001",
-            "helper_metadata": {
-                "tag": {
-                    "tag": list(tag)
-                },
-                "go": {
-                    "user_account": conversation.user_account.key,
-                    "sensitive": True,
-                },
-            },
-        }
+        self.assertEqual(
+            VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,),
+                'send_message',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key,
+                command_data=dict(
+                    batch_id=conversation.get_batches()[0].key,
+                    to_addr=u'+27761234567', msg_options={
+                        'helper_metadata': {'go': {'sensitive': True}},
+                    },
+                    content=RegexMatcher(r'Please visit http://[^/]+/t/abcdef/'
+                                         r' to start your conversation.')),
+            ),
+            token_send_cmd)
 
-        [cmd] = self.get_api_commands_sent()
-        site = Site.objects.get_current()
-        expected_cmd = VumiApiCommand.command(
+        # POST the confirmation
+        confirm_response = self.client.post(
+            reverse('token', kwargs={'token': 'abcdef'}))
+        self.assertRedirects(
+            confirm_response,
+            self.get_view_url('confirm') + '?token=6-abcdef123456')
+
+        # POST the second confirmation
+
+        final_response = self.client.post(self.get_view_url('confirm'), {
+            'token': '6-abcdef123456',
+        })
+        self.assertRedirects(final_response, self.get_view_url('show'))
+
+        [bulk_send_cmd] = self.get_api_commands_sent()
+        self.assertEqual(bulk_send_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
-            'send_message',
+            'bulk_send',
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
-            command_data={
-                'batch_id': batch.key,
-                'msg_options': msg_options,
-                'content':
-                    'Please visit http://%s%s to start your conversation.' % (
-                    site.domain, reverse('token', kwargs={'token': 'abcdef'})),
-                'to_addr': account.msisdn,
-            }
-        )
-        self.assertEqual(cmd, expected_cmd)
-
-    def test_confirmation_get(self):
-        conversation = self.user_api.get_wrapped_conversation(self.conv_key)
-        token = self.tm.generate('/foo/', user_id=self.user.pk)
-        token_data = self.tm.get(token)
-        full_token = '%s-%s%s' % (len(token), token,
-                                    token_data['system_token'])
-
-        response = self.client.get('%s?token=%s' % (
-            self.get_view_url('confirm'), full_token))
-
-        self.assertContains(response, conversation.name)
-        self.assertContains(response, conversation.description)
-
-    def test_confirmation_post(self):
-        conversation = self.user_api.get_wrapped_conversation(self.conv_key)
-
-        self.assertTrue(u'CONVERSATION:bulk_message:%s' % (self.conv_key,)
-                        not in self.user_api.get_routing_table())
-        # we're faking this here, this would normally have happened when
-        # the confirmation SMS was sent out.
-        tag = conversation.acquire_tag()
-        # store manually so that when we acquire_existing_tag() later we get
-        # the one already used, not another random one from the same pool.
-        conversation.c.delivery_tag = unicode(tag[1])
-        batch_key = conversation.start_batch(tag)
-        conversation.batches.add_key(batch_key)
-        conversation.save()
-
-        token = self.tm.generate('/foo/', user_id=self.user.pk, extra_params={
-            'dedupe': True,
-            })
-        token_data = self.tm.get(token)
-        full_token = '%s-%s%s' % (len(token), token,
-                                    token_data['system_token'])
-
-        response = self.client.post(self.get_view_url('confirm'), {
-            'token': full_token,
-        })
-
-        self.assertContains(response, conversation.name)
-        self.assertContains(response, conversation.description)
-        self.assertContains(response, "Conversation confirmed")
-        self.assertContains(response, "Conversation started succesfully!")
-
-        self.assertTrue(u'CONVERSATION:bulk_message:%s' % (self.conv_key,)
-                        in self.user_api.get_routing_table())
-
-        # reload the conversation because batches are cached.
-        conversation = self.user_api.get_wrapped_conversation(conversation.key)
-        # ugly hack because grabbing the latest batch key here is tricky
-        # because we `get_latest_batch_key()` depends on the cache being
-        # populated which at this point it isn't yet.
-        batch_keys = conversation.get_batch_keys()
-        self.assertEqual(len(batch_keys), 1)
-        self.assertEqual([batch_key], batch_keys)
-
-        batch = conversation.mdb.get_batch(batch_key)
-        [tag] = list(batch.tags)
-        [start_cmd] = self.get_api_commands_sent()
-
-        self.assertEqual(start_cmd, VumiApiCommand.command(
-                '%s_application' % (conversation.conversation_type,), 'start',
-                user_account_key=conversation.user_account.key,
-                conversation_key=conversation.key))
-
-        # check token was consumed so it can't be re-used to send the
-        # conversation messages again
-        self.assertEqual(self.tm.get(token), None)
-
-        # check repost fails because token has been deleted
-        response = self.client.post(self.get_view_url('confirm'), {
-            'token': full_token,
-        })
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(self.tm.get(token), None)
+            batch_id=conversation.get_batches()[0].key, msg_options={},
+            content='I am ham, not spam.', dedupe=True))
 
 
 class SendOneOffReplyTestCase(DjangoGoApplicationTestCase):
