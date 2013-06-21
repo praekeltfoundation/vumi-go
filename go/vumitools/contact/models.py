@@ -248,7 +248,8 @@ class ContactStore(PerAccountStore):
 
     @Manager.calls_manager
     def list_groups(self):
-        # FIXME: Return all group objects? Really!?
+        # FIXME: Loading and returning all groups is a potential performance
+        #        issue, especially if the caller doesn't need them all.
         group_keys = yield self.list_keys(self.groups)
         # NOTE: This assumes that we don't have very large numbers of groups.
         groups = []
@@ -258,13 +259,13 @@ class ContactStore(PerAccountStore):
 
     @Manager.calls_manager
     def list_smart_groups(self):
-        # FIXME: This is incredibly bad when used with list_static_groups()
+        # FIXME: When used with list_static_groups() we load each group twice.
         groups = yield self.list_groups()
         returnValue([group for group in groups if group.is_smart_group()])
 
     @Manager.calls_manager
     def list_static_groups(self):
-        # FIXME: This is incredibly bad when used with list_smart_groups()
+        # FIXME: When used with list_smart_groups() we load each group twice.
         groups = yield self.list_groups()
         returnValue([group for group in groups if not group.is_smart_group()])
 
