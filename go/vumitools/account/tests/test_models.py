@@ -123,6 +123,11 @@ class GoConnectorTestCase(TestCase):
         self.assertEqual(c.tagname, "tag_1")
         self.assertEqual(str(c), "TRANSPORT_TAG:tagpool_1:tag_1")
 
+    def test_create_opt_out_connector(self):
+        c = GoConnector.for_opt_out()
+        self.assertEqual(c.ctype, GoConnector.OPT_OUT)
+        self.assertEqual(str(c), "OPT_OUT")
+
     def test_parse_conversation_connector(self):
         c = GoConnector.parse("CONVERSATION:conv_type_1:12345")
         self.assertEqual(c.ctype, GoConnector.CONVERSATION)
@@ -141,6 +146,10 @@ class GoConnectorTestCase(TestCase):
         self.assertEqual(c.ctype, GoConnector.TRANSPORT_TAG)
         self.assertEqual(c.tagpool, "tagpool_1")
         self.assertEqual(c.tagname, "tag_1")
+
+    def test_parse_opt_out_connector(self):
+        c = GoConnector.parse("OPT_OUT")
+        self.assertEqual(c.ctype, GoConnector.OPT_OUT)
 
     def test_parse_unknown_ctype(self):
         self.assertRaises(GoConnectorError, GoConnector.parse,

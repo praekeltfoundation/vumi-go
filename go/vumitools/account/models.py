@@ -171,6 +171,7 @@ class GoConnector(object):
     CONVERSATION = "CONVERSATION"
     ROUTING_BLOCK = "ROUTING_BLOCK"
     TRANSPORT_TAG = "TRANSPORT_TAG"
+    OPT_OUT = "OPT_OUT"
 
     # Directions for routing block entries
 
@@ -206,6 +207,10 @@ class GoConnector(object):
                    [tagpool, tagname])
 
     @classmethod
+    def for_opt_out(cls):
+        return cls(cls.OPT_OUT, [], [])
+
+    @classmethod
     def parse(cls, s):
         parts = s.split(":")
         ctype, parts = parts[0], parts[1:]
@@ -213,6 +218,7 @@ class GoConnector(object):
             cls.CONVERSATION: cls.for_conversation,
             cls.ROUTING_BLOCK: cls.for_routing_block,
             cls.TRANSPORT_TAG: cls.for_transport_tag,
+            cls.OPT_OUT: cls.for_opt_out,
         }
         if ctype not in constructors:
             raise GoConnectorError("Unknown connector type %r"
