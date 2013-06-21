@@ -222,10 +222,10 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         if direction == self.INBOUND:
             allowed_types = (
-                GoConnector.CONVERSATION, GoConnector.ROUTING_BLOCK)
+                self.CONVERSATION, self.ROUTING_BLOCK, self.OPT_OUT)
         else:
             allowed_types = (
-                GoConnector.ROUTING_BLOCK, GoConnector.TRANSPORT_TAG)
+                self.ROUTING_BLOCK, self.TRANSPORT_TAG)
 
         if conn.ctype not in allowed_types:
             raise UnroutableMessageError(
@@ -250,6 +250,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                     "No transport name found for tagpool %r"
                     % conn.tagpool, msg)
             dst_connector_name = transport_name
+
+        elif conn.ctype == conn.OPT_OUT:
+            dst_connector_name = self.opt_out_connector
 
         else:
             raise UnroutableMessageError(
@@ -304,10 +307,13 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         return str(src_conn)
 
+    @inlineCallbacks
     def publish_inbound_optout(self, config, msg):
         """Publish an inbound opt-out request to the opt-out worker."""
-        self.push_hop(msg, config.opt_out_connector, 'default')
-        return self.publish_inbound(msg, config.opt_out_connector, 'default')
+        target = [str(GoConnector.for_opt_out()), 'default']
+        dst_connector_name, dst_endpoint = yield self.set_destination(
+            msg, target, self.INBOUND)
+        yield self.publish_inbound(msg, dst_connector_name, dst_endpoint)
 
     @inlineCallbacks
     def publish_outbound_optout(self, config, msg):
@@ -355,7 +361,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         if (connector_type == self.TRANSPORT_TAG
                 and msg_mdh.is_optout_message()):
-            self.publish_inbound_optout(config, msg)
+            yield self.publish_inbound_optout(config, msg)
             return
 
         src_conn = self.acquire_source(msg, connector_type, self.INBOUND)

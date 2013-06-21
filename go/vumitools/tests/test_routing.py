@@ -156,7 +156,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'optout.inbound')
         self.with_md(msg, user_account=self.user_account_key,
-                     hops=[['optout', 'default']])
+                     hops=[['OPT_OUT', 'default']])
         self.assertEqual([msg], self.get_dispatched_inbound('optout'))
 
     @inlineCallbacks
