@@ -46,7 +46,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     Provides routing dispatching for Vumi Go accounts.
 
     Broadly, the strategy is to determine a user account key for the message
-    and look up it's assocaited routing table. The user account key is
+    and look up its associated routing table. The user account key is
     determined either based on the tag (if the message is inbound from
     a transport) or retrieved from the Vumi Go metadata.
 
