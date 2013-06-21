@@ -6,6 +6,8 @@ class BulkSendAction(ConversationAction):
     action_name = 'bulk_send'
     action_display_name = 'Send Bulk Message'
 
+    needs_confirmation = True
+
     def perform_action(self, action_data):
         return self.send_command(
             'bulk_send', batch_id=self._conv.get_latest_batch_key(),

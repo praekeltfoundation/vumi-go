@@ -3,7 +3,8 @@ from django.core.urlresolvers import reverse
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.apps.sequential_send.views import SequentialSendConversationViews
+from go.apps.sequential_send.views import (
+    SequentialSendConversationViews, UsedTagConversationForm)
 
 
 # FIXME: These tests are probably broken.
@@ -152,3 +153,34 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')
+
+    def test_used_tag_conversation_form(self):
+        conv = self.get_wrapped_conv()
+
+        def assertEndpoint(conversations):
+            form = UsedTagConversationForm(self.user_api)
+
+            # sort them all by conv-key so we can zip them
+            tp_delivery_classes = sorted(
+                form.tagpools_by_delivery_class(), key=lambda tpdc: tpdc[0])
+            conversations = sorted(conversations, key=lambda c: c.key)
+
+            zipped = zip(tp_delivery_classes, conversations)
+            for tp_delivery_class, conversation in zipped:
+                (conv_key, [conv_info]) = tp_delivery_class
+                (conv_name, endpoints) = conv_info
+                tag = "%s:%s" % (conversation.delivery_tag_pool,
+                                 conversation.delivery_tag)
+                self.assertEqual(conv_key, conversation.key)
+                self.assertEqual(endpoints, [(tag, conversation.delivery_tag)])
+                self.assertEqual(conv_name, conversation.name)
+
+        assertEndpoint([conv])
+
+        new_conv = self.conv_store.new_conversation(
+            conversation_type=u'bulk_message',
+            name=self.TEST_CONVERSATION_NAME, description=u"Test message",
+            config={}, delivery_class=u"sms", delivery_tag_pool=u"longcode",
+            delivery_tag=u"default10002")
+
+        assertEndpoint([conv, new_conv])

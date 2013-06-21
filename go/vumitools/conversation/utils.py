@@ -286,7 +286,7 @@ class ConversationWrapper(object):
         yield user_account.save()
 
     @Manager.calls_manager
-    def send_token_url(self, token_url, msisdn, **extra_params):
+    def send_token_url(self, token_url, msisdn, acquire_tag=True):
         """
         I was tempted to make this a generic 'send_message' function but
         that gets messy with acquiring tags, it becomes unclear whether an
@@ -296,17 +296,21 @@ class ConversationWrapper(object):
         tag needs to be acquired and when the conversation start is actually
         confirmed that tag can be re-used.
         """
-        tag = yield self.acquire_tag()
-        batch_id = yield self.start_batch(tag)
-        msg_options = yield self.make_message_options(tag)
+        # TODO: Get rid of tag silliness when we can.
+        if acquire_tag:
+            tag = yield self.acquire_tag()
+            batch_id = yield self.start_batch(tag)
+            msg_options = yield self.make_message_options(tag)
+            # We need to have routing set up so that we can send the message
+            # with the token in it.
+            yield self._add_to_routing_table(tag)
+        else:
+            batch_id = yield self.get_latest_batch_key()
+            msg_options = {}
         # specify this message as being sensitive
         helper_metadata = msg_options.setdefault('helper_metadata', {})
         go_metadata = helper_metadata.setdefault('go', {})
         go_metadata['sensitive'] = True
-
-        # We need to have routing set up so that we can send the message with
-        # the token in it.
-        yield self._add_to_routing_table(tag)
 
         yield self.dispatch_command(
             'send_message',

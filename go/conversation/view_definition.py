@@ -55,40 +55,14 @@ class StartConversationView(ConversationApiView):
     path_suffix = 'start/'
 
     def post(self, request, conversation):
-        profile = request.user.get_profile()
-        account = profile.get_user_account()
-        if account.confirm_start_conversation:
-            return self._start_via_confirmation(request, account, conversation)
-        else:
-            return self._start_conversation(request, conversation)
-
-    def _start_conversation(self, request, conversation):
-        params = {'send_initial_action_hack': False}
-        # XXX: Dedupe stuff?
-
+        # TODO: Better conversation start error handling.
         try:
-            conversation.start(**params)
+            conversation.start(send_initial_action_hack=False)
         except ConversationSendError as error:
             messages.add_message(request, messages.ERROR, str(error))
         else:
             messages.add_message(request, messages.INFO, '%s started' % (
                 self.view_def.conversation_display_name,))
-        return self.redirect_to('show', conversation_key=conversation.key)
-
-    def _start_via_confirmation(self, request, account, conversation):
-        params = {}
-        # XXX: Dedupe stuff?
-
-        # The URL the user will be redirected to post-confirmation
-        redirect_to = self.get_view_url('confirm',
-                            conversation_key=conversation.key)
-        # The token to be sent.
-        token_manager = DjangoTokenManager(request.user_api.api.token_manager)
-        token = token_manager.generate(redirect_to, user_id=request.user.id,
-                                        extra_params=params)
-        conversation.send_token_url(token_manager.url_for_token(token),
-                                        account.msisdn)
-        messages.info(request, 'Confirmation request sent.')
         return self.redirect_to('show', conversation_key=conversation.key)
 
 
@@ -121,21 +95,23 @@ class ConfirmConversationView(ConversationTemplateView):
         if not token_data:
             raise Http404
 
-        params = {'send_initial_action_hack': False}
-        params.update(token_data.get('extra_params', {}))
+        action_name = token_data['extra_params'].get('action_name')
+        action_data = token_data['extra_params'].get('action_data', {})
+        action = self.view_def.get_action(action_name)
+        action_view = ConversationActionView(
+            view_def=self.view_def, action=action)
+
         user_token, sys_token = token_manager.parse_full_token(token)
         confirmation_form = ConfirmConversationForm(request.POST)
         success = False
         if confirmation_form.is_valid():
             try:
-                batch_id = conversation.get_latest_batch_key()
                 if token_manager.delete(user_token):
-                    conversation.start(batch_id=batch_id, **params)
-                    messages.info(request, '%s started succesfully!' % (
-                        self.view_def.conversation_display_name,))
-                    success = True
+                    return action_view.perform_action(
+                        request, conversation, action_data)
                 else:
                     messages.warning("Conversation already confirmed!")
+            # TODO: Better exception handling
             except ConversationSendError as error:
                 messages.error(request, str(error))
         else:
@@ -321,7 +297,7 @@ class ConversationActionView(ConversationTemplateView):
         form_cls = self.view_def.get_action_form(self.action.action_name)
         if form_cls is None:
             # We have no form, so assume we're just redirecting elsewhere.
-            return self.action_done(conversation)
+            return self._action_done(request, conversation)
         return self._render_form(request, conversation, form_cls)
 
     def post(self, request, conversation):
@@ -329,19 +305,48 @@ class ConversationActionView(ConversationTemplateView):
         form_cls = self.view_def.get_action_form(self.action.action_name)
         if form_cls is not None:
             form = form_cls(request.POST)
-            print "POST:", request.POST
             if not form.is_valid():
-                print "invalid"
                 return self._render_form(request, conversation, form)
             action_data = form.cleaned_data
-        self.action.perform_action(action_data)
-        return self.action_done(conversation)
 
-    def action_done(self, conversation):
+        if self.action.needs_confirmation:
+            user_account = request.user_api.get_user_account()
+            # TODO: Rename this field
+            if user_account.confirm_start_conversation:
+                return self._confirm_action(
+                    request, conversation, user_account, action_data)
+
+        return self.perform_action(request, conversation, action_data)
+
+    def perform_action(self, request, conversation, action_data):
+        self.action.perform_action(action_data)
+        messages.info(request, 'Action successful: %s!' % (
+            self.action.action_display_name,))
+        return self._action_done(request, conversation)
+
+    def _action_done(self, request, conversation):
         next_view = self.get_next_view(conversation)
         if self.action.redirect_to is not None:
             next_view = self.action.redirect_to
         return self.redirect_to(next_view, conversation_key=conversation.key)
+
+    def _confirm_action(self, request, conv, user_account, action_data):
+        # The URL the user will be redirected to post-confirmation
+        redirect_to = self.get_view_url('confirm', conversation_key=conv.key)
+        # The token to be sent.
+        params = {
+            'action_name': self.action.action_name,
+            'action_data': action_data,
+        }
+
+        token_manager = DjangoTokenManager(request.user_api.api.token_manager)
+        token = token_manager.generate(redirect_to, user_id=request.user.id,
+                                       extra_params=params)
+        conv.send_token_url(
+            token_manager.url_for_token(token), user_account.msisdn,
+            acquire_tag=False)
+        messages.info(request, 'Confirmation request sent.')
+        return self.redirect_to('show', conversation_key=conv.key)
 
 
 class AggregatesConversationView(ConversationTemplateView):
@@ -408,6 +413,12 @@ class ConversationViewDefinitionBase(object):
 
     def get_actions(self):
         return self._conv_def.get_actions()
+
+    def get_action(self, action_name):
+        for action in self.get_actions():
+            if action.action_name == action_name:
+                return action
+            raise ValueError("Action not found: %s" % (action_name,))
 
     def get_action_form(self, action_name):
         """Returns a Django form for setting up the action or ``None``."""
