@@ -320,13 +320,14 @@ class ConversationActionView(ConversationTemplateView):
 
     def perform_action(self, request, conversation, action_data):
         self.action.perform_action(action_data)
+        messages.info(request, 'Action successful: %s!' % (
+            self.action.action_display_name,))
         return self._action_done(request, conversation)
 
     def _action_done(self, request, conversation):
         next_view = self.get_next_view(conversation)
         if self.action.redirect_to is not None:
             next_view = self.action.redirect_to
-        messages.info(request, 'Action performed succesfully!')
         return self.redirect_to(next_view, conversation_key=conversation.key)
 
     def _confirm_action(self, request, conv, user_account, action_data):
