@@ -52,13 +52,8 @@ describe("go.components.plumbing (connections)", function() {
     describe(".render", function() {
       var connection;
 
-      beforeEach(function(done) {
-        diagram.connections.on('add', function(id, addedConnection) {
-          connection = addedConnection;
-          done();
-        });
-
-        diagram.connections.add('connections', {
+      beforeEach(function() {
+        connection = diagram.connections.add('connections', {
           model: {
             source: {uuid: 'x1'},
             target: {uuid: 'y1'}
