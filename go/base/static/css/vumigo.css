@@ -349,7 +349,7 @@ button {
   z-index: 0;
   -webkit-user-select: none;
 }
-.campaigns #routing-diagram .column-container .state .description {
+.campaigns #routing-diagram .column-container .state .name {
   margin: 10px;
 }
 .campaigns #routing-diagram .column-container .state:hover {
