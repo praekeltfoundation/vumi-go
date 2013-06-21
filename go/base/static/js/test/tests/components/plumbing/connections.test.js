@@ -50,23 +50,30 @@ describe("go.components.plumbing (connections)", function() {
     });
 
     describe(".render", function() {
-      it("should create the actual jsPlumb connection", function(done) {
-        var x1_y1 = new ConnectionView({
-          diagram: diagram,
-          model: new ConnectionModel({
-            uuid: 'x1-y1',
-            source: {uuid: 'x1'},
-            target: {uuid: 'y1'}
-          })
-        });
+      var connection;
 
-        jsPlumb.bind('connection', function(e) {
-          assert(x1_y1.source.$el.is(e.source));
-          assert(x1_y1.target.$el.is(e.target));
+      beforeEach(function(done) {
+        diagram.connections.on('add', function(id, addedConnection) {
+          connection = addedConnection;
           done();
         });
 
-        x1_y1.render();
+        diagram.connections.add('connections', {
+          model: {
+            source: {uuid: 'x1'},
+            target: {uuid: 'y1'}
+          }
+        }, {render: false});
+      });
+
+      it("should create the actual jsPlumb connection", function(done) {
+        jsPlumb.bind('connection', function(e) {
+          assert(connection.source.$el.is(e.source));
+          assert(connection.target.$el.is(e.target));
+          done();
+        });
+
+        connection.render();
       });
     });
   });

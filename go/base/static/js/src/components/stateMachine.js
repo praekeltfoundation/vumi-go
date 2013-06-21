@@ -31,16 +31,18 @@
 // server and the views themselves.
 
 (function(exports) {
+  var utils = go.utils,
+      idOfModel = utils.idOfModel;
+
   var models = go.components.models,
       Model = models.Model;
 
   // Model for a 'placeholder' attached to a state that one end of a connection
   // can be hooked onto.
-  var EndpointModel = Model.extend({
-  });
+  var EndpointModel = Model.extend();
 
-  var idOfConnection = function(sourceId, targetId) {
-    return sourceId + '-' + targetId;
+  var idOfConnection = function(source, target) {
+    return idOfModel(source) + '-' + idOfModel(target);
   };
 
   // Model for a connection between two endpoint models
@@ -57,15 +59,19 @@
       relatedModel: 'go.components.stateMachine.EndpointModel'
     }],
 
-    initialize: function() {
-      // Ensure our connection models ids are generated from their source and
-      // target so we have a consistent way of creating new connection models
-      // in the ui and looking them up later by their source and target
-      //
-      // NOTE: We don't set the id attribute used when syncing the model with
-      // the server, we only set the model's id *property* so we can use it on
-      // the client side
-      this.id = idOfConnection(this.get('source').id, this.get('target').id);
+    constructor: function(attrs, options) {
+      // Parse by default so we can ensure we set the uuid of the connection
+      options = _(options || {}).extend({parse: true});
+
+      Model.prototype.constructor.call(this, attrs, options);
+    },
+
+    parse: function(attrs) {
+      if (attrs.source && attrs.target) {
+        attrs.uuid = idOfConnection(attrs.source, attrs.target);
+      }
+
+      return attrs;
     }
   });
 
