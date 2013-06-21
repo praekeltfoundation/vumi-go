@@ -1,27 +1,22 @@
 from twisted.trial.unittest import TestCase
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportUserMessage
-from vumi.middleware.tagger import TaggingMiddleware
 
 from go.vumitools.api import VumiApi
-from go.vumitools.api_worker import OldGoMessageMetadata
+from go.vumitools.utils import MessageMetadataHelper
 from go.vumitools.tests.utils import GoPersistenceMixin
 
 
-class OldGoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
+class MessageMetadataHelperTestCase(GoPersistenceMixin, TestCase):
     use_riak = True
 
     @inlineCallbacks
     def setUp(self):
         self._persist_setUp()
-
         self.vumi_api = yield VumiApi.from_config_async(self._persist_config)
-        self._persist_riak_managers.append(self.vumi_api.manager)
-        self._persist_redis_managers.append(self.vumi_api.redis)
         self.account = yield self.mk_user(self.vumi_api, u'user')
         self.user_api = self.vumi_api.get_user_api(self.account.key)
-        self.tag = ('xmpp', 'test1@xmpp.org')
 
     def tearDown(self):
         return self._persist_tearDown()
@@ -31,127 +26,124 @@ class OldGoMessageMetadataTestCase(GoPersistenceMixin, TestCase):
         return self.user_api.conversation_store.new_conversation(
             conversation_type, name, description, config)
 
+    def mk_msg(self, go_metadata=None):
+        helper_metadata = {}
+        if go_metadata is not None:
+            helper_metadata['go'] = go_metadata
+        return TransportUserMessage(
+            to_addr="to@domain.org", from_addr="from@domain.org",
+            transport_name="dummy_endpoint",
+            transport_type="dummy_transport_type",
+            helper_metadata=helper_metadata)
+
+    def mk_md(self, message=None, go_metadata=None):
+        if message is None:
+            message = self.mk_msg(go_metadata)
+        return MessageMetadataHelper(self.vumi_api, message)
+
+    def test_is_sensitive(self):
+        md = self.mk_md()
+        self.assertFalse(md.is_sensitive())
+        md = self.mk_md(go_metadata={'sensitive': True})
+        self.assertTrue(md.is_sensitive())
+
+    def test_has_user_account(self):
+        md = self.mk_md()
+        self.assertFalse(md.has_user_account())
+        md = self.mk_md(go_metadata={'user_account': 'user-1'})
+        self.assertTrue(md.has_user_account())
+
+    def test_get_account_key(self):
+        md = self.mk_md()
+        self.assertRaises(KeyError, md.get_account_key)
+        md = self.mk_md(go_metadata={'user_account': 'user-1'})
+        self.assertEqual(md.get_account_key(), 'user-1')
+
+    def test_get_user_api(self):
+        md = self.mk_md()
+        self.assertRaises(KeyError, md.get_user_api)
+        md = self.mk_md(go_metadata={
+            'user_account': self.user_api.user_account_key})
+        user_api = md.get_user_api()
+        self.assertEqual(user_api.user_account_key,
+                         self.user_api.user_account_key)
+
+    def test_get_conversation_key(self):
+        md = self.mk_md()
+        self.assertRaises(KeyError, md.get_conversation_key)
+        md = self.mk_md(go_metadata={'conversation_key': 'conv-1'})
+        self.assertEqual(md.get_conversation_key(), 'conv-1')
+
     @inlineCallbacks
-    def tag_conversation(self, conversation, tag):
-        batch_id = yield self.vumi_api.mdb.batch_start([tag],
-                            user_account=unicode(self.account.key))
-        conversation.batches.add_key(batch_id)
-        conversation.save()
-        returnValue(batch_id)
-
-    def mk_msg(self, to_addr, from_addr):
-        return TransportUserMessage(to_addr=to_addr, from_addr=from_addr,
-                                   transport_name="dummy_endpoint",
-                                   transport_type="dummy_transport_type")
-
-    def mk_md(self, message):
-        return OldGoMessageMetadata(self.vumi_api, message)
-
-    @inlineCallbacks
-    def test_account_key_lookup(self):
+    def test_get_conversation(self):
+        md = self.mk_md()
+        self.assertRaises(KeyError, md.get_conversation)
+        md = self.mk_md(go_metadata={'user_account': 'user-1'})
+        self.assertRaises(KeyError, md.get_conversation)
         conversation = yield self.create_conversation()
-        batch_key = yield self.tag_conversation(conversation, self.tag)
-        msg = self.mk_msg('to@domain.org', 'from@domain.org')
-        TaggingMiddleware.add_tag_to_msg(msg, self.tag)
+        md = self.mk_md(go_metadata={
+            'user_account': self.user_api.user_account_key,
+            'conversation_key': conversation.key,
+        })
+        md_conv = yield md.get_conversation()
+        self.assertEqual(md_conv.key, conversation.key)
 
-        self.assertEqual(msg['helper_metadata'],
-                         {'tag': {'tag': list(self.tag)}})
+    def test_get_conversation_info(self):
+        md = self.mk_md()
+        self.assertEqual(md.get_conversation_info(), None)
+        md = self.mk_md(go_metadata={'user_account': 'user-1'})
+        self.assertEqual(md.get_conversation_info(), None)
+        md = self.mk_md(go_metadata={
+            'user_account': 'user-1',
+            'conversation_type': 'dummy',
+        })
+        self.assertEqual(md.get_conversation_info(), None)
+        md = self.mk_md(go_metadata={
+            'user_account': 'user-1',
+            'conversation_type': 'dummy',
+            'conversation_key': 'conv-1',
+        })
+        self.assertEqual(md.get_conversation_info(), {
+            'user_account': 'user-1',
+            'conversation_type': 'dummy',
+            'conversation_key': 'conv-1',
+        })
 
+    def test_set_conversation_info(self):
+        msg = self.mk_msg()
         md = self.mk_md(msg)
-        # The metadata wrapper creates the 'go' metadata
-        self.assertEqual(msg['helper_metadata']['go'], {})
-
-        account_key = yield md.get_account_key()
-        self.assertEqual(account_key, self.account.key)
+        md.set_conversation_info('dummy', 'conv-1')
         self.assertEqual(msg['helper_metadata']['go'], {
-                'batch_key': batch_key,
-                'user_account': account_key,
-                })
+            'conversation_type': 'dummy',
+            'conversation_key': 'conv-1',
+        })
 
-    @inlineCallbacks
-    def test_batch_lookup(self):
-        conversation = yield self.create_conversation()
-        batch_key = yield self.tag_conversation(conversation, self.tag)
-        msg = self.mk_msg('to@domain.org', 'from@domain.org')
-        TaggingMiddleware.add_tag_to_msg(msg, self.tag)
-
-        self.assertEqual(msg['helper_metadata'],
-                         {'tag': {'tag': list(self.tag)}})
-
+    def test_set_user_account(self):
+        msg = self.mk_msg()
         md = self.mk_md(msg)
-        # The metadata wrapper creates the 'go' metadata
-        self.assertEqual(msg['helper_metadata']['go'], {})
-
-        msg_batch_key = yield md.get_batch_key()
-        self.assertEqual(batch_key, msg_batch_key)
-        self.assertEqual(msg['helper_metadata']['go'],
-                         {'batch_key': batch_key})
-
-    @inlineCallbacks
-    def test_conversation_lookup(self):
-        conversation = yield self.create_conversation()
-        batch_key = yield self.tag_conversation(conversation, self.tag)
-        msg = self.mk_msg('to@domain.org', 'from@domain.org')
-        TaggingMiddleware.add_tag_to_msg(msg, self.tag)
-
-        self.assertEqual(msg['helper_metadata'],
-                         {'tag': {'tag': list(self.tag)}})
-
-        md = self.mk_md(msg)
-        # The metadata wrapper creates the 'go' metadata
-        self.assertEqual(msg['helper_metadata']['go'], {})
-
-        conv_key, conv_type = yield md.get_conversation_info()
-        self.assertEqual(conv_key, conversation.key)
-        self.assertEqual(conv_type, conversation.conversation_type)
+        md.set_user_account('user-1')
         self.assertEqual(msg['helper_metadata']['go'], {
-                'batch_key': batch_key,
-                'user_account': self.account.key,
-                'conversation_key': conv_key,
-                'conversation_type': conv_type,
-                })
+            'user_account': 'user-1',
+        })
 
-    @inlineCallbacks
     def test_rewrap(self):
-        conversation = yield self.create_conversation()
-        batch_key = yield self.tag_conversation(conversation, self.tag)
-        msg = self.mk_msg('to@domain.org', 'from@domain.org')
-        TaggingMiddleware.add_tag_to_msg(msg, self.tag)
-
-        self.assertEqual(msg['helper_metadata'],
-                         {'tag': {'tag': list(self.tag)}})
+        msg = self.mk_msg()
 
         md = self.mk_md(msg)
         # The metadata wrapper creates the 'go' metadata
         self.assertEqual(msg['helper_metadata']['go'], {})
-
-        msg_batch_key = yield md.get_batch_key()
-        self.assertEqual(batch_key, msg_batch_key)
-        self.assertEqual(msg['helper_metadata']['go'],
-                         {'batch_key': batch_key})
 
         # We create a new wrapper around the same message object and make sure
         # the cached message store objects are still there in the new one.
         new_md = self.mk_md(msg)
         self.assertNotEqual(md, new_md)
-        self.assertEqual(md._store_objects, new_md._store_objects)
-        self.assertEqual(md._go_metadata, new_md._go_metadata)
+        self.assertIdentical(md._store_objects, new_md._store_objects)
+        self.assertIdentical(md._go_metadata, new_md._go_metadata)
 
         # We create a new wrapper around the a copy of the message object and
         # make sure the message store object cache is empty, but the metadata
         # remains.
         other_md = self.mk_md(msg.copy())
-        self.assertNotEqual(md, other_md)
+        self.assertNotIdentical(md, other_md)
         self.assertEqual({}, other_md._store_objects)
         self.assertEqual(md._go_metadata, other_md._go_metadata)
-
-    def test_is_sensitive(self):
-        msg = self.mk_msg('to@domain.org', 'from@domain.org')
-        self.assertFalse(self.mk_md(msg).is_sensitive())
-
-        msg['helper_metadata'] = {
-            'go': {
-                'sensitive': True,
-            }
-        }
-        self.assertTrue(self.mk_md(msg).is_sensitive())
