@@ -90,10 +90,10 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     worker_name = 'account_routing_table_dispatcher'
 
     # connector types
-    CONVERSATION = "CONVERSATION"
-    ROUTING_BLOCK = "ROUTING_BLOCK"
-    TRANSPORT = "TRANSPORT"
-    OPT_OUT = "OPT_OUT"
+    CONVERSATION = GoConnector.CONVERSATION
+    ROUTING_BLOCK = GoConnector.ROUTING_BLOCK
+    TRANSPORT_TAG = GoConnector.TRANSPORT_TAG
+    OPT_OUT = GoConnector.OPT_OUT
 
     # directions
     INBOUND = GoConnector.INBOUND
@@ -169,7 +169,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             return self.ROUTING_BLOCK
         elif connector_name == self.opt_out_connector:
             return self.OPT_OUT
-        return self.TRANSPORT
+        return self.TRANSPORT_TAG
 
     def get_application_connector(self, conversation_type):
         return self.application_connector_mapping.get(conversation_type)
@@ -273,7 +273,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         msg_mdh = self.get_metadata_helper(msg)
 
         if direction == self.INBOUND:
-            allowed_types = (self.TRANSPORT, self.ROUTING_BLOCK)
+            allowed_types = (self.TRANSPORT_TAG, self.ROUTING_BLOCK)
         else:
             allowed_types = (self.CONVERSATION, self.ROUTING_BLOCK)
 
@@ -292,7 +292,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 router_info['router_type'], router_info['router_key'],
                 self.router_direction(direction)))
 
-        elif connector_type == self.TRANSPORT:
+        elif connector_type == self.TRANSPORT_TAG:
             src_conn = str(GoConnector.for_transport_tag(*msg_mdh.tag))
 
         else:
@@ -353,7 +353,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         connector_type = self.connector_type(connector_name)
 
-        if connector_type == self.TRANSPORT and msg_mdh.is_optout_message():
+        if (connector_type == self.TRANSPORT_TAG
+                and msg_mdh.is_optout_message()):
             self.publish_inbound_optout(config, msg)
             return
 
