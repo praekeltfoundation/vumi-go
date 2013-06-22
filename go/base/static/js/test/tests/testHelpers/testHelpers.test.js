@@ -39,25 +39,6 @@ describe("go.testHelpers", function() {
     });
   });
 
-  describe(".attrsOfModel", function() {
-    var attrsOfModel = testHelpers.attrsOfModel;
-
-    var models = go.components.models,
-        Model = models.Model;
-
-    it("should return the model's attrs if a model was given", function() {
-      assert.deepEqual(
-        attrsOfModel(new Model({uuid: 'ackbar', a: 'red', b: 'blue'})),
-        {uuid: 'ackbar', a: 'red', b: 'blue'});
-    });
-
-    it("should return the model's attrs an object was given", function() {
-      assert.deepEqual(
-        attrsOfModel({uuid: 'ackbar', a: 'red', b: 'blue', _rpcId: 132123}),
-        {uuid: 'ackbar', a: 'red', b: 'blue'});
-    });
-  });
-
   describe(".assertModelAttrs", function() {
     var assertModelAttrs = testHelpers.assertModelAttrs;
 

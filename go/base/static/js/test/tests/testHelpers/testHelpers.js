@@ -12,25 +12,18 @@
     return $(selector).length === 0;
   };
 
-  var attrsOfModel = function(obj) {
-    var attrs = obj instanceof Backbone.Model
-      ? obj.toJSON()
-      : obj;
-
+  var assertModelAttrs = function(model, attrs) {
     // Backbone.rpc adds an extra `_rpcId` attribute which isn't part of
     // our model attributes. We need to exclude it for equality testing.
-    return _(attrs).omit('_rpcId');
-  };
-
-  var assertModelAttrs = function(model, attrs) {
-    assert.deepEqual(attrsOfModel(model), attrs);
+    return assert.deepEqual(
+      _(model.toJSON()).omit('_rpcId'),
+      attrs);
   };
 
   _.extend(exports, {
     assertFails: assertFails,
     oneElExists: oneElExists,
     noElExists: noElExists,
-    attrsOfModel: attrsOfModel,
     assertModelAttrs: assertModelAttrs
   });
 })(go.testHelpers = {});
