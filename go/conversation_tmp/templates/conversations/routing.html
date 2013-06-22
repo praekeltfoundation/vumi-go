@@ -12,8 +12,8 @@
     <a href="{% url 'conversations:index' %}">Cancel</a>
 
     {# TODO Send model data back to server when clicked #}
-    <a id="fetch-routing-table-button" href="" class="btn">Fetch (tmp)</a>
-    <a id="save-routing-table-button" href="" class="btn btn-primary">Save</a>
+    <a id="reset" href="" class="btn">Reset</a>
+    <a id="save" href="" class="btn btn-primary">Save</a>
 {% endblock %}
 
 {% block content_main %}
@@ -47,6 +47,8 @@
     {{ block.super }}
 
 jsPlumb.ready(function() {
+  var resetOnFetch = go.utils.resetOnFetch;
+
   var routing = go.campaign.routing,
       modelData = {{ model_data|safe }},
       CampaignRoutingModel = routing.CampaignRoutingModel,
@@ -70,7 +72,15 @@ jsPlumb.ready(function() {
   });
 
   diagram.render();
-  $('#save-routing-table-button').click(function(e) { e.preventDefault(); diagram.model.save(); });
-  $('#fetch-routing-table-button').click(function(e) { e.preventDefault(); diagram.model.fetch(); });
+
+  $('#save').click(function(e) {
+      e.preventDefault();
+      diagram.model.save();
+  });
+
+  $('#reset').click(function(e) {
+      e.preventDefault();
+      diagram.model.fetch({reset: true});
+  });
 });
 {% endblock %}
