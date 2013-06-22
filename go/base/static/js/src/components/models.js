@@ -38,9 +38,11 @@
         // anything with the `options.error` callback that the original
         // `Backbone.sync()` supports. This leaves us with option 1.
 
+        var success = options.success;
         options.success = function(model, resp, options) {
           model.clear(options);
           model.set(model.parse(resp, options), options);
+          if (success) { success(model, resp, options); }
         };
       }
 
