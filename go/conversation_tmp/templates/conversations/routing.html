@@ -47,8 +47,6 @@
     {{ block.super }}
 
 jsPlumb.ready(function() {
-  var resetOnFetch = go.utils.resetOnFetch;
-
   var routing = go.campaign.routing,
       modelData = {{ model_data|safe }},
       CampaignRoutingModel = routing.CampaignRoutingModel,
