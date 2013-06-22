@@ -84,6 +84,17 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
     * for routing blocks, conversations and the opt-out worker:
       * the user account id is read from the Vumi Go helper_metadata.
+
+    When messages are published the following helper_metadata
+    is included:
+
+    * for transports: tag pool and tag name
+    * for routing blocks: user_account, router_type, router_key
+    * for conversations: user_account, conversation_type, conversation_key
+    * for the opt-out worker: user_account
+
+    Messages received from these sources are expected to include the same
+    metadata.
     """
 
     CONFIG_CLASS = AccountRoutingTableDispatcherConfig
