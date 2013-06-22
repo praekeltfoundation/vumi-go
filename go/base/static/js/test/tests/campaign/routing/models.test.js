@@ -29,6 +29,26 @@ describe("go.campaign.routing (models)", function() {
         server.assertRequest('routing_table', ['campaign1']);
       });
 
+      it("should ensure duplicate routing entries aren't made", function() {
+        var model = new CampaignRoutingModel({campaign_id: 'campaign1'});
+
+        var assertEntries = function() {
+          var entries = model.get('routing_entries');
+          assert.equal(entries.size(), 1);
+          assert.deepEqual(
+            entries.map(function(e) { return e.id; }),
+            ['endpoint1-endpoint4']);
+        };
+
+        model.fetch();
+        server.respondWith(modelData);
+        assertEntries();
+
+        model.fetch();
+        server.respondWith(modelData);
+        assertEntries();
+      });
+
       it("should update the model on the client side", function() {
         var model = new CampaignRoutingModel();
         model.fetch();
