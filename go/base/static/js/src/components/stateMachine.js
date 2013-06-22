@@ -99,6 +99,7 @@
     }, {
       type: Backbone.HasMany,
       key: 'connections',
+      parse: true,
       relatedModel: 'go.components.stateMachine.ConnectionModel'
     }]
   });

@@ -87,6 +87,7 @@
     }, {
       type: Backbone.HasMany,
       key: 'connections',
+      parse: true,
       relatedModel: DialogueConnectionModel
     }]
   });
