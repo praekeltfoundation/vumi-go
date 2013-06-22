@@ -64,15 +64,51 @@ describe("go.testHelpers", function() {
     var models = go.components.models,
         Model = models.Model;
 
+    var ToyModel = Model.extend({
+      relations: [{
+        type: Backbone.HasMany,
+        key: 'submodels',
+        relatedModel: Model
+      }]
+    });
+
     it("should determine whether a model has only the given attrs", function() {
-      assertModelAttrs(
-        new Model({uuid: 'ackbar', a: 'red', b: 'blue'}),
-        {uuid: 'ackbar', a: 'red', b: 'blue'});
+      assertModelAttrs(new ToyModel({
+        uuid: 'jimmy',
+        a: 'red',
+        b: 'blue',
+        c: 'green',
+        submodels: [
+          {uuid: 'one', spoon: 'yes'},
+          {uuid: 'two', spoon: 'pen'}]
+      }), {
+        uuid: 'jimmy',
+        a: 'red',
+        b: 'blue',
+        c: 'green',
+        submodels: [
+          {uuid: 'one', spoon: 'yes'},
+          {uuid: 'two', spoon: 'pen'}]
+      });
 
       assertFails(function() {
-        assertModelAttrs(
-          new Model({uuid: 'anakin', a: 'red', b: 'blue'}),
-          {uuid: 'ackbar', a: 'blue', b: 'green'});
+        assertModelAttrs(new ToyModel({
+          uuid: 'sam',
+          a: 'red',
+          b: 'blue',
+          c: 'green',
+          submodels: [
+            {uuid: 'one', spoon: 'yes'},
+            {uuid: 'two', spoon: 'pen'}]
+        }), {
+          uuid: 'sam',
+          a: 'red',
+          b: 'blue',
+          c: 'green',
+          submodels: [
+            {uuid: 'one', spoon: 'yes'},
+            {uuid: 'two', spoon: 'rawr'}]
+        });
       });
     });
   });
