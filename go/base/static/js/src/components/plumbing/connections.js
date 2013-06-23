@@ -7,6 +7,9 @@
   var views = go.components.views,
       UniqueView = views.UniqueView;
 
+  var stateMachine = go.components.stateMachine,
+      idOfConnection = stateMachine.idOfConnection;
+
   var structures = go.components.structures,
       SubviewCollection = structures.SubviewCollection,
       SubviewCollectionGroup = structures.SubviewCollectionGroup;
