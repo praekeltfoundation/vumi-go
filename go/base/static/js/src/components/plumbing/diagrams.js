@@ -18,25 +18,29 @@
     stateSchema: [{attr: 'states'}],
     stateType: StateView,
     stateCollectionType: StateViewCollection,
+    stateGroupType: DiagramStateGroup,
 
     connectionSchema: [{attr: 'connections'}],
     connectionType: ConnectionView,
     connectionCollectionType: ConnectionViewCollection,
+    connectionGroupType: DiagramConnectionGroup,
+
+    endpointGroupType: DiagramEndpointGroup,
 
     initialize: function() {
-      // Lookup/Manager of all the states in the diagram
-      this.states = new DiagramStateGroup({
+      // Lookup/manager of all the states in the diagram
+      this.states = new this.stateGroupType({
         view: this,
         schema: this.stateSchema,
         schemaDefaults: {type: this.stateType},
         collectionType: this.stateCollectionType
       });
 
-      // Lookup/Manager of all the endpoints in the diagram
-      this.endpoints = new DiagramEndpointGroup(this);
+      // Lookup/manager of all the endpoints in the diagram
+      this.endpoints = new this.endpointGroupType(this);
 
-      // Lookup/Manager of all the connections in the diagram
-      this.connections = new DiagramConnectionGroup({
+      // Lookup/manager of all the connections in the diagram
+      this.connections = new this.connectionGroupType({
         view: this,
         schema: this.connectionSchema,
         schemaDefaults: {type: this.connectionType},

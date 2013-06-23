@@ -19,18 +19,19 @@
     endpointSchema: [{attr: 'endpoints'}],
     endpointType: EndpointView,
     endpointCollectionType: EndpointViewCollection,
+    endpointGroupType: StateEndpointGroup,
 
     uuid: function() { return this.model.id; },
 
     initialize: function(options) {
-      // the diagram view that this state is part of
+      // The diagram view that this state is part of
       this.diagram = options.diagram;
 
-      // the collection of state views that this state is part of
+      // The collection of state views that this state is part of
       this.collection = options.collection;
 
       // Lookup of all the endpoints in this state
-      this.endpoints = new StateEndpointGroup({
+      this.endpoints = new this.endpointGroupType({
         view: this,
         schema: this.endpointSchema,
         schemaDefaults: {type: this.endpointType},
