@@ -5,36 +5,17 @@
 (function(exports) {
   var structures = go.components.structures,
       Lookup = structures.Lookup,
-      SubviewCollectionGroup = structures.SubviewCollectionGroup,
-      ViewCollectionGroup = structures.ViewCollectionGroup;
+      SubviewCollectionGroup = structures.SubviewCollectionGroup;
 
   var plumbing = go.components.plumbing,
       StateView = plumbing.StateView,
       ConnectionView = plumbing.ConnectionView,
       StateViewCollection = plumbing.StateViewCollection,
-      ConnectionViewCollection = plumbing.ConnectionViewCollection;
+      ConnectionViewCollection = plumbing.ConnectionViewCollection,
+      DiagramEndpointGroup = plumbing.DiagramEndpointGroup;
 
   var stateMachine = go.components.stateMachine,
       idOfConnection = stateMachine.idOfConnection;
-
-  // Keeps track of all the endpoints in the state diagram
-  var DiagramViewEndpoints = ViewCollectionGroup.extend({
-    constructor: function(diagram) {
-      ViewCollectionGroup.prototype.constructor.call(this);
-      this.diagram = diagram;
-
-      // Add the initial states' endpoints
-      var states = diagram.states;
-      states.eachItem(this.addState, this);
-
-      states.on('add', this.addState, this);
-      states.on('remove', this.removeState, this);
-    },
-
-    addState: function(id, state) { this.subscribe(id, state.endpoints); },
-
-    removeState: function(id) { this.unsubscribe(id); }
-  });
 
   // Keeps connections between connection models in sync with the jsPlumb
   // connections in the UI
@@ -156,7 +137,7 @@
       });
 
       // Lookup/Manager of all the endpoints in the diagram
-      this.endpoints = new DiagramViewEndpoints(this);
+      this.endpoints = new DiagramEndpointGroup(this);
 
       // Lookup/Manager of all the connections in the diagram
       this.connections = new DiagramViewConnections({
@@ -186,7 +167,6 @@
     DiagramView: DiagramView,
 
     // Secondary components
-    DiagramViewEndpoints: DiagramViewEndpoints,
     DiagramViewConnections: DiagramViewConnections
   });
 })(go.components.plumbing);

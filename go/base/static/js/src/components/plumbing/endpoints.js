@@ -8,6 +8,7 @@
       functor = utils.functor;
 
   var structures = go.components.structures,
+      ViewCollectionGroup = structures.ViewCollectionGroup,
       SubviewCollection = structures.SubviewCollection;
 
   var views = go.components.views,
@@ -97,6 +98,25 @@
 
       return SubviewCollection.prototype.remove.call(this, view, options);
     }
+  });
+
+  // Keeps track of all the endpoints across all states in a diagram
+  var DiagramEndpointGroup = ViewCollectionGroup.extend({
+    constructor: function(diagram) {
+      ViewCollectionGroup.prototype.constructor.call(this);
+      this.diagram = diagram;
+
+      // Add the initial states' endpoints
+      var states = diagram.states;
+      states.eachItem(this.addState, this);
+
+      states.on('add', this.addState, this);
+      states.on('remove', this.removeState, this);
+    },
+
+    addState: function(id, state) { this.subscribe(id, state.endpoints); },
+
+    removeState: function(id) { this.unsubscribe(id); }
   });
 
   // Derived components
@@ -269,6 +289,7 @@
   _.extend(exports, {
     EndpointView: EndpointView,
     EndpointViewCollection: EndpointViewCollection,
+    DiagramEndpointGroup: DiagramEndpointGroup,
 
     PositionableEndpointView: PositionableEndpointView,
     ParametricEndpointView: ParametricEndpointView,

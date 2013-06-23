@@ -8,6 +8,7 @@ describe("go.components.plumbing (endpoints)", function() {
 
   var setUp = plumbing.testHelpers.setUp,
       newSimpleDiagram = plumbing.testHelpers.newSimpleDiagram,
+      newComplexDiagram = plumbing.testHelpers.newComplexDiagram,
       tearDown = plumbing.testHelpers.tearDown;
 
   var diagram;
@@ -118,6 +119,80 @@ describe("go.components.plumbing (endpoints)", function() {
       });
     });
   });
+
+  describe(".DiagramEndpointGroup", function() {
+    var StateModel = stateMachine.StateModel,
+        StateView = plumbing.StateView,
+        DiagramEndpointGroup = plumbing.DiagramEndpointGroup;
+
+    var endpoints,
+        a3,
+        a1;
+
+    var assertSubscribed = function(id, subscriber) {
+      assert(endpoints.members.has(id));
+      assert.includeMembers(endpoints.keys(), subscriber.keys());
+    };
+
+    var assertUnsubscribed = function(id, subscriber) {
+      assert(!endpoints.members.has(id));
+      subscriber.eachItem(function(id) { assert(!endpoints.has(id)); });
+    };
+
+    beforeEach(function() {
+      diagram = newComplexDiagram();
+      endpoints = new DiagramEndpointGroup(diagram);
+
+      var modelA3 = new StateModel({
+        uuid: 'a3',
+        left: [{uuid: 'a3L1'}, {uuid: 'a3L2'}],
+        right: [{uuid: 'a3R1'}, {uuid: 'a3R2'}]
+      });
+      a3 = new StateView({diagram: diagram, model: modelA3});
+
+      a1 = diagram.states.get('a1');
+    });
+
+    describe("on 'add' state events", function() {
+      it("should subscribe the new state's endpoints to the group",
+      function(done) {
+        diagram.states.on('add', function() {
+          assertSubscribed('a3', a3.endpoints);
+          done();
+        });
+
+        diagram.states.add('apples', a3);
+      });
+    });
+
+    describe("on 'remove' state events", function() {
+      it("should unsubscribe the state's endpoints from the group",
+      function(done) {
+        diagram.states.on('remove', function() {
+          assertUnsubscribed('a1', a1.endpoints);
+          done();
+        });
+
+        diagram.states.members.get('apples').remove('a1');
+      });
+    });
+
+    describe(".addState", function() {
+      it("should subscribe the state's endpoints to the group", function() {
+        endpoints.addState('a3', a3);
+        assertSubscribed('a3', a3.endpoints);
+      });
+    });
+
+    describe(".removeState", function() {
+      it("should unsubscribe the state's endpoints from the group",
+      function() {
+        endpoints.removeState('a1');
+        assertUnsubscribed('a1', a1.endpoints);
+      });
+    });
+  });
+
 
   describe(".PositionableEndpointView", function() {
     var PositionableEndpointView = plumbing.PositionableEndpointView;
