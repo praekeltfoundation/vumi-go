@@ -4,8 +4,7 @@
 
 (function(exports) {
   var structures = go.components.structures,
-      Lookup = structures.Lookup,
-      SubviewCollectionGroup = structures.SubviewCollectionGroup;
+      Lookup = structures.Lookup;
 
   var plumbing = go.components.plumbing,
       StateView = plumbing.StateView,
@@ -163,10 +162,6 @@
   });
 
   _.extend(exports, {
-    // Components intended to be used and extended
-    DiagramView: DiagramView,
-
-    // Secondary components
-    DiagramViewConnections: DiagramViewConnections
+    DiagramView: DiagramView
   });
 })(go.components.plumbing);

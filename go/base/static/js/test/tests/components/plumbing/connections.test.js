@@ -90,4 +90,123 @@ describe("go.components.plumbing (connections)", function() {
       });
     });
   });
+
+  describe(".DiagramConnectionGroup", function() {
+    var DiagramConnectionGroup = plumbing.DiagramConnectionGroup;
+
+    var diagram,
+        connections,
+        leftToRight;
+
+    beforeEach(function() {
+      diagram = newComplexDiagram();
+      connections = diagram.connections;
+      leftToRight = connections.members.get('leftToRight');
+    });
+
+    describe(".determineCollection", function() {
+      it("should determine which collection a source and target belong to",
+      function() {
+        assert.equal(
+          connections.members.get('leftToRight'),
+          connections.determineCollection(
+            diagram.endpoints.get('a1L1'),
+            diagram.endpoints.get('b2R1')));
+
+        assert.equal(
+          connections.members.get('rightToLeft'),
+          connections.determineCollection(
+            diagram.endpoints.get('b1R1'),
+            diagram.endpoints.get('a2L1')));
+      });
+    });
+
+    describe("on 'connection' jsPlumb events", function() {
+      var EndpointView = plumbing.EndpointView,
+          EndpointModel = stateMachine.EndpointModel;
+
+      var UnknownEndpointView = EndpointView.extend();
+
+      beforeEach(function() {
+        // render the diagram to ensure the jsPlumb endpoints are drawn
+        diagram.render();
+      });
+
+      it("should add a connection model and its view if they do not yet exist",
+      function(done) {
+        var a1L1 = diagram.endpoints.get('a1L1'),
+            b2R1 = diagram.endpoints.get('b2R1');
+
+        connections.on('add', function(id, connection) {
+          // check that the model was added
+          assert.equal(connection.model.get('source'), a1L1.model);
+          assert.equal(connection.model.get('target'), b2R1.model);
+          assert.equal(
+            connection.model,
+            leftToRight.models.get('a1L1-b2R1'));
+
+          // check that the view was added
+          assert.equal(connection.source, a1L1);
+          assert.equal(connection.target, b2R1);
+          assert.equal(connection, connections.get('a1L1-b2R1'));
+
+          done();
+        });
+
+        jsPlumb.connect({source: a1L1.$el, target: b2R1.$el});
+      });
+
+      it("should fire an event when unsupported connections are encountered",
+      function(done) {
+        var a1L1 = diagram.endpoints.get('a1L1'),
+            a1L2 = diagram.endpoints.get('a1L2');
+
+        diagram.connections.on(
+          'error:unsupported',
+          function(source, target, plumbConnection) {
+            assert.equal(source, a1L1);
+            assert.equal(target, a1L2);
+            assert(a1L1.$el.is(plumbConnection.source));
+            assert(a1L2.$el.is(plumbConnection.target));
+            done();
+          });
+
+        jsPlumb.connect({source: a1L1.$el, target: a1L2.$el});
+      });
+    });
+
+    describe("on 'connectionDetached' jsPlumb events", function() {
+      beforeEach(function() {
+        // render the diagram and connections to ensure the jsPlumb endpoints
+        // and connections are drawn
+        diagram.render();
+      });
+
+      it("should remove the connection model and its view if they still exist",
+      function(done) {
+        var a1L2 = diagram.endpoints.get('a1L2'),
+            b2R2 = diagram.endpoints.get('b2R2'),
+            a1L2_b2R2 = connections.get('a1L2-b2R2');
+
+        // make sure that the connection did initially exist
+        assert(a1L2_b2R2);
+
+        connections.on('remove', function(id, connection) {
+
+          // check that the model was removed
+          assert(!leftToRight.models.get('a1L2-b2R2'));
+          assert.equal(connection.model.get('source'), a1L2.model);
+          assert.equal(connection.model.get('target'), b2R2.model);
+
+          // check that the view was removed
+          assert(!connections.has('a1L2-b2R2'));
+          assert.equal(a1L2_b2R2, connection);
+
+          done();
+        });
+
+        jsPlumb.detach(a1L2_b2R2.plumbConnection);
+      });
+    });
+  });
 });

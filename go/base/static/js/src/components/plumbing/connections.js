@@ -8,7 +8,8 @@
       UniqueView = views.UniqueView;
 
   var structures = go.components.structures,
-      SubviewCollection = structures.SubviewCollection;
+      SubviewCollection = structures.SubviewCollection,
+      SubviewCollectionGroup = structures.SubviewCollectionGroup;
 
   var plumbing = go.components.plumbing,
       EndpointView = plumbing.EndpointView;
@@ -96,6 +97,95 @@
     }
   });
 
+  // Manages the connection collections in a diagram. Keeps connection models
+  // in sync with the jsPlumb connections in the UI.
+  var DiagramConnectionGroup = SubviewCollectionGroup.extend({
+    constructor: function(options) {
+      SubviewCollectionGroup.prototype.constructor.call(this, options);
+      this.diagram = this.view; // alias for better context
+
+      jsPlumb.bind(
+        'connection',
+        _.bind(this.onPlumbConnect, this));
+
+      jsPlumb.bind(
+        'connectionDetached',
+        _.bind(this.onPlumbDisconnect, this));
+    },
+
+    // Returns the first connection collection found that accepts a connection
+    // based on the type of the given source and target endpoints. We need this
+    // to determine which connection collection a new connection made in the ui
+    // belongs to.
+    determineCollection: function(source, target) {
+      var collections = this.members.values(),
+          i = collections.length,
+          c;
+
+      while (i--) {
+        c = collections[i];
+        if (c.accepts(source, target)) { return c; }
+      }
+
+      return null;
+    },
+
+    onPlumbConnect: function(e) {
+      var sourceId = e.source.attr('data-uuid'),
+          targetId = e.target.attr('data-uuid'),
+          connectionId = idOfConnection(sourceId, targetId);
+
+      // Case 1:
+      // -------
+      // The connection model and its view have been added, but we haven't
+      // rendered the view (drawn the jsPlumb connection) yet. We don't
+      // need to add the connection since it already exists.
+      if (this.has(connectionId)) { return; }
+
+      // Case 2:
+      // -------
+      // The connection was created in the UI, so no model or view exists yet.
+      // We need to create a new connection model and its view.
+      var source = this.diagram.endpoints.get(sourceId),
+          target = this.diagram.endpoints.get(targetId),
+          collection = this.determineCollection(source, target);
+
+      // Case 3:
+      // -------
+      // This kind of connection is not supported
+      if (collection === null) {
+        this.trigger('error:unsupported', source, target, e.connection);
+        return;
+      }
+
+      collection.add({
+        model: {source: source.model, target: target.model},
+        plumbConnection: e.connection
+      });
+    },
+
+    onPlumbDisconnect: function(e) {
+      var sourceId = e.source.attr('data-uuid'),
+          targetId = e.target.attr('data-uuid'),
+          connectionId = idOfConnection(sourceId, targetId);
+
+      // Case 1:
+      // -------
+      // The connection model and its view have been removed from its
+      // collection, so its connection view was destroyed (along with the
+      // jsPlumb connection). We don't need to remove the connection model
+      // and view since they no longer exists.
+      if (!this.has(connectionId)) { return; }
+
+      // Case 2:
+      // -------
+      // The connection was removed in the UI, so the model and view still
+      // exist. We need to remove them.
+      var collection = this.ownerOf(connectionId);
+      collection.remove(connectionId, {removeModel: true});
+    }
+  });
+
   // Derived components
   // ------------------
 
@@ -127,6 +217,7 @@
   _.extend(exports, {
     ConnectionView: ConnectionView,
     ConnectionViewCollection: ConnectionViewCollection,
+    DiagramConnectionGroup: DiagramConnectionGroup,
 
     connectorOverlays: connectorOverlays,
     DirectionalConnectionView: DirectionalConnectionView
