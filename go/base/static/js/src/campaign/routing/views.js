@@ -63,7 +63,7 @@
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
       this.$column = this.diagram.$(options.columnEl);
-      this.$description = $('<span></span>').attr('class', 'description');
+      this.$name = $('<span></span>').attr('class', 'name');
     },
 
     render: function() {
@@ -71,9 +71,9 @@
 
       this.$el
         .css('position', 'relative')
-        .append(this.$description);
+        .append(this.$name);
 
-      this.$description.text(this.model.get('description'));
+      this.$name.text(this.model.get('name'));
       this.endpoints.render();
 
       return this;

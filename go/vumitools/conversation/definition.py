@@ -32,6 +32,7 @@ class ConversationAction(object):
 
     action_name = None
     action_display_name = None
+    needs_confirmation = False
 
     redirect_to = None
 

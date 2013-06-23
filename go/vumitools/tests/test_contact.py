@@ -63,6 +63,50 @@ class TestContactStore(GoPersistenceMixin, TestCase):
 
         self.assert_models_equal(group, dbgroup)
 
+    @inlineCallbacks
+    def test_list_groups(self):
+        self.assertEqual([], (yield self.store.list_groups()))
+
+        group1 = yield self.store.new_group(u'group1')
+        group2 = yield self.store.new_group(u'group2')
+        sgroup1 = yield self.store.new_smart_group(u'sgroup1', u'surname:"a"')
+        sgroup2 = yield self.store.new_smart_group(u'sgroup2', u'surname:"a"')
+
+        [g1, g2, sg1, sg2] = yield self.store.list_groups()
+
+        self.assert_models_equal(group1, g1)
+        self.assert_models_equal(group2, g2)
+        self.assert_models_equal(sgroup1, sg1)
+        self.assert_models_equal(sgroup2, sg2)
+
+    @inlineCallbacks
+    def test_list_smart_groups(self):
+        self.assertEqual([], (yield self.store.list_smart_groups()))
+
+        yield self.store.new_group(u'group1')
+        yield self.store.new_group(u'group2')
+        sgroup1 = yield self.store.new_smart_group(u'sgroup1', u'surname:"a"')
+        sgroup2 = yield self.store.new_smart_group(u'sgroup2', u'surname:"a"')
+
+        [sg1, sg2] = yield self.store.list_smart_groups()
+
+        self.assert_models_equal(sgroup1, sg1)
+        self.assert_models_equal(sgroup2, sg2)
+
+    @inlineCallbacks
+    def test_list_static_groups(self):
+        self.assertEqual([], (yield self.store.list_static_groups()))
+
+        group1 = yield self.store.new_group(u'group1')
+        group2 = yield self.store.new_group(u'group2')
+        yield self.store.new_smart_group(u'sgroup1', u'surname:"a"')
+        yield self.store.new_smart_group(u'sgroup2', u'surname:"a"')
+
+        [g1, g2] = yield self.store.list_static_groups()
+
+        self.assert_models_equal(group1, g1)
+        self.assert_models_equal(group2, g2)
+
     # TODO: Either implement unique group names or delete this test.
     # @inlineCallbacks
     # def test_new_group_exists(self):
