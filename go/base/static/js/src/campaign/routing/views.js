@@ -3,15 +3,23 @@
 // Views for campaign routing diagram.
 
 (function(exports) {
-  var plumbing = go.components.plumbing,
-      StateView = plumbing.StateView,
-      DiagramView = plumbing.DiagramView,
-      ParametricEndpointView = plumbing.ParametricEndpointView,
-      DirectionalConnectionView = plumbing.DirectionalConnectionView,
-      StateViewCollection = plumbing.StateViewCollection,
-      AligningEndpointCollection = plumbing.AligningEndpointCollection,
-      ConnectionViewCollection = plumbing.ConnectionViewCollection,
-      connectorOverlays = plumbing.connectorOverlays;
+  var plumbing = go.components.plumbing;
+
+  var states = plumbing.states,
+      StateView = states.StateView,
+      StateViewCollection = states.StateViewCollection;
+
+  var endpoints = plumbing.endpoints,
+      ParametricEndpointView = endpoints.ParametricEndpointView,
+      AligningEndpointCollection = endpoints.AligningEndpointCollection;
+
+  var connections = plumbing.connections,
+      DirectionalConnectionView = connections.DirectionalConnectionView,
+      ConnectionViewCollection = connections.ConnectionViewCollection,
+      connectorOverlays = connections.connectorOverlays;
+
+  var diagrams = plumbing.diagrams,
+      DiagramView = diagrams.DiagramView;
 
   // Endpoints
   // ---------

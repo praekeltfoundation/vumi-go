@@ -1,10 +1,11 @@
-describe("go.components.plumbing (endpoints)", function() {
-  var stateMachine = go.components.stateMachine;
-      plumbing = go.components.plumbing,
-      testHelpers = go.testHelpers;
-
-  var oneElExists = testHelpers.oneElExists,
+describe("go.components.plumbing.endpoints", function() {
+  var testHelpers = go.testHelpers,
+      oneElExists = testHelpers.oneElExists,
       noElExists = testHelpers.noElExists;
+
+  var stateMachine = go.components.stateMachine;
+
+  var plumbing = go.components.plumbing;
 
   var setUp = plumbing.testHelpers.setUp,
       newSimpleDiagram = plumbing.testHelpers.newSimpleDiagram,
@@ -24,7 +25,7 @@ describe("go.components.plumbing (endpoints)", function() {
 
   describe(".EndpointView", function() {
     var EndpointModel = stateMachine.EndpointModel,
-        EndpointView = plumbing.EndpointView;
+        EndpointView = plumbing.endpoints.EndpointView;
 
     var ToyEndpointView = EndpointView.extend({labelled: true});
 
@@ -122,8 +123,8 @@ describe("go.components.plumbing (endpoints)", function() {
 
   describe(".DiagramEndpointGroup", function() {
     var StateModel = stateMachine.StateModel,
-        StateView = plumbing.StateView,
-        DiagramEndpointGroup = plumbing.DiagramEndpointGroup;
+        StateView = plumbing.states.StateView,
+        DiagramEndpointGroup = plumbing.endpoints.DiagramEndpointGroup;
 
     var endpoints,
         a3,
@@ -195,7 +196,7 @@ describe("go.components.plumbing (endpoints)", function() {
 
 
   describe(".PositionableEndpointView", function() {
-    var PositionableEndpointView = plumbing.PositionableEndpointView;
+    var PositionableEndpointView = plumbing.endpoints.PositionableEndpointView;
 
     var ToyEndpointView = PositionableEndpointView.extend({
       reposition: function(p) { this.p = p; },
@@ -241,7 +242,7 @@ describe("go.components.plumbing (endpoints)", function() {
 
   describe(".ParametricEndpointView", function() {
     var EndpointModel = stateMachine.EndpointModel,
-        ParametricEndpointView = plumbing.ParametricEndpointView;
+        ParametricEndpointView = plumbing.endpoints.ParametricEndpointView;
 
     var state,
         endpoint;
@@ -335,7 +336,7 @@ describe("go.components.plumbing (endpoints)", function() {
   });
 
   describe(".FollowingEndpointView", function() {
-    var FollowingEndpointView = plumbing.FollowingEndpointView;
+    var FollowingEndpointView = plumbing.endpoints.FollowingEndpointView;
 
     var state,
         endpoint,
@@ -418,10 +419,10 @@ describe("go.components.plumbing (endpoints)", function() {
 
   describe(".AligningEndpointCollection", function() {
     var EndpointModel = stateMachine.EndpointModel,
-        ParametricEndpointView = plumbing.ParametricEndpointView;
+        ParametricEndpointView = plumbing.endpoints.ParametricEndpointView;
 
     var AligningEndpointCollection
-      = plumbing.AligningEndpointCollection;
+      = plumbing.endpoints.AligningEndpointCollection;
 
     var MockAligningEndpointCollection = AligningEndpointCollection.extend({
       margin: 0,

@@ -10,10 +10,10 @@
       SubviewCollection = structures.SubviewCollection,
       SubviewCollectionGroup = structures.SubviewCollectionGroup;
 
-  var plumbing = go.components.plumbing,
-      EndpointView = plumbing.EndpointView,
-      EndpointViewCollection = plumbing.EndpointViewCollection,
-      StateEndpointGroup = plumbing.StateEndpointGroup;
+  var endpoints = go.components.plumbing.endpoints,
+      EndpointView = endpoints.EndpointView,
+      EndpointViewCollection = endpoints.EndpointViewCollection,
+      StateEndpointGroup = endpoints.StateEndpointGroup;
 
   var StateView = UniqueView.extend({
     endpointSchema: [{attr: 'endpoints'}],
@@ -77,4 +77,4 @@
     StateViewCollection: StateViewCollection,
     DiagramStateGroup: DiagramStateGroup
   });
-})(go.components.plumbing);
+})(go.components.plumbing.states = {});

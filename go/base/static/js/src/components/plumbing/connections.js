@@ -14,8 +14,8 @@
       SubviewCollection = structures.SubviewCollection,
       SubviewCollectionGroup = structures.SubviewCollectionGroup;
 
-  var plumbing = go.components.plumbing,
-      EndpointView = plumbing.EndpointView;
+  var endpoints = go.components.plumbing.endpoints,
+      EndpointView = endpoints.EndpointView;
 
   // Base components
   // ---------------
@@ -225,4 +225,4 @@
     connectorOverlays: connectorOverlays,
     DirectionalConnectionView: DirectionalConnectionView
   });
-})(go.components.plumbing);
+})(go.components.plumbing.connections = {});

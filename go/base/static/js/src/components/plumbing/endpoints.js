@@ -293,4 +293,4 @@
     FollowingEndpointView: FollowingEndpointView,
     AligningEndpointCollection: AligningEndpointCollection
   });
-})(go.components.plumbing);
+})(go.components.plumbing.endpoints = {});

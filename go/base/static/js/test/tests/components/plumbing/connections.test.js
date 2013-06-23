@@ -1,6 +1,7 @@
-describe("go.components.plumbing (connections)", function() {
+describe("go.components.plumbing.connections", function() {
   var stateMachine = go.components.stateMachine;
-      plumbing = go.components.plumbing;
+
+  var plumbing = go.components.plumbing;
 
   var testHelpers = plumbing.testHelpers,
       setUp = testHelpers.setUp,
@@ -18,7 +19,7 @@ describe("go.components.plumbing (connections)", function() {
 
   describe(".ConnectionView", function() {
     var ConnectionModel = stateMachine.ConnectionModel,
-        ConnectionView = plumbing.ConnectionView;
+        ConnectionView = plumbing.connections.ConnectionView;
 
     var diagram,
         x1,
@@ -92,7 +93,7 @@ describe("go.components.plumbing (connections)", function() {
   });
 
   describe(".DiagramConnectionGroup", function() {
-    var DiagramConnectionGroup = plumbing.DiagramConnectionGroup;
+    var DiagramConnectionGroup = plumbing.connections.DiagramConnectionGroup;
 
     var diagram,
         connections,
@@ -122,7 +123,7 @@ describe("go.components.plumbing (connections)", function() {
     });
 
     describe("on 'connection' jsPlumb events", function() {
-      var EndpointView = plumbing.EndpointView,
+      var EndpointView = plumbing.endpoints.EndpointView,
           EndpointModel = stateMachine.EndpointModel;
 
       var UnknownEndpointView = EndpointView.extend();

@@ -1,6 +1,7 @@
-describe("go.components.plumbing (diagrams)", function() {
+describe("go.components.plumbing.diagrams", function() {
   var stateMachine = go.components.stateMachine;
-      plumbing = go.components.plumbing;
+
+  var plumbing = go.components.plumbing;
 
   var testHelpers = plumbing.testHelpers,
       setUp = testHelpers.setUp,
@@ -19,7 +20,7 @@ describe("go.components.plumbing (diagrams)", function() {
   });
 
   describe(".DiagramViewConnections", function() {
-    var DiagramViewConnections = plumbing.DiagramViewConnections;
+    var DiagramViewConnections = plumbing.connections.DiagramViewConnections;
 
     var connections,
         leftToRight;
@@ -47,7 +48,7 @@ describe("go.components.plumbing (diagrams)", function() {
     });
 
     describe("on 'connection' jsPlumb events", function() {
-      var EndpointView = plumbing.EndpointView,
+      var EndpointView = plumbing.endpoints.EndpointView,
           EndpointModel = stateMachine.EndpointModel;
 
       var UnknownEndpointView = EndpointView.extend();

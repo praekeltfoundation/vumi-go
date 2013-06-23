@@ -3,14 +3,20 @@
 // Components for state diagrams (or 'plumbing views') in Go
 
 (function(exports) {
-  var plumbing = go.components.plumbing,
-      StateView = plumbing.StateView,
-      ConnectionView = plumbing.ConnectionView,
-      StateViewCollection = plumbing.StateViewCollection,
-      ConnectionViewCollection = plumbing.ConnectionViewCollection,
-      DiagramStateGroup = plumbing.DiagramStateGroup,
-      DiagramConnectionGroup = plumbing.DiagramConnectionGroup,
-      DiagramEndpointGroup = plumbing.DiagramEndpointGroup;
+  var plumbing = go.components.plumbing;
+
+  var states = plumbing.states,
+      StateView = states.StateView,
+      StateViewCollection = states.StateViewCollection,
+      DiagramStateGroup = states.DiagramStateGroup;
+
+  var endpoints = plumbing.endpoints,
+      DiagramEndpointGroup = endpoints.DiagramEndpointGroup;
+
+  var connections = plumbing.connections,
+      ConnectionView = connections.ConnectionView,
+      ConnectionViewCollection = connections.ConnectionViewCollection,
+      DiagramConnectionGroup = connections.DiagramConnectionGroup;
 
   // The main view for the state diagram. Delegates interactions between
   // the states and their endpoints.
@@ -65,4 +71,4 @@
   _.extend(exports, {
     DiagramView: DiagramView
   });
-})(go.components.plumbing);
+})(go.components.plumbing.diagrams = {});
