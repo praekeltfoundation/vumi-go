@@ -15,22 +15,12 @@
   // The main view for the state diagram. Delegates interactions between
   // the states and their endpoints.
   var DiagramView = Backbone.View.extend({
-    // Override to change how the states map to the diagram view's model
     stateSchema: [{attr: 'states'}],
-
-    // Override to change the default state view type
     stateType: StateView,
-
-    // Override to change the default state view collection type
     stateCollectionType: StateViewCollection,
 
-    // Override to change how the connections map to the diagram view's model
     connectionSchema: [{attr: 'connections'}],
-
-    // Override to change the connection view type
     connectionType: ConnectionView,
-
-    // Override to change the default connection view collection type
     connectionCollectionType: ConnectionViewCollection,
 
     initialize: function() {

@@ -28,24 +28,16 @@
 
     uuid: function() { return this.model.id; },
 
-    // Override to set whether the endpoint can source connections
+    // Whether endpoint can be a source/target for connections
     isSource: true,
-
-    // Override to set whether the element can be the target of connections
     isTarget: true,
 
-    // Override to change what params are passed to jsPlumb when configuring
-    // the element as a connection source
+    // The params passed to jsPlumb when configuring the element as a
+    // connection source/target
     plumbSourceOptions: {anchor: 'Continuous', maxConnections: 1},
-
-    // Override to change what params are passed to jsPlumb when configuring
-    // the element as a connection target
     plumbTargetOptions: {anchor: 'Continuous'},
 
-    // Override to enable labelling
     labelled: false,
-
-    // Override to change the options used to initialise the label
     labelOptions: {my: 'right center', at: 'left center', text: ''},
 
     initialize: function(options) {

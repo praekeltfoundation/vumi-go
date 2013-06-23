@@ -16,14 +16,8 @@
       StateEndpointGroup = plumbing.StateEndpointGroup;
 
   var StateView = UniqueView.extend({
-    // A list of configuration objects, where each corresponds to a group of
-    // endpoints or a single endpoint. Override to change the state schema.
     endpointSchema: [{attr: 'endpoints'}],
-
-    // Default endpoint view type
     endpointType: EndpointView,
-
-    // Default endpoint view collection type
     endpointCollectionType: EndpointViewCollection,
 
     uuid: function() { return this.model.id; },
