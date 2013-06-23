@@ -757,7 +757,7 @@ describe("go.components.structures", function() {
       });
 
       view = new Backbone.View({model: model});
-      subviews = new SubthingViewCollections(view);
+      subviews = new SubthingViewCollections({view: view});
     });
 
     it("should set up the subviews according to the schema", function() {

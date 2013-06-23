@@ -39,26 +39,9 @@
   // Keeps connections between connection models in sync with the jsPlumb
   // connections in the UI
   var DiagramViewConnections = SubviewCollectionGroup.extend({
-    defaults: function() {
-      // Get the default endpoint type for the diagram's default state type
-      var endpointType = this.diagram
-        .stateType
-        .prototype
-        .endpointType;
-
-      return {
-        type: this.view.connectionType,
-        sourceType: endpointType,
-        targetType: endpointType
-      };
-    },
-
-    schema: function() { return _(this.diagram).result('connectionSchema'); },
-
-    constructor: function(diagram) {
-      this.diagram = diagram;  // helpful alias
-      this.collectionType = this.diagram.connectionCollectionType;
-      SubviewCollectionGroup.prototype.constructor.call(this, diagram);
+    constructor: function(options) {
+      SubviewCollectionGroup.prototype.constructor.call(this, options);
+      this.diagram = this.view; // alias for better context
 
       jsPlumb.bind(
         'connection',
@@ -142,18 +125,6 @@
     }
   });
 
-  // Keeps track of all the states in a state diagram
-  var DiagramViewStates = SubviewCollectionGroup.extend({
-    defaults: function() { return {type: this.diagram.stateType}; },
-    schema: function() { return _(this.diagram).result('stateSchema'); },
-
-    constructor: function(diagram) {
-      this.diagram = diagram;  // helpful alias
-      this.collectionType = this.diagram.stateCollectionType;
-      SubviewCollectionGroup.prototype.constructor.call(this, diagram);
-    }
-  });
-
   // The main view for the state diagram. Delegates interactions between
   // the states and their endpoints.
   var DiagramView = Backbone.View.extend({
@@ -177,13 +148,23 @@
 
     initialize: function() {
       // Lookup/Manager of all the states in the diagram
-      this.states = new DiagramViewStates(this);
+      this.states = new SubviewCollectionGroup({
+        view: this,
+        schema: this.stateSchema,
+        schemaDefaults: {type: this.stateType},
+        collectionType: this.stateCollectionType
+      });
 
       // Lookup/Manager of all the endpoints in the diagram
       this.endpoints = new DiagramViewEndpoints(this);
 
       // Lookup/Manager of all the connections in the diagram
-      this.connections = new DiagramViewConnections(this);
+      this.connections = new DiagramViewConnections({
+        view: this,
+        schema: this.connectionSchema,
+        schemaDefaults: {type: this.connectionType},
+        collectionType: this.connectionCollectionType
+      });
 
       // Set the view as the default container so jsPlumb connects endpoint
       // elements properly.
@@ -206,7 +187,6 @@
 
     // Secondary components
     DiagramViewEndpoints: DiagramViewEndpoints,
-    DiagramViewConnections: DiagramViewConnections,
-    DiagramViewStates: DiagramViewStates
+    DiagramViewConnections: DiagramViewConnections
   });
 })(go.components.plumbing);

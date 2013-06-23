@@ -72,11 +72,9 @@
 
   // A collection of connections views that form part of a diagram view
   var ConnectionViewCollection = SubviewCollection.extend({
-    defaults: {
-      type: ConnectionView,
-      sourceType: EndpointView,
-      targetType: EndpointView
-    },
+    type: ConnectionView,
+    sourceType: EndpointView,
+    targetType: EndpointView,
 
     viewOptions: function() {
       return {diagram: this.diagram, collection: this};
@@ -86,8 +84,8 @@
       this.diagram = options.view;
 
       SubviewCollection.prototype.constructor.call(this, options);
-      this.sourceType = options.sourceType;
-      this.targetType = options.targetType;
+      this.sourceType = options.sourceType || this.sourceType;
+      this.targetType = options.targetType || this.targetType;
     },
 
     // Returns whether or not this collection accepts a connection based on the

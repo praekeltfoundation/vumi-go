@@ -14,27 +14,15 @@
       EndpointView = plumbing.EndpointView,
       EndpointViewCollection = plumbing.EndpointViewCollection;
 
-  // Keeps track of all the endpoints in the state view
-  var StateViewEndpoints = SubviewCollectionGroup.extend({
-    defaults: function() { return {type: this.state.endpointType}; },
-    schema: function() { return _(this.state).result('endpointSchema'); },
-
-    constructor: function(state) {
-      this.state = state;  // helpful alias
-      this.collectionType = this.state.endpointCollectionType;
-      SubviewCollectionGroup.prototype.constructor.call(this, state);
-    }
-  });
-
   var StateView = UniqueView.extend({
     // A list of configuration objects, where each corresponds to a group of
     // endpoints or a single endpoint. Override to change the state schema.
     endpointSchema: [{attr: 'endpoints'}],
 
-    // Override to change the default endpoint view type
+    // Default endpoint view type
     endpointType: EndpointView,
 
-    // Override to change the default endpoint view collection type
+    // Default endpoint view collection type
     endpointCollectionType: EndpointViewCollection,
 
     uuid: function() { return this.model.id; },
@@ -47,7 +35,12 @@
       this.collection = options.collection;
 
       // Lookup of all the endpoints in this state
-      this.endpoints = new StateViewEndpoints(this);
+      this.endpoints = new SubviewCollectionGroup({
+        view: this,
+        schema: this.endpointSchema,
+        schemaDefaults: {type: this.endpointType},
+        collectionType: this.endpointCollectionType
+      });
 
       this.model.on('change', this.render, this);
     },
@@ -82,9 +75,6 @@
   _.extend(exports, {
     // Components intended to be used and extended
     StateView: StateView,
-    StateViewCollection: StateViewCollection,
-
-    // Secondary components
-    StateViewEndpoints: StateViewEndpoints
+    StateViewCollection: StateViewCollection
   });
 })(go.components.plumbing);
