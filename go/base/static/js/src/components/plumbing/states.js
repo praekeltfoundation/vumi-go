@@ -12,7 +12,8 @@
 
   var plumbing = go.components.plumbing,
       EndpointView = plumbing.EndpointView,
-      EndpointViewCollection = plumbing.EndpointViewCollection;
+      EndpointViewCollection = plumbing.EndpointViewCollection,
+      StateEndpointGroup = plumbing.StateEndpointGroup;
 
   var StateView = UniqueView.extend({
     // A list of configuration objects, where each corresponds to a group of
@@ -35,7 +36,7 @@
       this.collection = options.collection;
 
       // Lookup of all the endpoints in this state
-      this.endpoints = new SubviewCollectionGroup({
+      this.endpoints = new StateEndpointGroup({
         view: this,
         schema: this.endpointSchema,
         schemaDefaults: {type: this.endpointType},
@@ -72,9 +73,13 @@
     }
   });
 
+  // Keeps track of a diagrams's states
+  var DiagramStateGroup = SubviewCollectionGroup.extend();
+
   _.extend(exports, {
     // Components intended to be used and extended
     StateView: StateView,
-    StateViewCollection: StateViewCollection
+    StateViewCollection: StateViewCollection,
+    DiagramStateGroup: DiagramStateGroup
   });
 })(go.components.plumbing);

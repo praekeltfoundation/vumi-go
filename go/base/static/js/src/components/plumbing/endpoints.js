@@ -9,7 +9,8 @@
 
   var structures = go.components.structures,
       ViewCollectionGroup = structures.ViewCollectionGroup,
-      SubviewCollection = structures.SubviewCollection;
+      SubviewCollection = structures.SubviewCollection,
+      SubviewCollectionGroup = structures.SubviewCollectionGroup;
 
   var views = go.components.views,
       UniqueView = views.UniqueView,
@@ -99,6 +100,9 @@
       return SubviewCollection.prototype.remove.call(this, view, options);
     }
   });
+
+  // Keeps track of a state's endpoints
+  var StateEndpointGroup = SubviewCollectionGroup.extend();
 
   // Keeps track of all the endpoints across all states in a diagram
   var DiagramEndpointGroup = ViewCollectionGroup.extend({
@@ -289,6 +293,7 @@
   _.extend(exports, {
     EndpointView: EndpointView,
     EndpointViewCollection: EndpointViewCollection,
+    StateEndpointGroup: StateEndpointGroup,
     DiagramEndpointGroup: DiagramEndpointGroup,
 
     PositionableEndpointView: PositionableEndpointView,

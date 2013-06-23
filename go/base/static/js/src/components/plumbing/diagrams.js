@@ -3,15 +3,12 @@
 // Components for state diagrams (or 'plumbing views') in Go
 
 (function(exports) {
-  var structures = go.components.structures,
-      Lookup = structures.Lookup;
-      SubviewCollectionGroup = structures.SubviewCollectionGroup;
-
   var plumbing = go.components.plumbing,
       StateView = plumbing.StateView,
       ConnectionView = plumbing.ConnectionView,
       StateViewCollection = plumbing.StateViewCollection,
       ConnectionViewCollection = plumbing.ConnectionViewCollection,
+      DiagramStateGroup = plumbing.DiagramStateGroup,
       DiagramConnectionGroup = plumbing.DiagramConnectionGroup,
       DiagramEndpointGroup = plumbing.DiagramEndpointGroup;
 
@@ -38,7 +35,7 @@
 
     initialize: function() {
       // Lookup/Manager of all the states in the diagram
-      this.states = new SubviewCollectionGroup({
+      this.states = new DiagramStateGroup({
         view: this,
         schema: this.stateSchema,
         schemaDefaults: {type: this.stateType},
