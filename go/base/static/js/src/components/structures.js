@@ -35,21 +35,30 @@
   //   - 'add' (key, value) - Emitted when an item is added
   //   - 'remove' (key, value) - Emitted when an item is removed
   var Lookup = Eventable.extend({
-    addDefaults: {silent: false},
-    removeDefaults: {silent: false},
+    addDefaults: {silent: false, sort: true},
+    removeDefaults: {silent: false, sort: true},
+
+    ordered: false,
+
+    // The comparator to use if the lookup is ordered
+    comparator: function(v, i) { return i; },
 
     constructor: function(items) {
       this._items = {};
+      this._values = [];
 
-      items = items || {};
-      for (var k in items) { this.add(k, items[k], {silent: true}); }
+      for (var k in (items || {})) {
+        this.add(k, items[k], {silent: true, sort: false});
+      }
+
+      this.sort();
     },
 
-    size: function() { return _.size(this._items); },
+    size: function() { return _.size(this._values); },
 
     keys: function() { return _.keys(this._items); },
 
-    values: function() { return _.values(this._items); },
+    values: function() { return this._values.slice(); },
 
     items: function() { return _.clone(this._items); },
 
@@ -57,10 +66,10 @@
 
     map: function(fn, that) { return this.values().map(fn, that); },
 
-    where: function(props) { return _.where(this.values(), props); },
+    where: function(props) { return _.where(this._values, props); },
 
     eachItem: function(fn, that) {
-      var items = this.items();
+      var items = this._items;
       for (var k in items) { fn.call(that, k, items[k]); }
     },
 
@@ -68,11 +77,17 @@
 
     get: function(key) { return this._items[key]; },
 
+    at: function(i) { return this._values[i]; },
+
     add: function(key, value, options) {
       options = _(options || {}).defaults(this.addDefaults);
 
       this._items[key] = value;
+      this._values.push(value);
+
       if (!options.silent) { this.trigger('add', key, value); }
+      if (options.sort) { this.sort(); }
+
       return this;
     },
 
@@ -82,9 +97,18 @@
       var value = this._items[key];
       if (value) {
         delete this._items[key];
+        this._values.splice(_(this._values).indexOf(value), 1);
+
         if (!options.silent) { this.trigger('remove', key, value); }
       }
       return value;
+    },
+
+    sort: function() {
+      if (this.ordered) {
+        this._values = _(this._values).sortBy(this.comparator, this);
+      }
+      return this;
     }
   });
 
