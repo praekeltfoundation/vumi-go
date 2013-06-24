@@ -5,7 +5,7 @@
 {% block content_title %}New Conversation{% endblock %}
 
 {% block content_main %}
-<form class="indent" method="post" action="">
+<form id="form-conversation" class="indent" method="post" action="">
     {% csrf_token %}
 
     {{ form_general }}

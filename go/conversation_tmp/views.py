@@ -114,12 +114,15 @@ def contacts(request, campaign_key):
             return redirect('conversations_tmp:index')
 
         group_keys = request.POST.getlist('group')
+        print '-----------'
+        print group_keys
+        print '-----------'
         for group_key in group_keys:
             conversation.add_group(group_key)
         conversation.save()
 
-        # TODO save and go to next step.
-        return redirect('conversations_tmp:preview', campaign_key=conversation.key)
+        
+        # return redirect('conversations_tmp:preview', campaign_key=conversation.key)
 
     groups = sorted(request.user_api.list_groups(),
                     key=lambda group: group.created_at,
