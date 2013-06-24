@@ -69,6 +69,9 @@ class TagpoolSet(object):
     def display_name(self, pool):
         return self._pools[pool].get('display_name', pool)
 
+    def country_name(self, pool, default):
+        return self._pools[pool].get('country_name', default)
+
     def user_selects_tag(self, pool):
         return self._pools[pool].get('user_selects_tag', False)
 
