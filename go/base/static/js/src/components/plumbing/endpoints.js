@@ -88,7 +88,7 @@
     viewOptions: function() { return {state: this.view, collection: this}; },
 
     remove: function(viewOrId, options) {
-      var view = this.get(this.idOfView(viewOrId)),
+      var view = this.resolveView(viewOrId),
           connections = this.view.diagram.connections,
           remove = function(c) { connections.remove(c, options); };
 

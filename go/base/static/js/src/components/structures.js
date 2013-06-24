@@ -243,6 +243,12 @@
     idOfModel: idOfModel,
     idOfView: idOfView,
 
+    // Useful in situations where we need to do something with a view in the
+    // collection, but aren't sure whether we were given the view or its id.
+    resolveView: function(viewOrId) {
+      return this.get(this.idOfView(viewOrId));
+    },
+
     _ensureModel: function(obj) {
       return obj instanceof Backbone.Model
         ? obj
