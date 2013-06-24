@@ -105,13 +105,6 @@
       // Lookup of item owners by item keys
       this._owners = {};
 
-      // Lookup of the add callbacks bound to member add events. We only need
-      // to bind callbacks for adds and not removes, since we need to know the
-      // owner of an item to be added, while with removes, we know already. We
-      // keep a lookup so we can unbind the add callbacks when the member is
-      // unsubscribed.
-      this._memberAdds = {};
-
       lookups = lookups || {};
       for (var k in lookups) { this.subscribe(k, lookups[k]); }
     },
@@ -141,22 +134,18 @@
 
     subscribe: function(key, lookup) {
       var add = _(this.onMemberAdd).bind(this, lookup);
-      this._memberAdds[key] = add;
-      this.members.add(key, lookup);
-
       lookup.eachItem(add);
-      lookup.on('add', add);
-      lookup.on('remove', this.onMemberRemove, this);
+
+      this.listenTo(lookup, 'add', add);
+      this.listenTo(lookup, 'remove', this.onMemberRemove, this);
+
+      this.members.add(key, lookup);
       return this;
     },
 
     unsubscribe: function(key) {
-      var lookup = this.members.get(key),
-          add = this._memberAdds[key];
-
-      delete this._memberAdds[key];
-      lookup.off('add', add);
-      lookup.off('remove', this.onMemberRemove, this);
+      var lookup = this.members.get(key);
+      this.stopListening(lookup);
 
       lookup.keys().forEach(this.onMemberRemove, this);
       this.members.remove(key);

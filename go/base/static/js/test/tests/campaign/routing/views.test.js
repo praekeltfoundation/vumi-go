@@ -144,14 +144,14 @@ describe("go.campaign.routing (views)", function() {
         assert(oneElExists('[data-uuid="channel4"] [data-uuid="endpoint81"]'));
       });
 
-      it("should display the state's description", function() {
-        assert(noElExists('[data-uuid="channel4"] .description'));
+      it("should display the state's name", function() {
+        assert(noElExists('[data-uuid="channel4"] .name'));
         state.render();
 
-        assert(oneElExists('[data-uuid="channel4"] .description'));
+        assert(oneElExists('[data-uuid="channel4"] .name'));
         assert.equal(
-          $('[data-uuid="channel4"] .description').text(),
-          'Invisible Sms: *181#');
+          $('[data-uuid="channel4"] .name').text(),
+          '*181#');
       });
     });
   });
