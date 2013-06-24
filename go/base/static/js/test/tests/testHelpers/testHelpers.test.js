@@ -1,5 +1,6 @@
 describe("go.testHelpers", function() {
-  var testHelpers = go.testHelpers;
+  var testHelpers = go.testHelpers,
+      assertFails = testHelpers.assertFails;
 
   beforeEach(function() {
     $('body').append([
@@ -9,6 +10,8 @@ describe("go.testHelpers", function() {
         "<div id='c' class='different-thing'></div>",
       "</div>"
     ].join(''));
+
+    Backbone.Relational.store.reset();
   });
 
   afterEach(function() {
@@ -33,6 +36,61 @@ describe("go.testHelpers", function() {
     it("should determine whether no element exists", function() {
       assert(noElExists('.kjhfsdfsdf'));
       assert(!noElExists('#a'));
+    });
+  });
+
+  describe(".assertModelAttrs", function() {
+    var assertModelAttrs = testHelpers.assertModelAttrs;
+
+    var models = go.components.models,
+        Model = models.Model;
+
+    var ToyModel = Model.extend({
+      relations: [{
+        type: Backbone.HasMany,
+        key: 'submodels',
+        relatedModel: Model
+      }]
+    });
+
+    it("should determine whether a model has only the given attrs", function() {
+      assertModelAttrs(new ToyModel({
+        uuid: 'jimmy',
+        a: 'red',
+        b: 'blue',
+        c: 'green',
+        submodels: [
+          {uuid: 'one', spoon: 'yes'},
+          {uuid: 'two', spoon: 'pen'}]
+      }), {
+        uuid: 'jimmy',
+        a: 'red',
+        b: 'blue',
+        c: 'green',
+        submodels: [
+          {uuid: 'one', spoon: 'yes'},
+          {uuid: 'two', spoon: 'pen'}]
+      });
+
+      assertFails(function() {
+        assertModelAttrs(new ToyModel({
+          uuid: 'sam',
+          a: 'red',
+          b: 'blue',
+          c: 'green',
+          submodels: [
+            {uuid: 'one', spoon: 'yes'},
+            {uuid: 'two', spoon: 'pen'}]
+        }), {
+          uuid: 'sam',
+          a: 'red',
+          b: 'blue',
+          c: 'green',
+          submodels: [
+            {uuid: 'one', spoon: 'yes'},
+            {uuid: 'two', spoon: 'rawr'}]
+        });
+      });
     });
   });
 });
