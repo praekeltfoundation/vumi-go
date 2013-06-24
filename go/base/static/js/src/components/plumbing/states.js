@@ -47,7 +47,7 @@
     },
 
     render: function() {
-      this.diagram.$el.append(this.$el);
+      this.collection.appendToView(this);
       this.endpoints.render();
       return this;
     }
@@ -60,7 +60,7 @@
     viewOptions: function() { return {diagram: this.view, collection: this}; },
 
     remove: function(viewOrId, options) {
-      var view = this.get(this.idOfView(viewOrId)),
+      var view = this.resolveView(viewOrId),
           endpoints = view.endpoints;
 
       endpoints.each(function(e) { endpoints.remove(e, options); });
