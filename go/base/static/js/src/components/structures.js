@@ -340,6 +340,7 @@
   // collections.
   var ViewCollectionGroup = LookupGroup.extend({
     idOfView: idOfView,
+    resolveView: ViewCollection.prototype.resolveView,
 
     add: function(memberKey, view, options) {
       var member = this.members.get(memberKey);
@@ -372,6 +373,12 @@
       this.attr = options.attr;
       options.models = this.view.model.get(this.attr);
       ViewCollection.prototype.constructor.call(this, options);
+    },
+
+    // Provides a way for each subview to be appended to the parent view.
+    appendToView: function(viewOrId) {
+      var subview = this.resolveView(viewOrId);
+      this.view.$el.append(subview.$el);
     }
   });
 

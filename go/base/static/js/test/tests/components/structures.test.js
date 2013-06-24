@@ -1,4 +1,8 @@
 describe("go.components.structures", function() {
+  var testHelpers = go.testHelpers,
+      noElExists = testHelpers.noElExists,
+      oneElExists = testHelpers.oneElExists;
+
   var structures = go.components.structures;
 
   describe(".Extendable", function() {
@@ -714,6 +718,14 @@ describe("go.components.structures", function() {
     function() {
       assert.deepEqual(subviews.keys(), ['a', 'b', 'c']);
       subviews.each(function(v) { assert.instanceOf(v, SubthingView); });
+    });
+
+    describe(".appendToView", function() {
+      it("should should append the subview to the parent view", function() {
+        assert(noElExists(view.$('#a')));
+        subviews.appendToView('a');
+        assert(oneElExists(view.$('#a')));
+      });
     });
   });
 
