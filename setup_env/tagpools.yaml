@@ -17,6 +17,7 @@ pools:
       transport_type: sms
       server_initiated: true
       transport_name: sms_transport
+      country_name: "South Africa"
       msg_options:
         transport_name: sms_transport
 
@@ -36,6 +37,7 @@ pools:
       transport_type: sms
       client_initiated: true
       transport_name: sms_transport_2
+      country_name: "Star Kingdom of Manticore"
       msg_options:
         transport_name: sms_transport_2
 
@@ -55,5 +57,6 @@ pools:
       transport_type: ussd
       client_initiated: true
       transport_name: ussd_transport
+      country_name: "South Africa"
       msg_options:
         transport_name: ussd_transport

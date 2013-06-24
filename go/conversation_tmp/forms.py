@@ -23,26 +23,30 @@ class CampaignGeneralForm(forms.Form):
                                 required=False, widget=RadioSelect)
 
 
-class CampaignConfigurationForm(forms.Form):
+# class CampaignConfigurationForm(forms.Form):
 
-    COUNTRY_CHOICES = (
-        ('.za', 'South Africa'),
-        ('.ke', 'Kenya'),
-    )
+#     COUNTRY_CHOICES = (
+#         ('.za', 'South Africa'),
+#         ('.ke', 'Kenya'),
+#     )
 
-    CHANNEL_CHOICES = (
-        ('ussd', 'USSD'),
-        ('sms', 'SMS'),
-    )
+#     CHANNEL_CHOICES = (
+#         ('ussd', 'USSD'),
+#         ('sms', 'SMS'),
+#     )
 
-    countries = forms.MultipleChoiceField(label="Select a destination",
-                                          widget=forms.Select(),
-                                          choices=COUNTRY_CHOICES)
-    # TODO: Channels are related to countries.
-    channels = forms.MultipleChoiceField(label="Select a channel",
-                                         widget=forms.Select(),
-                                         choices=CHANNEL_CHOICES)
-    keyword = forms.CharField(label="Define a keyword", max_length=100)
+#     countries = forms.MultipleChoiceField(label="Select a destination",
+#                                           widget=forms.Select(),
+#                                           choices=COUNTRY_CHOICES)
+#     # TODO: Channels are related to countries.
+#     channels = forms.MultipleChoiceField(label="Select a channel",
+#                                          widget=forms.Select(),
+#                                          choices=CHANNEL_CHOICES)
+#     keyword = forms.CharField(label="Define a keyword", max_length=100)
+
+
+# XXX: Temp
+from go.channel.forms import CampaignConfigurationForm
 
 
 class CampaignBulkMessageForm(forms.Form):
