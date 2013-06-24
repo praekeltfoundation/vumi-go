@@ -204,17 +204,23 @@
     // The default options passed to each new view
     viewOptions: {},
 
-    addDefaults: {
-      silent: false,
-      render: true,  // render view after adding
-      addModel: true  // add the model if it is not in the collection
+    // Determines whether or not the ViewCollection is ordered
+    ordered: false,
+
+    // Default comparator that sorts based on the model collection's comparator
+    comparator: function(v1, v2) {
+      return this.models.comparator(v1.model, v2.model);
     },
 
-    removeDefaults: {
-      silent: false,
+    addDefaults: _({
+      render: true,  // render view after adding
+      addModel: true  // add the model if it is not in the collection
+    }).defaults(Lookup.prototype.addDefaults),
+
+    removeDefaults: _({
       render: true,  // render view after adding
       removeModel: true  // remove the model if it is in the collection
-    },
+    }).defaults(Lookup.prototype.removeDefaults),
 
     constructor: function(options) {
       Lookup.prototype.constructor.call(this);
@@ -294,10 +300,10 @@
       }
 
       view = this._ensureView(view);
-      if (options.render) { view.render(); }
-
       if (model) { this._byModelId[this.idOfModel(model)] = view; }
       Lookup.prototype.add.call(this, this.idOfView(view), view, options);
+
+      if (options.render) { this.ordered ? this.render() : view.render(); }
       return view;
     },
 
