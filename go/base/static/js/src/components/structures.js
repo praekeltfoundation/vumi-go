@@ -297,10 +297,10 @@
       }
 
       view = this._ensureView(view);
-      if (options.render) { view.render(); }
-
       if (model) { this._byModelId[this.idOfModel(model)] = view; }
       Lookup.prototype.add.call(this, this.idOfView(view), view, options);
+
+      if (options.render) { view.render(); }
       return view;
     },
 

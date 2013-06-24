@@ -62,12 +62,11 @@
 
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
-      this.$column = this.diagram.$(options.columnEl);
       this.$name = $('<span></span>').attr('class', 'name');
     },
 
     render: function() {
-      this.$column.append(this.$el);
+      this.collection.appendToView(this);
 
       this.$el
         .css('position', 'relative')
@@ -112,13 +111,13 @@
   });
 
   var RoutingStateCollection = StateViewCollection.extend({
-    viewOptions: function() {
-      var opts = StateViewCollection.prototype.viewOptions.call(this);
-      return _(opts).extend({columnEl: this.columnEl});
+    initialize: function(options) {
+      this.$column = this.view.$(options.columnEl);
     },
 
-    initialize: function(options) {
-      this.columnEl = options.columnEl;
+    appendToView: function(viewOrId) {
+      var subview = this.resolveView(viewOrId);
+      this.$column.append(subview.$el);
     }
   });
 

@@ -48,11 +48,11 @@ describe("go.components.plumbing (endpoints)", function() {
       var x4;
 
       beforeEach(function() {
-        x4 = new ToyEndpointView({
+        x4 = x.endpoints.add('endpoints', new ToyEndpointView({
           state: x,
           collection: x.endpoints.members.get('endpoints'),
           model: new EndpointModel({uuid: 'x4'})
-        });
+        }), {render: false});
       });
 
       it("should append the endpoint to the state element", function() {
@@ -124,7 +124,7 @@ describe("go.components.plumbing (endpoints)", function() {
 
     var ToyEndpointView = PositionableEndpointView.extend({
       reposition: function(p) { this.p = p; },
-      position: function() { return this.p; }
+      position: function() { return this.p || {top: 0, left: 0}; }
     });
 
     var state,
@@ -133,11 +133,11 @@ describe("go.components.plumbing (endpoints)", function() {
     beforeEach(function() {
       state = diagram.states.get('x');
 
-      endpoint = new ToyEndpointView({
+      endpoint = state.endpoints.add('endpoints', new ToyEndpointView({
         state: state,
         collection: state.endpoints.members.get('endpoints'),
         model: new EndpointModel({uuid: 'x4'})
-      });
+      }), {render: false});
 
       state
         .render()
@@ -174,11 +174,11 @@ describe("go.components.plumbing (endpoints)", function() {
     beforeEach(function() {
       state = diagram.states.get('x');
 
-      endpoint = new ParametricEndpointView({
+      endpoint = state.endpoints.add('endpoints', new ParametricEndpointView({
         state: state,
         collection: state.endpoints.members.get('endpoints'),
         model: new EndpointModel({uuid: 'x4'})
-      });
+      }), {render: false});
 
       state
         .render()
@@ -272,12 +272,12 @@ describe("go.components.plumbing (endpoints)", function() {
       state = diagram.states.get('x');
       state.$el.append($target);
 
-      endpoint = new FollowingEndpointView({
+      endpoint = state.endpoints.add('endpoints', new FollowingEndpointView({
         state: state,
         target: '#target',
         collection: state.endpoints.members.get('endpoints'),
         model: new EndpointModel({uuid: 'x4'})
-      });
+      }));
 
       state
         .render()

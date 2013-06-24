@@ -58,7 +58,7 @@
     },
 
     render: function() {
-      this.diagram.$el.append(this.$el);
+      this.collection.appendToView(this);
       this.endpoints.render();
       return this;
     }

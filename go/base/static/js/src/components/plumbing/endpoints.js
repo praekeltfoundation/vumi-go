@@ -77,7 +77,7 @@
     },
 
     render: function() {
-      this.state.$el.append(this.$el);
+      this.collection.appendToView(this);
       if (this.labelled) { this.label.render(); }
     }
   });

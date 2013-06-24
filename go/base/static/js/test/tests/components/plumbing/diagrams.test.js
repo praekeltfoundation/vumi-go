@@ -45,7 +45,11 @@ describe("go.components.plumbing (diagrams)", function() {
         left: [{uuid: 'a3L1'}, {uuid: 'a3L2'}],
         right: [{uuid: 'a3R1'}, {uuid: 'a3R2'}]
       });
-      a3 = new StateView({diagram: diagram, model: modelA3});
+      a3 = new StateView({
+        diagram: diagram,
+        collection: diagram.states.members.get('apples'),
+        model: modelA3
+      });
 
       a1 = diagram.states.get('a1');
     });
