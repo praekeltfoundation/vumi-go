@@ -4,9 +4,9 @@
 // diagram.
 
 (function(exports) {
-  var plumbing = go.components.plumbing,
-      ConnectionView = plumbing.ConnectionView,
-      ConnectionViewCollection = plumbing.ConnectionViewCollection;
+  var connections = go.components.plumbing.connections,
+      ConnectionView = connections.ConnectionView,
+      ConnectionViewCollection = connections.ConnectionViewCollection;
 
   var DialogueConnectionView = ConnectionView.extend();
 

@@ -3,8 +3,8 @@
 // Structures for the dialogue diagram (the main view for the dialogue screen).
 
 (function(exports) {
-  var plumbing = go.components.plumbing,
-      DiagramView = plumbing.DiagramView;
+  var diagrams = go.components.plumbing.diagrams,
+      DiagramView = diagrams.DiagramView;
 
   var dialogue = go.campaign.dialogue,
       connections = dialogue.connections,

@@ -1,6 +1,7 @@
-describe("go.components.plumbing (connections)", function() {
+describe("go.components.plumbing.connections", function() {
   var stateMachine = go.components.stateMachine;
-      plumbing = go.components.plumbing;
+
+  var plumbing = go.components.plumbing;
 
   var testHelpers = plumbing.testHelpers,
       setUp = testHelpers.setUp,
@@ -18,7 +19,7 @@ describe("go.components.plumbing (connections)", function() {
 
   describe(".ConnectionView", function() {
     var ConnectionModel = stateMachine.ConnectionModel,
-        ConnectionView = plumbing.ConnectionView;
+        ConnectionView = plumbing.connections.ConnectionView;
 
     var diagram,
         x1,
@@ -50,23 +51,25 @@ describe("go.components.plumbing (connections)", function() {
     });
 
     describe(".render", function() {
-      it("should create the actual jsPlumb connection", function(done) {
-        var x1_y1 = new ConnectionView({
-          diagram: diagram,
-          model: new ConnectionModel({
-            uuid: 'x1-y1',
+      var connection;
+
+      beforeEach(function() {
+        connection = diagram.connections.add('connections', {
+          model: {
             source: {uuid: 'x1'},
             target: {uuid: 'y1'}
-          })
-        });
+          }
+        }, {render: false});
+      });
 
+      it("should create the actual jsPlumb connection", function(done) {
         jsPlumb.bind('connection', function(e) {
-          assert(x1_y1.source.$el.is(e.source));
-          assert(x1_y1.target.$el.is(e.target));
+          assert(connection.source.$el.is(e.source));
+          assert(connection.target.$el.is(e.target));
           done();
         });
 
-        x1_y1.render();
+        connection.render();
       });
     });
   });
@@ -87,6 +90,125 @@ describe("go.components.plumbing (connections)", function() {
 
         assert(connections.accepts(a1L1, b1R1));
         assert(!connections.accepts(b1R1, a1L1));
+      });
+    });
+  });
+
+  describe(".DiagramConnectionGroup", function() {
+    var DiagramConnectionGroup = plumbing.connections.DiagramConnectionGroup;
+
+    var diagram,
+        connections,
+        leftToRight;
+
+    beforeEach(function() {
+      diagram = newComplexDiagram();
+      connections = diagram.connections;
+      leftToRight = connections.members.get('leftToRight');
+    });
+
+    describe(".determineCollection", function() {
+      it("should determine which collection a source and target belong to",
+      function() {
+        assert.equal(
+          connections.members.get('leftToRight'),
+          connections.determineCollection(
+            diagram.endpoints.get('a1L1'),
+            diagram.endpoints.get('b2R1')));
+
+        assert.equal(
+          connections.members.get('rightToLeft'),
+          connections.determineCollection(
+            diagram.endpoints.get('b1R1'),
+            diagram.endpoints.get('a2L1')));
+      });
+    });
+
+    describe("on 'connection' jsPlumb events", function() {
+      var EndpointView = plumbing.endpoints.EndpointView,
+          EndpointModel = stateMachine.EndpointModel;
+
+      var UnknownEndpointView = EndpointView.extend();
+
+      beforeEach(function() {
+        // render the diagram to ensure the jsPlumb endpoints are drawn
+        diagram.render();
+      });
+
+      it("should add a connection model and its view if they do not yet exist",
+      function(done) {
+        var a1L1 = diagram.endpoints.get('a1L1'),
+            b2R1 = diagram.endpoints.get('b2R1');
+
+        connections.on('add', function(id, connection) {
+          // check that the model was added
+          assert.equal(connection.model.get('source'), a1L1.model);
+          assert.equal(connection.model.get('target'), b2R1.model);
+          assert.equal(
+            connection.model,
+            leftToRight.models.get('a1L1-b2R1'));
+
+          // check that the view was added
+          assert.equal(connection.source, a1L1);
+          assert.equal(connection.target, b2R1);
+          assert.equal(connection, connections.get('a1L1-b2R1'));
+
+          done();
+        });
+
+        jsPlumb.connect({source: a1L1.$el, target: b2R1.$el});
+      });
+
+      it("should fire an event when unsupported connections are encountered",
+      function(done) {
+        var a1L1 = diagram.endpoints.get('a1L1'),
+            a1L2 = diagram.endpoints.get('a1L2');
+
+        diagram.connections.on(
+          'error:unsupported',
+          function(source, target, plumbConnection) {
+            assert.equal(source, a1L1);
+            assert.equal(target, a1L2);
+            assert(a1L1.$el.is(plumbConnection.source));
+            assert(a1L2.$el.is(plumbConnection.target));
+            done();
+          });
+
+        jsPlumb.connect({source: a1L1.$el, target: a1L2.$el});
+      });
+    });
+
+    describe("on 'connectionDetached' jsPlumb events", function() {
+      beforeEach(function() {
+        // render the diagram and connections to ensure the jsPlumb endpoints
+        // and connections are drawn
+        diagram.render();
+      });
+
+      it("should remove the connection model and its view if they still exist",
+      function(done) {
+        var a1L2 = diagram.endpoints.get('a1L2'),
+            b2R2 = diagram.endpoints.get('b2R2'),
+            a1L2_b2R2 = connections.get('a1L2-b2R2');
+
+        // make sure that the connection did initially exist
+        assert(a1L2_b2R2);
+
+        connections.on('remove', function(id, connection) {
+
+          // check that the model was removed
+          assert(!leftToRight.models.get('a1L2-b2R2'));
+          assert.equal(connection.model.get('source'), a1L2.model);
+          assert.equal(connection.model.get('target'), b2R2.model);
+
+          // check that the view was removed
+          assert(!connections.has('a1L2-b2R2'));
+          assert.equal(a1L2_b2R2, connection);
+
+          done();
+        });
+
+        jsPlumb.detach(a1L2_b2R2.plumbConnection);
       });
     });
   });

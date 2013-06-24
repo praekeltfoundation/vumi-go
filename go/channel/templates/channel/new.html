@@ -1,0 +1,64 @@
+{% extends "app.html" %}
+
+{% block content_title %}New Channel{% endblock %}
+
+{% block content_main %}
+    <div class="row">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+
+<form class="indent" method="post" action="">
+    {% csrf_token %}
+
+    <div class="configuration">
+        <fieldset class="configuration_new row-fluid boxes">
+            <div class="span4">
+                <div class="box">
+                    <label for="id_{{ form_config.country.name }}">
+                        {{ form_config_new.country.label }}
+                    </label>
+
+                    {{ form_config_new.country }}
+                </div>
+            </div>
+
+            <div class="span4">
+                <div class="box">
+                    <label for="id_{{ form_config.channel.name }}">
+                      {{ form_config_new.channel.label }}
+                    </label>
+                    {{ form_config_new.channel }}
+                </div>
+            </div>
+
+            <div class="span4">
+                <div class="box">
+                    <input type="submit" class="btn btn-primary" value="save">
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</form>
+{% endblock %}
+
+
+{% block ondomready %}
+    {{ block.super }}
+    
+    // if a channel is already selected then we should show the
+    // configuration view for it.
+    $('input[name=channel]:checked').trigger('change');
+
+    $('input[name=channel]').on('change', function() {
+        $('.configuration').show();
+        $('.configuration fieldset').hide();
+        var $el = $('.configuration_' + $(this).attr('value'));
+        $el.show();
+    });
+
+    // TODO: form validation.
+
+
+{% endblock %}

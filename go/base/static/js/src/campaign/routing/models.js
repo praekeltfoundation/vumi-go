@@ -80,6 +80,7 @@ var stateMachine = go.components.stateMachine,
     }, {
       type: Backbone.HasMany,
       key: 'routing_entries',
+      parse: true,
       relatedModel: RoutingEntryModel
     }]
   });

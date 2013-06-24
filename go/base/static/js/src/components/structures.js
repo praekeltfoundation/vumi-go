@@ -5,7 +5,9 @@
 (function(exports) {
   var utils = go.utils,
       merge = utils.merge,
-      maybeByName = utils.maybeByName;
+      maybeByName = utils.maybeByName,
+      idOfModel = utils.idOfModel,
+      idOfView = utils.idOfView;
 
   // Acts as a 'base' for class-like objects which can be extended (with the
   // prototype chain set up automatically)
@@ -33,21 +35,30 @@
   //   - 'add' (key, value) - Emitted when an item is added
   //   - 'remove' (key, value) - Emitted when an item is removed
   var Lookup = Eventable.extend({
-    addDefaults: {silent: false},
-    removeDefaults: {silent: false},
+    addDefaults: {silent: false, sort: true},
+    removeDefaults: {silent: false, sort: true},
+
+    ordered: false,
+
+    // The comparator to use if the lookup is ordered
+    comparator: function(v, i) { return i; },
 
     constructor: function(items) {
       this._items = {};
+      this._values = [];
 
-      items = items || {};
-      for (var k in items) { this.add(k, items[k], {silent: true}); }
+      for (var k in (items || {})) {
+        this.add(k, items[k], {silent: true, sort: false});
+      }
+
+      this.sort();
     },
 
-    size: function() { return _.size(this._items); },
+    size: function() { return _.size(this._values); },
 
     keys: function() { return _.keys(this._items); },
 
-    values: function() { return _.values(this._items); },
+    values: function() { return this._values.slice(); },
 
     items: function() { return _.clone(this._items); },
 
@@ -55,10 +66,10 @@
 
     map: function(fn, that) { return this.values().map(fn, that); },
 
-    where: function(props) { return _.where(this.values(), props); },
+    where: function(props) { return _.where(this._values, props); },
 
     eachItem: function(fn, that) {
-      var items = this.items();
+      var items = this._items;
       for (var k in items) { fn.call(that, k, items[k]); }
     },
 
@@ -66,11 +77,17 @@
 
     get: function(key) { return this._items[key]; },
 
+    at: function(i) { return this._values[i]; },
+
     add: function(key, value, options) {
       options = _(options || {}).defaults(this.addDefaults);
 
       this._items[key] = value;
+      this._values.push(value);
+
       if (!options.silent) { this.trigger('add', key, value); }
+      if (options.sort) { this.sort(); }
+
       return this;
     },
 
@@ -80,9 +97,18 @@
       var value = this._items[key];
       if (value) {
         delete this._items[key];
+        this._values.splice(_(this._values).indexOf(value), 1);
+
         if (!options.silent) { this.trigger('remove', key, value); }
       }
       return value;
+    },
+
+    sort: function() {
+      if (this.ordered) {
+        this._values = _(this._values).sortBy(this.comparator, this);
+      }
+      return this;
     }
   });
 
@@ -102,13 +128,6 @@
 
       // Lookup of item owners by item keys
       this._owners = {};
-
-      // Lookup of the add callbacks bound to member add events. We only need
-      // to bind callbacks for adds and not removes, since we need to know the
-      // owner of an item to be added, while with removes, we know already. We
-      // keep a lookup so we can unbind the add callbacks when the member is
-      // unsubscribed.
-      this._memberAdds = {};
 
       lookups = lookups || {};
       for (var k in lookups) { this.subscribe(k, lookups[k]); }
@@ -139,40 +158,24 @@
 
     subscribe: function(key, lookup) {
       var add = _(this.onMemberAdd).bind(this, lookup);
-      this._memberAdds[key] = add;
-      this.members.add(key, lookup);
-
       lookup.eachItem(add);
-      lookup.on('add', add);
-      lookup.on('remove', this.onMemberRemove, this);
+
+      this.listenTo(lookup, 'add', add);
+      this.listenTo(lookup, 'remove', this.onMemberRemove, this);
+
+      this.members.add(key, lookup);
       return this;
     },
 
     unsubscribe: function(key) {
-      var lookup = this.members.get(key),
-          add = this._memberAdds[key];
-
-      delete this._memberAdds[key];
-      lookup.off('add', add);
-      lookup.off('remove', this.onMemberRemove, this);
+      var lookup = this.members.get(key);
+      this.stopListening(lookup);
 
       lookup.keys().forEach(this.onMemberRemove, this);
       this.members.remove(key);
       return lookup;
     }
   });
-
-  var idOfModel = function(obj) {
-    return obj.id
-      ? obj.id
-      : obj.cid || obj;
-  };
-
-  var idOfView = function(obj) {
-    return obj.uuid
-      ? _(obj).result('uuid')
-      : _(obj).result('id') || obj;
-  };
 
   // Maintains a collection of views, allowing views to be created dynamically
   // and interacted with collectively.
@@ -201,17 +204,23 @@
     // The default options passed to each new view
     viewOptions: {},
 
-    addDefaults: {
-      silent: false,
-      render: true,  // render view after adding
-      addModel: true  // add the model if it is not in the collection
+    // Determines whether or not the ViewCollection is ordered
+    ordered: false,
+
+    // Default comparator that sorts based on the model collection's comparator
+    comparator: function(v1, v2) {
+      return this.models.comparator(v1.model, v2.model);
     },
 
-    removeDefaults: {
-      silent: false,
+    addDefaults: _({
+      render: true,  // render view after adding
+      addModel: true  // add the model if it is not in the collection
+    }).defaults(Lookup.prototype.addDefaults),
+
+    removeDefaults: _({
       render: true,  // render view after adding
       removeModel: true  // remove the model if it is in the collection
-    },
+    }).defaults(Lookup.prototype.removeDefaults),
 
     constructor: function(options) {
       Lookup.prototype.constructor.call(this);
@@ -291,10 +300,10 @@
       }
 
       view = this._ensureView(view);
-      if (options.render) { view.render(); }
-
       if (model) { this._byModelId[this.idOfModel(model)] = view; }
       Lookup.prototype.add.call(this, this.idOfView(view), view, options);
+
+      if (options.render) { this.ordered ? this.render() : view.render(); }
       return view;
     },
 
@@ -372,8 +381,13 @@
   // A self-maintaining, 'flattened' lookup of subview collections defined by a
   // schema.
   //
-  // Arguments:
+  // Options:
   // - view: The parent view of the group
+  // - [schema]: A list of options for each subview collection. Override to
+  // change the subview options passed to each subview collection.
+  // - [schemaDefaults]: Defaults to apply to each subview collection option
+  // set in the schema
+  // - [collectionType]: The default subview collection type
   var SubviewCollectionGroup = ViewCollectionGroup.extend({
     // Override to change the subview collection type
     collectionType: SubviewCollection,
@@ -382,14 +396,15 @@
     // Override to change the subview collections are created.
     schema: [{attr: 'subviews'}],
 
-    // Defaults to apply to each subview spec/option set
-    defaults: {},
+    schemaDefaults: {},
 
-    constructor: function(view) {
+    constructor: function(options) {
       ViewCollectionGroup.prototype.constructor.call(this);
 
-      this.view = view;
-      this.schema = _(this).result('schema');
+      this.view = options.view;
+      this.schema = options.schema || this.schema;
+      this.schemaDefaults = options.schemaDefaults || this.schemaDefaults;
+      this.collectionType = options.collectionType || this.collectionType;
 
       // clone each collection option set so we don't modify the schema
       this.schema.forEach(
@@ -398,7 +413,7 @@
     },
 
     subscribe: function(options) {
-      _(options).defaults({view: this.view}, _(this).result('defaults'));
+      _(options).defaults({view: this.view}, _(this).result('schemaDefaults'));
 
       var collectionType = options.collectionType || this.collectionType,
           collection = new collectionType(options);

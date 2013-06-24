@@ -133,6 +133,7 @@ TEMPLATE_DIRS = (
     abspath("apps", "jsbox", "templates"),
     abspath("apps", "http_api", "templates"),
     abspath("conversation", "templates"),
+    abspath("channel", "templates"),
 )
 
 INSTALLED_APPS = (
