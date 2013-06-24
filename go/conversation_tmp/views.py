@@ -24,7 +24,7 @@ def details(request, campaign_key=None):
     """
 
     form_general = CampaignGeneralForm()
-    form_config_new = CampaignConfigurationForm(request.user_api)
+    form_config_new = CampaignConfigurationForm()
 
     if campaign_key:
         conversation = conversation_or_404(request.user_api, campaign_key)
