@@ -1,13 +1,15 @@
-describe("go.components.plumbing (endpoints)", function() {
-  var stateMachine = go.components.stateMachine;
-      plumbing = go.components.plumbing,
-      testHelpers = go.testHelpers;
-
-  var oneElExists = testHelpers.oneElExists,
+describe("go.components.plumbing.endpoints", function() {
+  var testHelpers = go.testHelpers,
+      oneElExists = testHelpers.oneElExists,
       noElExists = testHelpers.noElExists;
+
+  var stateMachine = go.components.stateMachine;
+
+  var plumbing = go.components.plumbing;
 
   var setUp = plumbing.testHelpers.setUp,
       newSimpleDiagram = plumbing.testHelpers.newSimpleDiagram,
+      newComplexDiagram = plumbing.testHelpers.newComplexDiagram,
       tearDown = plumbing.testHelpers.tearDown;
 
   var diagram;
@@ -23,7 +25,7 @@ describe("go.components.plumbing (endpoints)", function() {
 
   describe(".EndpointView", function() {
     var EndpointModel = stateMachine.EndpointModel,
-        EndpointView = plumbing.EndpointView;
+        EndpointView = plumbing.endpoints.EndpointView;
 
     var ToyEndpointView = EndpointView.extend({labelled: true});
 
@@ -119,8 +121,82 @@ describe("go.components.plumbing (endpoints)", function() {
     });
   });
 
+  describe(".DiagramEndpointGroup", function() {
+    var StateModel = stateMachine.StateModel,
+        StateView = plumbing.states.StateView,
+        DiagramEndpointGroup = plumbing.endpoints.DiagramEndpointGroup;
+
+    var endpoints,
+        a3,
+        a1;
+
+    var assertSubscribed = function(id, subscriber) {
+      assert(endpoints.members.has(id));
+      assert.includeMembers(endpoints.keys(), subscriber.keys());
+    };
+
+    var assertUnsubscribed = function(id, subscriber) {
+      assert(!endpoints.members.has(id));
+      subscriber.eachItem(function(id) { assert(!endpoints.has(id)); });
+    };
+
+    beforeEach(function() {
+      diagram = newComplexDiagram();
+      endpoints = new DiagramEndpointGroup(diagram);
+
+      var modelA3 = new StateModel({
+        uuid: 'a3',
+        left: [{uuid: 'a3L1'}, {uuid: 'a3L2'}],
+        right: [{uuid: 'a3R1'}, {uuid: 'a3R2'}]
+      });
+      a3 = new StateView({diagram: diagram, model: modelA3});
+
+      a1 = diagram.states.get('a1');
+    });
+
+    describe("on 'add' state events", function() {
+      it("should subscribe the new state's endpoints to the group",
+      function(done) {
+        diagram.states.on('add', function() {
+          assertSubscribed('a3', a3.endpoints);
+          done();
+        });
+
+        diagram.states.add('apples', a3);
+      });
+    });
+
+    describe("on 'remove' state events", function() {
+      it("should unsubscribe the state's endpoints from the group",
+      function(done) {
+        diagram.states.on('remove', function() {
+          assertUnsubscribed('a1', a1.endpoints);
+          done();
+        });
+
+        diagram.states.members.get('apples').remove('a1');
+      });
+    });
+
+    describe(".addState", function() {
+      it("should subscribe the state's endpoints to the group", function() {
+        endpoints.addState('a3', a3);
+        assertSubscribed('a3', a3.endpoints);
+      });
+    });
+
+    describe(".removeState", function() {
+      it("should unsubscribe the state's endpoints from the group",
+      function() {
+        endpoints.removeState('a1');
+        assertUnsubscribed('a1', a1.endpoints);
+      });
+    });
+  });
+
+
   describe(".PositionableEndpointView", function() {
-    var PositionableEndpointView = plumbing.PositionableEndpointView;
+    var PositionableEndpointView = plumbing.endpoints.PositionableEndpointView;
 
     var ToyEndpointView = PositionableEndpointView.extend({
       reposition: function(p) { this.p = p; },
@@ -166,7 +242,7 @@ describe("go.components.plumbing (endpoints)", function() {
 
   describe(".ParametricEndpointView", function() {
     var EndpointModel = stateMachine.EndpointModel,
-        ParametricEndpointView = plumbing.ParametricEndpointView;
+        ParametricEndpointView = plumbing.endpoints.ParametricEndpointView;
 
     var state,
         endpoint;
@@ -260,7 +336,7 @@ describe("go.components.plumbing (endpoints)", function() {
   });
 
   describe(".FollowingEndpointView", function() {
-    var FollowingEndpointView = plumbing.FollowingEndpointView;
+    var FollowingEndpointView = plumbing.endpoints.FollowingEndpointView;
 
     var state,
         endpoint,
@@ -343,10 +419,10 @@ describe("go.components.plumbing (endpoints)", function() {
 
   describe(".AligningEndpointCollection", function() {
     var EndpointModel = stateMachine.EndpointModel,
-        ParametricEndpointView = plumbing.ParametricEndpointView;
+        ParametricEndpointView = plumbing.endpoints.ParametricEndpointView;
 
     var AligningEndpointCollection
-      = plumbing.AligningEndpointCollection;
+      = plumbing.endpoints.AligningEndpointCollection;
 
     var MockAligningEndpointCollection = AligningEndpointCollection.extend({
       margin: 0,
