@@ -3,9 +3,9 @@
 // Structures for each dialogue state type
 
 (function(exports) {
-  var plumbing = go.components.plumbing,
-      StateView = plumbing.StateView,
-      StateViewCollection = plumbing.StateViewCollection;
+  var states = go.components.plumbing.states,
+      StateView = states.StateView,
+      StateViewCollection = states.StateViewCollection;
 
   // Base 'mode' for state views. Each mode acts as a 'delegate view',
   // targeting a dialogue view's element and acting according to the mode type

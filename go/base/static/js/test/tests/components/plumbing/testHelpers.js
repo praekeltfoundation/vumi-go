@@ -10,10 +10,10 @@
       StateMachineModel = stateMachine.StateMachineModel;
 
   var plumbing = go.components.plumbing,
-      EndpointView = plumbing.EndpointView,
-      StateView = plumbing.StateView,
-      ConnectionView = plumbing.ConnectionView,
-      DiagramView = plumbing.DiagramView;
+      EndpointView = plumbing.endpoints.EndpointView,
+      StateView = plumbing.states.StateView,
+      ConnectionView = plumbing.connections.ConnectionView,
+      DiagramView = plumbing.diagrams.DiagramView;
 
   // Mocks
   // -----

@@ -8,7 +8,9 @@
       functor = utils.functor;
 
   var structures = go.components.structures,
-      SubviewCollection = structures.SubviewCollection;
+      ViewCollectionGroup = structures.ViewCollectionGroup,
+      SubviewCollection = structures.SubviewCollection,
+      SubviewCollectionGroup = structures.SubviewCollectionGroup;
 
   var views = go.components.views,
       UniqueView = views.UniqueView,
@@ -26,24 +28,16 @@
 
     uuid: function() { return this.model.id; },
 
-    // Override to set whether the endpoint can source connections
+    // Whether endpoint can be a source/target for connections
     isSource: true,
-
-    // Override to set whether the element can be the target of connections
     isTarget: true,
 
-    // Override to change what params are passed to jsPlumb when configuring
-    // the element as a connection source
+    // The params passed to jsPlumb when configuring the element as a
+    // connection source/target
     plumbSourceOptions: {anchor: 'Continuous', maxConnections: 1},
-
-    // Override to change what params are passed to jsPlumb when configuring
-    // the element as a connection target
     plumbTargetOptions: {anchor: 'Continuous'},
 
-    // Override to enable labelling
     labelled: false,
-
-    // Override to change the options used to initialise the label
     labelOptions: {my: 'right center', at: 'left center', text: ''},
 
     initialize: function(options) {
@@ -97,6 +91,28 @@
 
       return SubviewCollection.prototype.remove.call(this, view, options);
     }
+  });
+
+  // Keeps track of a state's endpoints
+  var StateEndpointGroup = SubviewCollectionGroup.extend();
+
+  // Keeps track of all the endpoints across all states in a diagram
+  var DiagramEndpointGroup = ViewCollectionGroup.extend({
+    constructor: function(diagram) {
+      ViewCollectionGroup.prototype.constructor.call(this);
+      this.diagram = diagram;
+
+      // Add the initial states' endpoints
+      var states = diagram.states;
+      states.eachItem(this.addState, this);
+
+      states.on('add', this.addState, this);
+      states.on('remove', this.removeState, this);
+    },
+
+    addState: function(id, state) { this.subscribe(id, state.endpoints); },
+
+    removeState: function(id) { this.unsubscribe(id); }
   });
 
   // Derived components
@@ -269,10 +285,12 @@
   _.extend(exports, {
     EndpointView: EndpointView,
     EndpointViewCollection: EndpointViewCollection,
+    StateEndpointGroup: StateEndpointGroup,
+    DiagramEndpointGroup: DiagramEndpointGroup,
 
     PositionableEndpointView: PositionableEndpointView,
     ParametricEndpointView: ParametricEndpointView,
     FollowingEndpointView: FollowingEndpointView,
     AligningEndpointCollection: AligningEndpointCollection
   });
-})(go.components.plumbing);
+})(go.components.plumbing.endpoints = {});
