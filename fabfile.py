@@ -1,4 +1,4 @@
-from fabric.api import cd, sudo, env
+from fabric.api import cd, sudo, env, puts
 
 env.path = '/var/praekelt/vumi-go'
 
@@ -31,6 +31,24 @@ def restart_gunicorn():
             supervisorctl('restart vumi_web:goui_%s' % (i,))
 
 
+def restart_all(group=None, server_url='unix:///var/run/supervisor.sock'):
+    """
+    Restart all running processes one-by-one so that the system as a whole
+    experiences no down-time during the restart. If a group is specified,
+    restart only the processes within that group one by one.
+    """
+    ctl = _get_supervisorctl_proxy(server_url)
+    processes = ctl.getAllProcessInfo()
+    if group is not None:
+        processes = [p for p in processes if p['group'] == group]
+    processes = [p for p in processes if p['statename'] == 'RUNNING']
+    for p in processes:
+        p_name = '%s:%s' % (p['group'], p['name'])
+        puts("Restarting %s ..." % (p_name,))
+        ctl.stopProcess(p_name)
+        ctl.startProcess(p_name)
+
+
 def update_nodejs_modules():
     """
     Update the Node.js modules that the JS sandbox depends on.
@@ -48,3 +66,14 @@ def npm_install(package):
 
 def _venv_command(command, user='vumi'):
     return sudo('. ve/bin/activate && %s' % (command,), user=user)
+
+
+def _get_supervisorctl_proxy(serverurl):
+    import supervisor.xmlrpc
+    import xmlrpclib
+    transport = supervisor.xmlrpc.SupervisorTransport(
+        None, None, serverurl=serverurl)
+    # the url (http://127.0.0.1) is just a dummy value -- the
+    # transport determines how to connect.
+    proxy = xmlrpclib.ServerProxy('http://127.0.0.1', transport=transport)
+    return proxy.supervisor
