@@ -6,6 +6,7 @@ from django.views.generic import RedirectView
 
 admin.autodiscover()
 
+
 def health(request):
     return HttpResponse('')
 
@@ -24,7 +25,8 @@ urlpatterns = patterns('',
                                     query_string=True), name='home'),
     url(r'^conversations/',
         include('go.conversation.urls', namespace='conversations')),
-    url(r'^conversation-tmp/', include('go.conversation_tmp.urls', 
+    url(r'^channels/', include('go.channel.urls', namespace='channels')),
+    url(r'^conversation-tmp/', include('go.conversation_tmp.urls',
         namespace='conversations_tmp')),
     url(r'^app/', include('go.apps.urls')),
     url(r'^contacts/', include('go.contacts.urls', namespace='contacts')),
