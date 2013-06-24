@@ -114,16 +114,25 @@ def contacts(request, campaign_key):
             return redirect('conversations_tmp:index')
 
         group_keys = request.POST.getlist('group')
+
+        # TODO: Remove all groups
         for group_key in group_keys:
             conversation.add_group(group_key)
         conversation.save()
 
-        # TODO save and go to next step.
         return redirect('conversations_tmp:preview', campaign_key=conversation.key)
 
     groups = sorted(request.user_api.list_groups(),
                     key=lambda group: group.created_at,
                     reverse=True)
+
+
+    contact_store = request.user_api.contact_store
+    selected_groups = list(group.key for group in conversation.get_groups())
+
+    for group in groups:
+        if group.key in selected_groups:
+            group.selected = True
 
     query = request.GET.get('query', '')
     p = request.GET.get('p', 1)
