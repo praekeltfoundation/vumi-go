@@ -89,7 +89,6 @@
                 <a href="{% url 'conversations_tmp:contacts' conversation.key %}" class="btn btn-primary btn-mini">Edit</a>
             </h4>
             <p class="contacts">
-                {# TODO: List of groups contacts #}
                 <ol>
                 {% for group, member_count in groups.items %}
                     <li>{{group}} ({{member_count}} member{{member_count|pluralize}})</li>
