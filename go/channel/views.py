@@ -19,9 +19,14 @@ def new_channel(request):
     if request.method == 'POST':
         form = CampaignConfigurationForm(request.user_api, request.POST)
         if form.is_valid():
+            # TODO: Better validation?
+            pool, tag = form.cleaned_data['channel'].split(':')
+            if tag:
+                got_tag = request.user_api.acquire_specific_tag((pool, tag))
+            else:
+                got_tag = request.user_api.acquire_tag(pool)
             # TODO: Acquire tag, etc.
-            messages.info(request, 'Pretended to create channel: %r - %r.' % (
-                form.cleaned_data['countries'], form.cleaned_data['channels']))
+            messages.info(request, 'Acquired tag: %r.' % (got_tag,))
 
             # TODO save and go to next step.
             return redirect('conversations:index')

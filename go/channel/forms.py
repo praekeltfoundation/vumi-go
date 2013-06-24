@@ -3,10 +3,10 @@ from django import forms
 
 class CampaignConfigurationForm(forms.Form):
 
-    countries = forms.ChoiceField(label="Select a destination",
+    country = forms.ChoiceField(label="Select a destination",
                                           widget=forms.Select())
     # TODO: Channels are related to countries.
-    channels = forms.ChoiceField(label="Select a channel",
+    channel = forms.ChoiceField(label="Select a channel",
                                          widget=forms.Select())
     keyword = forms.CharField(label="Define a keyword", max_length=100,
                               required=False)
@@ -17,13 +17,13 @@ class CampaignConfigurationForm(forms.Form):
         self.tagpool_set = self.user_api.tagpools()
         self.channel_options = self._load_channel_options()
 
-        self.fields['countries'].choices = [
+        self.fields['country'].choices = [
             (country, country) for country in self.channel_options.keys()]
         channel_choices = []
         for country, channels in self.channel_options.iteritems():
             for name, items in channels.iteritems():
                 channel_choices.append(['%s: %s' % (country, name[1]), items])
-        self.fields['channels'].choices = channel_choices
+        self.fields['channel'].choices = channel_choices
 
     def _load_channel_options(self):
         channels = {}
