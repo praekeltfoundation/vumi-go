@@ -9,13 +9,16 @@ describe("go.components.stateMachine", function() {
     var EndpointModel = stateMachine.EndpointModel,
         ConnectionModel = stateMachine.ConnectionModel;
 
-    it("should assign a unique id from its source and target", function() {
-      var endpoint = new ConnectionModel({
-        source: new EndpointModel({uuid: 'a'}),
-        target: new EndpointModel({uuid: 'b'})
-      });
+    describe(".parse", function() {
+      it("should set the uuid attr based on the source and target attrs",
+      function() {
+        var attrs = ConnectionModel.prototype.parse({
+          source: {uuid: 'a'},
+          target: {uuid: 'b'}
+        });
 
-      assert.equal(endpoint.id, 'a-b');
+        assert.equal(attrs.uuid, 'a-b');
+      });
     });
   });
 });
