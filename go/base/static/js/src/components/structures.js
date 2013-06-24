@@ -351,8 +351,13 @@
   // A self-maintaining, 'flattened' lookup of subview collections defined by a
   // schema.
   //
-  // Arguments:
+  // Options:
   // - view: The parent view of the group
+  // - [schema]: A list of options for each subview collection. Override to
+  // change the subview options passed to each subview collection.
+  // - [schemaDefaults]: Defaults to apply to each subview collection option
+  // set in the schema
+  // - [collectionType]: The default subview collection type
   var SubviewCollectionGroup = ViewCollectionGroup.extend({
     // Override to change the subview collection type
     collectionType: SubviewCollection,
@@ -361,14 +366,15 @@
     // Override to change the subview collections are created.
     schema: [{attr: 'subviews'}],
 
-    // Defaults to apply to each subview spec/option set
-    defaults: {},
+    schemaDefaults: {},
 
-    constructor: function(view) {
+    constructor: function(options) {
       ViewCollectionGroup.prototype.constructor.call(this);
 
-      this.view = view;
-      this.schema = _(this).result('schema');
+      this.view = options.view;
+      this.schema = options.schema || this.schema;
+      this.schemaDefaults = options.schemaDefaults || this.schemaDefaults;
+      this.collectionType = options.collectionType || this.collectionType;
 
       // clone each collection option set so we don't modify the schema
       this.schema.forEach(
@@ -377,7 +383,7 @@
     },
 
     subscribe: function(options) {
-      _(options).defaults({view: this.view}, _(this).result('defaults'));
+      _(options).defaults({view: this.view}, _(this).result('schemaDefaults'));
 
       var collectionType = options.collectionType || this.collectionType,
           collection = new collectionType(options);
