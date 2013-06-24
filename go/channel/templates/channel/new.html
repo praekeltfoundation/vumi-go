@@ -49,11 +49,10 @@
     
     // if a channel is already selected then we should show the
     // configuration view for it.
-    $('input[name=channel]:checked').trigger('change')
+    $('input[name=channel]:checked').trigger('change');
 
     $('input[name=channel]').on('change', function() {
-        // hide both
-        $('.configuration').show()
+        $('.configuration').show();
         $('.configuration fieldset').hide();
         var $el = $('.configuration_' + $(this).attr('value'));
         $el.show();
