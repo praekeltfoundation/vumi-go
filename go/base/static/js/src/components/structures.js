@@ -79,14 +79,16 @@
 
     at: function(i) { return this._values[i]; },
 
+    last: function() { return this._values[this._values.length - 1]; },
+
     add: function(key, value, options) {
       options = _(options || {}).defaults(this.addDefaults);
 
       this._items[key] = value;
       this._values.push(value);
 
-      if (!options.silent) { this.trigger('add', key, value); }
       if (options.sort) { this.sort(); }
+      if (!options.silent) { this.trigger('add', key, value); }
 
       return this;
     },
