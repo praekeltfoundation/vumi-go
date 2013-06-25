@@ -16,7 +16,7 @@
 
     <fieldset class="configuration_new row-fluid boxes">
 
-        <div class="span4 country">
+        <div class="span4">
             <div class="box">
                 <label for="id_{{ form_config.country.name }}">
                     {{ form_config_new.country.label }}
@@ -32,8 +32,6 @@
                 <label for="id_{{ form_config.channel.name }}">
                   {{ form_config_new.channel.label }}
                 </label>
-
-
                 
                 {% for country, channels in form_config_new.channel_options.items %}
                     <select name="{{ form_config_new.channel.name }}"
@@ -67,12 +65,12 @@
         $('.channel select').hide();
         $('.channel select[data-relation-key="' + v + '"]').show();
     });
+    // trigger change in order to show the first select box.
     $('.country select').trigger('change');
 
     $('#form-channels').on('submit', function() {
-        // remove all the elements that are hidden, so that they're
-        // not submitted.
+        // remove all the select elements that are hidden, so that they're
+        // not posted.
         $(this).find('select:hidden').remove();
     });
-
 {% endblock %}
