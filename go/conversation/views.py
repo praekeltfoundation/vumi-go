@@ -9,7 +9,7 @@ from django.http import HttpResponse
 
 from go.conversation.forms import ConversationSearchForm, ReplyToMessageForm
 from go.base.utils import get_conversation_view_definition, conversation_or_404
-from go.conversation_tmp.forms import CampaignGeneralForm
+from go.wizard.forms import CampaignGeneralForm
 
 
 CONVERSATIONS_PER_PAGE = 12

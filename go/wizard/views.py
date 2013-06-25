@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 
-from go.conversation_tmp.forms import (
+from go.wizard.forms import (
     CampaignGeneralForm, CampaignConfigurationForm, CampaignBulkMessageForm,
     CampaignSurveryInitiateForm)
 from go.base.utils import conversation_or_404
@@ -39,10 +39,10 @@ def details(request, campaign_key=None):
             action = request.POST.get('action')
             if action == 'draft':
                 # save and go back to list.
-                return redirect('conversations_tmp:index')
+                return redirect('wizard:index')
 
             # TODO save and go to next step.
-            return redirect('conversations_tmp:message', campaign_key=conversation.key)
+            return redirect('wizard:message', campaign_key=conversation.key)
 
     return render(request, 'wizard_views/wizard_1_details.html', {
         'form_general': form_general,
@@ -55,7 +55,7 @@ def details(request, campaign_key=None):
 def message(request, campaign_key):
     conversation = conversation_or_404(request.user_api, campaign_key)
 
-    to = 'conversations_tmp:message_%s' % conversation.conversation_type
+    to = 'wizard:message_%s' % conversation.conversation_type
     return redirect(to, campaign_key=conversation.key)
 
 
@@ -68,10 +68,10 @@ def message_survey(request, campaign_key):
         action = request.POST.get('action')
         if action == 'draft':
             # save and go back to list.
-            return redirect('conversations_tmp:index')
+            return redirect('wizard:index')
 
         # TODO save and go to next step.
-        return redirect('conversations_tmp:contacts', campaign_key=conversation.key)
+        return redirect('wizard:contacts', campaign_key=conversation.key)
 
     return render(request, 'wizard_views/wizard_2_survey.html', {
         'campaign_key': campaign_key,
@@ -89,10 +89,10 @@ def message_bulk(request, campaign_key):
         action = request.POST.get('action')
         if action == 'draft':
             # save and go back to list.
-            return redirect('conversations_tmp:index')
+            return redirect('wizard:index')
 
         # TODO save and go to next step.
-        return redirect('conversations_tmp:contacts', campaign_key=conversation.key)
+        return redirect('wizard:contacts', campaign_key=conversation.key)
 
     return render(request, 'wizard_views/wizard_2_message_bulk.html', {
         'form': form,
@@ -108,7 +108,7 @@ def contacts(request, campaign_key):
         action = request.POST.get('action')
         if action == 'draft':
             # save and go back to list.
-            return redirect('conversations_tmp:index')
+            return redirect('wizard:index')
 
         group_keys = request.POST.getlist('group')
 

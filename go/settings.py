@@ -130,6 +130,7 @@ TEMPLATE_DIRS = (
     abspath("conversation", "templates"),
     abspath("channel", "templates"),
     abspath("routing", "templates"),
+    abspath("wizard", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -153,7 +154,7 @@ INSTALLED_APPS = (
     'djcelery_email',
     'go.base',
     'go.conversation',
-    'go.conversation_tmp',
+    'go.wizard',
     'go.contacts',
     'go.account',
 

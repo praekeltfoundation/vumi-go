@@ -71,7 +71,7 @@
         <div class="sub-messages">
             <h4>
                 Messages
-                <a href="{% url 'conversations_tmp:message' conversation.key %}" class="btn btn-primary btn-mini">Edit</a>
+                <a href="{% url 'wizard:message' conversation.key %}" class="btn btn-primary btn-mini">Edit</a>
             </h4>
 
             <p class="message">
@@ -86,7 +86,7 @@
         <div class="sub-contacts">
             <h4 class="control-label">
                 Contacts
-                <a href="{% url 'conversations_tmp:contacts' conversation.key %}" class="btn btn-primary btn-mini">Edit</a>
+                <a href="{% url 'wizard:contacts' conversation.key %}" class="btn btn-primary btn-mini">Edit</a>
             </h4>
             <p class="contacts">
                 {# TODO: List of groups contacts #}

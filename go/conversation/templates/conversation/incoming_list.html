@@ -58,10 +58,10 @@
                 <tbody>
                     {# TODO the message key here is fake. #}
                     {% for message in message_list %}
-                    <tr data-url="{% url 'conversations_tmp:incoming_detail' conversation.key 1 %}">
+                    <tr data-url="{% url 'wizard:incoming_detail' conversation.key 1 %}">
                         <td><input type="checkbox" value="{{ message.key }}"></td>
                         <td>
-                            <a href="{% url 'conversations_tmp:incoming_detail' conversation.key 1 %}">
+                            <a href="{% url 'wizard:incoming_detail' conversation.key 1 %}">
                                 {{ message.contact }}
                             </a>
                         </td>
