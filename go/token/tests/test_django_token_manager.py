@@ -6,7 +6,7 @@ from django.contrib import messages
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.vumitools.token_manager import TokenManager
-from go.base.django_token_manager import DjangoTokenManager
+from go.token.django_token_manager import DjangoTokenManager
 
 
 class DjangoTokenManagerTestCase(DjangoGoApplicationTestCase):

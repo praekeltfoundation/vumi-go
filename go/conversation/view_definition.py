@@ -11,7 +11,7 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from go.vumitools.exceptions import ConversationSendError
-from go.base.django_token_manager import DjangoTokenManager
+from go.token.django_token_manager import DjangoTokenManager
 from go.conversation.forms import ConfirmConversationForm, ReplyToMessageForm
 from go.conversation.tasks import export_conversation_messages
 

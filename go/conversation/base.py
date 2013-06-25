@@ -16,7 +16,7 @@ from django.conf import settings
 from django.http import HttpResponse
 
 from go.vumitools.exceptions import ConversationSendError
-from go.base.django_token_manager import DjangoTokenManager
+from go.token.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConversationForm, ConversationGroupForm,
                                     ConfirmConversationForm,
                                     ReplyToMessageForm)

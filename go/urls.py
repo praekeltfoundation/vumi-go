@@ -10,15 +10,17 @@ admin.autodiscover()
 def health(request):
     return HttpResponse('')
 
-urlpatterns = patterns('',
+urlpatterns = patterns(
+    '',
     # django admin site
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
     url(r'^admin/', include(admin.site.urls)),
 
     # simple todo view for stuff that's not completed yet
     url(r'^todo/.*$', 'go.base.views.todo', name='todo'),
-    url(r'^t/task/$', 'go.base.views.token_task', name='token_task'),
-    url(r'^t/(?P<token>\w+)/$', 'go.conversation.views.token', name='token'),
+
+    # confirmation tokens
+    url(r'^t/', include('go.token.urls')),
 
     # vumi go!
     url(r'^$', RedirectView.as_view(url='/conversations/', permanent=False,
