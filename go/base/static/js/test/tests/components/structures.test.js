@@ -50,8 +50,13 @@ describe("go.components.structures", function() {
     var Lookup = structures.Lookup,
         lookup;
 
+    var ToyLookup = Lookup.extend({
+      ordered: true,
+      comparator: function(v) { return v; }
+    });
+
     beforeEach(function() {
-      lookup = new Lookup({a: 1, b: 2, c: 3});
+      lookup = new ToyLookup({a: 1, b: 2, c: 3});
     });
 
     describe(".size", function() {
@@ -136,6 +141,12 @@ describe("go.components.structures", function() {
       });
     });
 
+    describe(".at", function() {
+      it("should get the item's value by its index", function() {
+        assert.equal(lookup.at(0), 1);
+      });
+    });
+
     describe(".add", function() {
       it("should add the item to the lookup", function() {
         assert.equal(lookup.add('d', 4), lookup);
@@ -150,6 +161,11 @@ describe("go.components.structures", function() {
         });
 
         lookup.add('d', 4);
+      });
+
+      it("should sort the lookup", function() {
+        lookup.add('d', 0);
+        assert.deepEqual(lookup.values(), [0, 1, 2, 3]);
       });
     });
 
@@ -167,6 +183,20 @@ describe("go.components.structures", function() {
         });
 
         lookup.remove('c');
+      });
+    });
+
+    describe(".sort", function() {
+      it("should sort the items", function() {
+        lookup = new ToyLookup();
+        lookup.add('a', 3, {sort: false});
+        lookup.add('b', 5, {sort: false});
+        lookup.add('c', 2, {sort: false});
+        lookup.add('d', 9, {sort: false});
+
+        assert.deepEqual(lookup.values(), [3, 5, 2, 9]);
+        lookup.sort();
+        assert.deepEqual(lookup.values(), [2, 3, 5, 9]);
       });
     });
   });

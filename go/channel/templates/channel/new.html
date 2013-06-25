@@ -2,63 +2,75 @@
 
 {% block content_title %}New Channel{% endblock %}
 
-{% block content_main %}
-    <div class="row">
-        <div class="span12">
-            {% include "base/includes/messages.html" %}
-        </div>
-    </div>
+{% block content_extraclass %}channels new{% endblock %}
 
-<form class="indent" method="post" action="">
+{% block content_main %}
+<div class="row">
+    <div class="span12">
+        {% include "base/includes/messages.html" %}
+    </div>
+</div>
+
+<form id="form-channels" class="indent" method="post" action="">
     {% csrf_token %}
 
-    <div class="configuration">
-        <fieldset class="configuration_new row-fluid boxes">
-            <div class="span4">
-                <div class="box">
-                    <label for="id_{{ form_config.country.name }}">
-                        {{ form_config_new.country.label }}
-                    </label>
+    <fieldset class="configuration_new row-fluid boxes">
 
-                    {{ form_config_new.country }}
-                </div>
-            </div>
+        <div class="span4">
+            <div class="box">
+                <label for="id_{{ form_config.country.name }}">
+                    {{ form_config_new.country.label }}
+                </label>
 
-            <div class="span4">
-                <div class="box">
-                    <label for="id_{{ form_config.channel.name }}">
-                      {{ form_config_new.channel.label }}
-                    </label>
-                    {{ form_config_new.channel }}
-                </div>
-            </div>
+                {{ form_config_new.country }}
 
-            <div class="span4">
-                <div class="box">
-                    <input type="submit" class="btn btn-primary" value="save">
-                </div>
             </div>
-        </fieldset>
-    </div>
+        </div>
+
+        <div class="span4 channel">
+            <div class="box">
+                <label for="id_{{ form_config.channel.name }}">
+                  {{ form_config_new.channel.label }}
+                </label>
+                
+                {% for country, channels in form_config_new.channel_options.items %}
+                    <select name="{{ form_config_new.channel.name }}"
+                        data-relation-key="{{ country }}">
+                        {% for channel in channels %}
+                        <option value="{{ channel.0 }}:">
+                            {{ channel.1 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="span4">
+            <div class="box">
+                <br>
+                <input type="submit" class="btn btn-primary" value="Save">
+            </div>
+        </div>
+    </fieldset>
 </form>
 {% endblock %}
 
 
 {% block ondomready %}
     {{ block.super }}
-    
-    // if a channel is already selected then we should show the
-    // configuration view for it.
-    $('input[name=channel]:checked').trigger('change');
 
-    $('input[name=channel]').on('change', function() {
-        $('.configuration').show();
-        $('.configuration fieldset').hide();
-        var $el = $('.configuration_' + $(this).attr('value'));
-        $el.show();
+    $('.country select').on('change', function() {
+        var v = $(this).find(':checked').val();
+        $('.channel select').hide();
+        $('.channel select[data-relation-key="' + v + '"]').show();
     });
+    // trigger change in order to show the first select box.
+    $('.country select').trigger('change');
 
-    // TODO: form validation.
-
-
+    $('#form-channels').on('submit', function() {
+        // remove all the select elements that are hidden, so that they're
+        // not posted.
+        $(this).find('select:hidden').remove();
+    });
 {% endblock %}
