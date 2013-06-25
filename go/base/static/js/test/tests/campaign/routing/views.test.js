@@ -35,24 +35,19 @@ describe("go.campaign.routing (views)", function() {
         name: 'default'
       });
 
-      endpoint = new RoutingEndpointView({
-        model: model,
-        state: state,
-        collection: state.endpoints.members.get('endpoints')
-      });
+      endpoint = state.endpoints.add(
+        'endpoints',
+        {model: model},
+        {render: false, silent: true});
     });
 
     describe(".render", function() {
-      beforeEach(function() {
-        state.render();
-      });
-
       it("should display the endpoint name", function() {
-        assert(noElExists('[data-uuid="endpoint80"]'));
+        assert(noElExists(state.$('[data-uuid="endpoint80"]')));
         endpoint.render();
 
-        assert(oneElExists('[data-uuid="endpoint80"]'));
-        assert.equal($('[data-uuid="endpoint80"]').text(), 'default');
+        assert(oneElExists(state.$('[data-uuid="endpoint80"]')));
+        assert.equal(state.$('[data-uuid="endpoint80"]').text(), 'default');
       });
     });
   });
@@ -117,17 +112,15 @@ describe("go.campaign.routing (views)", function() {
           {uuid: 'endpoint81', name: 'secondary'}]
       });
 
-      state = new RoutingStateView({
+      state = diagram.states.add('channels', new RoutingStateView({
         model: model,
         diagram: diagram,
-        columnEl: '#channels',
         collection: diagram.states.members.get('channels')
-      });
+      }), {render: false, silent: true});
     });
 
     describe(".render", function() {
       beforeEach(function() {
-        diagram.render();
         $column = $('#routing-diagram #channels');
       });
 
