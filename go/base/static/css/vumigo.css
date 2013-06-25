@@ -201,6 +201,37 @@ button {
 .alert {
   margin: 1em 0;
 }
+.boxes {
+  text-align: center;
+}
+.boxes .box {
+  background: #d2d0c7;
+  color: #000;
+  font-size: 16px;
+  padding: 15px 0;
+  text-align: center;
+  -webkit-border-radius: 5px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 5px;
+  -moz-background-clip: padding;
+  border-radius: 5px;
+  background-clip: padding-box;
+  margin-bottom: 1em;
+  min-height: 70px;
+}
+.boxes .box label {
+  text-align: left;
+  text-indent: 10%;
+}
+.boxes .box input,
+.boxes .box select {
+  width: auto;
+  max-width: 100%;
+  min-width: 80%;
+}
+.channels.new .channel select {
+  display: none;
+}
 .conversations.dashboard .status {
   text-transform: capitalize;
 }
@@ -290,31 +321,6 @@ button {
 }
 .conversations form .title .tooltip {
   text-transform: none;
-}
-.conversations form .box {
-  background: #d2d0c7;
-  color: #000;
-  font-size: 16px;
-  padding: 15px 0;
-  text-align: center;
-  -webkit-border-radius: 5px;
-  -webkit-background-clip: padding-box;
-  -moz-border-radius: 5px;
-  -moz-background-clip: padding;
-  border-radius: 5px;
-  background-clip: padding-box;
-  margin-bottom: 1em;
-  min-height: 70px;
-}
-.conversations form .box label {
-  text-align: left;
-  text-indent: 10%;
-}
-.conversations form .box input,
-.conversations form .box select {
-  width: auto;
-  max-width: 100%;
-  min-width: 80%;
 }
 .conversations #routing-diagram .column-container {
   text-align: center;
