@@ -14,8 +14,8 @@ from vumi.persist.redis_manager import RedisManager
 from go.base.utils import (make_read_only_form, make_read_only_formset,
     conversation_or_404)
 from go.vumitools.exceptions import ConversationSendError
-from go.conversation.forms import (ConversationForm, ConversationGroupForm,
-                                   ReplyToMessageForm)
+from go.conversation.forms import ReplyToMessageForm
+from go.conversation.old_forms import ConversationForm, ConversationGroupForm
 from go.apps.surveys import forms
 from go.conversation.tasks import export_conversation_messages
 
