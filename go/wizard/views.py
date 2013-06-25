@@ -12,7 +12,7 @@ from go.base.utils import conversation_or_404
 
 
 @login_required
-def details(request, conversation_key=None):
+def create(request, conversation_key=None):
     """
     TODO: This is a fake implementation, it's not based on anything
     other than displaying the views and perhaps formulating
@@ -40,13 +40,13 @@ def details(request, conversation_key=None):
             action = request.POST.get('action')
             if action == 'draft':
                 # save and go back to list.
-                return redirect('wizard:index')
+                return redirect('conversations:index')
 
             # TODO save and go to next step.
             return redirect(
-                'wizard:message', conversation_key=conversation.key)
+                'wizard:edit', conversation_key=conversation.key)
 
-    return render(request, 'wizard_views/wizard_1_details.html', {
+    return render(request, 'wizard_views/wizard_1_create.html', {
         'form_general': form_general,
         'form_config_new': form_config_new,
         'conversation_key': conversation_key,
@@ -55,15 +55,15 @@ def details(request, conversation_key=None):
 
 
 @login_required
-def message(request, conversation_key):
+def edit(request, conversation_key):
     conversation = conversation_or_404(request.user_api, conversation_key)
 
-    to = 'wizard:message_%s' % conversation.conversation_type
+    to = 'wizard:edit_%s' % conversation.conversation_type
     return redirect(to, conversation_key=conversation.key)
 
 
 @login_required
-def message_survey(request, conversation_key):
+def edit_survey(request, conversation_key):
     conversation = conversation_or_404(request.user_api, conversation_key)
     initiate_form = CampaignSurveryInitiateForm()
     if request.method == 'POST':
@@ -71,12 +71,12 @@ def message_survey(request, conversation_key):
         action = request.POST.get('action')
         if action == 'draft':
             # save and go back to list.
-            return redirect('wizard:index')
+            return redirect('conversations:index')
 
         # TODO save and go to next step.
         return redirect('wizard:contacts', conversation_key=conversation.key)
 
-    return render(request, 'wizard_views/wizard_2_survey.html', {
+    return render(request, 'wizard_views/wizard_2_edit_survey.html', {
         'conversation_key': conversation_key,
         'conversation': conversation,
         'initiate_form': initiate_form
@@ -84,7 +84,7 @@ def message_survey(request, conversation_key):
 
 
 @login_required
-def message_bulk(request, conversation_key):
+def edit_bulk_message(request, conversation_key):
     """The simpler of the two messages."""
     conversation = conversation_or_404(request.user_api, conversation_key)
     form = CampaignBulkMessageForm()
@@ -92,12 +92,12 @@ def message_bulk(request, conversation_key):
         action = request.POST.get('action')
         if action == 'draft':
             # save and go back to list.
-            return redirect('wizard:index')
+            return redirect('conversations:index')
 
         # TODO save and go to next step.
         return redirect('wizard:contacts', conversation_key=conversation.key)
 
-    return render(request, 'wizard_views/wizard_2_message_bulk.html', {
+    return render(request, 'wizard_views/wizard_2_edit_bulk_message.html', {
         'form': form,
         'conversation': conversation,
         'conversation_key': conversation_key
@@ -111,7 +111,7 @@ def contacts(request, conversation_key):
         action = request.POST.get('action')
         if action == 'draft':
             # save and go back to list.
-            return redirect('wizard:index')
+            return redirect('conversations:index')
 
         group_keys = request.POST.getlist('group')
 
@@ -159,6 +159,7 @@ def contacts(request, conversation_key):
     })
 
 
+# TODO: Something sensible with the pricing view.
 @login_required
 def pricing(request):
     return render(request, 'conversations/pricing.html', {

@@ -8,16 +8,6 @@
 {% block content_breadcrumbs %}
     {# TODO: Use bootstrap breadcrumbs #}
     <a href="{% conversation_screen conversation %}">Details</a>
-    {% if not conversation %}
-        <a href="#">Messages</a>
-        <a href="#">Contacts</a>
-        <a href="#">Preview &amp; Activate</a>
-    {% else %}
-        {# TODO: Make real conversation screens for these? #}
-        <a href="{% url 'wizard:message' conversation.key %}">Messages</a>
-        <a href="{% url 'wizard:contacts' conversation.key %}">Contacts</a>
-        <a href="{% conversation_screen conversation %}">Preview &amp; Activate</a>
-    {% endif %}
 {% endblock %}
 
 {% block content_actions_right %}
