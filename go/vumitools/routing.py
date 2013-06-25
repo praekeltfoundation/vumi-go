@@ -25,6 +25,40 @@ class InvalidConnectorError(RoutingError):
     """Raised when an invalid connector name is encountered."""
 
 
+class RoutingMetadata(object):
+    """Helps manage Vumi Go routing metadata on a message."""
+
+    def __init__(self, msg, outbound=None):
+        self._msg = msg
+
+    def get_hops(self):
+        """Return a reference to the hops list for the given message."""
+        hops = self._msg['routing_metadata'].setdefault('hops', [])
+        return hops
+
+    def push_hop(self, go_connector_str, endpoint):
+        """Add a new hop to the hops list for the given message."""
+        hops = self.get_hops()
+        hops.append([go_connector_str, endpoint])
+
+    def next_hop(self, outbound_msg):
+        """Computes the next hop assuming this message is following the
+        inverse of the hops contained in the supplied outbound msg.
+
+        Usually this is called on an event message with the outbound
+        message the event is for as the `outbound_msg` argument since
+        events follow the reverse of the path taken by their associated
+        outbound message.
+
+        Returns `None` if a suitable next hop cannot be determined.
+        """
+        our_hops = self.get_hops()
+        outbound_hops = self.__class__(outbound_msg).get_hops()
+        if len(our_hops) >= len(outbound_hops):
+            return None
+        return outbound_hops[-(len(our_hops) + 1)]
+
+
 class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
                                           GoWorkerConfigMixin):
     application_connector_mapping = ConfigDict(
@@ -216,27 +250,6 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         }.get(direction)
         return router_direction
 
-    def get_hops(self, msg):
-        """Return a reference to the hops list for the given message."""
-        hops = msg['routing_metadata'].setdefault('hops', [])
-        return hops
-
-    def push_hop(self, msg, go_connector_str, endpoint):
-        """Add a new hop to the hops list for the given message."""
-        hops = self.get_hops(msg)
-        hops.append([go_connector_str, endpoint])
-
-    def next_hop_for_event(self, event, outbound_msg):
-        """Compares the current hops taken by an event and its corresponding
-        outbound message and determines the next destination the event should
-        visit.
-        """
-        event_hops = self.get_hops(event)
-        outbound_hops = self.get_hops(outbound_msg)
-        if len(event_hops) >= len(outbound_hops):
-            return None
-        return outbound_hops[-(len(event_hops) + 1)]
-
     @inlineCallbacks
     def set_destination(self, msg, target, direction):
         """Parse a target `(str(go_connector), endpoint)` pair and determine
@@ -295,7 +308,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 " in which destination connector type is valid but"
                 " unknown. Bad connector is: %s" % conn, msg)
 
-        self.push_hop(msg, str(conn), target[1])
+        rmeta = RoutingMetadata(msg)
+        rmeta.push_hop(str(conn), target[1])
         returnValue((dst_connector_name, target[1]))
 
     def acquire_source(self, msg, connector_type, direction):
@@ -345,8 +359,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 % connector_type, msg)
 
         src_conn_str = str(src_conn)
-        if not self.get_hops(msg):
-            self.push_hop(msg, src_conn_str, msg.get_routing_endpoint())
+        rmeta = RoutingMetadata(msg)
+        if not rmeta.get_hops():
+            rmeta.push_hop(src_conn_str, msg.get_routing_endpoint())
         return src_conn_str
 
     @inlineCallbacks
@@ -481,11 +496,19 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         # events are in same direction as inbound messages so
         # we use INBOUND as the direction in this method.
 
+        # TODO: have hops include both source and destination
+        # TODO: have event dispatcher store outbound message hops and user account key
+        #       in the event message so that it doesn't have to be repeatedly looked up.
+        # TODO: have the next hop function check that existing event and outbound hops
+        #       match up and that the inbound endpoint is what is expected.
+
+        # TODO: check for routing metadata before loading message
         msg = yield self.find_message_for_event(event)
-        msg_mdh = self.get_metadata_helper(msg)
         if msg is None:
             raise UnroutableMessageError(
                 "Could not find transport user message for event", event)
+
+        msg_mdh = self.get_metadata_helper(msg)
         if not msg_mdh.has_user_account():
             raise UnroutableMessageError(
                 "Outbound message for event has no associated"
@@ -498,18 +521,23 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         # set the tag on the event so that if it is from a transport
         # we can set the source of the message correctly in acquire_source.
         msg_mdh = self.get_metadata_helper(msg)
-        # TODO: add helper_metadata to events
+        # TODO: the setdefault can be removed once Vumi events have
+        #       helper_metadata
         event.payload.setdefault('helper_metadata', {})
         event_mdh = self.get_metadata_helper(event)
         event_mdh.set_tag(msg_mdh.tag)
         event_mdh.set_user_account(msg_mdh.get_account_key())
 
+        # TODO: move hops helper functions to RoutingMetadata helper class
+
         connector_type = self.connector_type(connector_name)
         # we ignore the source connector but acquire_sources sets the initial
         # hop if needed
+        # TODO: check source in next hop
         self.acquire_source(event, connector_type, self.INBOUND)
 
-        target = self.next_hop_for_event(event, msg)
+        rmeta = RoutingMetadata(event)
+        target = rmeta.next_hop(msg)
         if target is None:
             raise UnroutableMessageError(
                 "Could not find next hop for event"
