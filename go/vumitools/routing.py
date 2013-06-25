@@ -280,6 +280,10 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 raise UnroutableMessageError(
                     "No transport name found for tagpool %r"
                     % conn.tagpool, msg)
+            if self.connector_type(transport_name) != self.TRANSPORT_TAG:
+                raise UnroutableMessageError(
+                    "Transport name %r found in tagpool metadata for pool"
+                    " %r is invalid." % (transport_name, conn.tagpool), msg)
             dst_connector_name = transport_name
 
         elif conn.ctype == conn.OPT_OUT:
@@ -288,8 +292,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         else:
             raise UnroutableMessageError(
                 "Serious error. Reached apparently unreachable state"
-                " in which destination connector type is both valid"
-                " but unknown. Bad connector is: %s" % conn, msg)
+                " in which destination connector type is valid but"
+                " unknown. Bad connector is: %s" % conn, msg)
 
         self.push_hop(msg, str(conn), target[1])
         returnValue((dst_connector_name, target[1]))
