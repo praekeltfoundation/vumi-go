@@ -201,90 +201,97 @@ button {
 .alert {
   margin: 1em 0;
 }
-.campaigns.dashboard .status {
+.conversations.dashboard .status {
   text-transform: capitalize;
 }
-.campaigns.details ul,
-.campaigns.details li {
+.conversations.details ul,
+.conversations.details li {
   list-style-type: none;
   padding: 0;
   margin: 0;
   width: auto;
 }
-.campaigns.details ul label,
-.campaigns.details li label {
+.conversations.details ul label,
+.conversations.details li label {
   font-weight: normal;
   display: inline;
 }
-.campaigns.details .configuration {
+.conversations.details .configuration {
   margin: 18px 0 0 0;
   display: none;
 }
-.campaigns.details .configuration ul,
-.campaigns.details .configuration li {
+.conversations.details .configuration ul,
+.conversations.details .configuration li {
   padding: 0;
   margin: 0;
   list-style-type: none;
 }
-.campaigns.summary .sub-details,
-.campaigns.summary .sub-actions,
-.campaigns.summary .sub-messages {
+.conversations.summary .sub-details,
+.conversations.summary .sub-actions,
+.conversations.summary .sub-messages {
   border-bottom: 1px #c9c9c9 solid;
   margin: 0 0 18px 0;
   padding: 0 0 18px 0;
 }
-.campaigns.summary h6 {
+.conversations.summary h6 {
   font-weight: bold;
   color: #878b8e;
 }
-.campaigns.summary h4 {
+.conversations.summary h4 {
   font-size: 20px;
   margin: 0 0 18px 0;
 }
-.campaigns.summary ol,
-.campaigns.summary ul,
-.campaigns.summary li {
+.conversations.summary ol,
+.conversations.summary ul,
+.conversations.summary li {
   list-style-type: none;
   padding: 0;
   margin: 0;
   width: auto;
 }
-.campaigns .header a {
-  color: #878b8e;
+.conversations .breadcrumbs span,
+.conversations .breadcrumbs a {
   font-weight: bold;
   font-size: 16px;
   margin-right: 10px;
 }
-.campaigns .header a.active {
+.conversations .breadcrumbs a:link,
+.conversations .breadcrumbs a:visted {
+  color: #2280ff;
+}
+.conversations .breadcrumbs .present {
   color: #000;
 }
-.campaigns .actions .right {
+.conversations .breadcrumbs span {
+  color: #878b8e;
+}
+.conversations .actions .right {
   text-align: right;
 }
-.campaigns .actions .right a:first-child {
+.conversations .actions .right a:first-child {
   margin-right: 20px;
 }
-.campaigns label {
+.conversations label {
   color: #000;
   font-weight: bold;
 }
-.campaigns label a:link,
-.campaigns label a:visited {
+.conversations label a:link,
+.conversations label a:visited {
   color: #000;
 }
-.campaigns label a:hover {
+.conversations label a:hover {
   text-decoration: none;
 }
-.campaigns form .boxes {
+.conversations form .boxes {
   text-align: center;
 }
-.campaigns form .title {
+.conversations form .title {
   text-transform: uppercase;
 }
-.campaigns form .title .tooltip {
+.conversations form .title .tooltip {
   text-transform: none;
 }
-.campaigns form .box {
+.conversations form .box {
   background: #d2d0c7;
   color: #000;
   font-size: 16px;
@@ -299,20 +306,20 @@ button {
   margin-bottom: 1em;
   min-height: 70px;
 }
-.campaigns form .box label {
+.conversations form .box label {
   text-align: left;
   text-indent: 10%;
 }
-.campaigns form .box input,
-.campaigns form .box select {
+.conversations form .box input,
+.conversations form .box select {
   width: auto;
   max-width: 100%;
   min-width: 80%;
 }
-.campaigns #routing-diagram .column-container {
+.conversations #routing-diagram .column-container {
   text-align: center;
 }
-.campaigns #routing-diagram .column-container .title {
+.conversations #routing-diagram .column-container .title {
   font-size: 22px;
   margin: 10px 0;
   font-family: inherit;
@@ -321,17 +328,17 @@ button {
   color: inherit;
   text-rendering: optimizelegibility;
 }
-.campaigns #routing-diagram .column-container .new {
+.conversations #routing-diagram .column-container .new {
   font-size: 35px;
   line-height: 50px;
   width: 130px;
   height: 50px;
 }
-.campaigns #routing-diagram .column-container .column {
+.conversations #routing-diagram .column-container .column {
   margin-top: 15px;
   display: inline-block;
 }
-.campaigns #routing-diagram .column-container .state {
+.conversations #routing-diagram .column-container .state {
   background: #d2d0c7;
   color: #333;
   font-size: 16px;
@@ -349,17 +356,17 @@ button {
   z-index: 0;
   -webkit-user-select: none;
 }
-.campaigns #routing-diagram .column-container .state .name {
+.conversations #routing-diagram .column-container .state .name {
   margin: 10px;
 }
-.campaigns #routing-diagram .column-container .state:hover {
+.conversations #routing-diagram .column-container .state:hover {
   cursor: move;
 }
-.campaigns #routing-diagram .column-container .endpoint:hover {
+.conversations #routing-diagram .column-container .endpoint:hover {
   cursor: pointer;
 }
-.campaigns #routing-diagram ._jsPlumb_endpoint,
-.campaigns #routing-diagram ._jsPlumb_connector {
+.conversations #routing-diagram ._jsPlumb_endpoint,
+.conversations #routing-diagram ._jsPlumb_connector {
   z-index: 200;
 }
 .contacts .smart-group-search form {

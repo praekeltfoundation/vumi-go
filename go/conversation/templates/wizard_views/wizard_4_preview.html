@@ -2,9 +2,16 @@
 {% load url from future %}
 {% load conversation_tags %}
 
-{% block content_extraclass %}campaigns summary{% endblock %}
+{% block content_extraclass %}converstations summary{% endblock %}
 
-{% block content_title %}Preview &amp; Activate{% endblock %}
+{% block content_title %}Preview &amp; Activate1{% endblock %}
+
+{% block content_breadcrumbs %}
+    <a href="{% url 'conversations_tmp:details' campaign_key %}">Details</a>
+    <a href="{% url 'conversations_tmp:message' campaign_key %}">Messages</a>
+    <a href="{% url 'conversations_tmp:contacts' campaign_key %}">Contacts</a>
+    <a href="{% url 'conversations_tmp:preview' campaign_key %}" class="present">Preview &amp; Activate</a>
+{% endblock %}
 
 
 {% block content_actions_right %}
@@ -100,10 +107,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-
-{% block ondomready %}
-    {{ block.super }}
-    // highlight the breadcrumbs.
 {% endblock %}

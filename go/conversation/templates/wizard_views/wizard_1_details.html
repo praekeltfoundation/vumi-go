@@ -1,8 +1,17 @@
 {% extends "wizard_views/wizard_base.html" %}
+{% load url from future %}
+
 
 {% block content_extraclass %}{{ block.super }} details{% endblock %}
 
 {% block content_title %}New Conversation{% endblock %}
+
+{% block content_breadcrumbs %}
+    <a href="{% url 'conversations_tmp:details' campaign_key %}" class="present">Details</a>
+    <span>Messages</span>
+    <span>Contacts</span>
+    <span>Preview &amp; Activate</span>
+{% endblock %}
 
 {% block content_main %}
 <form id="form-conversation" class="indent" method="post" action="">
@@ -101,8 +110,5 @@
         var $el = $('.configuration_' + $(this).attr('value'));
         $el.show();
     });
-
-    // TODO: form validation.
-
 
 {% endblock %}
