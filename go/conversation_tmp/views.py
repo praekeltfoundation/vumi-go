@@ -117,7 +117,8 @@ def contacts(request, campaign_key):
             conversation.add_group(group_key)
         conversation.save()
 
-        return redirect('conversations_tmp:preview', campaign_key=conversation.key)
+        return redirect('conversations:conversation',
+                        campaign_key=conversation.key, path_suffix='')
 
     groups = sorted(request.user_api.list_groups(),
                     key=lambda group: group.created_at,
@@ -151,66 +152,6 @@ def contacts(request, campaign_key):
         'page': page,
         'pagination_params': pagination_params,
         'campaign_key': campaign_key,
-    })
-
-
-@login_required
-def preview(request, campaign_key):
-    conversation = conversation_or_404(request.user_api, campaign_key)
-
-    contact_store = request.user_api.contact_store
-    groups = dict((group.name, contact_store.count_contacts_for_group(group))
-                  for group in conversation.get_groups())
-
-    return render(request, 'wizard_views/wizard_4_preview.html', {
-        'conversation': conversation,
-        'campaign_key': campaign_key,
-        'groups': groups,
-    })
-
-
-@login_required
-def incoming_list(request, campaign_key):
-    conversation = conversation_or_404(request.user_api, campaign_key)
-
-    # TODO: Conversation data.
-    # FAKE DATA FOR BADLARD.
-    message_list = (
-        {'contact': '07922 539 521', 'threads': 35, 'date': '2013-03-21'},
-        {'contact': '55555 539 521', 'threads': 27, 'date': '2013-03-21'},
-        {'contact': '07922 222 521', 'threads': 51, 'date': '2013-03-21'},
-        {'contact': '22222 539 222', 'threads': 99, 'date': '2013-03-21'},
-    )
-
-    return render(request, 'conversations/incoming_list.html', {
-        'conversation': conversation,
-        'message_list': message_list
-    })
-
-
-@login_required
-def incoming_detail(request, campaign_key, contact_key):
-    conversation = conversation_or_404(request.user_api, campaign_key)
-    form = CampaignBulkMessageForm()
-
-    if request.method == 'POST':
-        # TODO: process sending message from form
-        pass
-
-    # TODO: Conversation data.
-    # FAKE DATA FOR BADLARD.
-    message_list = (
-        {'contact': 'You', 'message': 'Thank you'},
-        {'contact': '55555 539 521', 'message': 'Saturday'},
-        {'contact': 'You', 'message': 'What days do you eat?'},
-        {'contact': '55555 539 521', 'message': 'Hotdogs'},
-        {'contact': 'You', 'message': 'What is your favourite meal?'},
-    )
-
-    return render(request, 'conversations/incoming_detail.html', {
-        'conversation': conversation,
-        'form': form,
-        'message_list': message_list
     })
 
 

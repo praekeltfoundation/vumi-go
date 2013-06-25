@@ -7,7 +7,7 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.http import HttpResponse
 
-from go.conversation.forms import ConversationSearchForm
+from go.conversation.forms import ConversationSearchForm, ReplyToMessageForm
 from go.base.utils import get_conversation_view_definition, conversation_or_404
 from go.conversation_tmp.forms import CampaignGeneralForm
 
@@ -122,3 +122,51 @@ def new_conversation(request):
 
     return redirect(view_def.get_view_url(
         next_view, conversation_key=conv.key))
+
+
+# TODO: The following should probably be moved over to view_definition.py
+
+
+@login_required
+def incoming_list(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
+
+    # TODO: Conversation data.
+    # FAKE DATA FOR BADLARD.
+    message_list = (
+        {'contact': '07922 539 521', 'threads': 35, 'date': '2013-03-21'},
+        {'contact': '55555 539 521', 'threads': 27, 'date': '2013-03-21'},
+        {'contact': '07922 222 521', 'threads': 51, 'date': '2013-03-21'},
+        {'contact': '22222 539 222', 'threads': 99, 'date': '2013-03-21'},
+    )
+
+    return render(request, 'conversations/incoming_list.html', {
+        'conversation': conversation,
+        'message_list': message_list
+    })
+
+
+@login_required
+def incoming_detail(request, conversation_key, contact_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
+    form = ReplyToMessageForm()
+
+    if request.method == 'POST':
+        # TODO: process sending message from form
+        pass
+
+    # TODO: Conversation data.
+    # FAKE DATA FOR BADLARD.
+    message_list = (
+        {'contact': 'You', 'message': 'Thank you'},
+        {'contact': '55555 539 521', 'message': 'Saturday'},
+        {'contact': 'You', 'message': 'What days do you eat?'},
+        {'contact': '55555 539 521', 'message': 'Hotdogs'},
+        {'contact': 'You', 'message': 'What is your favourite meal?'},
+    )
+
+    return render(request, 'conversations/incoming_detail.html', {
+        'conversation': conversation,
+        'form': form,
+        'message_list': message_list
+    })

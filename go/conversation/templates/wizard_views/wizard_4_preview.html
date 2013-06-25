@@ -14,9 +14,9 @@
     {% endif %}
     {# TODO: Proper lifecycle stuff. #}
     {% if conversation.stopped %}
-        <a href="{% url 'conversations_tmp:incoming_list' conversation.key %}" class="btn btn-primary">Start</a>
+        <a href="{% url 'conversations:incoming_list' conversation.key %}" class="btn btn-primary">Start</a>
     {% elif conversation.running %}
-        <a href="{% url 'conversations_tmp:incoming_list' conversation.key %}" class="btn btn-primary">Stop</a>
+        <a href="{% url 'conversations:incoming_list' conversation.key %}" class="btn btn-primary">Stop</a>
     {% else %}
         <a href="{% conversation_screen conversation %}" class="btn btn-primary">???</a>
     {% endif %}
