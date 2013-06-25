@@ -27,15 +27,15 @@
             <div class="box shadow conv-disabled">
                 <h3>1. Message Details</h3>
                 <br>
-                {% include "generic/includes/new.html" with form=conversation_form %}
+                {% include "conversation/includes/new.html" with form=conversation_form %}
             </div>
         </div>
         {% if confirm_start_conversation %}
-            {% include "generic/includes/conversation_start_confirmation.html" %}
+            {% include "conversation/includes/conversation_start_confirmation.html" %}
         {% elif send_messages %}
-            {% include "generic/includes/send.html" %}
+            {% include "conversation/includes/send.html" %}
         {% else %}
-            {% include "generic/includes/nosend.html" %}
+            {% include "conversation/includes/nosend.html" %}
         {% endif %}
         {% csrf_token %}
     </div>

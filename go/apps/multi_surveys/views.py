@@ -365,6 +365,7 @@ def show(request, conversation_key):
 
     return render(request, 'multi_surveys/show.html', {
         'conversation': conversation,
+        'button_template': 'conversation/includes/next-button.html',
     })
 
 

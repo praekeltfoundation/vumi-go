@@ -37,7 +37,7 @@ class ConversationViewMixin(object):
 
 
 class ConversationTemplateView(ConversationViewMixin, TemplateView):
-    template_base = 'conversation_views'
+    template_base = 'conversation'
 
     def get_template_names(self):
         return [self.get_template_name(self.view_name)]
