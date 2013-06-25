@@ -17,6 +17,8 @@
 
     uuid: function() { return idOfView(this.item); },
 
+    className: 'item',
+
     initialize: function(options) {
       this.item = options.item;
       this.span = this.spanOfEl(this.item.$el) || options.span || this.span;

@@ -111,6 +111,17 @@ describe("go.components.grid", function() {
       comparator: function(v1) { return v1.id.charCodeAt(0); }
     });
 
+    var assertRows = function() {
+      var actualRows = grid.$('.row').map(function() {
+        return [$(this)
+          .find('.item')
+          .map(function() { return $(this).attr('data-uuid'); }).get()];
+      }).get();
+
+      var expectedRows = Array.prototype.slice.call(arguments);
+      assert.deepEqual(actualRows, expectedRows);
+    };
+
     var items,
         grid;
 
@@ -132,31 +143,9 @@ describe("go.components.grid", function() {
       it("should re-render the grid according to the item ordering",
       function(done) {
         items.on('add', function() {
-          assert.equal(grid.$el.html(), [
-            '<div class="row" data-uuid="row0">',
-              '<div class="span3" data-uuid="a">',
-                '<div id="a">a</div>',
-              '</div>',
-              '<div class="span3" data-uuid="b">',
-                '<div id="b">b</div>',
-              '</div>',
-              '<div class="span3" data-uuid="c">',
-                '<div id="c">c</div>',
-              '</div>',
-              '<div class="span3" data-uuid="d">',
-                '<div id="d">d</div>',
-              '</div>',
-            '</div>',
-            '<div class="row" data-uuid="row1">',
-              '<div class="span3" data-uuid="e">',
-                '<div id="e">e</div>',
-              '</div>',
-              '<div class="span3" data-uuid="f">',
-                '<div id="f">f</div>',
-              '</div>',
-            '</div>'
-          ].join(''));
-
+          assertRows(
+            ['a', 'b', 'c', 'd'],
+            ['e', 'f']);
           done();
         });
 
@@ -168,23 +157,7 @@ describe("go.components.grid", function() {
       it("should re-render the grid according to the item ordering",
       function(done) {
         items.on('remove', function() {
-          assert.equal(grid.$el.html(), [
-            '<div class="row" data-uuid="row0">',
-              '<div class="span3" data-uuid="a">',
-                '<div id="a">a</div>',
-              '</div>',
-              '<div class="span3" data-uuid="c">',
-                '<div id="c">c</div>',
-              '</div>',
-              '<div class="span3" data-uuid="e">',
-                '<div id="e">e</div>',
-              '</div>',
-              '<div class="span3" data-uuid="f">',
-                '<div id="f">f</div>',
-              '</div>',
-            '</div>'
-          ].join(''));
-
+          assertRows(['a', 'c', 'e', 'f']);
           done();
         });
 
@@ -199,27 +172,9 @@ describe("go.components.grid", function() {
 
         grid.render();
 
-        assert.equal(grid.$el.html(), [
-          '<div class="row" data-uuid="row0">',
-            '<div class="span3" data-uuid="a">',
-              '<div id="a">a</div>',
-            '</div>',
-            '<div class="span3" data-uuid="c">',
-              '<div id="c">c</div>',
-            '</div>',
-            '<div class="span3" data-uuid="d">',
-              '<div id="d">d</div>',
-            '</div>',
-            '<div class="span3" data-uuid="e">',
-              '<div id="e">e</div>',
-            '</div>',
-          '</div>',
-          '<div class="row" data-uuid="row1">',
-            '<div class="span3" data-uuid="f">',
-              '<div id="f">f</div>',
-            '</div>',
-          '</div>'
-        ].join(''));
+        assertRows(
+          ['a', 'c', 'd', 'e'],
+          ['f']);
       });
     });
   });
