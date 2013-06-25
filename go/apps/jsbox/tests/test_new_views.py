@@ -6,14 +6,13 @@ from django.core.urlresolvers import reverse
 from go.base.utils import get_conversation_view_definition
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.apps.jsbox.log import LogManager
-from go.apps.jsbox.views import JsboxConversationViews
 
 from mock import patch, Mock
 
 
 class JsBoxTestCase(DjangoGoApplicationTestCase):
 
-    VIEWS_CLASS = JsboxConversationViews
+    TEST_CONVERSATION_TYPE = u'jsbox'
 
     def setUp(self):
         super(JsBoxTestCase, self).setUp()

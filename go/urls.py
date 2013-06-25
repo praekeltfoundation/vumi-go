@@ -30,7 +30,6 @@ urlpatterns = patterns(
     url(r'^channels/', include('go.channel.urls', namespace='channels')),
     url(r'^conversation-tmp/', include('go.conversation_tmp.urls',
         namespace='conversations_tmp')),
-    url(r'^app/', include('go.apps.urls')),
     url(r'^contacts/', include('go.contacts.urls', namespace='contacts')),
     url(r'^account/', include('go.account.urls', namespace='account')),
     url(r'^accounts/', include('registration.backends.default.urls')),
@@ -39,6 +38,10 @@ urlpatterns = patterns(
 
     # proxy API calls
     url(r'^api/', include('go.api.urls', namespace='api')),
+
+    # HACK: To keep this around temporarily.
+    url(r'^app/multi_survey/',
+        include('go.apps.multi_surveys.urls', namespace='multi_survey')),
 )
 
 urlpatterns += patterns('django.contrib.flatpages.views',

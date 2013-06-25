@@ -9,7 +9,7 @@ from django.utils.unittest import skip
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.apps.surveys.views import get_poll_config
+from go.apps.surveys.view_definition import get_poll_config
 from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
 from go.base.utils import get_conversation_view_definition
 
