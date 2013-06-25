@@ -21,6 +21,10 @@ class UnroutableMessageError(RoutingError):
         super(RoutingError, self).__init__(reason, msg)
 
 
+class InvalidConnectorError(RoutingError):
+    """Raised when an invalid connector name is encountered."""
+
+
 class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
                                           GoWorkerConfigMixin):
     application_connector_mapping = ConfigDict(
@@ -129,6 +133,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             config.application_connector_mapping)
         self.application_connectors = set(
             config.application_connector_mapping.itervalues())
+        self.transport_connectors = set()
+        self.transport_connectors.update(
+            config.receive_inbound_connectors)
+        self.transport_connectors.discard(
+            self.router_connectors)
 
     @inlineCallbacks
     def teardown_dispatcher(self):
@@ -178,9 +187,14 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             return self.CONVERSATION
         elif connector_name in self.router_connectors:
             return self.ROUTING_BLOCK
+        elif connector_name in self.transport_connectors:
+            return self.TRANSPORT_TAG
         elif connector_name == self.opt_out_connector:
             return self.OPT_OUT
-        return self.TRANSPORT_TAG
+        else:
+            raise InvalidConnectorError(
+                "Connector %r is not a valid connector name"
+                % (connector_name,))
 
     def get_application_connector(self, conversation_type):
         return self.application_connector_mapping.get(conversation_type)
