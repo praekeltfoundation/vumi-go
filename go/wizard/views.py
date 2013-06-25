@@ -12,7 +12,7 @@ from go.base.utils import conversation_or_404
 
 
 @login_required
-def details(request, campaign_key=None):
+def details(request, conversation_key=None):
     """
     TODO: This is a fake implementation, it's not based on anything
     other than displaying the views and perhaps formulating
@@ -23,8 +23,9 @@ def details(request, campaign_key=None):
     form_general = CampaignGeneralForm()
     form_config_new = CampaignConfigurationForm()
 
-    if campaign_key:
-        conversation = conversation_or_404(request.user_api, campaign_key)
+    conversation = None
+    if conversation_key:
+        conversation = conversation_or_404(request.user_api, conversation_key)
         form_general = CampaignGeneralForm(data={'name': conversation.name})
 
     if request.method == 'POST':
@@ -42,26 +43,28 @@ def details(request, campaign_key=None):
                 return redirect('wizard:index')
 
             # TODO save and go to next step.
-            return redirect('wizard:message', campaign_key=conversation.key)
+            return redirect(
+                'wizard:message', conversation_key=conversation.key)
 
     return render(request, 'wizard_views/wizard_1_details.html', {
         'form_general': form_general,
         'form_config_new': form_config_new,
-        'campaign_key': campaign_key
+        'conversation_key': conversation_key,
+        'conversation': conversation,
     })
 
 
 @login_required
-def message(request, campaign_key):
-    conversation = conversation_or_404(request.user_api, campaign_key)
+def message(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
 
     to = 'wizard:message_%s' % conversation.conversation_type
-    return redirect(to, campaign_key=conversation.key)
+    return redirect(to, conversation_key=conversation.key)
 
 
 @login_required
-def message_survey(request, campaign_key):
-    conversation = conversation_or_404(request.user_api, campaign_key)
+def message_survey(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
     initiate_form = CampaignSurveryInitiateForm()
     if request.method == 'POST':
         initiate_form = CampaignSurveryInitiateForm(request.POST)
@@ -71,19 +74,19 @@ def message_survey(request, campaign_key):
             return redirect('wizard:index')
 
         # TODO save and go to next step.
-        return redirect('wizard:contacts', campaign_key=conversation.key)
+        return redirect('wizard:contacts', conversation_key=conversation.key)
 
     return render(request, 'wizard_views/wizard_2_survey.html', {
-        'campaign_key': campaign_key,
+        'conversation_key': conversation_key,
         'conversation': conversation,
         'initiate_form': initiate_form
     })
 
 
 @login_required
-def message_bulk(request, campaign_key):
+def message_bulk(request, conversation_key):
     """The simpler of the two messages."""
-    conversation = conversation_or_404(request.user_api, campaign_key)
+    conversation = conversation_or_404(request.user_api, conversation_key)
     form = CampaignBulkMessageForm()
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -92,18 +95,18 @@ def message_bulk(request, campaign_key):
             return redirect('wizard:index')
 
         # TODO save and go to next step.
-        return redirect('wizard:contacts', campaign_key=conversation.key)
+        return redirect('wizard:contacts', conversation_key=conversation.key)
 
     return render(request, 'wizard_views/wizard_2_message_bulk.html', {
         'form': form,
         'conversation': conversation,
-        'campaign_key': campaign_key
+        'conversation_key': conversation_key
     })
 
 
 @login_required
-def contacts(request, campaign_key):
-    conversation = conversation_or_404(request.user_api, campaign_key)
+def contacts(request, conversation_key):
+    conversation = conversation_or_404(request.user_api, conversation_key)
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'draft':
@@ -118,7 +121,7 @@ def contacts(request, campaign_key):
         conversation.save()
 
         return redirect('conversations:conversation',
-                        campaign_key=conversation.key, path_suffix='')
+                        conversation_key=conversation.key, path_suffix='')
 
     groups = sorted(request.user_api.list_groups(),
                     key=lambda group: group.created_at,
@@ -151,7 +154,8 @@ def contacts(request, campaign_key):
         'paginator': paginator,
         'page': page,
         'pagination_params': pagination_params,
-        'campaign_key': campaign_key,
+        'conversation_key': conversation_key,
+        'conversation': conversation,
     })
 
 
