@@ -303,6 +303,25 @@ class GoWorkerMixin(object):
         if outbound_message:
             returnValue(outbound_message.msg)
 
+    @inlineCallbacks
+    def find_inboundmessage_for_reply(self, reply):
+        user_message_id = reply.get('in_reply_to')
+        if user_message_id is None:
+            log.error('Received reply without in_reply_to: %s' % (reply,))
+            return
+
+        msg = yield self.vumi_api.mdb.inbound_messages.load(user_message_id)
+        if msg is None:
+            log.error('Unable to find message for reply: %s' % (reply,))
+
+        returnValue(msg)
+
+    @inlineCallbacks
+    def find_message_for_reply(self, reply):
+        inbound_message = yield self.find_inboundmessage_for_reply(reply)
+        if inbound_message:
+            returnValue(inbound_message.msg)
+
     def event_for_message(self, message, event_type, content):
         msg_mdh = self.get_metadata_helper(message)
         return VumiApiEvent.event(msg_mdh.get_account_key(),
