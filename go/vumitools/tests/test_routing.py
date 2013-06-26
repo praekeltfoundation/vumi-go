@@ -1,6 +1,7 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from go.vumitools.routing import AccountRoutingTableDispatcher
+from go.vumitools.routing import (
+    AccountRoutingTableDispatcher, RoutingMetadata)
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.utils import MessageMetadataHelper
 
@@ -99,8 +100,9 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         if tag is not None:
             md.set_tag(tag)
         if hops is not None:
-            routes = msg['routing_metadata'].setdefault('hops', [])
-            routes[:] = hops
+            rmeta = RoutingMetadata(msg)
+            for src, dst in zip(hops[:-1], hops[1:]):
+                rmeta.push_hop(src, dst)
         return msg
 
     def assert_rkeys_used(self, *rkeys):
