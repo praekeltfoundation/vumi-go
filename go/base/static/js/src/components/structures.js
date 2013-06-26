@@ -57,7 +57,6 @@
 
       this._items = {};
       this._itemList = [];
-      this._keyIndices = {};
 
       for (var k in (items || {})) {
         this.add(k, items[k], {silent: true, sort: false});
@@ -124,19 +123,37 @@
 
     get: function(key) { return this._items[key]; },
 
-    at: function(i) { return this._itemList[i].value; },
+    at: function(i) {
+      var item = this._itemList[i];
+      return item ? item.value : undefined;
+    },
 
-    keyAt: function(i) { return this._itemList[i].key; },
+    keyAt: function(i) {
+      var item = this._itemList[i];
+      return item ? item.key : undefined;
+    },
 
-    indexOf: function(v) { return _(this.values()).indexOf(v); },
+    _indexOf: function(propName, value) {
+      var i = this.size(),
+          items = this._itemList,
+          item;
 
-    indexOfKey: function(k) { return _(this.keys()).indexOf(k); },
+      while (i--) {
+        item = items[i];
+        if (item && item[propName] === value) { return i; }
+      }
+
+      return -1;
+    },
+
+    indexOf: function(v) { return this._indexOf('value', v); },
+
+    indexOfKey: function(k) { return this._indexOf('key', k); },
 
     add: function(key, value, options) {
       options = _(options || {}).defaults(this.addDefaults);
 
       this._items[key] = value;
-      this._keyIndices[key] = this.size();
       this._itemList.push({key: key, value: value});
 
       if (!options.silent) { this.trigger('add', key, value); }
@@ -150,27 +167,17 @@
 
       var value = this._items[key];
       if (value) {
-        this._itemList.splice(this.indexOfKey(key), 1);
+        this._itemList.splice(this.indexOf(key), 1);
         delete this._items[key];
-        delete this._keyIndices[key];
 
         if (!options.silent) { this.trigger('remove', key, value); }
       }
       return value;
     },
 
-    _refreshKeyIndices: function() {
-      var indices = this._keyIndices = {},
-          items = this._itemList,
-          i = this.size();
-
-      while (i--) { indices[items[i].key] = i; }
-    },
-
     sort: function() {
       if (this.ordered) {
         this._itemList = this._sorter(this._itemList, this._comparator, this);
-        this._refreshKeyIndices();
       }
       return this;
     },

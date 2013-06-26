@@ -126,14 +126,11 @@ TEMPLATE_DIRS = (
     abspath("account", "templates"),
     abspath("apps", "surveys", "templates"),
     abspath("apps", "multi_surveys", "templates"),
-    abspath("apps", "bulk_message", "templates"),
-    abspath("apps", "opt_out", "templates"),
-    abspath("apps", "sequential_send", "templates"),
-    abspath("apps", "wikipedia", "ussd", "templates"),
     abspath("apps", "jsbox", "templates"),
-    abspath("apps", "http_api", "templates"),
     abspath("conversation", "templates"),
     abspath("channel", "templates"),
+    abspath("routing", "templates"),
+    abspath("wizard", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -157,7 +154,7 @@ INSTALLED_APPS = (
     'djcelery_email',
     'go.base',
     'go.conversation',
-    'go.conversation_tmp',
+    'go.wizard',
     'go.contacts',
     'go.account',
 

@@ -13,7 +13,7 @@ from go.account.forms import (EmailForm, AccountForm, UserAccountForm,
     UserProfileForm)
 from go.account.tasks import update_account_details
 from go.base.models import UserProfile
-from go.base.django_token_manager import DjangoTokenManager
+from go.token.django_token_manager import DjangoTokenManager
 
 
 @login_required

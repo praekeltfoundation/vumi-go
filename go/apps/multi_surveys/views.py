@@ -1,4 +1,5 @@
 import csv
+import logging
 from StringIO import StringIO
 
 from django.conf import settings
@@ -13,14 +14,44 @@ from vumi.persist.redis_manager import RedisManager
 from go.base.utils import (make_read_only_form, make_read_only_formset,
     conversation_or_404)
 from go.vumitools.exceptions import ConversationSendError
-from go.conversation.forms import (ConversationForm, ConversationGroupForm,
-                                   ReplyToMessageForm)
+from go.conversation.forms import ReplyToMessageForm
+from go.conversation.old_forms import ConversationForm, ConversationGroupForm
 from go.apps.surveys import forms
-from go.apps.surveys.views import _clear_empties
-from go.conversation.base import ShowConversationView
 from go.conversation.tasks import export_conversation_messages
 
 from vxpolls.manager import PollManager
+
+
+logger = logging.getLogger(__name__)
+
+
+def _clear_empties(cleaned_data):
+    """
+    FIXME:  this is a work around because for some reason Django is seeing
+            the new (empty) forms in the formsets as stuff that is to be
+            stored when it really should be discarded.
+    """
+    return [cd for cd in cleaned_data if cd.get('copy')]
+
+
+def send_one_off_reply(user_api, conversation, in_reply_to, content):
+    inbound_message = user_api.api.mdb.get_inbound_message(in_reply_to)
+    if inbound_message is None:
+        logger.info('Replying to an unknown message: %s' % (in_reply_to,))
+
+    [tag] = conversation.get_tags()
+    msg_options = conversation.make_message_options(tag)
+    msg_options['in_reply_to'] = in_reply_to
+    conversation.dispatch_command(
+        'send_message', user_api.user_account_key, conversation.key,
+        command_data={
+            "batch_id": conversation.get_latest_batch_key(),
+            "conversation_key": conversation.key,
+            "to_addr": inbound_message['from_addr'],
+            "content": content,
+            "msg_options": msg_options,
+       }
+    )
 
 
 def link_poll_to_conversation(poll_name, poll_id, conversation):
@@ -322,7 +353,7 @@ def show(request, conversation_key):
         if form.is_valid():
             in_reply_to = form.cleaned_data['in_reply_to']
             content = form.cleaned_data['content']
-            ShowConversationView.send_one_off_reply(
+            send_one_off_reply(
                 request.user_api, conversation, in_reply_to, content)
             messages.info(request, 'Reply scheduled for sending.')
             return redirect(reverse('multi_survey:show', kwargs={
@@ -334,6 +365,7 @@ def show(request, conversation_key):
 
     return render(request, 'multi_surveys/show.html', {
         'conversation': conversation,
+        'button_template': 'conversation/includes/next-button.html',
     })
 
 

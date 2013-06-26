@@ -150,11 +150,19 @@ describe("go.components.structures", function() {
       it("should get the item's value by its index", function() {
         assert.equal(lookup.at(0), 1);
       });
+
+      it("should return undefined if a bad index is given", function() {
+        assert.isUndefined(lookup.at(-1));
+      });
     });
 
     describe(".keyAt", function() {
       it("should get the item's key by its index", function() {
         assert.equal(lookup.keyAt(0), 'a');
+      });
+
+      it("should return undefined if a bad index is given", function() {
+        assert.isUndefined(lookup.keyAt(-1));
       });
     });
 

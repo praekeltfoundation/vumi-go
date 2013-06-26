@@ -1,4 +1,4 @@
-from fabric.api import cd, sudo, env
+from fabric.api import cd, sudo, env, puts
 
 env.path = '/var/praekelt/vumi-go'
 
@@ -31,6 +31,22 @@ def restart_gunicorn():
             supervisorctl('restart vumi_web:goui_%s' % (i,))
 
 
+def restart_all(group=None):
+    """
+    Restart all running processes one-by-one so that the system as a whole
+    experiences no down-time during the restart. If a group is specified,
+    restart only the processes within that group one by one.
+    """
+    processes = _supervisorctl_status()
+    if group is not None:
+        processes = [p for p in processes if p['group'] == group]
+    processes = [p for p in processes if p['statename'] == 'RUNNING']
+    for p in processes:
+        p_name = '%s:%s' % (p['group'], p['name'])
+        puts("Restarting %s ..." % (p_name,))
+        supervisorctl("restart %s" % p_name)
+
+
 def update_nodejs_modules():
     """
     Update the Node.js modules that the JS sandbox depends on.
@@ -48,3 +64,17 @@ def npm_install(package):
 
 def _venv_command(command, user='vumi'):
     return sudo('. ve/bin/activate && %s' % (command,), user=user)
+
+
+def _supervisorctl_status():
+    status = supervisorctl('status').splitlines()
+    processes = []
+    for line in status:
+        parts = line.split()
+        group, name = parts[0].split(':')
+        processes.append({
+            'name': name,
+            'group': group,
+            'statename': parts[1],
+        })
+    return processes
