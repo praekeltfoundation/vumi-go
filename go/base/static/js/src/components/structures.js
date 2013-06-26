@@ -48,6 +48,7 @@
     constructor: function(items) {
       this._items = {};
       this._itemList = [];
+      this._keyIndices = {};
 
       for (var k in (items || {})) {
         this.add(k, items[k], {silent: true, sort: false});
@@ -97,7 +98,7 @@
 
     callAt: function(i, fn, that) {
       var item = this._itemList[i];
-      fn.call(that, item.key, item.value);
+      fn.call(that, item.key, item.value, i);
     },
 
     eachItem: function(fn, that) {
@@ -123,6 +124,7 @@
       options = _(options || {}).defaults(this.addDefaults);
 
       this._items[key] = value;
+      this._keyIndices[key] = this.size();
       this._itemList.push({key: key, value: value});
 
       if (!options.silent) { this.trigger('add', key, value); }
@@ -136,17 +138,27 @@
 
       var value = this._items[key];
       if (value) {
+        this._itemList.splice(this.indexOfKey(key), 1);
         delete this._items[key];
-        this._itemList.splice(this.indexOf(value), 1);
+        delete this._keyIndices[key];
 
         if (!options.silent) { this.trigger('remove', key, value); }
       }
       return value;
     },
 
+    _refreshKeyIndices: function() {
+      var indices = this._keyIndices = {},
+          items = this._itemList,
+          i = this.size();
+
+      while (i--) { indices[items[i].key] = i; }
+    },
+
     sort: function() {
       if (this.ordered) {
         this._itemList = this._sorter(this._itemList, this._comparator, this);
+        this._refreshKeyIndices();
       }
       return this;
     }
