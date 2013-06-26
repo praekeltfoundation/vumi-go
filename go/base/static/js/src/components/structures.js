@@ -48,7 +48,13 @@
     arrangeable: false, // whether the lookup's items can be reordered
     arranger: function(v, ordinal) { return v.ordinal = ordinal; },
 
-    constructor: function(items) {
+    constructor: function(items, options) {
+      options = options || {};
+      this.ordered = options.ordered || this.ordered;
+      this.comparator = options.comparator || this.comparator;
+      this.arrangeable = options.ordered || this.arrangeable;
+      this.arranger = options.arranger || this.arranger;
+
       this._items = {};
       this._itemList = [];
       this._keyIndices = {};
@@ -191,8 +197,8 @@
   //   - 'add' (key, value) - Emitted when an item is added
   //   - 'remove' (key, value) - Emitted when an item is removed
   var LookupGroup = Lookup.extend({
-    constructor: function(lookups) {
-      Lookup.prototype.constructor.call(this);
+    constructor: function(lookups, options) {
+      Lookup.prototype.constructor.call(this, {}, options);
       this.members = new Lookup();
 
       // Lookup of item owners by item keys
@@ -284,8 +290,7 @@
     }).defaults(Lookup.prototype.removeDefaults),
 
     constructor: function(options) {
-      Lookup.prototype.constructor.call(this);
-      options = options || {};
+      Lookup.prototype.constructor.call(this, {}, options);
 
       this._byModelId = {};
       this.models = this._ensureCollection(options.models);
