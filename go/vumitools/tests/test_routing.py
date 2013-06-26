@@ -129,7 +129,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         returnValue((msg, ack))
 
     @inlineCallbacks
-    def test_inbound_message_from_transport(self):
+    def test_inbound_message_from_transport_to_app1(self):
         yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_in(), tag=("pool1", "1234"))
         yield self.dispatch_inbound(msg, 'sphex')
@@ -141,18 +141,9 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                      ])
         self.assertEqual([msg], self.get_dispatched_inbound('app1'))
 
-        self.clear_all_dispatched()
-        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "5678"))
-        yield self.dispatch_inbound(msg, 'sphex')
-        self.assert_rkeys_used('sphex.inbound', 'app1.inbound')
-        self.with_md(msg, conv=('app1', 'conv1'), endpoint='other',
-                     hops=[
-                        ['TRANSPORT_TAG:pool1:5678', 'default'],
-                        ['CONVERSATION:app1:conv1', 'other'],
-                     ])
-        self.assertEqual([msg], self.get_dispatched_inbound('app1'))
-
-        self.clear_all_dispatched()
+    @inlineCallbacks
+    def test_inbound_message_from_transport_to_app2(self):
+        yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_in(), tag=("pool1", "9012"))
         yield self.dispatch_inbound(msg, 'sphex')
         self.assert_rkeys_used('sphex.inbound', 'app2.inbound')
@@ -162,6 +153,19 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                         ['CONVERSATION:app2:conv2', 'default'],
                      ])
         self.assertEqual([msg], self.get_dispatched_inbound('app2'))
+
+    @inlineCallbacks
+    def test_inbound_message_from_transport_to_custom_endpoint(self):
+        yield self.get_dispatcher()
+        msg = self.with_md(self.mkmsg_in(), tag=("pool1", "5678"))
+        yield self.dispatch_inbound(msg, 'sphex')
+        self.assert_rkeys_used('sphex.inbound', 'app1.inbound')
+        self.with_md(msg, conv=('app1', 'conv1'), endpoint='other',
+                     hops=[
+                        ['TRANSPORT_TAG:pool1:5678', 'default'],
+                        ['CONVERSATION:app1:conv1', 'other'],
+                     ])
+        self.assertEqual([msg], self.get_dispatched_inbound('app1'))
 
     @inlineCallbacks
     def test_inbound_message_from_transport_to_optout(self):
@@ -191,7 +195,9 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                      ])
         self.assertEqual([msg], self.get_dispatched_inbound('app1'))
 
-        self.clear_all_dispatched()
+    @inlineCallbacks
+    def test_inbound_message_from_router_to_custom_endpoint(self):
+        yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'),
                            endpoint='other')
         yield self.dispatch_inbound(msg, 'router_ro')
@@ -218,7 +224,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assertEqual([reply], self.get_dispatched_outbound('sphex'))
 
     @inlineCallbacks
-    def test_outbound_message_from_conversation(self):
+    def test_outbound_message_from_conversation_in_app1(self):
         yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'))
         yield self.dispatch_outbound(msg, 'app1')
@@ -230,7 +236,9 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                      ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
-        self.clear_all_dispatched()
+    @inlineCallbacks
+    def test_outbound_message_from_conversation_in_app2(self):
+        yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_out(), conv=('app2', 'conv2'))
         yield self.dispatch_outbound(msg, 'app2')
         self.assert_rkeys_used('app2.outbound', 'sphex.outbound')
@@ -241,7 +249,9 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                      ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
-        self.clear_all_dispatched()
+    @inlineCallbacks
+    def test_outbound_message_from_conversation_via_custom_endpoint(self):
+        yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'),
                            endpoint='other')
         yield self.dispatch_outbound(msg, 'app1')
@@ -266,7 +276,9 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                      ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
-        self.clear_all_dispatched()
+    @inlineCallbacks
+    def test_outbound_message_from_router_via_custom_endpoint(self):
+        yield self.get_dispatcher()
         msg = self.with_md(self.mkmsg_out(), router=('router', 'router1'),
                            endpoint='other')
         yield self.dispatch_outbound(msg, 'router_ri')
@@ -279,10 +291,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
     @inlineCallbacks
-    def test_event_routing(self):
-        dispatcher = yield self.get_dispatcher()
-        self.vumi_api = dispatcher.vumi_api
-
+    def test_event_routing_to_app1(self):
+        yield self.get_dispatcher()
         msg, ack = yield self.mk_msg_ack(
             tag=('pool1', '1234'), user_account=self.user_account_key,
             hops=[
@@ -298,7 +308,27 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                      ], outbound_hops_from=msg)
         self.assertEqual([ack], self.get_dispatched_events('app1'))
 
-        self.clear_all_dispatched()
+    @inlineCallbacks
+    def test_event_routing_to_app2(self):
+        yield self.get_dispatcher()
+        msg, ack = yield self.mk_msg_ack(
+            tag=('pool1', '9012'), user_account=self.user_account_key,
+            hops=[
+                ['CONVERSATION:app2:conv2', 'default'],
+                ['TRANSPORT_TAG:pool1:9012', 'default'],
+            ])
+        yield self.dispatch_event(ack, 'sphex')
+        self.assert_rkeys_used('sphex.event', 'app2.event')
+        self.with_md(ack, tag=('pool1', '9012'), conv=('app2', 'conv2'),
+                     hops=[
+                         ['TRANSPORT_TAG:pool1:9012', 'default'],
+                         ['CONVERSATION:app2:conv2', 'default'],
+                     ], outbound_hops_from=msg)
+        self.assertEqual([ack], self.get_dispatched_events('app2'))
+
+    @inlineCallbacks
+    def test_event_routing_via_custom_endpoint(self):
+        yield self.get_dispatcher()
         msg, ack = yield self.mk_msg_ack(endpoint='other',
             tag=('pool1', '5678'), user_account=self.user_account_key,
             hops=[
@@ -314,19 +344,3 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                          ['CONVERSATION:app1:conv1', 'other']
                      ], outbound_hops_from=msg)
         self.assertEqual([ack], self.get_dispatched_events('app1'))
-
-        self.clear_all_dispatched()
-        msg, ack = yield self.mk_msg_ack(
-            tag=('pool1', '9012'), user_account=self.user_account_key,
-            hops=[
-                ['CONVERSATION:app2:conv2', 'default'],
-                ['TRANSPORT_TAG:pool1:9012', 'default'],
-            ])
-        yield self.dispatch_event(ack, 'sphex')
-        self.assert_rkeys_used('sphex.event', 'app2.event')
-        self.with_md(ack, tag=('pool1', '9012'), conv=('app2', 'conv2'),
-                     hops=[
-                         ['TRANSPORT_TAG:pool1:9012', 'default'],
-                         ['CONVERSATION:app2:conv2', 'default'],
-                     ], outbound_hops_from=msg)
-        self.assertEqual([ack], self.get_dispatched_events('app2'))
