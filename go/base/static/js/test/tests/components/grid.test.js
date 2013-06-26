@@ -219,6 +219,11 @@ describe("go.components.grid", function() {
           ['a', 'c', 'd', 'e'],
           ['f']);
       });
+
+      it("should emit a 'render' event", function(done) {
+        grid.on('render', function() { done(); });
+        grid.render();
+      });
     });
   });
 });

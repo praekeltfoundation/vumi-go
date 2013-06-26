@@ -181,6 +181,8 @@
       this.rows.each(function(r) { this.$el.append(r.$el); }, this);
 
       this.$('.row').sortable(this._sortableOptions());
+
+      this.trigger('render');
       return this;
     }
   });
