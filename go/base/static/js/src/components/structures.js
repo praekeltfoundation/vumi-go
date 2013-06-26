@@ -23,6 +23,10 @@
   // A class-like object onto which events can be bound and emitted
   var Eventable = Extendable.extend(Backbone.Events);
 
+  var nativeSort = function(list, comparator, that) {
+    return list.sort(comparator.bind(that || this));
+  };
+
   // A structure that stores key-value pairs, provides helpful operations for
   // accessing the data, and emits events when items are added or removed.
   // Similar to a Backbone Collection, except the contents are key-value pairs
@@ -39,9 +43,7 @@
     removeDefaults: {silent: false, sort: true},
 
     ordered: false,
-
-    // The comparator to use if the lookup is ordered
-    comparator: function(v, i) { return i; },
+    comparator: function(v) { return v; },
 
     constructor: function(items) {
       this._items = {};
@@ -51,7 +53,16 @@
         this.add(k, items[k], {silent: true, sort: false});
       }
 
-      this.sort();
+      if (this.ordered) {
+        this.sorter = this.determineSorter(this.comparator);
+        this.sort();
+      }
+    },
+
+    determineSorter: function(comparator) {
+      return _.isString(comparator) || comparator.length === 1
+        ? _.sortBy
+        : nativeSort;
     },
 
     size: function() { return _.size(this._values); },
@@ -106,7 +117,7 @@
 
     sort: function() {
       if (this.ordered) {
-        this._values = _(this._values).sortBy(this.comparator, this);
+        this._values = this.sorter(this._values, this.comparator, this);
       }
       return this;
     }

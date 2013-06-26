@@ -187,8 +187,53 @@ describe("go.components.structures", function() {
     });
 
     describe(".sort", function() {
-      it("should sort the items", function() {
+      it("should allow sorting the items using an 'iterator' comparator",
+      function() {
         lookup = new ToyLookup();
+        lookup.add('a', 3, {sort: false});
+        lookup.add('b', 5, {sort: false});
+        lookup.add('c', 2, {sort: false});
+        lookup.add('d', 9, {sort: false});
+
+        assert.deepEqual(lookup.values(), [3, 5, 2, 9]);
+        lookup.sort();
+        assert.deepEqual(lookup.values(), [2, 3, 5, 9]);
+      });
+
+      it("should allow sorting the items using a 'property' comparator",
+      function() {
+        var LittleToyLookup = ToyLookup.extend({comparator: 'ordinal'});
+
+        lookup = new LittleToyLookup();
+        lookup.add('a', {ordinal: 3}, {sort: false});
+        lookup.add('b', {ordinal: 5}, {sort: false});
+        lookup.add('c', {ordinal: 2}, {sort: false});
+        lookup.add('d', {ordinal: 9}, {sort: false});
+
+        assert.deepEqual(
+          lookup.values(),
+          [{ordinal: 3},
+           {ordinal: 5},
+           {ordinal: 2},
+           {ordinal: 9}]);
+
+        lookup.sort();
+
+        assert.deepEqual(
+          lookup.values(),
+          [{ordinal: 2},
+           {ordinal: 3},
+           {ordinal: 5},
+           {ordinal: 9}]);
+      });
+
+      it("should allow sorting the items a 'native sort' comparator",
+      function() {
+        var LittleToyLookup = ToyLookup.extend({
+          comparator: function(v1, v2) { return v1 < v2 ? -1 : 1; }
+        });
+
+        lookup = new LittleToyLookup();
         lookup.add('a', 3, {sort: false});
         lookup.add('b', 5, {sort: false});
         lookup.add('c', 2, {sort: false});
