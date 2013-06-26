@@ -326,7 +326,7 @@ class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):
             returnValue(worker)
         yield worker.startService()
 
-        port = worker.services[0]._waitingForPort.result
+        port = worker._web_service._waitingForPort.result
         addr = port.getHost()
 
         proxy = Proxy("http://%s:%d/api/" % (addr.host, addr.port),
