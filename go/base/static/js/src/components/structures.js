@@ -150,7 +150,9 @@
 
     indexOfKey: function(k) { return this._indexOf('key', k); },
 
-    last: function() { return this._values[this._values.length - 1]; },
+    last: function() { return this.at(this.size() - 1); },
+
+    lastKey: function() { return this.keyAt(this.size() - 1); },
 
     add: function(key, value, options) {
       options = _(options || {}).defaults(this.addDefaults);

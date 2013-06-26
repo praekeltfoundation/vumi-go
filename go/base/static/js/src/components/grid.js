@@ -107,14 +107,22 @@
   // Options:
   //   - items: A collection of views to be maintained in the grid
   var GridView = Backbone.View.extend({
-    className: 'container',
+    className: 'grid container',
 
     rowType: RowView,
     rowItemType: RowItemView,
     rowCollectionType: RowCollection,
 
+    sortableOptions: {},
+
     initialize: function(options) {
       this.items = this._ensureViewCollection(options.items);
+      this.sortableOptions = options.sortableOptions || this.sortableOptions;
+      this.rowType = options.rowType || this.rowType;
+      this.rowItemType = options.rowItemType || this.rowItemType;
+      this.rowCollectionType = options.rowCollectionType
+                            || this.rowCollectionType;
+
       this.resetRows();
 
       this.items.on('add', this.render, this);
@@ -124,7 +132,11 @@
     _ensureViewCollection: function(obj) {
       return obj instanceof ViewCollection
         ? obj
-        : new ViewCollection({views: obj});
+        : new ViewCollection({
+          orderable: true,
+          arrangeable: true,
+          views: obj
+        });
     },
 
     resetRows: function() {
@@ -136,6 +148,31 @@
       return this;
     },
 
+    itemOrder: function() {
+      return this.$('.row').map(function() {
+        return $(this)
+          .find('.item')
+          .map(function() { return $(this).attr('data-uuid'); }).get();
+      }).get();
+    },
+
+    // NOTE: The grid relies on the items collection to rearrange its items
+    // correctly. The grid shouldn't know (or be responsible for) how item and
+    // model ordering happens. If this isn't handled correctly, the ui ordering
+    // will be lost.
+    reorder: function() {
+      this.items.rearrange.apply(this.items, this.itemOrder());
+      this.render();
+    },
+
+    _sortableOptions: function() {
+      return _({}).extend(
+        _(this).result('sortableOptions'), {
+        connectWith: '.row',
+        stop: this.reorder.bind(this)
+      });
+    },
+
     render: function() {
       this.resetRows();
 
@@ -143,6 +180,7 @@
       this.rows.render();
       this.rows.each(function(r) { this.$el.append(r.$el); }, this);
 
+      this.$('.row').sortable(this._sortableOptions());
       return this;
     }
   });

@@ -102,13 +102,14 @@ describe("go.components.grid", function() {
         GridView = go.components.grid.GridView;
 
     var ToyView = Backbone.View.extend({
+      initialize: function(options) { this.ordinal = options.ordinal; },
       render: function() { this.$el.text(this.id); }
     });
 
     var ToyViewCollection = ViewCollection.extend({
       type: ToyView,
       ordered: true,
-      comparator: function(v1) { return v1.id.charCodeAt(0); }
+      arrangeable: true
     });
 
     var assertRows = function() {
@@ -128,15 +129,47 @@ describe("go.components.grid", function() {
     beforeEach(function() {
       items = new ToyViewCollection({
         views: [
-          {id: 'a'},
-          {id: 'd'},
-          {id: 'c'},
-          {id: 'f'},
-          {id: 'e'}]
+          {id: 'a', ordinal: 0},
+          {id: 'c', ordinal: 2},
+          {id: 'd', ordinal: 3},
+          {id: 'e', ordinal: 4},
+          {id: 'f', ordinal: 5}]
       });
-      items.sort();
 
       grid = new GridView({items: items});
+    });
+
+    describe("on ui item order changes", function() {
+      beforeEach(function() {
+        $('body').append("<div id='dummy'></div>");
+        $('#dummy').append(grid.$el);
+        grid.render();
+
+        $('.item').css({height: '100px', margin: '5px'});
+      });
+
+      afterEach(function() {
+        $('#dummy').remove();
+      });
+
+      it("should rearrange its items according to the ui ordering",
+      function() {
+        assert.deepEqual(items.keys(), ['a', 'c', 'd', 'e', 'f']);
+        $('[data-uuid="a"]').simulate('drag', {dy: 205});
+        assert.deepEqual(items.keys(), ['c', 'd', 'e', 'f', 'a']);
+      });
+
+      it("re-render the grid with the new ordering", function() {
+        assertRows(
+          ['a', 'c', 'd', 'e'],
+          ['f']);
+
+        $('[data-uuid="a"]').simulate('drag', {dy: 205});
+
+        assertRows(
+          ['c', 'd', 'e', 'f'],
+          ['a']);
+      });
     });
 
     describe("on 'add' item events", function() {
@@ -146,6 +179,7 @@ describe("go.components.grid", function() {
           assertRows(
             ['a', 'b', 'c', 'd'],
             ['e', 'f']);
+
           done();
         });
 
@@ -162,6 +196,15 @@ describe("go.components.grid", function() {
         });
 
         items.remove('d');
+      });
+    });
+
+    describe(".itemOrder", function() {
+      it("should return the current ordering of items on the grid", function() {
+        grid.render();
+        assert.deepEqual(
+          grid.itemOrder(),
+          ['a', 'c', 'd', 'e', 'f']);
       });
     });
 
