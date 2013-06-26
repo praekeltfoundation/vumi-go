@@ -203,6 +203,8 @@ describe("go.components.structures", function() {
     describe(".remove", function() {
       it("should remove an item from the lookup", function() {
         assert.equal(lookup.remove('c'), 3);
+        assert.deepEqual(lookup.keys(), ['a', 'b']);
+        assert.deepEqual(lookup.values(), [1, 2]);
         assert.deepEqual(lookup.items(), {a: 1, b: 2});
       });
 

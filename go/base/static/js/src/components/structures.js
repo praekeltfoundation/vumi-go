@@ -158,7 +158,7 @@
 
       var value = this._items[key];
       if (value) {
-        this._itemList.splice(this.indexOf(key), 1);
+        this._itemList.splice(this.indexOf(value), 1);
         delete this._items[key];
 
         if (!options.silent) { this.trigger('remove', key, value); }
