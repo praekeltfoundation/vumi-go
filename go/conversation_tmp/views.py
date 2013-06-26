@@ -120,7 +120,7 @@ def contacts(request, campaign_key):
             conversation.add_group(group_key)
         conversation.save()
 
-        return redirect('conversations_tmp:preview', campaign_key=conversation.key)
+        return redirect('/conversations/%s/' % conversation.key)
 
     groups = sorted(request.user_api.list_groups(),
                     key=lambda group: group.created_at,
@@ -155,22 +155,6 @@ def contacts(request, campaign_key):
         'pagination_params': pagination_params,
         'campaign_key': campaign_key,
     })
-
-
-@login_required
-def preview(request, campaign_key):
-    conversation = conversation_or_404(request.user_api, campaign_key)
-
-    contact_store = request.user_api.contact_store
-    groups = dict((group.name, contact_store.count_contacts_for_group(group))
-                  for group in conversation.get_groups())
-
-    return render(request, 'wizard_views/wizard_4_preview.html', {
-        'conversation': conversation,
-        'campaign_key': campaign_key,
-        'groups': groups,
-    })
-
 
 @login_required
 def incoming_list(request, campaign_key):

@@ -2,9 +2,16 @@
 {% load url from future %}
 {% load conversation_tags %}
 
-{% block content_extraclass %}campaigns summary{% endblock %}
+{% block content_extraclass %}conversations summary{% endblock %}
 
 {% block content_title %}Preview &amp; Activate{% endblock %}
+
+{% block content_breadcrumbs %}
+    <a href="{% url 'conversations_tmp:details' conversation.key %}">Details</a>
+    <a href="{% url 'conversations_tmp:message' conversation.key %}">Messages</a>
+    <a href="{% url 'conversations_tmp:contacts' conversation.key %}">Contacts</a>
+    <a href="{% conversation_screen conversation %}" class="present">Preview &amp; Activate</a>
+{% endblock %}
 
 
 {% block content_actions_right %}

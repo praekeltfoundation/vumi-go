@@ -1,4 +1,4 @@
-{% extends "wizard_views/wizard_2_message.html" %}
+{% extends "wizard_views/wizard_2_app.html" %}
 
 {% block content_main %}
 <div class="row">
@@ -13,6 +13,5 @@
 
 {% block ondomready %}
     {{ block.super }}
-    $('.breadcrumbs a').eq(1).addClass('active');
     new go.components.views.MessageTextView({el: $('#frm-campaign textarea')});
 {% endblock %}

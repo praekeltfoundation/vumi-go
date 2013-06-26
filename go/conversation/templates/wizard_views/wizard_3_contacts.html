@@ -1,7 +1,16 @@
 {% extends "wizard_views/wizard_base.html" %}
+{% load url from future %}
+
 
 {% block content_title %}
     Contacts
+{% endblock %}
+
+{% block content_breadcrumbs %}
+    <a href="{% url 'conversations_tmp:details' campaign_key %}">Details</a>
+    <a href="{% url 'conversations_tmp:message' campaign_key %}">Messages</a>
+    <a href="{% url 'conversations_tmp:contacts' campaign_key %}" class="present">Contacts</a>
+    <span>Preview &amp; Activate</span>
 {% endblock %}
 
 {% block content_main %}
@@ -30,9 +39,6 @@
 
 {% block ondomready %}
     {{ block.super }}
-    // highlight the breadcrumbs.
-    $('.breadcrumbs a').eq(2).addClass('active');
-
     var tableFormView = new go.components.tables.TableFormView({
         el: '#form-conversation'
     });

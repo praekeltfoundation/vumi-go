@@ -3,22 +3,7 @@
 {% load conversation_tags %}
 
 
-{% block content_extraclass %}campaigns{% endblock %}
-
-{% block content_breadcrumbs %}
-    {# TODO: Use bootstrap breadcrumbs #}
-    <a href="{% conversation_screen conversation %}">Details</a>
-    {% if not conversation %}
-        <a href="#">Messages</a>
-        <a href="#">Contacts</a>
-        <a href="#">Preview &amp; Activate</a>
-    {% else %}
-        {# TODO: Make real conversation screens for these? #}
-        <a href="{% url 'conversations_tmp:message' conversation.key %}">Messages</a>
-        <a href="{% url 'conversations_tmp:contacts' conversation.key %}">Contacts</a>
-        <a href="{% url 'conversations_tmp:preview' conversation.key %}">Preview &amp; Activate</a>
-    {% endif %}
-{% endblock %}
+{% block content_extraclass %}conversations{% endblock %}
 
 {% block content_actions_right %}
     <a href="{% url 'conversations:index' %}">Cancel</a>
@@ -43,5 +28,5 @@
         // append the action of the button, draft or save.
         $form.prepend('<input type="hidden" name="action" value="' + $(this).attr('data-action') + '">');
         $form.submit();
-    });    
+    });
 {% endblock %}

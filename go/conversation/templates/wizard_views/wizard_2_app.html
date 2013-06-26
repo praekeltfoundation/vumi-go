@@ -1,8 +1,16 @@
 {% extends "wizard_views/wizard_base.html" %}
+{% load url from future %}
 
 {% block content_title %}
     {{ conversation.name }}
     <button type="button" class="btn btn-mini" data-toggle="modal" data-target="#renameConversation">Rename</button>
+{% endblock %}
+
+{% block content_breadcrumbs %}
+    <a href="{% url 'conversations_tmp:details' campaign_key %}">Details</a>
+    <a href="{% url 'conversations_tmp:message' campaign_key %}" class="present">Messages</a>
+    <span>Contacts</span>
+    <span>Preview &amp; Activate</span>
 {% endblock %}
 
 {% block modals %}

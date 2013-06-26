@@ -1,4 +1,4 @@
-{% extends "wizard_views/wizard_base.html" %}
+{% extends "wizard_views/wizard_2_app.html" %}
 
 
 {% block extrahead %}
@@ -42,8 +42,6 @@
 {{ block.super }}
 <script type="text/javascript">
     $(function() {
-        // highlight the breadcrumbs.
-        $('.breadcrumbs a').eq(1).addClass('active');
 
         $('.actions .right button[data-action="save"]').off('click').on('click', function(e) {
             e.preventDefault();
