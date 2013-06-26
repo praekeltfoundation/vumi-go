@@ -171,6 +171,12 @@ class GoConnector(object):
     CONVERSATION = "CONVERSATION"
     ROUTING_BLOCK = "ROUTING_BLOCK"
     TRANSPORT_TAG = "TRANSPORT_TAG"
+    OPT_OUT = "OPT_OUT"
+
+    # Directions for routing block entries
+
+    INBOUND = "INBOUND"
+    OUTBOUND = "OUTBOUND"
 
     def __init__(self, ctype, names, parts):
         self.ctype = ctype
@@ -190,14 +196,19 @@ class GoConnector(object):
                    [conv_type, conv_key])
 
     @classmethod
-    def for_routing_block(cls, rblock_type, rblock_key):
-        return cls(cls.ROUTING_BLOCK, ["rblock_type", "rblock_key"],
-                   [rblock_type, rblock_key])
+    def for_routing_block(cls, rblock_type, rblock_key, direction):
+        return cls(cls.ROUTING_BLOCK,
+                   ["rblock_type", "rblock_key", "direction"],
+                   [rblock_type, rblock_key, direction])
 
     @classmethod
     def for_transport_tag(cls, tagpool, tagname):
         return cls(cls.TRANSPORT_TAG, ["tagpool", "tagname"],
                    [tagpool, tagname])
+
+    @classmethod
+    def for_opt_out(cls):
+        return cls(cls.OPT_OUT, [], [])
 
     @classmethod
     def parse(cls, s):
@@ -207,6 +218,7 @@ class GoConnector(object):
             cls.CONVERSATION: cls.for_conversation,
             cls.ROUTING_BLOCK: cls.for_routing_block,
             cls.TRANSPORT_TAG: cls.for_transport_tag,
+            cls.OPT_OUT: cls.for_opt_out,
         }
         if ctype not in constructors:
             raise GoConnectorError("Unknown connector type %r"

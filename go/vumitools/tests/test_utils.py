@@ -1,4 +1,4 @@
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import TestCase, SkipTest
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportUserMessage
@@ -26,19 +26,21 @@ class MessageMetadataHelperTestCase(GoPersistenceMixin, TestCase):
         return self.user_api.conversation_store.new_conversation(
             conversation_type, name, description, config)
 
-    def mk_msg(self, go_metadata=None):
+    def mk_msg(self, go_metadata=None, optout_metadata=None):
         helper_metadata = {}
         if go_metadata is not None:
             helper_metadata['go'] = go_metadata
+        if optout_metadata is not None:
+            helper_metadata['optout'] = optout_metadata
         return TransportUserMessage(
             to_addr="to@domain.org", from_addr="from@domain.org",
             transport_name="dummy_endpoint",
             transport_type="dummy_transport_type",
             helper_metadata=helper_metadata)
 
-    def mk_md(self, message=None, go_metadata=None):
+    def mk_md(self, message=None, go_metadata=None, optout_metadata=None):
         if message is None:
-            message = self.mk_msg(go_metadata)
+            message = self.mk_msg(go_metadata, optout_metadata)
         return MessageMetadataHelper(self.vumi_api, message)
 
     def test_is_sensitive(self):
@@ -124,6 +126,59 @@ class MessageMetadataHelperTestCase(GoPersistenceMixin, TestCase):
         md.set_user_account('user-1')
         self.assertEqual(msg['helper_metadata']['go'], {
             'user_account': 'user-1',
+        })
+
+    def test_is_optout_message(self):
+        md = self.mk_md()
+        self.assertFalse(md.is_optout_message())
+        md = self.mk_md(optout_metadata={"optout": True})
+        self.assertTrue(md.is_optout_message())
+
+    def test_get_router_key(self):
+        md = self.mk_md()
+        self.assertRaises(KeyError, md.get_router_key)
+        md = self.mk_md(go_metadata={'router_key': 'router-1'})
+        self.assertEqual(md.get_router_key(), 'router-1')
+
+    def test_get_router(self):
+        raise SkipTest("Add test once VumiUserApi has a get_router method")
+
+    def test_get_router_info(self):
+        md = self.mk_md()
+        self.assertEqual(md.get_router_info(), None)
+        md = self.mk_md(go_metadata={'user_account': 'user-1'})
+        self.assertEqual(md.get_router_info(), None)
+        md = self.mk_md(go_metadata={
+            'user_account': 'user-1',
+            'router_type': 'dummy',
+        })
+        self.assertEqual(md.get_router_info(), None)
+        md = self.mk_md(go_metadata={
+            'user_account': 'user-1',
+            'router_type': 'dummy',
+            'router_key': 'router-1',
+        })
+        self.assertEqual(md.get_router_info(), {
+            'user_account': 'user-1',
+            'router_type': 'dummy',
+            'router_key': 'router-1',
+        })
+
+    def test_set_router_info(self):
+        msg = self.mk_msg()
+        md = self.mk_md(msg)
+        md.set_router_info('dummy', 'router-1')
+        self.assertEqual(msg['helper_metadata']['go'], {
+            'router_type': 'dummy',
+            'router_key': 'router-1',
+        })
+
+    def test_set_tag(self):
+        msg = self.mk_msg()
+        md = self.mk_md(msg)
+        md.set_tag(["pool", "tagname"])
+        self.assertEqual(msg['helper_metadata']['tag'], {
+            'tag': ["pool", "tagname"],
         })
 
     def test_rewrap(self):
