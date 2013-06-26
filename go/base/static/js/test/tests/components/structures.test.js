@@ -267,6 +267,32 @@ describe("go.components.structures", function() {
         assert.deepEqual(lookup.values(), [2, 3, 5, 9]);
       });
     });
+
+    describe(".rearrange", function() {
+      var ArrangeableToyLookup = ToyLookup.extend({
+        ordered: true,
+        comparator: function(v) { return v.ordinal; },
+
+        arrangeable: true,
+        arranger: function(v, ordinal) { return v.ordinal = ordinal; }
+      });
+
+      beforeEach(function() {
+        lookup = new ArrangeableToyLookup({
+          a: {ordinal: 3},
+          b: {ordinal: 5},
+          c: {ordinal: 2},
+          d: {ordinal: 9}
+        });
+      });
+
+      it("should rearrange the lookup's items according to the order given",
+      function() {
+        assert.deepEqual(lookup.keys(), ['c', 'a', 'b', 'd']);
+        lookup.rearrange('d', 'c', 'b', 'a');
+        assert.deepEqual(lookup.keys(), ['d', 'c', 'b', 'a']);
+      });
+    });
   });
 
   describe(".LookupGroup", function() {

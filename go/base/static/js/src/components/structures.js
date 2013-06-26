@@ -42,8 +42,11 @@
     addDefaults: {silent: false, sort: true},
     removeDefaults: {silent: false, sort: true},
 
-    ordered: false,
-    comparator: function(v) { return v; },
+    ordered: false,  // whether the lookup's items have an ordering
+    comparator: function(v) { return v.ordinal || 0; },
+
+    arrangeable: false, // whether the lookup's items can be reordered
+    arranger: function(v, ordinal) { return v.ordinal = ordinal; },
 
     constructor: function(items) {
       this._items = {};
@@ -164,6 +167,15 @@
         this._refreshKeyIndices();
       }
       return this;
+    },
+
+    rearrange: function() {
+      var keys = Array.prototype.slice.call(arguments);
+
+      if (this.ordered && this.arrangeable) {
+        keys.forEach(function(k, i) { this.arranger(this.get(k), i); }, this);
+        this.sort();
+      }
     }
   });
 
@@ -258,14 +270,6 @@
 
     // The default options passed to each new view
     viewOptions: {},
-
-    // Determines whether or not the ViewCollection is ordered
-    ordered: false,
-
-    // Default comparator that sorts based on the model collection's comparator
-    comparator: function(v1, v2) {
-      return this.models.comparator(v1.model, v2.model);
-    },
 
     addDefaults: _({
       render: true,  // render view after adding
