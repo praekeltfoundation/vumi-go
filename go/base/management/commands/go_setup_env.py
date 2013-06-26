@@ -5,7 +5,6 @@ from ConfigParser import ConfigParser
 
 from yaml import SafeLoader
 from uuid import uuid4
-from datetime import datetime
 
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
@@ -15,7 +14,7 @@ from optparse import make_option
 
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.riak_manager import RiakManager
-from vumi.components import TagpoolManager
+from vumi.components.tagpool import TagpoolManager
 
 from go.base.utils import vumi_api_for_user
 from go.vumitools.api import VumiApi
