@@ -1,0 +1,18 @@
+{% extends "wizard_views/wizard_2_edit.html" %}
+
+{% block content_main %}
+<div class="row">
+    <div class="span12">
+        <form id="frm-campaign" class="indent" method="post" action="">
+            {% csrf_token %}
+            {{ form.as_p }}
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block ondomready %}
+    {{ block.super }}
+    $('.breadcrumbs a').eq(1).addClass('active');
+    new go.components.views.MessageTextView({el: $('#frm-campaign textarea')});
+{% endblock %}
