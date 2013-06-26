@@ -1,10 +1,8 @@
-from datetime import datetime
-
 from django import forms
 from django.contrib import messages
 
 from go.conversation.base import ConversationViews, NewConversationView
-from go.conversation.forms import ConversationForm
+from go.conversation.old_forms import ConversationForm
 
 
 class WikipediaConversationForm(ConversationForm):

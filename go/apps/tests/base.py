@@ -19,7 +19,6 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
     TEST_CONVERSATION_TYPE = u'bulk_message'
     TEST_CONVERSATION_PARAMS = None
     TEST_START_PARAMS = None
-    VIEWS_CLASS = None
 
     # These are used for the mkmsg_in and mkmsg_out helper methods
     transport_name = 'sphex'
@@ -41,10 +40,6 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
     def setup_riak_fixtures(self):
         self.user = self.mk_django_user()
         self.setup_user_api(self.user)
-
-        if self.VIEWS_CLASS is not None:
-            self.TEST_CONVERSATION_TYPE = self.VIEWS_CLASS.conversation_type
-            self.TEST_START_PARAMS = self.VIEWS_CLASS.conversation_start_params
 
         # We need a group
         self.group = self.contact_store.new_group(self.TEST_GROUP_NAME)

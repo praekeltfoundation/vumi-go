@@ -3,16 +3,16 @@ import logging
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 
+from go.base.utils import get_conversation_view_definition
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.apps.jsbox.log import LogManager
-from go.apps.jsbox.views import JsboxConversationViews
 
 from mock import patch, Mock
 
 
 class JsBoxTestCase(DjangoGoApplicationTestCase):
 
-    VIEWS_CLASS = JsboxConversationViews
+    TEST_CONVERSATION_TYPE = u'jsbox'
 
     def setUp(self):
         super(JsBoxTestCase, self).setUp()
@@ -20,47 +20,53 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         self.client = Client()
         self.client.login(username='username', password='password')
 
+    def get_view_url(self, view, conv_key=None):
+        if conv_key is None:
+            conv_key = self.conv_key
+        view_def = get_conversation_view_definition(
+            self.TEST_CONVERSATION_TYPE)
+        return view_def.get_view_url(view, conversation_key=conv_key)
+
+    def get_new_view_url(self):
+        return reverse('conversations:new_conversation')
+
+    def get_action_view_url(self, action_name, conv_key=None):
+        if conv_key is None:
+            conv_key = self.conv_key
+        return reverse('conversations:conversation_action', kwargs={
+            'conversation_key': conv_key, 'action_name': action_name})
+
     def test_new_conversation(self):
-        # render the form
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        response = self.client.get(reverse('jsbox:new'))
-        self.assertEqual(response.status_code, 200)
-        # post the form
-        response = self.client.post(reverse('jsbox:new'), {
-            'subject': 'the subject',
-            'message': 'the message',
-            'delivery_class': 'sms',
-            'delivery_tag_pool': 'longcode',
+        response = self.client.post(self.get_new_view_url(), {
+            'name': 'conversation name',
+            'type': self.TEST_CONVERSATION_TYPE,
         })
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
         conversation = self.get_latest_conversation()
-        self.assertEqual(conversation.name, 'the subject')
-        self.assertEqual(conversation.description, 'the message')
-        self.assertEqual(conversation.delivery_class, 'sms')
-        self.assertEqual(conversation.delivery_tag_pool, 'longcode')
-        self.assertEqual(conversation.delivery_tag, None)
+        # self.assertEqual(conversation.delivery_class, 'sms')
+        # self.assertEqual(conversation.delivery_tag_pool, 'longcode')
+        # self.assertEqual(conversation.delivery_tag, None)
+        self.assertEqual(conversation.name, 'conversation name')
+        self.assertEqual(conversation.description, '')
         self.assertEqual(conversation.config, {})
-        self.assertRedirects(response, reverse('jsbox:edit', kwargs={
-            'conversation_key': conversation.key,
-        }))
+        self.assertRedirects(
+            response, self.get_view_url('edit', conversation.key))
 
     def test_show_conversation(self):
         [conversation_key] = self.conv_store.list_conversations()
-        kwargs = {'conversation_key': conversation_key}
-        response = self.client.get(reverse('jsbox:show', kwargs=kwargs))
+        response = self.client.get(self.get_view_url('show'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "View Sandbox Logs")
-        self.assertContains(response,
-                            reverse('jsbox:jsbox_logs', kwargs=kwargs))
+        self.assertContains(response, self.get_action_view_url('view_logs'))
 
     def test_edit_conversation(self):
         # render the form
         [conversation_key] = self.conv_store.list_conversations()
-        kwargs = {'conversation_key': conversation_key}
-        response = self.client.get(reverse('jsbox:edit', kwargs=kwargs))
+        response = self.client.get(self.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
         # post the form
-        response = self.client.post(reverse('jsbox:edit', kwargs=kwargs), {
+        response = self.client.post(self.get_view_url('edit'), {
             'jsbox-javascript': 'x = 1;',
             'jsbox-source_url': '',
             'jsbox-update_from_source': '0',
@@ -68,7 +74,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
             'jsbox_app_config-INITIAL_FORMS': '0',
             'jsbox_app_config-MAX_NUM_FORMS': u''
         })
-        self.assertRedirects(response, reverse('jsbox:people', kwargs=kwargs))
+        self.assertRedirects(response, self.get_view_url('show'))
         conversation = self.get_latest_conversation()
         self.assertEqual(conversation.config, {
             'jsbox': {
@@ -82,7 +88,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
     def test_cross_domain_xhr(self, mocked_get):
         mocked_get.return_value = Mock(text='foo', status_code=200)
         response = self.client.post(
-            reverse('jsbox:cross_domain_xhr'),
+            self.get_view_url('cross_domain_xhr'),
             {'url': 'http://domain.com'})
         [call] = mocked_get.call_args_list
         args, kwargs = call
@@ -96,7 +102,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
     def test_basic_auth_cross_domain_xhr(self, mocked_get):
         mocked_get.return_value = Mock(text='foo', status_code=200)
         response = self.client.post(
-            reverse('jsbox:cross_domain_xhr'),
+            self.get_view_url('cross_domain_xhr'),
             {'url': 'http://username:password@domain.com'})
         [call] = mocked_get.call_args_list
         args, kwargs = call
@@ -110,7 +116,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
     def test_basic_auth_cross_domain_xhr_with_https_and_port(self, mocked_get):
         mocked_get.return_value = Mock(text='foo', status_code=200)
         response = self.client.post(
-            reverse('jsbox:cross_domain_xhr'),
+            self.get_view_url('cross_domain_xhr'),
             {'url': 'https://username:password@domain.com:443/foo'})
         [call] = mocked_get.call_args_list
         args, kwargs = call
@@ -127,15 +133,17 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         for i in range(10):
             log_manager.add_log(campaign_key, conversation_key,
                                 "test %d" % i, logging.INFO)
-        kwargs = {'conversation_key': conversation_key}
-        response = self.client.get(reverse('jsbox:jsbox_logs', kwargs=kwargs))
+        response = self.client.get(self.get_view_url('jsbox_logs'))
         self.assertEqual(response.status_code, 200)
         for i in range(10):
             self.assertContains(response, "INFO] test %d" % i)
 
     def test_jsbox_empty_logs(self):
         [conversation_key] = self.conv_store.list_conversations()
-        kwargs = {'conversation_key': conversation_key}
-        response = self.client.get(reverse('jsbox:jsbox_logs', kwargs=kwargs))
+        response = self.client.get(self.get_view_url('jsbox_logs'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No logs yet.")
+
+    def test_jsbox_logs_action(self):
+        response = self.client.get(self.get_action_view_url('view_logs'))
+        self.assertRedirects(response, self.get_view_url('jsbox_logs'))
