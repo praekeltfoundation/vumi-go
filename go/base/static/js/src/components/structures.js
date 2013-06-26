@@ -115,9 +115,15 @@
 
     get: function(key) { return this._items[key]; },
 
-    at: function(i) { return this._itemList[i].value; },
+    at: function(i) {
+      var item = this._itemList[i];
+      return item ? item.value : undefined;
+    },
 
-    keyAt: function(i) { return this._itemList[i].key; },
+    keyAt: function(i) {
+      var item = this._itemList[i];
+      return item ? item.key : undefined;
+    },
 
     indexOf: function(v) { return _(this.values()).indexOf(v); },
 
