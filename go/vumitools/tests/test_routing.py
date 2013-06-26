@@ -81,7 +81,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         returnValue(dispatcher)
 
     def with_md(self, msg, user_account=None, conv=None, router=None,
-                endpoint=None, tag=None, hops=None):
+                endpoint=None, tag=None, hops=None, outbound_hops_from=None):
         msg.payload.setdefault('helper_metadata', {})
         md = MessageMetadataHelper(self.vumi_api, msg)
         if user_account is not None:
@@ -103,6 +103,10 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
             rmeta = RoutingMetadata(msg)
             for src, dst in zip(hops[:-1], hops[1:]):
                 rmeta.push_hop(src, dst)
+        if outbound_hops_from is not None:
+            rmeta = RoutingMetadata(msg)
+            outbound_rmeta = RoutingMetadata(outbound_hops_from)
+            rmeta.set_outbound_hops(outbound_rmeta.get_hops())
         return msg
 
     def assert_rkeys_used(self, *rkeys):
@@ -289,9 +293,9 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('sphex.event', 'app1.event')
         self.with_md(ack, tag=('pool1', '1234'), conv=('app1', 'conv1'),
                      hops=[
-                        ['TRANSPORT_TAG:pool1:1234', 'default'],
-                        ['CONVERSATION:app1:conv1', 'default'],
-                     ])
+                         ['TRANSPORT_TAG:pool1:1234', 'default'],
+                         ['CONVERSATION:app1:conv1', 'default'],
+                     ], outbound_hops_from=msg)
         self.assertEqual([ack], self.get_dispatched_events('app1'))
 
         self.clear_all_dispatched()
@@ -308,7 +312,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                      hops=[
                          ['TRANSPORT_TAG:pool1:5678', 'default'],
                          ['CONVERSATION:app1:conv1', 'other']
-                     ])
+                     ], outbound_hops_from=msg)
         self.assertEqual([ack], self.get_dispatched_events('app1'))
 
         self.clear_all_dispatched()
@@ -324,5 +328,5 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                      hops=[
                          ['TRANSPORT_TAG:pool1:9012', 'default'],
                          ['CONVERSATION:app2:conv2', 'default'],
-                     ])
+                     ], outbound_hops_from=msg)
         self.assertEqual([ack], self.get_dispatched_events('app2'))
