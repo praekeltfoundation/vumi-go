@@ -56,7 +56,7 @@ describe("go.components.structures", function() {
     });
 
     beforeEach(function() {
-      lookup = new ToyLookup({a: 1, b: 2, c: 3});
+      lookup = new ToyLookup({b: 2, a: 1, c: 3});
     });
 
     describe(".size", function() {
@@ -66,13 +66,13 @@ describe("go.components.structures", function() {
     });
 
     describe(".keys", function() {
-      it("should get the lookup's item's keys", function() {
+      it("should get the lookup's item's keys in order", function() {
         assert.deepEqual(lookup.keys(), ['a', 'b', 'c']);
       });
     });
 
     describe(".values", function() {
-      it("should get the lookup's item's values", function() {
+      it("should get the lookup's item's values in order", function() {
         assert.deepEqual(lookup.values(), [1, 2, 3]);
       });
     });
@@ -110,10 +110,15 @@ describe("go.components.structures", function() {
     });
 
     describe(".eachItem", function() {
-      it("should iterate through each the lookup's items", function() {
-        var items = {};
-        lookup.eachItem(function(k, v) { items[k] = v; });
-        assert.deepEqual(lookup.items(), items);
+      it("should iterate through the lookup's items in order", function() {
+        var items = [];
+        lookup.eachItem(function(k, v) { items.push({k: k, v: v}); });
+
+        assert.deepEqual(
+          items,
+          [{k: 'a', v: 1},
+           {k: 'b', v: 2},
+           {k: 'c', v: 3}]);
       });
     });
 
@@ -145,6 +150,32 @@ describe("go.components.structures", function() {
       it("should get the item's value by its index", function() {
         assert.equal(lookup.at(0), 1);
       });
+
+      it("should return undefined if a bad index is given", function() {
+        assert.isUndefined(lookup.at(-1));
+      });
+    });
+
+    describe(".keyAt", function() {
+      it("should get the item's key by its index", function() {
+        assert.equal(lookup.keyAt(0), 'a');
+      });
+
+      it("should return undefined if a bad index is given", function() {
+        assert.isUndefined(lookup.keyAt(-1));
+      });
+    });
+
+    describe(".indexOf", function() {
+      it("should get the item's index by its value", function() {
+        assert.equal(lookup.indexOf(1), 0);
+      });
+    });
+
+    describe(".indexOfKey", function() {
+      it("should get the item's index by its key", function() {
+        assert.equal(lookup.indexOfKey('a'), 0);
+      });
     });
 
     describe(".add", function() {
@@ -172,6 +203,8 @@ describe("go.components.structures", function() {
     describe(".remove", function() {
       it("should remove an item from the lookup", function() {
         assert.equal(lookup.remove('c'), 3);
+        assert.deepEqual(lookup.keys(), ['a', 'b']);
+        assert.deepEqual(lookup.values(), [1, 2]);
         assert.deepEqual(lookup.items(), {a: 1, b: 2});
       });
 
@@ -187,7 +220,8 @@ describe("go.components.structures", function() {
     });
 
     describe(".sort", function() {
-      it("should sort the items", function() {
+      it("should allow sorting the items using an 'iterator' comparator",
+      function() {
         lookup = new ToyLookup();
         lookup.add('a', 3, {sort: false});
         lookup.add('b', 5, {sort: false});
@@ -197,6 +231,76 @@ describe("go.components.structures", function() {
         assert.deepEqual(lookup.values(), [3, 5, 2, 9]);
         lookup.sort();
         assert.deepEqual(lookup.values(), [2, 3, 5, 9]);
+      });
+
+      it("should allow sorting the items using a 'property' comparator",
+      function() {
+        var LittleToyLookup = ToyLookup.extend({comparator: 'ordinal'});
+
+        lookup = new LittleToyLookup();
+        lookup.add('a', {ordinal: 3}, {sort: false});
+        lookup.add('b', {ordinal: 5}, {sort: false});
+        lookup.add('c', {ordinal: 2}, {sort: false});
+        lookup.add('d', {ordinal: 9}, {sort: false});
+
+        assert.deepEqual(
+          lookup.values(),
+          [{ordinal: 3},
+           {ordinal: 5},
+           {ordinal: 2},
+           {ordinal: 9}]);
+
+        lookup.sort();
+
+        assert.deepEqual(
+          lookup.values(),
+          [{ordinal: 2},
+           {ordinal: 3},
+           {ordinal: 5},
+           {ordinal: 9}]);
+      });
+
+      it("should allow sorting the items using a 'native sort' comparator",
+      function() {
+        var LittleToyLookup = ToyLookup.extend({
+          comparator: function(v1, v2) { return v1 < v2 ? -1 : 1; }
+        });
+
+        lookup = new LittleToyLookup();
+        lookup.add('a', 3, {sort: false});
+        lookup.add('b', 5, {sort: false});
+        lookup.add('c', 2, {sort: false});
+        lookup.add('d', 9, {sort: false});
+
+        assert.deepEqual(lookup.values(), [3, 5, 2, 9]);
+        lookup.sort();
+        assert.deepEqual(lookup.values(), [2, 3, 5, 9]);
+      });
+    });
+
+    describe(".rearrange", function() {
+      var ArrangeableToyLookup = ToyLookup.extend({
+        ordered: true,
+        comparator: function(v) { return v.ordinal; },
+
+        arrangeable: true,
+        arranger: function(v, ordinal) { return v.ordinal = ordinal; }
+      });
+
+      beforeEach(function() {
+        lookup = new ArrangeableToyLookup({
+          a: {ordinal: 3},
+          b: {ordinal: 5},
+          c: {ordinal: 2},
+          d: {ordinal: 9}
+        });
+      });
+
+      it("should rearrange the lookup's items according to the order given",
+      function() {
+        assert.deepEqual(lookup.keys(), ['c', 'a', 'b', 'd']);
+        lookup.rearrange('d', 'c', 'b', 'a');
+        assert.deepEqual(lookup.keys(), ['d', 'c', 'b', 'a']);
       });
     });
   });

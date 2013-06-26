@@ -11,7 +11,7 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from go.vumitools.exceptions import ConversationSendError
-from go.base.django_token_manager import DjangoTokenManager
+from go.token.django_token_manager import DjangoTokenManager
 from go.conversation.forms import ConfirmConversationForm, ReplyToMessageForm
 from go.conversation.tasks import export_conversation_messages
 
@@ -37,7 +37,7 @@ class ConversationViewMixin(object):
 
 
 class ConversationTemplateView(ConversationViewMixin, TemplateView):
-    template_base = 'conversation_views'
+    template_base = 'conversation'
 
     def get_template_names(self):
         return [self.get_template_name(self.view_name)]

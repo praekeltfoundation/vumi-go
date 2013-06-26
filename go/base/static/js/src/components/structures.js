@@ -23,6 +23,10 @@
   // A class-like object onto which events can be bound and emitted
   var Eventable = Extendable.extend(Backbone.Events);
 
+  var nativeSort = function(list, comparator, that) {
+    return list.sort(comparator.bind(that || this));
+  };
+
   // A structure that stores key-value pairs, provides helpful operations for
   // accessing the data, and emits events when items are added or removed.
   // Similar to a Backbone Collection, except the contents are key-value pairs
@@ -38,27 +42,62 @@
     addDefaults: {silent: false, sort: true},
     removeDefaults: {silent: false, sort: true},
 
-    ordered: false,
+    ordered: false,  // whether the lookup's items have an ordering
+    comparator: function(v) { return v.ordinal || 0; },
 
-    // The comparator to use if the lookup is ordered
-    comparator: function(v, i) { return i; },
+    arrangeable: false, // whether the lookup's items can be reordered
+    arranger: function(v, ordinal) { return v.ordinal = ordinal; },
 
-    constructor: function(items) {
+    constructor: function(items, options) {
+      options = options || {};
+      this.ordered = options.ordered || this.ordered;
+      this.comparator = options.comparator || this.comparator;
+      this.arrangeable = options.ordered || this.arrangeable;
+      this.arranger = options.arranger || this.arranger;
+
       this._items = {};
-      this._values = [];
+      this._itemList = [];
 
       for (var k in (items || {})) {
         this.add(k, items[k], {silent: true, sort: false});
       }
 
-      this.sort();
+      if (this.ordered) {
+        this._initSorting();
+        this.sort();
+      }
     },
 
-    size: function() { return _.size(this._values); },
+    _initSorting: function() {
+      if (_.isString(this.comparator)) {
+        this._sorter = _.sortBy;
+        this._comparator = this._stringComparator;
+      } else if (this.comparator.length === 1) {
+        this._sorter = _.sortBy;
+        this._comparator = this._iteratorComparator;
+      } else {
+        this._sorter = nativeSort;
+        this._comparator = this._nativeComparator;
+      }
+    },
 
-    keys: function() { return _.keys(this._items); },
+    _stringComparator: function(item) {
+      return item.value[this.comparator];
+    },
 
-    values: function() { return this._values.slice(); },
+    _iteratorComparator: function(item) {
+      return this.comparator(item.value);
+    },
+
+    _nativeComparator: function(item1, item2) {
+      return this.comparator(item1.value, item2.value);
+    },
+
+    size: function() { return this._itemList.length; },
+
+    keys: function() { return _(this._itemList).pluck('key'); },
+
+    values: function() { return _(this._itemList).pluck('value'); },
 
     items: function() { return _.clone(this._items); },
 
@@ -66,27 +105,63 @@
 
     map: function(fn, that) { return this.values().map(fn, that); },
 
-    where: function(props) { return _.where(this._values, props); },
+    where: function(props) { return _.where(this.values(), props); },
+
+    callAt: function(i, fn, that) {
+      var item = this._itemList[i];
+      fn.call(that, item.key, item.value, i);
+    },
 
     eachItem: function(fn, that) {
-      var items = this._items;
-      for (var k in items) { fn.call(that, k, items[k]); }
+      var i = -1,
+          n = this.size();
+
+      while (++i < n) { this.callAt(i, fn, that); }
     },
 
     has: function(k) { return _.has(this._items, k); },
 
     get: function(key) { return this._items[key]; },
 
-    at: function(i) { return this._values[i]; },
+    at: function(i) {
+      var item = this._itemList[i];
+      return item ? item.value : undefined;
+    },
+
+    keyAt: function(i) {
+      var item = this._itemList[i];
+      return item ? item.key : undefined;
+    },
+
+    _indexOf: function(propName, value) {
+      var i = this.size(),
+          items = this._itemList,
+          item;
+
+      while (i--) {
+        item = items[i];
+        if (item && item[propName] === value) { return i; }
+      }
+
+      return -1;
+    },
+
+    indexOf: function(v) { return this._indexOf('value', v); },
+
+    indexOfKey: function(k) { return this._indexOf('key', k); },
+
+    last: function() { return this.at(this.size() - 1); },
+
+    lastKey: function() { return this.keyAt(this.size() - 1); },
 
     add: function(key, value, options) {
       options = _(options || {}).defaults(this.addDefaults);
 
       this._items[key] = value;
-      this._values.push(value);
+      this._itemList.push({key: key, value: value});
 
-      if (!options.silent) { this.trigger('add', key, value); }
       if (options.sort) { this.sort(); }
+      if (!options.silent) { this.trigger('add', key, value); }
 
       return this;
     },
@@ -96,8 +171,8 @@
 
       var value = this._items[key];
       if (value) {
+        this._itemList.splice(this.indexOf(value), 1);
         delete this._items[key];
-        this._values.splice(_(this._values).indexOf(value), 1);
 
         if (!options.silent) { this.trigger('remove', key, value); }
       }
@@ -106,9 +181,18 @@
 
     sort: function() {
       if (this.ordered) {
-        this._values = _(this._values).sortBy(this.comparator, this);
+        this._itemList = this._sorter(this._itemList, this._comparator, this);
       }
       return this;
+    },
+
+    rearrange: function() {
+      var keys = Array.prototype.slice.call(arguments);
+
+      if (this.ordered && this.arrangeable) {
+        keys.forEach(function(k, i) { this.arranger(this.get(k), i); }, this);
+        this.sort();
+      }
     }
   });
 
@@ -122,8 +206,8 @@
   //   - 'add' (key, value) - Emitted when an item is added
   //   - 'remove' (key, value) - Emitted when an item is removed
   var LookupGroup = Lookup.extend({
-    constructor: function(lookups) {
-      Lookup.prototype.constructor.call(this);
+    constructor: function(lookups, options) {
+      Lookup.prototype.constructor.call(this, {}, options);
       this.members = new Lookup();
 
       // Lookup of item owners by item keys
@@ -204,14 +288,6 @@
     // The default options passed to each new view
     viewOptions: {},
 
-    // Determines whether or not the ViewCollection is ordered
-    ordered: false,
-
-    // Default comparator that sorts based on the model collection's comparator
-    comparator: function(v1, v2) {
-      return this.models.comparator(v1.model, v2.model);
-    },
-
     addDefaults: _({
       render: true,  // render view after adding
       addModel: true  // add the model if it is not in the collection
@@ -223,8 +299,7 @@
     }).defaults(Lookup.prototype.removeDefaults),
 
     constructor: function(options) {
-      Lookup.prototype.constructor.call(this);
-      options = options || {};
+      Lookup.prototype.constructor.call(this, {}, options);
 
       this._byModelId = {};
       this.models = this._ensureCollection(options.models);

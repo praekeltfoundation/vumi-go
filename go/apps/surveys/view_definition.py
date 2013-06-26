@@ -8,7 +8,7 @@ from vxpolls.manager import PollManager
 
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, ConversationTemplateView)
-from go.conversation.forms import ConversationForm
+from go.conversation.old_forms import ConversationForm
 from go.base.utils import make_read_only_form
 from go.apps.surveys import forms
 
