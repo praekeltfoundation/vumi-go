@@ -26,37 +26,97 @@ class InvalidConnectorError(RoutingError):
 
 
 class RoutingMetadata(object):
-    """Helps manage Vumi Go routing metadata on a message."""
+    """Helps manage Vumi Go routing metadata on a message.
+
+    Adds support for `go_hops` and `go_outbound_hops`.
+
+    The hops are both lists of `[source, destination]`. A `source` is
+    a pair of a `GoConnector` string and an endpoint name and
+    represents connector and endpoint the `AccountRoutingTableDispatcher`
+    received the message on. The `destination` represents the connector
+    and endpoint the message was published on after being received.
+
+    The `go_outbound_hops` is a cache of the `go_hops` for the outbound
+    message associated with an event. `go_outbound_hops` is only written
+    to event messages. It allows dispatching events through multiple
+    routing blocks while only retrieving the outbound message from the
+    message store once.
+    """
 
     def __init__(self, msg, outbound=None):
         self._msg = msg
 
     def get_hops(self):
-        """Return a reference to the hops list for the given message."""
-        hops = self._msg['routing_metadata'].setdefault('hops', [])
+        """Return a reference to the hops list for the message."""
+        hops = self._msg['routing_metadata'].setdefault('go_hops', [])
         return hops
 
-    def push_hop(self, go_connector_str, endpoint):
-        """Add a new hop to the hops list for the given message."""
-        hops = self.get_hops()
-        hops.append([go_connector_str, endpoint])
+    def get_outbound_hops(self):
+        """Return a reference to the cached outbound hops list.
 
-    def next_hop(self, outbound_msg):
-        """Computes the next hop assuming this message is following the
-        inverse of the hops contained in the supplied outbound msg.
-
-        Usually this is called on an event message with the outbound
-        message the event is for as the `outbound_msg` argument since
-        events follow the reverse of the path taken by their associated
-        outbound message.
-
-        Returns `None` if a suitable next hop cannot be determined.
+        Returns None if no cached outbound hops are present.
         """
-        our_hops = self.get_hops()
-        outbound_hops = self.__class__(outbound_msg).get_hops()
-        if len(our_hops) >= len(outbound_hops):
+        outbound_hops = self._msg['routing_metadata'].get('go_outbound_hops')
+        return outbound_hops
+
+    def set_outbound_hops(self, outbound_hops):
+        """Set the cached list of outbound hops."""
+        self._msg['routing_metadata']['go_outbound_hops'] = outbound_hops[:]
+
+    def push_hop(self, source, destination):
+        """Appends a `[source, destination]` pair to the hops list."""
+        hops = self.get_hops()
+        hops.append([source, destination])
+
+    def push_source(self, go_connector_str, endpoint):
+        """Append a new hop to the hops list with destination set to None.
+
+        Checks that the previous hop (if any) does not have a None
+        destination.
+        """
+        source = [go_connector_str, endpoint]
+        hops = self.get_hops()
+        if hops and hops[-1][1] is None:
+            raise RoutingError(
+                "Attempt to push source hop twice in a row. First source was"
+                " %r. Second source was %r." % (hops[-1][1], source),
+                self._msg)
+        hops.append([source, None])
+
+    def push_destination(self, go_connector_str, endpoint):
+        """Set the destination of the most recent hop.
+
+        Checks that the most recent hop has an endpoint of None.
+        """
+        destination = [go_connector_str, endpoint]
+        hops = self.get_hops()
+        if not hops or hops[-1][1] is not None:
+            raise RoutingError(
+                "Attempt to push destination hop without first pushing the"
+                " source hop. Destination is %r" % (destination,), self._msg)
+        hops[-1][1] = destination
+
+    def next_hop(self):
+        """Computes the next hop assuming this message is following the
+        inverse of the hops contained in the cached outbound hops list.
+
+        Assumes the cached outbound hops list has been set and that
+        `push_source` has been called with the most recent source hop.
+
+        Returns the appropriate destination hop or `None` if no
+        appropriate hop can be determined.
+        """
+        hops = self.get_hops()
+        outbound_hops = self.get_outbound_hops()
+        if not hops or not outbound_hops or len(hops) > len(outbound_hops):
             return None
-        return outbound_hops[-(len(our_hops) + 1)]
+        if hops[-1][1] is not None:  # check source hop was set
+            return None
+        # Note: outbound source is the event destination (and vice versa).
+        [outbound_src, outbound_dst] = outbound_hops[-len(hops)]
+        if outbound_dst != hops[-1][0]:
+            return None
+        return outbound_src
 
 
 class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
@@ -309,7 +369,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                 " unknown. Bad connector is: %s" % conn, msg)
 
         rmeta = RoutingMetadata(msg)
-        rmeta.push_hop(str(conn), target[1])
+        rmeta.push_destination(str(conn), target[1])
         returnValue((dst_connector_name, target[1]))
 
     def acquire_source(self, msg, connector_type, direction):
@@ -360,8 +420,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         src_conn_str = str(src_conn)
         rmeta = RoutingMetadata(msg)
-        if not rmeta.get_hops():
-            rmeta.push_hop(src_conn_str, msg.get_routing_endpoint())
+        rmeta.push_source(src_conn_str, msg.get_routing_endpoint())
         return src_conn_str
 
     @inlineCallbacks
@@ -471,6 +530,46 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         yield self.publish_outbound(msg, dst_connector_name, dst_endpoint)
 
     @inlineCallbacks
+    def _set_event_metadata(self, event):
+        """Sets the user account, tag and outbound hops metadata on an event
+        if it does not already have them.
+        """
+        # TODO: the setdefault can be removed once Vumi events have
+        #       helper_metadata
+        event.payload.setdefault('helper_metadata', {})
+        event_mdh = self.get_metadata_helper(event)
+        event_rmeta = RoutingMetadata(event)
+
+        if (event_rmeta.get_outbound_hops() is not None
+            and event_mdh.has_user_account()
+            and event_mdh.tag is not None):
+                return
+
+        # some metadata is missing, grab the associated outbound message
+        # and look for it there:
+
+        msg = yield self.find_message_for_event(event)
+        if msg is None:
+            raise UnroutableMessageError(
+                "Could not find transport user message for event", event)
+        msg_mdh = self.get_metadata_helper(msg)
+        if not msg_mdh.has_user_account():
+            raise UnroutableMessageError(
+                "Outbound message for event has no associated"
+                " user account: %r" % (msg,), event)
+        if msg_mdh.tag is None:
+            raise UnroutableMessageError(
+                "Outbound message for event has no tag set: %r" % (msg,),
+                event)
+
+        # set the tag on the event so that if it is from a transport
+        # we can set the source of the message correctly in acquire_source.
+        event_mdh.set_tag(msg_mdh.tag)
+        event_mdh.set_user_account(msg_mdh.get_account_key())
+        msg_rmeta = RoutingMetadata(msg)
+        event_rmeta.set_outbound_hops(msg_rmeta.get_hops())
+
+    @inlineCallbacks
     def process_event(self, config, event, connector_name):
         """Process an event message.
 
@@ -496,52 +595,19 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         # events are in same direction as inbound messages so
         # we use INBOUND as the direction in this method.
 
-        # TODO: have hops include both source and destination
-        # TODO: have event dispatcher store outbound message hops and user account key
-        #       in the event message so that it doesn't have to be repeatedly looked up.
-        # TODO: have the next hop function check that existing event and outbound hops
-        #       match up and that the inbound endpoint is what is expected.
-
-        # TODO: check for routing metadata before loading message
-        msg = yield self.find_message_for_event(event)
-        if msg is None:
-            raise UnroutableMessageError(
-                "Could not find transport user message for event", event)
-
-        msg_mdh = self.get_metadata_helper(msg)
-        if not msg_mdh.has_user_account():
-            raise UnroutableMessageError(
-                "Outbound message for event has no associated"
-                " user account: %r" % (msg,), event)
-        if msg_mdh.tag is None:
-            raise UnroutableMessageError(
-                "Outbound message for event has no tag set: %r" % (msg,),
-                event)
-
-        # set the tag on the event so that if it is from a transport
-        # we can set the source of the message correctly in acquire_source.
-        msg_mdh = self.get_metadata_helper(msg)
-        # TODO: the setdefault can be removed once Vumi events have
-        #       helper_metadata
-        event.payload.setdefault('helper_metadata', {})
-        event_mdh = self.get_metadata_helper(event)
-        event_mdh.set_tag(msg_mdh.tag)
-        event_mdh.set_user_account(msg_mdh.get_account_key())
-
-        # TODO: move hops helper functions to RoutingMetadata helper class
+        yield self._set_event_metadata(event)
 
         connector_type = self.connector_type(connector_name)
-        # we ignore the source connector but acquire_sources sets the initial
-        # hop if needed
-        # TODO: check source in next hop
+        # we ignore the source connector returned but .acquire_source() sets
+        # the initial hop and .next_hop() checks that it matches the outbound
+        # destination.
         self.acquire_source(event, connector_type, self.INBOUND)
 
         rmeta = RoutingMetadata(event)
-        target = rmeta.next_hop(msg)
+        target = rmeta.next_hop()
         if target is None:
             raise UnroutableMessageError(
-                "Could not find next hop for event"
-                " (user message was: %s)" % (msg,), event)
+                "Could not find next hop for event.", event)
 
         dst_connector_name, dst_endpoint = yield self.set_destination(
             event, target, self.INBOUND)
