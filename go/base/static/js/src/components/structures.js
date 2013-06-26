@@ -72,12 +72,15 @@
         this._comparator = this._nativeComparator;
       }
     },
-    _iteratorComparator: function(item) {
-      return this.comparator(item.value);
-    },
+
     _stringComparator: function(item) {
       return item.value[this.comparator];
     },
+
+    _iteratorComparator: function(item) {
+      return this.comparator(item.value);
+    },
+
     _nativeComparator: function(item1, item2) {
       return this.comparator(item1.value, item2.value);
     },
