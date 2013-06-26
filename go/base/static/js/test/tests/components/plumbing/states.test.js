@@ -92,7 +92,6 @@ describe("go.components.plumbing.states", function() {
         var state = collection.get('x');
 
         collection.on('remove', function() {
-          console.log(state.endpoints._keyIndices);
           assert(_.isEmpty(state.endpoints.values()));
           done();
         });
