@@ -15,6 +15,8 @@
   var ChoiceEndpointModel = DialogueEndpointModel.extend();
 
   var DialogueStateModel = StateModel.extend({
+    collectionType: 'DialogueStateModelCollection',
+
     subModelTypes: {
       choice: 'ChoiceStateModel',
       freetext: 'FreeTextStateModel',
@@ -24,7 +26,13 @@
     initialize: function() {
       // TODO replace _.uniqueId() with a more universally unique id generator
       if (!this.has('uuid')) { this.set('uuid', _.uniqueId()); }
+      if (!this.has('ordinal')) { this.set('ordinal', 0); }
     }
+  });
+
+  var DialogueStateModelCollection = Backbone.Collection.extend({
+    model: DialogueStateModel,
+    comparator: function(state) { return state.get('ordinal'); }
   });
 
   var ChoiceStateModel = DialogueStateModel.extend({
