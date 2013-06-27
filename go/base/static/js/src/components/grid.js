@@ -168,10 +168,14 @@
     },
 
     _sortableOptions: function() {
-      return _({}).extend(
-        _(this).result('sortableOptions'), {
+      var opts = _(this).result('sortableOptions');
+
+      return _({}).extend(opts, {
         connectWith: '.row',
-        stop: this.reorder.bind(this)
+        stop: function(e, ui) {
+          this.reorder();
+          if (opts.stop) { opts.stop(e, ui); }
+        }.bind(this)
       });
     },
 
