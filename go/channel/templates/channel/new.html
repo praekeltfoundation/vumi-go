@@ -18,29 +18,33 @@
 
         <div class="span4">
             <div class="box">
-                <label for="id_{{ form_config.country.name }}">
-                    {{ form_config_new.country.label }}
+                <label for="id_{{ new_channel_form.country.name }}">
+                    {{ new_channel_form.country.label }}
                 </label>
 
-                {{ form_config_new.country }}
+                {{ new_channel_form.country }}
 
             </div>
         </div>
 
         <div class="span4 channel">
             <div class="box">
-                <label for="id_{{ form_config.channel.name }}">
-                  {{ form_config_new.channel.label }}
+                <label for="id_{{ new_channel_form.channel.name }}">
+                  {{ new_channel_form.channel.label }}
                 </label>
                 
-                {% for country, channels in form_config_new.channel_options.items %}
-                    <select name="{{ form_config_new.channel.name }}"
+                {% for country, channels in new_channel_form.channel_options.items %}
+                    <select name="{{ new_channel_form.channel.name }}"
                         data-relation-key="{{ country }}">
-                        {% for channel in channels %}
-                        <option value="{{ channel.0 }}:">
-                            {{ channel.1 }}
-                        </option>
+                        {% for channel, tags in channels.items %}
+                        <optgroup label="{{ channel.1 }}">
+                          {% for tag in tags %}
+                          <option value="{{ tag.0 }}">
+                            {{ tag.1 }}
+                          </option>
+                          {% endfor %}
                         {% endfor %}
+                        </optgroup>
                     </select>
                 {% endfor %}
             </div>
@@ -60,13 +64,13 @@
 {% block ondomready %}
     {{ block.super }}
 
-    $('.country select').on('change', function() {
+    $('select[name=country]').on('change', function() {
         var v = $(this).find(':checked').val();
         $('.channel select').hide();
         $('.channel select[data-relation-key="' + v + '"]').show();
     });
     // trigger change in order to show the first select box.
-    $('.country select').trigger('change');
+    $('select[name=country]').trigger('change');
 
     $('#form-channels').on('submit', function() {
         // remove all the select elements that are hidden, so that they're
