@@ -31,6 +31,11 @@
       return this;
     },
 
+    detach: function() {
+      this.$el.detach();
+      return this;
+    },
+
     render: function() {
       this.state.$el.append(this.$el);
 
@@ -69,17 +74,25 @@
       end: 'go.campaign.dialogue.states.end.EndStateView'
     },
 
-    id: function() { return this.model.id; },
+    headerTemplate: JST.campaign_dialogue_states_header,
+
+    events: {
+      'click .edit-switch': function(e) {
+        e.preventDefault();
+        this.edit();
+      }
+    },
 
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
 
-      this.editMode = new this.editModeType({state: this});
-      this.previewMode = new this.previewModeType({state: this});
+      this.$header = $('<div><div>').addClass('header');
+      this.modes = {
+        edit: new this.editModeType({state: this}),
+        preview: new this.previewModeType({state: this})
+      };
 
-      this.mode = options.mode === 'edit'
-        ? this.editMode
-        : this.previewMode;
+      this.switchMode(options.mode || 'preview', {render: false});
     },
 
     // 'Resets' a state to a new type by removing the current state, and
@@ -89,21 +102,33 @@
       this.collection.reset(this, type);
     },
 
-    // Switch to preview mode
-    preview: function() {
-      this.mode.destroy();
-      this.mode = this.previewMode;
-      this.render();
+    switchMode: function(modeName, options) {
+      options = _(options || {}).defaults({render: true});
+      var mode = this.modes[modeName] || this.previewMode;
+
+      if (this.mode) { this.mode.detach(); }
+      this.mode = mode;
+      this.modeName = modeName;
+
+      if (options.render) { this.render(); }
+      return this;
     },
 
-    // Switch to edit mode
-    edit: function() {
-      this.mode.destroy();
-      this.mode = this.editMode;
-      this.render();
+    preview: function(options) {
+      return this.switchMode('preview', options);
+    },
+
+    edit: function(options) {
+      return this.switchMode('edit', options);
     },
 
     render: function() {
+      this.$header.html(this.headerTemplate({
+        name: this.model.get('name'),
+        mode: this.modeName
+      }));
+      this.$el.append(this.$header);
+
       this.mode.render();
       this.endpoints.render();
       return this;
