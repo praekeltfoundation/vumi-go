@@ -122,6 +122,7 @@
     initialize: function(options) {
       this.items = this._ensureViewCollection(options.items);
       this.sortableOptions = options.sortableOptions || this.sortableOptions;
+
       this.rowType = options.rowType || this.rowType;
       this.rowItemType = options.rowItemType || this.rowItemType;
       this.rowCollectionType = options.rowCollectionType
@@ -129,6 +130,8 @@
 
       this.items.on('add', this.render, this);
       this.items.on('remove', this.render, this);
+
+      this.resetRows();
     },
 
     _ensureViewCollection: function(obj) {
@@ -180,9 +183,9 @@
     },
 
     render: function() {
+      this.rows.each(function(r) { r.$el.detach(); });
       this.resetRows();
 
-      this.$el.empty();
       this.rows.each(function(r) { this.$el.append(r.$el); }, this);
       this.rows.render();
 
