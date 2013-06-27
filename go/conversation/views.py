@@ -7,9 +7,9 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.http import HttpResponse
 
-from go.conversation.forms import ConversationSearchForm, ReplyToMessageForm
+from go.conversation.forms import (
+    NewConversationForm, ConversationSearchForm, ReplyToMessageForm)
 from go.base.utils import get_conversation_view_definition, conversation_or_404
-from go.wizard.forms import CampaignGeneralForm
 
 
 CONVERSATIONS_PER_PAGE = 12
@@ -96,15 +96,15 @@ def conversation_action(request, conversation_key, action_name):
 @require_POST
 def new_conversation(request):
     # TODO: description?
-    form = CampaignGeneralForm(request.POST)
+    form = NewConversationForm(request.POST)
     if not form.is_valid():
         # TODO: Something more sensible here?
         return HttpResponse(
             "Invalid form: %s" % (form.errors,), status=400)
-    conversation_type = form.cleaned_data['type']
+    conversation_type = form.cleaned_data['conversation_type']
     conv = request.user_api.new_conversation(
         conversation_type, name=form.cleaned_data['name'],
-        description=u'', config={})
+        description=form.cleaned_data['description'], config={})
     messages.info(request, 'Conversation created successfully.')
 
     view_def = get_conversation_view_definition(

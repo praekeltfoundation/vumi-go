@@ -3,7 +3,6 @@ from datetime import date
 from django.test.client import Client
 from django.core import mail
 from django.core.urlresolvers import reverse
-from django.contrib.sites.models import Site
 from django.utils.unittest import skip
 
 from vumi.tests.utils import RegexMatcher
@@ -47,18 +46,10 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         return self.user_api.wrap_conversation(conv)
 
     def run_new_conversation(self, selected_option, pool, tag):
-        # render the form
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        # post the form
-        response = self.client.post(self.get_new_view_url(), {
-            'name': 'conversation name',
-            'type': self.TEST_CONVERSATION_TYPE,
-        })
+        response = self.post_new_conversation()
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
         conv = self.get_latest_conversation()
-        # self.assertEqual(conv.delivery_class, 'sms')
-        # self.assertEqual(conv.delivery_tag_pool, pool)
-        # self.assertEqual(conv.delivery_tag, tag)
         self.assertRedirects(response, self.get_view_url('show', conv.key))
 
     def test_new_conversation(self):
