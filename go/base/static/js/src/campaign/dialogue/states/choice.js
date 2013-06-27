@@ -19,7 +19,9 @@
   var ChoiceStateView = DialogueStateView.extend({
     editModeType: ChoiceStateEditView,
     previewModeType: ChoiceStatePreviewView,
-    endpointSchema: [{attr: 'entry_endpoint'}]
+    endpointSchema: [
+      {attr: 'entry_endpoint'},
+      {attr: 'choice_endpoints'}]
   });
 
   _(exports).extend({

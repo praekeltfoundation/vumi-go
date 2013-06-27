@@ -26,11 +26,11 @@
   });
 
   var ToyStateEditView = DialogueStateEditView.extend({
-    template: _.template("toy edit mode")
+    template: _.template("toy edit mode: <%= model.name %>")
   });
 
   var ToyStatePreviewView = DialogueStatePreviewView.extend({
-    template: _.template("toy preview mode")
+    template: _.template("toy preview mode: <%= model.name %>")
   });
 
   // A state view type that does nothing. Useful for testing.
@@ -39,49 +39,51 @@
     previewModeType: ToyStatePreviewView,
 
     endpointSchema: [
-      {attr: 'entry_endpoint'},
-      {attr: 'exit_endpoint'}]
+      {attr: 'entry_endpoint', side: 'left'},
+      {attr: 'exit_endpoint', side: 'right'}]
   });
 
-  // Make toy state subtype to use for testing
-  DialogueStateModel.prototype.subModelTypes.toy = 'ToyStateModel';
+  // Make a toy state subtype to use for testing
+  DialogueStateModel.prototype.subModelTypes.toy
+    = 'go.campaign.dialogue.testHelpers.ToyStateModel';
+
   DialogueStateView.prototype.subtypes.toy = ToyStateView;
 
   var modelData = {
     conversation: 'conversation-key',
-    start_state: {uuid: 'state-1'},
+    start_state: {uuid: 'state1'},
     states: [{
-      uuid: 'state-1',
+      uuid: 'state1',
       name: 'Message 1',
       type: 'choice',
-      entry_endpoint: null,
       text: 'What is your favourite colour?',
+      entry_endpoint: {uuid: 'endpoint0'},
       choice_endpoints: [
-        {value: 'value-1', label: 'Red', uuid: 'endpoint-1'},
-        {value: 'value-2', label: 'Blue', uuid: 'endpoint-2'}]
+        {value: 'value1', label: 'Red', uuid: 'endpoint1'},
+        {value: 'value2', label: 'Blue', uuid: 'endpoint2'}]
     }, {
-      uuid: 'state-2',
+      uuid: 'state2',
       name: 'Message 2',
       type: 'freetext',
-      entry_endpoint: {uuid: 'endpoint-3'},
-      exit_endpoint: {uuid: 'endpoint-4'},
+      entry_endpoint: {uuid: 'endpoint3'},
+      exit_endpoint: {uuid: 'endpoint4'},
       text: 'What is your name?'
     }, {
-      uuid: 'state-3',
+      uuid: 'state3',
       name: 'Ending 1',
       type: 'end',
-      entry_endpoint: {uuid: 'endpoint-5'},
+      entry_endpoint: {uuid: 'endpoint5'},
       text: 'Thank you for taking our survey'
     }, {
-      uuid: 'state-4',
+      uuid: 'state4',
       name: 'Toy Message 1',
       type: 'toy',
-      entry_endpoint: {uuid: 'endpoint-6'},
-      exit_endpoint: {uuid: 'endpoint-7'}
+      entry_endpoint: {uuid: 'endpoint6'},
+      exit_endpoint: {uuid: 'endpoint7'}
     }],
     connections: [{
-     source: {uuid: 'endpoint-1'},
-     target: {uuid: 'endpoint-2'}
+     source: {uuid: 'endpoint1'},
+     target: {uuid: 'endpoint3'}
     }]
   };
 

@@ -15,16 +15,23 @@
   var ChoiceEndpointModel = DialogueEndpointModel.extend();
 
   var DialogueStateModel = StateModel.extend({
+    collectionType: 'go.campaign.dialogue.models.DialogueStateModelCollection',
+
     subModelTypes: {
-      choice: 'ChoiceStateModel',
-      freetext: 'FreeTextStateModel',
-      end: 'EndStateModel'
+      choice: 'go.campaign.dialogue.models.ChoiceStateModel',
+      freetext: 'go.campaign.dialogue.models.FreeTextStateModel',
+      end: 'go.campaign.dialogue.models.EndStateModel'
     },
 
     initialize: function() {
-      // TODO replace _.uniqueId() with a more universally unique id generator
-      if (!this.has('uuid')) { this.set('uuid', _.uniqueId()); }
+      if (!this.has('uuid')) { this.set('uuid', uuid.v4()); }
+      if (!this.has('ordinal')) { this.set('ordinal', 0); }
     }
+  });
+
+  var DialogueStateModelCollection = Backbone.Collection.extend({
+    model: DialogueStateModel,
+    comparator: function(state) { return state.get('ordinal'); }
   });
 
   var ChoiceStateModel = DialogueStateModel.extend({

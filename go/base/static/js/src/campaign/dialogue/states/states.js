@@ -3,9 +3,15 @@
 // Structures for each dialogue state type
 
 (function(exports) {
-  var states = go.components.plumbing.states,
+  var plumbing = go.components.plumbing;
+
+  var states = plumbing.states,
       StateView = states.StateView,
       StateViewCollection = states.StateViewCollection;
+
+  var endpoints = plumbing.endpoints,
+      ParametricEndpointView = endpoints.ParametricEndpointView,
+      AligningEndpointCollection = endpoints.AligningEndpointCollection;
 
   // Base 'mode' for state views. Each mode acts as a 'delegate view',
   // targeting a dialogue view's element and acting according to the mode type
@@ -54,9 +60,12 @@
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
 
+    endpointType: ParametricEndpointView,
+    endpointCollectionType: AligningEndpointCollection,
+
     subtypes: {
       choice: 'go.campaign.dialogue.states.choice.ChoiceStateView',
-      freetext: 'go.campaign.dialogue.states.freetext.FreeStateView',
+      freetext: 'go.campaign.dialogue.states.freetext.FreeTextStateView',
       end: 'go.campaign.dialogue.states.end.EndStateView'
     },
 
@@ -67,11 +76,10 @@
 
       this.editMode = new this.editModeType({state: this});
       this.previewMode = new this.previewModeType({state: this});
-      this.mode = this.editMode;
 
-      // If we weren't given a position, ask the grid for one. This case
-      // happens when new states are fetched from the server.
-      this.position = options.position || this.diagram.grid.nextPosition();
+      this.mode = options.mode === 'edit'
+        ? this.editMode
+        : this.previewMode;
     },
 
     // 'Resets' a state to a new type by removing the current state, and
@@ -96,8 +104,6 @@
     },
 
     render: function() {
-      // TODO position the state
-      this.diagram.$el.append(this.$el);
       this.mode.render();
       this.endpoints.render();
       return this;
@@ -107,11 +113,32 @@
   var DialogueStateCollection = StateViewCollection.extend({
     type: DialogueStateView,
 
+    ordered: true,
+    comparator: function(state) { return state.model.get('ordinal'); },
+
+    arrangeable: true,
+    arranger: function(state, ordinal) {
+      state.model.set('ordinal', ordinal, {silent: true});
+    },
+
+    viewOptions: function() {
+      var opts = DialogueStateCollection.__super__.viewOptions.call(this);
+      return _({mode: 'preview'}).defaults(opts);
+    },
+
     // Removes a state and creates a new state of a different type in the same
     // position as the old state
     reset: function(state, type) {
       this.remove(state);
-      this.add({position: state.position, model: {type: type}});
+
+      this.add({
+        mode: 'edit',
+        model: {
+          type: type,
+          ordinal: state.model.get('ordinal')
+        }
+      });
+
       return this;
     }
   });
