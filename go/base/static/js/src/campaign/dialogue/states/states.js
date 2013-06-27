@@ -76,7 +76,10 @@
 
       this.editMode = new this.editModeType({state: this});
       this.previewMode = new this.previewModeType({state: this});
-      this.mode = this.editMode;
+
+      this.mode = options.mode === 'edit'
+        ? this.editMode
+        : this.previewMode;
     },
 
     // 'Resets' a state to a new type by removing the current state, and
@@ -118,12 +121,18 @@
       state.model.set('ordinal', ordinal, {silent: true});
     },
 
+    viewOptions: function() {
+      var opts = DialogueStateCollection.__super__.viewOptions.call(this);
+      return _({mode: 'preview'}).defaults(opts);
+    },
+
     // Removes a state and creates a new state of a different type in the same
     // position as the old state
     reset: function(state, type) {
       this.remove(state);
 
       this.add({
+        mode: 'edit',
         model: {
           type: type,
           ordinal: state.model.get('ordinal')

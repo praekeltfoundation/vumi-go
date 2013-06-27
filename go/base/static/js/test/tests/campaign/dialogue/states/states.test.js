@@ -91,6 +91,7 @@ describe("go.campaign.dialogue.states", function() {
 
     describe(".preview", function() {
       beforeEach(function() {
+        state.mode = state.editMode;
         state.render();
       });
 
@@ -114,7 +115,7 @@ describe("go.campaign.dialogue.states", function() {
       });
     });
 
-    describe(".preview", function() {
+    describe(".edit", function() {
       beforeEach(function() {
         state.mode = state.previewMode;
         state.render();
