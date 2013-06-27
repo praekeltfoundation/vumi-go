@@ -27,6 +27,10 @@ class GoManageConversationTestCase(DjangoGoApplicationTestCase):
             'User matching query does not exist', self.command.handle,
             email_address='foo@bar')
         self.assertRaisesRegexp(
+            CommandError,
+            'Please specify a conversation key', self.command.handle,
+            email_address=self.user.email)
+        self.assertRaisesRegexp(
             CommandError, 'Conversation does not exist',
             self.command.handle, email_address=self.user.email,
             conversation_key='foo')

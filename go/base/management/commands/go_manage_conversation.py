@@ -40,6 +40,8 @@ class Command(BaseCommand):
             self.list_conversations(user_api)
             return
 
+        if 'conversation_key' not in options:
+            raise CommandError('Please specify a conversation key')
         conversation = user_api.get_wrapped_conversation(
             options['conversation_key'])
         if conversation is None:
