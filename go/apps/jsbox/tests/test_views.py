@@ -38,15 +38,9 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
 
     def test_new_conversation(self):
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        response = self.client.post(self.get_new_view_url(), {
-            'name': 'conversation name',
-            'type': self.TEST_CONVERSATION_TYPE,
-        })
+        response = self.post_new_conversation()
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
         conversation = self.get_latest_conversation()
-        # self.assertEqual(conversation.delivery_class, 'sms')
-        # self.assertEqual(conversation.delivery_tag_pool, 'longcode')
-        # self.assertEqual(conversation.delivery_tag, None)
         self.assertEqual(conversation.name, 'conversation name')
         self.assertEqual(conversation.description, '')
         self.assertEqual(conversation.config, {})
