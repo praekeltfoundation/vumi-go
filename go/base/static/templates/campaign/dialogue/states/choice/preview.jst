@@ -1,5 +1,5 @@
-<span class='question'><%= model.text %></span>
-<ol>
+<span class='text'><%= model.text %></span>
+<ol class='choices'>
 <% _(model.choice_endpoints).each(function(choice) { %>
   <li data-endpoint-id="<%= choice.uuid %>"><%= choice.label %></li>
 <% }); %>

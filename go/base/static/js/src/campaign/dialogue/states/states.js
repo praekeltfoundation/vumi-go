@@ -55,7 +55,10 @@
   // Mode allowing the user to make changes to the dialogue state. Acts as a
   // base for each state type's `edit` mode
   var DialogueStateEditView = DialogueStateModeView.extend({
-    className: 'edit mode'
+    className: 'edit mode',
+
+    headTemplate: JST.campaign_dialogue_states_modes_edit_head,
+    tailTemplate: JST.campaign_dialogue_states_modes_edit_tail
   });
 
   // Mode for a 'read-only' preview of the dialogue state. Acts as a base for

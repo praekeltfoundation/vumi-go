@@ -1,1 +1,11 @@
-<!-- TODO -->
+<label>Your message</label>
+<textarea class='text'><%= model.text %></textarea>
+
+<label>Recipient's options</label>
+<ol class='choices'>
+<% _(model.choice_endpoints).each(function(choice) { %>
+<li data-endpoint-id="<%= choice.uuid %>"><input value="<%= choice.label %>"></input></li>
+<% }); %>
+</ol>
+
+<a class='btn btn-primary new-choice'>Add another answer</a>
