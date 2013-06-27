@@ -263,6 +263,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         elif msg_mdh.tag is not None:
             tag_info = yield self.vumi_api.mdb.get_tag_info(tuple(msg_mdh.tag))
             user_account_key = tag_info.metadata['user_account']
+            if user_account_key is None:
+                raise UnroutableMessageError(
+                    "Message received for unowned tag.", msg)
         else:
             raise UnroutableMessageError(
                 "Could not determine user account key", msg)
