@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.contrib import messages
 
-from go.channel.forms import CampaignConfigurationForm
+from go.channel.forms import NewChannelForm
 
 
 @login_required
@@ -17,7 +17,7 @@ def new_channel(request):
     """
 
     if request.method == 'POST':
-        form = CampaignConfigurationForm(request.user_api, request.POST)
+        form = NewChannelForm(request.user_api, request.POST)
         if form.is_valid():
             # TODO: Better validation?
             pool, tag = form.cleaned_data['channel'].split(':')
@@ -33,7 +33,7 @@ def new_channel(request):
         else:
             raise ValueError(repr('Error: %s' % (form.errors,)))
 
-    form_config_new = CampaignConfigurationForm(request.user_api)
+    new_channel_form = NewChannelForm(request.user_api)
     return render(request, 'channel/new.html', {
-        'form_config_new': form_config_new,
+        'new_channel_form': new_channel_form,
     })
