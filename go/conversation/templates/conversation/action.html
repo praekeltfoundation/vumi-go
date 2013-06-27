@@ -9,8 +9,7 @@
 
 {% block content_actions_right %}
 <div class="pull-right">
-    <input type="reset" class="btn" value="Cancel">
-    <input type="submit" name="submit" class="btn btn-primary" value="Next">
+    <button type="submit" name="submit" class="btn btn-primary" value="Next">Next</button>
 </div>
 {% endblock %}
 
@@ -34,4 +33,10 @@
         </div>
     </div>
 </form>
+{% endblock %}
+
+{% block ondomready %}
+    $('.actions .right button').on('click', function(e) {
+        $('#conversation_action').submit();
+    });    
 {% endblock %}
