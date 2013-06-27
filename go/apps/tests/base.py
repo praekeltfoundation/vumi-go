@@ -1,12 +1,10 @@
 from datetime import datetime, timedelta
 import uuid
 
-from vumi.tests.fake_amqp import FakeAMQPBroker
 from vumi.message import TransportUserMessage, TransportEvent
 
 from go.base.tests.utils import VumiGoDjangoTestCase, declare_longcode_tags
 from go.base import utils as base_utils
-from go.vumitools.tests.utils import FakeAmqpConnection
 
 
 class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
@@ -26,15 +24,10 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
 
     def setUp(self):
         super(DjangoGoApplicationTestCase, self).setUp()
-        self._amqp = FakeAMQPBroker()
-        self._amqp.exchange_declare('vumi', 'direct')
-        self._old_connection = base_utils.connection
-        base_utils.connection = FakeAmqpConnection(self._amqp)
         self.setup_api()
         self.declare_longcode_tags()
 
     def tearDown(self):
-        base_utils.connection = self._old_connection
         super(DjangoGoApplicationTestCase, self).tearDown()
 
     def setup_riak_fixtures(self):
