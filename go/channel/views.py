@@ -25,7 +25,7 @@ def new_channel(request):
                 got_tag = request.user_api.acquire_specific_tag((pool, tag))
             else:
                 got_tag = request.user_api.acquire_tag(pool)
-            # TODO: Acquire tag, etc.
+
             messages.info(request, 'Acquired tag: %r.' % (got_tag,))
 
             # TODO save and go to next step.

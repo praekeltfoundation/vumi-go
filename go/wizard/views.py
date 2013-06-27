@@ -10,6 +10,11 @@ from go.wizard.forms import (
 from go.conversation.forms import NewConversationForm
 from go.channel.forms import NewChannelForm
 from go.base.utils import conversation_or_404
+from go.vumitools.account import RoutingTableHelper
+
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -32,15 +37,33 @@ def create(request, conversation_key=None):
             data={'name': conversation.name})
 
     if request.method == 'POST':
-        # TODO: Reuse new conversation view logic here.
+        # TODO: Reuse new conversation/channel view logic here.
         posted_conv_form = NewConversationForm(request.POST)
-        if posted_conv_form.is_valid():
-            data = posted_conv_form.cleaned_data
-            conversation_type = data['conversation_type']
+        posted_chan_form = NewChannelForm(request.user_api, request.POST)
+        if posted_conv_form.is_valid() and posted_chan_form.is_valid():
+
+            # Create channel
+            chan_data = posted_chan_form.cleaned_data
+            pool, tag = chan_data['channel'].split(':')
+            if tag:
+                got_tag = request.user_api.acquire_specific_tag((pool, tag))
+            else:
+                got_tag = request.user_api.acquire_tag(pool)
+
+            # Create conversation
+            conv_data = posted_conv_form.cleaned_data
+            conversation_type = conv_data['conversation_type']
             conversation = request.user_api.new_conversation(
-                conversation_type, name=data['name'],
-                description=data['description'], config={})
+                conversation_type, name=conv_data['name'],
+                description=conv_data['description'], config={})
             messages.info(request, 'Conversation created successfully.')
+
+            # TODO: Factor this out into a helper of some kind.
+            user_account = request.user_api.get_user_account()
+            routing_table = request.user_api.get_routing_table(user_account)
+            rt_helper = RoutingTableHelper(routing_table)
+            rt_helper.add_oldstyle_conversation(conversation, got_tag)
+            user_account.save()
 
             action = request.POST.get('action')
             if action == 'draft':
@@ -49,7 +72,11 @@ def create(request, conversation_key=None):
 
             # TODO save and go to next step.
             return redirect(
-                'wizard:edit', conversation_key=conversation.key)
+                'conversations:conversation',
+                conversation_key=conversation.key, path_suffix='')
+        else:
+            logger.info("Validation failed: %r %r" % (
+                posted_conv_form.errors, posted_chan_form.errors))
 
     return render(request, 'wizard_views/wizard_1_create.html', {
         'wizard_form': wizard_form,

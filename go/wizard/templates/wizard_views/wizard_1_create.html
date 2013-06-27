@@ -47,7 +47,7 @@
                             {% for channel, tags in channels.items %}
                             <optgroup label="{{ channel.1 }}">
                               {% for tag in tags %}
-                              <option value="{{ tag.0 }}:">
+                              <option value="{{ tag.0 }}">
                                 {{ tag.1 }}
                               </option>
                               {% endfor %}
@@ -132,7 +132,7 @@
     // trigger change in order to show the first select box.
     $('select[name=country]').trigger('change');
 
-    $('#form-channels').on('submit', function() {
+    $('#form-conversation').on('submit', function() {
         // remove all the select elements that are hidden, so that they're
         // not posted.
         $(this).find('select:hidden').remove();

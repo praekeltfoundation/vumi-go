@@ -39,7 +39,7 @@
                         {% for channel, tags in channels.items %}
                         <optgroup label="{{ channel.1 }}">
                           {% for tag in tags %}
-                          <option value="{{ tag.0 }}:">
+                          <option value="{{ tag.0 }}">
                             {{ tag.1 }}
                           </option>
                           {% endfor %}
