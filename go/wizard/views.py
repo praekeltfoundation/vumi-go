@@ -6,8 +6,9 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 
 from go.wizard.forms import (
-    CampaignGeneralForm, CampaignConfigurationForm, CampaignBulkMessageForm,
-    CampaignSurveryInitiateForm)
+    Wizard1CreateForm, CampaignBulkMessageForm, CampaignSurveryInitiateForm)
+from go.conversation.forms import NewConversationForm
+from go.channel.forms import NewChannelForm
 from go.base.utils import conversation_or_404
 
 
@@ -20,21 +21,25 @@ def create(request, conversation_key=None):
 
     """
 
-    form_general = CampaignGeneralForm()
-    form_config_new = CampaignConfigurationForm()
+    wizard_form = Wizard1CreateForm()
+    conversation_form = NewConversationForm()
+    channel_form = NewChannelForm(request.user_api)
 
     conversation = None
     if conversation_key:
         conversation = conversation_or_404(request.user_api, conversation_key)
-        form_general = CampaignGeneralForm(data={'name': conversation.name})
+        conversation_form = NewConversationForm(
+            data={'name': conversation.name})
 
     if request.method == 'POST':
-        form = CampaignGeneralForm(request.POST)
-        if form.is_valid():
-            conversation_type = form.cleaned_data['type']
+        # TODO: Reuse new conversation view logic here.
+        posted_conv_form = NewConversationForm(request.POST)
+        if posted_conv_form.is_valid():
+            data = posted_conv_form.cleaned_data
+            conversation_type = data['conversation_type']
             conversation = request.user_api.new_conversation(
-                conversation_type, name=form.cleaned_data['name'],
-                description=u'', config={})
+                conversation_type, name=data['name'],
+                description=data['description'], config={})
             messages.info(request, 'Conversation created successfully.')
 
             action = request.POST.get('action')
@@ -47,8 +52,9 @@ def create(request, conversation_key=None):
                 'wizard:edit', conversation_key=conversation.key)
 
     return render(request, 'wizard_views/wizard_1_create.html', {
-        'form_general': form_general,
-        'form_config_new': form_config_new,
+        'wizard_form': wizard_form,
+        'conversation_form': conversation_form,
+        'channel_form': channel_form,
         'conversation_key': conversation_key,
         'conversation': conversation,
     })

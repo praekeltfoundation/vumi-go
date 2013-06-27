@@ -8,8 +8,15 @@
 <form id="form-conversation" class="indent" method="post" action="">
     {% csrf_token %}
 
-    {{ form_general }}
-    
+    {{ conversation_form }}
+
+    <div class="box">
+        <label for="id_{{ wizard_form.channel_kind.name }}">
+            {{ wizard_form.channel_kind.label }}
+        </label>
+        {{ wizard_form.channel_kind }}
+    </div>
+
     <div class="configuration">
 
         <label>
@@ -19,31 +26,45 @@
         <fieldset class="configuration_new row-fluid boxes">
             <div class="span4">
                 <div class="box">
-                    <label for="id_{{ form_config.countries.name }}">
-                        {{ form_config_new.countries.label }}
+                    <label for="id_{{ channel_form.country.name }}">
+                        {{ channel_form.country.label }}
                     </label>
 
-                    {{ form_config_new.countries }}
+                    {{ channel_form.country }}
                 </div>
                 <button class="btn btn-primary">Add country</button>
             </div>
 
             <div class="span4">
                 <div class="box">
-                    <label for="id_{{ form_config.keyword.name }}">
-                      {{ form_config_new.channels.label }}
+                    <label for="id_{{ channel_form.channel.name }}">
+                      {{ channel_form.channel.label }}
                     </label>
-                    {{ form_config_new.channels }}
+
+                    {% for country, channels in channel_form.channel_options.items %}
+                        <select name="{{ channel_form.channel.name }}"
+                            data-relation-key="{{ country }}">
+                            {% for channel, tags in channels.items %}
+                            <optgroup label="{{ channel.1 }}">
+                              {% for tag in tags %}
+                              <option value="{{ tag.0 }}:">
+                                {{ tag.1 }}
+                              </option>
+                              {% endfor %}
+                            {% endfor %}
+                            </optgroup>
+                        </select>
+                    {% endfor %}
                 </div>
                 <button class="btn btn-primary">Add channel</button>
             </div>
-            
+
             <div class="span4">
                 <div class="box">
-                    <label for="id_{{ form_config.keyword.name }}">
-                      {{ form_config_new.keyword.label }}
+                    <label for="id_{{ wizard_form.keyword.name }}">
+                      {{ wizard_form.keyword.label }}
                     </label>
-                    {{ form_config_new.keyword }}
+                    {{ wizard_form.keyword }}
                 </div>
             </div>
         </fieldset>
@@ -71,7 +92,7 @@
                     <input type="text" name="keyword" id="id_keyword">
                 </div>
             </div>
-            
+
             <div class="span4">
                 <div class="box">
                     <label for="">
@@ -90,16 +111,31 @@
 
 {% block ondomready %}
     {{ block.super }}
-    
+
     // if a channel is already selected then we should show the
     // configuration view for it.
-    $('input[name=channel]:checked').trigger('change');
+    $('input[name=channel_kind]:checked').trigger('change');
 
-    $('input[name=channel]').on('change', function() {
+    $('input[name=channel_kind]').on('change', function() {
         $('.configuration').show();
         $('.configuration fieldset').hide();
         var $el = $('.configuration_' + $(this).attr('value'));
         $el.show();
+    });
+
+    // juggle available channels
+    $('select[name=country]').on('change', function() {
+        var v = $(this).find(':checked').val();
+        $('select[name=channel]').hide();
+        $('select[name=channel][data-relation-key="' + v + '"]').show();
+    });
+    // trigger change in order to show the first select box.
+    $('select[name=country]').trigger('change');
+
+    $('#form-channels').on('submit', function() {
+        // remove all the select elements that are hidden, so that they're
+        // not posted.
+        $(this).find('select:hidden').remove();
     });
 
     // TODO: form validation.
