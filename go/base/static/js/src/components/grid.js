@@ -183,10 +183,9 @@
     },
 
     render: function() {
-      this.rows.each(function(r) { r.$el.detach; });
+      this.rows.each(function(r) { r.$el.detach(); });
       this.resetRows();
 
-      this.$el.empty();
       this.rows.each(function(r) { this.$el.append(r.$el); }, this);
       this.rows.render();
 
