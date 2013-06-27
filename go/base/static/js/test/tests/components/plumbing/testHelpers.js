@@ -219,7 +219,7 @@
   };
 
   var tearDown = function() {
-    Backbone.Relational.store.reset();
+    go.testHelpers.unregisterModels();
     jsPlumb.unbind();
     jsPlumb.detachEveryConnection();
     jsPlumb.deleteEveryEndpoint();
