@@ -161,7 +161,7 @@
     // model ordering happens. If this isn't handled correctly, the ui ordering
     // will be lost.
     reorder: function() {
-      this.items.rearrange.apply(this.items, this.itemOrder());
+      this.items.rearrange(this.itemOrder());
       this.render();
     },
 
