@@ -299,7 +299,7 @@ describe("go.components.structures", function() {
       it("should rearrange the lookup's items according to the order given",
       function() {
         assert.deepEqual(lookup.keys(), ['c', 'a', 'b', 'd']);
-        lookup.rearrange('d', 'c', 'b', 'a');
+        lookup.rearrange(['d', 'c', 'b', 'a']);
         assert.deepEqual(lookup.keys(), ['d', 'c', 'b', 'a']);
       });
     });
