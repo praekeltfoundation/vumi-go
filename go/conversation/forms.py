@@ -2,6 +2,20 @@ from django import forms
 
 from bootstrap.forms import BootstrapForm
 
+from go.base.utils import configured_conversation_types
+
+
+class NewConversationForm(forms.Form):
+
+    TYPE_CHOICES = configured_conversation_types().items()
+
+    name = forms.CharField(label="Conversation name", max_length=100)
+    description = forms.CharField(
+        label="Description", required=False)
+    conversation_type = forms.ChoiceField(
+        label="Which kind of conversation would you like?",
+        choices=TYPE_CHOICES)
+
 
 class ConfirmConversationForm(BootstrapForm):
     token = forms.CharField(required=True, widget=forms.HiddenInput)
