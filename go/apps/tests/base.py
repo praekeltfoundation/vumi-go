@@ -61,6 +61,12 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
         self.conversation = self.conv_store.new_conversation(**params)
         self.conv_key = self.conversation.key
 
+    def post_new_conversation(self, name='conversation name'):
+        return self.client.post(self.get_new_view_url(), {
+            'name': name,
+            'conversation_type': self.TEST_CONVERSATION_TYPE,
+        })
+
     def mkconversation(self, **kwargs):
         defaults = {
             'conversation_type': u'bulk_message',

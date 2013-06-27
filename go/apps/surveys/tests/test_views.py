@@ -56,16 +56,9 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
 
     def run_new_conversation(self, selected_option, pool, tag):
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        # post the form
-        response = self.client.post(self.get_new_view_url(), {
-            'name': 'conversation name',
-            'type': self.TEST_CONVERSATION_TYPE,
-        })
+        response = self.post_new_conversation()
         self.assertEqual(len(self.conv_store.list_conversations()), 2)
         conv = self.get_latest_conversation()
-        # self.assertEqual(conv.delivery_class, 'sms')
-        # self.assertEqual(conv.delivery_tag_pool, pool)
-        # self.assertEqual(conv.delivery_tag, tag)
         self.assertRedirects(response, self.get_view_url('show', conv.key))
 
     def test_new_conversation(self):
