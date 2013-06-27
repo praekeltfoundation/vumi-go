@@ -30,7 +30,10 @@
       this.grid = new components.grid.GridView({
         el: this.$el,
         items: this.states.members.get('states'),
-        sortableOptions: {sort: function() { jsPlumb.repaintEverything(); }}
+        sortableOptions: {
+          placeholder: 'placeholder',
+          sort: function() { jsPlumb.repaintEverything(); }
+        }
       });
 
       this.grid.on('render', function() { jsPlumb.repaintEverything(); });
