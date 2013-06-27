@@ -42,10 +42,19 @@
     addDefaults: {silent: false, sort: true},
     removeDefaults: {silent: false, sort: true},
 
-    ordered: false,
-    comparator: function(v) { return v; },
+    ordered: false,  // whether the lookup's items have an ordering
+    comparator: function(v) { return v.ordinal || 0; },
 
-    constructor: function(items) {
+    arrangeable: false, // whether the lookup's items can be reordered
+    arranger: function(v, ordinal) { return v.ordinal = ordinal; },
+
+    constructor: function(items, options) {
+      options = options || {};
+      this.ordered = options.ordered || this.ordered;
+      this.comparator = options.comparator || this.comparator;
+      this.arrangeable = options.ordered || this.arrangeable;
+      this.arranger = options.arranger || this.arranger;
+
       this._items = {};
       this._itemList = [];
 
@@ -171,6 +180,13 @@
         this._itemList = this._sorter(this._itemList, this._comparator, this);
       }
       return this;
+    },
+
+    rearrange: function(keys) {
+      if (this.ordered && this.arrangeable) {
+        keys.forEach(function(k, i) { this.arranger(this.get(k), i); }, this);
+        this.sort();
+      }
     }
   });
 
@@ -184,8 +200,8 @@
   //   - 'add' (key, value) - Emitted when an item is added
   //   - 'remove' (key, value) - Emitted when an item is removed
   var LookupGroup = Lookup.extend({
-    constructor: function(lookups) {
-      Lookup.prototype.constructor.call(this);
+    constructor: function(lookups, options) {
+      Lookup.prototype.constructor.call(this, {}, options);
       this.members = new Lookup();
 
       // Lookup of item owners by item keys
@@ -266,14 +282,6 @@
     // The default options passed to each new view
     viewOptions: {},
 
-    // Determines whether or not the ViewCollection is ordered
-    ordered: false,
-
-    // Default comparator that sorts based on the model collection's comparator
-    comparator: function(v1, v2) {
-      return this.models.comparator(v1.model, v2.model);
-    },
-
     addDefaults: _({
       render: true,  // render view after adding
       addModel: true  // add the model if it is not in the collection
@@ -285,8 +293,7 @@
     }).defaults(Lookup.prototype.removeDefaults),
 
     constructor: function(options) {
-      Lookup.prototype.constructor.call(this);
-      options = options || {};
+      Lookup.prototype.constructor.call(this, {}, options);
 
       this._byModelId = {};
       this.models = this._ensureCollection(options.models);

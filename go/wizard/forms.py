@@ -1,10 +1,8 @@
 from django import forms
 from django.forms.widgets import RadioSelect
 
-from go.base.utils import configured_conversation_types
 
-
-class CampaignGeneralForm(forms.Form):
+class Wizard1CreateForm(forms.Form):
 
     CHANNEL_CHOICES = (
         ('new', 'Setup a new channel'),
@@ -12,36 +10,8 @@ class CampaignGeneralForm(forms.Form):
             channel'),
     )
 
-    TYPE_CHOICES = configured_conversation_types().items()
-
-    name = forms.CharField(label="Conversation name", max_length=100)
-    type = forms.ChoiceField(
-        label="Which kind of conversation would you like?",
-        choices=TYPE_CHOICES
-    )
-    channel = forms.ChoiceField(label="Channels", choices=CHANNEL_CHOICES,
-                                required=False, widget=RadioSelect)
-
-
-class CampaignConfigurationForm(forms.Form):
-
-    COUNTRY_CHOICES = (
-        ('.za', 'South Africa'),
-        ('.ke', 'Kenya'),
-    )
-
-    CHANNEL_CHOICES = (
-        ('ussd', 'USSD'),
-        ('sms', 'SMS'),
-    )
-
-    countries = forms.MultipleChoiceField(label="Select a destination",
-                                          widget=forms.Select(),
-                                          choices=COUNTRY_CHOICES)
-    # TODO: Channels are related to countries.
-    channels = forms.MultipleChoiceField(label="Select a channel",
-                                         widget=forms.Select(),
-                                         choices=CHANNEL_CHOICES)
+    channel_kind = forms.ChoiceField(label="Channels", choices=CHANNEL_CHOICES,
+                                     required=False, widget=RadioSelect)
     keyword = forms.CharField(label="Define a keyword", max_length=100)
 
 

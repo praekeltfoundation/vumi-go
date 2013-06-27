@@ -6,9 +6,12 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 
-from go.vumitools.tests.utils import GoPersistenceMixin
+from vumi.tests.fake_amqp import FakeAMQPBroker
+
+from go.vumitools.tests.utils import GoPersistenceMixin, FakeAmqpConnection
 from go.vumitools.api import VumiApi
 from go.base import models as base_models
+from go.base import utils as base_utils
 
 
 class override_settings(object):
@@ -67,7 +70,14 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
             sender=base_models.User,
             dispatch_uid='VumiGoDjangoTestCase.create_user_profile')
 
+        # We might need an AMQP connection at some point.
+        self._amqp = FakeAMQPBroker()
+        self._amqp.exchange_declare('vumi', 'direct')
+        self._old_connection = base_utils.connection
+        base_utils.connection = FakeAmqpConnection(self._amqp)
+
     def tearDown(self):
+        base_utils.connection = self._old_connection
         base_models.post_save.disconnect(
             sender=base_models.User,
             dispatch_uid='VumiGoDjangoTestCase.create_user_profile')
