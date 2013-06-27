@@ -26,11 +26,11 @@
   });
 
   var ToyStateEditView = DialogueStateEditView.extend({
-    template: _.template("toy edit mode")
+    template: _.template("toy edit mode: <%= model.name %>")
   });
 
   var ToyStatePreviewView = DialogueStatePreviewView.extend({
-    template: _.template("toy preview mode")
+    template: _.template("toy preview mode: <%= model.name %>")
   });
 
   // A state view type that does nothing. Useful for testing.
@@ -39,8 +39,8 @@
     previewModeType: ToyStatePreviewView,
 
     endpointSchema: [
-      {attr: 'entry_endpoint'},
-      {attr: 'exit_endpoint'}]
+      {attr: 'entry_endpoint', side: 'left'},
+      {attr: 'exit_endpoint', side: 'right'}]
   });
 
   // Make a toy state subtype to use for testing

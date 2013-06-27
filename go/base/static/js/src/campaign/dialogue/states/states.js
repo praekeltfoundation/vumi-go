@@ -3,9 +3,15 @@
 // Structures for each dialogue state type
 
 (function(exports) {
-  var states = go.components.plumbing.states,
+  var plumbing = go.components.plumbing;
+
+  var states = plumbing.states,
       StateView = states.StateView,
       StateViewCollection = states.StateViewCollection;
+
+  var endpoints = plumbing.endpoints,
+      ParametricEndpointView = endpoints.ParametricEndpointView,
+      AligningEndpointCollection = endpoints.AligningEndpointCollection;
 
   // Base 'mode' for state views. Each mode acts as a 'delegate view',
   // targeting a dialogue view's element and acting according to the mode type
@@ -54,6 +60,9 @@
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
 
+    endpointType: ParametricEndpointView,
+    endpointCollectionType: AligningEndpointCollection,
+
     subtypes: {
       choice: 'go.campaign.dialogue.states.choice.ChoiceStateView',
       freetext: 'go.campaign.dialogue.states.freetext.FreeTextStateView',
@@ -92,7 +101,6 @@
     },
 
     render: function() {
-      this.diagram.$el.append(this.$el);
       this.mode.render();
       this.endpoints.render();
       return this;
@@ -129,7 +137,7 @@
     // dynamically. This makes it apparent that we should probably be appending
     // plumbing elements in a top down fashion (instead of bottom up). We need
     // to change this when there is time for such things.
-    appendToView: function() {}
+    appendToView: function() { console.log('aaaaaaa'); }
   });
 
   _(exports).extend({

@@ -110,7 +110,7 @@ describe("go.campaign.dialogue.states", function() {
       it("should render the new mode", function() {
         assert(noElExists(state.$('.preview.mode')));
         state.preview();
-        assert(oneElExists(diagram.$('.preview.mode')));
+        assert(oneElExists(state.$('.preview.mode')));
       });
     });
 
@@ -136,7 +136,7 @@ describe("go.campaign.dialogue.states", function() {
       it("should render the new mode", function() {
         assert(noElExists(state.$('.edit.mode')));
         state.edit();
-        assert(oneElExists(diagram.$('.edit.mode')));
+        assert(oneElExists(state.$('.edit.mode')));
       });
     });
   });

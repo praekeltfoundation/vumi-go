@@ -20,15 +20,21 @@
     connectionType: connections.DialogueConnectionView,
     connectionCollectionType: connections.DialogueConnectionCollection,
 
+    className: function() {
+      return ['diagram', this.grid.className].join(' ');
+    },
+
     initialize: function(options) {
       DiagramView.prototype.initialize.call(this, options);
 
       this.grid = new components.grid.GridView({
         el: this.$el,
-        items: this.states.members.get('states')
+        items: this.states.members.get('states'),
+        sortableOptions: {sort: function() { jsPlumb.repaintEverything(); }}
       });
 
       this.grid.on('render', function() { jsPlumb.repaintEverything(); });
+      this.$el.addClass(this.className());
     },
 
     render: function() {
