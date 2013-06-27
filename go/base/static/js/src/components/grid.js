@@ -178,8 +178,8 @@
       this.resetRows();
 
       this.$el.empty();
-      this.rows.render();
       this.rows.each(function(r) { this.$el.append(r.$el); }, this);
+      this.rows.render();
 
       this.$('.row').sortable(this._sortableOptions());
 
