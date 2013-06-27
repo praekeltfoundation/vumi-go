@@ -20,8 +20,8 @@
     editModeType: ChoiceStateEditView,
     previewModeType: ChoiceStatePreviewView,
     endpointSchema: [
-      {attr: 'entry_endpoint'},
-      {attr: 'choice_endpoints'}]
+      {attr: 'entry_endpoint', side: 'left'},
+      {attr: 'choice_endpoints', side: 'right'}]
   });
 
   _(exports).extend({

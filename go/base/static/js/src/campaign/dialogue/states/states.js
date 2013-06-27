@@ -60,7 +60,7 @@
   // Base view for dialogue states. Dynamically switches between modes
   // (`edit`, `preview`).
   var DialogueStateView = StateView.extend({
-    className: 'state',
+    className: 'state span4',
 
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
