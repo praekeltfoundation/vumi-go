@@ -131,13 +131,7 @@
       });
 
       return this;
-    },
-
-    // TODO We make this a no-op since the diagram's grid appends the states
-    // dynamically. This makes it apparent that we should probably be appending
-    // plumbing elements in a top down fashion (instead of bottom up). We need
-    // to change this when there is time for such things.
-    appendToView: function() { console.log('aaaaaaa'); }
+    }
   });
 
   _(exports).extend({
