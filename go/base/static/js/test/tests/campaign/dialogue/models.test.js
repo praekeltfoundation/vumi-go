@@ -2,7 +2,7 @@ describe("go.campaign.dialogue.models", function() {
   var models = go.campaign.dialogue.models;
 
   afterEach(function() {
-    Backbone.Relational.store.reset();
+    go.testHelpers.unregisterModels();
   });
 
   describe(".DialogueStateModel", function() {

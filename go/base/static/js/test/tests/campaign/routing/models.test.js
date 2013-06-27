@@ -6,7 +6,7 @@ describe("go.campaign.routing (models)", function() {
       fakeServer = testHelpers.rpc.fakeServer;
 
   afterEach(function() {
-    Backbone.Relational.store.reset();
+    go.testHelpers.unregisterModels();
   });
 
   describe(".CampaignRoutingModel", function() {
