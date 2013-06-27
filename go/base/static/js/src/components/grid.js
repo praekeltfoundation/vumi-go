@@ -15,14 +15,17 @@
   var RowItemView = UniqueView.extend({
     span: 3,
 
-    uuid: function() { return idOfView(this.item); },
-
     className: 'item',
 
     initialize: function(options) {
       this.item = options.item;
       this.span = this.spanOfEl(this.item.$el) || options.span || this.span;
+
       this.$el.addClass('span' + this.span);
+
+      var itemId = idOfView(this.item);
+      this.uuid = 'item:' + itemId;
+      this.$el.data('item-id', itemId);
     },
 
     _spanRe: /span[0-9]/g,
@@ -124,8 +127,6 @@
       this.rowCollectionType = options.rowCollectionType
                             || this.rowCollectionType;
 
-      this.resetRows();
-
       this.items.on('add', this.render, this);
       this.items.on('remove', this.render, this);
     },
@@ -153,7 +154,7 @@
       return this.$('.row').map(function() {
         return $(this)
           .find('.item')
-          .map(function() { return $(this).attr('data-uuid'); }).get();
+          .map(function() { return $(this).data('item-id'); }).get();
       }).get();
     },
 
@@ -167,10 +168,14 @@
     },
 
     _sortableOptions: function() {
-      return _({}).extend(
-        _(this).result('sortableOptions'), {
+      var opts = _(this).result('sortableOptions');
+
+      return _({}).extend(opts, {
         connectWith: '.row',
-        stop: this.reorder.bind(this)
+        stop: function(e, ui) {
+          this.reorder();
+          if (opts.stop) { opts.stop(e, ui); }
+        }.bind(this)
       });
     },
 

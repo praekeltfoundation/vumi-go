@@ -130,7 +130,7 @@ describe("go.components.grid", function() {
       var actualRows = grid.$('.row').map(function() {
         return [$(this)
           .find('.item')
-          .map(function() { return $(this).attr('data-uuid'); }).get()];
+          .map(function() { return $(this).data('item-id'); }).get()];
       }).get();
 
       var expectedRows = Array.prototype.slice.call(arguments);
@@ -169,7 +169,7 @@ describe("go.components.grid", function() {
       it("should rearrange its items according to the ui ordering",
       function() {
         assert.deepEqual(items.keys(), ['a', 'c', 'd', 'e', 'f']);
-        $('[data-uuid="a"]').simulate('drag', {dy: 205});
+        $('[data-uuid="item:a"]').simulate('drag', {dy: 205});
         assert.deepEqual(items.keys(), ['c', 'd', 'e', 'f', 'a']);
       });
 
@@ -178,7 +178,7 @@ describe("go.components.grid", function() {
           ['a', 'c', 'd', 'e'],
           ['f']);
 
-        $('[data-uuid="a"]').simulate('drag', {dy: 205});
+        $('[data-uuid="item:a"]').simulate('drag', {dy: 205});
 
         assertRows(
           ['c', 'd', 'e', 'f'],
