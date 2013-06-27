@@ -52,9 +52,11 @@ class Command(BaseCommand):
 
     def list_conversations(self, user_api):
         conversations = user_api.active_conversations()
-        for c in conversations:
-            self.stdout.write("%s (type: %s, key: %s)"
-                              % (c.name, c.conversation_type, c.key))
+        conversations.sort(key=lambda c: c.created_at)
+        for i, c in enumerate(conversations):
+            self.stdout.write("%d. %s (type: %s, key: %s)\n"
+                              % (i, c.name, c.conversation_type, c.key))
 
     def show_config(self, conversation):
         self.stdout.write(pformat(conversation.config))
+        self.stdout.write("\n")
