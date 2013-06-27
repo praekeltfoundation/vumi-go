@@ -25,13 +25,14 @@
       this.$el.addClass('span' + this.span);
     },
 
-    spanOfEl: function($el) {
-      var classes = ($el.attr('class') || '').split(' '),
-          i = classes.length;
+    _spanRe: /span[0-9]/g,
 
-      while (i--) {
-        var c = classes[i];
-        if (c.substr(0, 4) === 'span') { return parseInt(c.slice(4), 10); }
+    spanOfEl: function($el) {
+      var classes = ($el.attr('class') || '').match(this._spanRe);
+
+      if (classes && classes.length === 1) {
+        var span = parseInt(classes[0].slice(4), 10);
+        if (!isNaN(span)) { return span; }
       }
 
       return null;
@@ -44,7 +45,7 @@
     }
   });
 
-  var RowView = UniqueView.extend({
+  var RowView = Backbone.View.extend({
     className: 'row',
 
     initialize: function(options) {
@@ -89,7 +90,7 @@
         : obj;
     },
 
-    viewOptions: function() { return {uuid: 'row' + this.size()}; },
+    viewOptions: function() { return {id: 'row' + this.size()}; },
 
     addItem: function(item) {
       var row = this.last() || this.add(),
@@ -177,8 +178,8 @@
       this.resetRows();
 
       this.$el.empty();
-      this.rows.render();
       this.rows.each(function(r) { this.$el.append(r.$el); }, this);
+      this.rows.render();
 
       this.$('.row').sortable(this._sortableOptions());
 
