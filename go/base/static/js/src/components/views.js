@@ -9,6 +9,7 @@
   // A view that can be uniquely identified by its `uuid` property.
   var UniqueView = Backbone.View.extend({
     constructor: function(options) {
+      options = options || {};
       Backbone.View.prototype.constructor.call(this, options);
 
       this.uuid = options.uuid || this.uuid || uuid.v4();

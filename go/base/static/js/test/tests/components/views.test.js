@@ -46,7 +46,7 @@ describe("go.components.views", function() {
 
       it("should position the label at the given position", function() {
         label.render();
-        assertOffset('#dummy .label', {left: 21, top: 73});
+        assertOffset('#dummy .label', {left: 19, top: 80});
       });
 
       it("should render the given text", function() {

@@ -150,14 +150,18 @@
 
     indexOfKey: function(k) { return this._indexOf('key', k); },
 
+    last: function() { return this.at(this.size() - 1); },
+
+    lastKey: function() { return this.keyAt(this.size() - 1); },
+
     add: function(key, value, options) {
       options = _(options || {}).defaults(this.addDefaults);
 
       this._items[key] = value;
       this._itemList.push({key: key, value: value});
 
-      if (!options.silent) { this.trigger('add', key, value); }
       if (options.sort) { this.sort(); }
+      if (!options.silent) { this.trigger('add', key, value); }
 
       return this;
     },
