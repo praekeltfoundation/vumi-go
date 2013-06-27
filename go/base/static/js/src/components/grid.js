@@ -45,7 +45,7 @@
     }
   });
 
-  var RowView = UniqueView.extend({
+  var RowView = Backbone.View.extend({
     className: 'row',
 
     initialize: function(options) {
@@ -90,7 +90,7 @@
         : obj;
     },
 
-    viewOptions: function() { return {uuid: 'row' + this.size()}; },
+    viewOptions: function() { return {id: 'row' + this.size()}; },
 
     addItem: function(item) {
       var row = this.last() || this.add(),
