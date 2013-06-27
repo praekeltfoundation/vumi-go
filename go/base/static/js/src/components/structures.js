@@ -176,9 +176,7 @@
       return this;
     },
 
-    rearrange: function() {
-      var keys = Array.prototype.slice.call(arguments);
-
+    rearrange: function(keys) {
       if (this.ordered && this.arrangeable) {
         keys.forEach(function(k, i) { this.arranger(this.get(k), i); }, this);
         this.sort();
