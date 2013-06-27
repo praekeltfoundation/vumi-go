@@ -167,7 +167,7 @@
 
       var value = this._items[key];
       if (value) {
-        this._itemList.splice(this.indexOf(key), 1);
+        this._itemList.splice(this.indexOf(value), 1);
         delete this._items[key];
 
         if (!options.silent) { this.trigger('remove', key, value); }
@@ -182,9 +182,7 @@
       return this;
     },
 
-    rearrange: function() {
-      var keys = Array.prototype.slice.call(arguments);
-
+    rearrange: function(keys) {
       if (this.ordered && this.arrangeable) {
         keys.forEach(function(k, i) { this.arranger(this.get(k), i); }, this);
         this.sort();

@@ -203,6 +203,8 @@ describe("go.components.structures", function() {
     describe(".remove", function() {
       it("should remove an item from the lookup", function() {
         assert.equal(lookup.remove('c'), 3);
+        assert.deepEqual(lookup.keys(), ['a', 'b']);
+        assert.deepEqual(lookup.values(), [1, 2]);
         assert.deepEqual(lookup.items(), {a: 1, b: 2});
       });
 
@@ -297,7 +299,7 @@ describe("go.components.structures", function() {
       it("should rearrange the lookup's items according to the order given",
       function() {
         assert.deepEqual(lookup.keys(), ['c', 'a', 'b', 'd']);
-        lookup.rearrange('d', 'c', 'b', 'a');
+        lookup.rearrange(['d', 'c', 'b', 'a']);
         assert.deepEqual(lookup.keys(), ['d', 'c', 'b', 'a']);
       });
     });
