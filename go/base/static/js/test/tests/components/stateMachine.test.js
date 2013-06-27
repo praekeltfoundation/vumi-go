@@ -2,7 +2,7 @@ describe("go.components.stateMachine", function() {
   var stateMachine = go.components.stateMachine;
 
   afterEach(function() {
-    Backbone.Relational.store.reset();
+    go.testHelpers.unregisterModels();
   });
 
   describe(".ConnectionModel", function() {

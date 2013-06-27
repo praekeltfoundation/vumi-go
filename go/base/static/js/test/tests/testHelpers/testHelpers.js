@@ -20,10 +20,20 @@
       attrs);
   };
 
+  var unregisterModels = function() {
+    // Accessing an internal variable is not ideal, but Backbone.Relational
+    // doesn't offer a way to unregister all its store's models or access all
+    // its store's collections
+    var collections = Backbone.Relational.store._collections;
+    collections.forEach(function(c) { c.reset([], {remove: true}); });
+    Backbone.Relational.store._collections = [];
+  };
+
   _.extend(exports, {
     assertFails: assertFails,
     oneElExists: oneElExists,
     noElExists: noElExists,
-    assertModelAttrs: assertModelAttrs
+    assertModelAttrs: assertModelAttrs,
+    unregisterModels: unregisterModels
   });
 })(go.testHelpers = {});
