@@ -56,7 +56,7 @@
 
     subtypes: {
       choice: 'go.campaign.dialogue.states.choice.ChoiceStateView',
-      freetext: 'go.campaign.dialogue.states.freetext.FreeStateView',
+      freetext: 'go.campaign.dialogue.states.freetext.FreeTextStateView',
       end: 'go.campaign.dialogue.states.end.EndStateView'
     },
 
@@ -102,13 +102,34 @@
   var DialogueStateCollection = StateViewCollection.extend({
     type: DialogueStateView,
 
+    ordered: true,
+    comparator: function(state) { return state.model.get('ordinal'); },
+
+    arrangeable: true,
+    arranger: function(state, ordinal) {
+      state.model.set('ordinal', ordinal, {silent: true});
+    },
+
     // Removes a state and creates a new state of a different type in the same
     // position as the old state
     reset: function(state, type) {
       this.remove(state);
-      this.add({position: state.position, model: {type: type}});
+
+      this.add({
+        model: {
+          type: type,
+          ordinal: state.model.get('ordinal')
+        }
+      });
+
       return this;
-    }
+    },
+
+    // TODO We make this a no-op since the diagram's grid appends the states
+    // dynamically. This makes it apparent that we should probably be appending
+    // plumbing elements in a top down fashion (instead of bottom up). We need
+    // to change this when there is time for such things.
+    appendToView: function() {}
   });
 
   _(exports).extend({

@@ -34,7 +34,7 @@ describe("go.campaign.dialogue.states", function() {
         mode;
 
     beforeEach(function() {
-      state = diagram.states.get('state-4');
+      state = diagram.states.get('state4');
       mode = new ToyStateModeView({state: state});
     });
 
@@ -70,20 +70,14 @@ describe("go.campaign.dialogue.states", function() {
       state = diagram.states.add('states', {
         model: model,
         position: {top: 0, left: 0}
-      }, {render: false});
+      }, {render: false, silent: true});
     });
 
     describe(".render", function() {
-      it("should append the state to the diagram", function() {
-        assert(noElExists(diagram.$('[data-uuid="luke-the-state"]')));
-        state.render();
-        assert(oneElExists(diagram.$('[data-uuid="luke-the-state"]')));
-      });
-
       it("should render the currently active mode", function() {
         assert(noElExists(state.$('.mode')));
         state.render();
-        assert(oneElExists(diagram.$('.mode')));
+        assert(oneElExists(state.$('.mode')));
       });
 
       it("should render its endpoints", function() {
@@ -162,22 +156,23 @@ describe("go.campaign.dialogue.states", function() {
 
     describe(".reset", function() {
       it("should remove the old state", function(){
-        assert(collection.has('state-3'));
-        collection.reset(collection.get('state-3'), 'toy');
-        assert(!collection.has('state-3'));
+        assert(collection.has('state3'));
+        collection.reset(collection.get('state3'), 'toy');
+        assert(!collection.has('state3'));
       });
 
       it("should add a new state at the same position as the old state",
       function(done){
-        var old = collection.get('state-3');
+        var old = collection.get('state3');
 
         collection.on('add', function(id, state) {
           assert(state instanceof ToyStateView);
-          assert.equal(state.position, old.position);
+          assert.equal(state.model.get('ordinal'), 3);
           done();
         });
 
-        collection.reset(collection.get('state-3'), 'toy');
+        old.model.set('ordinal', 3);
+        collection.reset(old, 'toy');
       });
     });
   });

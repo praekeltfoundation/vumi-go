@@ -21,9 +21,7 @@
     editModeType: EndStateEditView,
     previewModeType: EndStatePreviewView,
 
-    endpointSchema: [
-      {attr: 'entry_endpoint'},
-      {attr: 'choice_endpoints'}]
+    endpointSchema: [{attr: 'entry_endpoint'}]
   });
 
   _(exports).extend({

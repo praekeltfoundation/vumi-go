@@ -16,9 +16,9 @@ describe("go.campaign.dialogue.models", function() {
 
     it("should use the model's existing uuid if the model isn't new",
     function() {
-      var state = new DialogueStateModel({uuid: 'state-1'});
-      assert.equal(state.get('uuid'), 'state-1');
-      assert.equal(state.id, 'state-1');
+      var state = new DialogueStateModel({uuid: 'state1'});
+      assert.equal(state.get('uuid'), 'state1');
+      assert.equal(state.id, 'state1');
     });
   });
 });
