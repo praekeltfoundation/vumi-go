@@ -15,14 +15,17 @@
   var RowItemView = UniqueView.extend({
     span: 3,
 
-    uuid: function() { return idOfView(this.item); },
-
     className: 'item',
 
     initialize: function(options) {
       this.item = options.item;
       this.span = this.spanOfEl(this.item.$el) || options.span || this.span;
+
       this.$el.addClass('span' + this.span);
+
+      var itemId = idOfView(this.item);
+      this.uuid = 'item:' + itemId;
+      this.$el.data('item-id', itemId);
     },
 
     _spanRe: /span[0-9]/g,
@@ -151,7 +154,7 @@
       return this.$('.row').map(function() {
         return $(this)
           .find('.item')
-          .map(function() { return $(this).attr('data-uuid'); }).get();
+          .map(function() { return $(this).data('item-id'); }).get();
       }).get();
     },
 
