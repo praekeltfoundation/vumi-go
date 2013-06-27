@@ -124,8 +124,6 @@
       this.rowCollectionType = options.rowCollectionType
                             || this.rowCollectionType;
 
-      this.resetRows();
-
       this.items.on('add', this.render, this);
       this.items.on('remove', this.render, this);
     },
