@@ -17,10 +17,10 @@
   // targeting a dialogue view's element and acting according to the mode type
   // (for eg, `edit`) and state type (for eg, `freetext`).
   var DialogueStateModeView = Backbone.View.extend({
+    headTemplate: _.template(''),
     template: _.template(''),
-
-    // The data passed to the template
-    templateData: function() { return {model: this.state.model.toJSON()}; },
+    tailTemplate: _.template(''),
+    templateData: {},
 
     initialize: function(options) {
       this.state = options.state;
@@ -37,10 +37,17 @@
     },
 
     render: function() {
+      var data = {model: this.state.model.toJSON()};
+      _(data).defaults(_(this).result('templateData'));
+
       this.state.$el.append(this.$el);
 
-      var data = _(this).result('templateData');
-      this.$el.html(this.template(data));
+      this.$el.html([
+         this.headTemplate(data),
+         this.template(data),
+         this.tailTemplate(data)
+      ].join(''));
+
       return this;
     }
   });
@@ -104,7 +111,7 @@
 
     switchMode: function(modeName, options) {
       options = _(options || {}).defaults({render: true});
-      var mode = this.modes[modeName] || this.previewMode;
+      var mode = this.modes[modeName] || this.modes.preview;
 
       if (this.mode) { this.mode.detach(); }
       this.mode = mode;

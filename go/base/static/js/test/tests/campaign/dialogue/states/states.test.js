@@ -26,7 +26,10 @@ describe("go.campaign.dialogue.states", function() {
 
     var ToyStateModeView = DialogueStateModeView.extend({
       className: 'toy mode',
+
+      headTemplate: _.template("head "),
       template: _.template("<%= mode %> mode"),
+      tailTemplate: _.template(" tail"),
       templateData: {mode: 'toy'}
     });
 
@@ -45,10 +48,10 @@ describe("go.campaign.dialogue.states", function() {
         assert(oneElExists(state.$('.mode')));
       });
 
-      it("should render its template", function() {
+      it("should render its templates", function() {
         assert.equal(mode.$el.html(), '');
         mode.render();
-        assert.equal(mode.$el.html(), 'toy mode');
+        assert.equal(mode.$el.html(), 'head toy mode tail');
       });
     });
   });
@@ -91,7 +94,7 @@ describe("go.campaign.dialogue.states", function() {
 
     describe(".preview", function() {
       beforeEach(function() {
-        state.mode = state.editMode;
+        state.mode = state.modes.edit;
         state.render();
       });
 
@@ -103,9 +106,9 @@ describe("go.campaign.dialogue.states", function() {
 
       it("should switch from the currently active mode to the preview mode",
       function() {
-        assert.notEqual(state.mode, state.previewMode);
+        assert.notEqual(state.mode, state.modes.preview);
         state.preview();
-        assert.equal(state.mode, state.previewMode);
+        assert.equal(state.mode, state.modes.preview);
       });
 
       it("should render the new mode", function() {
@@ -117,7 +120,7 @@ describe("go.campaign.dialogue.states", function() {
 
     describe(".edit", function() {
       beforeEach(function() {
-        state.mode = state.previewMode;
+        state.mode = state.modes.preview;
         state.render();
       });
 
@@ -129,9 +132,9 @@ describe("go.campaign.dialogue.states", function() {
 
       it("should switch from the currently active mode to the edit mode",
       function() {
-        assert.notEqual(state.mode, state.editMode);
+        assert.notEqual(state.mode, state.modes.edit);
         state.edit();
-        assert.equal(state.mode, state.editMode);
+        assert.equal(state.mode, state.modes.edit);
       });
 
       it("should render the new mode", function() {

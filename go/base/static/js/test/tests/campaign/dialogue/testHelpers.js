@@ -26,11 +26,15 @@
   });
 
   var ToyStateEditView = DialogueStateEditView.extend({
-    template: _.template("toy edit mode: <%= model.name %>")
+    headTemplate: _.template("head "),
+    template: _.template("toy edit mode: <%= model.name %>"),
+    tailTemplate: _.template("tail ")
   });
 
   var ToyStatePreviewView = DialogueStatePreviewView.extend({
-    template: _.template("toy preview mode: <%= model.name %>")
+    headTemplate: _.template("head "),
+    template: _.template("toy preview mode: <%= model.name %>"),
+    tailTemplate: _.template("tail ")
   });
 
   // A state view type that does nothing. Useful for testing.
