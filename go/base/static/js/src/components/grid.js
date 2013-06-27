@@ -25,13 +25,14 @@
       this.$el.addClass('span' + this.span);
     },
 
-    spanOfEl: function($el) {
-      var classes = ($el.attr('class') || '').split(' '),
-          i = classes.length;
+    _spanRe: /span[0-9]/g,
 
-      while (i--) {
-        var c = classes[i];
-        if (c.substr(0, 4) === 'span') { return parseInt(c.slice(4), 10); }
+    spanOfEl: function($el) {
+      var classes = ($el.attr('class') || '').match(this._spanRe);
+
+      if (classes && classes.length === 1) {
+        var span = parseInt(classes[0].slice(4), 10);
+        if (!isNaN(span)) { return span; }
       }
 
       return null;

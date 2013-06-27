@@ -25,6 +25,20 @@ describe("go.components.grid", function() {
       assert.equal(rowItem.span, 4);
     });
 
+    it("should use a default span if the item has no span class", function() {
+      rowItem = new RowItemView({item: new Backbone.View()});
+      assert.equal(rowItem.span, 3);
+    });
+
+    it("should use a default span if the item has multiple span classes",
+    function() {
+      rowItem = new RowItemView({
+        item: new Backbone.View({className: 'span2 span3'})
+      });
+
+      assert.equal(rowItem.span, 3);
+    });
+
     describe(".render", function() {
       it("should render its item", function() {
         assert.equal(rowItem.$el.text(), '');
