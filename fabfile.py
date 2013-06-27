@@ -71,7 +71,11 @@ def _supervisorctl_status():
     processes = []
     for line in status:
         parts = line.split()
-        group, name = parts[0].split(':')
+        group, _, name = parts[0].partition(':')
+        if not name:
+            # single processes are in a group with the same
+            # name as themselves
+            name = group
         processes.append({
             'name': name,
             'group': group,
