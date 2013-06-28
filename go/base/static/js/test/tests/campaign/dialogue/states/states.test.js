@@ -185,24 +185,34 @@ describe("go.campaign.dialogue.states", function() {
     });
   });
 
+  describe(".DialogueStatePreviewView", function() {
+    var DialogueStatePreviewView = states.DialogueStatePreviewView;
+
+    var state,
+        previewMode;
+
+    beforeEach(function() {
+      state = diagram.states.get('state4');
+      previewMode = state.modes.preview;
+      state.preview();
+    });
+
+    describe("when the '.edit-switch' button is clicked", function() {
+      it("should update switch the state to edit mode", function() {
+        assert.equal(state.modeName, 'preview');
+        previewMode.$('.edit-switch').click();
+        assert.equal(state.modeName, 'edit');
+      });
+    });
+  });
+
   describe(".DialogueStateView", function() {
     var DummyStateModel = dialogue.models.DummyStateModel;
 
     var state;
 
     beforeEach(function() {
-      var model = new DummyStateModel({
-        uuid: 'luke-the-state',
-        name: 'Dummy Message 1',
-        type: 'dummy',
-        entry_endpoint: {uuid: 'lukes-entry-endpoint'},
-        exit_endpoint: {uuid: 'lukes-exit-endpoint'}
-      });
-
-      state = diagram.states.add('states', {
-        model: model,
-        position: {top: 0, left: 0}
-      }, {render: false, silent: true});
+      state = diagram.states.get('state4');
     });
 
     describe(".render", function() {
@@ -213,11 +223,11 @@ describe("go.campaign.dialogue.states", function() {
       });
 
       it("should render its endpoints", function() {
-        assert(noElExists(state.$('[data-uuid="lukes-entry-endpoint"]')));
-        assert(noElExists(state.$('[data-uuid="lukes-exit-endpoint"]')));
+        assert(noElExists(state.$('[data-uuid="endpoint6"]')));
+        assert(noElExists(state.$('[data-uuid="endpoint7"]')));
         state.render();
-        assert(oneElExists(state.$('[data-uuid="lukes-entry-endpoint"]')));
-        assert(oneElExists(state.$('[data-uuid="lukes-exit-endpoint"]')));
+        assert(oneElExists(state.$('[data-uuid="endpoint6"]')));
+        assert(oneElExists(state.$('[data-uuid="endpoint7"]')));
       });
     });
 
@@ -270,6 +280,24 @@ describe("go.campaign.dialogue.states", function() {
         assert(noElExists(state.$('.edit.mode')));
         state.edit();
         assert(oneElExists(state.$('.edit.mode')));
+      });
+    });
+
+    describe("when the '.titlebar .remove' button is clicked", function() {
+      beforeEach(function() {
+        state.render();
+      });
+
+      it("should remove the state", function() {
+        assert(diagram.states.has('state4'));
+        state.$('.titlebar .remove').click();
+        assert(!diagram.states.has('state4'));
+      });
+
+      it("should remove the state's model", function() {
+        assert.isDefined(diagram.model.get('states').get('state4'));
+        state.$('.titlebar .remove').click();
+        assert.isUndefined(diagram.model.get('states').get('state4'));
       });
     });
   });

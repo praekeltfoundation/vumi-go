@@ -119,7 +119,16 @@
   // each state type's `preview` mode
   var DialogueStatePreviewView = DialogueStateModeView.extend({
     className: 'preview mode',
-    titlebarTemplate: JST.campaign_dialogue_states_modes_preview_titlebar
+    titlebarTemplate: JST.campaign_dialogue_states_modes_preview_titlebar,
+
+    events: {
+      'click .edit-switch': 'onEditSwitch'
+    },
+
+    onEditSwitch: function(e) {
+      e.preventDefault();
+      this.state.edit();
+    }
   });
 
   // Base view for dialogue states. Dynamically switches between modes
@@ -143,10 +152,7 @@
     },
 
     events: {
-      'click .edit-switch': function(e) {
-        e.preventDefault();
-        this.edit();
-      }
+      'click .titlebar .remove': 'onRemove'
     },
 
     initialize: function(options) {
@@ -158,6 +164,11 @@
       };
 
       this.switchMode(options.mode || 'preview', {render: false});
+    },
+
+    onRemove: function(e) {
+      e.preventDefault();
+      this.collection.remove(this);
     },
 
     // 'Resets' a state to a new type by removing the current state, and
