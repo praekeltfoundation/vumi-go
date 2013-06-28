@@ -6,6 +6,7 @@ env.path = '/var/praekelt/vumi-go'
 def deploy_go():
     with cd(env.path):
         sudo('git pull', user='vumi')
+        sudo("find go -name '*.pyc' -delete")
         _venv_command('./ve/bin/django-admin.py collectstatic --pythonpath=. '
                       '--settings=go.settings --noinput')
 
@@ -13,6 +14,7 @@ def deploy_go():
 def deploy_vumi():
     with cd('%s/ve/src/vumi/' % (env.path,)):
         sudo('git pull', user='vumi')
+        sudo("find vumi -name '*.pyc' -delete")
 
 
 def restart_celery():
