@@ -12,7 +12,8 @@
     template: JST.campaign_dialogue_states_choice_edit,
 
     events: _({
-      'click .new-choice': 'newChoice'
+      'click .new-choice': 'newChoice',
+      'click .choice .remove': 'removeChoice'
     }).defaults(DialogueStateEditView.prototype.events),
 
     save: function(e) {
@@ -39,6 +40,15 @@
       this.state.endpoints.add(
         'choice_endpoints',
         {model: {uuid: uuid.v4()}});
+
+      this.render();
+    },
+
+    removeChoice: function(e) {
+      e.preventDefault();
+
+      var $choice = $(e.target).parent();
+      this.state.endpoints.remove($choice.attr('data-endpoint-id'));
 
       this.render();
     }
