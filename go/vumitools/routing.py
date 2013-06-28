@@ -216,7 +216,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         self.opt_out_connector = config.opt_out_connector
         self.router_inbound_connector_mapping = (
             config.router_inbound_connector_mapping)
-        self.router_outbound_connecor_mapping = (
+        self.router_outbound_connector_mapping = (
             config.router_outbound_connector_mapping)
         self.router_connectors = set()
         self.router_connectors.update(
@@ -263,6 +263,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         elif msg_mdh.tag is not None:
             tag_info = yield self.vumi_api.mdb.get_tag_info(tuple(msg_mdh.tag))
             user_account_key = tag_info.metadata['user_account']
+            if user_account_key is None:
+                raise UnroutableMessageError(
+                    "Message received for unowned tag.", msg)
         else:
             raise UnroutableMessageError(
                 "Could not determine user account key", msg)
@@ -297,7 +300,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         if direction == self.INBOUND:
             return self.router_inbound_connector_mapping.get(router_type)
         else:
-            return self.router_outbound_connecor_mapping.get(router_type)
+            return self.router_outbound_connector_mapping.get(router_type)
 
     def router_direction(self, direction):
         """Converts an connector direction (as seen from the perspective of
