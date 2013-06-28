@@ -306,7 +306,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_concurrency_limits(self):
-        concurrency = ConversationResource.CONCURRENCY_LIMIT
+        config = yield self.app.get_config(None)
+        concurrency = config.concurrency_limit
         queue = DeferredQueue()
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         max_receivers = [self.client.stream(
