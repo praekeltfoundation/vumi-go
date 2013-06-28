@@ -154,6 +154,7 @@ INSTALLED_APPS = (
     'djcelery_email',
     'go.base',
     'go.conversation',
+    'go.channel',
     'go.wizard',
     'go.contacts',
     'go.account',
