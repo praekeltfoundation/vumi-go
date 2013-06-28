@@ -12,7 +12,6 @@
     {% if is_editable %}
         <a href="{% conversation_screen conversation 'edit' %}" class="btn btn-primary">Edit</a>
     {% endif %}
-    {# TODO: Proper lifecycle stuff. #}
     {% if conversation.stopped %}
         <form action="{% conversation_screen conversation 'start' %}" class="form-horizontal" method="post">
             {% csrf_token %}
@@ -28,6 +27,7 @@
             <input type="submit" class="btn btn-primary" name="stop" value="Stop">
         </form>
     {% else %}
+        {# TODO: Figure out what to put here. #}
         <a href="{% conversation_screen conversation %}" class="btn btn-primary">???</a>
     {% endif %}
 {% endblock %}
