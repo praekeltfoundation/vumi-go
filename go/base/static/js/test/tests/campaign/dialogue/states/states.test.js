@@ -57,15 +57,15 @@ describe("go.campaign.dialogue.states", function() {
   });
 
   describe(".DialogueStateView", function() {
-    var ToyStateModel = dialogue.testHelpers.ToyStateModel;
+    var DummyStateModel = dialogue.models.DummyStateModel;
 
     var state;
 
     beforeEach(function() {
-      var model = new ToyStateModel({
+      var model = new DummyStateModel({
         uuid: 'luke-the-state',
-        name: 'Toy Message 1',
-        type: 'toy',
+        name: 'Dummy Message 1',
+        type: 'dummy',
         entry_endpoint: {uuid: 'lukes-entry-endpoint'},
         exit_endpoint: {uuid: 'lukes-exit-endpoint'}
       });
@@ -146,7 +146,7 @@ describe("go.campaign.dialogue.states", function() {
   });
 
   describe(".DialogueStateCollection", function() {
-    var ToyStateView = dialogue.testHelpers.ToyStateView,
+    var DummyStateView = dialogue.states.dummy.DummyStateView,
         DialogueStateCollection = states.DialogueStateCollection;
 
     var collection;
@@ -161,7 +161,7 @@ describe("go.campaign.dialogue.states", function() {
     describe(".reset", function() {
       it("should remove the old state", function(){
         assert(collection.has('state3'));
-        collection.reset(collection.get('state3'), 'toy');
+        collection.reset(collection.get('state3'), 'dummy');
         assert(!collection.has('state3'));
       });
 
@@ -170,13 +170,13 @@ describe("go.campaign.dialogue.states", function() {
         var old = collection.get('state3');
 
         collection.on('add', function(id, state) {
-          assert(state instanceof ToyStateView);
+          assert(state instanceof DummyStateView);
           assert.equal(state.model.get('ordinal'), 3);
           done();
         });
 
         old.model.set('ordinal', 3);
-        collection.reset(old, 'toy');
+        collection.reset(old, 'dummy');
       });
     });
   });
