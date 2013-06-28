@@ -71,7 +71,8 @@
 
     events: {
       'click .save': 'onSave',
-      'click .cancel': 'onCancel'
+      'click .cancel': 'onCancel',
+      'change .type': 'onTypeChange'
     },
 
     initialize: function(options) {
@@ -84,6 +85,7 @@
     // Keep a backup to restore the model for when the user cancels the edit
     backupModel: function() {
       this.modelBackup = this.state.model.toJSON();
+      return this;
     },
 
     _save: function() {
@@ -104,7 +106,11 @@
       this.state.preview();
     },
 
-    save: function() {},
+    onTypeChange: function(e) {
+      this.state.reset($(e.target).val());
+    },
+
+    save: function() { return this; },
 
     cancel: function() {
       var model = this.state.model;
@@ -112,6 +118,13 @@
       model.set(this.modelBackup);
 
       this.state.preview();
+      return this;
+    },
+
+    render: function() {
+      DialogueStateEditView.__super__.render.call(this);
+      this.$('.type').val(this.state.typeName);
+      return this;
     }
   });
 
@@ -157,6 +170,10 @@
 
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
+
+      if (!this.model.has('ordinal')) {
+        this.model.set('ordinal', this.collection.size(), {silent: true});
+      }
 
       this.modes = {
         edit: new this.editModeType({state: this}),
@@ -234,7 +251,9 @@
       this.add({
         mode: 'edit',
         model: {
+          uuid: uuid.v4(),
           type: type,
+          name: state.model.get('name'),
           ordinal: state.model.get('ordinal')
         }
       });

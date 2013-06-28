@@ -26,10 +26,7 @@
       end: 'go.campaign.dialogue.models.EndStateModel'
     },
 
-    initialize: function() {
-      if (!this.has('uuid')) { this.set('uuid', uuid.v4()); }
-      if (!this.has('ordinal')) { this.set('ordinal', 0); }
-    }
+    defaults: function() { return {uuid: uuid.v4()}; }
   });
 
   var DialogueStateModelCollection = Backbone.Collection.extend({

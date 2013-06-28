@@ -18,6 +18,8 @@
   });
 
   var EndStateView = DialogueStateView.extend({
+    typeName: 'end',
+
     editModeType: EndStateEditView,
     previewModeType: EndStatePreviewView,
 

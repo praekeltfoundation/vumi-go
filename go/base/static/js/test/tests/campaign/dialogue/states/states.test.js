@@ -82,7 +82,7 @@ describe("go.campaign.dialogue.states", function() {
             type: 'dummy',
             entry_endpoint: {'uuid':'endpoint6'},
             exit_endpoint: {'uuid':'endpoint7'},
-            ordinal: 0
+            ordinal: 3
           });
 
           done();
@@ -94,7 +94,7 @@ describe("go.campaign.dialogue.states", function() {
           type: 'dummy',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
-          ordinal: 0
+          ordinal: 3
         });
 
         state.model.set('name', 'New Dummy');
@@ -110,7 +110,7 @@ describe("go.campaign.dialogue.states", function() {
           type: 'dummy',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
-          ordinal: 0
+          ordinal: 3
         });
 
         state.model.set('name', 'New Dummy');
@@ -122,8 +122,36 @@ describe("go.campaign.dialogue.states", function() {
           type: 'dummy',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
-          ordinal: 0
+          ordinal: 3
         });
+      });
+    });
+
+    describe("when the the state's '.type' is changed", function() {
+      beforeEach(function() {
+        sinon.stub(uuid, 'v4', function() { return 'new-state'; });
+      });
+
+      afterEach(function() {
+        uuid.v4.restore();
+      });
+
+      it("should remove the state and replace it with another", function() {
+        assert(diagram.states.has('state4'));
+        assert.isDefined(diagram.model.get('states').get('state4'));
+
+        assert(!diagram.states.has('new-state'));
+        assert.isUndefined(diagram.model.get('states').get('new-state'));
+
+        editMode.$('.type')
+          .val('freetext')
+          .change();
+
+        assert(diagram.states.has('new-state'));
+        assert.isDefined(diagram.model.get('states').get('new-state'));
+
+        assert(!diagram.states.has('state4'));
+        assert.isUndefined(diagram.model.get('states').get('state4'));
       });
     });
 
@@ -136,7 +164,7 @@ describe("go.campaign.dialogue.states", function() {
           type: 'dummy',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
-          ordinal: 0
+          ordinal: 3
         });
 
         state.model.set('name', 'New Dummy');
@@ -148,7 +176,7 @@ describe("go.campaign.dialogue.states", function() {
           type: 'dummy',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
-          ordinal: 0
+          ordinal: 3
         });
       });
     });
@@ -161,7 +189,7 @@ describe("go.campaign.dialogue.states", function() {
           type: 'dummy',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
-          ordinal: 0
+          ordinal: 3
         });
 
         state.model.set('name', 'New Dummy');
@@ -173,7 +201,7 @@ describe("go.campaign.dialogue.states", function() {
           type: 'dummy',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
-          ordinal: 0
+          ordinal: 3
         });
       });
 

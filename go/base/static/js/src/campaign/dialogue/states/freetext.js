@@ -17,6 +17,8 @@
   });
 
   var FreeTextStateView = DialogueStateView.extend({
+    typeName: 'freetext',
+
     editModeType: FreeTextStateEditView,
     previewModeType: FreeTextStatePreviewView,
 
