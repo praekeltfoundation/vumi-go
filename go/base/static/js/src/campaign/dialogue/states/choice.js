@@ -9,7 +9,39 @@
       DialogueStatePreviewView = states.DialogueStatePreviewView;
 
   var ChoiceStateEditView = DialogueStateEditView.extend({
-    template: JST.campaign_dialogue_states_choice_edit
+    template: JST.campaign_dialogue_states_choice_edit,
+
+    events: _({
+      'click .new-choice': 'newChoice'
+    }).defaults(DialogueStateEditView.prototype.events),
+
+    save: function(e) {
+      var model = this.state.model,
+          choices = model.get('choice_endpoints');
+
+      if (e) { e.preventDefault(); }
+
+      model.set('text', this.$('.text').val(), {silent: true});
+      this.$('.choice').each(function() {
+        var $choice = $(this);
+
+        choices
+          .get($choice.attr('data-endpoint-id'))
+          .set('label', $choice.find('input').prop('value'), {silent: true});
+      });
+
+      this.state.preview();
+    },
+
+    newChoice: function(e) {
+      e.preventDefault();
+
+      this.state.endpoints.add(
+        'choice_endpoints',
+        {model: {uuid: uuid.v4()}});
+
+      this.render();
+    }
   });
 
   var ChoiceStatePreviewView = DialogueStatePreviewView.extend({

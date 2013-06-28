@@ -4,7 +4,11 @@
 <label>Recipient's options</label>
 <ol class='choices'>
 <% _(model.choice_endpoints).each(function(choice) { %>
-<li data-endpoint-id="<%= choice.uuid %>"><input value="<%= choice.label %>"></input></li>
+  <li
+   class='choice'
+   data-endpoint-id="<%= choice.uuid %>">
+    <input value="<%= choice.label %>">
+  </li>
 <% }); %>
 </ol>
 

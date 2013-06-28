@@ -58,7 +58,37 @@
     className: 'edit mode',
 
     headTemplate: JST.campaign_dialogue_states_modes_edit_head,
-    tailTemplate: JST.campaign_dialogue_states_modes_edit_tail
+    tailTemplate: JST.campaign_dialogue_states_modes_edit_tail,
+
+    events: {
+      'click .save': 'save',
+      'click .cancel': 'cancel'
+    },
+
+    initialize: function(options) {
+      DialogueStateEditView.__super__.initialize.call(this, options);
+      this.backupModel();
+
+      this.on('activate', this.backupModel, this);
+    },
+
+    // Keep a backup to restore the model for when the user cancels the edit
+    backupModel: function() {
+      this.modelBackup = this.state.model.toJSON();
+    },
+
+    // Override with custom saving functionality
+    save: function(e) { e.preventDefault(); },
+
+    cancel: function(e) {
+      e.preventDefault();
+
+      var model = this.state.model;
+      model.clear();
+      model.set(this.modelBackup);
+
+      this.state.preview();
+    }
   });
 
   // Mode for a 'read-only' preview of the dialogue state. Acts as a base for
@@ -70,6 +100,8 @@
   // Base view for dialogue states. Dynamically switches between modes
   // (`edit`, `preview`).
   var DialogueStateView = StateView.extend({
+    switchModeDefaults: {render: true, silent: false},
+
     className: 'state span4',
 
     editModeType: DialogueStateEditView,
@@ -114,13 +146,18 @@
     },
 
     switchMode: function(modeName, options) {
-      options = _(options || {}).defaults({render: true});
+      options = _(options || {}).defaults(this.switchModeDefaults);
       var mode = this.modes[modeName] || this.modes.preview;
 
-      if (this.mode) { this.mode.detach(); }
+      if (this.mode) {
+        if (!options.silent) { this.mode.trigger('deactivate'); }
+        this.mode.detach();
+      }
+
       this.mode = mode;
       this.modeName = modeName;
 
+      if (!options.silent) { this.mode.trigger('activate'); }
       if (options.render) { this.render(); }
       return this;
     },

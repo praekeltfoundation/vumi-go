@@ -17,6 +17,8 @@
   var DialogueStateModel = StateModel.extend({
     collectionType: 'go.campaign.dialogue.models.DialogueStateModelCollection',
 
+    relations: [],
+
     subModelTypes: {
       dummy: 'go.campaign.dialogue.models.DummyStateModel',
       choice: 'go.campaign.dialogue.models.ChoiceStateModel',

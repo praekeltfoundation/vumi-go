@@ -56,6 +56,74 @@ describe("go.campaign.dialogue.states", function() {
     });
   });
 
+  describe(".DialogueStateEditView", function() {
+    var DialogueStateEditView = states.DialogueStateEditView;
+
+    var state,
+        editMode;
+
+    beforeEach(function() {
+      state = diagram.states.get('state4');
+      editMode = state.modes.edit;
+      state.edit();
+    });
+
+    describe("on 'activate'", function() {
+      it("should keep a backup of the state's model's attributes",
+      function(done) {
+        editMode.on('activate', function() {
+          assert.deepEqual(editMode.modelBackup, {
+            uuid: 'state4',
+            name: 'New Dummy',
+            type: 'dummy',
+            entry_endpoint: {'uuid':'endpoint6'},
+            exit_endpoint: {'uuid':'endpoint7'},
+            ordinal: 0
+          });
+
+          done();
+        });
+
+        assert.deepEqual(editMode.modelBackup, {
+          uuid: 'state4',
+          name: 'Dummy Message 1',
+          type: 'dummy',
+          entry_endpoint: {'uuid':'endpoint6'},
+          exit_endpoint: {'uuid':'endpoint7'},
+          ordinal: 0
+        });
+
+        state.model.set('name', 'New Dummy');
+        editMode.trigger('activate');
+      });
+    });
+
+    describe("when the '.cancel' button is clicked", function() {
+      it("should change the model back to its old state", function() {
+        assert.deepEqual(state.model.toJSON(), {
+          uuid: 'state4',
+          name: 'Dummy Message 1',
+          type: 'dummy',
+          entry_endpoint: {'uuid':'endpoint6'},
+          exit_endpoint: {'uuid':'endpoint7'},
+          ordinal: 0
+        });
+
+        state.model.set('name', 'New Dummy');
+        editMode.$('.cancel').click();
+
+        assert.deepEqual(state.model.toJSON(), {
+          uuid: 'state4',
+          name: 'Dummy Message 1',
+          type: 'dummy',
+          entry_endpoint: {'uuid':'endpoint6'},
+          exit_endpoint: {'uuid':'endpoint7'},
+          ordinal: 0
+        });
+      });
+    });
+  });
+
   describe(".DialogueStateView", function() {
     var DummyStateModel = dialogue.models.DummyStateModel;
 
