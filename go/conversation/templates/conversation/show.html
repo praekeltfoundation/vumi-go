@@ -12,12 +12,22 @@
     {% if is_editable %}
         <a href="{% conversation_screen conversation 'edit' %}" class="btn btn-primary">Edit</a>
     {% endif %}
-    {# TODO: Proper lifecycle stuff. #}
     {% if conversation.stopped %}
-        <a href="{% url 'conversations:incoming_list' conversation.key %}" class="btn btn-primary">Start</a>
+        <form action="{% conversation_screen conversation 'start' %}" class="form-horizontal" method="post">
+            {% csrf_token %}
+            <input type="submit" class="btn btn-primary" name="start" value="Start">
+        </form>
+        <form action="{% conversation_screen conversation 'archive' %}" class="form-horizontal" method="post">
+            {% csrf_token %}
+            <input type="submit" class="btn btn-primary" name="archive" value="Archive">
+        </form>
     {% elif conversation.running %}
-        <a href="{% url 'conversations:incoming_list' conversation.key %}" class="btn btn-primary">Stop</a>
+        <form action="{% conversation_screen conversation 'stop' %}" class="form-horizontal" method="post">
+            {% csrf_token %}
+            <input type="submit" class="btn btn-primary" name="stop" value="Stop">
+        </form>
     {% else %}
+        {# TODO: Figure out what to put here. #}
         <a href="{% conversation_screen conversation %}" class="btn btn-primary">???</a>
     {% endif %}
 {% endblock %}

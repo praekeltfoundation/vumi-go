@@ -255,6 +255,8 @@ class GoApiWorker(BaseWorker):
         riak_manager = ConfigDict(
             "Riak client configuration.", default={}, static=True)
 
+    _web_service = None
+
     def _rpc_resource_for_user(self, username):
         rpc = GoApiServer(username, self.vumi_api)
         addIntrospection(rpc)
@@ -276,11 +278,14 @@ class GoApiWorker(BaseWorker):
                 self.realm, self.vumi_api),
             config.health_path: httprpc.HttpRpcHealthResource(self),
         })
-        self.addService(
-            StreamServerEndpointService(config.twisted_endpoint, site))
+        self._web_service = StreamServerEndpointService(
+            config.twisted_endpoint, site)
+        self._web_service.startService()
 
+    @inlineCallbacks
     def teardown_worker(self):
-        pass
+        if self._web_service is not None:
+            yield self._web_service.stopService()
 
     def setup_connectors(self):
         pass
