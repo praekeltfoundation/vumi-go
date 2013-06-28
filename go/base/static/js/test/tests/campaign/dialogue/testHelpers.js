@@ -4,50 +4,7 @@
 (function(exports) {
   var dialogue = go.campaign.dialogue,
       DialogueModel = dialogue.models.DialogueModel,
-      DialogueStateModel = dialogue.models.DialogueStateModel,
-      DialogueEndpointModel = dialogue.models.DialogueEndpointModel,
       DialogueDiagramView = dialogue.diagram.DialogueDiagramView;
-
-  var states = dialogue.states,
-      DialogueStateView = states.DialogueStateView,
-      DialogueStateEditView = states.DialogueStateEditView,
-      DialogueStatePreviewView = states.DialogueStatePreviewView;
-
-  var ToyStateModel = DialogueStateModel.extend({
-    relations: [{
-      type: Backbone.HasOne,
-      key: 'entry_endpoint',
-      relatedModel: DialogueEndpointModel
-    }, {
-      type: Backbone.HasOne,
-      key: 'exit_endpoint',
-      relatedModel: DialogueEndpointModel
-    }]
-  });
-
-  var ToyStateEditView = DialogueStateEditView.extend({
-    template: _.template("toy edit mode: <%= model.name %>")
-  });
-
-  var ToyStatePreviewView = DialogueStatePreviewView.extend({
-    template: _.template("toy preview mode: <%= model.name %>")
-  });
-
-  // A state view type that does nothing. Useful for testing.
-  var ToyStateView = DialogueStateView.extend({
-    editModeType: ToyStateEditView,
-    previewModeType: ToyStatePreviewView,
-
-    endpointSchema: [
-      {attr: 'entry_endpoint', side: 'left'},
-      {attr: 'exit_endpoint', side: 'right'}]
-  });
-
-  // Make a toy state subtype to use for testing
-  DialogueStateModel.prototype.subModelTypes.toy
-    = 'go.campaign.dialogue.testHelpers.ToyStateModel';
-
-  DialogueStateView.prototype.subtypes.toy = ToyStateView;
 
   var modelData = {
     conversation: 'conversation-key',
@@ -76,8 +33,8 @@
       text: 'Thank you for taking our survey'
     }, {
       uuid: 'state4',
-      name: 'Toy Message 1',
-      type: 'toy',
+      name: 'Dummy Message 1',
+      type: 'dummy',
       entry_endpoint: {uuid: 'endpoint6'},
       exit_endpoint: {uuid: 'endpoint7'}
     }],
@@ -110,11 +67,6 @@
   };
 
   _.extend(exports, {
-    ToyStateModel: ToyStateModel,
-    ToyStateEditView: ToyStateEditView,
-    ToyStatePreviewView: ToyStatePreviewView,
-    ToyStateView: ToyStateView,
-
     setUp: setUp,
     tearDown: tearDown,
     modelData: modelData,

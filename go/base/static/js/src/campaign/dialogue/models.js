@@ -18,6 +18,7 @@
     collectionType: 'go.campaign.dialogue.models.DialogueStateModelCollection',
 
     subModelTypes: {
+      dummy: 'go.campaign.dialogue.models.DummyStateModel',
       choice: 'go.campaign.dialogue.models.ChoiceStateModel',
       freetext: 'go.campaign.dialogue.models.FreeTextStateModel',
       end: 'go.campaign.dialogue.models.EndStateModel'
@@ -32,6 +33,18 @@
   var DialogueStateModelCollection = Backbone.Collection.extend({
     model: DialogueStateModel,
     comparator: function(state) { return state.get('ordinal'); }
+  });
+
+  var DummyStateModel = DialogueStateModel.extend({
+    relations: [{
+      type: Backbone.HasOne,
+      key: 'entry_endpoint',
+      relatedModel: DialogueEndpointModel
+    }, {
+      type: Backbone.HasOne,
+      key: 'exit_endpoint',
+      relatedModel: DialogueEndpointModel
+    }]
   });
 
   var ChoiceStateModel = DialogueStateModel.extend({
@@ -107,6 +120,7 @@
     ChoiceEndpointModel: ChoiceEndpointModel,
 
     DialogueStateModel: DialogueStateModel,
+    DummyStateModel: DummyStateModel,
     ChoiceStateModel: ChoiceStateModel,
     FreeTextStateModel: FreeTextStateModel,
     EndStateModel: EndStateModel
