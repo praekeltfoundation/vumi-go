@@ -2,6 +2,7 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, Http404
+from django.core.urlresolvers import reverse
 from django.contrib import messages
 
 from go.channel.forms import NewChannelForm
@@ -32,10 +33,15 @@ def new_channel(request):
             else:
                 got_tag = request.user_api.acquire_tag(pool)
 
-            messages.info(request, 'Acquired tag: %r.' % (got_tag,))
+            channel_key = u'%s:%s' % got_tag
+
+            messages.info(request, 'Acquired tag: %s.' % (channel_key,))
 
             # TODO save and go to next step.
-            return redirect('conversations:index')
+            return redirect(reverse('channels:channel', kwargs={
+                'channel_key': channel_key,
+                'path_suffix': '',
+            }))
         else:
             raise ValueError(repr('Error: %s' % (form.errors,)))
 
@@ -59,7 +65,7 @@ class CheapPlasticChannel(object):
         self.name = tag
 
     def release(self, user_api):
-        user_api.release_tag(self.key)
+        user_api.release_tag((self.tagpool, self.tag))
 
 
 class ChannelDefinition(object):

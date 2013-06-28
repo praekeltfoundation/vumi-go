@@ -89,7 +89,7 @@ class ChannelViewDefinitionBase(object):
             self._path_suffix_mapping[view.path_suffix] = view
 
     @property
-    def channel_display_name(self):
+    def display_name(self):
         return self._chan_def.display_name
 
     def get_view_url(self, view_name, **kwargs):
