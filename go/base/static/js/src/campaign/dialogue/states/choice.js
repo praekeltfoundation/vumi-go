@@ -16,11 +16,9 @@
       'click .choice .remove': 'removeChoice'
     }).defaults(DialogueStateEditView.prototype.events),
 
-    save: function(e) {
+    _save: function() {
       var model = this.state.model,
           choices = model.get('choice_endpoints');
-
-      if (e) { e.preventDefault(); }
 
       model.set('text', this.$('.text').val(), {silent: true});
       this.$('.choice').each(function() {
@@ -30,12 +28,17 @@
           .get($choice.attr('data-endpoint-id'))
           .set('label', $choice.find('input').prop('value'), {silent: true});
       });
+    },
 
+    save: function(e) {
+      e.preventDefault();
+      this._save();
       this.state.preview();
     },
 
     newChoice: function(e) {
       e.preventDefault();
+      this._save();
 
       this.state.endpoints.add(
         'choice_endpoints',
@@ -46,6 +49,7 @@
 
     removeChoice: function(e) {
       e.preventDefault();
+      this._save();
 
       var $choice = $(e.target).parent();
       this.state.endpoints.remove($choice.attr('data-endpoint-id'));
