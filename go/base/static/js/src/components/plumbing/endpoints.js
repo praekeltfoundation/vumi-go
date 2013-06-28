@@ -205,7 +205,7 @@
   var FollowingEndpointView = PositionableEndpointView.extend({
     initialize: function(options) {
       PositionableEndpointView.prototype.initialize.call(this, options);
-      this.target = options.target;
+      this.target = functor(options.target || this.target);
       this.position = this.positioners[this.side];
     },
 
@@ -228,7 +228,7 @@
     },
 
     targetOffset: function() {
-      var $target = this.state.$(this.target);
+      var $target = this.state.$(this.target());
       return $target.position().top + ($target.outerHeight() / 2);
     }
   });

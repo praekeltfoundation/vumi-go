@@ -9,10 +9,14 @@
       DialogueStatePreviewView = states.DialogueStatePreviewView;
 
   var plumbing = go.components.plumbing,
-      EndpointViewCollection = plumbing.endpoints.EndpointViewCollection;
+      EndpointViewCollection = plumbing.endpoints.EndpointViewCollection,
+      FollowingEndpointView = plumbing.endpoints.FollowingEndpointView;
 
-  var ChoiceEndpointCollection
-    = plumbing.endpoints.AligningEndpointCollection.extend({
+  var ChoiceEndpointView = FollowingEndpointView.extend({
+    side: 'right',
+    target: function() {
+      return '.choice[data-endpoint-id="' + this.uuid() + '"]';
+    }
   });
 
   var ChoiceStateEditView = DialogueStateEditView.extend({
@@ -26,11 +30,6 @@
     initialize: function(options) {
       ChoiceStateEditView.__super__.initialize.call(this, options);
       this.on('activate', this.onActivate, this);
-    },
-
-    onActivate: function() {
-      var choices = this.state.endpoints.members.get('choice_endpoints');
-      if (!choices.size()) { this.state.newChoice(); }
     },
 
     save: function() {
@@ -49,11 +48,23 @@
       return this;
     },
 
+    newChoice: function() {
+      return this.state.endpoints.add(
+        'choice_endpoints',
+        {model: {uuid: uuid.v4()}},
+        {render: false});
+    },
+
+    onActivate: function() {
+      var choices = this.state.endpoints.members.get('choice_endpoints');
+      if (!choices.size()) { this.state.newChoice(); }
+    },
+
     onNewChoice: function(e) {
       e.preventDefault();
       this.save();
-      this.state.newChoice();
-      this.render();
+      this.newChoice();
+      this.state.render();
     },
 
     onRemoveChoice: function(e) {
@@ -63,7 +74,7 @@
       var $choice = $(e.target).parent();
       this.state.endpoints.remove($choice.attr('data-endpoint-id'));
 
-      this.render();
+      this.state.render();
     },
 
     render: function() {
@@ -86,14 +97,9 @@
     }, {
       attr: 'choice_endpoints',
       side: 'right',
-      collectionType: ChoiceEndpointCollection
-    }],
-
-    newChoice: function() {
-      return this.endpoints.add(
-        'choice_endpoints',
-        {model: {uuid: uuid.v4()}});
-    }
+      type: ChoiceEndpointView,
+      collectionType: EndpointViewCollection
+    }]
   });
 
   _(exports).extend({
@@ -101,6 +107,6 @@
 
     ChoiceStateEditView: ChoiceStateEditView,
     ChoiceStatePreviewView: ChoiceStatePreviewView,
-    ChoiceEndpointCollection: ChoiceEndpointCollection
+    ChoiceEndpointView: ChoiceEndpointView
   });
 })(go.campaign.dialogue.states.choice = {});
