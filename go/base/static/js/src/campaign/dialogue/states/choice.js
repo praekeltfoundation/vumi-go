@@ -12,11 +12,11 @@
     bodyTemplate: JST.campaign_dialogue_states_choice_edit,
 
     events: _({
-      'click .new-choice': 'newChoice',
-      'click .choice .remove': 'removeChoice'
+      'click .new-choice': 'onNewChoice',
+      'click .choice .remove': 'onRemoveChoice'
     }).defaults(DialogueStateEditView.prototype.events),
 
-    _save: function() {
+    save: function() {
       var model = this.state.model,
           choices = model.get('choice_endpoints');
 
@@ -30,15 +30,9 @@
       });
     },
 
-    save: function(e) {
+    onNewChoice: function(e) {
       e.preventDefault();
-      this._save();
-      this.state.preview();
-    },
-
-    newChoice: function(e) {
-      e.preventDefault();
-      this._save();
+      this.save();
 
       this.state.endpoints.add(
         'choice_endpoints',
@@ -47,9 +41,9 @@
       this.render();
     },
 
-    removeChoice: function(e) {
+    onRemoveChoice: function(e) {
       e.preventDefault();
-      this._save();
+      this.save();
 
       var $choice = $(e.target).parent();
       this.state.endpoints.remove($choice.attr('data-endpoint-id'));

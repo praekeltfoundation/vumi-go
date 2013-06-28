@@ -70,8 +70,8 @@
     tailTemplate: JST.campaign_dialogue_states_modes_edit_tail,
 
     events: {
-      'click .save': 'save',
-      'click .cancel': 'cancel'
+      'click .save': 'onSave',
+      'click .cancel': 'onCancel'
     },
 
     initialize: function(options) {
@@ -86,12 +86,27 @@
       this.modelBackup = this.state.model.toJSON();
     },
 
-    // Override with custom saving functionality
-    save: function(e) { e.preventDefault(); },
+    _save: function() {
+      var name = this.$('.titlebar .name').val();
+      this.state.model.set('name', name, {silent: true});
+      this.save();
+    },
 
-    cancel: function(e) {
+    onSave: function(e) {
       e.preventDefault();
+      this._save();
+      this.state.preview();
+    },
 
+    onCancel: function(e) {
+      e.preventDefault();
+      this.cancel();
+      this.state.preview();
+    },
+
+    save: function() {},
+
+    cancel: function() {
       var model = this.state.model;
       model.clear();
       model.set(this.modelBackup);

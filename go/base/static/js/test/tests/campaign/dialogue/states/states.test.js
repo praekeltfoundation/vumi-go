@@ -102,6 +102,57 @@ describe("go.campaign.dialogue.states", function() {
       });
     });
 
+    describe(".cancel", function() {
+      it("should change the model back to its old state", function() {
+        assert.deepEqual(state.model.toJSON(), {
+          uuid: 'state4',
+          name: 'Dummy Message 1',
+          type: 'dummy',
+          entry_endpoint: {'uuid':'endpoint6'},
+          exit_endpoint: {'uuid':'endpoint7'},
+          ordinal: 0
+        });
+
+        state.model.set('name', 'New Dummy');
+        editMode.cancel();
+
+        assert.deepEqual(state.model.toJSON(), {
+          uuid: 'state4',
+          name: 'Dummy Message 1',
+          type: 'dummy',
+          entry_endpoint: {'uuid':'endpoint6'},
+          exit_endpoint: {'uuid':'endpoint7'},
+          ordinal: 0
+        });
+      });
+    });
+
+    describe("when the '.save' button is clicked", function() {
+      it("should update the 'name' attribute of the state's model",
+      function() {
+        assert.deepEqual(state.model.toJSON(), {
+          uuid: 'state4',
+          name: 'Dummy Message 1',
+          type: 'dummy',
+          entry_endpoint: {'uuid':'endpoint6'},
+          exit_endpoint: {'uuid':'endpoint7'},
+          ordinal: 0
+        });
+
+        state.model.set('name', 'New Dummy');
+        editMode.$('.save').click();
+
+        assert.deepEqual(state.model.toJSON(), {
+          uuid: 'state4',
+          name: 'New Dummy',
+          type: 'dummy',
+          entry_endpoint: {'uuid':'endpoint6'},
+          exit_endpoint: {'uuid':'endpoint7'},
+          ordinal: 0
+        });
+      });
+    });
+
     describe("when the '.cancel' button is clicked", function() {
       it("should change the model back to its old state", function() {
         assert.deepEqual(state.model.toJSON(), {
@@ -124,6 +175,12 @@ describe("go.campaign.dialogue.states", function() {
           exit_endpoint: {'uuid':'endpoint7'},
           ordinal: 0
         });
+      });
+
+      it("should switch back to the preview view", function() {
+        assert.equal(state.modeName, 'edit');
+        editMode.$('.cancel').click();
+        assert.equal(state.modeName, 'preview');
       });
     });
   });
