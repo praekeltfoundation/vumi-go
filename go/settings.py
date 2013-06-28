@@ -223,7 +223,11 @@ BROKER_VHOST = "/develop"
 # If we're running in DEBUG mode then skip RabbitMQ and execute tasks
 # immediate instead of deferring them to the queue / workers.
 CELERY_ALWAYS_EAGER = DEBUG
-CELERY_IMPORTS = ("go.vumitools.api_celery",)
+CELERY_IMPORTS = (
+    "go.contacts.tasks",
+    "go.account.tasks",
+    "go.conversation.tasks",
+)
 CELERY_RESULT_BACKEND = "amqp"
 EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
 SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
