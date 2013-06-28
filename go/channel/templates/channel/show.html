@@ -1,0 +1,39 @@
+{% extends "app.html" %}
+{% load url from future %}
+{% load channel_tags %}
+
+{% block content_title %}Channel{% endblock %}
+
+{% block content_extraclass %}channel summary{% endblock %}
+
+{% block content_actions_right %}
+    {# TODO: Better URL than conversation index. #}
+    <a href="{% url 'conversations:index' %}">Cancel</a>
+    {# TODO: Make this not broken. #}
+    <a href="{% channel_screen channel 'release' %}" class="btn btn-primary">Release?</a>
+{% endblock %}
+
+{% block content_main %}
+<div class="row-fluid indent">
+    <div class="span7">
+
+        <div class="sub-details">
+            <h4>
+                Details
+                <a href="{% channel_screen channel %}" class="btn btn-primary btn-mini">
+                    Edit
+                </a>
+            </h4>
+
+            <p>
+                <h6>TAGPOOL</h6>
+                {{ channel.tagpool }}<br>
+            </p>
+            <p>
+                <h6>TAG</h6>
+                {{ channel.tag }}<br>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
