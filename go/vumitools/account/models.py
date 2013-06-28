@@ -142,12 +142,21 @@ class RoutingTableHelper(object):
     def remove_conversation(self, conv):
         """Remove all entries linking to or from a given conversation.
 
-        Useful when arching a conversation to ensure it is no longer
+        Useful when archiving a conversation to ensure it is no longer
         present in the routing table.
         """
         conv_conn = str(GoConnector.for_conversation(conv.conversation_type,
                                                      conv.key))
         self.remove_connector(conv_conn)
+
+    def remove_transport_tag(self, tag):
+        """Remove all entries linking to or from a given transport tag.
+
+        Useful when releasing a tag to ensure it is no longer present in the
+        routing table.
+        """
+        tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
+        self.remove_connector(tag_conn)
 
     def add_oldstyle_conversation(self, conv, tag, outbound_only=False):
         """XXX: This can be removed when old-style conversations are gone."""
