@@ -75,10 +75,6 @@
       this.state.endpoints.remove($choice.attr('data-endpoint-id'));
 
       this.state.render();
-    },
-
-    render: function() {
-      ChoiceStateEditView.__super__.render.call(this);
     }
   });
 
@@ -99,7 +95,12 @@
       side: 'right',
       type: ChoiceEndpointView,
       collectionType: EndpointViewCollection
-    }]
+    }],
+
+    render: function() {
+      ChoiceStateView.__super__.render.call(this);
+      jsPlumb.repaintEverything();
+    }
   });
 
   _(exports).extend({
