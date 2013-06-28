@@ -64,6 +64,7 @@
     endpointCollectionType: AligningEndpointCollection,
 
     subtypes: {
+      dummy: 'go.campaign.dialogue.states.dummy.DummyStateView',
       choice: 'go.campaign.dialogue.states.choice.ChoiceStateView',
       freetext: 'go.campaign.dialogue.states.freetext.FreeTextStateView',
       end: 'go.campaign.dialogue.states.end.EndStateView'
