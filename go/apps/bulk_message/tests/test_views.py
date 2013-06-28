@@ -96,7 +96,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
         conversation = self.get_wrapped_conv()
         [batch] = conversation.get_batches()
-        [tag] = list(batch.tags)
+        self.assertEqual([], list(batch.tags))
         [contact] = self.get_contacts_for_conversation(conversation)
 
         [start_cmd] = self.get_api_commands_sent()
