@@ -14,6 +14,7 @@ from go.vumitools.api import (
     VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent)
 from go.vumitools.tests.utils import AppWorkerTestCase, FakeAmqpConnection
 from go.vumitools.account.old_models import AccountStoreVNone, AccountStoreV1
+from go.vumitools.account.models import GoConnector, RoutingTableHelper
 
 
 class TestTxVumiApi(AppWorkerTestCase):
@@ -291,6 +292,30 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag2)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), None)
         yield self.assert_account_tags([list(tag1), list(tag2)])
+
+    @inlineCallbacks
+    def test_release_tag_with_routing_entries(self):
+        [tag1] = yield self.setup_tagpool(u"pool1", [u"1234"])
+        yield self.assert_account_tags([])
+        yield self.user_api.acquire_specific_tag(tag1)
+        yield self.assert_account_tags([list(tag1)])
+
+        conv = yield self.user_api.new_conversation(
+            u'bulk_message', u'name', u'desc', {})
+        user = yield self.user_api.get_user_account()
+        rt_helper = RoutingTableHelper(user.routing_table)
+
+        tag_conn = str(GoConnector.for_transport_tag(tag1[0], tag1[1]))
+        conv_conn = str(
+            GoConnector.for_conversation(conv.conversation_type, conv.key))
+        rt_helper.add_entry(conv_conn, "default", tag_conn, "default")
+        rt_helper.add_entry(tag_conn, "default", conv_conn, "default")
+        yield user.save()
+
+        self.assertNotEqual({}, (yield self.user_api.get_routing_table()))
+        yield self.user_api.release_tag(tag1)
+        yield self.assert_account_tags([])
+        self.assertEqual({}, (yield self.user_api.get_routing_table()))
 
     @inlineCallbacks
     def test_get_empty_routing_table(self):
