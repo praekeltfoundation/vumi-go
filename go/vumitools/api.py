@@ -464,6 +464,12 @@ class VumiUserApi(object):
             tag_info = yield self.api.mdb.get_tag_info(tag)
             del tag_info.metadata['user_account']
             yield tag_info.save()
+
+            # Clean up routing table entries.
+            routing_table = yield self.get_routing_table(user_account)
+            rt_helper = RoutingTableHelper(routing_table)
+            rt_helper.remove_transport_tag(tag)
+
             yield user_account.save()
         yield self.api.tpm.release_tag(tag)
 
