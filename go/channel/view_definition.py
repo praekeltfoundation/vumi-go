@@ -46,7 +46,6 @@ class ReleaseChannelView(ChannelApiView):
 
     def post(self, request, channel):
         channel.release(request.user_api)
-        # TODO: Clean up routing.
         messages.add_message(
             request, messages.INFO, '%s released' % (
                 self.view_def.display_name,))
