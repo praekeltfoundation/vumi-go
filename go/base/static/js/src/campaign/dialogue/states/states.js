@@ -17,13 +17,17 @@
   // targeting a dialogue view's element and acting according to the mode type
   // (for eg, `edit`) and state type (for eg, `freetext`).
   var DialogueStateModeView = Backbone.View.extend({
+    titlebarTemplate: _.template(''),
     headTemplate: _.template(''),
-    template: _.template(''),
+    bodyTemplate: _.template(''),
     tailTemplate: _.template(''),
     templateData: {},
 
     initialize: function(options) {
       this.state = options.state;
+
+      this.$titlebar = $('<div><div>').addClass('titlebar');
+      this.$box = $('<div><div>').addClass('box');
     },
 
     destroy: function() {
@@ -41,10 +45,14 @@
       _(data).defaults(_(this).result('templateData'));
 
       this.state.$el.append(this.$el);
+      this.$el.append(this.$titlebar);
+      this.$el.append(this.$box);
 
-      this.$el.html([
+      this.$titlebar.html(this.titlebarTemplate(data));
+
+      this.$box.html([
          this.headTemplate(data),
-         this.template(data),
+         this.bodyTemplate(data),
          this.tailTemplate(data)
       ].join(''));
 
@@ -57,6 +65,7 @@
   var DialogueStateEditView = DialogueStateModeView.extend({
     className: 'edit mode',
 
+    titlebarTemplate: JST.campaign_dialogue_states_modes_edit_titlebar,
     headTemplate: JST.campaign_dialogue_states_modes_edit_head,
     tailTemplate: JST.campaign_dialogue_states_modes_edit_tail,
 
@@ -94,7 +103,8 @@
   // Mode for a 'read-only' preview of the dialogue state. Acts as a base for
   // each state type's `preview` mode
   var DialogueStatePreviewView = DialogueStateModeView.extend({
-    className: 'preview mode'
+    className: 'preview mode',
+    titlebarTemplate: JST.campaign_dialogue_states_modes_preview_titlebar
   });
 
   // Base view for dialogue states. Dynamically switches between modes
@@ -117,8 +127,6 @@
       end: 'go.campaign.dialogue.states.end.EndStateView'
     },
 
-    headerTemplate: JST.campaign_dialogue_states_header,
-
     events: {
       'click .edit-switch': function(e) {
         e.preventDefault();
@@ -129,7 +137,6 @@
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
 
-      this.$header = $('<div><div>').addClass('header');
       this.modes = {
         edit: new this.editModeType({state: this}),
         preview: new this.previewModeType({state: this})
@@ -171,12 +178,6 @@
     },
 
     render: function() {
-      this.$header.html(this.headerTemplate({
-        name: this.model.get('name'),
-        mode: this.modeName
-      }));
-      this.$el.append(this.$header);
-
       this.mode.render();
       this.endpoints.render();
       return this;

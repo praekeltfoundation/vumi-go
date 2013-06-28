@@ -9,7 +9,7 @@
       DialogueStatePreviewView = states.DialogueStatePreviewView;
 
   var ChoiceStateEditView = DialogueStateEditView.extend({
-    template: JST.campaign_dialogue_states_choice_edit,
+    bodyTemplate: JST.campaign_dialogue_states_choice_edit,
 
     events: _({
       'click .new-choice': 'newChoice',
@@ -59,7 +59,7 @@
   });
 
   var ChoiceStatePreviewView = DialogueStatePreviewView.extend({
-    template: JST.campaign_dialogue_states_choice_preview
+    bodyTemplate: JST.campaign_dialogue_states_choice_preview
   });
 
   var ChoiceStateView = DialogueStateView.extend({

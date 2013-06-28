@@ -27,9 +27,10 @@ describe("go.campaign.dialogue.states", function() {
     var ToyStateModeView = DialogueStateModeView.extend({
       className: 'toy mode',
 
+      titlebarTemplate: _.template('<%= mode %>'),
       headTemplate: _.template("head "),
-      template: _.template("<%= mode %> mode"),
-      tailTemplate: _.template(" tail"),
+      bodyTemplate: _.template("body "),
+      tailTemplate: _.template("tail"),
       templateData: {mode: 'toy'}
     });
 
@@ -51,7 +52,10 @@ describe("go.campaign.dialogue.states", function() {
       it("should render its templates", function() {
         assert.equal(mode.$el.html(), '');
         mode.render();
-        assert.equal(mode.$el.html(), 'head toy mode tail');
+        assert.equal(
+          mode.$el.html(),
+          ['<div class="titlebar">toy</div>',
+           '<div class="box">head body tail</div>'].join(''));
       });
     });
   });

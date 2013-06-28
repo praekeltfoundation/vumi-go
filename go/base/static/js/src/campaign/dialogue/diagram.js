@@ -31,7 +31,7 @@
         el: this.$el,
         items: this.states.members.get('states'),
         sortableOptions: {
-          handle: '.state .header',
+          handle: '.state .titlebar',
           placeholder: 'placeholder',
           sort: function() { jsPlumb.repaintEverything(); }
         }
