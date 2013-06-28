@@ -52,6 +52,13 @@ class ConversationWrapper(object):
         yield self._release_batches()
 
     @Manager.calls_manager
+    def archive_conversation(self):
+        self.c.set_status_finished()
+        yield self.c.save()
+        yield self._remove_from_routing_table()
+        yield self._release_batches()
+
+    @Manager.calls_manager
     def _release_batches(self):
         for batch in (yield self.get_batches()):
             yield self.mdb.batch_done(batch.key)  # TODO: why key?
@@ -250,6 +257,27 @@ class ConversationWrapper(object):
                 msg_options=msg_options,
                 is_client_initiated=is_client_initiated,
                 **extra_params)
+
+    @Manager.calls_manager
+    def new_start(self):
+        """Send the start command to this conversations application worker.
+
+        This is used by the new conversation lifecycle and skips all the
+        tagpool and initial_action silliness.
+
+        TODO: Replace the start() method above with this one.
+        """
+        batches = yield self.get_batches()
+        if not batches:
+            batch_id = yield self.start_batch()
+            self.c.batches.add_key(batch_id)
+
+        self.c.set_status_starting()
+        yield self.c.save()
+
+        yield self.dispatch_command('start',
+                                    user_account_key=self.c.user_account.key,
+                                    conversation_key=self.c.key)
 
     @Manager.calls_manager
     def _add_to_routing_table(self, tag, outbound_only=False):
