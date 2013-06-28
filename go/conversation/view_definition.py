@@ -57,7 +57,7 @@ class StartConversationView(ConversationApiView):
     def post(self, request, conversation):
         # TODO: Better conversation start error handling.
         try:
-            conversation.start(send_initial_action_hack=False)
+            conversation.new_start()
         except ConversationSendError as error:
             messages.add_message(request, messages.ERROR, str(error))
         else:
@@ -134,6 +134,18 @@ class StopConversationView(ConversationApiView):
             request, messages.INFO, '%s stopped' % (
                 self.view_def.conversation_display_name,))
         return self.redirect_to('show', conversation_key=conversation.key)
+
+
+class ArchiveConversationView(ConversationApiView):
+    view_name = 'archive'
+    path_suffix = 'archive/'
+
+    def post(self, request, conversation):
+        conversation.archive_conversation()
+        messages.add_message(
+            request, messages.INFO, '%s archived' % (
+                self.view_def.conversation_display_name,))
+        return redirect(reverse('conversations:index'))
 
 
 class ShowConversationView(ConversationTemplateView):
@@ -390,6 +402,7 @@ class ConversationViewDefinitionBase(object):
         StartConversationView,
         ConfirmConversationView,
         StopConversationView,
+        ArchiveConversationView,
         AggregatesConversationView,
     )
 
