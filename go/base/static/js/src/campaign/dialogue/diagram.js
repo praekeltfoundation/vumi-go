@@ -18,33 +18,7 @@
     stateCollectionType: states.DialogueStateCollection,
 
     connectionType: connections.DialogueConnectionView,
-    connectionCollectionType: connections.DialogueConnectionCollection,
-
-    className: function() {
-      return ['diagram', this.grid.className].join(' ');
-    },
-
-    initialize: function(options) {
-      DiagramView.prototype.initialize.call(this, options);
-
-      this.grid = new components.grid.GridView({
-        el: this.$el,
-        items: this.states.members.get('states'),
-        sortableOptions: {
-          handle: '.state .titlebar',
-          placeholder: 'placeholder',
-          sort: function() { jsPlumb.repaintEverything(); }
-        }
-      });
-
-      this.grid.on('render', function() { jsPlumb.repaintEverything(); });
-      this.$el.addClass(this.className());
-    },
-
-    render: function() {
-      this.grid.render();
-      this.connections.render();
-    }
+    connectionCollectionType: connections.DialogueConnectionCollection
   });
 
   _(exports).extend({
