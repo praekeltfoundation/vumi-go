@@ -1,4 +1,4 @@
-describe("go.campaign.dialogue.states.choice", function() {
+describe("go.campaign.dialogue.states.end", function() {
   var dialogue = go.campaign.dialogue,
       states = go.campaign.dialogue.states;
 
@@ -28,7 +28,7 @@ describe("go.campaign.dialogue.states.choice", function() {
     });
 
     describe(".save", function() {
-      it("should update the choice state's model", function() {
+      it("should update the end state's model", function() {
         assert.deepEqual(state.model.toJSON(), {
           uuid: 'state3',
           name: 'Ending 1',
@@ -53,7 +53,7 @@ describe("go.campaign.dialogue.states.choice", function() {
     });
 
     describe("when the '.save' button is clicked", function() {
-      it("should update the choice state's model", function() {
+      it("should update the end state's model", function() {
         assert.deepEqual(state.model.toJSON(), {
           uuid: 'state3',
           name: 'Ending 1',
