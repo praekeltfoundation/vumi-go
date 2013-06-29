@@ -146,7 +146,8 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
                 conversation_key, user_account_key))
             return
 
-        for contacts in (yield conv.get_opted_in_contact_bunches()):
+        for contacts in (yield conv.get_opted_in_contact_bunches(
+                conv.delivery_class)):
             for contact in (yield contacts):
                 to_addr = contact.addr_for(conv.delivery_class)
                 yield self.start_survey(to_addr, conv, **msg_options)

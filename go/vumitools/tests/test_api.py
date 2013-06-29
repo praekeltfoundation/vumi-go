@@ -166,7 +166,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
                 all_addrs.append(contact.addr_for(conv.delivery_class))
         self.assertEqual(set(all_addrs), set(['+27760000000', '+27761234567']))
         optedin_addrs = []
-        for contacts in (yield conv.get_opted_in_contact_bunches()):
+        for contacts in (yield conv.get_opted_in_contact_bunches(
+                conv.delivery_class)):
             for contact in (yield contacts):
                 optedin_addrs.append(contact.addr_for(conv.delivery_class))
         self.assertEqual(optedin_addrs, ['+27760000000'])

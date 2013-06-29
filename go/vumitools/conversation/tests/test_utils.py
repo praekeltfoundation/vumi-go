@@ -338,7 +338,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
         @inlineCallbacks
         def get_contacts():
-            bunches = yield self.conv.get_opted_in_contact_bunches()
+            bunches = yield self.conv.get_opted_in_contact_bunches(
+                self.conv.delivery_class)
             contacts = []
             for bunch in bunches:
                 contacts.extend((yield bunch))

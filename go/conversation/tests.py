@@ -95,7 +95,8 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         conversation = self.get_wrapped_conv()
         conversation.start()
         contacts = []
-        for bunch in conversation.get_opted_in_contact_bunches():
+        for bunch in conversation.get_opted_in_contact_bunches(
+                conversation.delivery_class):
             contacts.extend(bunch)
         [contact] = contacts
         [batch] = conversation.get_batches()

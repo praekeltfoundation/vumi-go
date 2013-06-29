@@ -60,7 +60,8 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     @inlineCallbacks
     def get_opted_in_contacts(self, conversation):
         contacts = []
-        for bunch in (yield conversation.get_opted_in_contact_bunches()):
+        for bunch in (yield conversation.get_opted_in_contact_bunches(
+                conversation.delivery_class)):
             contacts.extend((yield bunch))
         returnValue(sorted(contacts, key=lambda c: c.msisdn))
 
