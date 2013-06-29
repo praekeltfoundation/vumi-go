@@ -31,6 +31,21 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         self.assertContains(response, 'Conversation name')
         self.assertContains(response, 'kind of conversation')
 
+    def test_post_new_conversation(self):
+        conv_data = {
+            'name': 'new conv',
+            'conversation_type': 'bulk_message',
+        }
+        response = self.client.post(reverse('conversations:new_conversation'),
+                                    conv_data)
+        print response
+        conv = self.get_latest_conversation()
+        show_url = reverse('conversations:conversation', kwargs={
+            'conversation_key': conv.key, 'path_suffix': ''})
+        self.assertRedirects(response, show_url)
+        self.assertEqual(conv.name, 'new conv')
+        self.assertEqual(conv.conversation_type, 'bulk_message')
+
     def test_index(self):
         """Display all conversations"""
         response = self.client.get(reverse('conversations:index'))
