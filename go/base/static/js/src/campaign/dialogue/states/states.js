@@ -116,8 +116,7 @@
       var model = this.state.model;
 
       if (this.modelBackup) {
-        model.clear();
-        model.set(this.modelBackup);
+        model.set(this.modelBackup, {remove: true});
       }
 
       return this;
