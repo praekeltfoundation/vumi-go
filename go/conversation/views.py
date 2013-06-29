@@ -3,7 +3,6 @@ from urllib import urlencode
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.http import HttpResponse
 
@@ -93,35 +92,33 @@ def conversation_action(request, conversation_key, action_name):
 
 
 @login_required
-@require_POST
 def new_conversation(request):
-    # TODO: description?
-    form = NewConversationForm(request.POST)
-    if not form.is_valid():
-        # TODO: Something more sensible here?
-        return HttpResponse(
-            "Invalid form: %s" % (form.errors,), status=400)
-    conversation_type = form.cleaned_data['conversation_type']
-    conv = request.user_api.new_conversation(
-        conversation_type, name=form.cleaned_data['name'],
-        description=form.cleaned_data['description'], config={})
-    messages.info(request, 'Conversation created successfully.')
+    if request.method == 'POST':
+        form = NewConversationForm(request.POST)
+        if not form.is_valid():
+            # TODO: Something more sensible here?
+            return HttpResponse(
+                "Invalid form: %s" % (form.errors,), status=400)
+        conversation_type = form.cleaned_data['conversation_type']
+        conv = request.user_api.new_conversation(
+            conversation_type, name=form.cleaned_data['name'],
+            description=form.cleaned_data['description'], config={})
+        messages.info(request, 'Conversation created successfully.')
 
-    view_def = get_conversation_view_definition(
-        conv.conversation_type, conv)
+        view_def = get_conversation_view_definition(
+            conv.conversation_type, conv)
 
-    # TODO: Better workflow here?
+        next_view = 'show'
+        if view_def.is_editable:
+            next_view = 'edit'
 
-    next_view = 'show'
-    action = request.POST.get('action')
-    if action == 'draft':
-        # save and go back to list.
-        return redirect('conversations:index')
-    elif view_def.edit_conversation_forms is not None:
-        next_view = 'edit'
+        return redirect(view_def.get_view_url(
+            next_view, conversation_key=conv.key))
 
-    return redirect(view_def.get_view_url(
-        next_view, conversation_key=conv.key))
+    conversation_form = NewConversationForm()
+    return render(request, 'conversation/new.html', {
+        'conversation_form': conversation_form,
+    })
 
 
 # TODO: The following should probably be moved over to view_definition.py
