@@ -28,8 +28,8 @@
     previewModeType: FreeTextStatePreviewView,
 
     endpointSchema: [
-      {attr: 'entry_endpoint'},
-      {attr: 'exit_endpoint'}]
+      {attr: 'entry_endpoint', side: 'left'},
+      {attr: 'exit_endpoint', side: 'right'}]
   });
 
   _(exports).extend({

@@ -33,6 +33,28 @@ describe("go.campaign.dialogue.states.choice", function() {
       state.edit();
     });
 
+    describe("on 'activate' events", function() {
+      it("should add a new choice if the state's model has no choice endpoints",
+      function(done) {
+        // Set the state up to not have any endpoints
+        var choices = state.endpoints.members.get('choice_endpoints');
+        choices.each(function(c) { choices.remove(c); });
+        state.render();
+        assert.equal(choices.size(), 0);
+        assert(noElExists(editMode.$('.choice')));
+        assert(noElExists(state.$('.choice-endpoint')));
+
+        editMode.on('activate', function() {
+          assert.equal(choices.size(), 1);
+          assert(oneElExists(editMode.$('.choice')));
+          assert(oneElExists(state.$('.choice-endpoint')));
+          done();
+        });
+
+        editMode.trigger('activate');
+      });
+    });
+
     describe(".save", function() {
       it("should update the choice state's model", function() {
         assert.deepEqual(state.model.toJSON(), {
