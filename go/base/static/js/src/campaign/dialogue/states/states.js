@@ -114,11 +114,7 @@
 
     cancel: function() {
       var model = this.state.model;
-
-      if (this.modelBackup) {
-        model.set(this.modelBackup, {remove: true});
-      }
-
+      if (this.modelBackup) { model.set(this.modelBackup); }
       return this;
     },
 
