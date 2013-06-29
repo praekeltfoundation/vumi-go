@@ -9,14 +9,16 @@
       DialogueStatePreviewView = states.DialogueStatePreviewView;
 
   var FreeTextStateEditView = DialogueStateEditView.extend({
-    template: JST.campaign_dialogue_states_freetext_edit
+    bodyTemplate: JST.campaign_dialogue_states_freetext_edit
   });
 
   var FreeTextStatePreviewView = DialogueStatePreviewView.extend({
-    template: JST.campaign_dialogue_states_freetext_preview
+    bodyTemplate: JST.campaign_dialogue_states_freetext_preview
   });
 
   var FreeTextStateView = DialogueStateView.extend({
+    typeName: 'freetext',
+
     editModeType: FreeTextStateEditView,
     previewModeType: FreeTextStatePreviewView,
 

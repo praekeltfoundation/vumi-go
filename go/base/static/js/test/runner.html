@@ -33,6 +33,10 @@
         .reporter('html');
 
       window.templates = [
+        'campaign/dialogue/states/modes/preview/titlebar.jst',
+        'campaign/dialogue/states/modes/edit/titlebar.jst',
+        'campaign/dialogue/states/modes/edit/head.jst',
+        'campaign/dialogue/states/modes/edit/tail.jst',
         'campaign/dialogue/states/choice/edit.jst',
         'campaign/dialogue/states/choice/preview.jst',
         'campaign/dialogue/states/freetext/edit.jst',
@@ -106,6 +110,7 @@
     <script src="tests/campaign/dialogue/models.test.js"></script>
     <script src="tests/campaign/dialogue/diagram.test.js"></script>
     <script src="tests/campaign/dialogue/states/states.test.js"></script>
+    <script src="tests/campaign/dialogue/states/choice.test.js"></script>
     <script>
       if (window.mochaPhantomJS) { mochaPhantomJS.run(); }
       else { mocha.run(); }

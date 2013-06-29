@@ -17,13 +17,17 @@
   // targeting a dialogue view's element and acting according to the mode type
   // (for eg, `edit`) and state type (for eg, `freetext`).
   var DialogueStateModeView = Backbone.View.extend({
-    template: _.template(''),
-
-    // The data passed to the template
-    templateData: function() { return {model: this.state.model.toJSON()}; },
+    titlebarTemplate: _.template(''),
+    headTemplate: _.template(''),
+    bodyTemplate: _.template(''),
+    tailTemplate: _.template(''),
+    templateData: {},
 
     initialize: function(options) {
       this.state = options.state;
+
+      this.$titlebar = $('<div><div>').addClass('titlebar');
+      this.$box = $('<div><div>').addClass('box');
     },
 
     destroy: function() {
@@ -31,11 +35,27 @@
       return this;
     },
 
-    render: function() {
-      this.state.$el.append(this.$el);
+    detach: function() {
+      this.$el.detach();
+      return this;
+    },
 
-      var data = _(this).result('templateData');
-      this.$el.html(this.template(data));
+    render: function() {
+      var data = {model: this.state.model.toJSON()};
+      _(data).defaults(_(this).result('templateData'));
+
+      this.state.$el.append(this.$el);
+      this.$el.append(this.$titlebar);
+      this.$el.append(this.$box);
+
+      this.$titlebar.html(this.titlebarTemplate(data));
+
+      this.$box.html([
+         this.headTemplate(data),
+         this.bodyTemplate(data),
+         this.tailTemplate(data)
+      ].join(''));
+
       return this;
     }
   });
@@ -43,19 +63,93 @@
   // Mode allowing the user to make changes to the dialogue state. Acts as a
   // base for each state type's `edit` mode
   var DialogueStateEditView = DialogueStateModeView.extend({
-    className: 'edit mode'
+    className: 'edit mode',
+
+    titlebarTemplate: JST.campaign_dialogue_states_modes_edit_titlebar,
+    headTemplate: JST.campaign_dialogue_states_modes_edit_head,
+    tailTemplate: JST.campaign_dialogue_states_modes_edit_tail,
+
+    events: {
+      'click .save': 'onSave',
+      'click .cancel': 'onCancel',
+      'change .type': 'onTypeChange'
+    },
+
+    initialize: function(options) {
+      DialogueStateEditView.__super__.initialize.call(this, options);
+      this.backupModel();
+
+      this.on('activate', this.backupModel, this);
+    },
+
+    // Keep a backup to restore the model for when the user cancels the edit
+    backupModel: function() {
+      this.modelBackup = this.state.model.toJSON();
+      return this;
+    },
+
+    _save: function() {
+      var name = this.$('.titlebar .name').val();
+      this.state.model.set('name', name, {silent: true});
+      this.save();
+    },
+
+    onSave: function(e) {
+      e.preventDefault();
+      this._save();
+      this.state.preview();
+    },
+
+    onCancel: function(e) {
+      e.preventDefault();
+      this.cancel();
+      this.state.preview();
+    },
+
+    onTypeChange: function(e) {
+      this.state.reset($(e.target).val());
+    },
+
+    save: function() { return this; },
+
+    cancel: function() {
+      var model = this.state.model;
+      model.clear();
+      model.set(this.modelBackup);
+
+      this.state.preview();
+      return this;
+    },
+
+    render: function() {
+      DialogueStateEditView.__super__.render.call(this);
+      this.$('.type').val(this.state.typeName);
+      return this;
+    }
   });
 
   // Mode for a 'read-only' preview of the dialogue state. Acts as a base for
   // each state type's `preview` mode
   var DialogueStatePreviewView = DialogueStateModeView.extend({
-    className: 'preview mode'
+    className: 'preview mode',
+    titlebarTemplate: JST.campaign_dialogue_states_modes_preview_titlebar,
+
+    events: {
+      'click .edit-switch': 'onEditSwitch'
+    },
+
+    onEditSwitch: function(e) {
+      e.preventDefault();
+      this.state.edit();
+    }
   });
 
   // Base view for dialogue states. Dynamically switches between modes
   // (`edit`, `preview`).
   var DialogueStateView = StateView.extend({
-    className: 'state',
+    switchModeDefaults: {render: true, silent: false},
+
+    className: 'state span4',
 
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
@@ -70,17 +164,28 @@
       end: 'go.campaign.dialogue.states.end.EndStateView'
     },
 
-    id: function() { return this.model.id; },
+    events: {
+      'click .titlebar .remove': 'onRemove'
+    },
 
     initialize: function(options) {
       StateView.prototype.initialize.call(this, options);
 
-      this.editMode = new this.editModeType({state: this});
-      this.previewMode = new this.previewModeType({state: this});
+      if (!this.model.has('ordinal')) {
+        this.model.set('ordinal', this.collection.size(), {silent: true});
+      }
 
-      this.mode = options.mode === 'edit'
-        ? this.editMode
-        : this.previewMode;
+      this.modes = {
+        edit: new this.editModeType({state: this}),
+        preview: new this.previewModeType({state: this})
+      };
+
+      this.switchMode(options.mode || 'preview', {render: false});
+    },
+
+    onRemove: function(e) {
+      e.preventDefault();
+      this.collection.remove(this);
     },
 
     // 'Resets' a state to a new type by removing the current state, and
@@ -90,18 +195,32 @@
       this.collection.reset(this, type);
     },
 
-    // Switch to preview mode
-    preview: function() {
-      this.mode.destroy();
-      this.mode = this.previewMode;
-      this.render();
+    switchMode: function(modeName, options) {
+      options = _(options || {}).defaults(this.switchModeDefaults);
+      var mode = this.modes[modeName] || this.modes.preview;
+
+      if (this.mode) {
+        if (!options.silent) { this.mode.trigger('deactivate'); }
+        this.mode.detach();
+      }
+
+      this.mode = mode;
+      this.modeName = modeName;
+
+      if (!options.silent) { this.mode.trigger('activate'); }
+      if (options.render) {
+        this.render();
+        jsPlumb.repaintEverything();
+      }
+      return this;
     },
 
-    // Switch to edit mode
-    edit: function() {
-      this.mode.destroy();
-      this.mode = this.editMode;
-      this.render();
+    preview: function(options) {
+      return this.switchMode('preview', options);
+    },
+
+    edit: function(options) {
+      return this.switchMode('edit', options);
     },
 
     render: function() {
@@ -135,7 +254,9 @@
       this.add({
         mode: 'edit',
         model: {
+          uuid: uuid.v4(),
           type: type,
+          name: state.model.get('name'),
           ordinal: state.model.get('ordinal')
         }
       });

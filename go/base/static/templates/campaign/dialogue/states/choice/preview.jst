@@ -1,1 +1,10 @@
-<!-- TODO -->
+<span class='text'><%= model.text %></span>
+<ol class='choices'>
+<% _(model.choice_endpoints).each(function(choice) { %>
+  <li
+   class='choice'
+   data-endpoint-id="<%= choice.uuid %>">
+     <%= choice.label %>
+   </li>
+<% }); %>
+</ol>

@@ -10,14 +10,16 @@
       DialogueStatePreviewView = states.DialogueStatePreviewView;
 
   var EndStateEditView = DialogueStateEditView.extend({
-    template: JST.campaign_dialogue_states_end_edit
+    bodyTemplate: JST.campaign_dialogue_states_end_edit
   });
 
   var EndStatePreviewView = DialogueStatePreviewView.extend({
-    template: JST.campaign_dialogue_states_end_preview
+    bodyTemplate: JST.campaign_dialogue_states_end_preview
   });
 
   var EndStateView = DialogueStateView.extend({
+    typeName: 'end',
+
     editModeType: EndStateEditView,
     previewModeType: EndStatePreviewView,
 
