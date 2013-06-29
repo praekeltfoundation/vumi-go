@@ -5,6 +5,7 @@ import random
 from twisted.internet.defer import inlineCallbacks, maybeDeferred
 from twisted.web import http
 
+from vumi.config import ConfigInt, ConfigText
 from vumi.utils import http_request_full
 from vumi.transports.httprpc import httprpc
 from vumi import log
@@ -59,29 +60,37 @@ class StreamingClientManager(object):
         yield self.redis.ltrim(backlog_key, 0, self.MAX_BACKLOG_SIZE - 1)
 
 
+class StreamingHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
+    """Configuration options for StreamingHTTPWorker."""
+
+    web_path = ConfigText(
+        "The path the HTTP worker should expose the API on.",
+        required=True, static=True)
+    web_port = ConfigInt(
+        "The port the HTTP worker should open for the API.",
+        required=True, static=True)
+    health_path = ConfigText(
+        "The path the resource should receive health checks on.",
+        default='/health/', static=True)
+    concurrency_limit = ConfigInt(
+        "Maximum number of clients per account.",
+        default=10)
+
+
 class StreamingHTTPWorker(GoApplicationWorker):
-    """
 
-    :param str web_path:
-        The path the HTTP worker should expose the API on
-    :param int web_port:
-        The port the HTTP worker should open for the API
-    :param str health_path:
-        The path the resource should receive health checks on.
-        Defaults to '/health/'
-    """
     worker_name = 'http_api_worker'
-
-    def validate_config(self):
-        super(StreamingHTTPWorker, self).validate_config()
-        self.web_path = self.config['web_path']
-        self.web_port = int(self.config['web_port'])
-        self.health_path = self.config.get('health_path', '/health/')
-        self.metrics_prefix = self.config['metrics_prefix']
+    CONFIG_CLASS = StreamingHTTPWorkerConfig
 
     @inlineCallbacks
     def setup_application(self):
         yield super(StreamingHTTPWorker, self).setup_application()
+        config = self.get_static_config()
+        self.web_path = config.web_path
+        self.web_port = config.web_port
+        self.health_path = config.health_path
+        self.metrics_prefix = config.metrics_prefix
+
         # Set these to empty dictionaries because we're not interested
         # in using any of the helper functions at this point.
         self._event_handlers = {}

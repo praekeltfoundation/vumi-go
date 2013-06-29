@@ -16,6 +16,7 @@ from vumi import errors
 from vumi.blinkenlights import metrics
 from vumi.message import TransportUserMessage, TransportEvent
 from vumi.errors import InvalidMessage
+from vumi.config import ConfigContext
 from vumi import log
 
 from go.apps.http_api.auth import ConversationRealm, ConversationAccessChecker
@@ -251,21 +252,23 @@ class MetricResource(BaseResource):
 
 class ConversationResource(resource.Resource):
 
-    CONCURRENCY_LIMIT = 10
-
     def __init__(self, worker, conversation_key):
         resource.Resource.__init__(self)
         self.worker = worker
         self.redis = worker.redis
         self.conversation_key = conversation_key
 
+    def get_worker_config(self, user_account_key):
+        ctxt = ConfigContext(user_account=user_account_key)
+        return self.worker.get_config(msg=None, ctxt=ctxt)
+
     def key(self, *args):
         return ':'.join(['concurrency'] + map(unicode, args))
 
     @inlineCallbacks
-    def is_allowed(self, user_id):
+    def is_allowed(self, config, user_id):
         count = int((yield self.redis.get(self.key(user_id))) or 0)
-        returnValue(count < self.CONCURRENCY_LIMIT)
+        returnValue(count < config.concurrency_limit)
 
     def track_request(self, user_id):
         return self.redis.incr(self.key(user_id))
@@ -293,7 +296,8 @@ class ConversationResource(resource.Resource):
             returnValue(resource.NoResource())
 
         user_id = request.getUser()
-        if (yield self.is_allowed(user_id)):
+        config = yield self.get_worker_config(user_id)
+        if (yield self.is_allowed(config, user_id)):
 
             # remove track when request is closed
             finished = request.notifyFinish()
