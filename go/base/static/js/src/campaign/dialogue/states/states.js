@@ -13,6 +13,18 @@
       ParametricEndpointView = endpoints.ParametricEndpointView,
       AligningEndpointCollection = endpoints.AligningEndpointCollection;
 
+  var DialogueEndpointView = ParametricEndpointView.extend();
+
+  var EntryEndpointView = DialogueEndpointView.extend({
+    side: 'left',
+    isSource: false
+  });
+
+  var ExitEndpointView = DialogueEndpointView.extend({
+    side: 'right',
+    isTarget: false
+  });
+
   // Base 'mode' for state views. Each mode acts as a 'delegate view',
   // targeting a dialogue view's element and acting according to the mode type
   // (for eg, `edit`) and state type (for eg, `freetext`).
@@ -157,7 +169,7 @@
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
 
-    endpointType: ParametricEndpointView,
+    endpointType: DialogueEndpointView,
     endpointCollectionType: AligningEndpointCollection,
 
     subtypes: {
@@ -269,6 +281,9 @@
   });
 
   _(exports).extend({
+    EntryEndpointView: EntryEndpointView,
+    ExitEndpointView: ExitEndpointView,
+
     DialogueStateModeView: DialogueStateModeView,
     DialogueStatePreviewView: DialogueStatePreviewView,
     DialogueStateEditView: DialogueStateEditView,
