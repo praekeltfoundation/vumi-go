@@ -39,6 +39,12 @@
 
       this.grid.on('render', function() { jsPlumb.repaintEverything(); });
       this.$el.addClass(this.className());
+
+      this.connections.on('error:unsupported', this.onUnsupportedConnection);
+    },
+
+    onUnsupportedConnection: function(source, target, plumbConnection) {
+      jsPlumb.detach(plumbConnection, {fireEvent: false});
     },
 
     render: function() {
