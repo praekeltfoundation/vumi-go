@@ -226,6 +226,14 @@
     $('#diagram').remove();
   };
 
+  var connectionCount = function(a, b) {
+    return jsPlumb.getConnections({source: a.$el, target: b.$el}).length;
+  };
+
+  var noConnections = function(a, b) {
+    return connectionCount(a, b) === 0;
+  };
+
   _.extend(exports, {
     MockEndpointView: MockEndpointView,
     MockStateView: MockStateView,
@@ -257,6 +265,8 @@
     newComplexDiagram: newComplexDiagram,
 
     setUp: setUp,
-    tearDown: tearDown
+    tearDown: tearDown,
+    connectionCount: connectionCount,
+    noConnections: noConnections
   });
 })(go.components.plumbing.testHelpers = {});
