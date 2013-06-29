@@ -120,7 +120,6 @@
         model.set(this.modelBackup);
       }
 
-      this.state.preview();
       return this;
     },
 
