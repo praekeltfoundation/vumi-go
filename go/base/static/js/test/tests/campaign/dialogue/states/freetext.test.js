@@ -22,8 +22,6 @@ describe("go.campaign.dialogue.states.choice", function() {
   });
 
   describe(".FreeTextStateEditView", function() {
-    var FreeTextStateEditView = states.choice.FreeTextStateEditView;
-
     var state,
         editMode;
 
