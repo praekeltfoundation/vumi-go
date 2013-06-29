@@ -1,8 +1,4 @@
 describe("go.campaign.dialogue.states.choice", function() {
-  var testHelpers = go.testHelpers,
-      oneElExists = testHelpers.oneElExists,
-      noElExists = testHelpers.noElExists;
-
   var dialogue = go.campaign.dialogue,
       states = go.campaign.dialogue.states;
 
