@@ -208,7 +208,10 @@
       this.modeName = modeName;
 
       if (!options.silent) { this.mode.trigger('activate'); }
-      if (options.render) { this.render(); }
+      if (options.render) {
+        this.render();
+        jsPlumb.repaintEverything();
+      }
       return this;
     },
 
