@@ -26,6 +26,11 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
     def get_wrapped_conv(self):
         return self.user_api.get_wrapped_conversation(self.conv_key)
 
+    def test_get_new_conversation(self):
+        response = self.client.get(reverse('conversations:new_conversation'))
+        self.assertContains(response, 'Conversation name')
+        self.assertContains(response, 'kind of conversation')
+
     def test_index(self):
         """Display all conversations"""
         response = self.client.get(reverse('conversations:index'))
