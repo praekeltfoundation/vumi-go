@@ -9,7 +9,12 @@
       DialogueStatePreviewView = states.DialogueStatePreviewView;
 
   var FreeTextStateEditView = DialogueStateEditView.extend({
-    bodyTemplate: JST.campaign_dialogue_states_freetext_edit
+    bodyTemplate: JST.campaign_dialogue_states_freetext_edit,
+
+    save: function() {
+      this.state.model.set('text', this.$('.text').val(), {silent: true});
+      return this;
+    }
   });
 
   var FreeTextStatePreviewView = DialogueStatePreviewView.extend({
