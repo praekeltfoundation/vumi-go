@@ -114,8 +114,11 @@
 
     cancel: function() {
       var model = this.state.model;
-      model.clear();
-      model.set(this.modelBackup);
+
+      if (this.modelBackup) {
+        model.clear();
+        model.set(this.modelBackup);
+      }
 
       this.state.preview();
       return this;
