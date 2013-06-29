@@ -38,7 +38,6 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         }
         response = self.client.post(reverse('conversations:new_conversation'),
                                     conv_data)
-        print response
         conv = self.get_latest_conversation()
         show_url = reverse('conversations:conversation', kwargs={
             'conversation_key': conv.key, 'path_suffix': ''})
