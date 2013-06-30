@@ -562,6 +562,16 @@ describe("go.components.structures", function() {
   describe(".ViewCollection", function() {
     var ViewCollection = structures.ViewCollection;
 
+    var ToyModel = Backbone.RelationalModel.extend({
+      subModelTypes: {
+        pirate: 'globals.ToyPirateModel',
+        ninja: 'globals.ToyNinjaModel'
+      }
+    });
+
+    var ToyPirateModel = globals.ToyPirateModel = ToyModel.extend(),
+        ToyNinjaModel = globals.ToyNinjaModel = ToyModel.extend();
+
     var ToyView = Backbone.View.extend({
       id: function() { return this.model.id; },
       initialize: function(options) {
@@ -591,7 +601,10 @@ describe("go.components.structures", function() {
         views;
 
     beforeEach(function() {
-      models = new Backbone.Collection([{id: 'a'}, {id: 'b'}, {id: 'c'}]);
+      models = new Backbone.Collection(
+        [{id: 'a'}, {id: 'b'}, {id: 'c'}],
+        {model: ToyModel});
+
       views = new ToyViewCollection({models: models});
     });
 
@@ -665,6 +678,11 @@ describe("go.components.structures", function() {
         model = new Backbone.Model({id: 'e'});
         views.add({model: model}, {addModel: true});
         assert(views.models.get('e'));
+      });
+
+      it("should work with models with subtypes", function() {
+        var v = views.add({model: {type: 'ninja'}}, {addModel: true});
+        assert.instanceOf(v.model, ToyNinjaModel);
       });
 
       it("should add the view to the 'by model' lookup", function() {
