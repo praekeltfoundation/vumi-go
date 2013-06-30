@@ -189,9 +189,20 @@ class GoAppWorkerTestMixin(GoPersistenceMixin):
         returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
-    def start_conversation(self, conversation, *args, **kwargs):
+    def start_conversation_old_style(self, conv, tagpool=u'pool', **kwargs):
         old_cmds = len(self.get_dispatcher_commands())
-        yield conversation.start(*args, **kwargs)
+        conv.c.delivery_tag_pool = tagpool
+        yield conv.save()
+        yield conv.start(**kwargs)
+        for cmd in self.get_dispatcher_commands()[old_cmds:]:
+            yield self.dispatch_command(
+                cmd.payload['command'], *cmd.payload['args'],
+                **cmd.payload['kwargs'])
+
+    @inlineCallbacks
+    def start_conversation(self, conversation):
+        old_cmds = len(self.get_dispatcher_commands())
+        yield conversation.new_start()
         for cmd in self.get_dispatcher_commands()[old_cmds:]:
             yield self.dispatch_command(
                 cmd.payload['command'], *cmd.payload['args'],
