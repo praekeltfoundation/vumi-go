@@ -23,7 +23,7 @@
   });
 
   var ChoiceStateEditView = DialogueStateEditView.extend({
-    bodyTemplate: JST.campaign_dialogue_states_choice_edit,
+    bodyTemplate: 'JST.choice_edit',
 
     events: _({
       'click .new-choice': 'onNewChoice',
@@ -87,7 +87,7 @@
   });
 
   var ChoiceStatePreviewView = DialogueStatePreviewView.extend({
-    bodyTemplate: JST.campaign_dialogue_states_choice_preview
+    bodyTemplate: 'JST.choice_preview'
   });
 
   var ChoiceStateView = DialogueStateView.extend({
