@@ -25,6 +25,8 @@
 
 {% block ondomready %}
   {{ block.super }}
+  var dialogue = go.campaign.dialogue;
+
   $('.breadcrumbs a').eq(1).addClass('active');
 
   $('.actions button[data-action="save"]').click(function(e) {
@@ -32,13 +34,19 @@
       $('#initiateModal').modal('show');
   });
 
-  var dialogue = go.campaign.dialogue,
-      DialogueDiagramView = dialogue.diagram.DialogueDiagramView,
-      DialogueModel = dialogue.models.DialogueModel;
+  _(jsPlumb.Defaults.EndpointStyle).extend({
+    radius: 4,
+    fillStyle: '#2f3436'
+  });
 
-  var diagram = new DialogueDiagramView({
+  _(jsPlumb.Defaults.PaintStyle).extend({
+    lineWidth: 4,
+    strokeStyle: '#2f3436'
+  });
+
+  var diagram = new dialogue.diagram.DialogueDiagramView({
     el: '.dialogue.diagram',
-    model: new DialogueModel({{ model_data|safe }})
+    model: new dialogue.models.DialogueModel({{ model_data|safe }})
   });
 
   diagram.render();

@@ -232,7 +232,7 @@ button {
 .dialogue.diagram .item {
   margin-left: 0;
   padding: 0;
-  color: #222;
+  color: #2f3436;
 }
 .dialogue.diagram .item .state {
   padding: 6px;
@@ -241,7 +241,7 @@ button {
 .dialogue.diagram .item .state .titlebar {
   padding: 8px 6px;
   margin-bottom: 10px;
-  background-color: #222;
+  background: #2f3436;
   color: #eee;
   -webkit-border-radius: 5px;
   -webkit-background-clip: padding-box;
@@ -266,7 +266,7 @@ button {
 }
 .dialogue.diagram .item .state label,
 .dialogue.diagram .item .state p {
-  color: #222;
+  color: #2f3436;
 }
 .dialogue.diagram .item .state textarea {
   max-width: 80%;
