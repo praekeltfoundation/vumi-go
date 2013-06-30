@@ -136,7 +136,12 @@
       key: 'connections',
       parse: true,
       relatedModel: DialogueConnectionModel
-    }]
+    }],
+
+    defaults: {
+      states: [],
+      connections: []
+    }
   });
 
   _(exports).extend({

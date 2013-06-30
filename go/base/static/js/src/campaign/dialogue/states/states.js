@@ -268,6 +268,14 @@
       return _({mode: 'preview'}).defaults(opts);
     },
 
+    modelDefaults: function() {
+      return {
+        type: 'choice',
+        name: '',
+        ordinal: this.size()
+      };
+    },
+
     initialize: function(options) {
       DialogueStateCollection.__super__.initialize.call(this, options);
 
@@ -308,7 +316,6 @@
       this.add({
         mode: 'edit',
         model: {
-          uuid: uuid.v4(),
           type: type,
           name: state.model.get('name'),
           ordinal: state.model.get('ordinal')
