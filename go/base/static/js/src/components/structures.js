@@ -286,6 +286,9 @@
     // The default options passed to each new view
     viewOptions: {},
 
+    // The default attributes for each new view's model
+    modelDefaults: {},
+
     addDefaults: _({
       render: true,  // render view after adding
       addModel: true  // add the model if it is not in the collection
@@ -332,9 +335,10 @@
     },
 
     _ensureModel: function(obj) {
-      return obj instanceof Backbone.Model
-        ? obj
-        : new this.models.model(obj || {});
+      if (obj instanceof Backbone.Model) { return obj; }
+
+      var attrs = _(obj || {}).defaults(_(this).result('modelDefaults'));
+      return new this.models.model(attrs);
     },
 
     _ensureCollection: function(obj) {
