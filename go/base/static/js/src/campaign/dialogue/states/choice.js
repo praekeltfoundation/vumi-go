@@ -13,7 +13,7 @@
       FollowingEndpointView = plumbing.endpoints.FollowingEndpointView;
 
   var ChoiceEndpointView = FollowingEndpointView.extend({
-    className: 'choice-endpoint',
+    className: 'choice endpoint',
     side: 'right',
     target: function() {
       return '.choice[data-endpoint-id="' + this.uuid() + '"]';
