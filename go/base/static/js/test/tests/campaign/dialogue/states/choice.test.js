@@ -42,12 +42,12 @@ describe("go.campaign.dialogue.states.choice", function() {
         state.render();
         assert.equal(choices.size(), 0);
         assert(noElExists(editMode.$('.choice')));
-        assert(noElExists(state.$('.choice-endpoint')));
+        assert(noElExists(state.$('.choice.endpoint')));
 
         editMode.on('activate', function() {
           assert.equal(choices.size(), 1);
           assert(oneElExists(editMode.$('.choice')));
-          assert(oneElExists(state.$('.choice-endpoint')));
+          assert(oneElExists(state.$('.choice.endpoint')));
           done();
         });
 

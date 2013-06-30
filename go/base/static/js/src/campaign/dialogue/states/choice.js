@@ -14,7 +14,7 @@
       FollowingEndpointView = plumbing.endpoints.FollowingEndpointView;
 
   var ChoiceEndpointView = FollowingEndpointView.extend({
-    className: 'choice-endpoint',
+    className: 'choice endpoint',
     side: 'right',
     isTarget: false,
     target: function() {
