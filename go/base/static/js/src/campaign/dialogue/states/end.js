@@ -28,7 +28,7 @@
     editModeType: EndStateEditView,
     previewModeType: EndStatePreviewView,
 
-    endpointSchema: [{attr: 'entry_endpoint'}]
+    endpointSchema: [{attr: 'entry_endpoint', side: 'left'}]
   });
 
   _(exports).extend({
