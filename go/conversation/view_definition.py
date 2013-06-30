@@ -155,8 +155,7 @@ class ShowConversationView(ConversationTemplateView):
     def get(self, request, conversation):
         params = {
             'conversation': conversation,
-            'is_editable': (
-                self.view_def.edit_conversation_forms is not None),
+            'is_editable': self.view_def.is_editable,
             'user_api': request.user_api,
             'actions': self.view_def.get_actions(),
         }
@@ -423,6 +422,10 @@ class ConversationViewDefinitionBase(object):
     @property
     def conversation_display_name(self):
         return self._conv_def.conversation_display_name
+
+    @property
+    def is_editable(self):
+        return self.edit_conversation_forms is not None
 
     def get_actions(self):
         return self._conv_def.get_actions()
