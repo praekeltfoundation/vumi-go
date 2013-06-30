@@ -107,6 +107,8 @@
 
     where: function(props) { return _.where(this.values(), props); },
 
+    findWhere: function(props) { return _.findWhere(this.values(), props); },
+
     callAt: function(i, fn, that) {
       var item = this._itemList[i];
       fn.call(that, item.key, item.value, i);
