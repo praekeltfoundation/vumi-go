@@ -229,6 +229,81 @@ button {
   max-width: 100%;
   min-width: 80%;
 }
+.dialogue.diagram .item {
+  margin-left: 0;
+  padding: 0;
+  color: #222;
+}
+.dialogue.diagram .item .state {
+  padding: 6px;
+  position: relative;
+}
+.dialogue.diagram .item .state .titlebar {
+  padding: 8px 6px;
+  margin-bottom: 10px;
+  background-color: #222;
+  color: #eee;
+  -webkit-border-radius: 5px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 5px;
+  -moz-background-clip: padding;
+  border-radius: 5px;
+  background-clip: padding-box;
+}
+.dialogue.diagram .item .state .titlebar .name {
+  font-weight: bold;
+  margin-bottom: 0;
+  width: 60px;
+}
+.dialogue.diagram .item .state .titlebar .remove {
+  color: #eee;
+}
+.dialogue.diagram .item .state .edit.mode .actions {
+  background: inherit;
+}
+.dialogue.diagram .item .state .preview.mode .edit-switch {
+  margin-left: 8px;
+}
+.dialogue.diagram .item .state label,
+.dialogue.diagram .item .state p {
+  color: #222;
+}
+.dialogue.diagram .item .state textarea {
+  max-width: 80%;
+}
+.dialogue.diagram .item .state p {
+  text-align: left;
+  white-space: wrap;
+}
+.dialogue.diagram .item .state .close {
+  font-size: 16px;
+}
+.dialogue.diagram .item .state .hint {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+.dialogue.diagram .item .state .important {
+  color: #cc3333;
+}
+.dialogue.diagram .item .endpoint {
+  background: #2f3436;
+  width: 14px;
+  height: 14px;
+  -webkit-border-radius: 5px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 5px;
+  -moz-background-clip: padding;
+  border-radius: 5px;
+  background-clip: padding-box;
+}
+.dialogue.diagram .item .choice.state .edit.mode .choices input {
+  margin-bottom: 0;
+}
+.dialogue.diagram .item .choice.state .preview.mode .choices {
+  text-align: left;
+}
 .channels.new .channel select {
   display: none;
 }

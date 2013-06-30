@@ -41,7 +41,7 @@
       this.state = options.state;
 
       this.$titlebar = $('<div><div>').addClass('titlebar');
-      this.$box = $('<div><div>').addClass('box');
+      this.$main = $('<div><div>').addClass('main');
     },
 
     destroy: function() {
@@ -60,11 +60,11 @@
 
       this.state.$el.append(this.$el);
       this.$el.append(this.$titlebar);
-      this.$el.append(this.$box);
+      this.$el.append(this.$main);
 
       this.$titlebar.html(maybeByName(this.titlebarTemplate)(data));
 
-      this.$box.html([
+      this.$main.html([
          maybeByName(this.headTemplate)(data),
          maybeByName(this.bodyTemplate)(data),
          maybeByName(this.tailTemplate)(data)
@@ -173,7 +173,7 @@
   var DialogueStateView = StateView.extend({
     switchModeDefaults: {render: true, silent: false},
 
-    className: 'state span4',
+    className: function() { return 'state ' + this.typeName || ''; },
 
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
@@ -278,18 +278,23 @@
       };
     },
 
-    initialize: function(options) {
-      DialogueStateCollection.__super__.initialize.call(this, options);
-
-      this.grid = new go.components.grid.GridView({
+    gridOptions: function() {
+      return {
         items: this,
+        gridClass: 'boxes',
+        itemClass: 'box',
         sortableOptions: {
           handle: '.state .titlebar',
           placeholder: 'placeholder',
           start: this.onSortStart.bind(this)
         }
-      });
+      };
+    },
 
+    initialize: function(options) {
+      DialogueStateCollection.__super__.initialize.call(this, options);
+
+      this.grid = new go.components.grid.GridView(this.gridOptions());
       this.grid.on('render', function() { jsPlumb.repaintEverything(); });
     },
 

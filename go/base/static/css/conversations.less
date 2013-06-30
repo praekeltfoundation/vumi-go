@@ -1,0 +1,95 @@
+.dialogue.diagram {
+  .item {
+    margin-left: 0;
+    padding: 0;
+    color: #222;
+
+    .state {
+      padding: 6px;
+      position: relative;
+
+      .titlebar {
+        padding: 8px 6px;
+        margin-bottom: 10px;
+
+        background-color: #222;
+        color: #eee;
+        .border-radius(5px);
+
+        .name {
+          font-weight: bold;
+          margin-bottom: 0;
+          width: 60px;
+        }
+
+        .remove {
+          color: #eee;
+        }
+      }
+
+      .edit.mode {
+        .actions {
+          background: inherit;
+        }
+      }
+
+      .preview.mode {
+        .edit-switch {
+          margin-left: 8px;
+        }
+      }
+
+      label, p {
+        color: #222;
+      }
+
+      textarea {
+        max-width: 80%;
+      }
+
+      p {
+        text-align: left;
+        white-space: wrap;
+      }
+
+
+      .close {
+        font-size: 16px;
+      }
+
+      .hint {
+        margin: 0;
+        text-align: center;
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .important {
+        color: #cc3333;
+      }
+    }
+
+    .endpoint {
+      background: #2f3436;
+      width: 14px;
+      height: 14px;
+      .border-radius(5px);
+    }
+
+    .choice.state {
+      .edit.mode {
+        .choices {
+          input {
+            margin-bottom: 0;
+          }
+        }
+      }
+
+      .preview.mode {
+        .choices {
+          text-align: left;
+        }
+      }
+    }
+  }
+}

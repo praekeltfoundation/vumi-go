@@ -1,7 +1,7 @@
 {% extends "wizard_views/wizard_base.html" %}
 
 {% block content_main %}
-<div id="dialogue-diagram"></div>
+<div class="dialogue diagram"></div>
 {% endblock %}
 
 {% block modals %}
@@ -37,7 +37,7 @@
       DialogueModel = dialogue.models.DialogueModel;
 
   var diagram = new DialogueDiagramView({
-    el: '#dialogue-diagram',
+    el: '.dialogue.diagram',
     model: new DialogueModel({{ model_data|safe }})
   });
 
