@@ -257,11 +257,28 @@
         sortableOptions: {
           handle: '.state .titlebar',
           placeholder: 'placeholder',
-          sort: function() { jsPlumb.repaintEverything(); }
+          start: this.onSortStart.bind(this)
         }
       });
 
       this.grid.on('render', function() { jsPlumb.repaintEverything(); });
+    },
+
+    onSortStart: function(e, ui) {
+      var $state = ui.item.find('.state'),
+          state = this.get($state.attr('data-uuid'));
+
+      if (state.isConnected()) {
+        // Simulate the user 'letting go' of the mouse
+        // Ideally, we should be able to use jquery ui sortable's cancel()
+        // method. This seems to be broken, and is a known issue:
+        // http://bugs.jqueryui.com/ticket/6954
+        this.grid.$el.mouseup();
+        this.grid.render();
+
+        // TODO replace with something nicer
+        bootbox.alert('Messages with connections cannot be moved');
+      }
     },
 
     // Removes a state and creates a new state of a different type in the same
