@@ -383,7 +383,7 @@
       options = _(options || {}).defaults(this.addDefaults);
 
       var model = view.model;
-      if (model) {
+      if (model || options.addModel) {
         view.model = model = this._ensureModel(model);
         if (options.addModel) { this.models.add(model, {silent: true}); }
       }
