@@ -18,7 +18,16 @@
     stateCollectionType: states.DialogueStateCollection,
 
     connectionType: connections.DialogueConnectionView,
-    connectionCollectionType: connections.DialogueConnectionCollection
+    connectionCollectionType: connections.DialogueConnectionCollection,
+
+    initialize: function(options) {
+      DialogueDiagramView.__super__.initialize.call(this, options);
+      this.connections.on('error:unsupported', this.onUnsupportedConnection);
+    },
+
+    onUnsupportedConnection: function(source, target, plumbConnection) {
+      jsPlumb.detach(plumbConnection, {fireEvent: false});
+    }
   });
 
   _(exports).extend({

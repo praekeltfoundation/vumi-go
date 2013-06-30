@@ -4,6 +4,7 @@
 
 (function(exports) {
   var states = go.campaign.dialogue.states,
+      EntryEndpointView = states.EntryEndpointView,
       DialogueStateView = states.DialogueStateView,
       DialogueStateEditView = states.DialogueStateEditView,
       DialogueStatePreviewView = states.DialogueStatePreviewView;
@@ -15,6 +16,7 @@
   var ChoiceEndpointView = FollowingEndpointView.extend({
     className: 'choice-endpoint',
     side: 'right',
+    isTarget: false,
     target: function() {
       return '.choice[data-endpoint-id="' + this.uuid() + '"]';
     }
@@ -93,12 +95,12 @@
 
     editModeType: ChoiceStateEditView,
     previewModeType: ChoiceStatePreviewView,
+
     endpointSchema: [{
       attr: 'entry_endpoint',
-      side: 'left'
+      type: EntryEndpointView
     }, {
       attr: 'choice_endpoints',
-      side: 'right',
       type: ChoiceEndpointView,
       collectionType: EndpointViewCollection
     }]

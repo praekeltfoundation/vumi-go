@@ -4,6 +4,8 @@
 
 (function(exports) {
   var states = go.campaign.dialogue.states,
+      EntryEndpointView = states.EntryEndpointView,
+      ExitEndpointView = states.ExitEndpointView,
       DialogueStateView = states.DialogueStateView,
       DialogueStateEditView = states.DialogueStateEditView,
       DialogueStatePreviewView = states.DialogueStatePreviewView;
@@ -28,8 +30,8 @@
     previewModeType: FreeTextStatePreviewView,
 
     endpointSchema: [
-      {attr: 'entry_endpoint', side: 'left'},
-      {attr: 'exit_endpoint', side: 'right'}]
+      {attr: 'entry_endpoint', type: EntryEndpointView},
+      {attr: 'exit_endpoint', type: ExitEndpointView}]
   });
 
   _(exports).extend({

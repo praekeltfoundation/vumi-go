@@ -14,7 +14,7 @@
     type: DialogueConnectionView,
 
     accepts: function(source, target) {
-      // TODO scary connection acceptance rules go here
+      if (source.state === target.state) { return false; }
       return true;
     }
   });
