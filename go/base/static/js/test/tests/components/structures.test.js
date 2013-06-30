@@ -109,6 +109,21 @@ describe("go.components.structures", function() {
       });
     });
 
+    describe(".findWhere", function() {
+      beforeEach(function() {
+        lookup = new Lookup({
+          a: {x: 1, y: 2, ordinal: 0},
+          b: {x: 3, y: 2, ordinal: 1},
+          c: {x: 5, y: 6, ordinal: 2}
+        }, {ordered: true});
+      });
+
+      it("should return the first item containing the given properties",
+      function() {
+        assert.deepEqual(lookup.findWhere({y: 2}), lookup.get('a'));
+      });
+    });
+
     describe(".eachItem", function() {
       it("should iterate through the lookup's items in order", function() {
         var items = [];

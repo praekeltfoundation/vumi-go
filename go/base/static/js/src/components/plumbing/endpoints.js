@@ -65,6 +65,13 @@
       return _.defaults({of: this.$el}, _(this).result('labelOptions'));
     },
 
+    isConnected: function() {
+      var connections = this.state.diagram.connections;
+
+      return connections.findWhere({source: this})
+          || connections.findWhere({target: this});
+    },
+
     destroy: function() {
       this.$el.remove();
       return this;

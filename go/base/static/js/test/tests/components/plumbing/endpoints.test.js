@@ -38,6 +38,14 @@ describe("go.components.plumbing.endpoints", function() {
       diagram.render();
     });
 
+    describe(".isConnected", function() {
+      it("should determine whether the endpoint is connected", function() {
+        assert(diagram.endpoints.get('x3').isConnected());
+        assert(diagram.endpoints.get('y2').isConnected());
+        assert(!diagram.endpoints.get('x1').isConnected());
+      });
+    });
+
     describe(".destroy", function() {
       it("should remove the element", function() {
         assert(oneElExists('[data-uuid="x1"]'));

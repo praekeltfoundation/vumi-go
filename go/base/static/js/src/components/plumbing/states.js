@@ -41,6 +41,14 @@
       this.model.on('change', this.render, this);
     },
 
+    isConnected: function() {
+      var endpoints = this.endpoints.values(),
+          i = endpoints.length;
+
+      while (i--) { if (endpoints[i].isConnected()) { return true; } }
+      return false;
+    },
+
     destroy: function() {
       this.$el.remove();
       return this;
