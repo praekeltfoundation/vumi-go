@@ -10,7 +10,7 @@
       DialogueStatePreviewView = states.DialogueStatePreviewView;
 
   var EndStateEditView = DialogueStateEditView.extend({
-    bodyTemplate: 'JST.end_edit',
+    bodyTemplate: 'JST.campaign_dialogue_states_end_edit',
 
     save: function() {
       this.state.model.set('text', this.$('.text').val(), {silent: true});
@@ -19,7 +19,7 @@
   });
 
   var EndStatePreviewView = DialogueStatePreviewView.extend({
-    bodyTemplate: 'JST.end_preview'
+    bodyTemplate: 'JST.campaign_dialogue_states_end_preview'
   });
 
   var EndStateView = DialogueStateView.extend({

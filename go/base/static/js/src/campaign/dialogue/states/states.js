@@ -67,9 +67,9 @@
   var DialogueStateEditView = DialogueStateModeView.extend({
     className: 'edit mode',
 
-    titlebarTemplate: 'JST.edit_titlebar',
-    headTemplate: 'JST.edit_head',
-    tailTemplate: 'JST.edit_tail',
+    titlebarTemplate: 'JST.campaign_dialogue_states_modes_edit_titlebar',
+    headTemplate: 'JST.campaign_dialogue_states_modes_edit_head',
+    tailTemplate: 'JST.campaign_dialogue_states_modes_edit_tail',
 
     events: {
       'click .save': 'onSave',
@@ -137,7 +137,7 @@
   // each state type's `preview` mode
   var DialogueStatePreviewView = DialogueStateModeView.extend({
     className: 'preview mode',
-    titlebarTemplate: 'JST.preview_titlebar',
+    titlebarTemplate: 'JST.campaign_dialogue_states_modes_preview_titlebar',
 
     events: {
       'click .edit-switch': 'onEditSwitch'
