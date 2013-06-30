@@ -5,7 +5,6 @@
     var name = path
       .replace(/\..+$/, '')
       .split('/')
-      .slice(-2)
       .join('_');
 
     $.ajax({
