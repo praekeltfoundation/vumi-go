@@ -44,7 +44,7 @@ class GoAccountStatsCommandTestCase(DjangoGoApplicationTestCase):
             u'delivery_tag_pool': u'longcode',
             })
         conv = self.user_api.wrap_conversation(self.mkconversation(**kwargs))
-        conv.start()
+        conv.old_start()
         return conv
 
     def test_command_summary(self):

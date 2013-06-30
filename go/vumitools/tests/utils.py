@@ -193,7 +193,7 @@ class GoAppWorkerTestMixin(GoPersistenceMixin):
         old_cmds = len(self.get_dispatcher_commands())
         conv.c.delivery_tag_pool = tagpool
         yield conv.save()
-        yield conv.start(**kwargs)
+        yield conv.old_start(**kwargs)
         for cmd in self.get_dispatcher_commands()[old_cmds:]:
             yield self.dispatch_command(
                 cmd.payload['command'], *cmd.payload['args'],

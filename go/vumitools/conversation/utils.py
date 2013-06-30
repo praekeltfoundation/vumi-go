@@ -179,8 +179,8 @@ class ConversationWrapper(object):
         return helper_metadata
 
     @Manager.calls_manager
-    def start(self, no_batch_tag=False, batch_id=None, acquire_tag=True,
-              send_initial_action_hack=True, **extra_params):
+    def old_start(self, no_batch_tag=False, batch_id=None, acquire_tag=True,
+                  send_initial_action_hack=True, **extra_params):
         """
         Send the start command to this conversations application worker.
 

@@ -71,7 +71,7 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
             search('finished'), conversation.description)
 
         # now it should be running
-        conversation.start()
+        conversation.new_start()
         # Set the status manually, because it's in `starting', not `running'
         conversation = self.get_wrapped_conv()
         conversation.set_status_started()
@@ -93,7 +93,7 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         Test received_messages helper function
         """
         conversation = self.get_wrapped_conv()
-        conversation.start()
+        conversation.old_start()
         contacts = []
         for bunch in conversation.get_opted_in_contact_bunches(
                 conversation.delivery_class):
@@ -133,7 +133,7 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         Test that tags are released when a conversation is ended.
         """
         conversation = self.get_wrapped_conv()
-        conversation.start()
+        conversation.old_start()
         [message_batch] = conversation.get_batches()
         self.assertEqual(len(conversation.get_tags()), 1)
         conversation.end_conversation()
