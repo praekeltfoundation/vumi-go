@@ -63,7 +63,7 @@ class SubscriptionApplication(GoApplicationWorker):
         return self.vumi_api.mdb.add_event(event)
 
     @inlineCallbacks
-    def process_command_send_message(self, account_key, conversation_key,
+    def process_command_send_message(self, user_account_key, conversation_key,
                                      **kwargs):
         # FIXME: Fix whatever needs updating here?
         # TODO: Update

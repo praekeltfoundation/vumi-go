@@ -89,8 +89,6 @@ def details(request):
             if password_change_form.is_valid():
                 password_change_form.save()
 
-
-
     return render(request, 'account/details.html', {
         'email_form': email_form,
         'account_form': account_form,
@@ -114,6 +112,7 @@ def user_list(request):
         'user_list': user_list,
         'is_admin': request.user.get_profile().is_admin
     })
+
 
 @login_required
 def user_detail(request, user_id=None):
