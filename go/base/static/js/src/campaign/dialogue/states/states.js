@@ -3,6 +3,8 @@
 // Structures for each dialogue state type
 
 (function(exports) {
+  var maybeByName = go.utils.maybeByName;
+
   var plumbing = go.components.plumbing;
 
   var states = plumbing.states,
@@ -60,12 +62,12 @@
       this.$el.append(this.$titlebar);
       this.$el.append(this.$box);
 
-      this.$titlebar.html(this.titlebarTemplate(data));
+      this.$titlebar.html(maybeByName(this.titlebarTemplate)(data));
 
       this.$box.html([
-         this.headTemplate(data),
-         this.bodyTemplate(data),
-         this.tailTemplate(data)
+         maybeByName(this.headTemplate)(data),
+         maybeByName(this.bodyTemplate)(data),
+         maybeByName(this.tailTemplate)(data)
       ].join(''));
 
       return this;
@@ -77,9 +79,9 @@
   var DialogueStateEditView = DialogueStateModeView.extend({
     className: 'edit mode',
 
-    titlebarTemplate: JST.campaign_dialogue_states_modes_edit_titlebar,
-    headTemplate: JST.campaign_dialogue_states_modes_edit_head,
-    tailTemplate: JST.campaign_dialogue_states_modes_edit_tail,
+    titlebarTemplate: 'JST.campaign_dialogue_states_modes_edit_titlebar',
+    headTemplate: 'JST.campaign_dialogue_states_modes_edit_head',
+    tailTemplate: 'JST.campaign_dialogue_states_modes_edit_tail',
 
     events: {
       'click .save': 'onSave',
@@ -148,7 +150,7 @@
   // each state type's `preview` mode
   var DialogueStatePreviewView = DialogueStateModeView.extend({
     className: 'preview mode',
-    titlebarTemplate: JST.campaign_dialogue_states_modes_preview_titlebar,
+    titlebarTemplate: 'JST.campaign_dialogue_states_modes_preview_titlebar',
 
     events: {
       'click .edit-switch': 'onEditSwitch'
