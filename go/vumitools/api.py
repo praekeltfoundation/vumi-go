@@ -31,6 +31,8 @@ from go.vumitools.token_manager import TokenManager
 from django.conf import settings
 from django.utils.datastructures import SortedDict
 
+from vumi.message import TransportUserMessage
+
 
 class TagpoolSet(object):
     """Holder for helper methods for retrieving tag pool information.
@@ -475,6 +477,17 @@ class VumiUserApi(object):
 
             yield user_account.save()
         yield self.api.tpm.release_tag(tag)
+
+    def delivery_class_for_msg(self, msg):
+        # Sometimes we need a `delivery_class` but we don't always have (or
+        # want) one. This builds one from `msg['transport_type']`.
+        return {
+            TransportUserMessage.TT_SMS: 'sms',
+            TransportUserMessage.TT_USSD: 'ussd',
+            TransportUserMessage.TT_XMPP: 'gtalk',
+            TransportUserMessage.TT_TWITTER: 'twitter',
+        }.get(msg['transport_type'],
+              msg['transport_type'])
 
 
 class VumiApi(object):

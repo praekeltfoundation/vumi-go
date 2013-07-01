@@ -10,13 +10,12 @@
       StateMachineModel = stateMachine.StateMachineModel;
 
   var DialogueEndpointModel = EndpointModel.extend({
+    defaults: function() { return {uuid: uuid.v4()}; }
   });
 
   var ChoiceEndpointModel = DialogueEndpointModel.extend();
 
   var DialogueStateModel = StateModel.extend({
-    collectionType: 'go.campaign.dialogue.models.DialogueStateModelCollection',
-
     relations: [],
 
     subModelTypes: {
@@ -24,9 +23,7 @@
       choice: 'go.campaign.dialogue.models.ChoiceStateModel',
       freetext: 'go.campaign.dialogue.models.FreeTextStateModel',
       end: 'go.campaign.dialogue.models.EndStateModel'
-    },
-
-    defaults: function() { return {uuid: uuid.v4()}; }
+    }
   });
 
   var DialogueStateModelCollection = Backbone.Collection.extend({
@@ -43,7 +40,15 @@
       type: Backbone.HasOne,
       key: 'exit_endpoint',
       relatedModel: DialogueEndpointModel
-    }]
+    }],
+
+    defaults: function() {
+      return {
+        uuid: uuid.v4(),
+        entry_endpoint: {},
+        exit_endpoint: {}
+      };
+    }
   });
 
   var ChoiceStateModel = DialogueStateModel.extend({
@@ -55,7 +60,14 @@
       type: Backbone.HasMany,
       key: 'choice_endpoints',
       relatedModel: ChoiceEndpointModel
-    }]
+    }],
+
+    defaults: function() {
+      return {
+        uuid: uuid.v4(),
+        entry_endpoint: {}
+      };
+    }
   });
 
   var FreeTextStateModel = DialogueStateModel.extend({
@@ -67,7 +79,15 @@
       type: Backbone.HasOne,
       key: 'exit_endpoint',
       relatedModel: DialogueEndpointModel
-    }]
+    }],
+
+    defaults: function() {
+      return {
+        uuid: uuid.v4(),
+        entry_endpoint: {},
+        exit_endpoint: {}
+      };
+    }
   });
 
   var EndStateModel = DialogueStateModel.extend({
@@ -75,7 +95,14 @@
       type: Backbone.HasOne,
       key: 'entry_endpoint',
       relatedModel: DialogueEndpointModel
-    }]
+    }],
+
+    defaults: function() {
+      return {
+        uuid: uuid.v4(),
+        entry_endpoint: {}
+      };
+    }
   });
 
   var DialogueConnectionModel = ConnectionModel.extend({
@@ -93,11 +120,12 @@
   });
 
   var DialogueModel = Backbone.RelationalModel.extend({
-    idAttribute: 'conversation',
+    idAttribute: 'conversation_key',
     relations: [{
       type: Backbone.HasMany,
       key: 'states',
-      relatedModel: DialogueStateModel
+      relatedModel: DialogueStateModel,
+      collectionType: DialogueStateModelCollection
     }, {
       type: Backbone.HasOne,
       key: 'start_state',
@@ -108,7 +136,12 @@
       key: 'connections',
       parse: true,
       relatedModel: DialogueConnectionModel
-    }]
+    }],
+
+    defaults: {
+      states: [],
+      connections: []
+    }
   });
 
   _(exports).extend({

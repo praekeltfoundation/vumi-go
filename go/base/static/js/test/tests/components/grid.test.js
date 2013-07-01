@@ -159,6 +159,10 @@ describe("go.components.grid", function() {
         $('#dummy').append(grid.$el);
         grid.render();
 
+        $('.bootbox')
+          .modal('hide')
+          .remove();
+
         $('.item').css({height: '100px', margin: '5px'});
       });
 

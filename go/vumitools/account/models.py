@@ -8,7 +8,7 @@ from twisted.internet.defer import returnValue
 from vumi import log
 from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (
-   Integer, Unicode, Timestamp, ManyToMany, Json, Boolean)
+    Integer, Unicode, Timestamp, ManyToMany, Json, Boolean)
 
 from go.vumitools.account.migrations import UserAccountMigrator
 

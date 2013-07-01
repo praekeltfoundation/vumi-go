@@ -16,7 +16,7 @@ from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApiCommand
 
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
-from go.apps.http_api.resource import ConversationResource, StreamResource
+from go.apps.http_api.resource import StreamResource
 
 
 class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
@@ -235,7 +235,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertNotEqual(sent_msg['message_id'], msg['message_id'])
         self.assertEqual(sent_msg['message_id'], put_msg['message_id'])
         self.assertEqual(sent_msg['to_addr'], msg['to_addr'])
-        self.assertEqual(sent_msg['from_addr'], 'tag1')
+        self.assertEqual(sent_msg['from_addr'], None)
 
     @inlineCallbacks
     def test_invalid_in_reply_to(self):

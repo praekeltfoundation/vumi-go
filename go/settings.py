@@ -189,8 +189,6 @@ DEBUG_TOOLBAR_CONFIG = {
 SESSION_ENGINE = 'go.api.go_api.session'
 
 
-
-
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error.
@@ -339,7 +337,6 @@ ACCOUNT_ACTIVATION_DAYS = 7
 
 # PIPELINES CONFIGURATION
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
-PIPELINE_JS_COMPRESSOR = False
 PIPELINE_CSS = {
     'all': {
         'source_filenames': (
@@ -349,6 +346,10 @@ PIPELINE_CSS = {
         'output_filename': 'export/all.css',
     },
 }
+
+PIPELINE_TEMPLATE_FUNC = '_.template'
+PIPELINE_TEMPLATE_NAMESPACE = 'window.JST'
+PIPELINE_TEMPLATE_EXT = '.jst'
 
 PIPELINE_JS = {
     'lib': {
@@ -372,6 +373,18 @@ PIPELINE_JS = {
     },
     'go': {
         'source_filenames': (
+            'templates/campaign/dialogue/states/modes/preview/titlebar.jst',
+            'templates/campaign/dialogue/states/modes/edit/titlebar.jst',
+            'templates/campaign/dialogue/states/modes/edit/head.jst',
+            'templates/campaign/dialogue/states/modes/edit/tail.jst',
+            'templates/campaign/dialogue/states/choice/edit.jst',
+            'templates/campaign/dialogue/states/choice/preview.jst',
+            'templates/campaign/dialogue/states/freetext/edit.jst',
+            'templates/campaign/dialogue/states/freetext/preview.jst',
+            'templates/campaign/dialogue/states/end/edit.jst',
+            'templates/campaign/dialogue/states/end/preview.jst',
+            'templates/dummy/dummy.jst',
+
             'js/src/go.js',
             'js/src/utils.js',
             'js/src/errors.js',
@@ -394,7 +407,13 @@ PIPELINE_JS = {
             'js/src/campaign/routing/views.js',
             'js/src/campaign/dialogue/dialogue.js',
             'js/src/campaign/dialogue/models.js',
-            'js/src/campaign/dialogue/views.js',
+            'js/src/campaign/dialogue/connections.js',
+            'js/src/campaign/dialogue/states/states.js',
+            'js/src/campaign/dialogue/states/dummy.js',
+            'js/src/campaign/dialogue/states/choice.js',
+            'js/src/campaign/dialogue/states/freetext.js',
+            'js/src/campaign/dialogue/states/end.js',
+            'js/src/campaign/dialogue/diagram.js',
 
             # TODO This is here so we can access the test model data. This
             # gives us the data we need for a 'demo' of the routing screen.

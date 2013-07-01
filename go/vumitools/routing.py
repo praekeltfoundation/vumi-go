@@ -544,9 +544,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         event_rmeta = RoutingMetadata(event)
 
         if (event_rmeta.get_outbound_hops() is not None
-            and event_mdh.has_user_account()
-            and event_mdh.tag is not None):
-                return
+                and event_mdh.has_user_account()
+                and event_mdh.tag is not None):
+            return
 
         # some metadata is missing, grab the associated outbound message
         # and look for it there:

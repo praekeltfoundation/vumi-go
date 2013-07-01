@@ -1,3 +1,4 @@
+import json
 from urllib import urlencode
 
 from django.shortcuts import render, redirect
@@ -99,6 +100,7 @@ def edit(request, conversation_key):
 def edit_survey(request, conversation_key):
     conversation = conversation_or_404(request.user_api, conversation_key)
     initiate_form = CampaignSurveryInitiateForm()
+
     if request.method == 'POST':
         initiate_form = CampaignSurveryInitiateForm(request.POST)
         action = request.POST.get('action')
@@ -109,10 +111,14 @@ def edit_survey(request, conversation_key):
         # TODO save and go to next step.
         return redirect('wizard:contacts', conversation_key=conversation.key)
 
+    # TODO get existing model data from api and bootstrap it to page load
+    model_data = json.dumps({'conversation_key': conversation_key})
+
     return render(request, 'wizard_views/wizard_2_edit_survey.html', {
         'conversation_key': conversation_key,
         'conversation': conversation,
-        'initiate_form': initiate_form
+        'initiate_form': initiate_form,
+        'model_data': model_data
     })
 
 
@@ -160,8 +166,6 @@ def contacts(request, conversation_key):
                     key=lambda group: group.created_at,
                     reverse=True)
 
-
-    contact_store = request.user_api.contact_store
     selected_groups = list(group.key for group in conversation.get_groups())
 
     for group in groups:

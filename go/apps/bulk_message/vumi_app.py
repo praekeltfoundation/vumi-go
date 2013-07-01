@@ -78,7 +78,8 @@ class BulkMessageApplication(GoApplicationWorker):
             return
 
         to_addresses = []
-        for contacts_batch in (yield conv.get_opted_in_contact_bunches()):
+        for contacts_batch in (
+                yield conv.get_opted_in_contact_bunches(conv.delivery_class)):
             for contact in (yield contacts_batch):
                 to_addresses.append(contact.addr_for(conv.delivery_class))
         if dedupe:

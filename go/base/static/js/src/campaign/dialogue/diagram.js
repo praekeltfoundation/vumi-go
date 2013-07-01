@@ -20,30 +20,19 @@
     connectionType: connections.DialogueConnectionView,
     connectionCollectionType: connections.DialogueConnectionCollection,
 
-    className: function() {
-      return ['diagram', this.grid.className].join(' ');
-    },
-
     initialize: function(options) {
-      DiagramView.prototype.initialize.call(this, options);
+      DialogueDiagramView.__super__.initialize.call(this, options);
+      if (!this.states.size()) { this.newState(); }
 
-      this.grid = new components.grid.GridView({
-        el: this.$el,
-        items: this.states.members.get('states'),
-        sortableOptions: {
-          handle: '.state .titlebar',
-          placeholder: 'placeholder',
-          sort: function() { jsPlumb.repaintEverything(); }
-        }
-      });
-
-      this.grid.on('render', function() { jsPlumb.repaintEverything(); });
-      this.$el.addClass(this.className());
+      this.connections.on('error:unsupported', this.onUnsupportedConnection);
     },
 
-    render: function() {
-      this.grid.render();
-      this.connections.render();
+    newState: function() {
+      return this.states.add('states', {mode: 'edit'});
+    },
+
+    onUnsupportedConnection: function(source, target, plumbConnection) {
+      jsPlumb.detach(plumbConnection, {fireEvent: false});
     }
   });
 
