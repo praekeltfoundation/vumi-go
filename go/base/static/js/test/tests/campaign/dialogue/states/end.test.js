@@ -27,59 +27,21 @@ describe("go.campaign.dialogue.states.end", function() {
       state.edit();
     });
 
-    describe(".save", function() {
-      it("should update the end state's model", function() {
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state3',
-          name: 'Ending 1',
-          type: 'end',
-          ordinal: 2,
-          text: 'Thank you for taking our survey',
-          entry_endpoint: {uuid: 'endpoint5'}
-        });
+    describe("when '.text' has changed", function() {
+      it("should update the 'text' attribute of the state's model",
+      function() {
+        assert.equal(
+          state.model.get('text'),
+          'Thank you for taking our survey');
 
-        editMode.$('.text').text('So Long, and Thanks for All the Fish');
-        editMode.save();
+        editMode
+          .$('.text')
+          .text('So Long, and Thanks for All the Fish')
+          .change();
 
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state3',
-          name: 'Ending 1',
-          type: 'end',
-          ordinal: 2,
-          text: 'So Long, and Thanks for All the Fish',
-          entry_endpoint: {uuid: 'endpoint5'}
-        });
-      });
-    });
-
-    describe("when the '.save' button is clicked", function() {
-      it("should update the end state's model", function() {
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state3',
-          name: 'Ending 1',
-          type: 'end',
-          ordinal: 2,
-          text: 'Thank you for taking our survey',
-          entry_endpoint: {uuid: 'endpoint5'}
-        });
-
-        editMode.$('.text').text('So Long, and Thanks for All the Fish');
-        editMode.$('.save').click();
-
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state3',
-          name: 'Ending 1',
-          type: 'end',
-          ordinal: 2,
-          text: 'So Long, and Thanks for All the Fish',
-          entry_endpoint: {uuid: 'endpoint5'}
-        });
-      });
-
-      it("should switch back to the preview view", function() {
-        assert.equal(state.modeName, 'edit');
-        editMode.$('.save').click();
-        assert.equal(state.modeName, 'preview');
+        assert.equal(
+          state.model.get('text'),
+          'So Long, and Thanks for All the Fish');
       });
     });
   });

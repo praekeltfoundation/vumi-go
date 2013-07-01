@@ -13,8 +13,12 @@
   var EndStateEditView = DialogueStateEditView.extend({
     bodyTemplate: 'JST.campaign_dialogue_states_end_edit',
 
-    save: function() {
-      this.state.model.set('text', this.$('.text').val(), {silent: true});
+    events: _({
+      'change .text': 'onTextChange'
+    }).defaults(DialogueStateEditView.prototype.events),
+
+    onTextChange: function(e) {
+      this.state.model.set('text', $(e.target).text(), {silent: true});
       return this;
     }
   });

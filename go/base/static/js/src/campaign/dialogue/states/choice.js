@@ -27,7 +27,9 @@
 
     events: _({
       'click .new-choice': 'onNewChoice',
-      'click .choice .remove': 'onRemoveChoice'
+      'click .choice .remove': 'onRemoveChoice',
+      'change .choice input': 'onChoiceChange',
+      'change .text': 'onTextChange'
     }).defaults(DialogueStateEditView.prototype.events),
 
     initialize: function(options) {
@@ -51,13 +53,6 @@
       return this;
     },
 
-    newChoice: function() {
-      return this.state.endpoints.add(
-        'choice_endpoints',
-        {model: {uuid: uuid.v4()}},
-        {render: false});
-    },
-
     onActivate: function() {
       var choices = this.state.endpoints.members.get('choice_endpoints');
       if (!choices.size()) {
@@ -66,9 +61,13 @@
       }
     },
 
+    onTextChange: function(e) {
+      this.state.model.set('text', $(e.target).text(), {silent: true});
+      return this;
+    },
+
     onNewChoice: function(e) {
       e.preventDefault();
-      this.save();
       this.newChoice();
       this.state.render();
       jsPlumb.repaintEverything();
@@ -76,13 +75,28 @@
 
     onRemoveChoice: function(e) {
       e.preventDefault();
-      this.save();
 
       var $choice = $(e.target).parent();
       this.state.endpoints.remove($choice.attr('data-endpoint-id'));
 
       this.state.render();
       jsPlumb.repaintEverything();
+    },
+
+    onChoiceChange: function(e) {
+      var $choice = $(e.target).parent();
+
+      this.state.model
+        .get('choice_endpoints')
+        .get($choice.attr('data-endpoint-id'))
+        .set('label', $choice.find('input').prop('value'), {silent: true});
+    },
+
+    newChoice: function() {
+      return this.state.endpoints.add(
+        'choice_endpoints',
+        {model: {uuid: uuid.v4()}},
+        {render: false});
     }
   });
 
