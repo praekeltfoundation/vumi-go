@@ -13,6 +13,7 @@
       FollowingEndpointView = plumbing.endpoints.FollowingEndpointView;
 
   var ChoiceEndpointView = FollowingEndpointView.extend({
+    className: 'choice endpoint',
     side: 'right',
     target: function() {
       return '.choice[data-endpoint-id="' + this.uuid() + '"]';
@@ -57,7 +58,10 @@
 
     onActivate: function() {
       var choices = this.state.endpoints.members.get('choice_endpoints');
-      if (!choices.size()) { this.state.newChoice(); }
+      if (!choices.size()) {
+        this.newChoice();
+        this.state.render();
+      }
     },
 
     onNewChoice: function(e) {
