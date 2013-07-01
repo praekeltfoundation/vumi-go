@@ -385,13 +385,6 @@ describe("go.campaign.dialogue.states", function() {
           states.keys(),
           ['state1','state2','state3','state4']);
       });
-
-      it("should notify the user if they try move a connected state",
-      function() {
-        assert(noElExists('.modal'));
-        $('[data-uuid="state1"] .titlebar').simulate('drag', {dx: 150});
-        assert(oneElExists('.modal'));
-      });
     });
 
 
