@@ -16,7 +16,7 @@ from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApiCommand
 
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
-from go.apps.http_api.resource import ConversationResource, StreamResource
+from go.apps.http_api.resource import StreamResource
 
 
 class StreamingHTTPWorkerTestCase(AppWorkerTestCase):

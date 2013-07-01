@@ -119,7 +119,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
     @inlineCallbacks
     def _connect_conversation_to_tag(self, conv, tag):
         conv_conn = str(GoConnector.for_conversation(
-        conv.conversation_type, conv.key))
+            conv.conversation_type, conv.key))
         channel_conn = str(GoConnector.for_transport_tag(*tag))
         user_account = yield self.user_api.get_user_account()
         rt_helper = RoutingTableHelper(user_account.routing_table)

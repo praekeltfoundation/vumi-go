@@ -120,7 +120,7 @@
   });
 
   var DialogueModel = Backbone.RelationalModel.extend({
-    idAttribute: 'conversation',
+    idAttribute: 'conversation_key',
     relations: [{
       type: Backbone.HasMany,
       key: 'states',
@@ -136,7 +136,12 @@
       key: 'connections',
       parse: true,
       relatedModel: DialogueConnectionModel
-    }]
+    }],
+
+    defaults: {
+      states: [],
+      connections: []
+    }
   });
 
   _(exports).extend({

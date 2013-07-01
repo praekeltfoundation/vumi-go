@@ -1,6 +1,6 @@
 # -*- test-case-name: go.apps.surveys.tests.test_vumi_app -*-
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 from vxpolls.example import PollApplication
 from vxpolls.manager import PollManager
 
