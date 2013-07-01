@@ -137,7 +137,7 @@ def incoming_list(request, conversation_key):
         {'contact': '22222 539 222', 'threads': 99, 'date': '2013-03-21'},
     )
 
-    return render(request, 'conversations/incoming_list.html', {
+    return render(request, 'conversation/incoming_list.html', {
         'conversation': conversation,
         'message_list': message_list
     })
@@ -162,7 +162,7 @@ def incoming_detail(request, conversation_key, contact_key):
         {'contact': 'You', 'message': 'What is your favourite meal?'},
     )
 
-    return render(request, 'conversations/incoming_detail.html', {
+    return render(request, 'conversation/incoming_detail.html', {
         'conversation': conversation,
         'form': form,
         'message_list': message_list
