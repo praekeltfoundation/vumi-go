@@ -125,7 +125,7 @@
         var $option = $(e.target);
 
         bootbox.confirm(
-          "Changing the message type will break the state's connections.",
+          "Changing the message type will break the messages's connections.",
           function(submit) {
             if (submit) { this.state.reset($option.val()); }
             else { this.$('.type').val(this.state.typeName); }
