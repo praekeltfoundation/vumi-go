@@ -133,6 +133,7 @@ describe("go.campaign.dialogue.states", function() {
       beforeEach(function() {
         i = 0;
         sinon.stub(uuid, 'v4', function() { return i++ || 'new-state'; });
+        diagram.render();
       });
 
       afterEach(function() {
@@ -142,8 +143,11 @@ describe("go.campaign.dialogue.states", function() {
           .remove();
       });
 
-      it("should display a modal to confirm the user's decision", function() {
-        bootbox.animate(false);
+      it("should display a confirm modal for connected states", function() {
+        jsPlumb.connect({
+          source: diagram.endpoints.get('endpoint2').$el,
+          target: state.endpoints.get('endpoint6').$el
+        });
 
         assert(noElExists('.modal'));
         editMode.$('.type')
