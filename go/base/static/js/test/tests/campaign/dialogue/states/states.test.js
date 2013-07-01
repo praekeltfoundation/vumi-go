@@ -55,7 +55,7 @@ describe("go.campaign.dialogue.states", function() {
         assert.equal(
           mode.$el.html(),
           ['<div class="titlebar">toy</div>',
-           '<div class="box">head body tail</div>'].join(''));
+           '<div class="main">head body tail</div>'].join(''));
       });
     });
   });

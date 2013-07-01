@@ -53,10 +53,11 @@
     className: 'row',
 
     initialize: function(options) {
+      options = options || {};
+      if (options.extraClass) { this.$el.addClass(options.extraClass); }
+
       this.spanSum = 0;
       this.items = [];
-
-      if (options.extraClass) { this.$el.addClass(options.extraClass); }
     },
 
     add: function(item) {
@@ -77,7 +78,8 @@
 
   var RowCollection = ViewCollection.extend({
     addDefaults: _({
-      render: false
+      render: false,
+      addModel: false
     }).defaults(ViewCollection.prototype.addDefaults),
 
     type: RowView,

@@ -283,6 +283,7 @@
         items: this,
         gridClass: 'boxes',
         itemClass: 'box',
+        itemSpan: 4,
         sortableOptions: {
           handle: '.state .titlebar',
           placeholder: 'placeholder',
