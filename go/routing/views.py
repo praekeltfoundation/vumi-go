@@ -6,14 +6,13 @@ from django.conf import settings
 import requests
 
 
-@login_required
-def routing(request):
+def _get_routing_table(user_account_key, session_id):
     # TODO: Better Go API client.
 
     url = settings.GO_API_URL
-    auth = ('session_id', request.COOKIES['sessionid'])
+    auth = ('session_id', session_id)
     req_data = {
-        "params": [request.user_api.user_account_key],
+        "params": [user_account_key],
         "jsonrpc": "2.0",
         "method": "routing_table",
         "id": None,
@@ -23,10 +22,18 @@ def routing(request):
     r = requests.post(url, auth=auth, data=data)
 
     model_data = {
-        'campaign_id': request.user_api.user_account_key,
+        'campaign_id': user_account_key,
     }
     model_data.update(r.json['result'])
 
+    return json.dumps(model_data)
+
+
+@login_required
+def routing(request):
+    model_data = _get_routing_table(
+        request.user_api.user_account_key, request.COOKIES['sessionid'])
+
     return render(request, 'routing.html', {
-        'model_data': json.dumps(model_data),
+        'model_data': model_data,
     })
