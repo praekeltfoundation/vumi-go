@@ -71,7 +71,7 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
             search('finished'), conversation.description)
 
         # now it should be running
-        conversation.new_start()
+        conversation.start()
         # Set the status manually, because it's in `starting', not `running'
         conversation = self.get_wrapped_conv()
         conversation.set_status_started()

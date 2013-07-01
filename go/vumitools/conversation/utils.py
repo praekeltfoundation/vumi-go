@@ -259,13 +259,14 @@ class ConversationWrapper(object):
                 **extra_params)
 
     @Manager.calls_manager
-    def new_start(self):
+    def start(self):
         """Send the start command to this conversations application worker.
 
         This is used by the new conversation lifecycle and skips all the
         tagpool and initial_action silliness.
 
-        TODO: Replace the start() method above with this one.
+        TODO: Get rid of the old_start() method above and everything that
+              relies on it.
         """
         batches = yield self.get_batches()
         if not batches:

@@ -367,7 +367,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         conv = self.user_api.wrap_conversation(conv)
         # We don't want to actually send commands here.
         conv.dispatch_command = lambda *args, **kw: None
-        yield conv.new_start()
+        yield conv.start()
 
         # Set the status manually, because it's in `starting', not `running'
         conv.set_status_started()

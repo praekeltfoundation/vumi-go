@@ -202,7 +202,7 @@ class GoAppWorkerTestMixin(GoPersistenceMixin):
     @inlineCallbacks
     def start_conversation(self, conversation):
         old_cmds = len(self.get_dispatcher_commands())
-        yield conversation.new_start()
+        yield conversation.start()
         for cmd in self.get_dispatcher_commands()[old_cmds:]:
             yield self.dispatch_command(
                 cmd.payload['command'], *cmd.payload['args'],
