@@ -22,7 +22,13 @@
 
     initialize: function(options) {
       DialogueDiagramView.__super__.initialize.call(this, options);
+      if (!this.states.size()) { this.newState(); }
+
       this.connections.on('error:unsupported', this.onUnsupportedConnection);
+    },
+
+    newState: function() {
+      return this.states.add('states', {mode: 'edit'});
     },
 
     onUnsupportedConnection: function(source, target, plumbConnection) {
