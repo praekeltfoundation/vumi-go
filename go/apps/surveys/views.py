@@ -144,7 +144,7 @@ def people(request, conversation_key):
     if request.method == 'POST':
         if conversation.is_client_initiated():
             try:
-                conversation.start()
+                conversation.old_start()
             except ConversationSendError as error:
                 if str(error) == 'No spare messaging tags.':
                     error = 'You have maxed out your available ' \
@@ -193,7 +193,7 @@ def start(request, conversation_key):
     conversation = conversation_or_404(request.user_api, conversation_key)
     if request.method == 'POST':
         try:
-            conversation.start()
+            conversation.old_start()
         except ConversationSendError as error:
             messages.add_message(request, messages.ERROR, str(error))
             return redirect(reverse('survey:start', kwargs={

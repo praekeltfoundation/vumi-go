@@ -232,7 +232,8 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
                                             send_initial_action_hack=True):
         now = start_date or datetime.now().date()
         conversation = user_api.get_wrapped_conversation(conversation_key)
-        conversation.start(send_initial_action_hack=send_initial_action_hack)
+        conversation.old_start(
+            send_initial_action_hack=send_initial_action_hack)
 
         # Set the status manually, because it's in `starting', not `running'
         conversation.set_status_started()

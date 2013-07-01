@@ -267,14 +267,12 @@ class GoWorkerMixin(object):
 
         go_metadata = helper_metadata.get('go', {})
         account_key = go_metadata.get('user_account', None)
-        conversation_key = go_metadata.get('conversation_key', None)
 
-        if account_key and conversation_key:
+        if account_key:
             user_api = self.get_user_api(account_key)
-            conv = yield user_api.get_wrapped_conversation(conversation_key)
-
+            delivery_class = user_api.delivery_class_for_msg(message)
             contact = yield user_api.contact_store.contact_for_addr(
-                conv.delivery_class, message.user(), create=create)
+                delivery_class, message.user(), create=create)
             returnValue(contact)
 
     def get_conversation(self, user_account_key, conversation_key):

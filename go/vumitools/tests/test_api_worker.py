@@ -168,7 +168,7 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
             conversation_type=u'bulk_message', description=u'message',
             config={}, delivery_tag_pool=u'pool', delivery_class=u'sms')
 
-        yield conversation.start()
+        yield conversation.old_start()
 
         user_account.event_handler_config = [
             [[conversation.key, 'my_event'], [('handler1', {
