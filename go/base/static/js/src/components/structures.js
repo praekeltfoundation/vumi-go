@@ -107,6 +107,8 @@
 
     where: function(props) { return _.where(this.values(), props); },
 
+    findWhere: function(props) { return _.findWhere(this.values(), props); },
+
     callAt: function(i, fn, that) {
       var item = this._itemList[i];
       fn.call(that, item.key, item.value, i);
@@ -286,6 +288,9 @@
     // The default options passed to each new view
     viewOptions: {},
 
+    // The default attributes for each new view's model
+    modelDefaults: {},
+
     addDefaults: _({
       render: true,  // render view after adding
       addModel: true  // add the model if it is not in the collection
@@ -332,9 +337,14 @@
     },
 
     _ensureModel: function(obj) {
-      return obj instanceof Backbone.Model
-        ? obj
-        : new this.models.model(obj || {});
+      if (obj instanceof Backbone.Model) { return obj; }
+
+      var modelType = this.models.model,
+          attrs = _(obj || {}).defaults(_(this).result('modelDefaults'));
+
+      return modelType.build
+        ? modelType.build(attrs)
+        : new modelType(attrs);
     },
 
     _ensureCollection: function(obj) {
@@ -373,7 +383,7 @@
       options = _(options || {}).defaults(this.addDefaults);
 
       var model = view.model;
-      if (model) {
+      if (model || options.addModel) {
         view.model = model = this._ensureModel(model);
         if (options.addModel) { this.models.add(model, {silent: true}); }
       }

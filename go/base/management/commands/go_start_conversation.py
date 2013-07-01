@@ -59,11 +59,11 @@ class Command(BaseCommand):
         if conversation.archived() or conversation.running():
             raise CommandError('Conversation already started.')
 
-        conversation.start(send_initial_action_hack=send_iah)
+        conversation.old_start(send_initial_action_hack=send_iah)
 
     def start_sequential_send(self, user_api, conversation, send_iah):
         if conversation.archived() or conversation.running():
             raise CommandError('Conversation already started.')
 
-        conversation.start(no_batch_tag=True, acquire_tag=False,
-                           send_initial_action_hack=send_iah)
+        conversation.old_start(no_batch_tag=True, acquire_tag=False,
+                               send_initial_action_hack=send_iah)

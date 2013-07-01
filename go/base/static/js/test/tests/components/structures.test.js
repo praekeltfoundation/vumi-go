@@ -109,6 +109,21 @@ describe("go.components.structures", function() {
       });
     });
 
+    describe(".findWhere", function() {
+      beforeEach(function() {
+        lookup = new Lookup({
+          a: {x: 1, y: 2, ordinal: 0},
+          b: {x: 3, y: 2, ordinal: 1},
+          c: {x: 5, y: 6, ordinal: 2}
+        }, {ordered: true});
+      });
+
+      it("should return the first item containing the given properties",
+      function() {
+        assert.deepEqual(lookup.findWhere({y: 2}), lookup.get('a'));
+      });
+    });
+
     describe(".eachItem", function() {
       it("should iterate through the lookup's items in order", function() {
         var items = [];
@@ -562,6 +577,16 @@ describe("go.components.structures", function() {
   describe(".ViewCollection", function() {
     var ViewCollection = structures.ViewCollection;
 
+    var ToyModel = Backbone.RelationalModel.extend({
+      subModelTypes: {
+        pirate: 'globals.ToyPirateModel',
+        ninja: 'globals.ToyNinjaModel'
+      }
+    });
+
+    var ToyPirateModel = globals.ToyPirateModel = ToyModel.extend(),
+        ToyNinjaModel = globals.ToyNinjaModel = ToyModel.extend();
+
     var ToyView = Backbone.View.extend({
       id: function() { return this.model.id; },
       initialize: function(options) {
@@ -591,7 +616,10 @@ describe("go.components.structures", function() {
         views;
 
     beforeEach(function() {
-      models = new Backbone.Collection([{id: 'a'}, {id: 'b'}, {id: 'c'}]);
+      models = new Backbone.Collection(
+        [{id: 'a'}, {id: 'b'}, {id: 'c'}],
+        {model: ToyModel});
+
       views = new ToyViewCollection({models: models});
     });
 
@@ -665,6 +693,11 @@ describe("go.components.structures", function() {
         model = new Backbone.Model({id: 'e'});
         views.add({model: model}, {addModel: true});
         assert(views.models.get('e'));
+      });
+
+      it("should work with models with subtypes", function() {
+        var v = views.add({model: {type: 'ninja'}}, {addModel: true});
+        assert.instanceOf(v.model, ToyNinjaModel);
       });
 
       it("should add the view to the 'by model' lookup", function() {

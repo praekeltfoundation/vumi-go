@@ -4,12 +4,14 @@
 
 (function(exports) {
   var states = go.campaign.dialogue.states,
+      EntryEndpointView = states.EntryEndpointView,
+      ExitEndpointView = states.ExitEndpointView,
       DialogueStateView = states.DialogueStateView,
       DialogueStateEditView = states.DialogueStateEditView,
       DialogueStatePreviewView = states.DialogueStatePreviewView;
 
   var FreeTextStateEditView = DialogueStateEditView.extend({
-    bodyTemplate: JST.campaign_dialogue_states_freetext_edit,
+    bodyTemplate: 'JST.campaign_dialogue_states_freetext_edit',
 
     save: function() {
       this.state.model.set('text', this.$('.text').val(), {silent: true});
@@ -18,7 +20,7 @@
   });
 
   var FreeTextStatePreviewView = DialogueStatePreviewView.extend({
-    bodyTemplate: JST.campaign_dialogue_states_freetext_preview
+    bodyTemplate: 'JST.campaign_dialogue_states_freetext_preview'
   });
 
   var FreeTextStateView = DialogueStateView.extend({
@@ -28,8 +30,8 @@
     previewModeType: FreeTextStatePreviewView,
 
     endpointSchema: [
-      {attr: 'entry_endpoint'},
-      {attr: 'exit_endpoint'}]
+      {attr: 'entry_endpoint', type: EntryEndpointView},
+      {attr: 'exit_endpoint', type: ExitEndpointView}]
   });
 
   _(exports).extend({

@@ -1,10 +1,10 @@
 describe("go.campaign.dialogue.states", function() {
   var testHelpers = go.testHelpers,
       oneElExists = testHelpers.oneElExists,
-      noElExists = testHelpers.noElExists;
+      noElExists = testHelpers.noElExists,
+      unregisterModels = testHelpers.unregisterModels;
 
-  var dialogue = go.campaign.dialogue,
-      states = go.campaign.dialogue.states;
+  var dialogue = go.campaign.dialogue;
 
   var setUp = dialogue.testHelpers.setUp,
       tearDown = dialogue.testHelpers.tearDown,
@@ -22,7 +22,7 @@ describe("go.campaign.dialogue.states", function() {
   });
 
   describe(".DialogueStateModeView", function() {
-    var DialogueStateModeView = states.DialogueStateModeView;
+    var DialogueStateModeView = dialogue.states.DialogueStateModeView;
 
     var ToyStateModeView = DialogueStateModeView.extend({
       className: 'toy mode',
@@ -61,7 +61,7 @@ describe("go.campaign.dialogue.states", function() {
   });
 
   describe(".DialogueStateEditView", function() {
-    var DialogueStateEditView = states.DialogueStateEditView;
+    var DialogueStateEditView = dialogue.states.DialogueStateEditView;
 
     var state,
         editMode;
@@ -128,30 +128,72 @@ describe("go.campaign.dialogue.states", function() {
     });
 
     describe("when the the state's '.type' is changed", function() {
+      var i;
+
       beforeEach(function() {
-        sinon.stub(uuid, 'v4', function() { return 'new-state'; });
+        i = 0;
+        sinon.stub(uuid, 'v4', function() { return i++ || 'new-state'; });
       });
 
       afterEach(function() {
         uuid.v4.restore();
+        $('.bootbox')
+          .modal('hide')
+          .remove();
       });
 
-      it("should remove the state and replace it with another", function() {
+      it("should display a modal to confirm the user's decision", function() {
+        bootbox.animate(false);
+
+        assert(noElExists('.modal'));
+        editMode.$('.type')
+          .val('freetext')
+          .change();
+        assert(oneElExists('.modal'));
+      });
+
+      it("should replace the state with another if the user confirms the reset",
+      function() {
         assert(diagram.states.has('state4'));
         assert.isDefined(diagram.model.get('states').get('state4'));
 
         assert(!diagram.states.has('new-state'));
         assert.isUndefined(diagram.model.get('states').get('new-state'));
 
-        editMode.$('.type')
-          .val('freetext')
-          .change();
+        editMode.$('.type').val('freetext').change();
+        $('.modal [data-handler=1]').click();
 
         assert(diagram.states.has('new-state'));
         assert.isDefined(diagram.model.get('states').get('new-state'));
 
         assert(!diagram.states.has('state4'));
         assert.isUndefined(diagram.model.get('states').get('state4'));
+      });
+
+      it("should revert '.type's selection if the user cancels the reset",
+      function() {
+        assert.equal(editMode.$('.type').val(), 'dummy');
+        editMode.$('.type').val('freetext').change();
+        $('.modal [data-handler=0]').click();
+        assert.equal(editMode.$('.type').val(), 'dummy');
+      });
+
+      it("should keep the current state if the user cancels the reset",
+      function() {
+        assert(diagram.states.has('state4'));
+        assert.isDefined(diagram.model.get('states').get('state4'));
+
+        assert(!diagram.states.has('new-state'));
+        assert.isUndefined(diagram.model.get('states').get('new-state'));
+
+        editMode.$('.type').val('freetext').change();
+        $('.modal [data-handler=0]').click();
+
+        assert(diagram.states.has('state4'));
+        assert.isDefined(diagram.model.get('states').get('state4'));
+
+        assert(!diagram.states.has('new-state'));
+        assert.isUndefined(diagram.model.get('states').get('new-state'));
       });
     });
 
@@ -167,7 +209,7 @@ describe("go.campaign.dialogue.states", function() {
           ordinal: 3
         });
 
-        state.model.set('name', 'New Dummy');
+        state.$('.name').val('New Dummy');
         editMode.$('.save').click();
 
         assert.deepEqual(state.model.toJSON(), {
@@ -214,7 +256,7 @@ describe("go.campaign.dialogue.states", function() {
   });
 
   describe(".DialogueStatePreviewView", function() {
-    var DialogueStatePreviewView = states.DialogueStatePreviewView;
+    var DialogueStatePreviewView = dialogue.states.DialogueStatePreviewView;
 
     var state,
         previewMode;
@@ -332,36 +374,80 @@ describe("go.campaign.dialogue.states", function() {
 
   describe(".DialogueStateCollection", function() {
     var DummyStateView = dialogue.states.dummy.DummyStateView,
-        DialogueStateCollection = states.DialogueStateCollection;
+        DialogueStateCollection = dialogue.states.DialogueStateCollection;
 
-    var collection;
+    var states;
 
     beforeEach(function() {
-      collection = new DialogueStateCollection({
-        view: diagram,
-        attr: 'states'
+      states = diagram.states.members.get('states');
+    });
+
+    describe("when the user tries to drag a state", function() {
+      beforeEach(function() {
+        diagram.render();
+
+        $('.bootbox')
+          .modal('hide')
+          .remove();
+
+        $('.item').css({
+          width: '100px',
+          height: '100px',
+          margin: '5px'
+        });
+      });
+
+      it("should allow the state to be sorted if it isn't connected",
+      function() {
+        assert.deepEqual(
+          states.keys(),
+          ['state1','state2','state3','state4']);
+
+
+        $('[data-uuid="state3"] .titlebar')
+          .simulate('mousedown')
+          .simulate('drag', {dx: 150});
+
+        assert.deepEqual(
+          states.keys(),
+          ['state1','state2','state4','state3']);
+      });
+
+      it("should not let the state be sorted if it is connected", function() {
+        assert.deepEqual(
+          states.keys(),
+          ['state1','state2','state3','state4']);
+
+        $('[data-uuid="state1"] .titlebar')
+          .simulate('mousedown')
+          .simulate('drag', {dx: 150});
+
+        assert.deepEqual(
+          states.keys(),
+          ['state1','state2','state3','state4']);
       });
     });
 
+
     describe(".reset", function() {
       it("should remove the old state", function(){
-        assert(collection.has('state3'));
-        collection.reset(collection.get('state3'), 'dummy');
-        assert(!collection.has('state3'));
+        assert(states.has('state3'));
+        states.reset(states.get('state3'), 'dummy');
+        assert(!states.has('state3'));
       });
 
       it("should add a new state at the same position as the old state",
       function(done){
-        var old = collection.get('state3');
+        var old = states.get('state3');
 
-        collection.on('add', function(id, state) {
+        states.on('add', function(id, state) {
           assert(state instanceof DummyStateView);
           assert.equal(state.model.get('ordinal'), 3);
           done();
         });
 
         old.model.set('ordinal', 3);
-        collection.reset(old, 'dummy');
+        states.reset(old, 'dummy');
       });
     });
   });
