@@ -195,7 +195,7 @@ class StartConversationView(ConversationView):
         if self.conversation_initiator != 'client':
             params['dedupe'] = request.POST.get('dedupe') == '1'
         try:
-            conversation.start(**params)
+            conversation.old_start(**params)
         except ConversationSendError as error:
             messages.add_message(request, messages.ERROR, str(error))
             return self.redirect_to('start', conversation_key=conversation.key)
@@ -268,7 +268,7 @@ class ConfirmConversationView(ConversationView):
             try:
                 batch_id = conversation.get_latest_batch_key()
                 if token_manager.delete(user_token):
-                    conversation.start(batch_id=batch_id, **params)
+                    conversation.old_start(batch_id=batch_id, **params)
                     messages.info(request, '%s started succesfully!' %
                                   (self.conversation_display_name,))
                     success = True

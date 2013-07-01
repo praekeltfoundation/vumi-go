@@ -114,7 +114,7 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
         yield self.contact_store.groups.enable_search()
         self.contact = yield self.contact_store.new_contact(
                                                         msisdn=u'+27761234567')
-        yield self.conversation.start()
+        yield self.conversation.old_start()
         [self.tag] = yield self.conversation.get_tags()
         self.msg_options = yield self.conversation.make_message_options(
             self.tag)

@@ -93,9 +93,10 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         Test received_messages helper function
         """
         conversation = self.get_wrapped_conv()
-        conversation.start()
+        conversation.old_start()
         contacts = []
-        for bunch in conversation.get_opted_in_contact_bunches():
+        for bunch in conversation.get_opted_in_contact_bunches(
+                conversation.delivery_class):
             contacts.extend(bunch)
         [contact] = contacts
         [batch] = conversation.get_batches()
@@ -132,7 +133,7 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         Test that tags are released when a conversation is ended.
         """
         conversation = self.get_wrapped_conv()
-        conversation.start()
+        conversation.old_start()
         [message_batch] = conversation.get_batches()
         self.assertEqual(len(conversation.get_tags()), 1)
         conversation.end_conversation()

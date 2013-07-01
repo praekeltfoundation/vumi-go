@@ -140,7 +140,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             surname=u'Contact', msisdn=u'27831234568', groups=[self.group])
         yield self.create_survey(self.conversation)
         with LogCatcher() as log:
-            yield self.start_conversation(self.conversation)
+            yield self.start_conversation_old_style(self.conversation)
             self.assertEqual(log.errors, [])
 
         [msg1, msg2] = yield self.wait_for_dispatched_messages(2)
@@ -191,7 +191,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         yield self.create_contact(u'First', u'Contact',
             msisdn=u'27831234567', groups=[self.group])
         yield self.create_survey(self.conversation)
-        yield self.start_conversation(self.conversation)
+        yield self.start_conversation_old_style(self.conversation)
         yield self.complete_survey(self.default_polls)
 
     @inlineCallbacks
@@ -199,7 +199,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         yield self.create_contact(u'First', u'Contact',
             msisdn=u'27831234567', groups=[self.group])
         yield self.create_survey(self.conversation)
-        yield self.start_conversation(self.conversation)
+        yield self.start_conversation_old_style(self.conversation)
         start_at = 0
         for i in range(1):
             msgs = yield self.complete_survey(self.default_polls,
@@ -229,7 +229,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
         yield self.create_contact(u'First', u'Contact',
             msisdn=u'27831234567', groups=[self.group])
         yield self.create_survey(self.conversation)
-        yield self.start_conversation(self.conversation)
+        yield self.start_conversation_old_style(self.conversation)
         start_at = 0
         for i in range(3):
             msgs = yield self.complete_survey(self.default_polls,
@@ -245,7 +245,7 @@ class TestMultiSurveyApplication(AppWorkerTestCase):
             surname=u'Contact', msisdn=u'27831234561', groups=[self.group])
         yield self.create_survey(self.conversation)
         with LogCatcher() as log:
-            yield self.start_conversation(self.conversation)
+            yield self.start_conversation_old_style(self.conversation)
             self.assertEqual(log.errors, [])
 
         # First run through to the second poll

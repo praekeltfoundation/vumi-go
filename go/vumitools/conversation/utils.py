@@ -179,8 +179,8 @@ class ConversationWrapper(object):
         return helper_metadata
 
     @Manager.calls_manager
-    def start(self, no_batch_tag=False, batch_id=None, acquire_tag=True,
-              send_initial_action_hack=True, **extra_params):
+    def old_start(self, no_batch_tag=False, batch_id=None, acquire_tag=True,
+                  send_initial_action_hack=True, **extra_params):
         """
         Send the start command to this conversations application worker.
 
@@ -259,13 +259,14 @@ class ConversationWrapper(object):
                 **extra_params)
 
     @Manager.calls_manager
-    def new_start(self):
+    def start(self):
         """Send the start command to this conversations application worker.
 
         This is used by the new conversation lifecycle and skips all the
         tagpool and initial_action silliness.
 
-        TODO: Replace the start() method above with this one.
+        TODO: Get rid of the old_start() method above and everything that
+              relies on it.
         """
         batches = yield self.get_batches()
         if not batches:
@@ -796,9 +797,9 @@ class ConversationWrapper(object):
         returnValue(count / (sample_time / 60.0))
 
     @Manager.calls_manager
-    def _filter_opted_out_contacts(self, contacts):
+    def _filter_opted_out_contacts(self, contacts, delivery_class):
         # TODO: Less hacky address type handling.
-        address_type = 'gtalk' if self.delivery_class == 'gtalk' else 'msisdn'
+        address_type = 'gtalk' if delivery_class == 'gtalk' else 'msisdn'
         contacts = yield contacts
         opt_out_store = OptOutStore(
             self.api.manager, self.user_api.user_account_key)
@@ -810,13 +811,13 @@ class ConversationWrapper(object):
 
         filtered_contacts = []
         for contact in contacts:
-            contact_addr = contact.addr_for(self.delivery_class)
+            contact_addr = contact.addr_for(delivery_class)
             if contact_addr and contact_addr not in opted_out_addrs:
                 filtered_contacts.append(contact)
         returnValue(filtered_contacts)
 
     @Manager.calls_manager
-    def get_opted_in_contact_bunches(self):
+    def get_opted_in_contact_bunches(self, delivery_class):
         """
         Get a generator that produces batches the contacts with
         an address attribute that is appropriate for the conversation's
@@ -825,13 +826,14 @@ class ConversationWrapper(object):
         contact_store = self.user_api.contact_store
         contact_keys = yield self.get_contact_keys()
         contacts_iter = yield contact_store.contacts.load_all_bunches(
-                                                            contact_keys)
+            contact_keys)
 
         # We return a generator here. It's important that this is iterated over
         # slowly, otherwise we risk hammering our Riak servers to death.
         def opted_in_contacts_generator():
             # NOTE: This is a generator, *not* an async flattener.
             for contacts_bunch in contacts_iter:
-                yield self._filter_opted_out_contacts(contacts_bunch)
+                yield self._filter_opted_out_contacts(
+                    contacts_bunch, delivery_class)
 
         returnValue(opted_in_contacts_generator())
