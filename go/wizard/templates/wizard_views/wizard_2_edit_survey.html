@@ -52,6 +52,8 @@
     strokeStyle: '#0bcac3'
   });
 
+  jsPlumb.Defaults.Connector = ['Flowchart', {stub: 5}];
+
   var diagram = new dialogue.diagram.DialogueDiagramView({
     el: '.dialogue #diagram',
     model: new dialogue.models.DialogueModel({{ model_data|safe }})

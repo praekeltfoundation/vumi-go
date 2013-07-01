@@ -24,7 +24,6 @@
       DialogueDiagramView.__super__.initialize.call(this, options);
       if (!this.states.size()) { this.newState(); }
 
-      jsPlumb.Defaults.Connector = ['Flowchart'];
       this.connections.on('error:unsupported', this.onUnsupportedConnection);
     },
 
