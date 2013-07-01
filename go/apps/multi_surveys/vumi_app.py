@@ -135,7 +135,7 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
     @inlineCallbacks
     def process_command_send_survey(self, user_account_key, conversation_key,
                                     batch_id, msg_options, is_client_initiated,
-                                    **extra_params):
+                                    delivery_class, **extra_params):
 
         if is_client_initiated:
             log.debug('Conversation %r is client initiated, no need to notify '
@@ -145,9 +145,9 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
         conv = yield self.get_conversation(user_account_key, conversation_key)
 
         for contacts in (yield conv.get_opted_in_contact_bunches(
-                conv.delivery_class)):
+                delivery_class)):
             for contact in (yield contacts):
-                to_addr = contact.addr_for(conv.delivery_class)
+                to_addr = contact.addr_for(delivery_class)
                 yield self.start_survey(to_addr, conv, **msg_options)
 
     def process_command_initial_action_hack(self, *args, **kwargs):

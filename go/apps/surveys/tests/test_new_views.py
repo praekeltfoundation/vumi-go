@@ -143,6 +143,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.get_batches()[0].key, msg_options={},
+            delivery_class=self.conversation.delivery_class,
             is_client_initiated=False))
 
     def test_group_selection(self):
