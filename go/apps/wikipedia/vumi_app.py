@@ -2,7 +2,6 @@
 from twisted.internet.defer import inlineCallbacks
 
 from vumi_wikipedia.wikipedia import WikipediaWorker
-from vumi import log
 
 from go.vumitools.app_worker import GoApplicationMixin, GoWorkerConfigMixin
 

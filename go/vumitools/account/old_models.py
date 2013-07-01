@@ -5,7 +5,7 @@ from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Model, Manager, ModelMigrator
 from vumi.persist.fields import (
-   Integer, Unicode, Timestamp, ManyToMany, Json, Boolean)
+    Integer, Unicode, Timestamp, ManyToMany, Json, Boolean)
 
 
 class UserTagPermissionVNone(Model):
