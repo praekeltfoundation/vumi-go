@@ -3,6 +3,9 @@ describe("go.campaign.dialogue.diagram", function() {
       oneElExists = testHelpers.oneElExists,
       noElExists = testHelpers.noElExists;
 
+  var plumbing = go.components.plumbing,
+      noConnections = plumbing.testHelpers.noConnections;
+
   var dialogue = go.campaign.dialogue,
       states = go.campaign.dialogue.states;
 
@@ -22,6 +25,24 @@ describe("go.campaign.dialogue.diagram", function() {
   });
 
   describe(".DialogueDiagramView", function() {
+    describe("on 'error:unsupported' connection events", function() {
+      beforeEach(function() {
+        diagram.render();
+      });
+
+      it("should detach the jsPlumb connection", function(done) {
+        var e1 = diagram.endpoints.get('endpoint1'),
+            e2 = diagram.endpoints.get('endpoint2');
+
+        diagram.connections.on('error:unsupported', function() {
+          assert(noConnections(e1, e2));
+          done();
+        });
+
+        jsPlumb.connect({source: e1.$el, target: e2.$el});
+      });
+    });
+
     describe(".render", function() {
       it("should render its states", function() {
         assert(noElExists(diagram.$('.state')));

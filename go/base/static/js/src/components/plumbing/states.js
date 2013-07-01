@@ -37,8 +37,6 @@
         schemaDefaults: {type: this.endpointType},
         collectionType: this.endpointCollectionType
       });
-
-      this.model.on('change', this.render, this);
     },
 
     destroy: function() {
