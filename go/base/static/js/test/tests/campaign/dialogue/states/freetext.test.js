@@ -36,7 +36,7 @@ describe("go.campaign.dialogue.states.freetext", function() {
 
         editMode
           .$('.text')
-          .text('What is your parrot doing?')
+          .val('What is your parrot doing?')
           .change();
 
         assert.equal(

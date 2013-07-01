@@ -64,7 +64,7 @@ describe("go.campaign.dialogue.states.choice", function() {
 
         editMode
           .$('.text')
-          .text('What is your favourite dinosaur?')
+          .val('What is your favourite dinosaur?')
           .change();
 
         assert.equal(

@@ -37,22 +37,6 @@
       this.on('activate', this.onActivate, this);
     },
 
-    save: function() {
-      var model = this.state.model,
-          choices = model.get('choice_endpoints');
-
-      model.set('text', this.$('.text').val(), {silent: true});
-      this.$('.choice').each(function() {
-        var $choice = $(this);
-
-        choices
-          .get($choice.attr('data-endpoint-id'))
-          .set('label', $choice.find('input').prop('value'), {silent: true});
-      });
-
-      return this;
-    },
-
     onActivate: function() {
       var choices = this.state.endpoints.members.get('choice_endpoints');
       if (!choices.size()) {
@@ -62,7 +46,7 @@
     },
 
     onTextChange: function(e) {
-      this.state.model.set('text', $(e.target).text(), {silent: true});
+      this.state.model.set('text', $(e.target).val(), {silent: true});
       return this;
     },
 

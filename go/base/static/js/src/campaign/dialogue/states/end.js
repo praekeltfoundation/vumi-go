@@ -18,7 +18,7 @@
     }).defaults(DialogueStateEditView.prototype.events),
 
     onTextChange: function(e) {
-      this.state.model.set('text', $(e.target).text(), {silent: true});
+      this.state.model.set('text', $(e.target).val(), {silent: true});
       return this;
     }
   });

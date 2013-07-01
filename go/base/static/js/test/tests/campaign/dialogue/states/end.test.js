@@ -36,7 +36,7 @@ describe("go.campaign.dialogue.states.end", function() {
 
         editMode
           .$('.text')
-          .text('So Long, and Thanks for All the Fish')
+          .val('So Long, and Thanks for All the Fish')
           .change();
 
         assert.equal(
