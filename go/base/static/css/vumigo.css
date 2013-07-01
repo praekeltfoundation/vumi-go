@@ -339,6 +339,7 @@ button {
   cursor: pointer;
 }
 .dialogue #diagram .choice.state .edit.mode .choices input {
+  width: 60%;
   margin-bottom: 0;
 }
 .dialogue #diagram .choice.state .preview.mode .choices {
