@@ -55,73 +55,21 @@ describe("go.campaign.dialogue.states.choice", function() {
       });
     });
 
-    describe(".save", function() {
-      it("should update the choice state's model", function() {
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: "state1",
-          name: "Message 1",
-          type: "choice",
-          text: "What is your favourite colour?",
-          ordinal: 0,
-          entry_endpoint: {uuid: "endpoint0"},
-          choice_endpoints: [
-            {value: "value1", label: "Red", uuid: "endpoint1"},
-            {value: "value2", label: "Blue", uuid: "endpoint2"}]
-        });
+    describe("when '.text' has changed", function() {
+      it("should update the 'text' attribute of the state's model",
+      function() {
+        assert.equal(
+          state.model.get('text'),
+          'What is your favourite colour?');
 
-        editMode.$('.text').text('What is your favourite dinosaur?');
-        editMode.$('.choice input').eq(1).val('Diplodocus');
-        editMode.save();
+        editMode
+          .$('.text')
+          .val('What is your favourite dinosaur?')
+          .change();
 
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: "state1",
-          name: "Message 1",
-          type: "choice",
-          text: "What is your favourite dinosaur?",
-          ordinal: 0,
-          entry_endpoint: {uuid: "endpoint0"},
-          choice_endpoints: [
-            {value: "value1", label: "Red", uuid: "endpoint1"},
-            {value: "value2", label: "Diplodocus", uuid: "endpoint2"}]
-        });
-      });
-    });
-
-    describe("when the '.save' button is clicked", function() {
-      it("should update the choice state's model", function() {
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: "state1",
-          name: "Message 1",
-          type: "choice",
-          text: "What is your favourite colour?",
-          ordinal: 0,
-          entry_endpoint: {uuid: "endpoint0"},
-          choice_endpoints: [
-            {value: "value1", label: "Red", uuid: "endpoint1"},
-            {value: "value2", label: "Blue", uuid: "endpoint2"}]
-        });
-
-        editMode.$('.text').text('What is your favourite dinosaur?');
-        editMode.$('.choice input').eq(1).val('Diplodocus');
-        editMode.$('.save').click();
-
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: "state1",
-          name: "Message 1",
-          type: "choice",
-          text: "What is your favourite dinosaur?",
-          ordinal: 0,
-          entry_endpoint: {uuid: "endpoint0"},
-          choice_endpoints: [
-            {value: "value1", label: "Red", uuid: "endpoint1"},
-            {value: "value2", label: "Diplodocus", uuid: "endpoint2"}]
-        });
-      });
-
-      it("should switch back to the preview view", function() {
-        assert.equal(state.modeName, 'edit');
-        editMode.$('.save').click();
-        assert.equal(state.modeName, 'preview');
+        assert.equal(
+          state.model.get('text'),
+          'What is your favourite dinosaur?');
       });
     });
 
@@ -175,6 +123,24 @@ describe("go.campaign.dialogue.states.choice", function() {
 
         assert(noElExists(
           editMode.$('.choice[data-endpoint-id="endpoint1"]')));
+      });
+    });
+
+    describe("when a '.choice input' has changed", function() {
+      it("should update the corresponding endpoint model's label attribute",
+      function() {
+        var endpoint = state.model
+          .get('choice_endpoints')
+          .get('endpoint2');
+
+        assert.equal(endpoint.get('label'), 'Blue');
+
+        editMode.$('.choice input')
+          .eq(1)
+          .val('Diplodocus')
+          .change();
+
+        assert.equal(endpoint.get('label'), 'Diplodocus');
       });
     });
   });

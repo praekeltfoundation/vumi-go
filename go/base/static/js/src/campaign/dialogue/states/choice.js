@@ -27,35 +27,14 @@
 
     events: _({
       'click .new-choice': 'onNewChoice',
-      'click .choice .remove': 'onRemoveChoice'
+      'click .choice .remove': 'onRemoveChoice',
+      'change .choice input': 'onChoiceChange',
+      'change .text': 'onTextChange'
     }).defaults(DialogueStateEditView.prototype.events),
 
     initialize: function(options) {
       ChoiceStateEditView.__super__.initialize.call(this, options);
       this.on('activate', this.onActivate, this);
-    },
-
-    save: function() {
-      var model = this.state.model,
-          choices = model.get('choice_endpoints');
-
-      model.set('text', this.$('.text').val(), {silent: true});
-      this.$('.choice').each(function() {
-        var $choice = $(this);
-
-        choices
-          .get($choice.attr('data-endpoint-id'))
-          .set('label', $choice.find('input').prop('value'), {silent: true});
-      });
-
-      return this;
-    },
-
-    newChoice: function() {
-      return this.state.endpoints.add(
-        'choice_endpoints',
-        {model: {uuid: uuid.v4()}},
-        {render: false});
     },
 
     onActivate: function() {
@@ -66,9 +45,13 @@
       }
     },
 
+    onTextChange: function(e) {
+      this.state.model.set('text', $(e.target).val(), {silent: true});
+      return this;
+    },
+
     onNewChoice: function(e) {
       e.preventDefault();
-      this.save();
       this.newChoice();
       this.state.render();
       jsPlumb.repaintEverything();
@@ -76,13 +59,28 @@
 
     onRemoveChoice: function(e) {
       e.preventDefault();
-      this.save();
 
       var $choice = $(e.target).parent();
       this.state.endpoints.remove($choice.attr('data-endpoint-id'));
 
       this.state.render();
       jsPlumb.repaintEverything();
+    },
+
+    onChoiceChange: function(e) {
+      var $choice = $(e.target).parent();
+
+      this.state.model
+        .get('choice_endpoints')
+        .get($choice.attr('data-endpoint-id'))
+        .set('label', $choice.find('input').prop('value'), {silent: true});
+    },
+
+    newChoice: function() {
+      return this.state.endpoints.add(
+        'choice_endpoints',
+        {model: {uuid: uuid.v4()}},
+        {render: false});
     }
   });
 

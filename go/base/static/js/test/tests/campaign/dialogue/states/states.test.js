@@ -197,29 +197,12 @@ describe("go.campaign.dialogue.states", function() {
       });
     });
 
-    describe("when the '.save' button is clicked", function() {
+    describe("when '.name' has changed", function() {
       it("should update the 'name' attribute of the state's model",
       function() {
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state4',
-          name: 'Dummy Message 1',
-          type: 'dummy',
-          entry_endpoint: {'uuid':'endpoint6'},
-          exit_endpoint: {'uuid':'endpoint7'},
-          ordinal: 3
-        });
-
-        state.$('.name').val('New Dummy');
-        editMode.$('.save').click();
-
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state4',
-          name: 'New Dummy',
-          type: 'dummy',
-          entry_endpoint: {'uuid':'endpoint6'},
-          exit_endpoint: {'uuid':'endpoint7'},
-          ordinal: 3
-        });
+        assert.equal(state.model.get('name'), 'Dummy Message 1');
+        state.$('.name').val('New Dummy').change();
+        assert.equal(state.model.get('name'), 'New Dummy');
       });
     });
 
@@ -250,6 +233,14 @@ describe("go.campaign.dialogue.states", function() {
       it("should switch back to the preview view", function() {
         assert.equal(state.modeName, 'edit');
         editMode.$('.cancel').click();
+        assert.equal(state.modeName, 'preview');
+      });
+    });
+
+    describe("when '.ok' button is clicked", function() {
+      it("should switch back to the preview view", function() {
+        assert.equal(state.modeName, 'edit');
+        editMode.$('.ok').click();
         assert.equal(state.modeName, 'preview');
       });
     });
