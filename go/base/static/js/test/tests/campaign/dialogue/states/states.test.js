@@ -171,7 +171,7 @@ describe("go.campaign.dialogue.states", function() {
           ordinal: 3
         });
 
-        state.model.set('name', 'New Dummy');
+        state.$('.name').val('New Dummy');
         editMode.$('.save').click();
 
         assert.deepEqual(state.model.toJSON(), {
