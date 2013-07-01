@@ -4,6 +4,7 @@
 
 (function(exports) {
   var states = go.campaign.dialogue.states,
+      EntryEndpointView = states.EntryEndpointView,
       DialogueStateView = states.DialogueStateView,
       DialogueStateEditView = states.DialogueStateEditView,
       DialogueStatePreviewView = states.DialogueStatePreviewView;
@@ -15,13 +16,14 @@
   var ChoiceEndpointView = FollowingEndpointView.extend({
     className: 'choice endpoint',
     side: 'right',
+    isTarget: false,
     target: function() {
       return '.choice[data-endpoint-id="' + this.uuid() + '"]';
     }
   });
 
   var ChoiceStateEditView = DialogueStateEditView.extend({
-    bodyTemplate: JST.campaign_dialogue_states_choice_edit,
+    bodyTemplate: 'JST.campaign_dialogue_states_choice_edit',
 
     events: _({
       'click .new-choice': 'onNewChoice',
@@ -85,7 +87,7 @@
   });
 
   var ChoiceStatePreviewView = DialogueStatePreviewView.extend({
-    bodyTemplate: JST.campaign_dialogue_states_choice_preview
+    bodyTemplate: 'JST.campaign_dialogue_states_choice_preview'
   });
 
   var ChoiceStateView = DialogueStateView.extend({
@@ -93,12 +95,12 @@
 
     editModeType: ChoiceStateEditView,
     previewModeType: ChoiceStatePreviewView,
+
     endpointSchema: [{
       attr: 'entry_endpoint',
-      side: 'left'
+      type: EntryEndpointView
     }, {
       attr: 'choice_endpoints',
-      side: 'right',
       type: ChoiceEndpointView,
       collectionType: EndpointViewCollection
     }]

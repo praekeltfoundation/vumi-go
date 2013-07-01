@@ -67,6 +67,10 @@ class Contact(Model):
             self.groups.add_key(group)
 
     def addr_for(self, delivery_class):
+        if delivery_class is None:
+            # FIXME: Find a better way to do get delivery_class and get rid of
+            #        this hack.
+            return self.msisdn
         # TODO: delivery classes need to be defined somewhere
         if delivery_class in ('sms', 'ussd'):
             return self.msisdn
