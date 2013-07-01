@@ -1,7 +1,5 @@
 """Tests for go.vumitools.metrics_worker."""
 
-from datetime import datetime
-
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import Clock, LoopingCall
 
