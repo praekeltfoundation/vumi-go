@@ -74,7 +74,8 @@
 
   var RowCollection = ViewCollection.extend({
     addDefaults: _({
-      render: false
+      render: false,
+      addModel: false
     }).defaults(ViewCollection.prototype.addDefaults),
 
     type: RowView,
