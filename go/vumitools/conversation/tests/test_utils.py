@@ -32,8 +32,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         yield self.setup_tags()
 
         self.conv = yield self.create_conversation(
-            conversation_type=u'dummy',
-            delivery_tag_pool=u'longcode', delivery_class=u'sms')
+            conversation_type=u'dummy')
 
     @inlineCallbacks
     def setup_tags(self, name=u'longcode', count=4, metadata=None):
@@ -113,6 +112,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.assertEqual(batch_key, None)
         self.assertEqual(self.conv.batches.keys(), [])
 
+        self.conv.c.delivery_tag_pool = u"longcode"
+        yield self.conv.save()
         tag = yield self.conv.acquire_tag()
         batch1 = yield self.get_batch_id(self.conv, tag)
         batch2 = yield self.get_batch_id(self.conv, tag)
@@ -266,6 +267,13 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_get_tags(self):
         yield self.conv.start()
+        self.assertEqual([], (yield self.conv.get_tags()))
+
+    @inlineCallbacks
+    def test_get_tags_old_style(self):
+        self.conv.c.delivery_tag_pool = u'longcode'
+        yield self.conv.save()
+        yield self.conv.old_start()
         [tag] = yield self.conv.get_tags()
         self.assertEqual(tag, ('longcode', 'longcode10001'))
 
@@ -312,6 +320,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_acquire_tag(self):
+        self.conv.c.delivery_tag_pool = u"longcode"
+        yield self.conv.save()
         tag = yield self.conv.acquire_tag()
         self.assertEqual(tag, ('longcode', 'longcode10001'))
 
@@ -338,7 +348,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
         @inlineCallbacks
         def get_contacts():
-            bunches = yield self.conv.get_opted_in_contact_bunches()
+            bunches = yield self.conv.get_opted_in_contact_bunches(
+                self.conv.delivery_class)
             contacts = []
             for bunch in bunches:
                 contacts.extend((yield bunch))

@@ -13,8 +13,6 @@ from go.conversation.forms import ReplyToMessageForm
 from go.base import message_store_client as ms_client
 from go.base.utils import page_range_window, get_conversation_view_definition
 
-from vumi.message import TransportUserMessage
-
 
 register = template.Library()
 
@@ -139,13 +137,7 @@ def get_contact_for_message(user_api, message, direction='inbound'):
     # It falls back to the raw `transport_type` so that errors in
     # retrieving a contact return something useful for debugging (i.e.
     # the `transport_type` that failed to be looked up).
-    delivery_class = {
-        TransportUserMessage.TT_SMS: 'sms',
-        TransportUserMessage.TT_USSD: 'ussd',
-        TransportUserMessage.TT_XMPP: 'gtalk',
-        TransportUserMessage.TT_TWITTER: 'twitter',
-    }.get(message['transport_type'],
-          message['transport_type'])
+    delivery_class = user_api.delivery_class_for_msg(message)
     user = message.user() if direction == 'inbound' else message['to_addr']
     return user_api.contact_store.contact_for_addr(
         delivery_class, unicode(user), create=True)

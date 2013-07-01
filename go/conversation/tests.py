@@ -26,6 +26,25 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
     def get_wrapped_conv(self):
         return self.user_api.get_wrapped_conversation(self.conv_key)
 
+    def test_get_new_conversation(self):
+        response = self.client.get(reverse('conversations:new_conversation'))
+        self.assertContains(response, 'Conversation name')
+        self.assertContains(response, 'kind of conversation')
+
+    def test_post_new_conversation(self):
+        conv_data = {
+            'name': 'new conv',
+            'conversation_type': 'bulk_message',
+        }
+        response = self.client.post(reverse('conversations:new_conversation'),
+                                    conv_data)
+        conv = self.get_latest_conversation()
+        show_url = reverse('conversations:conversation', kwargs={
+            'conversation_key': conv.key, 'path_suffix': ''})
+        self.assertRedirects(response, show_url)
+        self.assertEqual(conv.name, 'new conv')
+        self.assertEqual(conv.conversation_type, 'bulk_message')
+
     def test_index(self):
         """Display all conversations"""
         response = self.client.get(reverse('conversations:index'))
@@ -93,9 +112,10 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         Test received_messages helper function
         """
         conversation = self.get_wrapped_conv()
-        conversation.start()
+        conversation.old_start()
         contacts = []
-        for bunch in conversation.get_opted_in_contact_bunches():
+        for bunch in conversation.get_opted_in_contact_bunches(
+                conversation.delivery_class):
             contacts.extend(bunch)
         [contact] = contacts
         [batch] = conversation.get_batches()
@@ -132,7 +152,7 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         Test that tags are released when a conversation is ended.
         """
         conversation = self.get_wrapped_conv()
-        conversation.start()
+        conversation.old_start()
         [message_batch] = conversation.get_batches()
         self.assertEqual(len(conversation.get_tags()), 1)
         conversation.end_conversation()

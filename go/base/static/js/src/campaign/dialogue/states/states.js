@@ -3,6 +3,8 @@
 // Structures for each dialogue state type
 
 (function(exports) {
+  var maybeByName = go.utils.maybeByName;
+
   var plumbing = go.components.plumbing;
 
   var states = plumbing.states,
@@ -12,6 +14,18 @@
   var endpoints = plumbing.endpoints,
       ParametricEndpointView = endpoints.ParametricEndpointView,
       AligningEndpointCollection = endpoints.AligningEndpointCollection;
+
+  var DialogueEndpointView = ParametricEndpointView.extend();
+
+  var EntryEndpointView = DialogueEndpointView.extend({
+    side: 'left',
+    isSource: false
+  });
+
+  var ExitEndpointView = DialogueEndpointView.extend({
+    side: 'right',
+    isTarget: false
+  });
 
   // Base 'mode' for state views. Each mode acts as a 'delegate view',
   // targeting a dialogue view's element and acting according to the mode type
@@ -48,12 +62,12 @@
       this.$el.append(this.$titlebar);
       this.$el.append(this.$box);
 
-      this.$titlebar.html(this.titlebarTemplate(data));
+      this.$titlebar.html(maybeByName(this.titlebarTemplate)(data));
 
       this.$box.html([
-         this.headTemplate(data),
-         this.bodyTemplate(data),
-         this.tailTemplate(data)
+         maybeByName(this.headTemplate)(data),
+         maybeByName(this.bodyTemplate)(data),
+         maybeByName(this.tailTemplate)(data)
       ].join(''));
 
       return this;
@@ -65,9 +79,9 @@
   var DialogueStateEditView = DialogueStateModeView.extend({
     className: 'edit mode',
 
-    titlebarTemplate: JST.campaign_dialogue_states_modes_edit_titlebar,
-    headTemplate: JST.campaign_dialogue_states_modes_edit_head,
-    tailTemplate: JST.campaign_dialogue_states_modes_edit_tail,
+    titlebarTemplate: 'JST.campaign_dialogue_states_modes_edit_titlebar',
+    headTemplate: 'JST.campaign_dialogue_states_modes_edit_head',
+    tailTemplate: 'JST.campaign_dialogue_states_modes_edit_tail',
 
     events: {
       'click .save': 'onSave',
@@ -107,20 +121,21 @@
     },
 
     onTypeChange: function(e) {
-      this.state.reset($(e.target).val());
+      var $option = $(e.target);
+
+      bootbox.confirm(
+        "Changing the message type will break the state's connections.",
+        function(submit) {
+          if (submit) { this.state.reset($option.val()); }
+          else { this.$('.type').val(this.state.typeName); }
+        }.bind(this));
     },
 
     save: function() { return this; },
 
     cancel: function() {
       var model = this.state.model;
-
-      if (this.modelBackup) {
-        model.clear();
-        model.set(this.modelBackup);
-      }
-
-      this.state.preview();
+      if (this.modelBackup) { model.set(this.modelBackup); }
       return this;
     },
 
@@ -135,7 +150,7 @@
   // each state type's `preview` mode
   var DialogueStatePreviewView = DialogueStateModeView.extend({
     className: 'preview mode',
-    titlebarTemplate: JST.campaign_dialogue_states_modes_preview_titlebar,
+    titlebarTemplate: 'JST.campaign_dialogue_states_modes_preview_titlebar',
 
     events: {
       'click .edit-switch': 'onEditSwitch'
@@ -157,7 +172,7 @@
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
 
-    endpointType: ParametricEndpointView,
+    endpointType: DialogueEndpointView,
     endpointCollectionType: AligningEndpointCollection,
 
     subtypes: {
@@ -249,6 +264,21 @@
       return _({mode: 'preview'}).defaults(opts);
     },
 
+    initialize: function(options) {
+      DialogueStateCollection.__super__.initialize.call(this, options);
+
+      this.grid = new go.components.grid.GridView({
+        items: this,
+        sortableOptions: {
+          handle: '.state .titlebar',
+          placeholder: 'placeholder',
+          sort: function() { jsPlumb.repaintEverything(); }
+        }
+      });
+
+      this.grid.on('render', function() { jsPlumb.repaintEverything(); });
+    },
+
     // Removes a state and creates a new state of a different type in the same
     // position as the old state
     reset: function(state, type) {
@@ -265,10 +295,18 @@
       });
 
       return this;
+    },
+
+    render: function() {
+      this.view.$el.append(this.grid.$el);
+      this.grid.render();
     }
   });
 
   _(exports).extend({
+    EntryEndpointView: EntryEndpointView,
+    ExitEndpointView: ExitEndpointView,
+
     DialogueStateModeView: DialogueStateModeView,
     DialogueStatePreviewView: DialogueStatePreviewView,
     DialogueStateEditView: DialogueStateEditView,

@@ -143,7 +143,8 @@ class SequentialSendApplication(GoApplicationWorker):
         conv.set_go_helper_metadata(
             message_options.setdefault('helper_metadata', {}))
 
-        for contacts in (yield conv.get_opted_in_contact_bunches()):
+        for contacts in (yield conv.get_opted_in_contact_bunches(
+                conv.delivery_class)):
             for contact in (yield contacts):
                 index_key = 'scheduled_message_index_%s' % (conv.key,)
                 message_index = int(contact.extra[index_key] or '0')
