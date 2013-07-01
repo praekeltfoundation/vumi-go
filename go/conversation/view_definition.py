@@ -57,7 +57,7 @@ class StartConversationView(ConversationApiView):
     def post(self, request, conversation):
         # TODO: Better conversation start error handling.
         try:
-            conversation.new_start()
+            conversation.start()
         except ConversationSendError as error:
             messages.add_message(request, messages.ERROR, str(error))
         else:
