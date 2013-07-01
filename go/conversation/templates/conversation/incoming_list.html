@@ -72,9 +72,9 @@
                 </ul>
                 <div class="tab-content" id="message-page">
                     {% if message_page.paginator.num_pages %}
-                        {% include "conversation/includes/message-list.html" %}
+                        {% include "conversation/incoming_list_table.html" %}
                     {% else %}
-                        {% include "conversation/includes/message-load-results.html" %}
+                        {% include "conversation/incoming_list_table_load.html" %}
                     {% endif %}
                 </div>
             </form>
