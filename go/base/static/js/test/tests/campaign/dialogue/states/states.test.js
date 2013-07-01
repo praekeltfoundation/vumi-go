@@ -138,24 +138,63 @@ describe("go.campaign.dialogue.states", function() {
 
       afterEach(function() {
         uuid.v4.restore();
+        $('.bootbox')
+          .modal('hide')
+          .remove();
       });
 
-      it("should remove the state and replace it with another", function() {
+      it("should display a modal to confirm the user's decision", function() {
+        bootbox.animate(false);
+
+        assert(noElExists('.modal'));
+        editMode.$('.type')
+          .val('freetext')
+          .change();
+        assert(oneElExists('.modal'));
+      });
+
+      it("should replace the state with another if the user confirms the reset",
+      function() {
         assert(diagram.states.has('state4'));
         assert.isDefined(diagram.model.get('states').get('state4'));
 
         assert(!diagram.states.has('new-state'));
         assert.isUndefined(diagram.model.get('states').get('new-state'));
 
-        editMode.$('.type')
-          .val('freetext')
-          .change();
+        editMode.$('.type').val('freetext').change();
+        $('.modal [data-handler=1]').click();
 
         assert(diagram.states.has('new-state'));
         assert.isDefined(diagram.model.get('states').get('new-state'));
 
         assert(!diagram.states.has('state4'));
         assert.isUndefined(diagram.model.get('states').get('state4'));
+      });
+
+      it("should revert '.type's selection if the user cancels the reset",
+      function() {
+        assert.equal(editMode.$('.type').val(), 'dummy');
+        editMode.$('.type').val('freetext').change();
+        $('.modal [data-handler=0]').click();
+        assert.equal(editMode.$('.type').val(), 'dummy');
+      });
+
+      it("should keep the current state if the user cancels the reset",
+      function() {
+        assert(diagram.states.has('state4'));
+        assert.isDefined(diagram.model.get('states').get('state4'));
+
+        assert(!diagram.states.has('new-state'));
+        assert.isUndefined(diagram.model.get('states').get('new-state'));
+
+        editMode.$('.type').val('freetext').change();
+        $('.modal [data-handler=0]').click();
+
+        assert(diagram.states.has('state4'));
+        assert.isDefined(diagram.model.get('states').get('state4'));
+
+        assert(!diagram.states.has('new-state'));
+        assert.isUndefined(diagram.model.get('states').get('new-state'));
       });
     });
 
