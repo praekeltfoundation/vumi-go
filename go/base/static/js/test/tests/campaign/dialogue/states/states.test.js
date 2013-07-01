@@ -4,8 +4,7 @@ describe("go.campaign.dialogue.states", function() {
       noElExists = testHelpers.noElExists,
       unregisterModels = testHelpers.unregisterModels;
 
-  var dialogue = go.campaign.dialogue,
-      states = go.campaign.dialogue.states;
+  var dialogue = go.campaign.dialogue;
 
   var setUp = dialogue.testHelpers.setUp,
       tearDown = dialogue.testHelpers.tearDown,
@@ -23,7 +22,7 @@ describe("go.campaign.dialogue.states", function() {
   });
 
   describe(".DialogueStateModeView", function() {
-    var DialogueStateModeView = states.DialogueStateModeView;
+    var DialogueStateModeView = dialogue.states.DialogueStateModeView;
 
     var ToyStateModeView = DialogueStateModeView.extend({
       className: 'toy mode',
@@ -62,7 +61,7 @@ describe("go.campaign.dialogue.states", function() {
   });
 
   describe(".DialogueStateEditView", function() {
-    var DialogueStateEditView = states.DialogueStateEditView;
+    var DialogueStateEditView = dialogue.states.DialogueStateEditView;
 
     var state,
         editMode;
@@ -257,7 +256,7 @@ describe("go.campaign.dialogue.states", function() {
   });
 
   describe(".DialogueStatePreviewView", function() {
-    var DialogueStatePreviewView = states.DialogueStatePreviewView;
+    var DialogueStatePreviewView = dialogue.states.DialogueStatePreviewView;
 
     var state,
         previewMode;
@@ -375,36 +374,80 @@ describe("go.campaign.dialogue.states", function() {
 
   describe(".DialogueStateCollection", function() {
     var DummyStateView = dialogue.states.dummy.DummyStateView,
-        DialogueStateCollection = states.DialogueStateCollection;
+        DialogueStateCollection = dialogue.states.DialogueStateCollection;
 
-    var collection;
+    var states;
 
     beforeEach(function() {
-      collection = new DialogueStateCollection({
-        view: diagram,
-        attr: 'states'
+      states = diagram.states.members.get('states');
+    });
+
+    describe("when the user tries to drag a state", function() {
+      beforeEach(function() {
+        diagram.render();
+
+        $('.bootbox')
+          .modal('hide')
+          .remove();
+
+        $('.item').css({
+          width: '100px',
+          height: '100px',
+          margin: '5px'
+        });
+      });
+
+      it("should allow the state to be sorted if it isn't connected",
+      function() {
+        assert.deepEqual(
+          states.keys(),
+          ['state1','state2','state3','state4']);
+
+
+        $('[data-uuid="state3"] .titlebar')
+          .simulate('mousedown')
+          .simulate('drag', {dx: 150});
+
+        assert.deepEqual(
+          states.keys(),
+          ['state1','state2','state4','state3']);
+      });
+
+      it("should not let the state be sorted if it is connected", function() {
+        assert.deepEqual(
+          states.keys(),
+          ['state1','state2','state3','state4']);
+
+        $('[data-uuid="state1"] .titlebar')
+          .simulate('mousedown')
+          .simulate('drag', {dx: 150});
+
+        assert.deepEqual(
+          states.keys(),
+          ['state1','state2','state3','state4']);
       });
     });
 
+
     describe(".reset", function() {
       it("should remove the old state", function(){
-        assert(collection.has('state3'));
-        collection.reset(collection.get('state3'), 'dummy');
-        assert(!collection.has('state3'));
+        assert(states.has('state3'));
+        states.reset(states.get('state3'), 'dummy');
+        assert(!states.has('state3'));
       });
 
       it("should add a new state at the same position as the old state",
       function(done){
-        var old = collection.get('state3');
+        var old = states.get('state3');
 
-        collection.on('add', function(id, state) {
+        states.on('add', function(id, state) {
           assert(state instanceof DummyStateView);
           assert.equal(state.model.get('ordinal'), 3);
           done();
         });
 
         old.model.set('ordinal', 3);
-        collection.reset(old, 'dummy');
+        states.reset(old, 'dummy');
       });
     });
   });
