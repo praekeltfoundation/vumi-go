@@ -78,7 +78,7 @@ class GoUserSessionAccessCheckerTestCase(TestCase, GoPersistenceMixin):
         checker = GoUserSessionAccessChecker(self.sm)
         session = {}
         self.sm.set_user_account_key(session, u"user-1")
-        yield  self.sm.save_session(u"session-1", session, 10)
+        yield self.sm.save_session(u"session-1", session, 10)
         creds = UsernamePassword(u"session_id_BAD", u"session-1")
         try:
             yield checker.requestAvatarId(creds)
