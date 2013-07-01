@@ -1,7 +1,6 @@
 {% extends "app.html" %}
 {% load url from future %}
 
-
 {% block content_extraclass %}conversations{% endblock %}
 
 {% block content_title %}{{ conversation.name }} messages{% endblock %}
@@ -44,6 +43,7 @@
         <div class="span9">
 
             {% include "base/includes/messages.html" %}
+
 
             <table class="table">
                 <thead>
