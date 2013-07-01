@@ -334,9 +334,12 @@
     },
 
     _ensureModel: function(obj) {
-      return obj instanceof Backbone.Model
-        ? obj
-        : new this.models.model(obj || {});
+      if (obj instanceof Backbone.Model) return obj;
+
+      var modelType = this.models.model;
+      return modelType.build
+        ? modelType.build(obj)
+        : new modelType(obj || {});
     },
 
     _ensureCollection: function(obj) {
