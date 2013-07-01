@@ -35,8 +35,9 @@ class SubscriptionApplication(GoApplicationWorker):
         user_api = self.get_user_api(msg_mdh.get_account_key())
         conv = yield msg_mdh.get_conversation()
 
+        delivery_class = user_api.delivery_class_for_msg(message)
         contact = yield user_api.contact_store.contact_for_addr(
-            conv.delivery_class, message['from_addr'], create=True)
+            delivery_class, message['from_addr'], create=True)
         # We're guaranteed to have a contact here, because we create one if we
         # can't find an existing one.
 
