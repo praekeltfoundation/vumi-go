@@ -1,7 +1,8 @@
 describe("go.campaign.dialogue.states", function() {
   var testHelpers = go.testHelpers,
       oneElExists = testHelpers.oneElExists,
-      noElExists = testHelpers.noElExists;
+      noElExists = testHelpers.noElExists,
+      unregisterModels = testHelpers.unregisterModels;
 
   var dialogue = go.campaign.dialogue,
       states = go.campaign.dialogue.states;
@@ -128,8 +129,11 @@ describe("go.campaign.dialogue.states", function() {
     });
 
     describe("when the the state's '.type' is changed", function() {
+      var i;
+
       beforeEach(function() {
-        sinon.stub(uuid, 'v4', function() { return 'new-state'; });
+        i = 0;
+        sinon.stub(uuid, 'v4', function() { return i++ || 'new-state'; });
       });
 
       afterEach(function() {
@@ -167,7 +171,7 @@ describe("go.campaign.dialogue.states", function() {
           ordinal: 3
         });
 
-        state.model.set('name', 'New Dummy');
+        state.$('.name').val('New Dummy');
         editMode.$('.save').click();
 
         assert.deepEqual(state.model.toJSON(), {

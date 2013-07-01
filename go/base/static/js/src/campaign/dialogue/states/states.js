@@ -126,13 +126,7 @@
 
     cancel: function() {
       var model = this.state.model;
-
-      if (this.modelBackup) {
-        model.clear();
-        model.set(this.modelBackup);
-      }
-
-      this.state.preview();
+      if (this.modelBackup) { model.set(this.modelBackup); }
       return this;
     },
 
@@ -261,6 +255,21 @@
       return _({mode: 'preview'}).defaults(opts);
     },
 
+    initialize: function(options) {
+      DialogueStateCollection.__super__.initialize.call(this, options);
+
+      this.grid = new go.components.grid.GridView({
+        items: this,
+        sortableOptions: {
+          handle: '.state .titlebar',
+          placeholder: 'placeholder',
+          sort: function() { jsPlumb.repaintEverything(); }
+        }
+      });
+
+      this.grid.on('render', function() { jsPlumb.repaintEverything(); });
+    },
+
     // Removes a state and creates a new state of a different type in the same
     // position as the old state
     reset: function(state, type) {
@@ -277,6 +286,11 @@
       });
 
       return this;
+    },
+
+    render: function() {
+      this.view.$el.append(this.grid.$el);
+      this.grid.render();
     }
   });
 

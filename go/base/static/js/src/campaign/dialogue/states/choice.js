@@ -14,6 +14,7 @@
       FollowingEndpointView = plumbing.endpoints.FollowingEndpointView;
 
   var ChoiceEndpointView = FollowingEndpointView.extend({
+    className: 'choice endpoint',
     side: 'right',
     isTarget: false,
     target: function() {
@@ -59,7 +60,10 @@
 
     onActivate: function() {
       var choices = this.state.endpoints.members.get('choice_endpoints');
-      if (!choices.size()) { this.state.newChoice(); }
+      if (!choices.size()) {
+        this.newChoice();
+        this.state.render();
+      }
     },
 
     onNewChoice: function(e) {
