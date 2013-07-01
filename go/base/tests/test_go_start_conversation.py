@@ -89,7 +89,7 @@ class GoStartConversationTestCase(DjangoGoApplicationTestCase):
         sender = DummyMessageSender()
         SyncMessageSender.return_value = sender
         conversation = self.get_conversation()
-        conversation.start()
+        conversation.old_start()
 
         # Set the status manually, because it's in `starting', not `running'
         conversation.set_status_started()

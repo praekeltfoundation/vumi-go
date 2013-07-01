@@ -305,7 +305,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         rt = yield self.user_api.get_routing_table()
         self.assertEqual(len(rt), 0)
         yield self.user_api.acquire_specific_tag((u'pool', u'tag1'))
-        yield self.start_conversation(
+        yield self.start_conversation_old_style(
             conv, no_batch_tag=True, acquire_tag=False)
         rt = yield self.user_api.get_routing_table()
         self.assertEqual(len(rt), 1)

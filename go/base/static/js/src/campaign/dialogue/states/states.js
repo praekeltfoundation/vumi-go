@@ -135,13 +135,7 @@
 
     cancel: function() {
       var model = this.state.model;
-
-      if (this.modelBackup) {
-        model.clear();
-        model.set(this.modelBackup);
-      }
-
-      this.state.preview();
+      if (this.modelBackup) { model.set(this.modelBackup); }
       return this;
     },
 
@@ -310,9 +304,6 @@
         // http://bugs.jqueryui.com/ticket/6954
         this.grid.$el.mouseup();
         this.grid.render();
-
-        // TODO replace with something nicer
-        bootbox.alert('Messages with connections cannot be moved');
       }
     },
 

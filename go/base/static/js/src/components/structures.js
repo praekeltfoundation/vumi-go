@@ -339,12 +339,12 @@
     _ensureModel: function(obj) {
       if (obj instanceof Backbone.Model) { return obj; }
 
-      var attrs = _(obj || {}).defaults(_(this).result('modelDefaults')),
-          modelType = this.models.model;
+      var modelType = this.models.model,
+          attrs = _(obj || {}).defaults(_(this).result('modelDefaults'));
 
       return modelType.build
         ? modelType.build(attrs)
-        : new modelType(attrs || {});
+        : new modelType(attrs);
     },
 
     _ensureCollection: function(obj) {

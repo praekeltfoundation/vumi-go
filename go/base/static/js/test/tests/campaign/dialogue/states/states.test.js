@@ -209,7 +209,7 @@ describe("go.campaign.dialogue.states", function() {
           ordinal: 3
         });
 
-        state.model.set('name', 'New Dummy');
+        state.$('.name').val('New Dummy');
         editMode.$('.save').click();
 
         assert.deepEqual(state.model.toJSON(), {
@@ -418,18 +418,13 @@ describe("go.campaign.dialogue.states", function() {
           states.keys(),
           ['state1','state2','state3','state4']);
 
-        $('[data-uuid="state1"] .titlebar').simulate('drag', {dx: 150});
+        $('[data-uuid="state1"] .titlebar')
+          .simulate('mousedown')
+          .simulate('drag', {dx: 150});
 
         assert.deepEqual(
           states.keys(),
           ['state1','state2','state3','state4']);
-      });
-
-      it("should notify the user if they try move a connected state",
-      function() {
-        assert(noElExists('.modal'));
-        $('[data-uuid="state1"] .titlebar').simulate('drag', {dx: 150});
-        assert(oneElExists('.modal'));
       });
     });
 
