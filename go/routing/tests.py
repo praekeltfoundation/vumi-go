@@ -8,6 +8,8 @@ from go.routing import views
 
 
 class RoutingScreenTestCase(DjangoGoApplicationTestCase):
+    # Most of the functionality of this view lives in JS, so we just test that
+    # we're correctly injecting initial state into the template.
 
     def setUp(self):
         # Monkey patch _get_routing_table
@@ -90,6 +92,9 @@ class RoutingScreenTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(
             self.routing_table_api_response, json.loads(model_data))
         self.assertContains(response, model_data)
+        self.assertContains(response, reverse('channels:new_channel'))
+        self.assertContains(
+            response, reverse('conversations:new_conversation'))
 
     def test_non_empty_routing(self):
         tag = (u'pool', u'tag')
