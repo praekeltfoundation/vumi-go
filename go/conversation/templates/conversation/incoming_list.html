@@ -3,33 +3,36 @@
 
 {% block content_extraclass %}conversations{% endblock %}
 
-{% block content_title %}{{ conversation.name }} messages{% endblock %}
+{% block content_title %}Messages from {{ inbound_uniques_count }} unique people{% endblock %}
 
-
-
-{% block content_actions_left %}
+{% block content_breadcrumbs %}
+    <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
+        <input type="text" name="q" size="40" placeholder="Search ..." value="{{query|default:""}}" class="input-medium search-query">
+            <input type="hidden" name="direction" value="{{message_direction}}"/>
+            <button type="submit" class="btn">Search</button>
+    </form>
 {% endblock %}
 
 {% block content_actions_right %}
     <div class="pull-left">
-        <button class="btn">Download .csv</button>
+        <span class="table-form-view-buttons">
+            <!-- TODO: 
+            <button class="btn" disabled="disabled">Delete</button>
+            -->
+        </span>
 
-    </div>
-    <div class="table-form-view-buttons pull-left">
-        &nbsp;
-        With message:
-        <button class="btn" disabled="disabled">Delete</button>
+        &nbsp; With message:
+        <!-- These exist in the previous template, but not the new design.
+        <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=inbound">Download Received Stats</a>
+        <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=outbound">Download Sent Stats</a>
+        -->
+        <button class="btn" data-toggle="modal" href="#expMessagesFrm">Export</button>
     </div>
     
-
-    <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
-        <input type="text" class="search-query" placeholder="Search" name="{{ search_form.query.name }}" value="{{ search_form.query.value|default:"" }}">
-        <button type="submit" class="btn" id="search-filter-btn">Search</button>
-    </form>
 {% endblock %}
 
 {% block content_main %}
-<form class="table-form-view" method="post" action="">
+
     <div class="row-fluid">
         <div class="span3 sidebar">
 
@@ -44,57 +47,59 @@
 
             {% include "base/includes/messages.html" %}
 
+            <form class="table-form-view" method="post" action="">
+                <p>
+                    Averaging {{conversation.get_inbound_throughput}} messages
+                    per minute inbound and {{conversation.get_outbound_throughput}} messages
+                    per minute outbound.
+                </p>
 
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th><input type="checkbox"></th>
-                        <th>Contact</th>
-                        <th>Messages Per Thread</th>
-                        <th>Messages</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {# TODO the message key here is fake. #}
-                    {% for message in message_list %}
-                    <tr data-url="{% url 'conversations:incoming_detail' conversation.key 1 %}">
-                        <td><input type="checkbox" value="{{ message.key }}"></td>
-                        <td>
-                            <a href="{% url 'conversations:incoming_detail' conversation.key 1 %}">
-                                {{ message.contact }}
-                            </a>
-                        </td>
-                        <td>{{ message.threads }}</td>
-                        <td>{{ message.messages }}</td>
-                        <td>{{ message.date }}</td>
-                    </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="5">
-                            {% if query %}
-                                No contacts match <strong>{{ query }}</strong>
-                            {% else %}
-                                No messages
-                            {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    {% if paginator.num_pages > 1 %}
-                    <tr colspan="5">
-                        {% include "base/includes/pagination.html" %}
-                    </tr>
+                <ul class="nav nav-tabs">
+                    <li {% ifequal message_direction 'inbound' %}class="active"{% endifequal %}>
+                        <a href="?direction=inbound">
+                            {% ifequal message_direction 'inbound' %}<strong>{% endifequal %}
+                            {{inbound_message_paginator.count}} Received
+                            {% ifequal message_direction 'inbound' %}</strong>{% endifequal %}
+                        </a>
+                    </li>
+                    <li {% ifequal message_direction 'outbound' %}class="active"{% endifequal %}>
+                        <a href="?direction=outbound">
+                            {% ifequal message_direction 'outbound' %}<strong>{% endifequal %}
+                            {{outbound_message_paginator.count}} Sent
+                            {% ifequal message_direction 'outbound' %}</strong>{% endifequal %}
+                        </a>
+                    </li>
+                </ul>
+                <div class="tab-content" id="message-page">
+                    {% if message_page.paginator.num_pages %}
+                        {% include "conversation/includes/message-list.html" %}
+                    {% else %}
+                        {% include "conversation/includes/message-load-results.html" %}
                     {% endif %}
-                </tbody>
-            </table>
+                </div>
+            </form>
         </div>
     </div>
-</form>
 {% endblock %}
 
-{% block ondomready %}
-    var tableFormView = new go.components.tables.TableFormView({
-        el: '.table-form-view',
-        actions: '.table-form-view-buttons button',
-    });
+{% block modals %}
+<div class="modal hide fade" id="expMessagesFrm">
+    <div class="modal-header">
+        <a class="close" data-dismiss="modal">×</a>
+        <h3>Schedule CSV Export of Messages</h3>
+    </div>
+    <form method="post" action="" class="form-horizontal">
+        {% csrf_token %}
+        <div class="modal-body">
+            <p><span class="help-block">
+              The file is potentially quite large and as a result the export 
+              will be done in the background. When completed the results will 
+              be sent to you as a CSV file attached to an email.
+            </span><br/></p>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" name="_export_conversation_messages" class="btn btn-primary" data-loading-text="uploading...">Schedule Export</button>
+        </div>
+    </form>
+</div><!--/expContactFrm-->
 {% endblock %}

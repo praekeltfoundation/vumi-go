@@ -145,23 +145,18 @@ def incoming_list(request, conversation_key):
     :param str query:
         The query string to search messages for in the batch's inbound
         messages.
-    """
-    
+    """   
     conversation = conversation_or_404(request.user_api, conversation_key)
 
-    # query, pagination.
-    direction = None
-    page = None
+    direction = request.GET.get('direction', 'inbound')
+    page = request.GET.get('p', 1)
     batch_id = None
-    query = request.POST.get('q', None)
+    query = request.GET.get('q', None)
     token = None
    
-
     batch_id = batch_id or conversation.get_latest_batch_key()
-    direction = 'outbound' if direction == 'outbound' else 'inbound'
 
     # Paginator starts counting at 1 so 0 would also be invalid
-    page = page or 1
     inbound_message_paginator = Paginator(
         PagedMessageCache(conversation.count_replies(),
             lambda start, stop: conversation.received_messages(
@@ -176,7 +171,7 @@ def incoming_list(request, conversation_key):
         'conversation': conversation,
         'inbound_message_paginator': inbound_message_paginator,
         'outbound_message_paginator': outbound_message_paginator,
-        '4': conversation.count_inbound_uniques(),
+        'inbound_uniques_count': conversation.count_inbound_uniques(),
         'outbound_uniques_count': conversation.count_outbound_uniques(),
         'message_direction': direction,
     }
