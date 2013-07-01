@@ -244,10 +244,22 @@ button {
 .dialogue #diagram .grid.container .row {
   margin: 0;
 }
-.dialogue #diagram .grid.container .row .item {
+.dialogue #diagram .grid.container .item {
   width: 220px;
   margin: 30px 40px;
   padding: 0;
+}
+.dialogue #diagram .grid.container .placeholder {
+  background: #2f3436;
+  width: 8px;
+  height: 200px;
+  float: left;
+  -webkit-border-radius: 10px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 10px;
+  -moz-background-clip: padding;
+  border-radius: 10px;
+  background-clip: padding-box;
 }
 .dialogue #diagram .state {
   padding: 6px;
