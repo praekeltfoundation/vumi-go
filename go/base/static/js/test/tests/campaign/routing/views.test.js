@@ -5,6 +5,9 @@ describe("go.campaign.routing (views)", function() {
       tearDown = routing.testHelpers.tearDown,
       newRoutingDiagram = routing.testHelpers.newRoutingDiagram;
 
+  var plumbing = go.components.plumbing,
+      noConnections = plumbing.testHelpers.noConnections;
+
   var testHelpers = go.testHelpers,
       noElExists = testHelpers.noElExists,
       oneElExists = testHelpers.oneElExists;
@@ -178,14 +181,6 @@ describe("go.campaign.routing (views)", function() {
 
   describe(".RoutingDiagramView", function() {
     describe("on 'error:unsupported' connection events", function() {
-      var connectionCount = function(a, b) {
-        return jsPlumb.getConnections({source: a.$el, target: b.$el}).length;
-      };
-
-      var noConnections = function(a, b) {
-        return connectionCount(a, b) === 0;
-      };
-
       beforeEach(function() {
         diagram.render();
       });
