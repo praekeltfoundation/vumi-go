@@ -1,7 +1,15 @@
 {% extends "wizard_views/wizard_base.html" %}
 
+{% block content_extraclass %}{{ block.super }} dialogue{% endblock %}
+
+{% block content_actions_left %}
+    <button class="btn btn-primary" data-action='new-state'>
+        Create new message
+    </button>
+{% endblock %}
+
 {% block content_main %}
-<div class="dialogue diagram"></div>
+<div id="diagram"></div>
 {% endblock %}
 
 {% block modals %}
@@ -35,18 +43,23 @@
   });
 
   _(jsPlumb.Defaults.EndpointStyle).extend({
-    radius: 4,
-    fillStyle: '#2f3436'
+    radius: 8,
+    fillStyle: '#0bcac3'
   });
 
   _(jsPlumb.Defaults.PaintStyle).extend({
     lineWidth: 4,
-    strokeStyle: '#2f3436'
+    strokeStyle: '#0bcac3'
   });
 
   var diagram = new dialogue.diagram.DialogueDiagramView({
-    el: '.dialogue.diagram',
+    el: '.dialogue #diagram',
     model: new dialogue.models.DialogueModel({{ model_data|safe }})
+  });
+
+  $('.actions [data-action="new-state"]').click(function(e) {
+      e.preventDefault();
+      diagram.newState();
   });
 
   diagram.render();

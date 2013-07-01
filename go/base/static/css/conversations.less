@@ -1,12 +1,36 @@
-.dialogue.diagram {
-  .item {
-    margin-left: 0;
-    padding: 0;
-    color: #2f3436;
+.dialogue {
+  .actions {
+    .sidebar {
+      background: #d9d8d3;
+    }
+  }
+
+  #diagram {
+    ._jsPlumb_endpoint, ._jsPlumb_connector {
+      z-index:200;
+    }
+
+    .grid.container {
+      text-align: center;
+      margin: 0 auto;
+      width: 1280px;
+
+      .row {
+        margin: 0;
+
+        .item {
+          width: 220px;
+          margin: 30px 40px;
+          padding: 0;
+        }
+      }
+    }
 
     .state {
       padding: 6px;
       position: relative;
+      color: #2f3436;
+      .user-select(none);
 
       .titlebar {
         padding: 8px 6px;
@@ -25,6 +49,10 @@
         .remove {
           color: #eee;
         }
+      }
+
+      .titlebar:hover {
+        cursor: move;
       }
 
       .edit.mode {
@@ -77,6 +105,10 @@
       width: 14px;
       height: 14px;
       .border-radius(5px);
+    }
+
+    .endpoint:hover {
+      cursor: pointer;
     }
 
     .choice.state {
