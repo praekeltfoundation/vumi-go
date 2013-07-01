@@ -160,8 +160,6 @@ def contacts(request, conversation_key):
                     key=lambda group: group.created_at,
                     reverse=True)
 
-
-    contact_store = request.user_api.contact_store
     selected_groups = list(group.key for group in conversation.get_groups())
 
     for group in groups:
