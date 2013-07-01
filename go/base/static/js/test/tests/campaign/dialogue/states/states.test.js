@@ -379,7 +379,9 @@ describe("go.campaign.dialogue.states", function() {
           states.keys(),
           ['state1','state2','state3','state4']);
 
-        $('[data-uuid="state1"] .titlebar').simulate('drag', {dx: 150});
+        $('[data-uuid="state1"] .titlebar')
+          .simulate('mousedown')
+          .simulate('drag', {dx: 150});
 
         assert.deepEqual(
           states.keys(),
