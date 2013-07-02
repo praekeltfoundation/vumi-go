@@ -66,11 +66,6 @@ def create(request, conversation_key=None):
             rt_helper.add_oldstyle_conversation(conversation, got_tag)
             user_account.save()
 
-            action = request.POST.get('action')
-            if action == 'draft':
-                # save and go back to list.
-                return redirect('conversations:index')
-
             # TODO save and go to next step.
             return redirect(
                 'conversations:conversation',
