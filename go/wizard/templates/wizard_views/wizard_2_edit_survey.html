@@ -42,18 +42,6 @@
       $('#initiateModal').modal('show');
   });
 
-  _(jsPlumb.Defaults.EndpointStyle).extend({
-    radius: 8,
-    fillStyle: '#0bcac3'
-  });
-
-  _(jsPlumb.Defaults.PaintStyle).extend({
-    lineWidth: 4,
-    strokeStyle: '#0bcac3'
-  });
-
-  jsPlumb.Defaults.Connector = ['Flowchart', {stub: 5}];
-
   var diagram = new dialogue.diagram.DialogueDiagramView({
     el: '.dialogue #diagram',
     model: new dialogue.models.DialogueModel({{ model_data|safe }})
@@ -64,5 +52,6 @@
       diagram.newState();
   });
 
+  dialogue.style.initialize();
   diagram.render();
 {% endblock %}
