@@ -13,19 +13,29 @@
         <a href="{% conversation_screen conversation 'edit' %}" class="btn btn-primary">Edit</a>
     {% endif %}
     {% if conversation.stopped %}
-        <form action="{% conversation_screen conversation 'start' %}" class="form-horizontal" method="post">
-            {% csrf_token %}
-            <input type="submit" class="btn btn-primary" name="start" value="Start">
-        </form>
-        <form action="{% conversation_screen conversation 'archive' %}" class="form-horizontal" method="post">
-            {% csrf_token %}
-            <input type="submit" class="btn btn-primary" name="archive" value="Archive">
-        </form>
+
+
+        <a href="{% conversation_screen conversation 'start' %}" 
+            class="btn btn-primary action" 
+            data-name="start"
+            data-value="Start">
+            Start
+        </a>
+
+        <a href="{% conversation_screen conversation 'archive' %}" 
+            class="btn btn-primary action" 
+            data-name="archive"
+            data-value="Archive">
+            Archive
+        </a>
+        
     {% elif conversation.running %}
-        <form action="{% conversation_screen conversation 'stop' %}" class="form-horizontal" method="post">
-            {% csrf_token %}
-            <input type="submit" class="btn btn-primary" name="stop" value="Stop">
-        </form>
+        <a href="{% conversation_screen conversation 'stop' %}" 
+            class="btn btn-primary action" 
+            data-name="stop"
+            data-value="Stop">
+            Stop
+        </a>
     {% else %}
         {# TODO: Figure out what to put here. #}
         <a href="{% conversation_screen conversation %}" class="btn btn-primary">???</a>
@@ -111,5 +121,22 @@
 
 
 {% block ondomready %}
-    {{ block.super }}
+
+    
+    $('.content .actions .right .action').on('click', function() {
+
+        // confirm if the user wants to perform the action,
+        var $button = $(this);
+        bootbox.confirm('Are you sure you want to ' + $button.attr('data-value') + ' this conversation?', function(submit) {
+
+            $form = $('<form method="post"></form>')
+                .attr('action', $button.attr('href'));
+            $form.append("{% csrf_token %}");
+            $form.append('<input type="hidden" name="' + $button.attr('data-name') + '" value="' + $button.attr('data-value') + '">');
+            $form.submit();
+        });
+
+        return false;
+    });
+
 {% endblock %}
