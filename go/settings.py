@@ -158,6 +158,7 @@ INSTALLED_APPS = (
     'go.wizard',
     'go.contacts',
     'go.account',
+    'go.apps.multi_surveys',
 
 
     'vxpolls.djdashboard',
