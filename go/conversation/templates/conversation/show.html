@@ -50,7 +50,7 @@
             </p>
             <p>
                 <h6>TYPE</h6>
-                {{ conversation.type }}<br>
+                {{ conversation.conversation_type }}<br>
             </p>
 
             <p>
@@ -58,7 +58,6 @@
                 <!-- TODO:  update the routing table metadata helpers to
                             be able to answer questions like this.
                 -->
-                USSD<br>
             </p>
         </div>
 
@@ -85,12 +84,9 @@
             </h4>
 
             <p class="message">
-
                 {{ conversation.description }}
             </p>
         </div>
-
-
         
         
         <div class="sub-contacts">
@@ -116,5 +112,4 @@
 
 {% block ondomready %}
     {{ block.super }}
-    // highlight the breadcrumbs.
 {% endblock %}
