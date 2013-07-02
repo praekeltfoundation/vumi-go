@@ -67,7 +67,7 @@
 
             <div class="span4">
                 <div class="box">
-                    {{ channel_form.keyword }}
+                    {# TODO: The channel form doesn't have a keyword? #}
                 </div>
             </div>
         </fieldset>
@@ -116,7 +116,7 @@
     {{ block.super }}
 
     
-    
+
 
     $('input[name=channel_kind]').on('change', function() {
         $('.configuration').show();
