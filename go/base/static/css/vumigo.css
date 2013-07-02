@@ -241,7 +241,7 @@ button {
   opacity: 0.5;
 }
 .dialogue #diagram ._jsPlumb_endpoint svg circle:hover {
-  cursor: pointer;
+  cursor: move;
 }
 .dialogue #diagram ._jsPlumb_dragging {
   z-index: 3;
@@ -353,6 +353,9 @@ button {
   -moz-background-clip: padding;
   border-radius: 5px;
   background-clip: padding-box;
+}
+.dialogue #diagram .endpoint:hover {
+  cursor: pointer;
 }
 .dialogue #diagram .choice.state .edit.mode .choices input {
   width: 60%;
