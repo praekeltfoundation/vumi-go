@@ -1,5 +1,5 @@
-// go.campaign.dialogue.states.dummy
-// =================================
+// go.campaign.dialogue.style
+// ==========================
 // Styling for the dialogue screen that cannot be done through css
 
 (function(exports) {
