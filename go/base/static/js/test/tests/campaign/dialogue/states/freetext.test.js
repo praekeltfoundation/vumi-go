@@ -27,63 +27,21 @@ describe("go.campaign.dialogue.states.freetext", function() {
       state.edit();
     });
 
-    describe(".save", function() {
-      it("should update the freetext state's model", function() {
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state2',
-          name: 'Message 2',
-          type: 'freetext',
-          text: 'What is your name?',
-          ordinal: 1,
-          entry_endpoint: {uuid: 'endpoint3'},
-          exit_endpoint: {uuid: 'endpoint4'}
-        });
+    describe("when '.text' has changed", function() {
+      it("should update the 'text' attribute of the state's model",
+      function() {
+        assert.equal(
+          state.model.get('text'),
+          'What is your name?');
 
-        editMode.$('.text').text('What is your parrot doing?');
-        editMode.save();
+        editMode
+          .$('.text')
+          .val('What is your parrot doing?')
+          .change();
 
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state2',
-          name: 'Message 2',
-          type: 'freetext',
-          ordinal: 1,
-          text: 'What is your parrot doing?',
-          entry_endpoint: {uuid: 'endpoint3'},
-          exit_endpoint: {uuid: 'endpoint4'}
-        });
-      });
-    });
-
-    describe("when the '.save' button is clicked", function() {
-      it("should update the freetext state's model", function() {
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state2',
-          name: 'Message 2',
-          type: 'freetext',
-          text: 'What is your name?',
-          ordinal: 1,
-          entry_endpoint: {uuid: 'endpoint3'},
-          exit_endpoint: {uuid: 'endpoint4'}
-        });
-
-        editMode.$('.text').text('What is your parrot doing?');
-        editMode.$('.save').click();
-
-        assert.deepEqual(state.model.toJSON(), {
-          uuid: 'state2',
-          name: 'Message 2',
-          type: 'freetext',
-          ordinal: 1,
-          text: 'What is your parrot doing?',
-          entry_endpoint: {uuid: 'endpoint3'},
-          exit_endpoint: {uuid: 'endpoint4'}
-        });
-      });
-
-      it("should switch back to the preview view", function() {
-        assert.equal(state.modeName, 'edit');
-        editMode.$('.save').click();
-        assert.equal(state.modeName, 'preview');
+        assert.equal(
+          state.model.get('text'),
+          'What is your parrot doing?');
       });
     });
   });
