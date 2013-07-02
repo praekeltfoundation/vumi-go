@@ -49,6 +49,17 @@ def restart_all(group=None):
         supervisorctl("restart %s" % p_name)
 
 
+def deploy_world(restart=True):
+    """
+    Update Vumi, Vumi Go and the node.js modules and then run restart_all.
+    """
+    deploy_vumi()
+    deploy_go()
+    update_nodejs_modules()
+    if restart:
+        restart_all()
+
+
 def update_nodejs_modules():
     """
     Update the Node.js modules that the JS sandbox depends on.
