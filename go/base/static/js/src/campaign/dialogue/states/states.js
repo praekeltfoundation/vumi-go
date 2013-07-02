@@ -84,9 +84,10 @@
     tailTemplate: 'JST.campaign_dialogue_states_modes_edit_tail',
 
     events: {
-      'click .save': 'onSave',
+      'click .ok': 'onOk',
       'click .cancel': 'onCancel',
-      'change .type': 'onTypeChange'
+      'change .type': 'onTypeChange',
+      'change .name': 'onNameChange'
     },
 
     initialize: function(options) {
@@ -96,21 +97,8 @@
       this.on('activate', this.backupModel, this);
     },
 
-    // Keep a backup to restore the model for when the user cancels the edit
-    backupModel: function() {
-      this.modelBackup = this.state.model.toJSON();
-      return this;
-    },
-
-    _save: function() {
-      var name = this.$('.titlebar .name').val();
-      this.state.model.set('name', name, {silent: true});
-      this.save();
-    },
-
-    onSave: function(e) {
+    onOk: function(e) {
       e.preventDefault();
-      this._save();
       this.state.preview();
     },
 
@@ -124,14 +112,23 @@
       var $option = $(e.target);
 
       bootbox.confirm(
-        "Changing the message type will break the state's connections.",
-        function(submit) {
+        "Changing the message's type will break its connections and reset " +
+        "its content.", function(submit) {
           if (submit) { this.state.reset($option.val()); }
           else { this.$('.type').val(this.state.typeName); }
         }.bind(this));
     },
 
-    save: function() { return this; },
+    onNameChange: function(e) {
+      this.state.model.set('name', $(e.target).val(), {silent: true});
+      return this;
+    },
+
+    // Keep a backup to restore the model for when the user cancels the edit
+    backupModel: function() {
+      this.modelBackup = this.state.model.toJSON();
+      return this;
+    },
 
     cancel: function() {
       var model = this.state.model;

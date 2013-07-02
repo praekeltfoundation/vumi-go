@@ -69,7 +69,7 @@ class BulkMessageApplication(GoApplicationWorker):
     @inlineCallbacks
     def process_command_bulk_send(self, user_account_key, conversation_key,
                                   batch_id, msg_options, content, dedupe,
-                                  **extra_params):
+                                  delivery_class, **extra_params):
 
         conv = yield self.get_conversation(user_account_key, conversation_key)
         if conv is None:
@@ -79,9 +79,9 @@ class BulkMessageApplication(GoApplicationWorker):
 
         to_addresses = []
         for contacts_batch in (
-                yield conv.get_opted_in_contact_bunches(conv.delivery_class)):
+                yield conv.get_opted_in_contact_bunches(delivery_class)):
             for contact in (yield contacts_batch):
-                to_addresses.append(contact.addr_for(conv.delivery_class))
+                to_addresses.append(contact.addr_for(delivery_class))
         if dedupe:
             to_addresses = set(to_addresses)
 

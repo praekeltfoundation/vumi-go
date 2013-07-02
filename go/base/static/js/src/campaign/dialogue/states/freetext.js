@@ -13,8 +13,12 @@
   var FreeTextStateEditView = DialogueStateEditView.extend({
     bodyTemplate: 'JST.campaign_dialogue_states_freetext_edit',
 
-    save: function() {
-      this.state.model.set('text', this.$('.text').val(), {silent: true});
+    events: _({
+      'change .text': 'onTextChange'
+    }).defaults(DialogueStateEditView.prototype.events),
+
+    onTextChange: function(e) {
+      this.state.model.set('text', $(e.target).val(), {silent: true});
       return this;
     }
   });

@@ -166,6 +166,7 @@ class TestSurveyApplication(AppWorkerTestCase):
             batch_id=batch_id,
             msg_options={},
             is_client_initiated=False,
+            delivery_class=conversation.delivery_class,
         )
 
     @inlineCallbacks

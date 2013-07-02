@@ -261,6 +261,7 @@ class ConversationWrapper(object):
                 batch_id=batch_id,
                 msg_options=msg_options,
                 is_client_initiated=is_client_initiated,
+                delivery_class=self.c.delivery_class,
                 **extra_params)
 
     @Manager.calls_manager
