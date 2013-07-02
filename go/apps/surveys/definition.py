@@ -9,7 +9,8 @@ class SendSurveyAction(ConversationAction):
     def perform_action(self, action_data):
         return self.send_command(
             'send_survey', batch_id=self._conv.get_latest_batch_key(),
-            msg_options={}, is_client_initiated=False)
+            msg_options={}, is_client_initiated=False,
+            delivery_class=self._conv.delivery_class)
 
 
 class DownloadUserDataAction(ConversationAction):
