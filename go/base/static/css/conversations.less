@@ -6,6 +6,8 @@
   }
 
   #diagram {
+    @state-padding: 6px;
+
     * {
       z-index: 2;
     }
@@ -60,17 +62,22 @@
     }
 
     .state {
-      padding: 6px;
+      padding: @state-padding;
       position: relative;
       color: #2f3436;
       .user-select(none);
 
       .titlebar {
+        font-size: 16px;
         padding: 8px 6px;
+
+        // Set the margin to the reverse of the state's padding so the titlebar
+        // actually looks like a titlebar
+        margin: -@state-padding;
+
         margin-bottom: 10px;
 
-        background: #2f3436;
-        color: #eee;
+        background: #b0b0b0;
         .border-radius(5px);
 
         .name {
@@ -134,7 +141,7 @@
 
     .endpoint {
       z-index: 4;
-      background: #2f3436;
+      background: #b0b0b0;
       width: 14px;
       height: 14px;
       .border-radius(5px);

@@ -289,10 +289,11 @@ button {
   -ms-user-select: none;
 }
 .dialogue #diagram .state .titlebar {
+  font-size: 16px;
   padding: 8px 6px;
+  margin: -6px;
   margin-bottom: 10px;
-  background: #2f3436;
-  color: #eee;
+  background: #b0b0b0;
   -webkit-border-radius: 5px;
   -webkit-background-clip: padding-box;
   -moz-border-radius: 5px;
@@ -344,7 +345,7 @@ button {
 }
 .dialogue #diagram .endpoint {
   z-index: 4;
-  background: #2f3436;
+  background: #b0b0b0;
   width: 14px;
   height: 14px;
   -webkit-border-radius: 5px;
