@@ -232,6 +232,9 @@ button {
 .dialogue .actions .sidebar {
   background: #d9d8d3;
 }
+.dialogue #diagram * {
+  z-index: 2;
+}
 .dialogue #diagram ._jsPlumb_connector {
   z-index: 1;
   opacity: 0.5;
@@ -250,9 +253,6 @@ button {
 .dialogue #diagram ._jsPlumb_hover {
   z-index: 3;
   opacity: 0.75;
-}
-.dialogue #diagram *:not(._jsPlumb_connector) {
-  z-index: 2;
 }
 .dialogue #diagram .grid.container {
   text-align: center;

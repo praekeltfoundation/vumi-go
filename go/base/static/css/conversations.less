@@ -6,6 +6,10 @@
   }
 
   #diagram {
+    * {
+      z-index: 2;
+    }
+
     ._jsPlumb_connector {
       z-index: 1;
       opacity: 0.5;
@@ -28,10 +32,6 @@
     ._jsPlumb_hover {
       z-index: 3;
       opacity: 0.75;
-    }
-
-    *:not([class='_jsPlumb_']) {
-      z-index: 2;
     }
 
     .grid.container {
