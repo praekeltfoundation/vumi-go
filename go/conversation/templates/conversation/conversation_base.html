@@ -5,11 +5,6 @@
 
 {% block content_extraclass %}campaigns{% endblock %}
 
-{% block content_breadcrumbs %}
-    {# TODO: Use bootstrap breadcrumbs #}
-    <a href="{% conversation_screen conversation %}">Details</a>
-{% endblock %}
-
 {% block content_actions_right %}
     <a href="{% url 'conversations:index' %}">Cancel</a>
     <button class="btn btn-primary" data-action="draft">Save draft</button>
@@ -24,14 +19,4 @@
         </div>
     </div>
     {% endif %}
-{% endblock %}
-
-{% block ondomready %}
-    $('.actions .right button').on('click', function(e) {
-        e.preventDefault();
-        var $form = $('form');
-        // append the action of the button, draft or save.
-        $form.prepend('<input type="hidden" name="action" value="' + $(this).attr('data-action') + '">');
-        $form.submit();
-    });    
 {% endblock %}

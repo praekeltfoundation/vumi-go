@@ -171,6 +171,13 @@ button {
   color: #fff;
   background: #b41c30;
 }
+.content .sidebar .nav-list .nav-list {
+  padding: 0;
+  margin: 0;
+}
+.content .sidebar .nav-list .nav-list li {
+  text-indent: 10px;
+}
 .content .sidebar .extra-actions {
   margin-bottom: 1em;
 }

@@ -26,7 +26,6 @@ def create(request, conversation_key=None):
     some kind of workflow.
 
     """
-
     wizard_form = Wizard1CreateForm()
     conversation_form = NewConversationForm()
     channel_form = NewChannelForm(request.user_api)
@@ -66,11 +65,6 @@ def create(request, conversation_key=None):
             rt_helper.add_oldstyle_conversation(conversation, got_tag)
             user_account.save()
 
-            action = request.POST.get('action')
-            if action == 'draft':
-                # save and go back to list.
-                return redirect('conversations:index')
-
             # TODO save and go to next step.
             return redirect(
                 'conversations:conversation',
@@ -83,7 +77,6 @@ def create(request, conversation_key=None):
         'wizard_form': wizard_form,
         'conversation_form': conversation_form,
         'channel_form': channel_form,
-        'conversation_key': conversation_key,
         'conversation': conversation,
     })
 
