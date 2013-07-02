@@ -32,7 +32,7 @@ def _get_routing_table(user_account_key, session_id):
 @login_required
 def routing(request):
     model_data = _get_routing_table(
-        request.user_api.user_account_key, request.COOKIES['sessionid'])
+        request.user_api.user_account_key, request.session.session_key)
 
     return render(request, 'routing.html', {
         'model_data': model_data,
