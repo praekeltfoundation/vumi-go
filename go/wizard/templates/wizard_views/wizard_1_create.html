@@ -13,15 +13,12 @@
     {{ conversation_form }}
 
 
-    <label>Channels</label>
-    <label for="id_channel_kind_0">
-        <input type="radio" id="id_channel_kind_0" value="new" name="channel_kind" checked>
-        Setup a new channel
-    </label>
-    <label for="id_channel_kind_1">
-        <input type="radio" id="id_channel_kind_1" value="existing" name="channel_kind">
-        Use a keyword to route messages over an existing channel
-    </label>
+    <div class="box">
+        <label for="id_{{ wizard_form.channel_kind.name }}">
+            {{ wizard_form.channel_kind.label }}
+        </label>
+        {{ wizard_form.channel_kind }}
+    </div>
 
     <div class="configuration">
 
@@ -67,7 +64,7 @@
 
             <div class="span4">
                 <div class="box">
-                    {# TODO: The channel form doesn't have a keyword? #}
+                    {{ wizard_form.keyword }}
                 </div>
             </div>
         </fieldset>

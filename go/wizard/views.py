@@ -7,7 +7,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 
 from go.wizard.forms import (
-    CampaignBulkMessageForm, CampaignSurveryInitiateForm)
+    Wizard1CreateForm, CampaignBulkMessageForm, CampaignSurveryInitiateForm)
 from go.conversation.forms import NewConversationForm
 from go.channel.forms import NewChannelForm
 from go.base.utils import conversation_or_404
@@ -26,7 +26,7 @@ def create(request, conversation_key=None):
     some kind of workflow.
 
     """
-
+    wizard_form = Wizard1CreateForm()
     conversation_form = NewConversationForm()
     channel_form = NewChannelForm(request.user_api)
 
@@ -74,6 +74,7 @@ def create(request, conversation_key=None):
                 posted_conv_form.errors, posted_chan_form.errors))
 
     return render(request, 'wizard_views/wizard_1_create.html', {
+        'wizard_form': wizard_form,
         'conversation_form': conversation_form,
         'channel_form': channel_form,
         'conversation': conversation,
