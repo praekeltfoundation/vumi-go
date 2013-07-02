@@ -20,13 +20,3 @@
     </div>
     {% endif %}
 {% endblock %}
-
-{% block ondomready %}
-    $('.actions .right button').on('click', function(e) {
-        e.preventDefault();
-        var $form = $('form');
-        // append the action of the button, draft or save.
-        $form.prepend('<input type="hidden" name="action" value="' + $(this).attr('data-action') + '">');
-        $form.submit();
-    });    
-{% endblock %}
