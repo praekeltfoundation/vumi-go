@@ -29,7 +29,7 @@ class Command(BaseCommand):
         self.sender.send_command(cmd)
 
     def handle_reconcile_cache(self, worker_name, command, account_key,
-        conversation_key):
+                               conversation_key):
 
         try:
             user = User.objects.get(userprofile__user_account=account_key)

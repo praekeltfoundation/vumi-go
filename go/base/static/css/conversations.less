@@ -1,0 +1,138 @@
+.dialogue {
+  .actions {
+    .sidebar {
+      background: #d9d8d3;
+    }
+  }
+
+  #diagram {
+    ._jsPlumb_endpoint, ._jsPlumb_connector {
+      z-index:200;
+    }
+
+    .grid.container {
+      text-align: center;
+      margin: 0 auto;
+      width: 1280px;
+
+      .row {
+        margin: 0;
+      }
+
+      .item {
+        width: 220px;
+        margin: 30px 40px;
+        padding: 0;
+      }
+
+      .placeholder {
+        background: #2f3436;
+        width: 8px;
+        height: 200px;
+        float: left;
+        .border-radius(10px);
+      }
+    }
+
+    .state {
+      padding: 6px;
+      position: relative;
+      color: #2f3436;
+      .user-select(none);
+
+      .titlebar {
+        padding: 8px 6px;
+        margin-bottom: 10px;
+
+        background: #2f3436;
+        color: #eee;
+        .border-radius(5px);
+
+        .name {
+          font-weight: bold;
+          margin-bottom: 0;
+          width: 60px;
+        }
+
+        .remove {
+          color: #eee;
+        }
+      }
+
+      .titlebar:hover {
+        cursor: move;
+      }
+
+      .edit.mode {
+        .actions {
+          background: inherit;
+        }
+      }
+
+      .preview.mode {
+        .edit-switch {
+          margin-left: 8px;
+        }
+
+        .text {
+          margin-left: 8px;
+        }
+      }
+
+      label, p {
+        color: #2f3436;
+      }
+
+      textarea {
+        max-width: 80%;
+      }
+
+      p {
+        text-align: left;
+      }
+
+      .close {
+        font-size: 16px;
+      }
+
+      .hint {
+        margin: 0;
+        text-align: center;
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .important {
+        color: #cc3333;
+      }
+    }
+
+    .endpoint {
+      background: #2f3436;
+      width: 14px;
+      height: 14px;
+      .border-radius(5px);
+    }
+
+    .endpoint:hover {
+      cursor: pointer;
+    }
+
+    .choice.state {
+      .edit.mode {
+        .choices {
+          input {
+            width: 60%;
+            margin-bottom: 0;
+          }
+        }
+      }
+
+      .preview.mode {
+        .choices {
+          text-align: left;
+        }
+      }
+    }
+  }
+}

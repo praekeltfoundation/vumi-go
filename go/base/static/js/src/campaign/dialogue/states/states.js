@@ -41,7 +41,7 @@
       this.state = options.state;
 
       this.$titlebar = $('<div><div>').addClass('titlebar');
-      this.$box = $('<div><div>').addClass('box');
+      this.$main = $('<div><div>').addClass('main');
     },
 
     destroy: function() {
@@ -60,11 +60,11 @@
 
       this.state.$el.append(this.$el);
       this.$el.append(this.$titlebar);
-      this.$el.append(this.$box);
+      this.$el.append(this.$main);
 
       this.$titlebar.html(maybeByName(this.titlebarTemplate)(data));
 
-      this.$box.html([
+      this.$main.html([
          maybeByName(this.headTemplate)(data),
          maybeByName(this.bodyTemplate)(data),
          maybeByName(this.tailTemplate)(data)
@@ -84,9 +84,10 @@
     tailTemplate: 'JST.campaign_dialogue_states_modes_edit_tail',
 
     events: {
-      'click .save': 'onSave',
+      'click .ok': 'onOk',
       'click .cancel': 'onCancel',
-      'change .type': 'onTypeChange'
+      'change .type': 'onTypeChange',
+      'change .name': 'onNameChange'
     },
 
     initialize: function(options) {
@@ -96,21 +97,8 @@
       this.on('activate', this.backupModel, this);
     },
 
-    // Keep a backup to restore the model for when the user cancels the edit
-    backupModel: function() {
-      this.modelBackup = this.state.model.toJSON();
-      return this;
-    },
-
-    _save: function() {
-      var name = this.$('.titlebar .name').val();
-      this.state.model.set('name', name, {silent: true});
-      this.save();
-    },
-
-    onSave: function(e) {
+    onOk: function(e) {
       e.preventDefault();
-      this._save();
       this.state.preview();
     },
 
@@ -131,7 +119,16 @@
         }.bind(this));
     },
 
-    save: function() { return this; },
+    onNameChange: function(e) {
+      this.state.model.set('name', $(e.target).val(), {silent: true});
+      return this;
+    },
+
+    // Keep a backup to restore the model for when the user cancels the edit
+    backupModel: function() {
+      this.modelBackup = this.state.model.toJSON();
+      return this;
+    },
 
     cancel: function() {
       var model = this.state.model;
@@ -167,7 +164,7 @@
   var DialogueStateView = StateView.extend({
     switchModeDefaults: {render: true, silent: false},
 
-    className: 'state span4',
+    className: function() { return 'state ' + this.typeName || ''; },
 
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
@@ -264,18 +261,32 @@
       return _({mode: 'preview'}).defaults(opts);
     },
 
-    initialize: function(options) {
-      DialogueStateCollection.__super__.initialize.call(this, options);
+    modelDefaults: function() {
+      return {
+        type: 'choice',
+        name: '',
+        ordinal: this.size()
+      };
+    },
 
-      this.grid = new go.components.grid.GridView({
+    gridOptions: function() {
+      return {
         items: this,
+        gridClass: 'boxes',
+        itemClass: 'box',
+        itemSpan: 3,
         sortableOptions: {
           handle: '.state .titlebar',
           placeholder: 'placeholder',
           start: this.onSortStart.bind(this)
         }
-      });
+      };
+    },
 
+    initialize: function(options) {
+      DialogueStateCollection.__super__.initialize.call(this, options);
+
+      this.grid = new go.components.grid.GridView(this.gridOptions());
       this.grid.on('render', function() { jsPlumb.repaintEverything(); });
     },
 
@@ -301,7 +312,6 @@
       this.add({
         mode: 'edit',
         model: {
-          uuid: uuid.v4(),
           type: type,
           name: state.model.get('name'),
           ordinal: state.model.get('ordinal')

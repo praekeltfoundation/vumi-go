@@ -19,9 +19,10 @@
 
     initialize: function(options) {
       this.item = options.item;
-      this.span = this.spanOfEl(this.item.$el) || options.span || this.span;
 
+      this.span = this.spanOfEl(this.item.$el) || options.span || this.span;
       this.$el.addClass('span' + this.span);
+      if (options.extraClass) { this.$el.addClass(options.extraClass); }
 
       var itemId = idOfView(this.item);
       this.uuid = 'item:' + itemId;
@@ -52,6 +53,9 @@
     className: 'row',
 
     initialize: function(options) {
+      options = options || {};
+      if (options.extraClass) { this.$el.addClass(options.extraClass); }
+
       this.spanSum = 0;
       this.items = [];
     },
@@ -84,6 +88,10 @@
     maxSpan: 12,
 
     initialize: function(options) {
+      this.rowClass = options.rowClass;
+      this.itemClass = options.itemClass;
+      this.itemSpan = options.itemSpan;
+
       this.rowItemType = options.rowItemType || this.rowItemType;
       this._ensureArray(options.items).forEach(this.addItem, this);
     },
@@ -94,11 +102,21 @@
         : obj;
     },
 
-    viewOptions: function() { return {id: 'row' + this.size()}; },
+    viewOptions: function() {
+      return {
+        id: 'row' + this.size(),
+        extraClass: this.rowClass
+      };
+    },
 
     addItem: function(item) {
-      var row = this.last() || this.add(),
-          rowItem = new this.rowItemType({item: item});
+      var row = this.last() || this.add();
+
+      var rowItem = new this.rowItemType({
+        item: item,
+        span: this.itemSpan,
+        extraClass: this.itemClass
+      });
 
       if (row.spanSum + rowItem.span > this.maxSpan) { row = this.add(); }
 
@@ -123,6 +141,12 @@
     initialize: function(options) {
       this.items = this._ensureViewCollection(options.items);
       this.sortableOptions = options.sortableOptions || this.sortableOptions;
+
+      if (options.gridClass) { this.$el.addClass(options.gridClass); }
+
+      this.rowClass = options.rowClass;
+      this.itemClass = options.itemClass;
+      this.itemSpan = options.itemSpan;
 
       this.rowType = options.rowType || this.rowType;
       this.rowItemType = options.rowItemType || this.rowItemType;
@@ -149,7 +173,10 @@
       this.rows = new this.rowCollectionType({
         items: this.items,
         type: this.rowType,
-        rowItemType: this.rowItemType
+        rowItemType: this.rowItemType,
+        rowClass: this.rowClass,
+        itemSpan: this.itemSpan,
+        itemClass: this.itemClass
       });
       return this;
     },

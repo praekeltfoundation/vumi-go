@@ -1,6 +1,6 @@
 # -*- test-case-name: go.apps.surveys.tests.test_vumi_app -*-
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 from vxpolls.example import PollApplication
 from vxpolls.manager import PollManager
 
@@ -107,7 +107,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
     @inlineCallbacks
     def process_command_send_survey(self, user_account_key, conversation_key,
                                     batch_id, msg_options, is_client_initiated,
-                                    **extra_params):
+                                    delivery_class, **extra_params):
 
         if is_client_initiated:
             log.debug('Conversation %r is client initiated, no need to notify '
@@ -121,9 +121,9 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             return
 
         for contacts in (yield conv.get_opted_in_contact_bunches(
-                conv.delivery_class)):
+                delivery_class)):
             for contact in (yield contacts):
-                to_addr = contact.addr_for(conv.delivery_class)
+                to_addr = contact.addr_for(delivery_class)
                 # Set some fake msg_options in case we didn't get real ones.
                 msg_options.setdefault('from_addr', None)
                 msg_options.setdefault('transport_name', None)

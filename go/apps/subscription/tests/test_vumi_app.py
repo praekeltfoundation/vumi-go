@@ -4,8 +4,6 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.middleware.tagger import TaggingMiddleware
-
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.subscription.vumi_app import SubscriptionApplication
 

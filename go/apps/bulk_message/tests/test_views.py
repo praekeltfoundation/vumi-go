@@ -258,6 +258,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.get_batches()[0].key, msg_options={},
+            delivery_class=conversation.delivery_class,
             content='I am ham, not spam.', dedupe=True))
 
     def test_action_bulk_send_no_dedupe(self):
@@ -276,6 +277,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.get_batches()[0].key, msg_options={},
+            delivery_class=conversation.delivery_class,
             content='I am ham, not spam.', dedupe=False))
 
     @skip("The new views don't handle this kind of thing very well yet.")
@@ -353,6 +355,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.get_batches()[0].key, msg_options={},
+            delivery_class=conversation.delivery_class,
             content='I am ham, not spam.', dedupe=True))
 
 

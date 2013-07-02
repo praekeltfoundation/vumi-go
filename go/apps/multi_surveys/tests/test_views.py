@@ -142,6 +142,7 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
                 user_account_key=conversation.user_account.key,
                 conversation_key=conversation.key,
                 is_client_initiated=conversation.is_client_initiated(),
+                delivery_class=conversation.delivery_class,
                 batch_id=batch.key, msg_options=msg_options))
 
     def test_send_fails(self):
