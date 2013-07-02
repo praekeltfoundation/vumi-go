@@ -12,12 +12,10 @@
 
     {{ conversation_form }}
 
-    <div class="box">
-        <label for="id_{{ wizard_form.channel_kind.name }}">
-            {{ wizard_form.channel_kind.label }}
-        </label>
-        {{ wizard_form.channel_kind }}
-    </div>
+    <label for="id_{{ wizard_form.channel_kind.name }}">
+        {{ wizard_form.channel_kind.label }}
+    </label>
+    {{ wizard_form.channel_kind }}
 
     <div class="configuration">
 

@@ -83,7 +83,6 @@ def create(request, conversation_key=None):
         'wizard_form': wizard_form,
         'conversation_form': conversation_form,
         'channel_form': channel_form,
-        'conversation_key': conversation_key,
         'conversation': conversation,
     })
 
