@@ -8,8 +8,32 @@
   #diagram {
     @state-padding: 6px;
 
-    ._jsPlumb_endpoint, ._jsPlumb_connector {
-      z-index:200;
+    * {
+      z-index: 2;
+    }
+
+    ._jsPlumb_connector {
+      z-index: 1;
+      opacity: 0.5;
+    }
+
+    ._jsPlumb_endpoint {
+      z-index: 5;
+      opacity: 0.5;
+    }
+
+    ._jsPlumb_endpoint svg circle:hover {
+      cursor: move;
+    }
+
+    ._jsPlumb_dragging {
+      z-index: 3;
+      opacity: 0.5;
+    }
+
+    ._jsPlumb_hover {
+      z-index: 3;
+      opacity: 0.75;
     }
 
     .grid.container {
@@ -25,6 +49,7 @@
         width: 220px;
         margin: 30px 40px;
         padding: 0;
+        position: relative;
       }
 
       .placeholder {
@@ -115,7 +140,8 @@
     }
 
     .endpoint {
-      background: #afafaf;
+      z-index: 4;
+      background: #b0b0b0;
       width: 14px;
       height: 14px;
       .border-radius(5px);

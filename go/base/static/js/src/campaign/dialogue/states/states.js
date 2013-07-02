@@ -278,7 +278,8 @@
         sortableOptions: {
           handle: '.state .titlebar',
           placeholder: 'placeholder',
-          start: this.onSortStart.bind(this)
+          start: this.onSortStart.bind(this),
+          sort: function() { jsPlumb.repaintEverything(); }
         }
       };
     },
