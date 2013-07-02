@@ -41,11 +41,16 @@
       .user-select(none);
 
       .titlebar {
+        font-size: 16px;
         padding: 8px 6px;
+
+        // Set the margin to the reverse of the state's padding so the titlebar
+        // actually looks like a titlebar
+        margin: -6px;
+
         margin-bottom: 10px;
 
-        background: #2f3436;
-        color: #eee;
+        background: #a0a0a0;
         .border-radius(5px);
 
         .name {
@@ -108,7 +113,7 @@
     }
 
     .endpoint {
-      background: #2f3436;
+      background: #afafaf;
       width: 14px;
       height: 14px;
       .border-radius(5px);
