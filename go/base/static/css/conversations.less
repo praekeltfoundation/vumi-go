@@ -6,6 +6,8 @@
   }
 
   #diagram {
+    @state-padding: 6px;
+
     ._jsPlumb_endpoint, ._jsPlumb_connector {
       z-index:200;
     }
@@ -35,7 +37,7 @@
     }
 
     .state {
-      padding: 6px;
+      padding: @state-padding;
       position: relative;
       color: #2f3436;
       .user-select(none);
@@ -46,7 +48,7 @@
 
         // Set the margin to the reverse of the state's padding so the titlebar
         // actually looks like a titlebar
-        margin: -6px;
+        margin: -@state-padding;
 
         margin-bottom: 10px;
 
