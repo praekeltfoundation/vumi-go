@@ -4,6 +4,8 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.api.go_api.api_types import (
+    ChannelType, ConversationType, RoutingEntryType)
 from go.routing import views
 
 
@@ -27,9 +29,7 @@ class RoutingScreenTestCase(DjangoGoApplicationTestCase):
 
     def get_routing_table(self, user_account_key, session_id):
         self.assertEqual(user_account_key, self.user_api.user_account_key)
-        response = self.routing_table_api_response.copy()
-        response['campaign_id'] = user_account_key
-        return json.dumps(response)
+        return self.routing_table_api_response
 
     def make_routing_table(self, tags=(), conversations=(), routing=()):
         routing_table = {
@@ -40,32 +40,12 @@ class RoutingScreenTestCase(DjangoGoApplicationTestCase):
             u'routing_entries': [],
         }
 
-        for pool, tag in tags:
-            routing_table[u'channels'].append({
-                u'uuid': u'%s:%s' % (pool, tag),
-                u'name': tag,
-                u'tag': [pool, tag],
-                u'description': u"%s: %s" % (
-                    pool.replace('_', ' ').title(), tag),
-                u'endpoints': [{
-                    u'name': u'default',
-                    u'uuid': u'TRANSPORT_TAG:%s:%s:default' % (pool, tag),
-                }],
-            })
+        for tag in tags:
+            routing_table[u'channels'].append(ChannelType.format_channel(tag))
 
         for conv in conversations:
-            routing_table[u'conversations'].append({
-                u'uuid': conv.key,
-                u'type': conv.conversation_type,
-                u'name': conv.name,
-                u'description': conv.description,
-                u'endpoints': [{
-                    u'name': u'default',
-                    u'uuid': u'CONVERSATION:%s:%s:default' % (
-                        conv.conversation_type, conv.key),
-                }],
-            })
-
+            routing_table[u'conversations'].append(
+                ConversationType.format_conversation(conv))
         # TODO: Routing blocks
 
         def mkconn(thing):
@@ -78,19 +58,16 @@ class RoutingScreenTestCase(DjangoGoApplicationTestCase):
                     thing.conversation_type, thing.key)
 
         for src, dst in routing:
-            routing_table[u'routing_entries'].append({
-                u'source': {u'uuid': mkconn(src)},
-                u'target': {u'uuid': mkconn(dst)},
-            })
+            routing_table[u'routing_entries'].append(
+                RoutingEntryType.format_entry(mkconn(src), mkconn(dst)))
 
-        return routing_table
+        return json.dumps(routing_table)
 
     def test_empty_routing(self):
         self.routing_table_api_response = self.make_routing_table()
         response = self.client.get(reverse('routing'))
         model_data = response.context['model_data']
-        self.assertEqual(
-            self.routing_table_api_response, json.loads(model_data))
+        self.assertEqual(self.routing_table_api_response, model_data)
         self.assertContains(response, model_data)
         self.assertContains(response, reverse('channels:new_channel'))
         self.assertContains(
@@ -103,6 +80,5 @@ class RoutingScreenTestCase(DjangoGoApplicationTestCase):
             routing=[(self.conversation, tag), (tag, self.conversation)])
         response = self.client.get(reverse('routing'))
         model_data = response.context['model_data']
-        self.assertEqual(
-            self.routing_table_api_response, json.loads(model_data))
+        self.assertEqual(self.routing_table_api_response, model_data)
         self.assertContains(response, model_data)
