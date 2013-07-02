@@ -23,8 +23,9 @@
 {% block ondomready %}
     $('.actions .right button').on('click', function(e) {
         e.preventDefault();
+        // prepend the `data-action` of the button to the form,
+        // and submit the form.
         var $form = $('#form-conversation');
-        // append the action of the button, draft or save.
         $form.prepend('<input type="hidden" name="action" value="' + $(this).attr('data-action') + '">');
         $form.submit();
     });    
