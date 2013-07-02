@@ -16,6 +16,8 @@
 
 {% endblock %}
 
+{% block content_title %}Edit {{ conversation.name }}{% endblock %}
+
 {% block content_main %}
 <form name="conversation" id="conversation" method="post" action="">
     {% csrf_token %}
@@ -28,7 +30,7 @@
                 <input type="reset" class="btn" value="Cancel">
             </div>
             <div id="welcome">
-                <h1>Edit Conversation</h1>
+                <h1>Edit Conversation1</h1>
             </div>
         </div>
     </div>
