@@ -46,8 +46,9 @@ class WizardViewsTestCase(DjangoGoApplicationTestCase):
             'country': 'International',
             'channel': 'longcode:',
         })
-        # We just assert that we don't redirect here.
-        self.assertNotEqual(response.status_code, 302)
+        # TODO: Test that we do the right thing with the bad form when we do
+        #       the right thing with the bad form.
+        self.assertEqual(response.status_code, 200)
 
     def test_post_create_view_invalid_country(self):
         response = self.client.post(reverse('wizard:create'), {
@@ -56,8 +57,9 @@ class WizardViewsTestCase(DjangoGoApplicationTestCase):
             'country': 'Nowhere',
             'channel': 'longcode:',
         })
-        # We just assert that we don't redirect here.
-        self.assertNotEqual(response.status_code, 302)
+        # TODO: Test that we do the right thing with the bad form when we do
+        #       the right thing with the bad form.
+        self.assertEqual(response.status_code, 200)
 
     def test_post_create_view_invalid_channel(self):
         response = self.client.post(reverse('wizard:create'), {
@@ -66,5 +68,6 @@ class WizardViewsTestCase(DjangoGoApplicationTestCase):
             'country': 'International',
             'channel': 'badpool:',
         })
-        # We just assert that we don't redirect here.
-        self.assertNotEqual(response.status_code, 302)
+        # TODO: Test that we do the right thing with the bad form when we do
+        #       the right thing with the bad form.
+        self.assertEqual(response.status_code, 200)
