@@ -67,10 +67,7 @@
 
             <div class="span4">
                 <div class="box">
-                    <label for="id_{{ wizard_form.keyword.name }}">
-                      {{ wizard_form.keyword.label }}
-                    </label>
-                    {{ wizard_form.keyword }}
+                    {{ channel_form.keyword }}
                 </div>
             </div>
         </fieldset>
@@ -118,9 +115,8 @@
 {% block ondomready %}
     {{ block.super }}
 
-    // if a channel is already selected then we should show the
-    // configuration view for it.
-    $('input[name=channel_kind]:checked').trigger('change');
+    
+    
 
     $('input[name=channel_kind]').on('change', function() {
         $('.configuration').show();
@@ -144,7 +140,9 @@
         $(this).find('select:hidden').remove();
     });
 
-    // TODO: form validation.
+    // if a channel is already selected then we should show the
+    // configuration view for it.
+    $('input[name=channel_kind]:checked').trigger('change');
 
 
 {% endblock %}
