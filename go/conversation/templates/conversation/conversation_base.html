@@ -5,11 +5,6 @@
 
 {% block content_extraclass %}campaigns{% endblock %}
 
-{% block content_breadcrumbs %}
-    {# TODO: Use bootstrap breadcrumbs #}
-    <a href="{% conversation_screen conversation %}">Details</a>
-{% endblock %}
-
 {% block content_actions_right %}
     <a href="{% url 'conversations:index' %}">Cancel</a>
     <button class="btn btn-primary" data-action="draft">Save draft</button>
