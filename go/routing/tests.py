@@ -3,10 +3,11 @@ import json
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 
+from mock import patch
+
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.api.go_api.api_types import (
     ChannelType, ConversationType, RoutingEntryType)
-from go.routing import views
 
 
 class RoutingScreenTestCase(DjangoGoApplicationTestCase):
@@ -14,18 +15,10 @@ class RoutingScreenTestCase(DjangoGoApplicationTestCase):
     # we're correctly injecting initial state into the template.
 
     def setUp(self):
-        # Monkey patch _get_routing_table
-        self._orig_get_routing_table = views._get_routing_table
-        views._get_routing_table = self.get_routing_table
-
         super(RoutingScreenTestCase, self).setUp()
         self.setup_riak_fixtures()
         self.client = Client()
         self.client.login(username=self.user.username, password='password')
-
-    def tearDown(self):
-        views._get_routing_table = self._orig_get_routing_table
-        super(RoutingScreenTestCase, self).setUp()
 
     def get_routing_table(self, user_account_key, session_id):
         self.assertEqual(user_account_key, self.user_api.user_account_key)
@@ -63,7 +56,9 @@ class RoutingScreenTestCase(DjangoGoApplicationTestCase):
 
         return json.dumps(routing_table)
 
-    def test_empty_routing(self):
+    @patch('go.routing.views._get_routing_table')
+    def test_empty_routing(self, mock_routing):
+        mock_routing.side_effect = self.get_routing_table
         self.routing_table_api_response = self.make_routing_table()
         response = self.client.get(reverse('routing'))
         model_data = response.context['model_data']
@@ -73,7 +68,9 @@ class RoutingScreenTestCase(DjangoGoApplicationTestCase):
         self.assertContains(
             response, reverse('conversations:new_conversation'))
 
-    def test_non_empty_routing(self):
+    @patch('go.routing.views._get_routing_table')
+    def test_non_empty_routing(self, mock_routing):
+        mock_routing.side_effect = self.get_routing_table
         tag = (u'pool', u'tag')
         self.routing_table_api_response = self.make_routing_table(
             tags=[tag], conversations=[self.conversation],
