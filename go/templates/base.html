@@ -9,10 +9,6 @@
     <meta content="no" http-equiv="imagetoolbar" />
     <title>{% block page_title %}Vumi Go{% endblock %}</title>
 
-    {% block extrahead %}
-    {% endblock %}
-    
-    {# I think I only want to show these on public facing pages. #}
     <meta name="description" content="A super scalable conversation engine for 
         distribution of SMS, star menu and chat messages">
     <meta name="author" content="Praekelt Foundation">
@@ -23,6 +19,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     {% compressed_css 'all' %}
+
+    {% compressed_js 'lib' %}
+    {% compressed_js 'go' %}
+
+    {% block extrahead %}
+    {% endblock %}
+
 
 </head>
 <body>
@@ -51,11 +54,8 @@
     {% block modals %}
     {% endblock %}
 
-    {% compressed_js 'lib' %}
-    {% compressed_js 'go' %}
 
-    {% block formsmedia %}
-    {% endblock %}
+    
 
     {% block extrascript %}
     {% endblock %}
