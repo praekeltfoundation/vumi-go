@@ -78,7 +78,13 @@
             <p>
                 <ol>
                 {% for action in actions %}
-                    <li><a href="{% conversation_action conversation action.action_name %}">{{action.action_display_name}}</a></li>
+                    {% with is_disabled=action.is_disabled %}
+                    {% if is_disabled %}
+                    <li><a href="#" class="disabled" title="{{ is_disabled }}">{{action.action_display_name}}</a></li>
+                    {% else %}
+                    <li><a href="{% conversation_action conversation action.action_name %}">{{ action.action_display_name }}</a></li>
+                    {% endif %}
+                    {% endwith %}
                 {% empty %}
                     <li>This conversation has no actions.</li>
                 {% endfor %}
