@@ -1,5 +1,4 @@
 import logging
-import urllib
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, Http404
@@ -27,8 +26,7 @@ class CheapPlasticChannel(object):
         self.tagpool = tagpool
         self.tag = tag
         self.tagpool_metadata = tagpool_metadata
-        # NOTE: We currently only use `key` to build URLs.
-        self.key = urllib.quote(u'%s:%s' % (tagpool, tag))
+        self.key = u'%s:%s' % (tagpool, tag)
         self.name = tag
 
     def release(self, user_api):
@@ -50,6 +48,12 @@ class ChannelDefinition(object):
 
 class ChannelViewDefinition(ChannelViewDefinitionBase):
     pass
+
+
+def get_channel_view_definition(channel):
+    # TODO: Replace this with a real thing when we have channel models.
+    chan_def = ChannelDefinition(channel)
+    return ChannelViewDefinition(chan_def)
 
 
 def get_channels(user_api):
@@ -103,11 +107,10 @@ def new_channel(request):
 
             messages.info(request, 'Acquired tag: %s.' % (channel_key,))
 
-            # TODO save and go to next step.
-            return redirect(reverse('channels:channel', kwargs={
-                'channel_key': channel_key,
-                'path_suffix': '',
-            }))
+            view_def = get_channel_view_definition(
+                CheapPlasticChannel(pool, tag, None))
+            return redirect(
+                view_def.get_view_url('show', channel_key=channel_key))
         else:
             raise ValueError(repr('Error: %s' % (form.errors,)))
 
@@ -126,12 +129,6 @@ def channel_or_404(user_api, channel_key):
 
     tagpool_meta = user_api.api.tpm.get_metadata(pool)
     return CheapPlasticChannel(pool, tag, tagpool_meta)
-
-
-def get_channel_view_definition(channel):
-    # TODO: Replace this with a real thing when we have channel models.
-    chan_def = ChannelDefinition(channel)
-    return ChannelViewDefinition(chan_def)
 
 
 @login_required

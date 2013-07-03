@@ -1,4 +1,5 @@
 import logging
+import urllib
 
 from django.views.generic import View, TemplateView
 from django.shortcuts import redirect, Http404
@@ -91,8 +92,11 @@ class ChannelViewDefinitionBase(object):
     def display_name(self):
         return self._chan_def.display_name
 
-    def get_view_url(self, view_name, **kwargs):
-        kwargs['path_suffix'] = self._view_mapping[view_name].path_suffix
+    def get_view_url(self, view_name, channel_key):
+        kwargs = {
+            'path_suffix': self._view_mapping[view_name].path_suffix,
+            'channel_key': urllib.quote(channel_key),
+        }
         return reverse('channels:channel', kwargs=kwargs)
 
     def get_view(self, path_suffix):
