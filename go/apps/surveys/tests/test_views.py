@@ -104,6 +104,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(conversation.stopping())
 
     def test_action_send_survey_get(self):
+        self.prepare_conversation()
         response = self.client.get(self.get_action_view_url('send_survey'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
