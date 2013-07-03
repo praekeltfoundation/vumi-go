@@ -1,4 +1,5 @@
 import logging
+import urllib
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, Http404
@@ -26,7 +27,8 @@ class CheapPlasticChannel(object):
         self.tagpool = tagpool
         self.tag = tag
         self.tagpool_metadata = tagpool_metadata
-        self.key = u'%s:%s' % (tagpool, tag)
+        # NOTE: We currently only use `key` to build URLs.
+        self.key = urllib.quote(u'%s:%s' % (tagpool, tag))
         self.name = tag
 
     def release(self, user_api):
