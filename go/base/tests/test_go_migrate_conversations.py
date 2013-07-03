@@ -11,11 +11,10 @@ from go.vumitools.conversation.old_models import ConversationVNone
 
 
 class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
+    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
 
     def setUp(self):
         super(GoMigrateConversationsCommandTestCase, self).setUp()
-        self.user = self.mk_django_user()
-        self.setup_user_api(self.user)
 
         self.old_conv_model = self.user_api.conversation_store.manager.proxy(
             ConversationVNone)
@@ -51,7 +50,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         self.command.handle(migrate=False)
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 2)
-        self.assertTrue(self.user.username in output[0])
+        self.assertTrue(self.django_user.username in output[0])
         self.assertTrue('Conversations: 3' in output[1])
         for conv in self.convs:
             # If we can load the old model, the data hasn't been migrated.
@@ -62,7 +61,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         self.command.handle(migrate=True)
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 8)
-        self.assertTrue(self.user.username in output[0])
+        self.assertTrue(self.django_user.username in output[0])
         self.assertTrue('Conversations: 3' in output[1])
         extracted_keys = set(line.split(': ')[1]
                              for line in output[2:] if 'migrated' not in line)

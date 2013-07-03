@@ -1,6 +1,5 @@
 import json
 
-from django.test.client import Client
 from django.core.urlresolvers import reverse
 
 from mock import patch
@@ -11,14 +10,10 @@ from go.api.go_api.api_types import (
 
 
 class RoutingScreenTestCase(DjangoGoApplicationTestCase):
+    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
+
     # Most of the functionality of this view lives in JS, so we just test that
     # we're correctly injecting initial state into the template.
-
-    def setUp(self):
-        super(RoutingScreenTestCase, self).setUp()
-        self.setup_riak_fixtures()
-        self.client = Client()
-        self.client.login(username=self.user.username, password='password')
 
     def get_routing_table(self, user_account_key, session_id):
         self.assertEqual(user_account_key, self.user_api.user_account_key)
@@ -70,6 +65,7 @@ class RoutingScreenTestCase(DjangoGoApplicationTestCase):
 
     @patch('go.routing.views._get_routing_table')
     def test_non_empty_routing(self, mock_routing):
+        self.setup_conversation()
         mock_routing.side_effect = self.get_routing_table
         tag = (u'pool', u'tag')
         self.routing_table_api_response = self.make_routing_table(

@@ -10,6 +10,7 @@ from go.channel.views import get_channel_view_definition
 
 
 class ChannelViewsTestCase(VumiGoDjangoTestCase):
+    use_riak = True
 
     def setUp(self):
         super(ChannelViewsTestCase, self).setUp()

@@ -1,9 +1,12 @@
 from datetime import datetime, timedelta
 import uuid
 
+from django.core.urlresolvers import reverse
+
 from vumi.message import TransportUserMessage, TransportEvent
 
-from go.base.tests.utils import VumiGoDjangoTestCase, declare_longcode_tags
+from go.base.utils import get_conversation_view_definition
+from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base import utils as base_utils
 
 
@@ -16,29 +19,53 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
     TEST_CONVERSATION_NAME = u"Test Conversation"
     TEST_CONVERSATION_TYPE = u'bulk_message'
     TEST_CONVERSATION_PARAMS = None
-    TEST_START_PARAMS = None
 
     # These are used for the mkmsg_in and mkmsg_out helper methods
     transport_name = 'sphex'
     transport_type = 'sms'
 
+    # Set a bunch of attrs to None so we can see if we've set them later.
+    group = None
+    contact = None
+    conversation = None
+
     def setUp(self):
         super(DjangoGoApplicationTestCase, self).setUp()
         self.setup_api()
-        self.declare_longcode_tags()
+        self.setup_user_api()
+        self.setup_client()
 
-    def tearDown(self):
-        super(DjangoGoApplicationTestCase, self).tearDown()
+    def setup_user_api(self, django_user=None):
+        if django_user is None:
+            django_user = self.mk_django_user()
+        self.django_user = django_user
+        self.user_api = base_utils.vumi_api_for_user(django_user)
+        self.contact_store = self.user_api.contact_store
+        self.contact_store.contacts.enable_search()
+        self.contact_store.groups.enable_search()
+        self.conv_store = self.user_api.conversation_store
 
-    def setup_riak_fixtures(self):
-        self.user = self.mk_django_user()
-        self.setup_user_api(self.user)
+    def create_conversation(self, **kwargs):
+        defaults = {
+            'conversation_type': u'test_conversation_type',
+            'name': u'conversation name',
+            'description': u'hello world',
+            'config': {},
+        }
+        defaults.update(kwargs)
+        return self.conv_store.new_conversation(**defaults)
 
-        # We need a group
+    def _create_group(self, with_contact=False):
+        if self.group is not None:
+            return
         self.group = self.contact_store.new_group(self.TEST_GROUP_NAME)
         self.group_key = self.group.key
+        if with_contact:
+            self._create_contact()
 
-        # Also a contact
+    def _create_contact(self):
+        if self.contact is not None:
+            return
         self.contact = self.contact_store.new_contact(
             name=self.TEST_CONTACT_NAME, surname=self.TEST_CONTACT_SURNAME,
             msisdn=u"+27761234567")
@@ -46,36 +73,21 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
         self.contact.save()
         self.contact_key = self.contact.key
 
-        # And a conversation
+    def _create_conversation(self, with_group=True):
+        if self.conversation is not None:
+            return
         params = {
             'conversation_type': self.TEST_CONVERSATION_TYPE,
             'name': self.TEST_CONVERSATION_NAME,
             'description': u"Test message",
-            'delivery_class': u"sms",
-            'delivery_tag_pool': u"longcode",
-            'groups': [self.group_key],
-            'config': {},
-            }
-        if self.TEST_CONVERSATION_PARAMS:
-            params.update(self.TEST_CONVERSATION_PARAMS)
-        self.conversation = self.conv_store.new_conversation(**params)
-        self.conv_key = self.conversation.key
-
-    def post_new_conversation(self, name='conversation name'):
-        return self.client.post(self.get_new_view_url(), {
-            'name': name,
-            'conversation_type': self.TEST_CONVERSATION_TYPE,
-        })
-
-    def mkconversation(self, **kwargs):
-        defaults = {
-            'conversation_type': u'bulk_message',
-            'name': u'subject',
-            'description': u'hello world',
             'config': {},
         }
-        defaults.update(kwargs)
-        return self.conv_store.new_conversation(**defaults)
+        if with_group:
+            params['groups'] = [self.group]
+        if self.TEST_CONVERSATION_PARAMS:
+            params.update(self.TEST_CONVERSATION_PARAMS)
+        self.conversation = self.create_conversation(**params)
+        self.conv_key = self.conversation.key
 
     def get_latest_conversation(self):
         # We won't have too many here, so doing it naively is fine.
@@ -83,6 +95,12 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
         for key in self.conv_store.list_conversations():
             conversations.append(self.conv_store.get_conversation_by_key(key))
         return max(conversations, key=lambda c: c.created_at)
+
+    def post_new_conversation(self, name='conversation name'):
+        return self.client.post(self.get_new_view_url(), {
+            'name': name,
+            'conversation_type': self.TEST_CONVERSATION_TYPE,
+        })
 
     def mkmsg_ack(self, user_message_id='1', sent_message_id='abc',
                   transport_metadata=None, transport_name=None):
@@ -183,57 +201,15 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
             )
         return TransportUserMessage(**params)
 
-    def mkcontact(self, name=None, surname=None, msisdn=u'+1234567890',
-                  **kwargs):
-        return self.contact_store.new_contact(
-            name=unicode(name or self.TEST_CONTACT_NAME),
-            surname=unicode(surname or self.TEST_CONTACT_SURNAME),
-            msisdn=unicode(msisdn), **kwargs)
-
-    def setup_user_api(self, django_user):
-        self.user_api = base_utils.vumi_api_for_user(django_user)
-        # XXX: We assume the tagpool already exists here. We need to rewrite
-        #      a lot of this test infrastructure.
-        self.add_tagpool_permission(u"longcode")
-        self.contact_store = self.user_api.contact_store
-        self.contact_store.contacts.enable_search()
-        self.contact_store.groups.enable_search()
-        self.conv_store = self.user_api.conversation_store
-
-    def declare_longcode_tags(self):
-        declare_longcode_tags(self.api)
-
-    def add_tagpool_permission(self, tagpool, max_keys=None):
-        permission = self.api.account_store.tag_permissions(
-            uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
-        permission.save()
-        account = self.user_api.get_user_account()
-        account.tagpools.add(permission)
-        account.save()
-
-    def acquire_all_longcode_tags(self):
-        for _i in range(4):
-            self.user_api.acquire_tag(u"longcode")
-
     def get_api_commands_sent(self):
         return base_utils.connection.get_commands()
 
-    def put_sample_messages_in_conversation(self, user_api, conversation_key,
-                                            message_count,
+    def put_sample_messages_in_conversation(self, message_count,
                                             content_generator=None,
                                             start_date=None,
-                                            time_multiplier=10,
-                                            send_initial_action_hack=True):
+                                            time_multiplier=10):
         now = start_date or datetime.now().date()
-        conversation = user_api.get_wrapped_conversation(conversation_key)
-        conversation.old_start(
-            send_initial_action_hack=send_initial_action_hack)
-
-        # Set the status manually, because it's in `starting', not `running'
-        conversation.set_status_started()
-        conversation.save()
-
-        batch_key = conversation.get_latest_batch_key()
+        batch_key = self.get_wrapped_conv().get_latest_batch_key()
 
         messages = []
         for i in range(message_count):
@@ -265,4 +241,46 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
 
         account = self.user_api.get_user_account()
         account.applications.add(permission)
+        account.save()
+
+    def get_view_url(self, view, conv_key=None):
+        if conv_key is None:
+            conv_key = self.conv_key
+        view_def = get_conversation_view_definition(
+            self.TEST_CONVERSATION_TYPE)
+        return view_def.get_view_url(view, conversation_key=conv_key)
+
+    def get_new_view_url(self):
+        return reverse('conversations:new_conversation')
+
+    def get_action_view_url(self, action_name, conv_key=None):
+        if conv_key is None:
+            conv_key = self.conv_key
+        return reverse('conversations:conversation_action', kwargs={
+            'conversation_key': conv_key, 'action_name': action_name})
+
+    def get_wrapped_conv(self, conv_key=None):
+        if conv_key is None:
+            conv_key = self.conv_key
+        return self.user_api.get_wrapped_conversation(conv_key)
+
+    def setup_conversation(self, started=False, with_group=False,
+                           with_contact=False):
+        if with_group:
+            self._create_group(with_contact=with_contact)
+        self._create_conversation(with_group=with_group)
+        conv = self.user_api.wrap_conversation(self.conversation)
+
+        if started:
+            conv.set_status_started()
+            batch_id = conv.start_batch()
+            conv.batches.add_key(batch_id)
+            conv.save()
+
+    def add_tagpool_permission(self, tagpool, max_keys=None):
+        permission = self.api.account_store.tag_permissions(
+            uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
+        permission.save()
+        account = self.user_api.get_user_account()
+        account.tagpools.add(permission)
         account.save()

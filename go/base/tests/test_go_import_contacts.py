@@ -10,7 +10,7 @@ from go.base.utils import vumi_api_for_user
 
 class GoImportContactsCommandTestCase(VumiGoDjangoTestCase):
 
-    USE_RIAK = True
+    use_riak = True
 
     def setUp(self):
         super(GoImportContactsCommandTestCase, self).setUp()

@@ -29,12 +29,10 @@ class FakeFile(StringIO):
 
 
 class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
-
-    USE_RIAK = True
+    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
 
     def setUp(self):
         super(GoBootstrapEnvTestCase, self).setUp()
-        self.setup_riak_fixtures()
         self.config = self.mk_config({})
 
         self.command = go_setup_env.Command()

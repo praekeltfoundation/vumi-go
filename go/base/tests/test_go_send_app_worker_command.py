@@ -16,11 +16,11 @@ class DummyMessageSender(object):
 
 
 class GoSendAppWorkerCommandTestCase(DjangoGoApplicationTestCase):
+    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
 
     def setUp(self):
         super(GoSendAppWorkerCommandTestCase, self).setUp()
-        self.setup_riak_fixtures()
-        self.account_key = self.user.get_profile().user_account
+        self.account_key = self.user_api.user_account_key
 
         self.command = go_send_app_worker_command.Command()
         self.command.sender_class = DummyMessageSender
@@ -44,6 +44,7 @@ class GoSendAppWorkerCommandTestCase(DjangoGoApplicationTestCase):
             'account_key=%s' % self.account_key, 'conversation_key=bar')
 
     def test_reconcile_cache(self):
+        self.setup_conversation()
         self.command.handle('worker-name', 'reconcile_cache',
             'account_key=%s' % (self.account_key,),
             'conversation_key=%s' % (self.conv_key,))

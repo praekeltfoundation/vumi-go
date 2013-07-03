@@ -1,20 +1,15 @@
-from django.test.client import Client
 from django.core.urlresolvers import reverse
 
+from go.base.tests.utils import declare_longcode_tags
 from go.apps.tests.base import DjangoGoApplicationTestCase
 
 
 class WizardViewsTestCase(DjangoGoApplicationTestCase):
-    # Most of the functionality of this view lives in JS, so we just test that
-    # we're correctly injecting initial state into the template.
-
-    def setUp(self):
-        super(WizardViewsTestCase, self).setUp()
-        self.setup_riak_fixtures()
-        self.client = Client()
-        self.client.login(username=self.user.username, password='password')
+    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
 
     def test_get_create_view(self):
+        declare_longcode_tags(self.api)
+        self.add_tagpool_permission(u'longcode')
         response = self.client.get(reverse('wizard:create'))
         # Check that we have a few conversation types in the response
         self.assertContains(response, 'bulk_message')
@@ -23,16 +18,18 @@ class WizardViewsTestCase(DjangoGoApplicationTestCase):
         self.assertContains(response, 'longcode:')
 
     def test_post_create_view_valid(self):
-        convs = len(self.user_api.active_conversations())
-        tags = len(self.user_api.list_endpoints())
+        declare_longcode_tags(self.api)
+        self.add_tagpool_permission(u'longcode')
+        self.assertEqual(0, len(self.user_api.active_conversations()))
+        self.assertEqual(0, len(self.user_api.list_endpoints()))
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'bulk_message',
             'name': 'My Conversation',
             'country': 'International',
             'channel': 'longcode:',
         })
-        self.assertEqual(convs + 1, len(self.user_api.active_conversations()))
-        self.assertEqual(tags + 1, len(self.user_api.list_endpoints()))
+        self.assertEqual(1, len(self.user_api.active_conversations()))
+        self.assertEqual(1, len(self.user_api.list_endpoints()))
         conv = self.get_latest_conversation()
         self.assertRedirects(
             response, reverse('conversations:conversation', kwargs={

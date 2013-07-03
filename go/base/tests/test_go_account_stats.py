@@ -8,11 +8,10 @@ from go.base.management.commands import go_account_stats
 
 
 class GoAccountStatsCommandTestCase(DjangoGoApplicationTestCase):
+    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
 
     def setUp(self):
         super(GoAccountStatsCommandTestCase, self).setUp()
-        self.user = self.mk_django_user()
-        self.setup_user_api(self.user)
 
         self.message_store = self.api.mdb
 
@@ -27,24 +26,22 @@ class GoAccountStatsCommandTestCase(DjangoGoApplicationTestCase):
                 batch_id=batch_key)
 
         self.inactive_conv = self.mkstartedconv(name=u'inactive')
-        self.inactive_conv.end_conversation()
-        self.assertTrue(self.inactive_conv.ended())
+        self.inactive_conv.archive_conversation()
 
         self.unicode_conv = self.mkstartedconv(name=u'Zoë destroyer of Ascii')
-        self.unicode_conv.end_conversation()
-        self.assertTrue(self.unicode_conv.ended())
+        self.unicode_conv.archive_conversation()
 
         self.command = go_account_stats.Command()
         self.command.stdout = StringIO()
         self.command.stderr = StringIO()
 
     def mkstartedconv(self, **kwargs):
-        kwargs.update({
-            u'delivery_class': u'sms',
-            u'delivery_tag_pool': u'longcode',
-            })
-        conv = self.user_api.wrap_conversation(self.mkconversation(**kwargs))
-        conv.old_start()
+        conv = self.user_api.wrap_conversation(
+            self.create_conversation(**kwargs))
+        conv.set_status_started()
+        batch_id = conv.start_batch()
+        conv.batches.add_key(batch_id)
+        conv.save()
         return conv
 
     def test_command_summary(self):
@@ -54,27 +51,29 @@ class GoAccountStatsCommandTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(output[1], 'list_conversations:')
 
     def test_list_conversations(self):
-        self.command.handle(self.user.username, 'list_conversations')
+        self.command.handle(self.django_user.username, 'list_conversations')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 3)
         self.assertTrue(self.active_conv.key in output[0])
         self.assertTrue(self.inactive_conv.key in output[1])
 
     def test_list_conversations_with_unicode(self):
-        self.command.handle(self.user.username, 'list_conversations')
+        self.command.handle(self.django_user.username, 'list_conversations')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 3)
         self.assertTrue(self.unicode_conv.key in output[2])
         self.assertTrue('Zo\xc3\xab' in output[2])
 
     def test_list_conversations_active(self):
-        self.command.handle(self.user.username, 'list_conversations', 'active')
+        self.command.handle(
+            self.django_user.username, 'list_conversations', 'active')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 1)
         self.assertTrue(self.active_conv.key in output[0])
 
     def test_stats(self):
-        self.command.handle(self.user.username, 'stats', self.active_conv.key)
+        self.command.handle(
+            self.django_user.username, 'stats', self.active_conv.key)
         output = self.command.stdout.getvalue().strip().split('\n')
         [batch_key] = self.active_conv.batches.keys()
         self.assertEqual(output, [

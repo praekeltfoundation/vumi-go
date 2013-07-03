@@ -12,6 +12,8 @@ from go.vumitools.api import VumiApi, VumiUserApi
 
 class AuthenticationTestCase(VumiGoDjangoTestCase):
 
+    use_riak = True
+
     def setUp(self):
         super(AuthenticationTestCase, self).setUp()
         self.setup_api()

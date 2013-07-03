@@ -4,6 +4,7 @@ from django.core.management.base import CommandError
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.management.commands import go_start_conversation
+from go.base.tests.utils import declare_longcode_tags
 
 from mock import patch
 
@@ -17,44 +18,49 @@ class DummyMessageSender(object):
 
 
 class GoStartConversationTestCase(DjangoGoApplicationTestCase):
-
-    USE_RIAK = True
+    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
 
     def setUp(self):
         super(GoStartConversationTestCase, self).setUp()
-        self.setup_riak_fixtures()
         self.config = self.mk_config({})
         self.command = go_start_conversation.Command()
         self.command.stdout = StringIO()
         self.command.stderr = StringIO()
 
-    def get_conversation(self):
-        return self.user_api.get_wrapped_conversation(self.conv_key)
+    def add_tagpool_to_conv(self):
+        declare_longcode_tags(self.api)
+        self.add_tagpool_permission(u'longcode')
+        conv = self.get_wrapped_conv()
+        conv.c.delivery_class = u'sms'
+        conv.c.delivery_tag_pool = u'longcode'
+        conv.save()
 
     def test_sanity_checks(self):
         self.assertRaisesRegexp(CommandError, 'provide --email-address',
             self.command.handle, email_address=None, conversation_key=None)
         self.assertRaisesRegexp(CommandError, 'provide --conversation-key',
-            self.command.handle, email_address=self.user.username,
+            self.command.handle, email_address=self.django_user.username,
             conversation_key=None)
         self.assertRaisesRegexp(CommandError, 'Conversation does not exist',
-            self.command.handle, email_address=self.user.username,
+            self.command.handle, email_address=self.django_user.username,
             conversation_key='foo')
 
     @patch('go.vumitools.api.SyncMessageSender')
     def test_start_conversation(self, SyncMessageSender):
+        self.setup_conversation()
+        self.add_tagpool_to_conv()
         sender = DummyMessageSender()
         SyncMessageSender.return_value = sender
-        conversation = self.get_conversation()
+        conversation = self.get_wrapped_conv()
         self.assertEqual(conversation.get_tags(), [])
         self.assertEqual(conversation.archive_status, 'active')
         self.assertEqual(conversation.get_status(), 'stopped')
         self.command.handle(
-            email_address=self.user.username,
+            email_address=self.django_user.username,
             conversation_key=conversation.key,
             skip_initial_action_hack=False)
         # reload b/c DB changed
-        conversation = self.get_conversation()
+        conversation = self.get_wrapped_conv()
         self.assertEqual(conversation.get_status(), 'starting')
         [(pool, tag)] = conversation.get_tags()
         self.assertEqual(pool, 'longcode')
@@ -65,18 +71,20 @@ class GoStartConversationTestCase(DjangoGoApplicationTestCase):
 
     @patch('go.vumitools.api.SyncMessageSender')
     def test_start_conversation_skip_iah(self, SyncMessageSender):
+        self.setup_conversation()
+        self.add_tagpool_to_conv()
         sender = DummyMessageSender()
         SyncMessageSender.return_value = sender
-        conversation = self.get_conversation()
+        conversation = self.get_wrapped_conv()
         self.assertEqual(conversation.get_tags(), [])
         self.assertEqual(conversation.archive_status, 'active')
         self.assertEqual(conversation.get_status(), 'stopped')
         self.command.handle(
-            email_address=self.user.username,
+            email_address=self.django_user.username,
             conversation_key=conversation.key,
             skip_initial_action_hack=True)
         # reload b/c DB changed
-        conversation = self.get_conversation()
+        conversation = self.get_wrapped_conv()
         self.assertEqual(conversation.get_status(), 'starting')
         [(pool, tag)] = conversation.get_tags()
         self.assertEqual(pool, 'longcode')
@@ -86,9 +94,11 @@ class GoStartConversationTestCase(DjangoGoApplicationTestCase):
 
     @patch('go.vumitools.api.SyncMessageSender')
     def test_restart_conversation(self, SyncMessageSender):
+        self.setup_conversation()
+        self.add_tagpool_to_conv()
         sender = DummyMessageSender()
         SyncMessageSender.return_value = sender
-        conversation = self.get_conversation()
+        conversation = self.get_wrapped_conv()
         conversation.old_start()
 
         # Set the status manually, because it's in `starting', not `running'
@@ -97,5 +107,5 @@ class GoStartConversationTestCase(DjangoGoApplicationTestCase):
 
         self.assertRaisesRegexp(
             CommandError, 'Conversation already started',
-            self.command.handle, email_address=self.user.username,
+            self.command.handle, email_address=self.django_user.username,
             conversation_key=conversation.key, skip_initial_action_hack=False)

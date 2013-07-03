@@ -5,6 +5,7 @@ from django.utils.functional import wraps
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
+from django.test.client import Client
 
 from vumi.tests.fake_amqp import FakeAMQPBroker
 
@@ -89,12 +90,22 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         for patch in reversed(self._settings_patches):
             patch.disable()
 
+    def setup_client(self):
+        self.client = Client()
+        self.client.login(username='username', password='password')
+
     def patch_settings(self, **kwargs):
         patch = override_settings(**kwargs)
         patch.enable()
         self._settings_patches.append(patch)
 
     def create_user_profile(self, sender, instance, created, **kwargs):
+        if not self.use_riak:
+            if created:
+                # Just create the account key, no actual user.
+                base_models.UserProfile.objects.create(
+                    user=instance, user_account=uuid.uuid4())
+            return
         if created:
             account = self.mk_user(self.api, unicode(instance.username))
             base_models.UserProfile.objects.create(
