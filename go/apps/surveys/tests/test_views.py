@@ -130,7 +130,6 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         response = self.client.post(
             self.get_action_view_url('send_survey'), {}, follow=True)
         self.assertRedirects(response, self.get_view_url('show'))
-        print [str(m) for m in response.context['messages']]
         [msg] = response.context['messages']
         self.assertEqual(
             str(msg), "Action disabled: This action needs a contact group.")
