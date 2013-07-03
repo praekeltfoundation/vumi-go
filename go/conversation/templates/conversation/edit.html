@@ -1,8 +1,5 @@
 {% extends "app.html" %}
 
-{% block extrahead %}
-    {{ edit_forms_media }}
-{% endblock %}
 
 {% block content_title %}Edit {{ conversation.name }}{% endblock %}
 
@@ -27,4 +24,8 @@
             <input class="btn btn-primary" type="submit" value="Save">
         </div>
     </form>
+{% endblock %}
+
+{% block extrahead %}
+    {{ edit_forms_media }}
 {% endblock %}

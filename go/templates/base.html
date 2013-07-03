@@ -9,6 +9,9 @@
     <meta content="no" http-equiv="imagetoolbar" />
     <title>{% block page_title %}Vumi Go{% endblock %}</title>
 
+    {% block extrahead %}
+    {% endblock %}
+    
     <meta name="description" content="A super scalable conversation engine for 
         distribution of SMS, star menu and chat messages">
     <meta name="author" content="Praekelt Foundation">
@@ -19,13 +22,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     {% compressed_css 'all' %}
-
-    {% compressed_js 'lib' %}
-    {% compressed_js 'go' %}
-
-    {% block extrahead %}
-    {% endblock %}
-
 
 </head>
 <body>
@@ -43,7 +39,6 @@
         {% block content %}
         {% endblock %}
 
-
         {% block footer %}
         <div class="footer">
             <p>&copy; 2012 <a href="http://praekelt.com">Praekelt Group</a>. <a href="mailto:hello@vumi.org">Contact</a>. <a href="https://github.com/praekelt/vumi">Github</a></p>
@@ -54,8 +49,8 @@
     {% block modals %}
     {% endblock %}
 
-
-    
+    {% compressed_js 'lib' %}
+    {% compressed_js 'go' %}
 
     {% block extrascript %}
     {% endblock %}
