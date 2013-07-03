@@ -330,6 +330,11 @@ class ConversationActionView(ConversationTemplateView):
         return self.perform_action(request, conversation, action_data)
 
     def perform_action(self, request, conversation, action_data):
+        disabled = self.action.is_disabled()
+        if disabled is not None:
+            messages.warning(request, 'Action disabled: %s' % (disabled,))
+            return self.redirect_to('show', conversation_key=conversation.key)
+
         self.action.perform_action(action_data)
         messages.info(request, 'Action successful: %s!' % (
             self.action.action_display_name,))

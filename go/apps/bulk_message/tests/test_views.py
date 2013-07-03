@@ -45,6 +45,23 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
         return self.user_api.wrap_conversation(conv)
 
+    def prepare_conversation(self, start=True, group=True):
+        if start:
+            resp = self.client.post(self.get_view_url('start'), follow=True)
+            [msg] = resp.context['messages']
+            self.assertEqual(str(msg), "Conversation started")
+            self.assertEqual(1, len(self.get_api_commands_sent()))
+
+        conv = self.get_wrapped_conv()
+
+        if not group:
+            conv.groups.remove_key(self.group.key)
+        if start:
+            conv.set_status_started()
+
+        conv.save()
+        return conv
+
     def run_new_conversation(self, selected_option, pool, tag):
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
         response = self.post_new_conversation()
@@ -242,10 +259,33 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertContains(response, 'name="message"')
         self.assertContains(response, '<h1>Send Bulk Message</h1>')
 
+    def test_action_bulk_send_no_group(self):
+        self.prepare_conversation(group=False)
+        response = self.client.post(
+            self.get_action_view_url('bulk_send'),
+            {'message': 'I am ham, not spam.', 'dedupe': True},
+            follow=True)
+        self.assertRedirects(response, self.get_view_url('show'))
+        [msg] = response.context['messages']
+        self.assertEqual(
+            str(msg), "Action disabled: This action needs a contact group.")
+        self.assertEqual([], self.get_api_commands_sent())
+
+    def test_action_bulk_send_not_running(self):
+        self.prepare_conversation(start=False)
+        response = self.client.post(
+            self.get_action_view_url('bulk_send'),
+            {'message': 'I am ham, not spam.', 'dedupe': True},
+            follow=True)
+        self.assertRedirects(response, self.get_view_url('show'))
+        [msg] = response.context['messages']
+        self.assertEqual(
+            str(msg),
+            "Action disabled: This action needs a running conversation.")
+        self.assertEqual([], self.get_api_commands_sent())
+
     def test_action_bulk_send_dedupe(self):
-        # Start the conversation
-        self.client.post(self.get_view_url('start'))
-        self.assertEqual(1, len(self.get_api_commands_sent()))
+        self.prepare_conversation()
         response = self.client.post(
             self.get_action_view_url('bulk_send'),
             {'message': 'I am ham, not spam.', 'dedupe': True})
@@ -262,9 +302,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             content='I am ham, not spam.', dedupe=True))
 
     def test_action_bulk_send_no_dedupe(self):
-        # Start the conversation
-        self.client.post(self.get_view_url('start'))
-        self.assertEqual(1, len(self.get_api_commands_sent()))
+        self.prepare_conversation()
         response = self.client.post(
             self.get_action_view_url('bulk_send'),
             {'message': 'I am ham, not spam.', 'dedupe': False})
@@ -305,8 +343,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         account.save()
 
         # Start the conversation
-        self.client.post(self.get_view_url('start'))
-        self.assertEqual(1, len(self.get_api_commands_sent()))
+        self.prepare_conversation()
 
         # POST the action with a mock token manager
         with patch.object(TokenManager, 'generate_token') as mock_method:
