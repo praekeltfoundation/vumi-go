@@ -1,40 +1,32 @@
 {% extends "app.html" %}
 
-{% block extrahead %}
-    {{ edit_forms_media }}
-{% endblock %}
 
 {% block content_title %}Edit {{ conversation.name }}{% endblock %}
 
-{% block content_actions_right %}
-<div class="pull-right">
-    <button class="btn btn-primary" value="Next">Save</button>
-</div>
-{% endblock %}
-
 {% block content_main %}
-
-{% if messages %}
-<div class="row-fluid">
-    <div class="span12">
-        {% include "base/includes/messages.html" %}
+    {% if messages %}
+    <div class="row-fluid">
+        <div class="span12">
+            {% include "base/includes/messages.html" %}
+        </div>
     </div>
-</div>
-{% endif %}
+    {% endif %}
 
+    <form id="form-conversation" class="indent" method="post" action="">
+        {% csrf_token %}
+        {% for edit_form in edit_forms %}
+            <fieldset>
+                {{ edit_form }}
+            </fieldset>
+        {% endfor %}
 
-<form id="form-conversation" class="indent" method="post" action="">
-    {% csrf_token %}
-    {% for edit_form in edit_forms %}
-        <fieldset>
-            {{ edit_form }}
-        </fieldset>
-    {% endfor %}
-</form>
+        <div class="form-actions">
+            <input class="btn btn-primary" type="submit" value="Save">
+        </div>
+    </form>
 {% endblock %}
 
-{% block ondomready %}
-    $('.content .actions .right button').click(function() {
-        $('#form-conversation').submit();
-    });
+{# TODO: Need to fix this #}
+{% block formsmedia %}
+    {{ edit_forms_media }}
 {% endblock %}
