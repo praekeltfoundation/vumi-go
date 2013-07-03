@@ -3,6 +3,12 @@
 
 {% block content_title %}Edit {{ conversation.name }}{% endblock %}
 
+{% block content_actions_right %}
+    <div class="pull-right">
+        <button class="btn btn-primary" type="submit" value="Save">Save</button>
+    </div>
+{% endblock %}
+
 {% block content_main %}
     {% if messages %}
     <div class="row-fluid">
@@ -19,13 +25,15 @@
                 {{ edit_form }}
             </fieldset>
         {% endfor %}
-
-        <div class="form-actions">
-            <input class="btn btn-primary" type="submit" value="Save">
-        </div>
     </form>
 {% endblock %}
 
 {% block extrahead %}
     {{ edit_forms_media }}
+{% endblock %}
+
+{% block ondomready %}
+    $('.content .actions .right button').click(function() {
+        $('#form-conversation').submit();
+    });
 {% endblock %}
