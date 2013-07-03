@@ -252,6 +252,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(mime_type, 'application/zip')
 
     def test_action_bulk_send_view(self):
+        self.prepare_conversation()
         response = self.client.get(self.get_action_view_url('bulk_send'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
