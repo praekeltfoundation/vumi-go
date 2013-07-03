@@ -1,4 +1,5 @@
 from uuid import uuid4
+import urllib
 
 from django.test.client import Client
 from django.core.urlresolvers import reverse
@@ -32,6 +33,16 @@ class ChannelViewsTestCase(VumiGoDjangoTestCase):
     def get_view_url(self, view, channel_key):
         view_def = get_channel_view_definition(None)
         return view_def.get_view_url(view, channel_key=channel_key)
+
+    def test_index(self):
+        tag = (u'longcode', u'default10001')
+        channel_key = u'%s:%s' % tag
+        response = self.client.get(reverse('channels:index'))
+        self.assertNotContains(response, urllib.quote(channel_key))
+
+        self.user_api.acquire_specific_tag(tag)
+        response = self.client.get(reverse('channels:index'))
+        self.assertContains(response, urllib.quote(channel_key))
 
     def test_get_new_channel(self):
         self.assertEqual(set([]), self.user_api.list_endpoints())
