@@ -179,6 +179,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         """
         Test showing the conversation
         """
+        self.prepare_conversation()
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')
