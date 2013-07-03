@@ -34,6 +34,10 @@ class ConversationAction(object):
     action_display_name = None
     needs_confirmation = False
 
+    # Some actions are only possible under certain conditions.
+    needs_group = False
+    needs_running = False
+
     redirect_to = None
 
     def __init__(self, conv):
@@ -49,3 +53,18 @@ class ConversationAction(object):
             user_account_key=self._conv.user_account.key,
             conversation_key=self._conv.key,
             **params)
+
+    def is_disabled(self):
+        """Returns `None` if the action is enabled, otherwise a reason string.
+        """
+        if self.needs_group and not self._conv.groups.keys():
+            return "This action needs a contact group."
+
+        if self.needs_running and not self._conv.running():
+            return "This action needs a running conversation."
+
+        return self.check_disabled()
+
+    def check_disabled(self):
+        """Override in subclasses to provide custom disable logic."""
+        return None
