@@ -3,7 +3,6 @@ from django.forms.widgets import RadioSelect
 
 
 class Wizard1CreateForm(forms.Form):
-
     CHANNEL_CHOICES = (
         ('new', 'Setup a new channel'),
         ('existing', 'Use a keyword to route messages over an existing \

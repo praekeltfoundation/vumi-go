@@ -48,6 +48,23 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         conv = self.conv_store.get_conversation_by_key(self.conv_key)
         return self.user_api.wrap_conversation(conv)
 
+    def prepare_conversation(self, start=True, group=True):
+        if start:
+            resp = self.client.post(self.get_view_url('start'), follow=True)
+            [msg] = resp.context['messages']
+            self.assertEqual(str(msg), "Conversation started")
+            self.assertEqual(1, len(self.get_api_commands_sent()))
+
+        conv = self.get_wrapped_conv()
+
+        if not group:
+            conv.groups.remove_key(self.group.key)
+        if start:
+            conv.set_status_started()
+
+        conv.save()
+        return conv
+
     def create_poll(self, conversation, **kwargs):
         poll_id = 'poll-%s' % (conversation.key,)
         pm, config = get_poll_config(poll_id)
@@ -87,21 +104,20 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(conversation.stopping())
 
     def test_action_send_survey_get(self):
+        self.prepare_conversation()
         response = self.client.get(self.get_action_view_url('send_survey'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
         self.assertEqual([], self.get_api_commands_sent())
 
     def test_action_send_survey_post(self):
-        # Start the conversation
-        self.client.post(self.get_view_url('start'))
-        self.assertEqual(1, len(self.get_api_commands_sent()))
+        self.prepare_conversation()
         response = self.client.post(
-            self.get_action_view_url('send_survey'), {})
+            self.get_action_view_url('send_survey'), {}, follow=True)
         self.assertRedirects(response, self.get_view_url('show'))
-        [bulk_send_cmd] = self.get_api_commands_sent()
+        [send_survey_cmd] = self.get_api_commands_sent()
         conversation = self.user_api.get_wrapped_conversation(self.conv_key)
-        self.assertEqual(bulk_send_cmd, VumiApiCommand.command(
+        self.assertEqual(send_survey_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
             'send_survey',
             user_account_key=conversation.user_account.key,
@@ -110,17 +126,26 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             delivery_class=conversation.delivery_class,
             is_client_initiated=False))
 
-    @skip("The new views don't handle this kind of thing very well yet.")
-    def test_action_send_survey_fails(self):
-        """
-        Test failure to send messages
-        """
-        self.acquire_all_longcode_tags()
-        response = self.client.post(self.get_view_url('start'), follow=True)
-        self.assertRedirects(response, self.get_view_url('start'))
-        [] = self.get_api_commands_sent()
+    def test_action_send_survey_no_group(self):
+        self.prepare_conversation(group=False)
+        response = self.client.post(
+            self.get_action_view_url('send_survey'), {}, follow=True)
+        self.assertRedirects(response, self.get_view_url('show'))
         [msg] = response.context['messages']
-        self.assertEqual(str(msg), "No spare messaging tags.")
+        self.assertEqual(
+            str(msg), "Action disabled: This action needs a contact group.")
+        self.assertEqual([], self.get_api_commands_sent())
+
+    def test_action_send_survey_not_running(self):
+        self.prepare_conversation(start=False)
+        response = self.client.post(
+            self.get_action_view_url('send_survey'), {}, follow=True)
+        self.assertRedirects(response, self.get_view_url('show'))
+        [msg] = response.context['messages']
+        self.assertEqual(
+            str(msg),
+            "Action disabled: This action needs a running conversation.")
+        self.assertEqual([], self.get_api_commands_sent())
 
     @skip("The new views don't have this yet.")
     def test_group_selection(self):
@@ -154,6 +179,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         """
         Test showing the conversation
         """
+        self.prepare_conversation()
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')

@@ -4,7 +4,7 @@
 
 {% block content_extraclass %}campaigns summary{% endblock %}
 
-{% block content_title %}Preview &amp; Activate{% endblock %}
+{% block content_title %}{{ conversation.name }}{% endblock %}
 
 
 {% block content_actions_right %}
@@ -13,19 +13,29 @@
         <a href="{% conversation_screen conversation 'edit' %}" class="btn btn-primary">Edit</a>
     {% endif %}
     {% if conversation.stopped %}
-        <form action="{% conversation_screen conversation 'start' %}" class="form-horizontal" method="post">
-            {% csrf_token %}
-            <input type="submit" class="btn btn-primary" name="start" value="Start">
-        </form>
-        <form action="{% conversation_screen conversation 'archive' %}" class="form-horizontal" method="post">
-            {% csrf_token %}
-            <input type="submit" class="btn btn-primary" name="archive" value="Archive">
-        </form>
+
+
+        <a href="{% conversation_screen conversation 'start' %}" 
+            class="btn btn-primary action" 
+            data-name="start"
+            data-value="Start">
+            Start
+        </a>
+
+        <a href="{% conversation_screen conversation 'archive' %}" 
+            class="btn btn-primary action" 
+            data-name="archive"
+            data-value="Archive">
+            Archive
+        </a>
+        
     {% elif conversation.running %}
-        <form action="{% conversation_screen conversation 'stop' %}" class="form-horizontal" method="post">
-            {% csrf_token %}
-            <input type="submit" class="btn btn-primary" name="stop" value="Stop">
-        </form>
+        <a href="{% conversation_screen conversation 'stop' %}" 
+            class="btn btn-primary action" 
+            data-name="stop"
+            data-value="Stop">
+            Stop
+        </a>
     {% else %}
         {# TODO: Figure out what to put here. #}
         <a href="{% conversation_screen conversation %}" class="btn btn-primary">???</a>
@@ -50,7 +60,7 @@
             </p>
             <p>
                 <h6>TYPE</h6>
-                {{ conversation.type }}<br>
+                {{ conversation.conversation_type }}<br>
             </p>
 
             <p>
@@ -58,7 +68,6 @@
                 <!-- TODO:  update the routing table metadata helpers to
                             be able to answer questions like this.
                 -->
-                USSD<br>
             </p>
         </div>
 
@@ -69,7 +78,13 @@
             <p>
                 <ol>
                 {% for action in actions %}
-                    <li><a href="{% conversation_action conversation action.action_name %}">{{action.action_display_name}}</a></li>
+                    {% with is_disabled=action.is_disabled %}
+                    {% if is_disabled %}
+                    <li><a href="#" class="disabled" title="Action disabled" data-content="{{ is_disabled }}">{{ action.action_display_name }}</a></li>
+                    {% else %}
+                    <li><a href="{% conversation_action conversation action.action_name %}">{{ action.action_display_name }}</a></li>
+                    {% endif %}
+                    {% endwith %}
                 {% empty %}
                     <li>This conversation has no actions.</li>
                 {% endfor %}
@@ -85,14 +100,11 @@
             </h4>
 
             <p class="message">
-
                 {{ conversation.description }}
             </p>
         </div>
 
 
-        
-        
         <div class="sub-contacts">
             <h4 class="control-label">
                 Contacts
@@ -115,6 +127,23 @@
 
 
 {% block ondomready %}
-    {{ block.super }}
-    // highlight the breadcrumbs.
+
+    $('.content .actions .right .action').on('click', function() {
+
+        // confirm if the user wants to perform the action,
+        var $button = $(this);
+        bootbox.confirm('Are you sure you want to ' + $button.attr('data-value') + ' this conversation?', function(submit) {
+            $form = $('<form method="post"></form>')
+                .attr('action', $button.attr('href'));
+            $form.append("{% csrf_token %}");
+            $form.append('<input type="hidden" name="' + $button.attr('data-name') + '" value="' + $button.attr('data-value') + '">');
+            $form.submit();
+        });
+
+        return false;
+    });
+
+    $('.content .sub-actions .disabled').popover();
+    $('.content .sub-actions .disabled').on('click', function() { return false; });
+
 {% endblock %}

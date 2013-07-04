@@ -6,6 +6,11 @@ class SendSurveyAction(ConversationAction):
     action_name = 'send_survey'
     action_display_name = 'Send Survey'
 
+    needs_confirmation = True
+
+    needs_group = True
+    needs_running = True
+
     def perform_action(self, action_data):
         return self.send_command(
             'send_survey', batch_id=self._conv.get_latest_batch_key(),
