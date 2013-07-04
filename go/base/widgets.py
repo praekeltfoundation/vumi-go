@@ -79,7 +79,7 @@ class CodeMirrorTextarea(forms.Textarea):
                   ' go.configs.codemirror["%s"] = %s;'
                   '</script>' %
                   (code_textarea_id, self.option_json)]
-        return mark_safe("\n\n".join(output))
+        return mark_safe("\n".join(output))
 
 
 class CodeField(forms.CharField):
