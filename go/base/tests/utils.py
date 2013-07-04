@@ -159,6 +159,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         return conv
 
     def put_sample_messages_in_conversation(self, message_count, conversation,
+                                            reply=False, ack=False,
                                             start_date=None,
                                             time_multiplier=10):
         now = start_date or datetime.now().date()
@@ -174,16 +175,24 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
                 transport_name='sphex')
             ts = now - timedelta(hours=i * time_multiplier)
             msg_in['timestamp'] = ts
+            self.api.mdb.add_inbound_message(msg_in, batch_id=batch_key)
+            if not reply:
+                messages.append(msg_in)
+                continue
+
             msg_out = msg_in.reply('thank you')
             msg_out['timestamp'] = ts
+            self.api.mdb.add_outbound_message(msg_out, batch_id=batch_key)
+            if not ack:
+                messages.append((msg_in, msg_out))
+                continue
+
             ack = TransportEvent(
                 event_type='ack',
                 user_message_id=msg_out['message_id'],
                 sent_message_id=msg_out['message_id'],
                 transport_type='sms',
                 transport_name='sphex')
-            self.api.mdb.add_inbound_message(msg_in, batch_id=batch_key)
-            self.api.mdb.add_outbound_message(msg_out, batch_id=batch_key)
             self.api.mdb.add_event(ack)
             messages.append((msg_in, msg_out, ack))
         return messages

@@ -7,7 +7,7 @@ from ConfigParser import ConfigParser
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 
-from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_setup_env
 from go.base.utils import vumi_api_for_user
 
@@ -28,11 +28,12 @@ class FakeFile(StringIO):
         pass
 
 
-class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
-    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
+class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
+    use_riak = True
 
     def setUp(self):
         super(GoBootstrapEnvTestCase, self).setUp()
+        self.setup_api()
         self.config = self.mk_config({})
 
         self.command = go_setup_env.Command()

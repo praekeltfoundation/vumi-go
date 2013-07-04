@@ -191,7 +191,7 @@ class EmailTestCase(VumiGoDjangoTestCase):
         self.contact_store.new_contact(
             name=u'Contact', surname=u'Two', msisdn=u"+27761234567")
 
-        self.put_sample_messages_in_conversation(10, conv)
+        self.put_sample_messages_in_conversation(10, conv, reply=True)
         # create a second conversation to test sorting
         self.create_conversation()
 

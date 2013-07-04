@@ -212,12 +212,9 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
         return self.user_api.get_wrapped_conversation(conv_key)
 
     def put_sample_messages_in_conversation(self, message_count,
-                                            conversation=None,
-                                            start_date=None,
-                                            time_multiplier=10):
+                                            conversation=None, **kwargs):
         if conversation is None:
             conversation = self.get_wrapped_conv()
         return super(DjangoGoApplicationTestCase,
                      self).put_sample_messages_in_conversation(
-                         message_count, conversation, start_date=start_date,
-                         time_multiplier=time_multiplier)
+                         message_count, conversation, **kwargs)

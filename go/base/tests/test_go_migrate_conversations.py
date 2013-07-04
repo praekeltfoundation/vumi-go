@@ -5,16 +5,18 @@ from datetime import datetime
 
 from vumi.persist.model import ModelMigrationError
 
-from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_migrate_conversations
 from go.vumitools.conversation.old_models import ConversationVNone
 
 
-class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
-    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
+class GoMigrateConversationsCommandTestCase(VumiGoDjangoTestCase):
+    use_riak = True
 
     def setUp(self):
         super(GoMigrateConversationsCommandTestCase, self).setUp()
+        self.setup_api()
+        self.setup_user_api()
 
         self.old_conv_model = self.user_api.conversation_store.manager.proxy(
             ConversationVNone)

@@ -202,7 +202,7 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
     def test_export_messages(self):
         self.setup_conversation(started=True)
         self.put_sample_messages_in_conversation(
-            10, start_date=date(2012, 1, 1), time_multiplier=12)
+            10, start_date=date(2012, 1, 1), time_multiplier=12, reply=True)
         conv_url = reverse('multi_survey:show', kwargs={
             'conversation_key': self.conv_key,
             })

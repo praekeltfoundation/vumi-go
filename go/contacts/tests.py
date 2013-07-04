@@ -39,8 +39,6 @@ def mkcontact(self, name=None, surname=None, msisdn=u'+1234567890', **kwargs):
 
 
 class ContactsTestCase(VumiGoDjangoTestCase):
-    # TODO: Cleaner test group and contact creation.
-
     use_riak = True
 
     def setUp(self):
@@ -52,10 +50,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
     def test_redirect_index(self):
         response = self.client.get(reverse('contacts:index'))
         self.assertRedirects(response, reverse('contacts:groups'))
-
-    def clear_groups(self, contact):
-        contact.groups.clear()
-        contact.save()
 
     def get_all_contacts(self, keys=None):
         if keys is None:
@@ -80,9 +74,7 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertRedirects(response, person_url(contact.key))
 
     def test_contact_deleting(self):
-        contact = self.contact_store.new_contact(
-            name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
-            msisdn=TEST_CONTACT_MSISDN)
+        contact = mkcontact(self)
         person_url = reverse('contacts:person', kwargs={
             'person_key': contact.key,
         })
@@ -98,9 +90,7 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_contact_update(self):
-        contact = self.contact_store.new_contact(
-            name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
-            msisdn=TEST_CONTACT_MSISDN)
+        contact = mkcontact(self)
         response = self.client.post(person_url(contact.key), {
             'name': 'changed name',
             'surname': 'changed surname',
@@ -138,7 +128,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
                         'fixtures', 'sample-contacts.csv'))
 
-        # self.clear_groups()
         response = self.client.post(reverse('contacts:people'), {
             'file': csv_file,
             'name': 'a new group',
@@ -155,7 +144,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
 
     def test_contact_upload_into_existing_group(self):
         group = self.contact_store.new_group(TEST_GROUP_NAME)
-        # self.clear_groups()
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
                         'fixtures', 'sample-contacts.csv'), 'r')
         response = self.client.post(reverse('contacts:people'), {
@@ -172,7 +160,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
 
     def test_uploading_unicode_chars_in_csv(self):
         group = self.contact_store.new_group(TEST_GROUP_NAME)
-        # self.clear_groups()
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
                                   'fixtures', 'sample-unicode-contacts.csv'))
 
@@ -191,7 +178,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
 
     def test_uploading_windows_linebreaks_in_csv(self):
         group = self.contact_store.new_group(TEST_GROUP_NAME)
-        # self.clear_groups()
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
                                   'fixtures',
                                   'sample-windows-linebreaks-contacts.csv'))
@@ -227,7 +213,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_uploading_unicode_chars_in_csv_into_new_group(self):
-        # self.clear_groups()
         new_group_name = u'Testing a ünicode grøüp'
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
                                   'fixtures', 'sample-unicode-contacts.csv'))
@@ -253,7 +238,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
             'group_key': group.key
         })
 
-        # self.clear_groups()
         csv_file = open(
             path.join(settings.PROJECT_ROOT, 'base',
                       'fixtures', 'sample-contacts.csv'), 'r')
@@ -299,8 +283,6 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         # Carefully crafted but bad CSV data
         wrong_file = StringIO(',,\na,b,c\n"')
         wrong_file.name = 'fubar.csv'
-
-        # self.clear_groups()
 
         response = self.client.post(group_url, {
             'file': wrong_file
@@ -376,9 +358,7 @@ class ContactsTestCase(VumiGoDjangoTestCase):
                         contacts]))
 
     def test_contact_querying(self):
-        contact = self.contact_store.new_contact(
-            name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
-            msisdn=TEST_CONTACT_MSISDN)
+        contact = mkcontact(self)
         people_url = reverse('contacts:people')
 
         # test no-match
@@ -394,9 +374,7 @@ class ContactsTestCase(VumiGoDjangoTestCase):
         self.assertContains(response, person_url(contact.key))
 
     def test_contact_key_value_query(self):
-        contact = self.contact_store.new_contact(
-            name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
-            msisdn=TEST_CONTACT_MSISDN)
+        contact = mkcontact(self)
         people_url = reverse('contacts:people')
         self.client.get(people_url, {
             'q': 'name:%s' % (contact.name,)
@@ -456,9 +434,7 @@ class GroupsTestCase(VumiGoDjangoTestCase):
 
     def test_group_contact_querying(self):
         group = self.contact_store.new_group(TEST_GROUP_NAME)
-        contact = self.contact_store.new_contact(
-            name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
-            msisdn=TEST_CONTACT_MSISDN, groups=[group])
+        contact = mkcontact(self, groups=[group])
         # test no-match
         response = self.client.get(group_url(group.key), {
             'q': 'this should not match',
@@ -551,9 +527,7 @@ class GroupsTestCase(VumiGoDjangoTestCase):
 
     def test_group_contact_export(self):
         group = self.contact_store.new_group(TEST_GROUP_NAME)
-        contact = self.contact_store.new_contact(
-            name=TEST_CONTACT_NAME, surname=TEST_CONTACT_SURNAME,
-            msisdn=TEST_CONTACT_MSISDN, groups=[group])
+        contact = mkcontact(self, groups=[group])
         # Clear the group
         group_url = reverse('contacts:group', kwargs={
             'group_key': group.key,
