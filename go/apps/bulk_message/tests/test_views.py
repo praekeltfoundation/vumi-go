@@ -92,13 +92,13 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
         self.assertContains(response, 'Send Bulk Message')
-        self.assertContains(response, self.get_action_view_url('bulk_send'))
+        self.assertNotContains(response, self.get_action_view_url('bulk_send'))
 
     def test_show_running(self):
         """
         Test showing the conversation
         """
-        self.setup_conversation(started=True)
+        self.setup_conversation(started=True, with_group=True)
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
@@ -225,7 +225,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(mime_type, 'application/zip')
 
     def test_action_bulk_send_view(self):
-        self.setup_conversation()
+        self.setup_conversation(started=True, with_group=True)
         response = self.client.get(self.get_action_view_url('bulk_send'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)

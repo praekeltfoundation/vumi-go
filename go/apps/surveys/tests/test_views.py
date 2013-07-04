@@ -45,7 +45,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(conversation.stopping())
 
     def test_action_send_survey_get(self):
-        self.setup_conversation()
+        self.setup_conversation(started=True, with_group=True)
         response = self.client.get(self.get_action_view_url('send_survey'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
@@ -143,13 +143,14 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')
-        self.assertContains(response, self.get_action_view_url('send_survey'))
+        self.assertNotContains(
+            response, self.get_action_view_url('send_survey'))
 
     def test_show_running(self):
         """
         Test showing the conversation
         """
-        self.setup_conversation(started=True)
+        self.setup_conversation(started=True, with_group=True)
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')
