@@ -24,27 +24,11 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
     transport_name = 'sphex'
     transport_type = 'sms'
 
-    # Set these to None so we can see if we've created them.
-    group = None
-    contact = None
-
     def setUp(self):
         super(DjangoGoApplicationTestCase, self).setUp()
         self.setup_api()
         self.setup_user_api()
         self.setup_client()
-
-    def _create_group(self, with_contact=False):
-        self.group = self.contact_store.new_group(self.TEST_GROUP_NAME)
-        self.group_key = self.group.key
-        if with_contact and self.contact is None:
-            self._create_contact()
-
-    def _create_contact(self):
-        self.contact = self.contact_store.new_contact(
-            name=self.TEST_CONTACT_NAME, surname=self.TEST_CONTACT_SURNAME,
-            msisdn=u"+27761234567", groups=[self.group])
-        self.contact_key = self.contact.key
 
     def setup_conversation(self, started=False, with_group=False,
                            with_contact=False):
@@ -55,9 +39,13 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
             'config': {},
         }
         if with_group:
-            if self.group is None:
-                self._create_group(with_contact)
+            self.group = self.contact_store.new_group(self.TEST_GROUP_NAME)
             params['groups'] = [self.group]
+            if with_contact:
+                self.contact = self.contact_store.new_contact(
+                    msisdn=u"+27761234567", name=self.TEST_CONTACT_NAME,
+                    surname=self.TEST_CONTACT_SURNAME, groups=[self.group])
+
         if self.TEST_CONVERSATION_PARAMS:
             params.update(self.TEST_CONVERSATION_PARAMS)
         self.conversation = self.create_conversation(started=started, **params)
