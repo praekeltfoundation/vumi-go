@@ -2,14 +2,9 @@
 
 {% block content_title %}{{ action_display_name }}{% endblock %}
 
-{% block extra_header %}
-<link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
-<link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
-{% endblock %}
-
 {% block content_actions_right %}
 <div class="pull-right">
-    <button type="submit" name="submit" class="btn btn-primary" value="Next">Next</button>
+    <button type="submit" name="submit" class="btn btn-primary" value="Save">Save</button>
 </div>
 {% endblock %}
 
@@ -33,6 +28,12 @@
         </div>
     </div>
 </form>
+
+
+{% endblock %}
+
+{% block extramedia %}
+    {{ form.media }}
 {% endblock %}
 
 {% block ondomready %}
