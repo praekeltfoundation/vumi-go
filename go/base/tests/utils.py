@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import uuid
 
 from django.conf import settings, UserSettingsHolder
@@ -5,8 +6,10 @@ from django.utils.functional import wraps
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
+from django.test.client import Client
 
 from vumi.tests.fake_amqp import FakeAMQPBroker
+from vumi.message import TransportUserMessage, TransportEvent
 
 from go.vumitools.tests.utils import GoPersistenceMixin, FakeAmqpConnection
 from go.vumitools.api import VumiApi
@@ -89,12 +92,22 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         for patch in reversed(self._settings_patches):
             patch.disable()
 
+    def setup_client(self):
+        self.client = Client()
+        self.client.login(username='username', password='password')
+
     def patch_settings(self, **kwargs):
         patch = override_settings(**kwargs)
         patch.enable()
         self._settings_patches.append(patch)
 
     def create_user_profile(self, sender, instance, created, **kwargs):
+        if not self.use_riak:
+            if created:
+                # Just create the account key, no actual user.
+                base_models.UserProfile.objects.create(
+                    user=instance, user_account=uuid.uuid4())
+            return
         if created:
             account = self.mk_user(self.api, unicode(instance.username))
             base_models.UserProfile.objects.create(
@@ -108,6 +121,16 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         self.api = VumiApi.from_config_sync(settings.VUMI_API_CONFIG)
         self._persist_riak_managers.append(self.api.manager)
 
+    def setup_user_api(self, django_user=None):
+        if django_user is None:
+            django_user = self.mk_django_user()
+        self.django_user = django_user
+        self.user_api = base_utils.vumi_api_for_user(django_user)
+        self.contact_store = self.user_api.contact_store
+        self.contact_store.contacts.enable_search()
+        self.contact_store.groups.enable_search()
+        self.conv_store = self.user_api.conversation_store
+
     def mk_django_user(self):
         user = User.objects.create_user(
             'username', 'user@domain.com', 'password')
@@ -116,18 +139,83 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         user.save()
         return User.objects.get(username='username')
 
+    def create_conversation(self, started=False, **kwargs):
+        params = {
+            'conversation_type': u'test_conversation_type',
+            'name': u'conversation name',
+            'description': u'hello world',
+            'config': {},
+        }
+        params.update(kwargs)
+        conv = self.user_api.wrap_conversation(
+            self.conv_store.new_conversation(**params))
 
-def declare_longcode_tags(api):
-    """Declare a set of long codes to the tag pool."""
-    api.tpm.declare_tags([(u"longcode", u"default%s" % i) for i
-                      in range(10001, 10001 + 4)])
-    api.tpm.set_metadata(u"longcode", {
-        "display_name": "Long code",
-        "delivery_class": "sms",
-        "transport_type": "sms",
-        "server_initiated": True,
-        "transport_name": "sphex",
-        })
+        if started:
+            conv.set_status_started()
+            batch_id = conv.start_batch()
+            conv.batches.add_key(batch_id)
+            conv.save()
+
+        return conv
+
+    def add_messages_to_conv(self, message_count, conversation, reply=False,
+                             ack=False, start_date=None, time_multiplier=10):
+        now = start_date or datetime.now().date()
+        batch_key = conversation.get_latest_batch_key()
+
+        messages = []
+        for i in range(message_count):
+            msg_in = TransportUserMessage(
+                to_addr='9292',
+                from_addr='from-%s' % (i,),
+                content='hello',
+                transport_type='sms',
+                transport_name='sphex')
+            ts = now - timedelta(hours=i * time_multiplier)
+            msg_in['timestamp'] = ts
+            self.api.mdb.add_inbound_message(msg_in, batch_id=batch_key)
+            if not reply:
+                messages.append(msg_in)
+                continue
+
+            msg_out = msg_in.reply('thank you')
+            msg_out['timestamp'] = ts
+            self.api.mdb.add_outbound_message(msg_out, batch_id=batch_key)
+            if not ack:
+                messages.append((msg_in, msg_out))
+                continue
+
+            ack = TransportEvent(
+                event_type='ack',
+                user_message_id=msg_out['message_id'],
+                sent_message_id=msg_out['message_id'],
+                transport_type='sms',
+                transport_name='sphex')
+            self.api.mdb.add_event(ack)
+            messages.append((msg_in, msg_out, ack))
+        return messages
+
+    def declare_tags(self, pool, num_tags, metadata=None):
+        """Declare a set of long codes to the tag pool."""
+        if metadata is None:
+            metadata = {
+                "display_name": "Long code",
+                "delivery_class": "sms",
+                "transport_type": "sms",
+                "server_initiated": True,
+                "transport_name": "sphex",
+            }
+        self.api.tpm.declare_tags([(pool, u"default%s" % i) for i
+                                   in range(10001, 10001 + num_tags)])
+        self.api.tpm.set_metadata(pool, metadata)
+
+    def add_tagpool_permission(self, tagpool, max_keys=None):
+        permission = self.api.account_store.tag_permissions(
+            uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
+        permission.save()
+        account = self.user_api.get_user_account()
+        account.tagpools.add(permission)
+        account.save()
 
 
 class FakeMessageStoreClient(object):
