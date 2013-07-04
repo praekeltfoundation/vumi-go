@@ -125,7 +125,6 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
 
         response = self.client.post(reverse('multi_survey:start', kwargs={
             'conversation_key': self.conv_key}))
-        print repr(response.content)
         self.assertRedirects(response, reverse('multi_survey:show', kwargs={
             'conversation_key': self.conv_key}))
 
