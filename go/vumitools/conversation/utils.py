@@ -162,13 +162,6 @@ class ConversationWrapper(object):
             groups.extend((yield bunch))
         returnValue(groups)
 
-    @Manager.calls_manager
-    def make_message_options(self, tag):
-        yield self.get_tagpool_metadata('msg_options')  # force cache update
-        msg_options = yield self.user_api.msg_options(
-            tag, self._tagpool_metadata)
-        returnValue(msg_options)
-
     def set_go_helper_metadata(self, helper_metadata=None):
         if helper_metadata is None:
             helper_metadata = {}
@@ -246,15 +239,13 @@ class ConversationWrapper(object):
                                     conversation_key=self.c.key)
 
         if send_initial_action_hack:
-            msg_options = yield self.make_message_options(tag)
-
             is_client_initiated = yield self.is_client_initiated()
             yield self.dispatch_command(
                 'initial_action_hack',
                 user_account_key=self.c.user_account.key,
                 conversation_key=self.c.key,
                 batch_id=batch_id,
-                msg_options=msg_options,
+                msg_options={},
                 is_client_initiated=is_client_initiated,
                 delivery_class=self.c.delivery_class,
                 **extra_params)
@@ -323,11 +314,8 @@ class ConversationWrapper(object):
         """
         tag = yield self.acquire_tag()
         batch_id = yield self.start_batch(tag)
-        msg_options = yield self.make_message_options(tag)
         # specify this message as being sensitive
-        helper_metadata = msg_options.setdefault('helper_metadata', {})
-        go_metadata = helper_metadata.setdefault('go', {})
-        go_metadata['sensitive'] = True
+        msg_options = {'helper_metadata': {'go': {'sensitive': True}}}
 
         # We need to have routing set up so that we can send the message with
         # the token in it.

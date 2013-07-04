@@ -115,16 +115,6 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
         [start_cmd, hack_cmd] = self.get_api_commands_sent()
         [batch] = conversation.get_batches()
         [] = list(batch.tags)
-        [contact] = self.get_contacts_for_conversation(conversation)
-        msg_options = {
-            "transport_type": "sms",
-            "transport_name": self.transport_name,
-            "from_addr": "default10001",
-            "helper_metadata": {
-                "tag": {"tag": ["longcode", "default10001"]},
-                "go": {"user_account": conversation.user_account.key},
-                },
-            }
 
         self.assertEqual(start_cmd, VumiApiCommand.command(
                 '%s_application' % (conversation.conversation_type,), 'start',
@@ -137,7 +127,7 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
                 conversation_key=conversation.key,
                 is_client_initiated=conversation.is_client_initiated(),
                 delivery_class=conversation.delivery_class,
-                batch_id=batch.key, msg_options=msg_options, dedupe=False))
+                batch_id=batch.key, msg_options={}, dedupe=False))
 
     def test_send_fails(self):
         response = self.client.post(reverse('sequential_send:start', kwargs={
