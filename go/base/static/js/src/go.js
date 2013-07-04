@@ -10,4 +10,4 @@
   // Models created automatically when added to Backbone.Collection won't be
   // recognised as instances of Backbone.Model, so we need to change this.
   Backbone.Collection.prototype.model = Backbone.Model;
-})(window.go = window.go || {});
+})(window.go);
