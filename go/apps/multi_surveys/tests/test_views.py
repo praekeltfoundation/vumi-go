@@ -1,14 +1,12 @@
 from datetime import date
 from zipfile import ZipFile
 from StringIO import StringIO
-import uuid
 
 from django.core.urlresolvers import reverse
 from django.core import mail
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.base.tests.utils import declare_longcode_tags
 
 
 class MultiSurveyTestCase(DjangoGoApplicationTestCase):
@@ -20,7 +18,7 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
             VXPOLLS_REDIS_CONFIG=self._persist_config['redis_manager'])
 
     def add_tagpool_to_conv(self):
-        declare_longcode_tags(self.api)
+        self.declare_tags(u'longcode', 4)
         self.add_tagpool_permission(u'longcode')
         conv = self.get_wrapped_conv()
         conv.c.delivery_class = u'sms'
@@ -232,7 +230,7 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         self.client.post(reverse('multi_survey:start', kwargs={
             'conversation_key': self.conv_key}))
 
-        self.put_sample_messages_in_conversation(1)
+        print self.put_sample_messages_in_conversation(1)
         conversation = self.get_wrapped_conv()
         [msg] = conversation.received_messages()
         response = self.client.post(reverse('multi_survey:show', kwargs={

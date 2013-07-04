@@ -6,13 +6,19 @@ from django.core import mail
 from django.conf import settings
 from django.utils.unittest import skip
 
-from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.account.utils import send_user_account_summary
 from go.account.tasks import send_scheduled_account_summary
+from go.base.tests.utils import VumiGoDjangoTestCase
 
 
-class AccountTestCase(DjangoGoApplicationTestCase):
-    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
+class AccountTestCase(VumiGoDjangoTestCase):
+    use_riak = True
+
+    def setUp(self):
+        super(AccountTestCase, self).setUp()
+        self.setup_api()
+        self.setup_user_api()
+        self.setup_client()
 
     def confirm(self, token_url):
         url = urlparse.urlsplit(token_url)
@@ -155,8 +161,14 @@ class AccountTestCase(DjangoGoApplicationTestCase):
         self.assertEqual([], mail.outbox)
 
 
-class EmailTestCase(DjangoGoApplicationTestCase):
-    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
+class EmailTestCase(VumiGoDjangoTestCase):
+    use_riak = True
+
+    def setUp(self):
+        super(EmailTestCase, self).setUp()
+        self.setup_api()
+        self.setup_user_api()
+        self.setup_client()
 
     def test_email_sending(self):
         response = self.client.post(reverse('account:details'), {
@@ -171,16 +183,15 @@ class EmailTestCase(DjangoGoApplicationTestCase):
         self.assertTrue('bar' in email.body)
 
     def test_daily_account_summary(self):
-        self.setup_conversation(
-            started=True, with_group=True, with_contact=True)
-        contact_store = self.user_api.contact_store
-        contact_keys = contact_store.list_contacts()
-        [contacts] = contact_store.contacts.load_all_bunches(contact_keys)
-        for contact in contacts:
-            # create a duplicate
-            contact_store.new_contact(msisdn=contact.msisdn)
+        conv = self.create_conversation(
+            started=True, conversation_type=u'bulk_message',
+            name=u'Test Conversation')
+        self.contact_store.new_contact(
+            name=u'Contact', surname=u'One', msisdn=u"+27761234567")
+        self.contact_store.new_contact(
+            name=u'Contact', surname=u'Two', msisdn=u"+27761234567")
 
-        self.put_sample_messages_in_conversation(10)
+        self.put_sample_messages_in_conversation(10, conv)
         # create a second conversation to test sorting
         self.create_conversation()
 

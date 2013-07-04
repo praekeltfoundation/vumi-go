@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 import uuid
 
 from django.core.urlresolvers import reverse
@@ -24,10 +24,9 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
     transport_name = 'sphex'
     transport_type = 'sms'
 
-    # Set a bunch of attrs to None so we can see if we've set them later.
+    # Set these to None so we can see if we've created them.
     group = None
     contact = None
-    conversation = None
 
     def setUp(self):
         super(DjangoGoApplicationTestCase, self).setUp()
@@ -35,47 +34,20 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
         self.setup_user_api()
         self.setup_client()
 
-    def setup_user_api(self, django_user=None):
-        if django_user is None:
-            django_user = self.mk_django_user()
-        self.django_user = django_user
-        self.user_api = base_utils.vumi_api_for_user(django_user)
-        self.contact_store = self.user_api.contact_store
-        self.contact_store.contacts.enable_search()
-        self.contact_store.groups.enable_search()
-        self.conv_store = self.user_api.conversation_store
-
-    def create_conversation(self, **kwargs):
-        defaults = {
-            'conversation_type': u'test_conversation_type',
-            'name': u'conversation name',
-            'description': u'hello world',
-            'config': {},
-        }
-        defaults.update(kwargs)
-        return self.conv_store.new_conversation(**defaults)
-
     def _create_group(self, with_contact=False):
-        if self.group is not None:
-            return
         self.group = self.contact_store.new_group(self.TEST_GROUP_NAME)
         self.group_key = self.group.key
-        if with_contact:
+        if with_contact and self.contact is None:
             self._create_contact()
 
     def _create_contact(self):
-        if self.contact is not None:
-            return
         self.contact = self.contact_store.new_contact(
             name=self.TEST_CONTACT_NAME, surname=self.TEST_CONTACT_SURNAME,
-            msisdn=u"+27761234567")
-        self.contact.add_to_group(self.group)
-        self.contact.save()
+            msisdn=u"+27761234567", groups=[self.group])
         self.contact_key = self.contact.key
 
-    def _create_conversation(self, with_group=True):
-        if self.conversation is not None:
-            return
+    def setup_conversation(self, started=False, with_group=False,
+                           with_contact=False):
         params = {
             'conversation_type': self.TEST_CONVERSATION_TYPE,
             'name': self.TEST_CONVERSATION_NAME,
@@ -83,10 +55,12 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
             'config': {},
         }
         if with_group:
+            if self.group is None:
+                self._create_group(with_contact)
             params['groups'] = [self.group]
         if self.TEST_CONVERSATION_PARAMS:
             params.update(self.TEST_CONVERSATION_PARAMS)
-        self.conversation = self.create_conversation(**params)
+        self.conversation = self.create_conversation(started=started, **params)
         self.conv_key = self.conversation.key
 
     def get_latest_conversation(self):
@@ -204,33 +178,6 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
     def get_api_commands_sent(self):
         return base_utils.connection.get_commands()
 
-    def put_sample_messages_in_conversation(self, message_count,
-                                            content_generator=None,
-                                            start_date=None,
-                                            time_multiplier=10):
-        now = start_date or datetime.now().date()
-        batch_key = self.get_wrapped_conv().get_latest_batch_key()
-
-        messages = []
-        for i in range(message_count):
-            content = (content_generator.next()
-                        if content_generator else 'hello')
-            msg_in = self.mkmsg_in(from_addr='from-%s' % (i,),
-                message_id=TransportUserMessage.generate_id(),
-                content=content)
-            ts = now - timedelta(hours=i * time_multiplier)
-            msg_in['timestamp'] = ts
-            msg_out = msg_in.reply('thank you')
-            msg_out['timestamp'] = ts
-            ack = self.mkmsg_ack(user_message_id=msg_out['message_id'])
-            dr = self.mkmsg_delivery(user_message_id=msg_out['message_id'])
-            self.api.mdb.add_inbound_message(msg_in, batch_id=batch_key)
-            self.api.mdb.add_outbound_message(msg_out, batch_id=batch_key)
-            self.api.mdb.add_event(ack)
-            self.api.mdb.add_event(dr)
-            messages.append((msg_in, msg_out, ack, dr))
-        return messages
-
     def get_contacts_for_conversation(self, conversation):
         return self.contact_store.get_contacts_for_conversation(conversation)
 
@@ -264,23 +211,13 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
             conv_key = self.conv_key
         return self.user_api.get_wrapped_conversation(conv_key)
 
-    def setup_conversation(self, started=False, with_group=False,
-                           with_contact=False):
-        if with_group:
-            self._create_group(with_contact=with_contact)
-        self._create_conversation(with_group=with_group)
-        conv = self.user_api.wrap_conversation(self.conversation)
-
-        if started:
-            conv.set_status_started()
-            batch_id = conv.start_batch()
-            conv.batches.add_key(batch_id)
-            conv.save()
-
-    def add_tagpool_permission(self, tagpool, max_keys=None):
-        permission = self.api.account_store.tag_permissions(
-            uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
-        permission.save()
-        account = self.user_api.get_user_account()
-        account.tagpools.add(permission)
-        account.save()
+    def put_sample_messages_in_conversation(self, message_count,
+                                            conversation=None,
+                                            start_date=None,
+                                            time_multiplier=10):
+        if conversation is None:
+            conversation = self.get_wrapped_conv()
+        return super(DjangoGoApplicationTestCase,
+                     self).put_sample_messages_in_conversation(
+                         message_count, conversation, start_date=start_date,
+                         time_multiplier=time_multiplier)

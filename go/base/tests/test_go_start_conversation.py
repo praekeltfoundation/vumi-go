@@ -4,7 +4,6 @@ from django.core.management.base import CommandError
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.management.commands import go_start_conversation
-from go.base.tests.utils import declare_longcode_tags
 
 from mock import patch
 
@@ -28,7 +27,7 @@ class GoStartConversationTestCase(DjangoGoApplicationTestCase):
         self.command.stderr = StringIO()
 
     def add_tagpool_to_conv(self):
-        declare_longcode_tags(self.api)
+        self.declare_tags(u'longcode', 4)
         self.add_tagpool_permission(u'longcode')
         conv = self.get_wrapped_conv()
         conv.c.delivery_class = u'sms'

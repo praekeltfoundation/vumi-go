@@ -9,8 +9,8 @@ from django.core.urlresolvers import reverse
 from django.core import mail
 
 from django.core.files.storage import default_storage
-from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.contacts.parsers.base import FieldNormalizer
+from go.base.tests.utils import VumiGoDjangoTestCase
 
 
 TEST_GROUP_NAME = u"Test Group"
@@ -31,9 +31,23 @@ def group_url(group_key):
     return reverse('contacts:group', kwargs={'group_key': group_key})
 
 
-class ContactsTestCase(DjangoGoApplicationTestCase):
-    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
+def mkcontact(self, name=None, surname=None, msisdn=u'+1234567890', **kwargs):
+    return self.contact_store.new_contact(
+        name=unicode(name or TEST_CONTACT_NAME),
+        surname=unicode(surname or TEST_CONTACT_SURNAME),
+        msisdn=unicode(msisdn), **kwargs)
+
+
+class ContactsTestCase(VumiGoDjangoTestCase):
     # TODO: Cleaner test group and contact creation.
+
+    use_riak = True
+
+    def setUp(self):
+        super(ContactsTestCase, self).setUp()
+        self.setup_api()
+        self.setup_user_api()
+        self.setup_client()
 
     def test_redirect_index(self):
         response = self.client.get(reverse('contacts:index'))
@@ -389,9 +403,16 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         })
 
 
-class GroupsTestCase(DjangoGoApplicationTestCase):
-    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
+class GroupsTestCase(VumiGoDjangoTestCase):
     # TODO: Cleaner test group and contact creation.
+
+    use_riak = True
+
+    def setUp(self):
+        super(GroupsTestCase, self).setUp()
+        self.setup_api()
+        self.setup_user_api()
+        self.setup_client()
 
     def get_all_contacts(self, keys=None):
         if keys is None:
@@ -576,9 +597,14 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(mime_type, 'application/zip')
 
 
-class SmartGroupsTestCase(DjangoGoApplicationTestCase):
-    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
+class SmartGroupsTestCase(VumiGoDjangoTestCase):
     # TODO: Cleaner test group and contact creation.
+
+    def setUp(self):
+        super(SmartGroupsTestCase, self).setUp()
+        self.setup_api()
+        self.setup_user_api()
+        self.setup_client()
 
     def mksmart_group(self, query, name='a smart group'):
         response = self.client.post(reverse('contacts:groups'), {
@@ -589,13 +615,6 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
         group = newest(self.contact_store.list_groups())
         self.assertRedirects(response, group_url(group.key))
         return group
-
-    def mkcontact(self, name=None, surname=None, msisdn=u'+1234567890',
-                  **kwargs):
-        return self.contact_store.new_contact(
-            name=unicode(name or self.TEST_CONTACT_NAME),
-            surname=unicode(surname or self.TEST_CONTACT_SURNAME),
-            msisdn=unicode(msisdn), **kwargs)
 
     def add_to_group(self, contact, group):
         contact.add_to_group(group)
@@ -617,7 +636,7 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(group not in self.contact_store.list_groups())
 
     def test_smart_group_clearing(self):
-        contact = self.mkcontact()
+        contact = mkcontact(self)
         group = self.mksmart_group('msisdn:\+12*')
         self.assertEqual([contact.key],
                          self.contact_store.get_contacts_for_group(group))
@@ -665,7 +684,7 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
             '_new_smart_group': '1',
         })
 
-        contact = self.mkcontact()
+        contact = mkcontact(self)
         group = newest(self.contact_store.list_groups())
         conversation = self.create_conversation()
         conversation.groups.add(group)
@@ -690,9 +709,9 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
             '_new_smart_group': '1',
         })
 
-        self.mkcontact(surname='bar'),
-        self.mkcontact(name='foo'),
-        match = self.mkcontact(name='foo', surname='bar')
+        mkcontact(self, surname='bar'),
+        mkcontact(self, name='foo'),
+        match = mkcontact(self, name='foo', surname='bar')
 
         group = newest(self.contact_store.list_groups())
         conversation = self.create_conversation()
@@ -710,9 +729,9 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
             '_new_smart_group': '1',
         })
 
-        contact1 = self.mkcontact(surname='bar')
-        contact2 = self.mkcontact(name='foo')
-        contact3 = self.mkcontact(name='foo', surname='bar')
+        contact1 = mkcontact(self, surname='bar')
+        contact2 = mkcontact(self, name='foo')
+        contact3 = mkcontact(self, name='foo', surname='bar')
 
         group = newest(self.contact_store.list_groups())
         conv = self.create_conversation()
@@ -760,9 +779,9 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
             '_new_smart_group': '1',
         })
 
-        self.mkcontact(surname='bar')
-        self.mkcontact(name='foo')
-        self.mkcontact(name='foo', surname='bar')
+        mkcontact(self, surname='bar')
+        mkcontact(self, name='foo')
+        mkcontact(self, name='foo', surname='bar')
 
         group = newest(self.contact_store.list_groups())
         group_url = reverse('contacts:group', kwargs={

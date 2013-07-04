@@ -4,16 +4,22 @@ from django.core.urlresolvers import reverse
 
 from mock import patch
 
-from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.base.tests.utils import VumiGoDjangoTestCase
 from go.api.go_api.api_types import (
     ChannelType, ConversationType, RoutingEntryType)
 
 
-class RoutingScreenTestCase(DjangoGoApplicationTestCase):
-    # TODO: Stop abusing DjangoGoApplicationTestCase for this.
-
+class RoutingScreenTestCase(VumiGoDjangoTestCase):
     # Most of the functionality of this view lives in JS, so we just test that
     # we're correctly injecting initial state into the template.
+
+    use_riak = True
+
+    def setUp(self):
+        super(RoutingScreenTestCase, self).setUp()
+        self.setup_api()
+        self.setup_user_api()
+        self.setup_client()
 
     def get_routing_table(self, user_account_key, session_id):
         self.assertEqual(user_account_key, self.user_api.user_account_key)
@@ -65,12 +71,12 @@ class RoutingScreenTestCase(DjangoGoApplicationTestCase):
 
     @patch('go.routing.views._get_routing_table')
     def test_non_empty_routing(self, mock_routing):
-        self.setup_conversation()
+        conv = self.create_conversation()
         mock_routing.side_effect = self.get_routing_table
         tag = (u'pool', u'tag')
         self.routing_table_api_response = self.make_routing_table(
-            tags=[tag], conversations=[self.conversation],
-            routing=[(self.conversation, tag), (tag, self.conversation)])
+            tags=[tag], conversations=[conv],
+            routing=[(conv, tag), (tag, conv)])
         response = self.client.get(reverse('routing'))
         model_data = response.context['model_data']
         self.assertEqual(self.routing_table_api_response, model_data)

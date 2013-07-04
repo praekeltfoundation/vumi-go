@@ -4,7 +4,7 @@ import urllib
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 
-from go.base.tests.utils import VumiGoDjangoTestCase, declare_longcode_tags
+from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base import utils as base_utils
 from go.channel.views import get_channel_view_definition
 
@@ -15,7 +15,7 @@ class ChannelViewsTestCase(VumiGoDjangoTestCase):
     def setUp(self):
         super(ChannelViewsTestCase, self).setUp()
         self.setup_api()
-        declare_longcode_tags(self.api)
+        self.declare_tags(u'longcode', 4)
         self.user = self.mk_django_user()
         self.user_api = base_utils.vumi_api_for_user(self.user)
         self.add_tagpool_permission(u"longcode")
