@@ -73,10 +73,7 @@ class CodeMirrorTextarea(forms.Textarea):
         code_textarea_id = self.id_for_name(name)
         output = [super(CodeMirrorTextarea, self).render(name, value, attrs),
                   '<script type="text/javascript">'
-                  ' window.go = window.go || {};'
-                  ' go.configs = go.configs || {};'
-                  ' go.configs.codemirror = go.configs.codemirror || {};'
-                  ' go.configs.codemirror["%s"] = %s;'
+                  '    go.configs["%s"] = %s;'
                   '</script>' %
                   (code_textarea_id, self.option_json)]
         return mark_safe("\n".join(output))
@@ -114,10 +111,7 @@ class SourceUrlTextInput(forms.TextInput):
         code_field_id = CodeMirrorTextarea.id_for_name(code_field_name)
         output = [super(SourceUrlTextInput, self).render(name, value, attrs),
                   '<script type="text/javascript">'
-                  'window.go = window.go || {};'
-                  'go.configs = go.configs || {};'
-                  'go.configs.sourceurl = go.configs.sourceurl || {};'
-                  'go.configs.sourceurl["%s"] = "%s";'
+                  '    go.configs["%s"] = "%s";'
                   '</script>' %
                   (source_input_id, code_field_id)]
         return mark_safe("\n".join(output))

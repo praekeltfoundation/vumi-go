@@ -1,7 +1,7 @@
 $(function () {
     var $inputs = $('input[data-widget=sourceurl]');
     $inputs.each(function(i, el) {
-        SourceUrl(el, go.configs.sourceurl[$(el).attr('id')]);
+        SourceUrl(el, go.configs[$(el).attr('id')]);
     });
 });
 
