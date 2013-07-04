@@ -56,8 +56,7 @@ class GoAccountStatsCommandTestCase(VumiGoDjangoTestCase):
 
     def test_stats(self):
         conv = self.create_conversation(started=True, name=u'active')
-        self.put_sample_messages_in_conversation(
-            5, conv, reply=True, time_multiplier=0)
+        self.add_messages_to_conv(5, conv, reply=True, time_multiplier=0)
 
         self.command.handle(self.django_user.username, 'stats', conv.key)
         output = self.command.stdout.getvalue().strip().split('\n')

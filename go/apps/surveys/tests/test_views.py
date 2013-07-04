@@ -226,14 +226,12 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
 
     def test_aggregates(self):
         self.setup_conversation(started=True)
-        self.put_sample_messages_in_conversation(
-            10, start_date=date(2012, 1, 1), time_multiplier=12)
+        self.add_messages_to_conv(
+            5, start_date=date(2012, 1, 1), time_multiplier=12)
         response = self.client.get(self.get_view_url('aggregates'),
                                    {'direction': 'inbound'})
         self.assertEqual(response.content, '\r\n'.join([
-            '2011-12-28,2',
-            '2011-12-29,2',
-            '2011-12-30,2',
+            '2011-12-30,1',
             '2011-12-31,2',
             '2012-01-01,2',
             '',  # csv ends with a blank line
@@ -241,8 +239,8 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
 
     def test_export_messages(self):
         self.setup_conversation(started=True)
-        self.put_sample_messages_in_conversation(
-            10, start_date=date(2012, 1, 1), time_multiplier=12, reply=True)
+        self.add_messages_to_conv(
+            5, start_date=date(2012, 1, 1), time_multiplier=12, reply=True)
         response = self.client.post(self.get_view_url('show'), {
             '_export_conversation_messages': True,
         })
@@ -257,8 +255,8 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         zipfile = ZipFile(StringIO(contents), 'r')
         csv_contents = zipfile.open('messages-export.csv', 'r').read()
 
-        # 1 header, 10 sent, 10 received, 1 trailing newline == 22
-        self.assertEqual(22, len(csv_contents.split('\n')))
+        # 1 header, 5 sent, 5 received, 1 trailing newline == 12
+        self.assertEqual(12, len(csv_contents.split('\n')))
         self.assertEqual(mime_type, 'application/zip')
 
     @skip("The new views don't have this.")
@@ -317,7 +315,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
 
     def test_send_one_off_reply(self):
         self.setup_conversation(started=True)
-        self.put_sample_messages_in_conversation(1)
+        self.add_messages_to_conv(1)
         conversation = self.get_wrapped_conv()
         [msg] = conversation.received_messages()
         response = self.client.post(self.get_view_url('show'), {

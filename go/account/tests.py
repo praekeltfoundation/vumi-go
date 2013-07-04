@@ -191,7 +191,7 @@ class EmailTestCase(VumiGoDjangoTestCase):
         self.contact_store.new_contact(
             name=u'Contact', surname=u'Two', msisdn=u"+27761234567")
 
-        self.put_sample_messages_in_conversation(10, conv, reply=True)
+        self.add_messages_to_conv(5, conv, reply=True)
         # create a second conversation to test sorting
         self.create_conversation()
 
@@ -205,14 +205,14 @@ class EmailTestCase(VumiGoDjangoTestCase):
         self.assertTrue('number of contacts: 2' in email.body)
         self.assertTrue('number of unique contacts by contact number: 1'
                             in email.body)
-        self.assertTrue('number of messages sent: 10' in email.body)
-        self.assertTrue('number of messages received: 10' in email.body)
+        self.assertTrue('number of messages sent: 5' in email.body)
+        self.assertTrue('number of messages received: 5' in email.body)
         self.assertTrue('Group Message' in email.body)
         self.assertTrue('Test Conversation' in email.body)
-        self.assertTrue('Sent: 10 to 10 uniques.' in email.body)
-        self.assertTrue('Received: 10 from 10 uniques.' in email.body)
-        self.assertTrue('"Group Message" Sent: 10' in email.body)
-        self.assertTrue('"Group Message" Received: 10' in email.body)
+        self.assertTrue('Sent: 5 to 5 uniques.' in email.body)
+        self.assertTrue('Received: 5 from 5 uniques.' in email.body)
+        self.assertTrue('"Group Message" Sent: 5' in email.body)
+        self.assertTrue('"Group Message" Received: 5' in email.body)
 
     def test_send_scheduled_account_summary_task(self):
         user_account = self.user_api.get_user_account()

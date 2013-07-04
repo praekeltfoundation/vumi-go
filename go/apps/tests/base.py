@@ -211,10 +211,8 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
             conv_key = self.conv_key
         return self.user_api.get_wrapped_conversation(conv_key)
 
-    def put_sample_messages_in_conversation(self, message_count,
-                                            conversation=None, **kwargs):
+    def add_messages_to_conv(self, message_count, conversation=None, **kwargs):
         if conversation is None:
             conversation = self.get_wrapped_conv()
-        return super(DjangoGoApplicationTestCase,
-                     self).put_sample_messages_in_conversation(
-                         message_count, conversation, **kwargs)
+        return super(DjangoGoApplicationTestCase, self).add_messages_to_conv(
+            message_count, conversation, **kwargs)

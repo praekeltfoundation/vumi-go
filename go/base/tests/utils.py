@@ -158,10 +158,8 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
 
         return conv
 
-    def put_sample_messages_in_conversation(self, message_count, conversation,
-                                            reply=False, ack=False,
-                                            start_date=None,
-                                            time_multiplier=10):
+    def add_messages_to_conv(self, message_count, conversation, reply=False,
+                             ack=False, start_date=None, time_multiplier=10):
         now = start_date or datetime.now().date()
         batch_key = conversation.get_latest_batch_key()
 
