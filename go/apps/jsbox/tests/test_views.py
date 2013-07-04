@@ -1,9 +1,5 @@
 import logging
 
-from django.test.client import Client
-from django.core.urlresolvers import reverse
-
-from go.base.utils import get_conversation_view_definition
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.apps.jsbox.log import LogManager
 
@@ -11,35 +7,12 @@ from mock import patch, Mock
 
 
 class JsBoxTestCase(DjangoGoApplicationTestCase):
-
     TEST_CONVERSATION_TYPE = u'jsbox'
 
-    def setUp(self):
-        super(JsBoxTestCase, self).setUp()
-        self.setup_riak_fixtures()
-        self.client = Client()
-        self.client.login(username='username', password='password')
-
-    def get_view_url(self, view, conv_key=None):
-        if conv_key is None:
-            conv_key = self.conv_key
-        view_def = get_conversation_view_definition(
-            self.TEST_CONVERSATION_TYPE)
-        return view_def.get_view_url(view, conversation_key=conv_key)
-
-    def get_new_view_url(self):
-        return reverse('conversations:new_conversation')
-
-    def get_action_view_url(self, action_name, conv_key=None):
-        if conv_key is None:
-            conv_key = self.conv_key
-        return reverse('conversations:conversation_action', kwargs={
-            'conversation_key': conv_key, 'action_name': action_name})
-
     def test_new_conversation(self):
-        self.assertEqual(len(self.conv_store.list_conversations()), 1)
+        self.assertEqual(len(self.conv_store.list_conversations()), 0)
         response = self.post_new_conversation()
-        self.assertEqual(len(self.conv_store.list_conversations()), 2)
+        self.assertEqual(len(self.conv_store.list_conversations()), 1)
         conversation = self.get_latest_conversation()
         self.assertEqual(conversation.name, 'conversation name')
         self.assertEqual(conversation.description, '')
@@ -47,16 +20,21 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(
             response, self.get_view_url('edit', conversation.key))
 
-    def test_show_conversation(self):
-        [conversation_key] = self.conv_store.list_conversations()
+    def test_show_stopped(self):
+        self.setup_conversation()
         response = self.client.get(self.get_view_url('show'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "View Sandbox Logs")
-        self.assertContains(response, self.get_action_view_url('view_logs'))
+        conversation = response.context[0].get('conversation')
+        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+
+    def test_show_running(self):
+        self.setup_conversation(started=True)
+        response = self.client.get(self.get_view_url('show'))
+        conversation = response.context[0].get('conversation')
+        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
 
     def test_edit_conversation(self):
+        self.setup_conversation()
         # render the form
-        [conversation_key] = self.conv_store.list_conversations()
         response = self.client.get(self.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
         # post the form
@@ -69,7 +47,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
             'jsbox_app_config-MAX_NUM_FORMS': u''
         })
         self.assertRedirects(response, self.get_view_url('show'))
-        conversation = self.get_latest_conversation()
+        conversation = self.get_wrapped_conv()
         self.assertEqual(conversation.config, {
             'jsbox': {
                     'javascript': 'x = 1;',
@@ -80,6 +58,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
 
     @patch('requests.get')
     def test_cross_domain_xhr(self, mocked_get):
+        self.setup_conversation()
         mocked_get.return_value = Mock(text='foo', status_code=200)
         response = self.client.post(
             self.get_view_url('cross_domain_xhr'),
@@ -94,6 +73,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
 
     @patch('requests.get')
     def test_basic_auth_cross_domain_xhr(self, mocked_get):
+        self.setup_conversation()
         mocked_get.return_value = Mock(text='foo', status_code=200)
         response = self.client.post(
             self.get_view_url('cross_domain_xhr'),
@@ -108,6 +88,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
 
     @patch('requests.get')
     def test_basic_auth_cross_domain_xhr_with_https_and_port(self, mocked_get):
+        self.setup_conversation()
         mocked_get.return_value = Mock(text='foo', status_code=200)
         response = self.client.post(
             self.get_view_url('cross_domain_xhr'),
@@ -121,11 +102,11 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_jsbox_logs(self):
+        self.setup_conversation()
         campaign_key = self.user_api.user_account_key
-        [conversation_key] = self.conv_store.list_conversations()
         log_manager = LogManager(self.user_api.api.redis)
         for i in range(10):
-            log_manager.add_log(campaign_key, conversation_key,
+            log_manager.add_log(campaign_key, self.conv_key,
                                 "test %d" % i, logging.INFO)
         response = self.client.get(self.get_view_url('jsbox_logs'))
         self.assertEqual(response.status_code, 200)
@@ -133,11 +114,12 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
             self.assertContains(response, "INFO] test %d" % i)
 
     def test_jsbox_empty_logs(self):
-        [conversation_key] = self.conv_store.list_conversations()
+        self.setup_conversation()
         response = self.client.get(self.get_view_url('jsbox_logs'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No logs yet.")
 
     def test_jsbox_logs_action(self):
+        self.setup_conversation()
         response = self.client.get(self.get_action_view_url('view_logs'))
         self.assertRedirects(response, self.get_view_url('jsbox_logs'))

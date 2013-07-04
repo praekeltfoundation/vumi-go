@@ -5,7 +5,7 @@ from go.base.management.commands import go_create_user
 
 class GoCreateUserCommandTestCase(VumiGoDjangoTestCase):
 
-    USE_RIAK = True
+    use_riak = True
 
     def test_user_creation(self):
         self.setup_api()
