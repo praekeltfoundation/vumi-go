@@ -21,7 +21,9 @@
     {% compressed_css 'all' %}
 
     <script type="text/javascript">
-        // namespacing
+        // Create window.go.configs namespace ahead of time so that Django 
+        // widgets have a place to put their config information even though 
+        // other javascript has yet to be loaded.
         window.go = {}
         window.go.configs = {}
     </script>
