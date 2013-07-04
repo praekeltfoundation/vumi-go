@@ -131,6 +131,12 @@ describe("go.campaign.dialogue.states", function() {
       var i;
 
       beforeEach(function() {
+        // Use 'state1' (the choice state), since the dummy state isn't an
+        // option in '.type'
+        state = diagram.states.get('state1');
+        editMode = state.modes.edit;
+        state.edit();
+
         i = 0;
         sinon.stub(uuid, 'v4', function() { return i++ || 'new-state'; });
       });
@@ -154,8 +160,8 @@ describe("go.campaign.dialogue.states", function() {
 
       it("should replace the state with another if the user confirms the reset",
       function() {
-        assert(diagram.states.has('state4'));
-        assert.isDefined(diagram.model.get('states').get('state4'));
+        assert(diagram.states.has('state1'));
+        assert.isDefined(diagram.model.get('states').get('state1'));
 
         assert(!diagram.states.has('new-state'));
         assert.isUndefined(diagram.model.get('states').get('new-state'));
@@ -166,22 +172,22 @@ describe("go.campaign.dialogue.states", function() {
         assert(diagram.states.has('new-state'));
         assert.isDefined(diagram.model.get('states').get('new-state'));
 
-        assert(!diagram.states.has('state4'));
-        assert.isUndefined(diagram.model.get('states').get('state4'));
+        assert(!diagram.states.has('state1'));
+        assert.isUndefined(diagram.model.get('states').get('state1'));
       });
 
       it("should revert '.type's selection if the user cancels the reset",
       function() {
-        assert.equal(editMode.$('.type').val(), 'dummy');
+        assert.equal(editMode.$('.type').val(), 'choice');
         editMode.$('.type').val('freetext').change();
         $('.modal [data-handler=0]').click();
-        assert.equal(editMode.$('.type').val(), 'dummy');
+        assert.equal(editMode.$('.type').val(), 'choice');
       });
 
       it("should keep the current state if the user cancels the reset",
       function() {
-        assert(diagram.states.has('state4'));
-        assert.isDefined(diagram.model.get('states').get('state4'));
+        assert(diagram.states.has('state1'));
+        assert.isDefined(diagram.model.get('states').get('state1'));
 
         assert(!diagram.states.has('new-state'));
         assert.isUndefined(diagram.model.get('states').get('new-state'));
@@ -189,8 +195,8 @@ describe("go.campaign.dialogue.states", function() {
         editMode.$('.type').val('freetext').change();
         $('.modal [data-handler=0]').click();
 
-        assert(diagram.states.has('state4'));
-        assert.isDefined(diagram.model.get('states').get('state4'));
+        assert(diagram.states.has('state1'));
+        assert.isDefined(diagram.model.get('states').get('state1'));
 
         assert(!diagram.states.has('new-state'));
         assert.isUndefined(diagram.model.get('states').get('new-state'));
