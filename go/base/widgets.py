@@ -32,8 +32,6 @@ class CodeMirrorTextarea(forms.Textarea):
         'lineWrapping': True,
     }
 
-    
-
     def __init__(self, attrs=None, mode='javascript', theme='twilight',
                  config=None, codemirror_path='codemirror', **kwargs):
         super(CodeMirrorTextarea, self).__init__(attrs=attrs, **kwargs)
@@ -70,18 +68,18 @@ class CodeMirrorTextarea(forms.Textarea):
 
     def render(self, name, value, attrs={}):
 
-        attrs.update({
-            'data-widget': 'codemirror',
-        })
+        attrs.update({'data-widget': 'codemirror'})
 
         code_textarea_id = self.id_for_name(name)
         output = [super(CodeMirrorTextarea, self).render(name, value, attrs),
                   '<script type="text/javascript">'
-                  '    var codemirrorConfig = codemirrorConfig || {};'
-                  '    codemirrorConfig["%s"] = %s;'
+                  ' window.go = window.go || {};'
+                  ' go.configs = go.configs || {};'
+                  ' go.configs.codemirror = go.configs.codemirror || {};'
+                  ' go.configs.codemirror["%s"] = %s;'
                   '</script>' %
                   (code_textarea_id, self.option_json)]
-        return mark_safe("\n".join(output))
+        return mark_safe("\n\n".join(output))
 
 
 class CodeField(forms.CharField):
@@ -97,7 +95,8 @@ class SourceUrlTextInput(forms.TextInput):
 
     @property
     def media(self):
-        js = ('js/source_url.js',)
+        js = ('js/src/widgets/initSourceUrl.js',)
+
         return forms.Media(js=js)
 
     def code_field_name(self, name):
@@ -106,7 +105,8 @@ class SourceUrlTextInput(forms.TextInput):
             raise ValueError("Couldn't understand field name %r" % name)
         return "%s-%s" % (parts[0], self.code_field)
 
-    def render(self, name, value, attrs=None):
+    def render(self, name, value, attrs={}):
+        attrs.update({'data-widget': 'sourceurl'})
         source_input_id = 'id_%s' % (name,)
         # constructing the correct code field name like this isn't
         # great but I don't have a better idea
@@ -114,7 +114,10 @@ class SourceUrlTextInput(forms.TextInput):
         code_field_id = CodeMirrorTextarea.id_for_name(code_field_name)
         output = [super(SourceUrlTextInput, self).render(name, value, attrs),
                   '<script type="text/javascript">'
-                  '//SourceUrl("%s", "%s");'
+                  'window.go = window.go || {};'
+                  'go.configs = go.configs || {};'
+                  'go.configs.sourceurl = go.configs.sourceurl || {};'
+                  'go.configs.sourceurl["%s"] = "%s";'
                   '</script>' %
                   (source_input_id, code_field_id)]
         return mark_safe("\n".join(output))
