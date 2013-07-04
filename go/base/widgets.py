@@ -32,6 +32,8 @@ class CodeMirrorTextarea(forms.Textarea):
         'lineWrapping': True,
     }
 
+    
+
     def __init__(self, attrs=None, mode='javascript', theme='twilight',
                  config=None, codemirror_path='codemirror', **kwargs):
         super(CodeMirrorTextarea, self).__init__(attrs=attrs, **kwargs)
@@ -49,6 +51,7 @@ class CodeMirrorTextarea(forms.Textarea):
 
         self.js_files = (
             "%s/lib/codemirror-compressed.js" % (codemirror_path,),
+            'js/src/widgets/initCodemirror.js',
         )
         self.css_files = {
             'all': (
@@ -65,17 +68,17 @@ class CodeMirrorTextarea(forms.Textarea):
     def id_for_name(name):
         return "id_%s" % (name,)
 
-    def render(self, name, value, attrs=None):
+    def render(self, name, value, attrs={}):
+
+        attrs.update({
+            'data-widget': 'codemirror',
+        })
+
         code_textarea_id = self.id_for_name(name)
         output = [super(CodeMirrorTextarea, self).render(name, value, attrs),
                   '<script type="text/javascript">'
-                  '$(function () {'
-                  '  var elem = document.getElementById("%s");'
-                  '  var cm = CodeMirror.fromTextArea(elem, %s);'
-                  '  elem.on_source_update = function (src) {'
-                  '    cm.setValue(src);'
-                  '  };'
-                  '});'
+                  '    var codemirrorConfig = codemirrorConfig || {};'
+                  '    codemirrorConfig["%s"] = %s;'
                   '</script>' %
                   (code_textarea_id, self.option_json)]
         return mark_safe("\n".join(output))
@@ -111,7 +114,7 @@ class SourceUrlTextInput(forms.TextInput):
         code_field_id = CodeMirrorTextarea.id_for_name(code_field_name)
         output = [super(SourceUrlTextInput, self).render(name, value, attrs),
                   '<script type="text/javascript">'
-                  'SourceUrl("%s", "%s");'
+                  '//SourceUrl("%s", "%s");'
                   '</script>' %
                   (source_input_id, code_field_id)]
         return mark_safe("\n".join(output))
