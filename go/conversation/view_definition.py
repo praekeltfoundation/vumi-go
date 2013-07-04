@@ -1,5 +1,6 @@
 import csv
 import logging
+import functools
 from StringIO import StringIO
 
 from django.views.generic import View, TemplateView
@@ -284,6 +285,26 @@ class EditConversationView(ConversationTemplateView):
         conversation.save()
 
 
+def check_action_is_enabled(f):
+    """Decorator to check that the action is not disabled.
+
+    Redirections to 'show' conversation with an appropriate message
+    if the action is disabled. Calls the original function otherwise.
+
+    Only wraps functions of the form
+    `f(request, conversation, *args, **kw)`.
+    """
+    @functools.wraps(f)
+    def wrapper(self, request, conversation, *args, **kw):
+        disabled = self.action.is_disabled()
+        if disabled is not None:
+            messages.warning(request, 'Action disabled: %s' % (disabled,))
+            return self.redirect_to(
+                'show', conversation_key=conversation.key)
+        return f(self, request, conversation, *args, **kw)
+    return wrapper
+
+
 class ConversationActionView(ConversationTemplateView):
     """View for performing an arbitrary conversation action.
 
@@ -301,6 +322,7 @@ class ConversationActionView(ConversationTemplateView):
             'action_display_name': self.action.action_display_name,
         })
 
+    @check_action_is_enabled
     def get(self, request, conversation):
         form_cls = self.view_def.get_action_form(self.action.action_name)
         if form_cls is None:
@@ -308,6 +330,7 @@ class ConversationActionView(ConversationTemplateView):
             return self._action_done(request, conversation)
         return self._render_form(request, conversation, form_cls)
 
+    @check_action_is_enabled
     def post(self, request, conversation):
         action_data = {}
         form_cls = self.view_def.get_action_form(self.action.action_name)
@@ -326,12 +349,8 @@ class ConversationActionView(ConversationTemplateView):
 
         return self.perform_action(request, conversation, action_data)
 
+    @check_action_is_enabled
     def perform_action(self, request, conversation, action_data):
-        disabled = self.action.is_disabled()
-        if disabled is not None:
-            messages.warning(request, 'Action disabled: %s' % (disabled,))
-            return self.redirect_to('show', conversation_key=conversation.key)
-
         self.action.perform_action(action_data)
         messages.info(request, 'Action successful: %s!' % (
             self.action.action_display_name,))
