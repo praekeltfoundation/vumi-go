@@ -78,7 +78,13 @@
             <p>
                 <ol>
                 {% for action in actions %}
-                    <li><a href="{% conversation_action conversation action.action_name %}">{{action.action_display_name}}</a></li>
+                    {% with is_disabled=action.is_disabled %}
+                    {% if is_disabled %}
+                    <li><a href="#" class="disabled" title="Action disabled" data-content="{{ is_disabled }}">{{ action.action_display_name }}</a></li>
+                    {% else %}
+                    <li><a href="{% conversation_action conversation action.action_name %}">{{ action.action_display_name }}</a></li>
+                    {% endif %}
+                    {% endwith %}
                 {% empty %}
                     <li>This conversation has no actions.</li>
                 {% endfor %}
@@ -97,8 +103,8 @@
                 {{ conversation.description }}
             </p>
         </div>
-        
-        
+
+
         <div class="sub-contacts">
             <h4 class="control-label">
                 Contacts
@@ -122,7 +128,6 @@
 
 {% block ondomready %}
 
-    
     $('.content .actions .right .action').on('click', function() {
 
         // confirm if the user wants to perform the action,
@@ -137,5 +142,8 @@
 
         return false;
     });
+
+    $('.content .sub-actions .disabled').popover();
+    $('.content .sub-actions .disabled').on('click', function() { return false; });
 
 {% endblock %}
