@@ -84,6 +84,24 @@ class RoutingTableHelper(object):
     def lookup_target(self, src_conn, src_endpoint):
         return self.routing_table.get(src_conn, {}).get(src_endpoint)
 
+    def lookup_targets(self, src_conn):
+        return self.routing_table.get(src_conn, {}).items()
+
+    def lookup_source(self, target_conn, target_endpoint):
+        for src_conn, routes in self.routing_table.iteritems():
+            for src_endpoint, (dst_conn, dst_endpoint) in routes.items():
+                if dst_conn == target_conn and dst_endpoint == target_endpoint:
+                    return [src_conn, src_endpoint]
+        return None
+
+    def lookup_sources(self, target_conn):
+        sources = []
+        for src_conn, routes in self.routing_table.iteritems():
+            for src_endpoint, (dest_conn, dest_endpoint) in routes.items():
+                if dest_conn == target_conn:
+                    sources.append((dest_endpoint, [src_conn, src_endpoint]))
+        return sources
+
     def entries(self):
         """Iterate over entries in the routing table.
 
@@ -166,6 +184,46 @@ class RoutingTableHelper(object):
         self.add_entry(conv_conn, "default", tag_conn, "default")
         if not outbound_only:
             self.add_entry(tag_conn, "default", conv_conn, "default")
+
+    def transitive_closure(self, src_conn):
+        """Return all connectors that are reachable from `src_conn`.
+
+        Only follows routing steps from source to destination (never
+        follows steps backwards from destination to source).
+        """
+        sources = [src_conn]
+        # put src_conn in results initially so that it's never
+        # re-added to the list of sources to examine.
+        results = set(sources)
+        while sources:
+            source = sources.pop()
+            destinations = self.lookup_targets(source)
+            for _src_endpoint, (dst_conn, _dst_endpoint) in destinations:
+                if dst_conn not in results:
+                    sources.append(dst_conn)
+                    results.add(dst_conn)
+        results.discard(src_conn)
+        return results
+
+    def reverse_transitive_closure(self, dst_conn):
+        """Return all connectors that lead to `dst_conn`.self
+
+        Only follows routing steps backwards from destination to
+        source (never forwards from source to destination).
+        """
+        destinations = [dst_conn]
+        # put dst_conn in results initially so that it's never
+        # re-added to the list of destinations to examine.
+        results = set(destinations)
+        while destinations:
+            destination = destinations.pop()
+            sources = self.lookup_sources(destination)
+            for src_conn in sources:
+                if src_conn not in results:
+                    destinations.append(src_conn)
+                    results.add(src_conn)
+        results.discard(dst_conn)
+        return results
 
 
 class GoConnectorError(Exception):
