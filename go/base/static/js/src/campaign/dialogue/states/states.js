@@ -180,6 +180,7 @@
     },
 
     events: {
+      'mousedown .titlebar': 'onTitlebarHold',
       'click .titlebar .remove': 'onRemove'
     },
 
@@ -196,6 +197,11 @@
       };
 
       this.switchMode(options.mode || 'preview', {render: false});
+    },
+
+    onTitlebarHold: function(e) {
+      if (this.isConnected()) { this.$el.addClass('locked'); }
+      else { this.$el.removeClass('locked'); }
     },
 
     onRemove: function(e) {
@@ -273,9 +279,9 @@
       return {
         className: 'container boxes',
         sortable: {
+          cancel: '.locked',
           handle: '.titlebar',
           placeholder: 'placeholder',
-          start: this.onSortStart.bind(this),
           sort: function() { jsPlumb.repaintEverything(); }
         }
       };
@@ -286,19 +292,6 @@
 
       this.grid = new go.components.grid.GridView(this.gridOptions());
       this.listenTo(this.grid, 'reorder', this.rearrange);
-    },
-
-    onSortStart: function(e, ui) {
-      var state = this.get(ui.item.attr('data-uuid'));
-
-      if (state.isConnected()) {
-        // Simulate the user 'letting go' of the mouse
-        // Ideally, we should be able to use jquery ui sortable's cancel()
-        // method. This seems to be broken, and is a known issue:
-        // http://bugs.jqueryui.com/ticket/6954
-        this.grid.$el.mouseup();
-        this.grid.render();
-      }
     },
 
     // Removes a state and creates a new state of a different type in the same

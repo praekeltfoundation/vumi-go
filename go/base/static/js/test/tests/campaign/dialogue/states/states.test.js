@@ -425,7 +425,6 @@ describe("go.campaign.dialogue.states", function() {
       });
     });
 
-
     describe(".reset", function() {
       it("should remove the old state", function(){
         assert(states.has('state3'));
