@@ -1,8 +1,10 @@
 import copy
 
+import mock
+
 from twisted.internet.defer import inlineCallbacks
 from twisted.trial.unittest import TestCase
-from vumi.tests.utils import UTCNearNow
+from vumi.tests.utils import UTCNearNow, LogCatcher
 
 from go.vumitools.tests.utils import GoPersistenceMixin
 from go.vumitools.account.models import (
@@ -150,6 +152,78 @@ class RoutingTableHelperTestCase(TestCase):
             ("conn1", "default1.1", "conn2", "default2"),
             ("conn1", "default1.2", "conn3", "default3"),
         ])
+
+    def test_add_entry(self):
+        rt = self.mk_helper()
+        rt.add_entry("new_conn", "default4", "conn4", "default5")
+        self.assertEqual(sorted(rt.entries()), [
+            ("conn1", "default1.1", "conn2", "default2"),
+            ("conn1", "default1.2", "conn3", "default3"),
+            ("new_conn", "default4", "conn4", "default5"),
+        ])
+
+    def test_add_entry_that_exists(self):
+        rt = self.mk_helper()
+        with LogCatcher() as lc:
+            rt.add_entry("conn1", "default1.2", "conn4", "default4")
+            self.assertEqual(lc.messages(), [
+                "Replacing routing entry for ('conn1', 'default1.2'):"
+                " was ['conn3', 'default3'], now ['conn4', 'default4']"
+            ])
+        self.assertEqual(sorted(rt.entries()), [
+            ("conn1", "default1.1", "conn2", "default2"),
+            ("conn1", "default1.2", "conn4", "default4"),
+        ])
+
+    def test_remove_entry(self):
+        rt = self.mk_helper()
+        rt.remove_entry("conn1", "default1.1")
+        self.assertEqual(sorted(rt.entries()), [
+            ("conn1", "default1.2", "conn3", "default3"),
+        ])
+
+    def test_remove_entry_that_does_not_exist(self):
+        rt = self.mk_helper()
+        with LogCatcher() as lc:
+            rt.remove_entry("conn1", "default1.unknown")
+            self.assertEqual(lc.messages(), [
+                "Attempting to remove missing routing entry for"
+                " ('conn1', 'default1.unknown')."
+            ])
+        self.assertEqual(sorted(rt.entries()), [
+            ("conn1", "default1.1", "conn2", "default2"),
+            ("conn1", "default1.2", "conn3", "default3"),
+        ])
+
+    def test_remove_connector_source(self):
+        rt = self.mk_helper()
+        rt.remove_connector("conn1")
+        self.assertEqual(sorted(rt.entries()), [])
+
+    def test_remove_connector_destination(self):
+        rt = self.mk_helper()
+        rt.remove_connector("conn2")
+        self.assertEqual(sorted(rt.entries()), [
+            ("conn1", "default1.2", "conn3", "default3"),
+        ])
+
+    def test_remove_conversation(self):
+        rt = self.mk_helper({})
+        conv = mock.Mock(conversation_type="conv_type_1", key="12345")
+        rt.add_entry(
+            str(GoConnector.for_conversation(
+                conv.conversation_type, conv.key)),
+            "default", "conn2", "default2")
+        rt.remove_conversation(conv)
+        self.assertEqual(sorted(rt.entries()), [])
+
+    def test_remove_transport_tag(self):
+        tag = ["pool1", "tag1"]
+        rt = self.mk_helper({})
+        rt.add_entry(str(GoConnector.for_transport_tag(*tag)),
+                     "default", "conn2", "default2")
+        rt.remove_transport_tag(tag)
+        self.assertEqual(sorted(rt.entries()), [])
 
 
 class GoConnectorTestCase(TestCase):
