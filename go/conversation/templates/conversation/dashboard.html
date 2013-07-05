@@ -35,14 +35,14 @@
                 <li>
                     <a href="{% url 'conversations:index' %}">All campaigns</a>
                     <ul class="nav nav-list">
-                        <li><a href="{% url 'conversations:index' %}?conversation_status=running">Running Smoothly</a></li>
-                        <li><a href="{% url 'conversations:index' %}?conversation_status=finished">Offline</a></li>
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=running">Activated</a></li>
                         <!-- TODO: we don't have a backend service for this yet -->
                         <!--
                         <li><a href="#">Some problems</a></li>
                         <li><a href="#">Paused</a></li>
                         -->
-                        <li><a href="{% url 'conversations:index' %}?conversation_status=draft">Drafts</a></li>
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=draft">Deactivated</a></li>
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=finished">Archived</a></li>
                     </ul>
                 </li>
 
