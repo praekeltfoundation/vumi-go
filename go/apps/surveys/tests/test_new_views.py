@@ -361,9 +361,6 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, self.get_view_url('show'))
 
         [start_cmd, hack_cmd, reply_to_cmd] = self.get_api_commands_sent()
-        [tag] = conversation.get_tags()
-        msg_options = conversation.make_message_options(tag)
-        msg_options['in_reply_to'] = msg['message_id']
         self.assertEqual(reply_to_cmd['worker_name'],
                          'survey_application')
         self.assertEqual(reply_to_cmd['command'], 'send_message')
@@ -372,5 +369,5 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             'conversation_key': conversation.key,
             'content': 'foo',
             'to_addr': msg['from_addr'],
-            'msg_options': msg_options,
+            'msg_options': {'in_reply_to': msg['message_id']},
         })

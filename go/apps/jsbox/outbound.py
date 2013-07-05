@@ -147,8 +147,8 @@ class GoOutboundResource(SandboxResource):
         if tag not in tags:
             returnValue(self._mkfail(
                 command, reason="Tag %r not held by account" % (tag,)))
-        msg_options = yield user_api.msg_options(tag)
         conv = self.app_worker.conversation_for_api(api)
+        msg_options = {}
         self.app_worker.add_conv_to_msg_options(conv, msg_options)
         endpoint = ':'.join(tag)
         yield self.app_worker.send_to(
