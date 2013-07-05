@@ -10,7 +10,7 @@ from go.wizard.forms import (
     Wizard1CreateForm, CampaignBulkMessageForm, CampaignSurveryInitiateForm)
 from go.conversation.forms import NewConversationForm
 from go.channel.forms import NewChannelForm
-from go.base.utils import conversation_or_404
+from go.base.utils import get_conversation_view_definition, conversation_or_404
 from go.vumitools.account import RoutingTableHelper
 
 
@@ -53,9 +53,13 @@ def create(request, conversation_key=None):
             # Create conversation
             conv_data = posted_conv_form.cleaned_data
             conversation_type = conv_data['conversation_type']
+
+            view_def = get_conversation_view_definition(conversation_type)
             conversation = request.user_api.new_conversation(
                 conversation_type, name=conv_data['name'],
-                description=conv_data['description'], config={})
+                description=conv_data['description'], config={},
+                extra_endpoints=list(view_def.extra_static_endpoints),
+            )
             messages.info(request, 'Conversation created successfully.')
 
             # TODO: Factor this out into a helper of some kind.
