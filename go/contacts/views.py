@@ -37,7 +37,7 @@ def index(request):
 
 
 @login_required
-def groups(request):
+def groups(request, type='static'):
     contact_store = request.user_api.contact_store
     if request.POST:
         contact_group_form = ContactGroupForm(request.POST)
