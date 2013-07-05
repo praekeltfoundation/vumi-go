@@ -218,7 +218,7 @@ class RoutingTableHelper(object):
         while destinations:
             destination = destinations.pop()
             sources = self.lookup_sources(destination)
-            for src_conn in sources:
+            for _dst_endpoint, (src_conn, _src_endpoint) in sources:
                 if src_conn not in results:
                     destinations.append(src_conn)
                     results.add(src_conn)

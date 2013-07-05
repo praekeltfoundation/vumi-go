@@ -247,6 +247,18 @@ class RoutingTableHelperTestCase(TestCase):
              'TRANSPORT_TAG:pool1:tag1', 'default'),
         ])
 
+    def test_transitive_closure_simple_case(self):
+        rt = self.mk_helper()
+        self.assertEqual(sorted(rt.transitive_closure("conn1")), [
+            "conn2", "conn3",
+        ])
+
+    def test_reverse_transitive_closure_simple_case(self):
+        rt = self.mk_helper()
+        self.assertEqual(sorted(rt.reverse_transitive_closure("conn2")), [
+            "conn1",
+        ])
+
 
 class GoConnectorTestCase(TestCase):
     def test_create_conversation_connector(self):
