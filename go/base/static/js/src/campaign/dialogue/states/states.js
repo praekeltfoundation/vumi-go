@@ -285,7 +285,7 @@
       DialogueStateCollection.__super__.initialize.call(this, options);
 
       this.grid = new go.components.grid.GridView(this.gridOptions());
-      this.grid.on('reorder', function(ids) { this.rearrange(ids); }, this);
+      this.listenTo(this.grid, 'reorder', this.rearrange);
     },
 
     onSortStart: function(e, ui) {
