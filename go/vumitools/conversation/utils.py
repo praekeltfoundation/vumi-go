@@ -39,17 +39,22 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def end_conversation(self):
-        # TODO: `stop' and `archive' should be different operations.
-        self.c.set_status_stopping()
+        # TODO: Remove this once the old UI is gone.
+        # Pretend we're archived, stop_conversation() saves for us.
         self.c.set_status_finished()
-        yield self.c.save()
+        # Stop as normal
+        yield self.stop_conversation()
+        # Clean up all the things
+        yield self._remove_from_routing_table()
+        yield self._release_batches()
 
+    @Manager.calls_manager
+    def stop_conversation(self):
+        self.c.set_status_stopping()
+        yield self.c.save()
         yield self.dispatch_command('stop',
                                     user_account_key=self.c.user_account.key,
                                     conversation_key=self.c.key)
-
-        yield self._remove_from_routing_table()
-        yield self._release_batches()
 
     @Manager.calls_manager
     def archive_conversation(self):
@@ -302,7 +307,7 @@ class ConversationWrapper(object):
         yield user_account.save()
 
     @Manager.calls_manager
-    def send_token_url(self, token_url, msisdn, **extra_params):
+    def send_token_url(self, token_url, msisdn, acquire_tag=True):
         """
         I was tempted to make this a generic 'send_message' function but
         that gets messy with acquiring tags, it becomes unclear whether an
@@ -312,14 +317,17 @@ class ConversationWrapper(object):
         tag needs to be acquired and when the conversation start is actually
         confirmed that tag can be re-used.
         """
-        tag = yield self.acquire_tag()
-        batch_id = yield self.start_batch(tag)
+        # TODO: Get rid of tag silliness when we can.
+        if acquire_tag:
+            tag = yield self.acquire_tag()
+            batch_id = yield self.start_batch(tag)
+            # We need to have routing set up so that we can send the message
+            # with the token in it.
+            yield self._add_to_routing_table(tag)
+        else:
+            batch_id = yield self.get_latest_batch_key()
         # specify this message as being sensitive
         msg_options = {'helper_metadata': {'go': {'sensitive': True}}}
-
-        # We need to have routing set up so that we can send the message with
-        # the token in it.
-        yield self._add_to_routing_table(tag)
 
         yield self.dispatch_command(
             'send_message',
