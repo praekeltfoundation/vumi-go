@@ -273,14 +273,6 @@ VUMI_INSTALLED_APPS = {
         'namespace': 'wikipedia',
         'display_name': 'Wikipedia',
     },
-    'go.apps.wikipedia.ussd': {
-        'namespace': 'wikipedia_ussd',
-        'display_name': 'Wikipedia USSD Connection',
-    },
-    'go.apps.wikipedia.sms': {
-        'namespace': 'wikipedia_sms',
-        'display_name': 'Wikipedia SMS Connection',
-    },
     'go.apps.jsbox': {
         'namespace': 'jsbox',
         'display_name': 'Javascript App',
