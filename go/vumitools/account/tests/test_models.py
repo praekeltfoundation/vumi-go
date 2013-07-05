@@ -225,6 +225,28 @@ class RoutingTableHelperTestCase(TestCase):
         rt.remove_transport_tag(tag)
         self.assertEqual(sorted(rt.entries()), [])
 
+    def test_add_oldstyle_conversation(self):
+        rt = self.mk_helper({})
+        conv = mock.Mock(conversation_type="conv_type_1", key="12345")
+        tag = ["pool1", "tag1"]
+        rt.add_oldstyle_conversation(conv, tag)
+        self.assertEqual(sorted(rt.entries()), [
+            ('CONVERSATION:conv_type_1:12345', 'default',
+             'TRANSPORT_TAG:pool1:tag1', 'default'),
+            ('TRANSPORT_TAG:pool1:tag1', 'default',
+             'CONVERSATION:conv_type_1:12345', 'default'),
+        ])
+
+    def test_add_oldstyle_conversation_outbound_only(self):
+        rt = self.mk_helper({})
+        conv = mock.Mock(conversation_type="conv_type_1", key="12345")
+        tag = ["pool1", "tag1"]
+        rt.add_oldstyle_conversation(conv, tag, outbound_only=True)
+        self.assertEqual(sorted(rt.entries()), [
+            ('CONVERSATION:conv_type_1:12345', 'default',
+             'TRANSPORT_TAG:pool1:tag1', 'default'),
+        ])
+
 
 class GoConnectorTestCase(TestCase):
     def test_create_conversation_connector(self):
