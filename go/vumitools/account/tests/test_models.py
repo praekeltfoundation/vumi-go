@@ -1,3 +1,5 @@
+import copy
+
 from twisted.internet.defer import inlineCallbacks
 from twisted.trial.unittest import TestCase
 from vumi.tests.utils import UTCNearNow
@@ -86,13 +88,64 @@ class UserAccountTestCase(GoPersistenceMixin, TestCase):
 
 
 class RoutingTableHelperTestCase(TestCase):
+
+    DEFAULT_ROUTING = {
+        "conn1": {
+            "default1.1": ["conn2", "default2"],
+            "default1.2": ["conn3", "default3"],
+        }
+    }
+
+    def mk_helper(self, routing_table=None):
+        if routing_table is None:
+            routing_table = copy.deepcopy(self.DEFAULT_ROUTING)
+        return RoutingTableHelper(routing_table)
+
+    def test_lookup_target(self):
+        rt = self.mk_helper()
+        self.assertEqual(rt.lookup_target("conn1", "default1.1"),
+                         ["conn2", "default2"])
+        self.assertEqual(rt.lookup_target("conn1", "default1.2"),
+                         ["conn3", "default3"])
+
+    def test_lookup_unknown_target(self):
+        rt = self.mk_helper()
+        self.assertEqual(rt.lookup_target("conn3", "default3"),
+                         None)
+
+    def test_lookup_source(self):
+        rt = self.mk_helper()
+        self.assertEqual(rt.lookup_source("conn2", "default2"),
+                         ["conn1", "default1.1"])
+        self.assertEqual(rt.lookup_source("conn3", "default3"),
+                         ["conn1", "default1.2"])
+
+    def test_lookup_unknown_source(self):
+        rt = self.mk_helper()
+        self.assertEqual(rt.lookup_source("conn1", "default1.1"),
+                         None)
+
+    def test_lookup_targets(self):
+        rt = self.mk_helper()
+        self.assertEqual(
+            sorted(rt.lookup_targets("conn1")),
+            [
+                ("default1.1", ["conn2", "default2"]),
+                ("default1.2", ["conn3", "default3"]),
+            ],
+        )
+
+    def test_lookup_sources(self):
+        rt = self.mk_helper()
+        self.assertEqual(
+            sorted(rt.lookup_sources("conn3")),
+            [
+                ("default3", ["conn1", "default1.2"]),
+            ],
+        )
+
     def test_entries(self):
-        rt = RoutingTableHelper({
-            "conn1": {
-                "default1.1": ["conn2", "default2"],
-                "default1.2": ["conn3", "default3"],
-            }
-        })
+        rt = self.mk_helper()
         self.assertEqual(sorted(rt.entries()), [
             ("conn1", "default1.1", "conn2", "default2"),
             ("conn1", "default1.2", "conn3", "default3"),
