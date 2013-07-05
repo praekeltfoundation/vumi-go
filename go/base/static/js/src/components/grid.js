@@ -18,6 +18,7 @@
   // Options:
   //   - items: A collection of views to be maintained in the grid
   var GridView = Backbone.View.extend({
+    className: 'container',
     rowClassName: 'row',
 
     sortableOptions: {},
@@ -34,7 +35,7 @@
 
     _ensureEl: function(viewOrEl) {
       return viewOrEl instanceof Backbone.View
-        ? view.$el
+        ? viewOrEl.$el
         : $(viewOrEl);
     },
 
@@ -60,6 +61,7 @@
         .get();
 
       this.items.rearrange(newOrder);
+      this.trigger('reorder', this.items.keys());
       return this;
     },
 

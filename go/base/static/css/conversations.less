@@ -36,21 +36,10 @@
       opacity: 0.75;
     }
 
-    .grid.container {
+    .container {
       text-align: center;
       margin: 0 auto;
       width: 1280px;
-
-      .row {
-        margin: 0;
-      }
-
-      .item {
-        width: 220px;
-        margin: 30px 40px;
-        padding: 0;
-        position: relative;
-      }
 
       .placeholder {
         background: #2f3436;
@@ -59,9 +48,16 @@
         float: left;
         .border-radius(10px);
       }
+
+      .row {
+        margin: 0;
+      }
     }
 
     .state {
+      width: 220px;
+      margin: 30px 40px;
+
       padding: @state-padding;
       position: relative;
       color: #2f3436;

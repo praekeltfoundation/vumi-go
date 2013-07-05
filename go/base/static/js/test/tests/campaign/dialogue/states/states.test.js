@@ -387,7 +387,7 @@ describe("go.campaign.dialogue.states", function() {
           .modal('hide')
           .remove();
 
-        $('.item').css({
+        $('.state').css({
           width: '100px',
           height: '100px',
           margin: '5px'

@@ -164,7 +164,7 @@
   var DialogueStateView = StateView.extend({
     switchModeDefaults: {render: true, silent: false},
 
-    className: function() { return 'state ' + this.typeName || ''; },
+    className: function() { return 'box span3 state ' + this.typeName || ''; },
 
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
@@ -271,12 +271,9 @@
 
     gridOptions: function() {
       return {
-        items: this,
-        gridClass: 'boxes',
-        itemClass: 'box',
-        itemSpan: 3,
-        sortableOptions: {
-          handle: '.state .titlebar',
+        className: 'container boxes',
+        sortable: {
+          handle: '.titlebar',
           placeholder: 'placeholder',
           start: this.onSortStart.bind(this),
           sort: function() { jsPlumb.repaintEverything(); }
@@ -288,12 +285,11 @@
       DialogueStateCollection.__super__.initialize.call(this, options);
 
       this.grid = new go.components.grid.GridView(this.gridOptions());
-      this.grid.on('render', function() { jsPlumb.repaintEverything(); });
+      this.grid.on('reorder', function(ids) { this.rearrange(ids); }, this);
     },
 
     onSortStart: function(e, ui) {
-      var $state = ui.item.find('.state'),
-          state = this.get($state.attr('data-uuid'));
+      var state = this.get(ui.item.attr('data-uuid'));
 
       if (state.isConnected()) {
         // Simulate the user 'letting go' of the mouse
@@ -323,8 +319,15 @@
     },
 
     render: function() {
-      this.view.$el.append(this.grid.$el);
-      this.grid.render();
+      var grid = this.grid;
+      this.view.$el.append(grid.$el);
+
+      grid.clear();
+      this.eachItem(grid.add, grid);
+
+      grid.render();
+      this.each(function(s) { s.render(); });
+      return this;
     }
   });
 
