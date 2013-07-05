@@ -70,7 +70,10 @@ def groups(request, type='static'):
         for group_bunch in contact_store.groups.load_all_bunches(keys):
             groups.extend(group_bunch)
     else:
-        groups = contact_store.list_groups()
+        if type == 'smart':
+            groups = contact_store.list_smart_groups()
+        else:
+            groups = contact_store.list_groups()
 
     groups = sorted(groups, key=lambda group: group.created_at, reverse=True)
     paginator = Paginator(groups, 15)
