@@ -269,6 +269,10 @@ VUMI_INSTALLED_APPS = {
         'namespace': 'subscription',
         'display_name': 'Subscription Manager',
     },
+    'go.apps.wikipedia': {
+        'namespace': 'wikipedia',
+        'display_name': 'Wikipedia',
+    },
     'go.apps.wikipedia.ussd': {
         'namespace': 'wikipedia_ussd',
         'display_name': 'Wikipedia USSD Connection',

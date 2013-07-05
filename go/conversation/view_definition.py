@@ -445,6 +445,10 @@ class ConversationViewDefinitionBase(object):
         return self._conv_def.conversation_display_name
 
     @property
+    def extra_static_endpoints(self):
+        return self._conv_def.extra_static_endpoints
+
+    @property
     def is_editable(self):
         return self.edit_conversation_forms is not None
 
