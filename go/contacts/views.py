@@ -309,40 +309,49 @@ def people(request):
 def _people(request):
     contact_store = request.user_api.contact_store
     group = None
+    upload_contacts_form = UploadContactsForm()
 
     if request.method == 'POST':
         # first parse the CSV file and create Contact instances
         # from them for attaching to a group later
-        upload_contacts_form = UploadContactsForm(request.POST, request.FILES)
-        if upload_contacts_form.is_valid():
-            # We could be creating a new contact group.
-            if request.POST.get('name'):
-                new_group_form = ContactGroupForm(request.POST)
-                if new_group_form.is_valid():
-                    group = contact_store.new_group(
-                        new_group_form.cleaned_data['name'])
+        if '_delete' in request.POST:
+            contacts = request.POST.getlist('contact')
+            for person_key in contacts:
+                contact = contact_store.get_contact_by_key(person_key)
+                contact.delete()
+            messages.info(request, '%d Contacts deleted' % len(contacts))
 
-            # We could be using an existing contact group.
-            if request.POST.get('contact_group'):
-                select_group_form = SelectContactGroupForm(
-                    request.POST, groups=contact_store.list_groups())
-                if select_group_form.is_valid():
-                    group = contact_store.get_group(
-                        select_group_form.cleaned_data['contact_group'])
-
-            if group is None:
-                messages.error(request, 'Please select a group or provide '
-                                        'a new group name.')
-            else:
-                file_object = upload_contacts_form.cleaned_data['file']
-                file_name, file_path = utils.store_temporarily(file_object)
-                utils.store_file_hints_in_session(
-                    request, file_name, file_path)
-                return redirect(_group_url(group.key))
+        elif '_export' in request.POST:
+            # TODO: Do we have an export method?
         else:
-            messages.error(request, 'Something went wrong with the upload.')
-    else:
-        upload_contacts_form = UploadContactsForm()
+            upload_contacts_form = UploadContactsForm(request.POST, request.FILES)
+            if upload_contacts_form.is_valid():
+                # We could be creating a new contact group.
+                if request.POST.get('name'):
+                    new_group_form = ContactGroupForm(request.POST)
+                    if new_group_form.is_valid():
+                        group = contact_store.new_group(
+                            new_group_form.cleaned_data['name'])
+
+                # We could be using an existing contact group.
+                if request.POST.get('contact_group'):
+                    select_group_form = SelectContactGroupForm(
+                        request.POST, groups=contact_store.list_groups())
+                    if select_group_form.is_valid():
+                        group = contact_store.get_group(
+                            select_group_form.cleaned_data['contact_group'])
+
+                if group is None:
+                    messages.error(request, 'Please select a group or provide '
+                                            'a new group name.')
+                else:
+                    file_object = upload_contacts_form.cleaned_data['file']
+                    file_name, file_path = utils.store_temporarily(file_object)
+                    utils.store_file_hints_in_session(
+                        request, file_name, file_path)
+                    return redirect(_group_url(group.key))
+            else:
+                messages.error(request, 'Something went wrong with the upload.')
 
     select_contact_group_form = SelectContactGroupForm(
         groups=contact_store.list_groups())
