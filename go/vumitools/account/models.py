@@ -185,7 +185,7 @@ class RoutingTableHelper(object):
         if not outbound_only:
             self.add_entry(tag_conn, "default", conv_conn, "default")
 
-    def transitive_closure(self, src_conn):
+    def transitive_targets(self, src_conn):
         """Return all connectors that are reachable from `src_conn`.
 
         Only follows routing steps from source to destination (never
@@ -205,7 +205,7 @@ class RoutingTableHelper(object):
         results.discard(src_conn)
         return results
 
-    def reverse_transitive_closure(self, dst_conn):
+    def transitive_sources(self, dst_conn):
         """Return all connectors that lead to `dst_conn`.self
 
         Only follows routing steps backwards from destination to
