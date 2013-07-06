@@ -40,7 +40,6 @@ def index(request):
 def groups(request):
     contact_store = request.user_api.contact_store
 
-
     if request.POST:
         contact_group_form = ContactGroupForm(request.POST)
         smart_group_form = SmartGroupForm(request.POST)
@@ -60,16 +59,17 @@ def groups(request):
                     name, query)
                 return redirect(_group_url(smart_group.key))
         elif '_delete':
-
             groups = request.POST.getlist('group')
             for group_key in groups:
                 group = contact_store.get_group(group_key)
                 tasks.delete_group.delay(request.user_api.user_account_key,
                                          group.key)
                 messages.info(request,
-                    '%d groups will be deleted shortly.' % len(groups))
+                        '%d groups will be deleted shortly.' % len(groups))
+                # TODO: Should the contacts be removed as well?
         elif '_export':
             pass
+            # TODO: Export contacts.
     else:
         contact_group_form = ContactGroupForm()
         smart_group_form = SmartGroupForm()
