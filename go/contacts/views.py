@@ -323,6 +323,7 @@ def _people(request):
 
         elif '_export' in request.POST:
             # TODO: Do we have an export method?
+            pass
         else:
             upload_contacts_form = UploadContactsForm(request.POST, request.FILES)
             if upload_contacts_form.is_valid():
