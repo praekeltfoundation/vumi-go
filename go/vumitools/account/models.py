@@ -190,6 +190,9 @@ class RoutingTableHelper(object):
 
         Only follows routing steps from source to destination (never
         follows steps backwards from destination to source).
+
+        :param str src_conn: source connector to start search with.
+        :rtype: set of destination connector strings.
         """
         sources = [src_conn]
         # put src_conn in results initially so that it's never
@@ -206,10 +209,13 @@ class RoutingTableHelper(object):
         return results
 
     def transitive_sources(self, dst_conn):
-        """Return all connectors that lead to `dst_conn`.self
+        """Return all connectors that lead to `dst_conn`.
 
         Only follows routing steps backwards from destination to
         source (never forwards from source to destination).
+
+        :param str dst_conn: destination connector to start search with.
+        :rtype: set of source connector strings.
         """
         destinations = [dst_conn]
         # put dst_conn in results initially so that it's never
