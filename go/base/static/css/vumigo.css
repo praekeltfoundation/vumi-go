@@ -381,8 +381,8 @@ button {
 .campaigns.details ul,
 .campaigns.details li {
   list-style-type: none;
-  padding: 0;
-  margin: 0;
+  padding: 0 0 0 5px;
+  margin: 0 0 10px 0;
   width: auto;
 }
 .campaigns.details ul label,
