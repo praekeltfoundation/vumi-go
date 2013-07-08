@@ -470,6 +470,18 @@ class GroupsTestCase(VumiGoDjangoTestCase):
         # during rendering.
         self.assertNotContains(no_limit, 'alert-success')
 
+    def test_multiple_group_deletion(self):
+        group_1 = self.contact_store.new_group(TEST_GROUP_NAME)
+        group_2 = self.contact_store.new_group(TEST_GROUP_NAME)
+
+        # Delete the groups
+        groups_url = reverse('contacts:groups')
+        response = self.client.post(groups_url, {
+            'group': [group_1.key, group_2.key],
+            '_delete': True,
+        })
+        self.assertEqual(self.contact_store.list_groups(), [])
+
     def test_group_deletion(self):
         group = self.contact_store.new_group(TEST_GROUP_NAME)
 
