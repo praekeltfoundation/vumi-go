@@ -266,10 +266,7 @@ button {
   margin: 0 auto;
   width: 1280px;
 }
-.dialogue #diagram .container .row {
-  margin: 0;
-}
-.dialogue #diagram .placeholder {
+.dialogue #diagram .container .placeholder {
   background: #2f3436;
   width: 8px;
   height: 200px;
@@ -280,6 +277,9 @@ button {
   -moz-background-clip: padding;
   border-radius: 10px;
   background-clip: padding-box;
+}
+.dialogue #diagram .container .row {
+  margin: 0;
 }
 .dialogue #diagram .state {
   width: 220px;
