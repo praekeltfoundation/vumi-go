@@ -1,10 +1,9 @@
-wikipedia_ussd:
+wikipedia:
   class: go.apps.wikipedia.vumi_app.WikipediaApplication
-  extra_application_names: ['wikipedia_sms']
   config:
-    metrics_prefix: wikipedia_ussd_application
-    sms_transport: wikipedia_sms_transport
-    incoming_sms_transport: wikipedia_sms_transport
+    metrics_prefix: wikipedia_application
+    sms_transport: wikipedia_transport
+    incoming_sms_transport: wikipedia_transport
     max_sms_content_length: 450
     max_sms_unicode_length: 190
     redis_manager:

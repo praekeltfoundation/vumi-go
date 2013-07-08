@@ -19,7 +19,7 @@
             class="btn btn-primary action" 
             data-name="start"
             data-value="Start">
-            Start
+            Activate
         </a>
 
         <a href="{% conversation_screen conversation 'archive' %}" 
@@ -34,11 +34,16 @@
             class="btn btn-primary action" 
             data-name="stop"
             data-value="Stop">
-            Stop
+            Deactivate
         </a>
     {% else %}
         {# TODO: Figure out what to put here. #}
-        <a href="{% conversation_screen conversation %}" class="btn btn-primary">???</a>
+        <a href="{% conversation_screen conversation 'stop' %}" 
+            class="btn btn-warning action" 
+            data-name="stop"
+            data-value="Stop">
+            In transition: attempt to stop
+        </a>
     {% endif %}
 {% endblock %}
 

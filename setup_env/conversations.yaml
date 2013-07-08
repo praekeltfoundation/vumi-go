@@ -38,24 +38,14 @@
   key: conversation4
   start: true
   account: user1@example.org
-  conversation_type: wikipedia_ussd
-  name: Wikipedia USSD connection
+  conversation_type: wikipedia
+  name: Wikipedia
   delivery_class: ussd
   delivery_tag_pool: ussd_tagpool
   delivery_tag: '*120*10001#'
   config:
     send_from_tagpool: longcode_tagpool
     send_from_tag: longcode-10001
-
--
-  key: conversation5
-  start: true
-  account: user1@example.org
-  conversation_type: wikipedia_sms
-  name: Wikipedia SMS connection
-  delivery_class: sms
-  delivery_tag_pool: longcode_tagpool
-  delivery_tag: longcode-10001
 
 -
   key: conversation6

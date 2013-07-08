@@ -39,9 +39,6 @@ def send_one_off_reply(user_api, conversation, in_reply_to, content):
     if inbound_message is None:
         logger.info('Replying to an unknown message: %s' % (in_reply_to,))
 
-    [tag] = conversation.get_tags()
-    msg_options = conversation.make_message_options(tag)
-    msg_options['in_reply_to'] = in_reply_to
     conversation.dispatch_command(
         'send_message', user_api.user_account_key, conversation.key,
         command_data={
@@ -49,7 +46,7 @@ def send_one_off_reply(user_api, conversation, in_reply_to, content):
             "conversation_key": conversation.key,
             "to_addr": inbound_message['from_addr'],
             "content": content,
-            "msg_options": msg_options,
+            "msg_options": {'in_reply_to': in_reply_to},
        }
     )
 
