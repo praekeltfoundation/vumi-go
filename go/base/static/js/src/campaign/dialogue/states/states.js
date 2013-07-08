@@ -166,7 +166,7 @@
   var DialogueStateView = StateView.extend({
     switchModeDefaults: {render: true, silent: false},
 
-    className: function() { return 'box span3 state ' + this.typeName || ''; },
+    className: function() { return 'box state ' + this.typeName || ''; },
 
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
