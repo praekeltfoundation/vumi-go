@@ -218,7 +218,7 @@ class RoutingTableHelper(object):
                 parsed_dst = GoConnector.parse(dst_conn)
                 if parsed_dst.ctype != GoConnector.ROUTING_BLOCK:
                     continue
-                extra_src = str(parsed_dst.flip_router())
+                extra_src = str(parsed_dst.flip_direction())
                 if extra_src not in results:
                     sources.append(extra_src)
                     results.add(extra_src)
@@ -258,7 +258,7 @@ class RoutingTableHelper(object):
                 parsed_src = GoConnector.parse(src_conn)
                 if parsed_src.ctype != GoConnector.ROUTING_BLOCK:
                     continue
-                extra_dst = str(parsed_src.flip_router())
+                extra_dst = str(parsed_src.flip_direction())
                 if extra_dst not in results:
                     destinations.append(extra_dst)
                     results.add(extra_dst)
@@ -297,10 +297,10 @@ class GoConnector(object):
     def __getattr__(self, name):
         return self._attrs[name]
 
-    def flip_router(self):
+    def flip_direction(self):
         if self.ctype != self.ROUTING_BLOCK:
             raise GoConnectorError(
-                "Attempt to call .flip_router on %r which is not a routing"
+                "Attempt to call .flip_direction on %r which is not a routing"
                 " block connector." % (self,))
         direction = (self.INBOUND if self.direction == self.OUTBOUND
                      else self.OUTBOUND)
