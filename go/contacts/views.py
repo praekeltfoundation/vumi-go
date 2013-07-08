@@ -66,7 +66,6 @@ def groups(request):
                                          group.key)
                 messages.info(request,
                         '%d groups will be deleted shortly.' % len(groups))
-                # TODO: Should the contacts be removed as well?
         elif '_export':
             pass
             # TODO: Export contacts.
