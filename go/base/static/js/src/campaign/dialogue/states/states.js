@@ -5,6 +5,8 @@
 (function(exports) {
   var maybeByName = go.utils.maybeByName;
 
+  var GridView = go.components.grid.GridView;
+
   var plumbing = go.components.plumbing;
 
   var states = plumbing.states,
@@ -164,7 +166,7 @@
   var DialogueStateView = StateView.extend({
     switchModeDefaults: {render: true, silent: false},
 
-    className: function() { return 'state ' + this.typeName || ''; },
+    className: function() { return 'box span3 state ' + this.typeName || ''; },
 
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
@@ -180,6 +182,7 @@
     },
 
     events: {
+      'mousedown .titlebar': 'onTitlebarHold',
       'click .titlebar .remove': 'onRemove'
     },
 
@@ -196,6 +199,11 @@
       };
 
       this.switchMode(options.mode || 'preview', {render: false});
+    },
+
+    onTitlebarHold: function(e) {
+      if (this.isConnected()) { this.$el.addClass('locked'); }
+      else { this.$el.removeClass('locked'); }
     },
 
     onRemove: function(e) {
@@ -245,6 +253,36 @@
     }
   });
 
+  var DialogueStateGridView = GridView.extend({
+    className: 'container boxes',
+
+    sortableOptions: {
+      cancel: '.locked,input',
+      handle: '.titlebar',
+      placeholder: 'placeholder',
+      sort: function() { jsPlumb.repaintEverything(); }
+    },
+
+    addState: function(id, state, options) {
+      options = _(options || {}).defaults({index: state.model.get('ordinal')});
+      return this.add(id, state, options);
+    },
+
+    initialize: function(options) {
+      DialogueStateGridView.__super__.initialize.call(this, options);
+
+      this.states = options.states;
+      this.states.eachItem(
+        function(id, state) { this.addState(id, state, {sort: false}); },
+        this);
+      this.items.sort();
+
+      this.listenTo(this.states, 'add', this.addState);
+      this.listenTo(this.states, 'remove', this.remove);
+      this.on('reorder', this.states.rearrange, this.states);
+    }
+  });
+
   var DialogueStateCollection = StateViewCollection.extend({
     type: DialogueStateView,
 
@@ -269,40 +307,9 @@
       };
     },
 
-    gridOptions: function() {
-      return {
-        items: this,
-        gridClass: 'boxes',
-        itemClass: 'box',
-        itemSpan: 3,
-        sortableOptions: {
-          handle: '.state .titlebar',
-          placeholder: 'placeholder',
-          start: this.onSortStart.bind(this),
-          sort: function() { jsPlumb.repaintEverything(); }
-        }
-      };
-    },
-
-    initialize: function(options) {
-      DialogueStateCollection.__super__.initialize.call(this, options);
-
-      this.grid = new go.components.grid.GridView(this.gridOptions());
-      this.grid.on('render', function() { jsPlumb.repaintEverything(); });
-    },
-
-    onSortStart: function(e, ui) {
-      var $state = ui.item.find('.state'),
-          state = this.get($state.attr('data-uuid'));
-
-      if (state.isConnected()) {
-        // Simulate the user 'letting go' of the mouse
-        // Ideally, we should be able to use jquery ui sortable's cancel()
-        // method. This seems to be broken, and is a known issue:
-        // http://bugs.jqueryui.com/ticket/6954
-        this.grid.$el.mouseup();
-        this.grid.render();
-      }
+    constructor: function(options) {
+      DialogueStateCollection.__super__.constructor.call(this, options);
+      this.grid = new DialogueStateGridView({states: this});
     },
 
     // Removes a state and creates a new state of a different type in the same
@@ -325,6 +332,9 @@
     render: function() {
       this.view.$el.append(this.grid.$el);
       this.grid.render();
+
+      this.each(function(s) { s.render(); });
+      return this;
     }
   });
 
@@ -337,6 +347,7 @@
     DialogueStateEditView: DialogueStateEditView,
 
     DialogueStateView: DialogueStateView,
+    DialogueStateGridView: DialogueStateGridView,
     DialogueStateCollection: DialogueStateCollection
   });
 })(go.campaign.dialogue.states = {});

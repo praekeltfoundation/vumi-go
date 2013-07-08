@@ -15,7 +15,6 @@ from go.base.utils import (
     get_conversation_view_definition, conversation_or_404, page_range_window)
 
 
-
 CONVERSATIONS_PER_PAGE = 12
 
 
@@ -105,11 +104,16 @@ def new_conversation(request):
             return HttpResponse(
                 "Invalid form: %s" % (form.errors,), status=400)
         conversation_type = form.cleaned_data['conversation_type']
+
+        view_def = get_conversation_view_definition(conversation_type)
         conv = request.user_api.new_conversation(
             conversation_type, name=form.cleaned_data['name'],
-            description=form.cleaned_data['description'], config={})
+            description=form.cleaned_data['description'], config={},
+            extra_endpoints=list(view_def.extra_static_endpoints),
+        )
         messages.info(request, 'Conversation created successfully.')
 
+        # Get a new view_def with a conversation object in it.
         view_def = get_conversation_view_definition(
             conv.conversation_type, conv)
 
@@ -145,7 +149,7 @@ def incoming_list(request, conversation_key):
     :param str query:
         The query string to search messages for in the batch's inbound
         messages.
-    """   
+    """
     conversation = conversation_or_404(request.user_api, conversation_key)
 
     direction = request.GET.get('direction', 'inbound')
@@ -153,7 +157,7 @@ def incoming_list(request, conversation_key):
     batch_id = None
     query = request.GET.get('q', None)
     token = None
-   
+
     batch_id = batch_id or conversation.get_latest_batch_key()
 
     # Paginator starts counting at 1 so 0 would also be invalid
