@@ -37,8 +37,9 @@ def index(request):
 
 
 @login_required
-def groups(request):
+def groups(request, type=None):
     contact_store = request.user_api.contact_store
+
     if request.POST:
         contact_group_form = ContactGroupForm(request.POST)
         smart_group_form = SmartGroupForm(request.POST)
@@ -57,6 +58,21 @@ def groups(request):
                 smart_group = contact_store.new_smart_group(
                     name, query)
                 return redirect(_group_url(smart_group.key))
+        elif '_delete' in request.POST:
+            groups = request.POST.getlist('group')
+            for group_key in groups:
+                group = contact_store.get_group(group_key)
+                tasks.delete_group.delay(request.user_api.user_account_key,
+                                         group.key)
+            messages.info(request, '%d groups will be deleted '
+                                   'shortly.' % len(groups))
+        elif '_export_group_contacts' in request.POST:
+            groups = request.POST.getlist('group')
+            for group_key in groups:
+                tasks.export_group_contacts.delay(
+                    request.user_api.user_account_key, group_key, True)
+            messages.info(request, 'The export is scheduled and should '
+                                   'complete within a few minutes.')
     else:
         contact_group_form = ContactGroupForm()
         smart_group_form = SmartGroupForm()
@@ -70,7 +86,12 @@ def groups(request):
         for group_bunch in contact_store.groups.load_all_bunches(keys):
             groups.extend(group_bunch)
     else:
-        groups = contact_store.list_groups()
+        if type == 'static':
+            groups = contact_store.list_static_groups()
+        elif type == 'smart':
+            groups = contact_store.list_smart_groups()
+        else:
+            groups = contact_store.list_groups()
 
     groups = sorted(groups, key=lambda group: group.created_at, reverse=True)
     paginator = Paginator(groups, 15)
@@ -311,36 +332,48 @@ def _people(request):
     group = None
 
     if request.method == 'POST':
-        # first parse the CSV file and create Contact instances
-        # from them for attaching to a group later
-        upload_contacts_form = UploadContactsForm(request.POST, request.FILES)
-        if upload_contacts_form.is_valid():
-            # We could be creating a new contact group.
-            if request.POST.get('name'):
-                new_group_form = ContactGroupForm(request.POST)
-                if new_group_form.is_valid():
-                    group = contact_store.new_group(
-                        new_group_form.cleaned_data['name'])
+        
+        if '_delete' in request.POST:
+            contacts = request.POST.getlist('contact')
+            for person_key in contacts:
+                contact = contact_store.get_contact_by_key(person_key)
+                contact.delete()
+            messages.info(request, '%d Contacts deleted' % len(contacts))
 
-            # We could be using an existing contact group.
-            if request.POST.get('contact_group'):
-                select_group_form = SelectContactGroupForm(
-                    request.POST, groups=contact_store.list_groups())
-                if select_group_form.is_valid():
-                    group = contact_store.get_group(
-                        select_group_form.cleaned_data['contact_group'])
-
-            if group is None:
-                messages.error(request, 'Please select a group or provide '
-                                        'a new group name.')
-            else:
-                file_object = upload_contacts_form.cleaned_data['file']
-                file_name, file_path = utils.store_temporarily(file_object)
-                utils.store_file_hints_in_session(
-                    request, file_name, file_path)
-                return redirect(_group_url(group.key))
+        elif '_export' in request.POST:
+            # TODO: Do we have an export method?
+            pass
         else:
-            messages.error(request, 'Something went wrong with the upload.')
+            # first parse the CSV file and create Contact instances
+            # from them for attaching to a group later
+            upload_contacts_form = UploadContactsForm(request.POST, request.FILES)
+            if upload_contacts_form.is_valid():
+                # We could be creating a new contact group.
+                if request.POST.get('name'):
+                    new_group_form = ContactGroupForm(request.POST)
+                    if new_group_form.is_valid():
+                        group = contact_store.new_group(
+                            new_group_form.cleaned_data['name'])
+
+                # We could be using an existing contact group.
+                if request.POST.get('contact_group'):
+                    select_group_form = SelectContactGroupForm(
+                        request.POST, groups=contact_store.list_groups())
+                    if select_group_form.is_valid():
+                        group = contact_store.get_group(
+                            select_group_form.cleaned_data['contact_group'])
+
+                if group is None:
+                    messages.error(request, 'Please select a group or provide '
+                                            'a new group name.')
+                else:
+                    file_object = upload_contacts_form.cleaned_data['file']
+                    file_name, file_path = utils.store_temporarily(file_object)
+                    utils.store_file_hints_in_session(
+                        request, file_name, file_path)
+                    return redirect(_group_url(group.key))
+            else:
+                messages.error(request, 'Something went wrong with the upload.')        
     else:
         upload_contacts_form = UploadContactsForm()
 
