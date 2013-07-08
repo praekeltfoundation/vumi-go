@@ -37,7 +37,7 @@ def index(request):
 
 
 @login_required
-def groups(request):
+def groups(request, type):
     contact_store = request.user_api.contact_store
 
     if request.POST:
@@ -86,7 +86,12 @@ def groups(request):
         for group_bunch in contact_store.groups.load_all_bunches(keys):
             groups.extend(group_bunch)
     else:
-        groups = contact_store.list_groups()
+        if type == 'static':
+            groups = contact_store.list_static_groups()
+        elif type == 'smart':
+            groups = contact_store.list_smart_groups()
+        else:
+            groups = contact_store.list_groups()
 
     groups = sorted(groups, key=lambda group: group.created_at, reverse=True)
     paginator = Paginator(groups, 15)
