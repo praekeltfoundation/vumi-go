@@ -278,7 +278,7 @@
         this);
       this.items.sort();
 
-      var $add = $('<div>')
+      var $add = $('<button>')
         .addClass('add btn btn-primary')
         .text('+');
 
