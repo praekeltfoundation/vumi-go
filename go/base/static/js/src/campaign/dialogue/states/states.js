@@ -257,7 +257,7 @@
     className: 'container boxes',
 
     sortableOptions: {
-      cancel: '.locked',
+      cancel: '.locked,input',
       handle: '.titlebar',
       placeholder: 'placeholder',
       sort: function() { jsPlumb.repaintEverything(); }
