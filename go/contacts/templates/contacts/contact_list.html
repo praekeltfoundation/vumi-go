@@ -32,7 +32,7 @@
     <div class="table-form-view-buttons pull-left">
         <button class="btn" data-action="delete" disabled="disabled">Delete</button>
         <button class="btn" data-toggle="modal" data-target="#expContactFrm" disabled="disabled">Export</button>
-        <button class="btn" disabled="disabled">Assign to group</button>
+        {# TODO <button class="btn" disabled="disabled">Assign to group</button> #}
     </div>
 {% endblock %}
 
@@ -52,6 +52,5 @@
 {% endblock %}
 
 {% block modals %}
-    {# TODO, assign to group #}
     {% include "contacts/includes/tools.html" with show_groups=1 save_group=1 %}
 {% endblock %}
