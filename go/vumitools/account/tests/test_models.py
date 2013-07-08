@@ -284,17 +284,15 @@ class RoutingTableHelperTestCase(TestCase):
     def test_transitive_targets_with_routers(self):
         rt = self.mk_helper(self.COMPLEX_ROUTING)
         self.assertEqual(sorted(rt.transitive_targets(self.CHANNEL_2)), [
-            self.CONV_1, self.CONV_2,
-            self.ROUTER_1_INBOUND, self.ROUTER_1_OUTBOUND,
+            self.CONV_1, self.CONV_2, self.ROUTER_1_INBOUND,
         ])
         self.assertEqual(sorted(rt.transitive_targets(self.CHANNEL_3)), [
         ])
         self.assertEqual(sorted(rt.transitive_targets(self.CONV_1)), [
-            self.ROUTER_1_INBOUND, self.ROUTER_1_OUTBOUND, self.CHANNEL_2,
+            self.ROUTER_1_OUTBOUND, self.CHANNEL_2,
         ])
         self.assertEqual(sorted(rt.transitive_targets(self.CONV_2)), [
-            self.ROUTER_1_INBOUND, self.ROUTER_1_OUTBOUND,
-            self.CHANNEL_2, self.CHANNEL_3,
+            self.ROUTER_1_OUTBOUND, self.CHANNEL_2, self.CHANNEL_3,
         ])
         self.assertEqual(sorted(rt.transitive_targets(self.ROUTER_1_INBOUND)),
                          [self.CHANNEL_2])
@@ -310,19 +308,16 @@ class RoutingTableHelperTestCase(TestCase):
     def test_transitive_sources_with_routers(self):
         rt = self.mk_helper(self.COMPLEX_ROUTING)
         self.assertEqual(sorted(rt.transitive_sources(self.CHANNEL_2)), [
-            self.CONV_1, self.CONV_2,
-            self.ROUTER_1_INBOUND, self.ROUTER_1_OUTBOUND,
+            self.CONV_1, self.CONV_2, self.ROUTER_1_INBOUND,
         ])
         self.assertEqual(sorted(rt.transitive_sources(self.CHANNEL_3)), [
             self.CONV_2,
         ])
         self.assertEqual(sorted(rt.transitive_sources(self.CONV_1)), [
-            self.ROUTER_1_INBOUND, self.ROUTER_1_OUTBOUND,
-            self.CHANNEL_2,
+            self.ROUTER_1_OUTBOUND, self.CHANNEL_2,
         ])
         self.assertEqual(sorted(rt.transitive_sources(self.CONV_2)), [
-            self.ROUTER_1_INBOUND, self.ROUTER_1_OUTBOUND,
-            self.CHANNEL_2,
+            self.ROUTER_1_OUTBOUND, self.CHANNEL_2,
         ])
         self.assertEqual(sorted(rt.transitive_sources(self.ROUTER_1_INBOUND)),
                          [self.CHANNEL_2])
@@ -391,3 +386,18 @@ class GoConnectorTestCase(TestCase):
                           "CONVERSATION:foo")  # one part
         self.assertRaises(GoConnectorError, GoConnector.parse,
                           "CONVERSATION:foo:bar:baz")  # three parts
+
+    def test_flip_routing_block_connector(self):
+        c1 = GoConnector.for_routing_block(
+            "dummy", "1", GoConnector.INBOUND)
+        c2 = c1.flip_direction()
+        self.assertEqual(c2.direction, GoConnector.OUTBOUND)
+        self.assertEqual(c2.ctype, GoConnector.ROUTING_BLOCK)
+        self.assertEqual(c2.rblock_type, "dummy")
+        self.assertEqual(c2.rblock_key, "1")
+        c3 = c2.flip_direction()
+        self.assertEqual(c3.direction, GoConnector.INBOUND)
+
+    def test_flip_non_routing_block_connector(self):
+        c = GoConnector.for_conversation("dummy", "1")
+        self.assertRaises(GoConnectorError, c.flip_direction)

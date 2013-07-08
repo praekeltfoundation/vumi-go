@@ -207,9 +207,8 @@ class RoutingTableHelper(object):
         :rtype: set of destination connector strings.
         """
         sources = [src_conn]
-        # put src_conn in results initially so that it's never
-        # re-added to the list of sources to examine.
-        results = set(sources)
+        sources_seen = set(sources)
+        results = set()
         while sources:
             source = sources.pop()
             destinations = self.lookup_targets(source)
@@ -219,10 +218,9 @@ class RoutingTableHelper(object):
                 if parsed_dst.ctype != GoConnector.ROUTING_BLOCK:
                     continue
                 extra_src = str(parsed_dst.flip_direction())
-                if extra_src not in results:
+                if extra_src not in sources_seen:
                     sources.append(extra_src)
-                    results.add(extra_src)
-        results.discard(src_conn)
+                    sources_seen.add(extra_src)
         return results
 
     def transitive_sources(self, dst_conn):
@@ -247,9 +245,8 @@ class RoutingTableHelper(object):
         :rtype: set of source connector strings.
         """
         destinations = [dst_conn]
-        # put dst_conn in results initially so that it's never
-        # re-added to the list of destinations to examine.
-        results = set(destinations)
+        destinations_seen = set(destinations)
+        results = set()
         while destinations:
             destination = destinations.pop()
             sources = self.lookup_sources(destination)
@@ -259,10 +256,9 @@ class RoutingTableHelper(object):
                 if parsed_src.ctype != GoConnector.ROUTING_BLOCK:
                     continue
                 extra_dst = str(parsed_src.flip_direction())
-                if extra_dst not in results:
+                if extra_dst not in destinations_seen:
                     destinations.append(extra_dst)
-                    results.add(extra_dst)
-        results.discard(dst_conn)
+                    destinations_seen.add(extra_dst)
         return results
 
 
