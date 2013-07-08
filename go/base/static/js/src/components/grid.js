@@ -49,6 +49,7 @@
       });
 
       this.items.add(key, item, options);
+      return this;
     },
 
     remove: function(key, options) {
@@ -57,6 +58,7 @@
 
     clear: function() {
       this.items = new GridItems();
+      return this;
     },
 
     _reorder: function() {
