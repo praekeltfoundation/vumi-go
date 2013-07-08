@@ -38,20 +38,12 @@ def get_channel_view_definition(channel):
     return ChannelViewDefinition(chan_def)
 
 
-def get_channels(user_api):
-    channels = []
-    for pool, tag in user_api.list_endpoints():
-        tagpool_meta = user_api.api.tpm.get_metadata(pool)
-        channels.append(CheapPlasticChannel(pool, tag, tagpool_meta))
-    return channels
-
-
 @login_required
 def index(request):
     # grab the fields from the GET request
     user_api = request.user_api
 
-    channels = sorted(get_channels(user_api), key=lambda ch: ch.name)
+    channels = sorted(user_api.active_channels(), key=lambda ch: ch.name)
 
     paginator = Paginator(channels, CHANNELS_PER_PAGE)
     try:

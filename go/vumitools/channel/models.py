@@ -24,9 +24,9 @@ class ChannelStore(PerAccountStore):
     # TODO: This is a mostly a placeholder until we have a real
     #       channel model.
 
-    def get_channel_by_tag(self, tag):
+    def get_channel_by_tag(self, tag, tagpool_metadata=None):
         """Return the active channel within this account for the given tag.
 
         Returns `None` if no such channel exists.
         """
-        return CheapPlasticChannel(tag[0], tag[1], {})
+        return CheapPlasticChannel(tag[0], tag[1], tagpool_metadata)
