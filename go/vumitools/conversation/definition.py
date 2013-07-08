@@ -11,6 +11,8 @@ class ConversationDefinitionBase(object):
     conversation_type = None
     conversation_display_name = 'Conversation'
 
+    extra_static_endpoints = ()
+
     actions = ()
 
     def __init__(self, conv=None):
