@@ -2,7 +2,6 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, Http404
-from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
@@ -14,23 +13,6 @@ CHANNELS_PER_PAGE = 12
 
 
 logger = logging.getLogger(__name__)
-
-
-class CheapPlasticChannel(object):
-    """Thin wrapper around a tagpool+tag.
-
-    TODO: Replace this with an actual channel object.
-    """
-
-    def __init__(self, tagpool, tag, tagpool_metadata):
-        self.tagpool = tagpool
-        self.tag = tag
-        self.tagpool_metadata = tagpool_metadata
-        self.key = u'%s:%s' % (tagpool, tag)
-        self.name = tag
-
-    def release(self, user_api):
-        user_api.release_tag((self.tagpool, self.tag))
 
 
 class ChannelDefinition(object):
