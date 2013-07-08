@@ -20,7 +20,7 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi import log
 
 from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
-from go.vumitooos.channel import ChannelStore
+from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.conversation.utils import ConversationWrapper
@@ -184,7 +184,7 @@ class VumiUserApi(object):
             channel = yield self.channel_store.get_channel_by_tag(
                 tag, tagpool_meta)
             channels.append(channel)
-        return channels
+        returnValue(channels)
 
     @Manager.calls_manager
     def tagpools(self):
