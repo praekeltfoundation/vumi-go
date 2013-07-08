@@ -37,7 +37,7 @@ def index(request):
 
 
 @login_required
-def groups(request, type):
+def groups(request, type=None):
     contact_store = request.user_api.contact_store
 
     if request.POST:
