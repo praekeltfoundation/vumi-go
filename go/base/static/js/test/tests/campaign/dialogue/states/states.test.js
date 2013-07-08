@@ -405,9 +405,10 @@ describe("go.campaign.dialogue.states", function() {
         diagram.render();
 
         $('.state').css({
-          width: '100px',
-          height: '100px',
-          margin: '5px'
+          'width': '100px',
+          'height': '100px',
+          'margin': '5px',
+          'float': 'left'
         });
       });
 

@@ -166,7 +166,7 @@
   var DialogueStateView = StateView.extend({
     switchModeDefaults: {render: true, silent: false},
 
-    className: function() { return 'box span3 state ' + this.typeName || ''; },
+    className: function() { return 'box item state ' + this.typeName || ''; },
 
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
@@ -254,7 +254,7 @@
   });
 
   var DialogueStateGridView = GridView.extend({
-    className: 'container boxes',
+    className: 'grid container boxes',
 
     sortableOptions: {
       cancel: '.locked,input',
@@ -277,6 +277,16 @@
         this);
       this.items.sort();
 
+      var $add = $('<div>')
+        .addClass('add btn btn-primary')
+        .text('+');
+
+      var $addItem = $('<div>')
+        .addClass('item')
+        .append($add);
+
+      this.add('add', $addItem, {index: Infinity});
+
       this.listenTo(this.states, 'add', this.addState);
       this.listenTo(this.states, 'remove', this.remove);
       this.on('reorder', this.states.rearrange, this.states);
@@ -294,9 +304,11 @@
       state.model.set('ordinal', ordinal, {silent: true});
     },
 
+    defaultMode: 'preview',
+
     viewOptions: function() {
       var opts = DialogueStateCollection.__super__.viewOptions.call(this);
-      return _({mode: 'preview'}).defaults(opts);
+      return _({mode: this.defaultMode}).defaults(opts);
     },
 
     modelDefaults: function() {
@@ -310,6 +322,10 @@
     constructor: function(options) {
       DialogueStateCollection.__super__.constructor.call(this, options);
       this.grid = new DialogueStateGridView({states: this});
+
+      // Change the default mode to edit once initialisation is done so new
+      // states can be rendered in edit mode.
+      this.defaultMode = 'edit';
     },
 
     // Removes a state and creates a new state of a different type in the same
@@ -318,9 +334,7 @@
       this.remove(state);
 
       this.add({
-        mode: 'edit',
         model: {
-          type: type,
           name: state.model.get('name'),
           ordinal: state.model.get('ordinal')
         }

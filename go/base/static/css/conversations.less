@@ -7,6 +7,7 @@
 
   #diagram {
     @state-padding: 6px;
+    @state-width: 200px;
 
     * {
       z-index: 2;
@@ -36,7 +37,7 @@
       opacity: 0.75;
     }
 
-    .container {
+    .grid {
       text-align: center;
       margin: 0 auto;
       width: 1280px;
@@ -52,12 +53,26 @@
       .row {
         margin: 0;
       }
+
+      .item {
+        margin: 40px 40px;
+        width: 200px;
+        float: left;
+      }
+    }
+
+    .add {
+      @height: 60px;
+
+      width: 60px;
+      height: @height;
+      line-height: @height;
+
+      font-size: 68px;
+      .user-select(none);
     }
 
     .state {
-      width: 220px;
-      margin: 30px 40px;
-
       padding: @state-padding;
       position: relative;
       color: #2f3436;
