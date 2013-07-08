@@ -369,25 +369,42 @@ describe("go.campaign.dialogue.states", function() {
     });
   });
 
-  describe(".DialogueStateCollection", function() {
-    var DummyStateView = dialogue.states.dummy.DummyStateView,
-        DialogueStateCollection = dialogue.states.DialogueStateCollection;
-
-    var states;
+  describe(".DialogueStateGridView", function() {
+    var states,
+        grid;
 
     beforeEach(function() {
       states = diagram.states.members.get('states');
+      grid = states.grid;
+    });
+
+    describe("when a state is added", function() {
+      it("should add the state to the grid", function(done) {
+        grid.items.on('add', function(key) {
+          assert.equal(key, 'new-state');
+          done();
+        });
+
+        states.add({model: {uuid: 'new-state'}});
+      });
+    });
+
+    describe("when a state is removed", function() {
+      it("should remove the state from the grid", function(done) {
+        grid.items.on('remove', function(key) {
+          assert.equal(key, 'state4');
+          done();
+        });
+
+        states.remove('state4');
+      });
     });
 
     describe("when the user tries to drag a state", function() {
       beforeEach(function() {
         diagram.render();
 
-        $('.bootbox')
-          .modal('hide')
-          .remove();
-
-        $('.item').css({
+        $('.state').css({
           width: '100px',
           height: '100px',
           margin: '5px'
@@ -399,7 +416,6 @@ describe("go.campaign.dialogue.states", function() {
         assert.deepEqual(
           states.keys(),
           ['state1','state2','state3','state4']);
-
 
         $('[data-uuid="state4"] .titlebar')
           .simulate('mousedown')
@@ -424,7 +440,16 @@ describe("go.campaign.dialogue.states", function() {
           ['state1','state2','state3','state4']);
       });
     });
+  });
 
+  describe(".DialogueStateCollection", function() {
+    var DummyStateView = dialogue.states.dummy.DummyStateView;
+
+    var states;
+
+    beforeEach(function() {
+      states = diagram.states.members.get('states');
+    });
 
     describe(".reset", function() {
       it("should remove the old state", function(){
