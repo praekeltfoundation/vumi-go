@@ -37,7 +37,7 @@ def index(request):
 
 
 @login_required
-def groups(request, type='static'):
+def groups(request, type):
     contact_store = request.user_api.contact_store
     if request.POST:
         contact_group_form = ContactGroupForm(request.POST)
@@ -70,7 +70,9 @@ def groups(request, type='static'):
         for group_bunch in contact_store.groups.load_all_bunches(keys):
             groups.extend(group_bunch)
     else:
-        if type == 'smart':
+        if type == 'static':
+            groups = contact_store.list_static_groups()
+        elif type == 'smart':
             groups = contact_store.list_smart_groups()
         else:
             groups = contact_store.list_groups()
