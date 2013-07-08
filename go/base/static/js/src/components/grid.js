@@ -39,15 +39,20 @@
         : $(viewOrEl);
     },
 
-    add: function(key, item) {
+    add: function(key, item, options) {
+      options = options || {};
       item = this._ensureEl(item);
 
       item.data({
         'grid:key': key,
-        'grid:index': this.items.size()
+        'grid:index': options.index || this.items.size()
       });
 
-      this.items.add(key, item);
+      this.items.add(key, item, options);
+    },
+
+    remove: function(key, options) {
+      return this.items.remove(key, options);
     },
 
     clear: function() {

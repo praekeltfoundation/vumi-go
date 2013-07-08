@@ -5,6 +5,8 @@
 (function(exports) {
   var maybeByName = go.utils.maybeByName;
 
+  var GridView = go.components.grid.GridView;
+
   var plumbing = go.components.plumbing;
 
   var states = plumbing.states,
@@ -251,6 +253,36 @@
     }
   });
 
+  var DialogueStateGridView = GridView.extend({
+    className: 'container boxes',
+
+    sortableOptions: {
+      cancel: '.locked',
+      handle: '.titlebar',
+      placeholder: 'placeholder',
+      sort: function() { jsPlumb.repaintEverything(); }
+    },
+
+    addState: function(id, state, options) {
+      options = _(options || {}).defaults({index: state.model.get('ordinal')});
+      return this.add(id, state, options);
+    },
+
+    initialize: function(options) {
+      DialogueStateGridView.__super__.initialize.call(this, options);
+
+      this.states = options.states;
+      this.states.eachItem(
+        function(id, state) { this.addState(id, state, {sort: false}); },
+        this);
+      this.items.sort();
+
+      this.listenTo(this.states, 'add', this.addState);
+      this.listenTo(this.states, 'remove', this.remove);
+      this.on('reorder', this.states.rearrange, this.states);
+    }
+  });
+
   var DialogueStateCollection = StateViewCollection.extend({
     type: DialogueStateView,
 
@@ -275,23 +307,9 @@
       };
     },
 
-    gridOptions: function() {
-      return {
-        className: 'container boxes',
-        sortable: {
-          cancel: '.locked',
-          handle: '.titlebar',
-          placeholder: 'placeholder',
-          sort: function() { jsPlumb.repaintEverything(); }
-        }
-      };
-    },
-
-    initialize: function(options) {
-      DialogueStateCollection.__super__.initialize.call(this, options);
-
-      this.grid = new go.components.grid.GridView(this.gridOptions());
-      this.listenTo(this.grid, 'reorder', this.rearrange);
+    constructor: function(options) {
+      DialogueStateCollection.__super__.constructor.call(this, options);
+      this.grid = new DialogueStateGridView({states: this});
     },
 
     // Removes a state and creates a new state of a different type in the same
@@ -312,13 +330,9 @@
     },
 
     render: function() {
-      var grid = this.grid;
-      this.view.$el.append(grid.$el);
+      this.view.$el.append(this.grid.$el);
+      this.grid.render();
 
-      grid.clear();
-      this.eachItem(grid.add, grid);
-
-      grid.render();
       this.each(function(s) { s.render(); });
       return this;
     }
@@ -333,6 +347,7 @@
     DialogueStateEditView: DialogueStateEditView,
 
     DialogueStateView: DialogueStateView,
+    DialogueStateGridView: DialogueStateGridView,
     DialogueStateCollection: DialogueStateCollection
   });
 })(go.campaign.dialogue.states = {});
