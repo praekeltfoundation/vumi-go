@@ -1,5 +1,3 @@
-"""A widget for displaying code in a CodeMirror editor"""
-
 import json
 
 from django import forms
@@ -121,3 +119,14 @@ class SourceUrlField(forms.URLField):
     def __init__(self, code_field, **kwargs):
         widget = SourceUrlTextInput(code_field=code_field)
         super(SourceUrlField, self).__init__(widget=widget, **kwargs)
+
+
+class BulkMessageWidget(forms.Textarea):
+    @property
+    def media(self):
+        js = ('js/src/widgets/initBulkMessage.js',)
+        return forms.Media(js=js)
+
+    def render(self, name, value, attrs={}):
+        attrs.update({'data-widget': 'bulkmessage'})
+        return super(BulkMessageWidget, self).render(name, value, attrs)

@@ -48,6 +48,21 @@ class ConversationTestCase(VumiGoDjangoTestCase):
         self.assertEqual(conv.name, 'new conv')
         self.assertEqual(conv.conversation_type, 'bulk_message')
 
+    def test_post_new_conversation_extra_endpoints(self):
+        conv_data = {
+            'name': 'new conv',
+            'conversation_type': 'wikipedia',
+        }
+        response = self.client.post(reverse('conversations:new_conversation'),
+                                    conv_data)
+        [conv] = self.user_api.active_conversations()
+        show_url = reverse('conversations:conversation', kwargs={
+            'conversation_key': conv.key, 'path_suffix': ''})
+        self.assertRedirects(response, show_url)
+        self.assertEqual(conv.name, 'new conv')
+        self.assertEqual(conv.conversation_type, 'wikipedia')
+        self.assertEqual(list(conv.extra_endpoints), [u'sms_content'])
+
     def test_index(self):
         """Display all conversations"""
         response = self.client.get(reverse('conversations:index'))
