@@ -284,6 +284,7 @@ button {
 .dialogue #diagram .state {
   width: 220px;
   margin: 30px 40px;
+  float: left;
   padding: 6px;
   position: relative;
   color: #2f3436;
