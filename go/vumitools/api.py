@@ -20,10 +20,12 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi import log
 
 from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
+from go.vumitooos.channel import ChannelStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
+from go.vumitools.router import RouterStore
 from go.vumitools.token_manager import TokenManager
 
 from django.conf import settings
@@ -98,6 +100,10 @@ class VumiUserApi(object):
         self.conversation_store = ConversationStore(self.api.manager,
                                                     self.user_account_key)
         self.contact_store = ContactStore(self.api.manager,
+                                          self.user_account_key)
+        self.router_store = RouterStore(self.api.manager,
+                                        self.user_account_key)
+        self.channel_store = ChannelStore(self.api.manager,
                                           self.user_account_key)
 
     def exists(self):
