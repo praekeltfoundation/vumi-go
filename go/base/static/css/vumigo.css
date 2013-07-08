@@ -296,6 +296,11 @@ button {
   -ms-user-select: none;
 }
 .dialogue #diagram .state {
+  width: 220px;
+  margin: 30px 40px;
+  float: left;
+}
+.dialogue #diagram .state {
   padding: 6px;
   position: relative;
   color: #2f3436;
