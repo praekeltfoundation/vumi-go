@@ -256,16 +256,17 @@
   var DialogueStateGridView = GridView.extend({
     className: 'grid container boxes',
 
+    events: {
+      'click .add': 'onAddClick'
+    },
+
     sortableOptions: {
+      items: '.item:not(.add-container)',
       cancel: '.locked,input',
       handle: '.titlebar',
       placeholder: 'placeholder',
-      sort: function() { jsPlumb.repaintEverything(); }
-    },
-
-    addState: function(id, state, options) {
-      options = _(options || {}).defaults({index: state.model.get('ordinal')});
-      return this.add(id, state, options);
+      sort: function() { jsPlumb.repaintEverything(); },
+      stop: function() { jsPlumb.repaintEverything(); }
     },
 
     initialize: function(options) {
@@ -281,15 +282,34 @@
         .addClass('add btn btn-primary')
         .text('+');
 
-      var $addItem = $('<div>')
-        .addClass('item')
+      var $addContainer = $('<div>')
+        .addClass('item add-container')
         .append($add);
 
-      this.add('add', $addItem, {index: Infinity});
+      this.add('add-btn', $addContainer, {index: Infinity});
 
       this.listenTo(this.states, 'add', this.addState);
       this.listenTo(this.states, 'remove', this.remove);
-      this.on('reorder', this.states.rearrange, this.states);
+      this.on('reorder', this.onReorder, this);
+    },
+
+    onAddClick: function(e) {
+      e.preventDefault();
+      this.states.add();
+    },
+
+    onReorder: function(keys) {
+      this.items
+        .get('add-btn')
+        .data('grid:index', Infinity);
+
+      keys.pop();
+      this.states.rearrange(keys);
+    },
+
+    addState: function(id, state, options) {
+      options = _(options || {}).defaults({index: state.model.get('ordinal')});
+      return this.add(id, state, options);
     }
   });
 
@@ -335,6 +355,7 @@
 
       this.add({
         model: {
+          type: type,
           name: state.model.get('name'),
           ordinal: state.model.get('ordinal')
         }

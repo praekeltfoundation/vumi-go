@@ -403,13 +403,6 @@ describe("go.campaign.dialogue.states", function() {
     describe("when the user tries to drag a state", function() {
       beforeEach(function() {
         diagram.render();
-
-        $('.state').css({
-          'width': '100px',
-          'height': '100px',
-          'margin': '5px',
-          'float': 'left'
-        });
       });
 
       it("should allow the state to be sorted if it isn't connected",
@@ -420,7 +413,7 @@ describe("go.campaign.dialogue.states", function() {
 
         $('[data-uuid="state4"] .titlebar')
           .simulate('mousedown')
-          .simulate('drag', {dx: -150});
+          .simulate('drag', {dx: -350});
 
         assert.deepEqual(
           states.keys(),
@@ -439,6 +432,36 @@ describe("go.campaign.dialogue.states", function() {
         assert.deepEqual(
           states.keys(),
           ['state1','state2','state3','state4']);
+      });
+    });
+
+    describe("when the user clicks the '.add' button", function() {
+      var i;
+
+      beforeEach(function() {
+        i = 0;
+        sinon.stub(uuid, 'v4', function() { return i++ || 'new-state'; });
+        diagram.render();
+      });
+
+      afterEach(function() {
+        uuid.v4.restore();
+      });
+
+      it("should add a new state", function() {
+        assert(!diagram.states.has('new-state'));
+        assert.isUndefined(diagram.model.get('states').get('new-state'));
+
+        grid.$('.add').click();
+
+        assert(diagram.states.has('new-state'));
+        assert.isDefined(diagram.model.get('states').get('new-state'));
+      });
+
+      it("should keep the button at the end of the grid", function() {
+        assert.equal(grid.items.indexOfKey('add-btn'), 4);
+        grid.$('.add').click();
+        assert.equal(grid.items.indexOfKey('add-btn'), 5);
       });
     });
   });
