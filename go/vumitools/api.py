@@ -17,7 +17,6 @@ from vumi.persist.riak_manager import RiakManager
 from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.txredis_manager import TxRedisManager
-from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
 from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
@@ -25,7 +24,6 @@ from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
-from go.vumitools.middleware import DebitAccountMiddleware
 from go.vumitools.token_manager import TokenManager
 
 from django.conf import settings
@@ -370,27 +368,6 @@ class VumiUserApi(object):
             raise VumiError(
                 "Routing table contains illegal connector names: %s" % (
                     routing_connectors,))
-
-    @Manager.calls_manager
-    def msg_options(self, tag, tagpool_metadata=None):
-        """Return a dictionary of message options needed to send a message
-        from this user to the given tag.
-        """
-        if tagpool_metadata is None:
-            tagpool_metadata = yield self.api.tpm.get_metadata(tag[0])
-        msg_options = {}
-        # TODO: transport_type is probably irrelevant
-        msg_options['transport_type'] = tagpool_metadata.get('transport_type')
-        # TODO: not sure whether to declare that tag names must always be
-        #       valid from_addr values or whether to put in a mapping somewhere
-        msg_options['from_addr'] = tag[1]
-        if 'transport_name' in tagpool_metadata:
-            msg_options['transport_name'] = tagpool_metadata['transport_name']
-        msg_options.update(tagpool_metadata.get('msg_options', {}))
-        TaggingMiddleware.add_tag_to_payload(msg_options, tag)
-        DebitAccountMiddleware.add_user_to_payload(msg_options,
-                                                   self.user_account_key)
-        returnValue(msg_options)
 
     @Manager.calls_manager
     def _update_tag_data_for_acquire(self, user_account, tag):

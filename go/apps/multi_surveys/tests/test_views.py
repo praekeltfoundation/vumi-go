@@ -133,15 +133,6 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         [batch] = conversation.get_batches()
         [tag] = list(batch.tags)
         [contact] = self.get_contacts_for_conversation(conversation)
-        msg_options = {
-            "transport_type": "sms",
-            "transport_name": self.transport_name,
-            "from_addr": "default10001",
-            "helper_metadata": {
-                "tag": {"tag": list(tag)},
-                "go": {"user_account": conversation.user_account.key},
-                },
-            }
 
         self.assertEqual(start_cmd, VumiApiCommand.command(
                 '%s_application' % (conversation.conversation_type,), 'start',
@@ -154,7 +145,7 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
                 conversation_key=conversation.key,
                 is_client_initiated=conversation.is_client_initiated(),
                 delivery_class=conversation.delivery_class,
-                batch_id=batch.key, msg_options=msg_options))
+                batch_id=batch.key, msg_options={}))
 
     def test_send_fails(self):
         """
@@ -243,9 +234,6 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
             }))
 
         [start_cmd, hack_cmd, reply_to_cmd] = self.get_api_commands_sent()
-        [tag] = conversation.get_tags()
-        msg_options = conversation.make_message_options(tag)
-        msg_options['in_reply_to'] = msg['message_id']
         self.assertEqual(reply_to_cmd['worker_name'],
                             'multi_survey_application')
         self.assertEqual(reply_to_cmd['command'], 'send_message')
@@ -254,5 +242,5 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
             'conversation_key': conversation.key,
             'content': 'foo',
             'to_addr': msg['from_addr'],
-            'msg_options': msg_options,
+            'msg_options': {'in_reply_to': msg['message_id']},
             })

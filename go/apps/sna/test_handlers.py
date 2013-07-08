@@ -116,8 +116,6 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
                                                         msisdn=u'+27761234567')
         yield self.conversation.old_start()
         [self.tag] = yield self.conversation.get_tags()
-        self.msg_options = yield self.conversation.make_message_options(
-            self.tag)
         self.track_event(self.account.key, self.conversation.key,
             'survey_completed', 'sisi_ni_amani', handler_config={
                 'sms_copy': {
@@ -148,7 +146,7 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
                 'batch_id': (yield self.conversation.get_latest_batch_key()),
                 'content': 'english sms',
                 'to_addr': self.contact.msisdn,
-                'msg_options': self.msg_options,
+                'msg_options': {},
             }
         })
 
