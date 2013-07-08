@@ -226,43 +226,6 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         self.assertEqual(endpoints, set([tag1]))
 
     @inlineCallbacks
-    def test_msg_options(self):
-        tag1, tag2, tag3 = yield self.setup_tagpool(
-            u"pool1", [u"1234", u"5678", u"9012"])
-        yield self.vumi_api.tpm.set_metadata(u"pool1", {
-            'transport_type': 'dummy_transport',
-            'msg_options': {'opt1': 'bar'},
-        })
-        msg_options = yield self.user_api.msg_options(tag1)
-        self.assertEqual(msg_options, {
-            'from_addr': '1234',
-            'helper_metadata': {
-                'go': {'user_account': 'test-0-user'},
-                'tag': {'tag': ['pool1', '1234']},
-            },
-            'transport_type': 'dummy_transport',
-            'opt1': 'bar',
-        })
-
-    @inlineCallbacks
-    def test_msg_options_with_tagpool_metadata(self):
-        tag = ('pool1', '1234')
-        tagpool_metadata = {
-            'transport_type': 'dummy_transport',
-            'msg_options': {'opt1': 'bar'},
-        }
-        msg_options = yield self.user_api.msg_options(tag, tagpool_metadata)
-        self.assertEqual(msg_options, {
-            'from_addr': '1234',
-            'helper_metadata': {
-                'go': {'user_account': 'test-0-user'},
-                'tag': {'tag': ['pool1', '1234']},
-            },
-            'transport_type': 'dummy_transport',
-            'opt1': 'bar',
-        })
-
-    @inlineCallbacks
     def assert_account_tags(self, expected):
         user_account = yield self.user_api.get_user_account()
         self.assertEqual(expected, user_account.tags)

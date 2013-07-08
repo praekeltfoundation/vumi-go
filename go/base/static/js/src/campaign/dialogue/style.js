@@ -4,22 +4,32 @@
 
 (function(exports) {
   var initialize = function() {
-    _(jsPlumb.Defaults.EndpointStyle).extend({
+    var plumbDefaults = jsPlumb.Defaults;
+
+    var colors = {
+      normal: '#0bcac3',
+      hover: '#b41e31'
+    };
+
+    _(plumbDefaults.EndpointStyle).extend({
       radius: 6,
-      fillStyle: '#0bcac3'
+      fillStyle: colors.normal
     });
 
-    _(jsPlumb.Defaults.PaintStyle).extend({
+    _(plumbDefaults.PaintStyle).extend({
       lineWidth: 4,
-      strokeStyle: '#0bcac3'
+      strokeStyle: colors.normal
     });
 
-    jsPlumb.Defaults.Connector = [
+    plumbDefaults.HoverPaintStyle = {strokeStyle: colors.hover};
+    plumbDefaults.EndpointHoverStyle = {fillStyle: colors.hover};
+
+    plumbDefaults.Connector = [
       'Flowchart', {
        cornerRadius: 10
     }];
 
-    jsPlumb.Defaults.ConnectionOverlays = [[
+    plumbDefaults.ConnectionOverlays = [[
       'Arrow', {
       width: 14,
       height: 14,

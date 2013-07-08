@@ -186,12 +186,9 @@ class MessageStream(StreamResource):
     @inlineCallbacks
     def handle_PUT_send_to(self, request, payload):
         user_account = request.getUser()
-        user_api = yield self.get_user_api(user_account)
         conversation = yield self.get_conversation(user_account)
 
         msg_options = self.get_msg_options(payload, ['content', 'to_addr'])
-        tag = self.get_conversation_tag(conversation)
-        msg_options.update((yield user_api.msg_options(tag)))
         to_addr = msg_options.pop('to_addr')
         content = msg_options.pop('content')
         msg_options['helper_metadata'] = conversation.set_go_helper_metadata()

@@ -12,35 +12,11 @@
 <div id="diagram"></div>
 {% endblock %}
 
-{% block modals %}
-<div id="initiateModal" class="modal hide fade in">
-    <form method="post" action="">
-        <div class="modal-header">
-            <h3>How do you intend to initiate the campaign?</h3>
-        </div>
-
-        <div class="modal-body">
-                {% csrf_token %}
-                {{ initiate_form }}
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-link" data-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-primary point-right">Next step</button>
-        </div>
-    </form>
-</div>
-{% endblock %}
-
 {% block ondomready %}
   {{ block.super }}
   var dialogue = go.campaign.dialogue;
 
   $('.breadcrumbs a').eq(1).addClass('active');
-
-  $('.actions button[data-action="save"]').click(function(e) {
-      e.preventDefault();
-      $('#initiateModal').modal('show');
-  });
 
   var diagram = new dialogue.diagram.DialogueDiagramView({
     el: '.dialogue #diagram',
@@ -51,6 +27,17 @@
       e.preventDefault();
       diagram.newState();
   });
+
+  $('.actions button[data-action="save"]').click(function(e) {
+      e.preventDefault();
+
+      // TODO uncomment once the screen is hooked up to the api
+      //diagram.model.save();
+
+      // send user to conversation show page
+      window.location.href = "/conversations/{{ conversation_key }}/";
+  });
+
 
   dialogue.style.initialize();
   diagram.render();
