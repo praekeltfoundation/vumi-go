@@ -191,6 +191,18 @@ class RoutingTableHelper(object):
         Only follows routing steps from source to destination (never
         follows steps backwards from destination to source).
 
+        Once a destination has been found, the following items are
+        added to the list of things to search:
+
+        * If the destination is a conversation, channel or opt-out
+          connector no extra sources to search are added.
+
+        * If the destination is a routing block, the connector on
+          the other side of the routing block is added to the list
+          of sources to search from (i.e. the inbound side if an
+          outbound routing block connector is the target and vice
+          versa).
+
         :param str src_conn: source connector to start search with.
         :rtype: set of destination connector strings.
         """
@@ -202,9 +214,14 @@ class RoutingTableHelper(object):
             source = sources.pop()
             destinations = self.lookup_targets(source)
             for _src_endpoint, (dst_conn, _dst_endpoint) in destinations:
-                if dst_conn not in results:
-                    sources.append(dst_conn)
-                    results.add(dst_conn)
+                results.add(dst_conn)
+                parsed_dst = GoConnector.parse(dst_conn)
+                if parsed_dst.ctype != GoConnector.ROUTING_BLOCK:
+                    continue
+                extra_src = str(parsed_dst.flip_router())
+                if extra_src not in results:
+                    sources.append(extra_src)
+                    results.add(extra_src)
         results.discard(src_conn)
         return results
 
@@ -213,6 +230,18 @@ class RoutingTableHelper(object):
 
         Only follows routing steps backwards from destination to
         source (never forwards from source to destination).
+
+        Once a source has been found, the following items are
+        added to the list of things to search:
+
+        * If the sources is a conversation, channel or opt-out
+          connector no extra destinations to search are added.
+
+        * If the source is a routing block, the connector on
+          the other side of the routing block is added to the list
+          of destinations to search from (i.e. the inbound side if an
+          outbound routing block connector is the source and vice
+          versa).
 
         :param str dst_conn: destination connector to start search with.
         :rtype: set of source connector strings.
@@ -225,9 +254,14 @@ class RoutingTableHelper(object):
             destination = destinations.pop()
             sources = self.lookup_sources(destination)
             for _dst_endpoint, (src_conn, _src_endpoint) in sources:
-                if src_conn not in results:
-                    destinations.append(src_conn)
-                    results.add(src_conn)
+                results.add(src_conn)
+                parsed_src = GoConnector.parse(src_conn)
+                if parsed_src.ctype != GoConnector.ROUTING_BLOCK:
+                    continue
+                extra_dst = str(parsed_src.flip_router())
+                if extra_dst not in results:
+                    destinations.append(extra_dst)
+                    results.add(extra_dst)
         results.discard(dst_conn)
         return results
 
@@ -262,6 +296,16 @@ class GoConnector(object):
 
     def __getattr__(self, name):
         return self._attrs[name]
+
+    def flip_router(self):
+        if self.ctype != self.ROUTING_BLOCK:
+            raise GoConnectorError(
+                "Attempt to call .flip_router on %r which is not a routing"
+                " block connector." % (self,))
+        direction = (self.INBOUND if self.direction == self.OUTBOUND
+                     else self.OUTBOUND)
+        return GoConnector.for_routing_block(
+            self.rblock_type, self.rblock_key, direction)
 
     @classmethod
     def for_conversation(cls, conv_type, conv_key):
