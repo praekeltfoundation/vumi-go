@@ -67,8 +67,6 @@
         .map(function() { return $(this).data('grid:key'); })
         .get();
 
-      console.log(newOrder + '---');
-
       this.items.rearrange(newOrder);
       this.trigger('reorder', this.items.keys());
       return this;
