@@ -20,6 +20,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
     TEST_CONVERSATION_TYPE = u'bulk_message'
 
     def test_new_conversation(self):
+        self.add_app_permission(u'go.apps.bulk_message')
         self.assertEqual(len(self.conv_store.list_conversations()), 0)
         response = self.post_new_conversation()
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
