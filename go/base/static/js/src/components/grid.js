@@ -25,7 +25,6 @@
 
     initialize: function(options) {
       this.items = new GridItems();
-      this.width = options.width || this.$el.outerWidth();
 
       if (options.rowClassName) { this.rowClassName = options.rowClassName; }
       if (options.sortable) { this.sortableOptions = options.sortable; }
@@ -87,13 +86,16 @@
 
     _newRow: function() {
       this._$lastRow = $('<div>').addClass(this.rowClassName);
-      this._remainingWidth = this.width;
+      this._remainingWidth = this.$el.outerWidth();
       this.$el.append(this._$lastRow);
       return this;
     },
 
     _append: function(item) {
-      var itemWidth = item.outerWidth();
+      // Append the item first so it has a width we can use, then detach it
+      this.$el.append(item);
+      var itemWidth = item.outerWidth(true);
+      item.detach();
 
       if (this._remainingWidth < itemWidth) { this._newRow(); }
       this._remainingWidth -= itemWidth;
