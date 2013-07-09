@@ -261,12 +261,12 @@ button {
   z-index: 3;
   opacity: 0.75;
 }
-.dialogue #diagram .container {
+.dialogue #diagram .grid {
   text-align: center;
   margin: 0 auto;
   width: 1280px;
 }
-.dialogue #diagram .container .placeholder {
+.dialogue #diagram .grid .placeholder {
   background: #2f3436;
   width: 8px;
   height: 200px;
@@ -278,13 +278,27 @@ button {
   border-radius: 10px;
   background-clip: padding-box;
 }
-.dialogue #diagram .container .row {
+.dialogue #diagram .grid .row {
   margin: 0;
+}
+.dialogue #diagram .grid .item {
+  margin: 40px 40px;
+  width: 200px;
+  float: left;
+}
+.dialogue #diagram .add {
+  height: 60px;
+  font-size: 68px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 .dialogue #diagram .state {
   width: 220px;
   margin: 30px 40px;
   float: left;
+}
+.dialogue #diagram .state {
   padding: 6px;
   position: relative;
   color: #2f3436;
