@@ -28,7 +28,7 @@
     },
 
     newState: function() {
-      return this.states.add('states', {mode: 'edit'});
+      return this.states.add('states');
     },
 
     onUnsupportedConnection: function(source, target, plumbConnection) {
