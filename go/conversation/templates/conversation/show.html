@@ -70,9 +70,13 @@
 
             <p>
                 <h6>CHANNELS</h6>
-                <!-- TODO:  update the routing table metadata helpers to
-                            be able to answer questions like this.
-                -->
+                <ul>
+                {% for channel in conversation.get_channels %}
+                    <li>{{ channel.name }}</li>
+                {% empty %}
+                    <li>No channels.</li>
+                {% endfor %}
+                </ul>
             </p>
         </div>
 
