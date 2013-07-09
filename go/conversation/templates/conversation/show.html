@@ -48,7 +48,7 @@
 {% endblock %}
 
 {% block content_main %}
-<div class="row-fluid indent">
+<div class="row-fluid">
     <div class="span7">
 
         <div class="sub-details">
@@ -75,28 +75,6 @@
                 -->
             </p>
         </div>
-
-
-        <div class="sub-actions">
-            <h4>Actions</h4>
-
-            <p>
-                <ol>
-                {% for action in actions %}
-                    {% with is_disabled=action.is_disabled %}
-                    {% if is_disabled %}
-                    <li><a href="#" class="disabled" title="Action disabled" data-content="{{ is_disabled }}">{{ action.action_display_name }}</a></li>
-                    {% else %}
-                    <li><a href="{% conversation_action conversation action.action_name %}">{{ action.action_display_name }}</a></li>
-                    {% endif %}
-                    {% endwith %}
-                {% empty %}
-                    <li>This conversation has no actions.</li>
-                {% endfor %}
-                </ol>
-            </p>
-        </div>
-
 
         <div class="sub-messages">
             <h4>
@@ -127,6 +105,29 @@
             </p>
         </div>
     </div>
+
+    <div class="span5">
+        {% if actions %}
+        <div class="sub-actions">
+            <ul class="nav nav-pills nav-stacked">
+                {% for action in actions %}
+                    {% with is_disabled=action.is_disabled %}
+                        {% if is_disabled %}
+                            <li>
+                                <a href="#" class="btn disabled" title="This action is disabled" data-content="{{ is_disabled }}">{{ action.action_display_name }}</a>
+                            </li>
+                        {% else %}
+                            <li><a href="{% conversation_action conversation action.action_name %}" class="btn">{{ action.action_display_name }}</a></li>
+                        {% endif %}
+                    {% endwith %}
+                {% empty %}
+                    <li>This conversation has no actions.</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
 </div>
 {% endblock %}
 
@@ -138,17 +139,19 @@
         // confirm if the user wants to perform the action,
         var $button = $(this);
         bootbox.confirm('Are you sure you want to ' + $button.attr('data-value') + ' this conversation?', function(submit) {
-            $form = $('<form method="post"></form>')
-                .attr('action', $button.attr('href'));
-            $form.append("{% csrf_token %}");
-            $form.append('<input type="hidden" name="' + $button.attr('data-name') + '" value="' + $button.attr('data-value') + '">');
-            $form.submit();
+            if (submit) {
+                $form = $('<form method="post"></form>')
+                    .attr('action', $button.attr('href'));
+                $form.append("{% csrf_token %}");
+                $form.append('<input type="hidden" name="' + $button.attr('data-name') + '" value="' + $button.attr('data-value') + '">');
+                $form.submit();
+            }
         });
 
         return false;
     });
 
-    $('.content .sub-actions .disabled').popover();
+    $('.content .sub-actions .disabled').popover({placement: 'left'});
     $('.content .sub-actions .disabled').on('click', function() { return false; });
 
 {% endblock %}
