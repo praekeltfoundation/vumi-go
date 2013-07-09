@@ -270,6 +270,11 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.assertEqual([], (yield self.conv.get_tags()))
 
     @inlineCallbacks
+    def test_get_channels(self):
+        yield self.conv.start()
+        self.assertEqual([], (yield self.conv.get_channels()))
+
+    @inlineCallbacks
     def test_get_tags_old_style(self):
         self.conv.c.delivery_tag_pool = u'longcode'
         yield self.conv.save()

@@ -11,7 +11,7 @@ from vumi.persist.model import Manager
 from go.vumitools.exceptions import ConversationSendError
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.utils import MessageMetadataHelper
-from go.vumitools.account import RoutingTableHelper
+from go.vumitools.account import RoutingTableHelper, GoConnector
 
 
 class ConversationWrapper(object):
@@ -109,6 +109,29 @@ class ConversationWrapper(object):
         for batch in (yield self.get_batches()):
             tags.extend((yield batch.tags))
         returnValue(tags)
+
+    @Manager.calls_manager
+    def get_channels(self):
+        """
+        Returns lists of channels that can either send messages to or receive
+        messages from this conversation.
+
+        :rtype:
+            List of channel models.
+        """
+        user_account = yield self.c.user_account.get(self.api.manager)
+        routing_table = yield self.user_api.get_routing_table(user_account)
+        rt_helper = RoutingTableHelper(routing_table)
+        conn = GoConnector.for_conversation(
+            self.conversation_type, self.key)
+        incoming = rt_helper.transitive_sources(str(conn))
+        outbound = rt_helper.transitive_targets(str(conn))
+        connectors = incoming | outbound
+        go_connectors = [GoConnector.parse(s) for s in connectors]
+        channels = [
+            self.user_api.get_channel_by_tag([c.tagpool, c.tagname])
+            for c in go_connectors if c.ctype == c.CHANNEL]
+        returnValue(channels)
 
     @Manager.calls_manager
     def get_progress_status(self):
