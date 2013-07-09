@@ -132,6 +132,7 @@ class ConversationWrapper(object):
             self.user_api.channel_store.get_channel_by_tag(
                 [c.tagpool, c.tagname])
             for c in go_connectors if c.ctype == c.TRANSPORT_TAG]
+        channels.sort(key=lambda c: c.name)
         returnValue(channels)
 
     @Manager.calls_manager
