@@ -38,6 +38,7 @@
 
 {% block content_main_list %}
     <form class="table-form-view" method="post" action="">
+        {% csrf_token %}
         {% include "contacts/contact_list_table.html" %}
         {% include "base/includes/pagination.html" %}
     </form>

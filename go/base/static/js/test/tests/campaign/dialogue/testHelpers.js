@@ -46,7 +46,7 @@
 
   var newDialogueDiagram = function() {
     return new DialogueDiagramView({
-      el: '#dialogue-diagram',
+      el: '.dialogue #diagram',
       model: new DialogueModel(modelData)
     });
   };
@@ -55,7 +55,11 @@
   // --------------
 
   var setUp = function() {
-    $('body').append("<div id='dialogue-diagram'></div>");
+    $('body').append([
+      "<div class='dialogue'>",
+        "<div id='diagram'></div>",
+      "</div>"
+    ].join(''));
   };
 
   var tearDown = function() {
@@ -63,7 +67,7 @@
     jsPlumb.unbind();
     jsPlumb.detachEveryConnection();
     jsPlumb.deleteEveryEndpoint();
-    $('#dialogue-diagram').remove();
+    $('.dialogue #diagram').remove();
   };
 
   _.extend(exports, {
