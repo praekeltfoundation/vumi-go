@@ -85,13 +85,6 @@
       });
     },
 
-    _resetRows: function() {
-      this.$rows().children().detach();
-      this.$rows().remove();
-      this._newRow();
-      return this;
-    },
-
     _newRow: function() {
       this._$lastRow = $('<div>').addClass(this.rowClassName);
       this._remainingWidth = this.width;
@@ -110,8 +103,12 @@
     },
 
     render: function() {
-      this._resetRows();
+      var $oldRows = this.$rows();
+
+      this._newRow();
       this.items.each(this._append, this);
+
+      $oldRows.remove();
       this.$rows().sortable(this._sortableOptions());
       return this;
     }
