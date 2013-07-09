@@ -84,6 +84,24 @@ class RoutingTableHelper(object):
     def lookup_target(self, src_conn, src_endpoint):
         return self.routing_table.get(src_conn, {}).get(src_endpoint)
 
+    def lookup_targets(self, src_conn):
+        return self.routing_table.get(src_conn, {}).items()
+
+    def lookup_source(self, target_conn, target_endpoint):
+        for src_conn, routes in self.routing_table.iteritems():
+            for src_endpoint, (dst_conn, dst_endpoint) in routes.items():
+                if dst_conn == target_conn and dst_endpoint == target_endpoint:
+                    return [src_conn, src_endpoint]
+        return None
+
+    def lookup_sources(self, target_conn):
+        sources = []
+        for src_conn, routes in self.routing_table.iteritems():
+            for src_endpoint, (dest_conn, dest_endpoint) in routes.items():
+                if dest_conn == target_conn:
+                    sources.append((dest_endpoint, [src_conn, src_endpoint]))
+        return sources
+
     def entries(self):
         """Iterate over entries in the routing table.
 
@@ -167,6 +185,82 @@ class RoutingTableHelper(object):
         if not outbound_only:
             self.add_entry(tag_conn, "default", conv_conn, "default")
 
+    def transitive_targets(self, src_conn):
+        """Return all connectors that are reachable from `src_conn`.
+
+        Only follows routing steps from source to destination (never
+        follows steps backwards from destination to source).
+
+        Once a destination has been found, the following items are
+        added to the list of things to search:
+
+        * If the destination is a conversation, channel or opt-out
+          connector no extra sources to search are added.
+
+        * If the destination is a routing block, the connector on
+          the other side of the routing block is added to the list
+          of sources to search from (i.e. the inbound side if an
+          outbound routing block connector is the target and vice
+          versa).
+
+        :param str src_conn: source connector to start search with.
+        :rtype: set of destination connector strings.
+        """
+        sources = [src_conn]
+        sources_seen = set(sources)
+        results = set()
+        while sources:
+            source = sources.pop()
+            destinations = self.lookup_targets(source)
+            for _src_endpoint, (dst_conn, _dst_endpoint) in destinations:
+                results.add(dst_conn)
+                parsed_dst = GoConnector.parse(dst_conn)
+                if parsed_dst.ctype != GoConnector.ROUTING_BLOCK:
+                    continue
+                extra_src = str(parsed_dst.flip_direction())
+                if extra_src not in sources_seen:
+                    sources.append(extra_src)
+                    sources_seen.add(extra_src)
+        return results
+
+    def transitive_sources(self, dst_conn):
+        """Return all connectors that lead to `dst_conn`.
+
+        Only follows routing steps backwards from destination to
+        source (never forwards from source to destination).
+
+        Once a source has been found, the following items are
+        added to the list of things to search:
+
+        * If the sources is a conversation, channel or opt-out
+          connector no extra destinations to search are added.
+
+        * If the source is a routing block, the connector on
+          the other side of the routing block is added to the list
+          of destinations to search from (i.e. the inbound side if an
+          outbound routing block connector is the source and vice
+          versa).
+
+        :param str dst_conn: destination connector to start search with.
+        :rtype: set of source connector strings.
+        """
+        destinations = [dst_conn]
+        destinations_seen = set(destinations)
+        results = set()
+        while destinations:
+            destination = destinations.pop()
+            sources = self.lookup_sources(destination)
+            for _dst_endpoint, (src_conn, _src_endpoint) in sources:
+                results.add(src_conn)
+                parsed_src = GoConnector.parse(src_conn)
+                if parsed_src.ctype != GoConnector.ROUTING_BLOCK:
+                    continue
+                extra_dst = str(parsed_src.flip_direction())
+                if extra_dst not in destinations_seen:
+                    destinations.append(extra_dst)
+                    destinations_seen.add(extra_dst)
+        return results
+
 
 class GoConnectorError(Exception):
     """Raised when attempting to construct an invalid connector."""
@@ -198,6 +292,16 @@ class GoConnector(object):
 
     def __getattr__(self, name):
         return self._attrs[name]
+
+    def flip_direction(self):
+        if self.ctype != self.ROUTING_BLOCK:
+            raise GoConnectorError(
+                "Attempt to call .flip_direction on %r which is not a routing"
+                " block connector." % (self,))
+        direction = (self.INBOUND if self.direction == self.OUTBOUND
+                     else self.OUTBOUND)
+        return GoConnector.for_routing_block(
+            self.rblock_type, self.rblock_key, direction)
 
     @classmethod
     def for_conversation(cls, conv_type, conv_key):
