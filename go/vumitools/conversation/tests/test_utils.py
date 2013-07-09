@@ -6,6 +6,7 @@ from vumi.message import TransportMessage
 from vumi.application.tests.test_base import DummyApplicationWorker
 
 from go.vumitools.tests.utils import AppWorkerTestCase
+from go.vumitools.account.models import RoutingTableHelper
 from go.vumitools.api import VumiApi
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.exceptions import ConversationSendError
@@ -271,6 +272,19 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_get_channels(self):
+        yield self.conv.start()
+        tags = [["pool", "tag1"], ["pool", "tag2"]]
+        user_account = yield self.user_api.get_user_account()
+        rt = RoutingTableHelper(user_account.routing_table)
+        for tag in tags:
+            rt.add_oldstyle_conversation(self.conv, tag)
+        yield user_account.save()
+        [chan1, chan2] = yield self.conv.get_channels()
+        self.assertEqual(chan1.tag, "tag1")
+        self.assertEqual(chan2.tag, "tag2")
+
+    @inlineCallbacks
+    def test_get_channels_with_no_channels(self):
         yield self.conv.start()
         self.assertEqual([], (yield self.conv.get_channels()))
 
