@@ -299,11 +299,16 @@
     },
 
     onReorder: function(keys) {
+      // The grid items their indices reset when the user sorts the items.
+      // We need to ensure the add button stays at the end, so we need to
+      // change it back to `Infinity` each re-order
       this.items
         .get('add-btn')
         .data('grid:index', Infinity);
 
+      // Remove the add button from the keys
       keys.pop();
+
       this.states.rearrange(keys);
     },
 
