@@ -422,7 +422,7 @@ button {
 }
 .campaigns.summary .sub-actions {
   background: #d9d8d3;
-  margin: -5px 0;
+  margin-top: -5px;
   padding: 18px;
 }
 .campaigns .header a {
