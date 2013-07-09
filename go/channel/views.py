@@ -7,6 +7,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from go.channel.forms import NewChannelForm
 from go.channel.view_definition import ChannelViewDefinitionBase
+from go.vumitools.channel.models import CheapPlasticChannel
 
 
 CHANNELS_PER_PAGE = 12
