@@ -17,6 +17,8 @@ if os.environ.get('VUMIGO_FAST_TESTS'):
         }
     }
 
+EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+
 NOSE_ARGS = ['-evumitools', '-evumi_app', '-ehandlers', '-m^test']
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.cookie.CookieStorage'
