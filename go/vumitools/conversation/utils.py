@@ -130,7 +130,7 @@ class ConversationWrapper(object):
         go_connectors = [GoConnector.parse(s) for s in connectors]
         channels = [
             self.user_api.get_channel_by_tag([c.tagpool, c.tagname])
-            for c in go_connectors if c.ctype == c.CHANNEL]
+            for c in go_connectors if c.ctype == c.TRANSPORT_TAG]
         returnValue(channels)
 
     @Manager.calls_manager
