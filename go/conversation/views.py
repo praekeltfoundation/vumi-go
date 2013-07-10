@@ -98,7 +98,7 @@ def conversation_action(request, conversation_key, action_name):
 @login_required
 def new_conversation(request):
     if request.method == 'POST':
-        form = NewConversationForm(request.POST)
+        form = NewConversationForm(request.user_api, request.POST)
         if not form.is_valid():
             # TODO: Something more sensible here?
             return HttpResponse(
@@ -124,7 +124,7 @@ def new_conversation(request):
         return redirect(view_def.get_view_url(
             next_view, conversation_key=conv.key))
 
-    conversation_form = NewConversationForm()
+    conversation_form = NewConversationForm(request.user_api)
     return render(request, 'conversation/new.html', {
         'conversation_form': conversation_form,
     })

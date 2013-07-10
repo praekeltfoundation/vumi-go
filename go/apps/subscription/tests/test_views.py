@@ -6,6 +6,7 @@ class SubscriptionTestCase(DjangoGoApplicationTestCase):
     TEST_CONVERSATION_TYPE = u'subscription'
 
     def test_new_conversation(self):
+        self.add_app_permission(u'go.apps.subscription')
         self.assertEqual(len(self.conv_store.list_conversations()), 0)
         response = self.post_new_conversation()
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
