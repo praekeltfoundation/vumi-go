@@ -88,6 +88,18 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             "Action disabled: This action needs a running conversation.")
         self.assertEqual([], self.get_api_commands_sent())
 
+    def test_action_send_survey_no_channel(self):
+        self.setup_conversation(started=True, with_group=True)
+        response = self.client.post(
+            self.get_action_view_url('send_survey'), {}, follow=True)
+        self.assertRedirects(response, self.get_view_url('show'))
+        [msg] = response.context['messages']
+        self.assertEqual(
+            str(msg),
+            "Action disabled: This action needs channels capable"
+            " of sending messages attached to this conversation.")
+        self.assertEqual([], self.get_api_commands_sent())
+
     @skip("The new views don't have this yet.")
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
