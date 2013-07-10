@@ -90,12 +90,9 @@ describe("go.components.views", function() {
     beforeEach(function() {
       confirm = new ConfirmView({
         content: 'I am a modal.',
-        optional: true
+        optional: true,
+        animate: false
       });
-
-      // Remove animation to make phantomjs happy
-      // ('shown' and 'hidden' events don't seem to be triggered otherwise)
-      confirm.$el.removeClass('fade in');
     });
 
     afterEach(function() {
