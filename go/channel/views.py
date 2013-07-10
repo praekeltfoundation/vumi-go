@@ -2,35 +2,18 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, Http404
-from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from go.channel.forms import NewChannelForm
 from go.channel.view_definition import ChannelViewDefinitionBase
+from go.vumitools.channel.models import CheapPlasticChannel
 
 
 CHANNELS_PER_PAGE = 12
 
 
 logger = logging.getLogger(__name__)
-
-
-class CheapPlasticChannel(object):
-    """Thin wrapper around a tagpool+tag.
-
-    TODO: Replace this with an actual channel object.
-    """
-
-    def __init__(self, tagpool, tag, tagpool_metadata):
-        self.tagpool = tagpool
-        self.tag = tag
-        self.tagpool_metadata = tagpool_metadata
-        self.key = u'%s:%s' % (tagpool, tag)
-        self.name = tag
-
-    def release(self, user_api):
-        user_api.release_tag((self.tagpool, self.tag))
 
 
 class ChannelDefinition(object):
@@ -56,20 +39,12 @@ def get_channel_view_definition(channel):
     return ChannelViewDefinition(chan_def)
 
 
-def get_channels(user_api):
-    channels = []
-    for pool, tag in user_api.list_endpoints():
-        tagpool_meta = user_api.api.tpm.get_metadata(pool)
-        channels.append(CheapPlasticChannel(pool, tag, tagpool_meta))
-    return channels
-
-
 @login_required
 def index(request):
     # grab the fields from the GET request
     user_api = request.user_api
 
-    channels = sorted(get_channels(user_api), key=lambda ch: ch.name)
+    channels = sorted(user_api.active_channels(), key=lambda ch: ch.name)
 
     paginator = Paginator(channels, CHANNELS_PER_PAGE)
     try:

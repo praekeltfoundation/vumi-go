@@ -26,18 +26,18 @@ def create(request, conversation_key=None):
 
     """
     wizard_form = Wizard1CreateForm()
-    conversation_form = NewConversationForm()
+    conversation_form = NewConversationForm(request.user_api)
     channel_form = NewChannelForm(request.user_api)
 
     conversation = None
     if conversation_key:
         conversation = conversation_or_404(request.user_api, conversation_key)
         conversation_form = NewConversationForm(
-            data={'name': conversation.name})
+            request.user_api, data={'name': conversation.name})
 
     if request.method == 'POST':
         # TODO: Reuse new conversation/channel view logic here.
-        posted_conv_form = NewConversationForm(request.POST)
+        posted_conv_form = NewConversationForm(request.user_api, request.POST)
         posted_chan_form = NewChannelForm(request.user_api, request.POST)
         if posted_conv_form.is_valid() and posted_chan_form.is_valid():
 
@@ -68,10 +68,12 @@ def create(request, conversation_key=None):
             rt_helper.add_oldstyle_conversation(conversation, got_tag)
             user_account.save()
 
-            # TODO save and go to next step.
-            return redirect(
-                'conversations:conversation',
-                conversation_key=conversation.key, path_suffix='')
+            if view_def.is_editable:
+                return redirect(view_def.get_view_url(
+                    'edit', conversation_key=conversation.key))
+            else:
+                return redirect(view_def.get_view_url(
+                    'show', conversation_key=conversation.key))
         else:
             logger.info("Validation failed: %r %r" % (
                 posted_conv_form.errors, posted_chan_form.errors))

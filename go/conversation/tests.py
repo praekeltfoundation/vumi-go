@@ -1,5 +1,3 @@
-import uuid
-
 from django.core.urlresolvers import reverse
 from django.utils.unittest import skip
 
@@ -20,21 +18,16 @@ class ConversationTestCase(VumiGoDjangoTestCase):
         self.setup_user_api()
         self.setup_client()
 
-    def add_app_permission(self, application):
-        permission = self.api.account_store.application_permissions(
-            uuid.uuid4().hex, application=application)
-        permission.save()
-
-        account = self.user_api.get_user_account()
-        account.applications.add(permission)
-        account.save()
-
     def test_get_new_conversation(self):
+        self.add_app_permission(u'go.apps.bulk_message')
         response = self.client.get(reverse('conversations:new_conversation'))
         self.assertContains(response, 'Conversation name')
         self.assertContains(response, 'kind of conversation')
+        self.assertContains(response, 'bulk_message')
+        self.assertNotContains(response, 'survey')
 
     def test_post_new_conversation(self):
+        self.add_app_permission(u'go.apps.bulk_message')
         conv_data = {
             'name': 'new conv',
             'conversation_type': 'bulk_message',
@@ -49,6 +42,7 @@ class ConversationTestCase(VumiGoDjangoTestCase):
         self.assertEqual(conv.conversation_type, 'bulk_message')
 
     def test_post_new_conversation_extra_endpoints(self):
+        self.add_app_permission(u'go.apps.wikipedia')
         conv_data = {
             'name': 'new conv',
             'conversation_type': 'wikipedia',
