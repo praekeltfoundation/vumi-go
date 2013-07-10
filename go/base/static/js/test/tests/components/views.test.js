@@ -82,7 +82,7 @@ describe("go.components.views", function() {
     });
   });
 
-  describe.only(".ConfirmView", function() {
+  describe(".ConfirmView", function() {
     var ConfirmView = views.ConfirmView;
 
     var confirm;
@@ -111,20 +111,31 @@ describe("go.components.views", function() {
     });
 
     describe(".show", function() {
-      it("should show the modal if the user has disabled the modal",
-      function() {
+      it("should show the modal", function() {
         assert(noElExists('.modal'));
         confirm.show();
         assert(oneElExists('.modal'));
       });
 
+      it("should not show the modal once the user has not disabled the modal",
+      function() {
+        confirm.show();
+        confirm.$('.dont-show').click();
+        confirm.$('.ok').click();
+
+        assert(confirm.$el.is(':hidden'));
+        confirm.show();
+        assert(confirm.$el.is(':hidden'));
+      });
+
       it("should trigger an 'ok' event if the user has disabled the modal",
       function(done) {
-        confirm.on('ok', function() { done(); });
-
         confirm.render();
         confirm.$('.dont-show').click();
         confirm.$('.ok').click();
+
+        confirm.on('ok', function() { done(); });
+        confirm.show();
       });
     });
 
