@@ -101,9 +101,7 @@ describe("go.components.views", function() {
     });
 
     afterEach(function() {
-      $('.modal').remove();
       confirm.remove();
-      confirm.$el.remove();
     });
 
     describe(".render", function() {
