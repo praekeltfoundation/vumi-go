@@ -166,7 +166,7 @@
   var DialogueStateView = StateView.extend({
     switchModeDefaults: {render: true, silent: false},
 
-    className: function() { return 'box state ' + this.typeName || ''; },
+    className: function() { return 'box item state ' + this.typeName || ''; },
 
     editModeType: DialogueStateEditView,
     previewModeType: DialogueStatePreviewView,
@@ -254,18 +254,19 @@
   });
 
   var DialogueStateGridView = GridView.extend({
-    className: 'container boxes',
+    className: 'grid container boxes',
+
+    events: {
+      'click .add': 'onAddClick'
+    },
 
     sortableOptions: {
+      items: '.item:not(.add-container)',
       cancel: '.locked,input',
       handle: '.titlebar',
       placeholder: 'placeholder',
-      sort: function() { jsPlumb.repaintEverything(); }
-    },
-
-    addState: function(id, state, options) {
-      options = _(options || {}).defaults({index: state.model.get('ordinal')});
-      return this.add(id, state, options);
+      sort: function() { jsPlumb.repaintEverything(); },
+      stop: function() { jsPlumb.repaintEverything(); }
     },
 
     initialize: function(options) {
@@ -277,9 +278,43 @@
         this);
       this.items.sort();
 
+      var $add = $('<button>')
+        .addClass('add btn btn-primary')
+        .text('+');
+
+      var $addContainer = $('<div>')
+        .addClass('item add-container')
+        .append($add);
+
+      this.add('add-btn', $addContainer, {index: Infinity});
+
       this.listenTo(this.states, 'add', this.addState);
       this.listenTo(this.states, 'remove', this.remove);
-      this.on('reorder', this.states.rearrange, this.states);
+      this.on('reorder', this.onReorder, this);
+    },
+
+    onAddClick: function(e) {
+      e.preventDefault();
+      this.states.add();
+    },
+
+    onReorder: function(keys) {
+      // The grid items have their indices reset when the user sorts the items
+      // in the UI. We need to ensure the add button stays at the end, so we
+      // need to change it back to `Infinity` each reorder
+      this.items
+        .get('add-btn')
+        .data('grid:index', Infinity);
+
+      // Remove the add button from the keys
+      keys.pop();
+
+      this.states.rearrange(keys);
+    },
+
+    addState: function(id, state, options) {
+      options = _(options || {}).defaults({index: state.model.get('ordinal')});
+      return this.add(id, state, options);
     }
   });
 
@@ -294,9 +329,11 @@
       state.model.set('ordinal', ordinal, {silent: true});
     },
 
+    defaultMode: 'preview',
+
     viewOptions: function() {
       var opts = DialogueStateCollection.__super__.viewOptions.call(this);
-      return _({mode: 'preview'}).defaults(opts);
+      return _({mode: this.defaultMode}).defaults(opts);
     },
 
     modelDefaults: function() {
@@ -310,6 +347,10 @@
     constructor: function(options) {
       DialogueStateCollection.__super__.constructor.call(this, options);
       this.grid = new DialogueStateGridView({states: this});
+
+      // Change the default mode to edit once initialisation is done so new
+      // states can be rendered in edit mode.
+      this.defaultMode = 'edit';
     },
 
     // Removes a state and creates a new state of a different type in the same
@@ -318,7 +359,6 @@
       this.remove(state);
 
       this.add({
-        mode: 'edit',
         model: {
           type: type,
           name: state.model.get('name'),
