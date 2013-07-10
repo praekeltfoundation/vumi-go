@@ -19,12 +19,22 @@ class CheapPlasticChannel(object):
     def release(self, user_api):
         user_api.release_tag((self.tagpool, self.tag))
 
+    def _check_support(self, option):
+        supports = self.tagpool_metadata.get('supports', {})
+        return bool(supports.get(option))
+
+    def supports_generic_sends(self):
+        return self._check_support('generic_sends')
+
+    def supports_replies(self):
+        return self._check_support('replies')
+
 
 class ChannelStore(PerAccountStore):
     # TODO: This is a mostly a placeholder until we have a real
     #       channel model.
 
-    def get_channel_by_tag(self, tag, tagpool_metadata=None):
+    def get_channel_by_tag(self, tag, tagpool_metadata):
         """Return the active channel within this account for the given tag.
 
         Returns `None` if no such channel exists.
