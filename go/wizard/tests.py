@@ -40,6 +40,24 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
                 'conversation_key': conv.key, 'path_suffix': '',
             }))
 
+    def test_post_create_view_editable_conversation(self):
+        self.declare_tags(u'longcode', 4)
+        self.add_tagpool_permission(u'longcode')
+        self.assertEqual(0, len(self.user_api.active_conversations()))
+        self.assertEqual(0, len(self.user_api.list_endpoints()))
+        response = self.client.post(reverse('wizard:create'), {
+            'conversation_type': 'jsbox',
+            'name': 'My Conversation',
+            'country': 'International',
+            'channel': 'longcode:',
+        })
+        [conv] = self.user_api.active_conversations()
+        self.assertEqual(1, len(self.user_api.list_endpoints()))
+        self.assertRedirects(
+            response, reverse('conversations:conversation', kwargs={
+                'conversation_key': conv.key, 'path_suffix': 'edit/',
+            }))
+
     def test_post_create_view_extra_endpoints(self):
         self.declare_tags(u'longcode', 4)
         self.add_tagpool_permission(u'longcode')
