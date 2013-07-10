@@ -261,12 +261,12 @@ button {
   z-index: 3;
   opacity: 0.75;
 }
-.dialogue #diagram .container {
+.dialogue #diagram .grid {
   text-align: center;
   margin: 0 auto;
   width: 1280px;
 }
-.dialogue #diagram .container .placeholder {
+.dialogue #diagram .grid .placeholder {
   background: #2f3436;
   width: 8px;
   height: 200px;
@@ -278,13 +278,27 @@ button {
   border-radius: 10px;
   background-clip: padding-box;
 }
-.dialogue #diagram .container .row {
+.dialogue #diagram .grid .row {
   margin: 0;
+}
+.dialogue #diagram .grid .item {
+  margin: 40px 40px;
+  width: 200px;
+  float: left;
+}
+.dialogue #diagram .add {
+  height: 60px;
+  font-size: 68px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 .dialogue #diagram .state {
   width: 220px;
   margin: 30px 40px;
   float: left;
+}
+.dialogue #diagram .state {
   padding: 6px;
   position: relative;
   color: #2f3436;
@@ -398,11 +412,11 @@ button {
   list-style-type: none;
 }
 .campaigns.summary .sub-details,
-.campaigns.summary .sub-actions,
-.campaigns.summary .sub-messages {
+.campaigns.summary .sub-messages,
+.campaigns.summary .sub-contacts {
   border-bottom: 1px #c9c9c9 solid;
-  margin: 0 0 18px 0;
-  padding: 0 0 18px 0;
+  margin: 0 18px;
+  padding: 18px 0;
 }
 .campaigns.summary h6 {
   font-weight: bold;
@@ -419,6 +433,11 @@ button {
   padding: 0;
   margin: 0;
   width: auto;
+}
+.campaigns.summary .sub-actions {
+  background: #d9d8d3;
+  margin-top: -5px;
+  padding: 18px;
 }
 .campaigns .header a {
   color: #878b8e;

@@ -68,10 +68,12 @@ def create(request, conversation_key=None):
             rt_helper.add_oldstyle_conversation(conversation, got_tag)
             user_account.save()
 
-            # TODO save and go to next step.
-            return redirect(
-                'conversations:conversation',
-                conversation_key=conversation.key, path_suffix='')
+            if view_def.is_editable:
+                return redirect(view_def.get_view_url(
+                    'edit', conversation_key=conversation.key))
+            else:
+                return redirect(view_def.get_view_url(
+                    'show', conversation_key=conversation.key))
         else:
             logger.info("Validation failed: %r %r" % (
                 posted_conv_form.errors, posted_chan_form.errors))
