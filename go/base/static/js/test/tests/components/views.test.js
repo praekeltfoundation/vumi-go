@@ -82,7 +82,7 @@ describe("go.components.views", function() {
     });
   });
 
-  describe(".ConfirmView", function() {
+  describe.only(".ConfirmView", function() {
     var ConfirmView = views.ConfirmView;
 
     var confirm;
@@ -90,9 +90,7 @@ describe("go.components.views", function() {
     beforeEach(function() {
       confirm = new ConfirmView({
         content: 'I am a modal.',
-        optional: true,
-        ok: sinon.spy(),
-        cancel: sinon.spy()
+        optional: true
       });
 
       // Remove animation to make phantomjs happy
@@ -112,23 +110,21 @@ describe("go.components.views", function() {
       });
     });
 
-    describe(".activate", function() {
+    describe(".show", function() {
       it("should show the modal if the user has disabled the modal",
       function() {
         assert(noElExists('.modal'));
-        confirm.activate();
+        confirm.show();
         assert(oneElExists('.modal'));
       });
 
-      it("should perform the 'ok' action if the user has disabled the modal",
-      function() {
+      it("should trigger an 'ok' event if the user has disabled the modal",
+      function(done) {
+        confirm.on('ok', function() { done(); });
+
         confirm.render();
         confirm.$('.dont-show').click();
         confirm.$('.ok').click();
-
-        assert(confirm.ok.calledOnce);
-        confirm.activate();
-        assert(confirm.ok.calledTwice);
       });
     });
 
@@ -138,10 +134,9 @@ describe("go.components.views", function() {
         confirm.render();
       });
 
-      it("should perform the 'ok' action", function() {
-        assert(!confirm.ok.called);
+      it("should trigger an 'ok' event", function(done) {
+        confirm.on('ok', function() { done(); });
         confirm.$('.ok').click();
-        assert(confirm.ok.calledOnce);
       });
 
       it("should hide the modal", function(done) {
@@ -156,10 +151,9 @@ describe("go.components.views", function() {
         confirm.render();
       });
 
-      it("should perform the 'cancel' action", function() {
-        assert(!confirm.cancel.called);
+      it("should trigger a 'cancel' event", function(done) {
+        confirm.on('cancel', function() { done(); });
         confirm.$('.cancel').click();
-        assert(confirm.cancel.calledOnce);
       });
 
       it("should hide the modal", function(done) {

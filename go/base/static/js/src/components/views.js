@@ -95,8 +95,6 @@
     },
 
     initialize: function(options) {
-      if (options.ok) { this.ok = options.ok; }
-      if (options.cancel) { this.cancel = options.cancel; }
       if (options.optional) { this.optional = options.optional; }
 
       this.dontShow = false;
@@ -108,20 +106,17 @@
         this.dontShow = this.$('.dont-show').is(':checked');
       }
 
-      this.ok();
+      this.trigger('ok');
       this.hide();
     },
 
     onCancel: function() {
-      this.cancel();
+      this.trigger('cancel');
       this.hide();
     },
 
-    ok: function() {},
-    cancel: function() {},
-
-    activate: function() {
-      if (this.dontShow) { this.ok(); }
+    show: function() {
+      if (this.dontShow) { this.trigger('ok'); }
       else { this.render(); }
       return this;
     },
