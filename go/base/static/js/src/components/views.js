@@ -105,7 +105,8 @@
 
     onOk: function() {
       if (this.optional) {
-        this.dontShow = this.$('#dont-show').is(':checked');
+        this.dontShow = this.$('.dont-show').is(':checked');
+        console.log(this.dontShow);
       }
 
       this.ok();

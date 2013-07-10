@@ -125,7 +125,7 @@ describe("go.components.views", function() {
       it("should perform the 'ok' action if the user has disabled the modal",
       function() {
         confirm.render();
-        confirm.$('#dont-show').click();
+        confirm.$('.dont-show').click();
         confirm.$('.ok').click();
 
         assert(confirm.ok.calledOnce);
