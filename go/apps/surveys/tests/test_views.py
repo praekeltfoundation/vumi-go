@@ -29,6 +29,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         return pm, pm.register(poll_id, config)
 
     def test_new_conversation(self):
+        self.add_app_permission(u'go.apps.surveys')
         self.assertEqual(len(self.conv_store.list_conversations()), 0)
         response = self.post_new_conversation()
         self.assertEqual(len(self.conv_store.list_conversations()), 1)

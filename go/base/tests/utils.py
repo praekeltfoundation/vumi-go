@@ -217,6 +217,15 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         account.tagpools.add(permission)
         account.save()
 
+    def add_app_permission(self, application):
+        permission = self.api.account_store.application_permissions(
+            uuid.uuid4().hex, application=application)
+        permission.save()
+
+        account = self.user_api.get_user_account()
+        account.applications.add(permission)
+        account.save()
+
 
 class FakeMessageStoreClient(object):
 
