@@ -45,6 +45,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
             }))
 
     def test_post_create_view_editable_conversation(self):
+        self.add_app_permission(u'go.apps.jsbox')
         self.declare_tags(u'longcode', 4)
         self.add_tagpool_permission(u'longcode')
         self.assertEqual(0, len(self.user_api.active_conversations()))
