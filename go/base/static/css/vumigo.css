@@ -288,6 +288,8 @@ button {
 }
 .dialogue #diagram .add {
   height: 60px;
+  display: table-cell;
+  vertical-align: center;
   font-size: 68px;
   -webkit-user-select: none;
   -moz-user-select: none;
