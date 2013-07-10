@@ -117,9 +117,10 @@ describe("go.components.views", function() {
         assert(oneElExists('.modal'));
       });
 
-      it("should not show the modal once the user has not disabled the modal",
+      it("should not show the modal once the user has disabled the modal",
       function() {
         confirm.show();
+        assert(!confirm.$el.is(':hidden'));
         confirm.$('.dont-show').click();
         confirm.$('.ok').click();
 
