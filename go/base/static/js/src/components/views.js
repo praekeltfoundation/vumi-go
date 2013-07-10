@@ -4,7 +4,8 @@
 
 (function(exports) {
   var utils = go.utils,
-      functor = utils.functor;
+      functor = utils.functor,
+      maybeByName = utils.maybeByName;
 
   // A view that can be uniquely identified by its `uuid` property.
   var UniqueView = Backbone.View.extend({
@@ -81,9 +82,64 @@
     }
   });
 
+  var ConfirmView = Backbone.View.extend({
+    className: 'modal hide fade in',
+
+    template: 'JST.components_confirm',
+
+    optional: false,
+
+    events: {
+      'click .ok': 'onOk',
+      'click .cancel': 'onCancel'
+    },
+
+    initialize: function(options) {
+      if (options.optional) { this.optional = options.optional; }
+
+      this.dontShow = false;
+      this.content = options.content || '';
+    },
+
+    onOk: function() {
+      if (this.optional) {
+        this.dontShow = this.$('.dont-show').is(':checked');
+      }
+
+      this.trigger('ok');
+      this.hide();
+    },
+
+    onCancel: function() {
+      this.trigger('cancel');
+      this.hide();
+    },
+
+    show: function() {
+      if (this.dontShow) { this.trigger('ok'); }
+      else { this.render(); }
+      return this;
+    },
+
+    hide: function() {
+      this.$el.modal('hide');
+      return this;
+    },
+
+    render: function() {
+      this.$el
+        .appendTo($('body'))
+        .html(maybeByName(this.template)({self: this}))
+        .modal('show');
+
+      return this;
+    }
+  });
+
   _.extend(exports, {
     LabelView: LabelView,
     UniqueView: UniqueView,
+    ConfirmView: ConfirmView,
     MessageTextView: MessageTextView
   });
 })(go.components.views = {});
