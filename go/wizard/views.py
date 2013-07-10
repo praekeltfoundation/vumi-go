@@ -26,18 +26,18 @@ def create(request, conversation_key=None):
 
     """
     wizard_form = Wizard1CreateForm()
-    conversation_form = NewConversationForm()
+    conversation_form = NewConversationForm(request.user_api)
     channel_form = NewChannelForm(request.user_api)
 
     conversation = None
     if conversation_key:
         conversation = conversation_or_404(request.user_api, conversation_key)
         conversation_form = NewConversationForm(
-            data={'name': conversation.name})
+            request.user_api, data={'name': conversation.name})
 
     if request.method == 'POST':
         # TODO: Reuse new conversation/channel view logic here.
-        posted_conv_form = NewConversationForm(request.POST)
+        posted_conv_form = NewConversationForm(request.user_api, request.POST)
         posted_chan_form = NewChannelForm(request.user_api, request.POST)
         if posted_conv_form.is_valid() and posted_chan_form.is_valid():
 
