@@ -1,5 +1,6 @@
 describe("go.components.views", function() {
   var testHelpers = go.testHelpers,
+      noElExists = testHelpers.noElExists;
       oneElExists = testHelpers.oneElExists;
 
   var views = go.components.views;
@@ -81,4 +82,92 @@ describe("go.components.views", function() {
     });
   });
 
+  describe(".ConfirmView", function() {
+    var ConfirmView = views.ConfirmView;
+
+    var confirm;
+
+    beforeEach(function() {
+      confirm = new ConfirmView({
+        content: 'I am a modal.',
+        optional: true,
+        ok: sinon.spy(),
+        cancel: sinon.spy()
+      });
+
+      // Remove animation to make phantomjs happy
+      // ('shown' and 'hidden' events don't seem to be triggered otherwise)
+      confirm.$el.removeClass('fade in');
+    });
+
+    afterEach(function() {
+      $('.modal').remove();
+      confirm.remove();
+      confirm.$el.remove();
+    });
+
+    describe(".render", function() {
+      it("should show the modal", function() {
+        assert(noElExists('.modal'));
+        confirm.render();
+        assert(oneElExists('.modal'));
+      });
+    });
+
+    describe(".activate", function() {
+      it("should show the modal if the user has disabled the modal",
+      function() {
+        assert(noElExists('.modal'));
+        confirm.activate();
+        assert(oneElExists('.modal'));
+      });
+
+      it("should perform the 'ok' action if the user has disabled the modal",
+      function() {
+        confirm.render();
+        confirm.$('#dont-show').click();
+        confirm.$('.ok').click();
+
+        assert(confirm.ok.calledOnce);
+        confirm.activate();
+        assert(confirm.ok.calledTwice);
+      });
+    });
+
+    describe("when the 'ok' button is clicked", function() {
+      beforeEach(function(done) {
+        confirm.$el.on('shown', function() { done(); });
+        confirm.render();
+      });
+
+      it("should perform the 'ok' action", function() {
+        assert(!confirm.ok.called);
+        confirm.$('.ok').click();
+        assert(confirm.ok.calledOnce);
+      });
+
+      it("should hide the modal", function(done) {
+        confirm.$el.on('hidden', function() { done(); });
+        confirm.$('.ok').click();
+      });
+    });
+
+    describe("when the 'cancel' button is clicked", function() {
+      beforeEach(function(done) {
+        confirm.$el.on('shown', function() { done(); });
+        confirm.render();
+      });
+
+      it("should perform the 'cancel' action", function() {
+        assert(!confirm.cancel.called);
+        confirm.$('.cancel').click();
+        assert(confirm.cancel.calledOnce);
+      });
+
+      it("should hide the modal", function(done) {
+        confirm.$el.on('hidden', function() { done(); });
+        confirm.$('.cancel').click();
+      });
+    });
+  });
 });

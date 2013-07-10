@@ -1,0 +1,13 @@
+<div class="modal-header">
+  <%= self.content %>
+
+  <% if (self.optional) { %>
+    <input type='checkbox' id='dont-show'>
+    <label for='dont-show'>Don't show this message again.</label>
+  <% } %>
+</div>
+
+<div class="modal-footer">
+    <button class="cancel btn">Cancel</button>
+    <button class="ok btn btn-primary">OK</button>
+</div>
