@@ -139,18 +139,19 @@ describe("go.campaign.dialogue.states", function() {
 
         i = 0;
         sinon.stub(uuid, 'v4', function() { return i++ || 'new-state'; });
+
+        editMode.resetModal.animate(false);
       });
 
       afterEach(function() {
         uuid.v4.restore();
-        $('.bootbox')
-          .modal('hide')
-          .remove();
+
+        editMode.resetModal
+         .off()
+         .hide();
       });
 
       it("should display a modal to confirm the user's decision", function() {
-        bootbox.animate(false);
-
         assert(noElExists('.modal'));
         editMode.$('.type')
           .val('freetext')
@@ -167,7 +168,7 @@ describe("go.campaign.dialogue.states", function() {
         assert.isUndefined(diagram.model.get('states').get('new-state'));
 
         editMode.$('.type').val('freetext').change();
-        $('.modal [data-handler=1]').click();
+        $('.modal .ok').click();
 
         assert(diagram.states.has('new-state'));
         assert.isDefined(diagram.model.get('states').get('new-state'));
@@ -180,7 +181,7 @@ describe("go.campaign.dialogue.states", function() {
       function() {
         assert.equal(editMode.$('.type').val(), 'choice');
         editMode.$('.type').val('freetext').change();
-        $('.modal [data-handler=0]').click();
+        $('.modal .cancel').click();
         assert.equal(editMode.$('.type').val(), 'choice');
       });
 
@@ -193,7 +194,7 @@ describe("go.campaign.dialogue.states", function() {
         assert.isUndefined(diagram.model.get('states').get('new-state'));
 
         editMode.$('.type').val('freetext').change();
-        $('.modal [data-handler=0]').click();
+        $('.modal .cancel').click();
 
         assert(diagram.states.has('state1'));
         assert.isDefined(diagram.model.get('states').get('state1'));
