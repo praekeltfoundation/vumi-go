@@ -33,7 +33,7 @@
       'Arrow', {
       width: 14,
       height: 14,
-      location: 0.75
+      location: 0.85
     }]];
   };
 
