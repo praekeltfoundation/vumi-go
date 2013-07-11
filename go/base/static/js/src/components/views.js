@@ -107,15 +107,15 @@
       this.optional = options.optional;
       this.animate(options.animate);
 
-      this.rebindActions();
+      this.resetActionHandlers();
     },
 
-    rebindActions: function() {
+    resetActionHandlers: function() {
       this.off('ok');
       this.off('cancel');
 
-      this.on('ok', this.rebindActions, this);
-      this.on('cancel', this.rebindActions, this);
+      this.on('ok', this.resetActionHandlers, this);
+      this.on('cancel', this.resetActionHandlers, this);
     },
 
     animate: function(animated) {
