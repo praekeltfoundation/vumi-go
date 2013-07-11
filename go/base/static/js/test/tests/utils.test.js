@@ -59,8 +59,8 @@ describe("go.utils", function() {
     });
   });
 
-  describe(".partial", function() {
-    var partial = go.utils.partial;
+  describe(".insertEl", function() {
+    var insertEl = go.utils.insertEl;
 
     var OuterView = Backbone.View.extend({
       render: function() {
@@ -68,12 +68,20 @@ describe("go.utils", function() {
       }
     });
 
-    it("should apply the inner element to the outer element", function() {
+    it("should replace any existing inner that matches", function() {
       var inner = new Backbone.View({id: 'inner'}),
           outer = new OuterView();
 
-      partial('#inner', inner, outer);
+      insertEl('#inner', inner, outer);
       assert(outer.$('#inner').is(inner.$el));
+    });
+
+    it("should append the inner if no match is found", function() {
+      var $inner = $('<div>').attr('id', 'inner'),
+          $outer = $('<div>');
+
+      insertEl('#inner', $inner, $outer);
+      assert($outer.find('#inner').is($inner));
     });
   });
 });

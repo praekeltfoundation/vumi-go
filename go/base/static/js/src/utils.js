@@ -67,10 +67,15 @@
     return $(obj);
   };
 
-  var partial = function(selector, inner, outer) {
-    ensureEl(outer)
-      .find(selector)
-      .replaceWith(ensureEl(inner));
+  var insertEl = function(selector, inner, outer) {
+    var $outer = ensureEl(outer),
+        $inner = ensureEl(inner),
+        $existing = $outer.find(selector);
+
+    if ($existing.length) { $existing.replaceWith($inner); }
+    else { $outer.append($inner); }
+
+    return $inner;
   };
 
   _.extend(exports, {
@@ -80,7 +85,7 @@
     maybeByName: maybeByName,
     idOfModel: idOfModel,
     idOfView: idOfView,
-    partial: partial,
+    insertEl: insertEl,
     highlightActiveLinks: highlightActiveLinks
   });
 })(go.utils = {});
