@@ -8,7 +8,6 @@
 
 
 {% block content_actions_right %}
-    <a href="{% url 'conversations:index' %}">Cancel</a>
     {% if is_editable %}
         <a href="{% conversation_screen conversation 'edit' %}" class="btn btn-primary">Edit</a>
     {% endif %}
