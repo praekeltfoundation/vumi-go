@@ -16,6 +16,11 @@ from mock import patch
 class SurveyTestCase(DjangoGoApplicationTestCase):
 
     TEST_CONVERSATION_TYPE = u'survey'
+    TEST_CHANNEL_METADATA = {
+        "supports": {
+            "generic_sends": True,
+        },
+    }
 
     def setUp(self):
         super(SurveyTestCase, self).setUp()
@@ -27,12 +32,6 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         pm, config = get_poll_config(poll_id)
         config.update(kwargs)
         return pm, pm.register(poll_id, config)
-
-    def attach_channel(self):
-        self.declare_tags("pool", 1, {
-            "supports": {"generic_sends": True}})
-        self.add_channel_to_conversation(
-            self.conversation, ["pool", "default1"])
 
     def test_new_conversation(self):
         self.add_app_permission(u'go.apps.surveys')
@@ -52,16 +51,16 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(conversation.stopping())
 
     def test_action_send_survey_get(self):
-        self.setup_conversation(started=True, with_group=True)
-        self.attach_channel()
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
         response = self.client.get(self.get_action_view_url('send_survey'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
         self.assertEqual([], self.get_api_commands_sent())
 
     def test_action_send_survey_post(self):
-        self.setup_conversation(started=True, with_group=True)
-        self.attach_channel()
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
         response = self.client.post(
             self.get_action_view_url('send_survey'), {}, follow=True)
         self.assertRedirects(response, self.get_view_url('show'))
@@ -171,8 +170,8 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         """
         Test showing the conversation
         """
-        self.setup_conversation(started=True, with_group=True)
-        self.attach_channel()
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')

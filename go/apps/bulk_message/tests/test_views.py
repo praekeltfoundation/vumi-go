@@ -17,13 +17,13 @@ from mock import patch
 
 
 class BulkMessageTestCase(DjangoGoApplicationTestCase):
-    TEST_CONVERSATION_TYPE = u'bulk_message'
 
-    def attach_channel(self):
-        self.declare_tags("pool", 1, {
-            "supports": {"generic_sends": True}})
-        self.add_channel_to_conversation(
-            self.conversation, ["pool", "default1"])
+    TEST_CONVERSATION_TYPE = u'bulk_message'
+    TEST_CHANNEL_METADATA = {
+        "supports": {
+            "generic_sends": True,
+        },
+    }
 
     def test_new_conversation(self):
         self.add_app_permission(u'go.apps.bulk_message')
@@ -105,8 +105,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         """
         Test showing the conversation
         """
-        self.setup_conversation(started=True, with_group=True)
-        self.attach_channel()
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
@@ -233,8 +233,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(mime_type, 'application/zip')
 
     def test_action_bulk_send_view(self):
-        self.setup_conversation(started=True, with_group=True)
-        self.attach_channel()
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
         response = self.client.get(self.get_action_view_url('bulk_send'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
@@ -282,8 +282,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertEqual([], self.get_api_commands_sent())
 
     def test_action_bulk_send_dedupe(self):
-        self.setup_conversation(started=True, with_group=True)
-        self.attach_channel()
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
         response = self.client.post(
             self.get_action_view_url('bulk_send'),
             {'message': 'I am ham, not spam.', 'dedupe': True})
@@ -300,8 +300,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             content='I am ham, not spam.', dedupe=True))
 
     def test_action_bulk_send_no_dedupe(self):
-        self.setup_conversation(started=True, with_group=True)
-        self.attach_channel()
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
         response = self.client.post(
             self.get_action_view_url('bulk_send'),
             {'message': 'I am ham, not spam.', 'dedupe': False})
@@ -329,8 +329,8 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         user_account.save()
 
         # Start the conversation
-        self.setup_conversation(started=True, with_group=True)
-        self.attach_channel()
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
 
         # POST the action with a mock token manager
         with patch.object(TokenManager, 'generate_token') as mock_method:

@@ -19,6 +19,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
     TEST_CONVERSATION_NAME = u"Test Conversation"
     TEST_CONVERSATION_TYPE = u'bulk_message'
     TEST_CONVERSATION_PARAMS = None
+    TEST_CHANNEL_METADATA = None
 
     # These are used for the mkmsg_in and mkmsg_out helper methods
     transport_name = 'sphex'
@@ -31,7 +32,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
         self.setup_client()
 
     def setup_conversation(self, started=False, with_group=False,
-                           with_contact=False):
+                           with_contact=False, with_channel=False):
         params = {
             'conversation_type': self.TEST_CONVERSATION_TYPE,
             'name': self.TEST_CONVERSATION_NAME,
@@ -45,7 +46,10 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
                 self.contact = self.contact_store.new_contact(
                     msisdn=u"+27761234567", name=self.TEST_CONTACT_NAME,
                     surname=self.TEST_CONTACT_SURNAME, groups=[self.group])
-
+        if with_channel:
+            self.declare_tags("pool", 1, self.TEST_CHANNEL_METADATA or {})
+            self.add_channel_to_conversation(
+                self.conversation, ["pool", "default1"])
         if self.TEST_CONVERSATION_PARAMS:
             params.update(self.TEST_CONVERSATION_PARAMS)
         self.conversation = self.create_conversation(started=started, **params)
