@@ -12,10 +12,8 @@ class SendSurveyAction(ConversationAction):
     needs_running = True
 
     def check_disabled(self):
-        channels = self._conv.get_channels()
-        for channel in channels:
-            if channel.supports_generic_sends():
-                return None
+        if self._conv.has_channel_supporting(generic_sends=True):
+            return None
         return ("This action needs channels capable of sending"
                 " messages attached to this conversation.")
 
