@@ -58,4 +58,22 @@ describe("go.utils", function() {
       assert.equal(maybeByName(23), 23);
     });
   });
+
+  describe(".partial", function() {
+    var partial = go.utils.partial;
+
+    var OuterView = Backbone.View.extend({
+      render: function() {
+        this.$el.html($('<script>').attr('id', 'inner'));
+      }
+    });
+
+    it("should apply the inner element to the outer element", function() {
+      var inner = new Backbone.View({id: 'inner'}),
+          outer = new OuterView();
+
+      partial('#inner', inner, outer);
+      assert(outer.$('#inner').is(inner.$el));
+    });
+  });
 });
