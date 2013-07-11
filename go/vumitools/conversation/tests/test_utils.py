@@ -6,7 +6,6 @@ from vumi.message import TransportMessage
 from vumi.application.tests.test_base import DummyApplicationWorker
 
 from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.account.models import RoutingTableHelper
 from go.vumitools.api import VumiApi
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.exceptions import ConversationSendError
@@ -25,11 +24,11 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         # Get a dummy worker so we have an amqp_client which we need
         # to set-up the MessageSender in the `VumiApi`
         self.worker = yield self.get_application({})
-        self.api = yield VumiApi.from_config_async(
+        self.vumi_api = yield VumiApi.from_config_async(
             self.mk_config({}), amqp_client=self.worker._amqp_client)
-        self.mdb = self.api.mdb
-        self.user = yield self.mk_user(self.api, u'username')
-        self.user_api = self.api.get_user_api(self.user.key)
+        self.mdb = self.vumi_api.mdb
+        self.user = yield self.mk_user(self.vumi_api, u'username')
+        self.user_api = self.vumi_api.get_user_api(self.user.key)
         yield self.setup_tags()
 
         self.conv = yield self.create_conversation(
@@ -38,7 +37,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setup_tags(self, name=u'longcode', count=4, metadata=None):
         """Declare a set of long codes to the tag pool."""
-        yield self.api.tpm.declare_tags(
+        yield self.vumi_api.tpm.declare_tags(
             [(name, "%s%s" % (name, i)) for i in range(10001, 10001 + count)])
         defaults = {
             "display_name": name,
@@ -48,7 +47,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             "transport_name": self.transport_name,
         }
         defaults.update(metadata or {})
-        yield self.api.tpm.set_metadata(name, defaults)
+        yield self.vumi_api.tpm.set_metadata(name, defaults)
         yield self.add_tagpool_permission(name)
 
     @inlineCallbacks
@@ -274,11 +273,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     def test_get_channels(self):
         yield self.conv.start()
         tags = [["pool", "tag1"], ["pool", "tag2"]]
-        user_account = yield self.user_api.get_user_account()
-        rt = RoutingTableHelper(user_account.routing_table)
         for tag in tags:
-            rt.add_oldstyle_conversation(self.conv, tag)
-        yield user_account.save()
+            yield self.add_channel_to_conversation(self.conv, tag)
         [chan1, chan2] = yield self.conv.get_channels()
         self.assertEqual(chan1.tag, "tag1")
         self.assertEqual(chan2.tag, "tag2")
@@ -287,6 +283,30 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     def test_get_channels_with_no_channels(self):
         yield self.conv.start()
         self.assertEqual([], (yield self.conv.get_channels()))
+
+    @inlineCallbacks
+    def test_has_channel_supporting(self):
+        yield self.conv.start()
+        yield self.setup_tagpool(u"pool1", [u"tag1"], metadata={
+            "supports": {"foo": True, "bar": True}})
+        yield self.setup_tagpool(u"pool2", [u"tag1"], metadata={
+            "supports": {"foo": True, "bar": False}})
+        yield self.add_channel_to_conversation(self.conv, ["pool1", "tag1"])
+        yield self.add_channel_to_conversation(self.conv, ["pool2", "tag1"])
+        self.assertTrue(
+            (yield self.conv.has_channel_supporting(foo=True, bar=True)))
+        self.assertTrue(
+            (yield self.conv.has_channel_supporting(foo=True)))
+        self.assertFalse(
+            (yield self.conv.has_channel_supporting(foo=False)))
+        self.assertTrue(
+            (yield self.conv.has_channel_supporting(bar=True)))
+        self.assertTrue(
+            (yield self.conv.has_channel_supporting(bar=False)))
+        self.assertFalse(
+            (yield self.conv.has_channel_supporting(zoo=True)))
+        self.assertTrue(
+            (yield self.conv.has_channel_supporting(zoo=False)))
 
     @inlineCallbacks
     def test_get_tags_old_style(self):
