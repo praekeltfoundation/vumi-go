@@ -90,12 +90,9 @@ describe("go.components.views", function() {
     beforeEach(function() {
       confirm = new ConfirmView({
         content: 'I am a modal.',
-        optional: true
+        optional: true,
+        animate: false
       });
-
-      // Remove animation to make phantomjs happy
-      // ('shown' and 'hidden' events don't seem to be triggered otherwise)
-      confirm.$el.removeClass('fade in');
     });
 
     afterEach(function() {
@@ -151,6 +148,12 @@ describe("go.components.views", function() {
         confirm.$('.ok').click();
       });
 
+      it("should unbind its events", function() {
+        confirm.on('test', function() { assert.fail(); });
+        confirm.$('.ok').click();
+        confirm.trigger('test');
+      });
+
       it("should hide the modal", function(done) {
         confirm.$el.on('hidden', function() { done(); });
         confirm.$('.ok').click();
@@ -166,6 +169,12 @@ describe("go.components.views", function() {
       it("should trigger a 'cancel' event", function(done) {
         confirm.on('cancel', function() { done(); });
         confirm.$('.cancel').click();
+      });
+
+      it("should unbind its events", function() {
+        confirm.on('test', function() { assert.fail(); });
+        confirm.$('.cancel').click();
+        confirm.trigger('test');
       });
 
       it("should hide the modal", function(done) {

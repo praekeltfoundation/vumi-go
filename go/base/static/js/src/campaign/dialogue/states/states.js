@@ -4,8 +4,8 @@
 
 (function(exports) {
   var maybeByName = go.utils.maybeByName;
-
   var GridView = go.components.grid.GridView;
+  var ConfirmView = go.components.views.ConfirmView;
 
   var plumbing = go.components.plumbing;
 
@@ -92,6 +92,12 @@
       'change .name': 'onNameChange'
     },
 
+    resetModal: new ConfirmView({
+      optional: true,
+      content: "Changing the message's type will break its connections " +
+               "and reset its content."
+    }),
+
     initialize: function(options) {
       DialogueStateEditView.__super__.initialize.call(this, options);
       this.backupModel();
@@ -113,12 +119,17 @@
     onTypeChange: function(e) {
       var $option = $(e.target);
 
-      bootbox.confirm(
-        "Changing the message's type will break its connections and reset " +
-        "its content.", function(submit) {
-          if (submit) { this.state.reset($option.val()); }
-          else { this.$('.type').val(this.state.typeName); }
-        }.bind(this));
+      // Using `on` is okay, since the events are unbound when either of the
+      // buttons are clicked. Simply using `once` won't work, since the event
+      // for the unclicked button will remain bound.
+      this.resetModal
+        .on(
+          'ok',
+          function() { this.state.reset($option.val()); }, this)
+        .on(
+          'cancel',
+          function() { this.$('.type').val(this.state.typeName); }, this)
+        .show();
     },
 
     onNameChange: function(e) {

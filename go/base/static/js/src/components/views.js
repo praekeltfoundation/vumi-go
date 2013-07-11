@@ -87,18 +87,30 @@
 
     template: 'JST.components_confirm',
 
-    optional: false,
-
     events: {
       'click .ok': 'onOk',
       'click .cancel': 'onCancel'
     },
 
+    optional: false,
+    animated: true,
+
     initialize: function(options) {
-      if (options.optional) { this.optional = options.optional; }
+      options = _(options || {}).defaults({
+        optional: this.optional,
+        animate: this.animated,
+        content: ''
+      });
 
       this.dontShow = false;
-      this.content = options.content || '';
+      this.content = options.content;
+      this.optional = options.optional;
+      this.animate(options.animate);
+    },
+
+    animate: function(animated) {
+      if (animated) { this.$el.addClass('fade in'); }
+      else { this.$el.removeClass('fade in'); }
     },
 
     onOk: function() {
@@ -107,11 +119,13 @@
       }
 
       this.trigger('ok');
+      this.off();
       this.hide();
     },
 
     onCancel: function() {
       this.trigger('cancel');
+      this.off();
       this.hide();
     },
 

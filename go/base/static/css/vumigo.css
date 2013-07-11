@@ -236,6 +236,9 @@ button {
   max-width: 100%;
   min-width: 80%;
 }
+.modal label input {
+  margin: 0;
+}
 .dialogue .actions .sidebar {
   background: #d9d8d3;
 }
