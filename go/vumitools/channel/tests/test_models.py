@@ -12,6 +12,15 @@ from go.vumitools.channel.models import ChannelStore, CheapPlasticChannel
 
 class TestChannel(TestCase):
 
+    def test_supports(self):
+        channel = CheapPlasticChannel("pool", "tag", {
+            "supports": {"foo": True}})
+        self.assertTrue(channel.supports(foo=True))
+        self.assertTrue(channel.supports())
+        self.assertFalse(channel.supports(foo=False))
+        self.assertFalse(channel.supports(bar=True))
+        self.assertFalse(channel.supports(foo=True, bar=True))
+
     def test_supports_generic_sends(self):
         channel = CheapPlasticChannel("pool", "tag", {
             "supports": {"generic_sends": True}})

@@ -23,6 +23,10 @@ class CheapPlasticChannel(object):
         supports = self.tagpool_metadata.get('supports', {})
         return bool(supports.get(option))
 
+    def supports(self, **kw):
+        return all(self._check_support(option) == value
+                   for option, value in kw.iteritems())
+
     def supports_generic_sends(self):
         return self._check_support('generic_sends')
 
