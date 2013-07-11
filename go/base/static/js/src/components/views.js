@@ -106,6 +106,16 @@
       this.content = options.content;
       this.optional = options.optional;
       this.animate(options.animate);
+
+      this.resetActionHandlers();
+    },
+
+    resetActionHandlers: function() {
+      this.off('ok');
+      this.off('cancel');
+
+      this.on('ok', this.resetActionHandlers, this);
+      this.on('cancel', this.resetActionHandlers, this);
     },
 
     animate: function(animated) {
@@ -119,13 +129,11 @@
       }
 
       this.trigger('ok');
-      this.off();
       this.hide();
     },
 
     onCancel: function() {
       this.trigger('cancel');
-      this.off();
       this.hide();
     },
 

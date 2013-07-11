@@ -148,12 +148,6 @@ describe("go.components.views", function() {
         confirm.$('.ok').click();
       });
 
-      it("should unbind its events", function() {
-        confirm.on('test', function() { assert.fail(); });
-        confirm.$('.ok').click();
-        confirm.trigger('test');
-      });
-
       it("should hide the modal", function(done) {
         confirm.$el.on('hidden', function() { done(); });
         confirm.$('.ok').click();
@@ -171,15 +165,37 @@ describe("go.components.views", function() {
         confirm.$('.cancel').click();
       });
 
-      it("should unbind its events", function() {
-        confirm.on('test', function() { assert.fail(); });
-        confirm.$('.cancel').click();
-        confirm.trigger('test');
-      });
-
       it("should hide the modal", function(done) {
         confirm.$el.on('hidden', function() { done(); });
         confirm.$('.cancel').click();
+      });
+    });
+
+    describe("on 'ok' events", function() {
+      it("should unbind 'ok' and 'cancel' callbacks", function() {
+        var i = 0;
+        confirm.on('ok', function() { i++ && assert.fail(); });
+        confirm.on('cancel', function() { assert.fail(); });
+
+        confirm.trigger('ok');
+
+        // No callbacks should be invoked now
+        confirm.trigger('ok');
+        confirm.trigger('cancel');
+      });
+    });
+
+    describe("on 'cancel' events", function() {
+      it("should unbind 'ok' and 'cancel' callbacks", function() {
+        var i = 0;
+        confirm.on('ok', function() { assert.fail(); });
+        confirm.on('cancel', function() { i++ && assert.fail(); });
+
+        confirm.trigger('cancel');
+
+        // No callbacks should be invoked now
+        confirm.trigger('cancel');
+        confirm.trigger('ok');
       });
     });
   });
