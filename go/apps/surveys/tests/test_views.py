@@ -28,6 +28,12 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         config.update(kwargs)
         return pm, pm.register(poll_id, config)
 
+    def attach_channel(self):
+        self.declare_tags("pool", 1, {
+            "supports": {"generic_sends": True}})
+        self.add_channel_to_conversation(
+            self.conversation, ["pool", "default1"])
+
     def test_new_conversation(self):
         self.add_app_permission(u'go.apps.surveys')
         self.assertEqual(len(self.conv_store.list_conversations()), 0)
@@ -47,6 +53,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
 
     def test_action_send_survey_get(self):
         self.setup_conversation(started=True, with_group=True)
+        self.attach_channel()
         response = self.client.get(self.get_action_view_url('send_survey'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
