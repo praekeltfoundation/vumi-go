@@ -202,6 +202,9 @@ class GoAppWorkerTestMixin(GoPersistenceMixin):
 
     @inlineCallbacks
     def add_channel_to_conversation(self, conv, tag):
+        # TODO: This is a duplicate of the method in
+        #       go.base.test.utils.VumiGoDjangoTestCase but
+        #       there is no suitable common base class.
         user_account = yield self.user_api.get_user_account()
         rt = RoutingTableHelper(user_account.routing_table)
         rt.add_oldstyle_conversation(conv, tag)
