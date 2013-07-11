@@ -61,6 +61,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
 
     def test_action_send_survey_post(self):
         self.setup_conversation(started=True, with_group=True)
+        self.attach_channel()
         response = self.client.post(
             self.get_action_view_url('send_survey'), {}, follow=True)
         self.assertRedirects(response, self.get_view_url('show'))
@@ -171,6 +172,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         Test showing the conversation
         """
         self.setup_conversation(started=True, with_group=True)
+        self.attach_channel()
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')
