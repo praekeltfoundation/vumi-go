@@ -141,6 +141,11 @@ class ConversationWrapper(object):
         returnValue(channels)
 
     @Manager.calls_manager
+    def has_channel_supporting(self, **kw):
+        channels = yield self.get_channels()
+        returnValue(any(channel.supports(**kw) for channel in channels))
+
+    @Manager.calls_manager
     def get_progress_status(self):
         """
         Get an overview of the progress of this conversation
