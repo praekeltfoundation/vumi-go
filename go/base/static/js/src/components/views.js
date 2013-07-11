@@ -119,11 +119,13 @@
       }
 
       this.trigger('ok');
+      this.off();
       this.hide();
     },
 
     onCancel: function() {
       this.trigger('cancel');
+      this.off();
       this.hide();
     },
 

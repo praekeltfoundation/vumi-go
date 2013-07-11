@@ -119,11 +119,14 @@
     onTypeChange: function(e) {
       var $option = $(e.target);
 
+      // Using `on` is okay, since the events are unbound when the modal is
+      // hidden. Simply using `once` won't work, since the event for the
+      // unclicked button will remain bound.
       this.resetModal
-        .once(
+        .on(
           'ok',
           function() { this.state.reset($option.val()); }, this)
-        .once(
+        .on(
           'cancel',
           function() { this.$('.type').val(this.state.typeName); }, this)
         .show();
