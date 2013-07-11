@@ -46,14 +46,14 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
                 self.contact = self.contact_store.new_contact(
                     msisdn=u"+27761234567", name=self.TEST_CONTACT_NAME,
                     surname=self.TEST_CONTACT_SURNAME, groups=[self.group])
-        if with_channel:
-            self.declare_tags("pool", 1, self.TEST_CHANNEL_METADATA or {})
-            self.add_channel_to_conversation(
-                self.conversation, ["pool", "default1"])
         if self.TEST_CONVERSATION_PARAMS:
             params.update(self.TEST_CONVERSATION_PARAMS)
         self.conversation = self.create_conversation(started=started, **params)
         self.conv_key = self.conversation.key
+        if with_channel:
+            self.declare_tags("pool", 1, self.TEST_CHANNEL_METADATA or {})
+            self.add_channel_to_conversation(
+                self.conversation, ["pool", "default1"])
 
     def get_latest_conversation(self):
         # We won't have too many here, so doing it naively is fine.
