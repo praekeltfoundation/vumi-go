@@ -128,10 +128,15 @@ class ConversationWrapper(object):
         outbound = rt_helper.transitive_targets(str(conn))
         connectors = incoming | outbound
         go_connectors = [GoConnector.parse(s) for s in connectors]
-        channels = [
-            self.user_api.channel_store.get_channel_by_tag(
-                [c.tagpool, c.tagname])
-            for c in go_connectors if c.ctype == c.TRANSPORT_TAG]
+        channels = []
+        for conn in go_connectors:
+            if conn.ctype != conn.TRANSPORT_TAG:
+                continue
+            tag = [conn.tagpool, conn.tagname]
+            metadata = yield self.user_api.api.tpm.get_metadata(conn.tagpool)
+            channel = self.user_api.channel_store.get_channel_by_tag(
+                tag, metadata)
+            channels.append(channel)
         channels.sort(key=lambda c: c.name)
         returnValue(channels)
 
