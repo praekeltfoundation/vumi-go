@@ -8,22 +8,15 @@
       EntryEndpointView = states.EntryEndpointView,
       DialogueStateView = states.DialogueStateView,
       DialogueStateEditView = states.DialogueStateEditView,
-      DialogueStatePreviewView = states.DialogueStatePreviewView;
+      DialogueStatePreviewView = states.DialogueStatePreviewView,
+      TextEditView = states.partials.TextEditView;
 
   var EndStateEditView = DialogueStateEditView.extend({
     bodyOptions: function() {
       return {
-        jst: 'JST.campaign_dialogue_states_end_edit'
+        jst: 'JST.campaign_dialogue_states_end_edit',
+        partials: {text: new TextEditView({mode: this})}
       };
-    },
-
-    events: _({
-      'change .text': 'onTextChange'
-    }).defaults(DialogueStateEditView.prototype.events),
-
-    onTextChange: function(e) {
-      this.state.model.set('text', $(e.target).val(), {silent: true});
-      return this;
     }
   });
 

@@ -7,7 +7,8 @@
       EntryEndpointView = states.EntryEndpointView,
       DialogueStateView = states.DialogueStateView,
       DialogueStateEditView = states.DialogueStateEditView,
-      DialogueStatePreviewView = states.DialogueStatePreviewView;
+      DialogueStatePreviewView = states.DialogueStatePreviewView,
+      TextEditView = states.partials.TextEditView;
 
   var plumbing = go.components.plumbing,
       EndpointViewCollection = plumbing.endpoints.EndpointViewCollection,
@@ -26,13 +27,13 @@
     events: _({
       'click .new-choice': 'onNewChoice',
       'click .choice .remove': 'onRemoveChoice',
-      'change .choice input': 'onChoiceChange',
-      'change .text': 'onTextChange'
+      'change .choice input': 'onChoiceChange'
     }).defaults(DialogueStateEditView.prototype.events),
 
     bodyOptions: function() {
       return {
-        jst: 'JST.campaign_dialogue_states_choice_edit'
+        jst: 'JST.campaign_dialogue_states_choice_edit',
+        partials: {text: new TextEditView({mode: this})}
       };
     },
 
@@ -47,11 +48,6 @@
         this.newChoice();
         this.state.render();
       }
-    },
-
-    onTextChange: function(e) {
-      this.state.model.set('text', $(e.target).val(), {silent: true});
-      return this;
     },
 
     onNewChoice: function(e) {
