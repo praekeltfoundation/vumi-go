@@ -11,7 +11,7 @@ class NewConversationForm(forms.Form):
 
     name = forms.CharField(label="Conversation name", max_length=100)
     description = forms.CharField(
-        label="Conversation Description", required=False)
+        label="Conversation description", required=False)
     conversation_type = forms.ChoiceField(
         label="Which kind of conversation would you like?",
         choices=TYPE_CHOICES)
