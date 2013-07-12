@@ -6,7 +6,7 @@
   var maybeByName = go.utils.maybeByName,
       GridView = go.components.grid.GridView,
       ConfirmView = go.components.views.ConfirmView,
-      Template = go.components.templating.Template;
+      TemplateView = go.components.views.TemplateView;
 
   var plumbing = go.components.plumbing;
 
@@ -33,31 +33,27 @@
   // Base 'mode' for state views. Each mode acts as a 'delegate view',
   // targeting a dialogue view's element and acting according to the mode type
   // (for eg, `edit`) and state type (for eg, `freetext`).
-  var DialogueStateModeView = Backbone.View.extend({
+  var DialogueStateModeView = TemplateView.extend({
     jst: _.template(''),
 
-    initialize: function(options) {
-      this.state = options.state;
-
-      var data = {
+    data: function() {
+      return {
         mode: this,
         state: this.state,
         model: this.state.model
       };
-
-      this.template = new Template({
-        el: this.$el,
-        jst: this.jst,
-        data: data,
-        partials: {
-          body: new Template(
-            _({data: data}).extend(
-            _(this).result('bodyOptions')))
-        }
-      });
     },
 
     bodyOptions: {},
+
+    initialize: function(options) {
+      DialogueStateModeView.__super__.initialize.call(this, options);
+      this.state = options.state;
+
+      this.partials.body = new TemplateView(
+        _({data: this.data.bind(this)}).extend(
+        _(this).result('bodyOptions')));
+    },
 
     destroy: function() {
       this.$el.remove();
@@ -66,11 +62,6 @@
 
     detach: function() {
       this.$el.detach();
-      return this;
-    },
-
-    render: function() {
-      this.template.render();
       return this;
     }
   });
