@@ -1,0 +1,28 @@
+<div class='titlebar'>
+  <input
+   type='text'
+   class='name'
+   value='<%= model.get('name') %>'
+   placeholder='Message name'>
+  </input>
+
+  <div class='pull-right'>
+    <button class='close remove'>x</button>
+  </div>
+</div>
+
+<div class='main'>
+  <label>Type of message</label>
+  <select class='type'>
+    <option value="choice">Recipients select one option from a list</option>
+    <option value="freetext">Recipients can reply with their own text</option>
+    <option value="end">Recipients are shown text and the session ends</option>
+  </select>
+
+  <script data-partial='body' type='partial'></script>
+
+  <div class='actions pull-right'>
+    <a class='btn cancel'>Cancel</a>
+    <a class='btn btn-primary ok'>Ok</a>
+  </div>
+</div>

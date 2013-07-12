@@ -23,14 +23,18 @@
   });
 
   var ChoiceStateEditView = DialogueStateEditView.extend({
-    bodyTemplate: 'JST.campaign_dialogue_states_choice_edit',
-
     events: _({
       'click .new-choice': 'onNewChoice',
       'click .choice .remove': 'onRemoveChoice',
       'change .choice input': 'onChoiceChange',
       'change .text': 'onTextChange'
     }).defaults(DialogueStateEditView.prototype.events),
+
+    bodyOptions: function() {
+      return {
+        jst: 'JST.campaign_dialogue_states_choice_edit'
+      };
+    },
 
     initialize: function(options) {
       ChoiceStateEditView.__super__.initialize.call(this, options);
@@ -85,7 +89,11 @@
   });
 
   var ChoiceStatePreviewView = DialogueStatePreviewView.extend({
-    bodyTemplate: 'JST.campaign_dialogue_states_choice_preview'
+    bodyOptions: function() {
+      return {
+        jst: 'JST.campaign_dialogue_states_choice_preview'
+      };
+    }
   });
 
   var ChoiceStateView = DialogueStateView.extend({

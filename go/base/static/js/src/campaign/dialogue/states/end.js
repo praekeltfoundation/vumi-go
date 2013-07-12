@@ -11,7 +11,11 @@
       DialogueStatePreviewView = states.DialogueStatePreviewView;
 
   var EndStateEditView = DialogueStateEditView.extend({
-    bodyTemplate: 'JST.campaign_dialogue_states_end_edit',
+    bodyOptions: function() {
+      return {
+        jst: 'JST.campaign_dialogue_states_end_edit'
+      };
+    },
 
     events: _({
       'change .text': 'onTextChange'
@@ -24,7 +28,11 @@
   });
 
   var EndStatePreviewView = DialogueStatePreviewView.extend({
-    bodyTemplate: 'JST.campaign_dialogue_states_end_preview'
+    bodyOptions: function() {
+      return {
+        jst: 'JST.campaign_dialogue_states_end_preview'
+      };
+    }
   });
 
   var EndStateView = DialogueStateView.extend({

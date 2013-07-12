@@ -35,17 +35,15 @@
         .reporter('html');
 
       window.templates = [
-        'campaign/dialogue/states/modes/preview/titlebar.jst',
-        'campaign/dialogue/states/modes/edit/titlebar.jst',
-        'campaign/dialogue/states/modes/edit/head.jst',
-        'campaign/dialogue/states/modes/edit/tail.jst',
+        'components/confirm.jst',
+        'campaign/dialogue/states/modes/preview.jst',
+        'campaign/dialogue/states/modes/edit.jst',
         'campaign/dialogue/states/choice/edit.jst',
         'campaign/dialogue/states/choice/preview.jst',
         'campaign/dialogue/states/freetext/edit.jst',
         'campaign/dialogue/states/freetext/preview.jst',
         'campaign/dialogue/states/end/edit.jst',
-        'campaign/dialogue/states/end/preview.jst',
-        'components/confirm.jst'
+        'campaign/dialogue/states/end/preview.jst'
       ];
 
       window.templates.forEach(helpers.loadTemplate);

@@ -11,7 +11,11 @@
       DialogueStatePreviewView = states.DialogueStatePreviewView;
 
   var FreeTextStateEditView = DialogueStateEditView.extend({
-    bodyTemplate: 'JST.campaign_dialogue_states_freetext_edit',
+    bodyOptions: function() {
+      return {
+        jst: 'JST.campaign_dialogue_states_freetext_edit'
+      };
+    },
 
     events: _({
       'change .text': 'onTextChange'
@@ -24,7 +28,11 @@
   });
 
   var FreeTextStatePreviewView = DialogueStatePreviewView.extend({
-    bodyTemplate: 'JST.campaign_dialogue_states_freetext_preview'
+    bodyOptions: function() {
+      return {
+        jst: 'JST.campaign_dialogue_states_freetext_preview'
+      };
+    }
   });
 
   var FreeTextStateView = DialogueStateView.extend({

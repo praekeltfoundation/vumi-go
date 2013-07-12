@@ -11,11 +11,15 @@
       DialogueStatePreviewView = states.DialogueStatePreviewView;
 
   var DummyStateEditView = DialogueStateEditView.extend({
-    bodyTemplate: _.template("dummy edit mode: <%= model.name %>")
+    bodyOptions: {
+      jst: _.template("dummy edit mode: <%= model.get('name') %>")
+    }
   });
 
   var DummyStatePreviewView = DialogueStatePreviewView.extend({
-    bodyTemplate: _.template("dummy preview mode: <%= model.name %>")
+    bodyOptions: {
+      jst: _.template("dummy preview mode: <%= model.get('name') %>")
+    }
   });
 
   // A state view type that does nothing. Useful for testing.
