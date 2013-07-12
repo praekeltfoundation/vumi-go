@@ -58,21 +58,6 @@
       : _(obj).result('id') || obj;
   };
 
-  var ensureEl = function(obj) {
-    if (obj instanceof Backbone.View) {
-      obj.render();
-      return obj.$el;
-    }
-
-    return $(obj);
-  };
-
-  var partial = function(selector, inner, outer) {
-    ensureEl(outer)
-      .find(selector)
-      .replaceWith(ensureEl(inner));
-  };
-
   _.extend(exports, {
     merge: merge,
     functor: functor,
@@ -80,7 +65,6 @@
     maybeByName: maybeByName,
     idOfModel: idOfModel,
     idOfView: idOfView,
-    partial: partial,
     highlightActiveLinks: highlightActiveLinks
   });
 })(go.utils = {});
