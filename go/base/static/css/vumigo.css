@@ -389,6 +389,9 @@ button {
 .campaigns.dashboard .status {
   text-transform: capitalize;
 }
+.campaigns.dashboard .sidebar p .btn {
+  margin-left: -4px;
+}
 .campaigns.details ul,
 .campaigns.details li {
   list-style-type: none;

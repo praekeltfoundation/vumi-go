@@ -31,11 +31,14 @@
     <div class="row-fluid">
         <div class="span3 sidebar">
 
-            <div class="nav nav-list extra-actions">
-                <a href="{% url 'routing' %}">Configure channels</a>
-            </div>
+            
+            <p>
+                <a href="{% url 'routing' %}" class="btn btn-primary">Configure channels (alpha)</a>
+            <p>
+            
 
             <ul class="nav nav-list">
+                
                 <li>
                     <a href="{% url 'conversations:index' %}">All campaigns</a>
                     <ul class="nav nav-list">
