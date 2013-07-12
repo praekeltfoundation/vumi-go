@@ -407,6 +407,7 @@ PIPELINE_JS = {
             'js/src/campaign/dialogue/models.js',
             'js/src/campaign/dialogue/connections.js',
             'js/src/campaign/dialogue/states/states.js',
+            'js/src/campaign/dialogue/states/partials.js',
             'js/src/campaign/dialogue/states/dummy.js',
             'js/src/campaign/dialogue/states/choice.js',
             'js/src/campaign/dialogue/states/freetext.js',
