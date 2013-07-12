@@ -36,7 +36,7 @@
     },
 
     render: function() {
-      this.$el.html(this.jst(_(this).result('data')));
+      this.$el.html(maybeByName(this.jst)(_(this).result('data')));
       _(this.partials).keys().forEach(this.renderPartial, this);
       return this;
     }
