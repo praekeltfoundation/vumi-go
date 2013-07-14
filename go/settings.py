@@ -370,10 +370,8 @@ PIPELINE_JS = {
     },
     'go': {
         'source_filenames': (
-            'templates/campaign/dialogue/states/modes/preview/titlebar.jst',
-            'templates/campaign/dialogue/states/modes/edit/titlebar.jst',
-            'templates/campaign/dialogue/states/modes/edit/head.jst',
-            'templates/campaign/dialogue/states/modes/edit/tail.jst',
+            'templates/campaign/dialogue/states/modes/preview.jst',
+            'templates/campaign/dialogue/states/modes/edit.jst',
             'templates/campaign/dialogue/states/choice/edit.jst',
             'templates/campaign/dialogue/states/choice/preview.jst',
             'templates/campaign/dialogue/states/freetext/edit.jst',
