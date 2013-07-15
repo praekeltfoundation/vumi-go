@@ -78,7 +78,7 @@ jsPlumb.ready(function() {
 
   $('#reset').click(function(e) {
       e.preventDefault();
-      diagram.model.fetch({reset: true});
+      diagram.model.set(modelData);
   });
 });
 {% endblock %}
