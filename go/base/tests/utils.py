@@ -12,6 +12,7 @@ from vumi.tests.fake_amqp import FakeAMQPBroker
 from vumi.message import TransportUserMessage, TransportEvent
 
 from go.vumitools.tests.utils import GoPersistenceMixin, FakeAmqpConnection
+from go.vumitools.account.models import RoutingTableHelper
 from go.vumitools.api import VumiApi
 from go.base import models as base_models
 from go.base import utils as base_utils
@@ -195,6 +196,15 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
             messages.append((msg_in, msg_out, ack))
         return messages
 
+    def add_channel_to_conversation(self, conv, tag):
+        # TODO: This is a duplicate of the method in
+        #       go.vumitools.test.utils.GoAppWorkerTestMixin but
+        #       there is no suitable common base class.
+        user_account = self.user_api.get_user_account()
+        rt = RoutingTableHelper(user_account.routing_table)
+        rt.add_oldstyle_conversation(conv, tag)
+        user_account.save()
+
     def declare_tags(self, pool, num_tags, metadata=None):
         """Declare a set of long codes to the tag pool."""
         if metadata is None:
@@ -215,6 +225,15 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         permission.save()
         account = self.user_api.get_user_account()
         account.tagpools.add(permission)
+        account.save()
+
+    def add_app_permission(self, application):
+        permission = self.api.account_store.application_permissions(
+            uuid.uuid4().hex, application=application)
+        permission.save()
+
+        account = self.user_api.get_user_account()
+        account.applications.add(permission)
         account.save()
 
 

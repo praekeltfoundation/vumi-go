@@ -16,6 +16,11 @@ from mock import patch
 class SurveyTestCase(DjangoGoApplicationTestCase):
 
     TEST_CONVERSATION_TYPE = u'survey'
+    TEST_CHANNEL_METADATA = {
+        "supports": {
+            "generic_sends": True,
+        },
+    }
 
     def setUp(self):
         super(SurveyTestCase, self).setUp()
@@ -29,6 +34,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         return pm, pm.register(poll_id, config)
 
     def test_new_conversation(self):
+        self.add_app_permission(u'go.apps.surveys')
         self.assertEqual(len(self.conv_store.list_conversations()), 0)
         response = self.post_new_conversation()
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
@@ -45,14 +51,16 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(conversation.stopping())
 
     def test_action_send_survey_get(self):
-        self.setup_conversation(started=True, with_group=True)
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
         response = self.client.get(self.get_action_view_url('send_survey'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
         self.assertEqual([], self.get_api_commands_sent())
 
     def test_action_send_survey_post(self):
-        self.setup_conversation(started=True, with_group=True)
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
         response = self.client.post(
             self.get_action_view_url('send_survey'), {}, follow=True)
         self.assertRedirects(response, self.get_view_url('show'))
@@ -86,6 +94,18 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(
             str(msg),
             "Action disabled: This action needs a running conversation.")
+        self.assertEqual([], self.get_api_commands_sent())
+
+    def test_action_send_survey_no_channel(self):
+        self.setup_conversation(started=True, with_group=True)
+        response = self.client.post(
+            self.get_action_view_url('send_survey'), {}, follow=True)
+        self.assertRedirects(response, self.get_view_url('show'))
+        [msg] = response.context['messages']
+        self.assertEqual(
+            str(msg),
+            "Action disabled: This action needs channels capable"
+            " of sending messages attached to this conversation.")
         self.assertEqual([], self.get_api_commands_sent())
 
     @skip("The new views don't have this yet.")
@@ -150,7 +170,8 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         """
         Test showing the conversation
         """
-        self.setup_conversation(started=True, with_group=True)
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')

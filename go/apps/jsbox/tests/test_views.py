@@ -10,6 +10,7 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
     TEST_CONVERSATION_TYPE = u'jsbox'
 
     def test_new_conversation(self):
+        self.add_app_permission(u'go.apps.jsbox')
         self.assertEqual(len(self.conv_store.list_conversations()), 0)
         response = self.post_new_conversation()
         self.assertEqual(len(self.conv_store.list_conversations()), 1)

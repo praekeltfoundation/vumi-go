@@ -236,6 +236,9 @@ button {
   max-width: 100%;
   min-width: 80%;
 }
+.modal label input {
+  margin: 0;
+}
 .dialogue .actions .sidebar {
   background: #d9d8d3;
 }
@@ -288,6 +291,8 @@ button {
 }
 .dialogue #diagram .add {
   height: 60px;
+  display: table-cell;
+  vertical-align: center;
   font-size: 68px;
   -webkit-user-select: none;
   -moz-user-select: none;

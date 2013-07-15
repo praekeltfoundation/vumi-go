@@ -20,10 +20,12 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi import log
 
 from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
+from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
+from go.vumitools.router import RouterStore
 from go.vumitools.token_manager import TokenManager
 
 from django.conf import settings
@@ -99,6 +101,10 @@ class VumiUserApi(object):
                                                     self.user_account_key)
         self.contact_store = ContactStore(self.api.manager,
                                           self.user_account_key)
+        self.router_store = RouterStore(self.api.manager,
+                                        self.user_account_key)
+        self.channel_store = ChannelStore(self.api.manager,
+                                          self.user_account_key)
 
     def exists(self):
         return self.api.user_exists(self.user_account_key)
@@ -168,6 +174,17 @@ class VumiUserApi(object):
         # TODO: Get rid of this once the old UI finally goes away.
         conversations = yield self.active_conversations()
         returnValue([c for c in conversations if c.is_draft()])
+
+    @Manager.calls_manager
+    def active_channels(self):
+        channels = []
+        endpoints = yield self.list_endpoints()
+        for tag in endpoints:
+            tagpool_meta = yield self.api.tpm.get_metadata(tag[0])
+            channel = yield self.channel_store.get_channel_by_tag(
+                tag, tagpool_meta)
+            channels.append(channel)
+        returnValue(channels)
 
     @Manager.calls_manager
     def tagpools(self):
