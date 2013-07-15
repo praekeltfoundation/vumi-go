@@ -8,23 +8,24 @@
       ExitEndpointView = states.ExitEndpointView,
       DialogueStateView = states.DialogueStateView,
       DialogueStateEditView = states.DialogueStateEditView,
-      DialogueStatePreviewView = states.DialogueStatePreviewView;
+      DialogueStatePreviewView = states.DialogueStatePreviewView,
+      TextEditView = states.partials.TextEditView;
 
   var FreeTextStateEditView = DialogueStateEditView.extend({
-    bodyTemplate: 'JST.campaign_dialogue_states_freetext_edit',
-
-    events: _({
-      'change .text': 'onTextChange'
-    }).defaults(DialogueStateEditView.prototype.events),
-
-    onTextChange: function(e) {
-      this.state.model.set('text', $(e.target).val(), {silent: true});
-      return this;
+    bodyOptions: function() {
+      return {
+        jst: 'JST.campaign_dialogue_states_freetext_edit',
+        partials: {text: new TextEditView({mode: this})}
+      };
     }
   });
 
   var FreeTextStatePreviewView = DialogueStatePreviewView.extend({
-    bodyTemplate: 'JST.campaign_dialogue_states_freetext_preview'
+    bodyOptions: function() {
+      return {
+        jst: 'JST.campaign_dialogue_states_freetext_preview'
+      };
+    }
   });
 
   var FreeTextStateView = DialogueStateView.extend({

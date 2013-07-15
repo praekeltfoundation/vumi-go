@@ -3,9 +3,10 @@
 // Structures for each dialogue state type
 
 (function(exports) {
-  var maybeByName = go.utils.maybeByName;
-  var GridView = go.components.grid.GridView;
-  var ConfirmView = go.components.views.ConfirmView;
+  var maybeByName = go.utils.maybeByName,
+      GridView = go.components.grid.GridView,
+      ConfirmView = go.components.views.ConfirmView,
+      TemplateView = go.components.views.TemplateView;
 
   var plumbing = go.components.plumbing;
 
@@ -32,18 +33,24 @@
   // Base 'mode' for state views. Each mode acts as a 'delegate view',
   // targeting a dialogue view's element and acting according to the mode type
   // (for eg, `edit`) and state type (for eg, `freetext`).
-  var DialogueStateModeView = Backbone.View.extend({
-    titlebarTemplate: _.template(''),
-    headTemplate: _.template(''),
-    bodyTemplate: _.template(''),
-    tailTemplate: _.template(''),
-    templateData: {},
+  var DialogueStateModeView = TemplateView.extend({
+    data: function() {
+      return {
+        mode: this,
+        state: this.state,
+        model: this.state.model
+      };
+    },
+
+    bodyOptions: {},
 
     initialize: function(options) {
+      DialogueStateModeView.__super__.initialize.call(this, options);
       this.state = options.state;
 
-      this.$titlebar = $('<div><div>').addClass('titlebar');
-      this.$main = $('<div><div>').addClass('main');
+      this.partials.body = new TemplateView(
+        _({data: this.data.bind(this)}).extend(
+        _(this).result('bodyOptions')));
     },
 
     destroy: function() {
@@ -54,36 +61,15 @@
     detach: function() {
       this.$el.detach();
       return this;
-    },
-
-    render: function() {
-      var data = {model: this.state.model.toJSON()};
-      _(data).defaults(_(this).result('templateData'));
-
-      this.state.$el.append(this.$el);
-      this.$el.append(this.$titlebar);
-      this.$el.append(this.$main);
-
-      this.$titlebar.html(maybeByName(this.titlebarTemplate)(data));
-
-      this.$main.html([
-         maybeByName(this.headTemplate)(data),
-         maybeByName(this.bodyTemplate)(data),
-         maybeByName(this.tailTemplate)(data)
-      ].join(''));
-
-      return this;
     }
   });
 
   // Mode allowing the user to make changes to the dialogue state. Acts as a
   // base for each state type's `edit` mode
   var DialogueStateEditView = DialogueStateModeView.extend({
-    className: 'edit mode',
+    jst: 'JST.campaign_dialogue_states_modes_edit',
 
-    titlebarTemplate: 'JST.campaign_dialogue_states_modes_edit_titlebar',
-    headTemplate: 'JST.campaign_dialogue_states_modes_edit_head',
-    tailTemplate: 'JST.campaign_dialogue_states_modes_edit_tail',
+    className: 'edit mode',
 
     events: {
       'click .ok': 'onOk',
@@ -159,8 +145,9 @@
   // Mode for a 'read-only' preview of the dialogue state. Acts as a base for
   // each state type's `preview` mode
   var DialogueStatePreviewView = DialogueStateModeView.extend({
+    jst: 'JST.campaign_dialogue_states_modes_preview',
+
     className: 'preview mode',
-    titlebarTemplate: 'JST.campaign_dialogue_states_modes_preview_titlebar',
 
     events: {
       'click .edit-switch': 'onEditSwitch'
@@ -258,7 +245,11 @@
     },
 
     render: function() {
-      this.mode.render();
+      this.mode
+        .render()
+        .$el
+        .appendTo(this.$el);
+
       this.endpoints.render();
       return this;
     }

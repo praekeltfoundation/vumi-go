@@ -27,11 +27,10 @@ describe("go.campaign.dialogue.states", function() {
     var ToyStateModeView = DialogueStateModeView.extend({
       className: 'toy mode',
 
-      titlebarTemplate: _.template('<%= mode %>'),
-      headTemplate: _.template("head "),
-      bodyTemplate: _.template("body "),
-      tailTemplate: _.template("tail"),
-      templateData: {mode: 'toy'}
+      jst: _.template('<script data-partial="body" type="partial"></script>'),
+      bodyOptions: {
+        jst: _.template("toy mode: <%= model.get('name') %>")
+      }
     });
 
     var state,
@@ -43,19 +42,13 @@ describe("go.campaign.dialogue.states", function() {
     });
 
     describe(".render", function() {
-      it("should append the mode to the state", function() {
-        assert(noElExists(state.$('.mode')));
-        mode.render();
-        assert(oneElExists(state.$('.mode')));
-      });
-
       it("should render its templates", function() {
         assert.equal(mode.$el.html(), '');
         mode.render();
+
         assert.equal(
           mode.$el.html(),
-          ['<div class="titlebar">toy</div>',
-           '<div class="main">head body tail</div>'].join(''));
+          '<div data-partial="body">toy mode: Dummy Message 1</div>');
       });
     });
   });
