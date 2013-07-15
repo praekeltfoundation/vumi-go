@@ -159,7 +159,7 @@
   });
 
   var TemplateView = Backbone.View.extend({
-    jst: _.template(''),
+    jst: null,
 
     partials: {},
 
