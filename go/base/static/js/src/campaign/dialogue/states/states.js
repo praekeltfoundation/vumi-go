@@ -34,8 +34,6 @@
   // targeting a dialogue view's element and acting according to the mode type
   // (for eg, `edit`) and state type (for eg, `freetext`).
   var DialogueStateModeView = TemplateView.extend({
-    jst: _.template(''),
-
     data: function() {
       return {
         mode: this,
