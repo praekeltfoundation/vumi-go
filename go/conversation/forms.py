@@ -7,7 +7,7 @@ class NewConversationForm(forms.Form):
 
     name = forms.CharField(label="Conversation name", max_length=100)
     description = forms.CharField(
-        label="Conversation Description", required=False)
+        label="Conversation description", required=False)
 
     def __init__(self, user_api, *args, **kwargs):
         super(NewConversationForm, self).__init__(*args, **kwargs)
