@@ -98,7 +98,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
-        self.assertContains(response, 'Send Bulk Message')
+        self.assertContains(response, 'Write and send bulk message')
         self.assertNotContains(response, self.get_action_view_url('bulk_send'))
 
     def test_show_running(self):
@@ -110,7 +110,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
-        self.assertContains(response, 'Send Bulk Message')
+        self.assertContains(response, 'Write and send bulk message')
         self.assertContains(response, self.get_action_view_url('bulk_send'))
 
     @skip("The new views don't have this.")
