@@ -3,7 +3,9 @@ import requests
 from django.http import HttpResponse
 
 from go.conversation.view_definition import (
-    ConversationViewDefinitionBase, ConversationTemplateView)
+    ConversationViewDefinitionBase, ConversationTemplateView,
+    EditConversationView)
+
 from go.apps.jsbox.forms import JsboxForm, JsboxAppConfigFormset
 from go.apps.jsbox.log import LogManager
 
@@ -60,11 +62,15 @@ class JSBoxLogsView(ConversationTemplateView):
         })
 
 
-class ConversationViewDefinition(ConversationViewDefinitionBase):
-    edit_conversation_forms = (
+class EditJSBoxView(EditConversationView):
+    edit_forms = (
         ('jsbox', JsboxForm),
         ('jsbox_app_config', JsboxAppConfigFormset),
     )
+
+
+class ConversationViewDefinition(ConversationViewDefinitionBase):
+    edit_view = EditJSBoxView
 
     extra_views = (
         CrossDomainXHRView,
