@@ -1,6 +1,7 @@
 from django import forms
 
-from go.conversation.view_definition import ConversationViewDefinitionBase
+from go.conversation.view_definition import (
+    ConversationViewDefinitionBase, EditConversationView)
 
 
 class ScheduleForm(forms.Form):
@@ -29,8 +30,12 @@ MessageFormSet = forms.formsets.formset_factory(
     MessageForm, can_delete=True, extra=1, formset=BaseMessageFormSet)
 
 
-class ConversationViewDefinition(ConversationViewDefinitionBase):
-    edit_conversation_forms = (
+class EditSequentialSendView(EditConversationView):
+    edit_forms = (
         ('schedule', ScheduleForm),
         ('messages', MessageFormSet),
     )
+
+
+class ConversationViewDefinition(ConversationViewDefinitionBase):
+    edit_view = EditSequentialSendView
