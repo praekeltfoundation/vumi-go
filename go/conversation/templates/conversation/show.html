@@ -8,9 +8,6 @@
 
 
 {% block content_actions_right %}
-    {% if is_editable %}
-        <a href="{% conversation_screen conversation 'edit' %}" class="btn btn-primary">Edit</a>
-    {% endif %}
     {% if conversation.stopped %}
 
 
