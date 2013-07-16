@@ -82,7 +82,9 @@
         <div class="sub-messages">
             <h4>
                 Messages
+                {% is_editable %}
                 <a href="{% conversation_screen conversation 'edit' %}" class="btn btn-primary">Edit</a>
+                {% endif %}
             </h4>
 
             <p class="message">
