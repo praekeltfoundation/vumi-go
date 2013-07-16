@@ -82,7 +82,7 @@
         <div class="sub-messages">
             <h4>
                 Messages
-                <a href="{% url 'wizard:edit' conversation.key %}" class="btn btn-primary btn-mini">Edit</a>
+                <a href="{% conversation_screen conversation 'edit' %}" class="btn btn-primary">Edit</a>
             </h4>
 
             <p class="message">
