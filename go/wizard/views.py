@@ -95,20 +95,6 @@ def edit(request, conversation_key):
 
 
 @login_required
-def edit_survey(request, conversation_key):
-    conversation = conversation_or_404(request.user_api, conversation_key)
-
-    # TODO get existing model data from api and bootstrap it to page load
-    model_data = json.dumps({'conversation_key': conversation_key})
-
-    return render(request, 'wizard_views/wizard_2_edit_survey.html', {
-        'conversation_key': conversation_key,
-        'conversation': conversation,
-        'model_data': model_data
-    })
-
-
-@login_required
 def edit_bulk_message(request, conversation_key):
     """The simpler of the two messages."""
     conversation = conversation_or_404(request.user_api, conversation_key)
