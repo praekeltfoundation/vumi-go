@@ -175,7 +175,12 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertContains(response, self.get_action_view_url('send_survey'))
 
     def test_edit(self):
-        pass
+        self.setup_conversation()
+        response = self.client.get(self.get_view_url('edit'))
+        conversation = response.context[0].get('conversation')
+        self.assertEqual(conversation.name, 'Test Conversation')
+        self.assertContains(response, 'Test Conversation')
+        self.assertContains(response, 'diagram')
 
     def test_export_user_data(self):
         self.setup_conversation()

@@ -1,5 +1,50 @@
-{% extends "app.html" %}
+{% extends "conversation/edit.html" %}
 {% load url from future %}
 
+{% block content_extraclass %}campaigns dialogue{% endblock %}
+
+{% block content_actions_left %}
+    <button class="btn btn-primary" data-action='new-state'>
+        Create new message
+    </button>
+{% endblock %}
+
+{% block content_actions_right %}
+    <a href="{% url 'conversations:index' %}">Cancel</a>
+    <button class="btn btn-primary" data-action="save">Save</button>
+{% endblock %}
+
 {% block content_main %}
+<div id="diagram"></div>
+{% endblock %}
+
+{% block ondomready %}
+  {{ block.super }}
+  var dialogue = go.campaign.dialogue;
+
+  $('.breadcrumbs a').eq(1).addClass('active');
+
+  var diagram = new dialogue.diagram.DialogueDiagramView({
+    el: '.dialogue #diagram',
+    model: new dialogue.models.DialogueModel({{ model_data|safe }})
+  });
+
+  $('.actions [data-action="new-state"]').click(function(e) {
+      e.preventDefault();
+      diagram.newState();
+  });
+
+  $('.actions button[data-action="save"]').click(function(e) {
+      e.preventDefault();
+
+      // TODO uncomment once the screen is hooked up to the api
+      //diagram.model.save();
+
+      // send user to conversation show page
+      window.location.href = "/conversations/{{ conversation_key }}/";
+  });
+
+
+  dialogue.style.initialize();
+  diagram.render();
 {% endblock %}
