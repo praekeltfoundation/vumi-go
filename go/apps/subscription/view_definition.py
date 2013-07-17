@@ -1,7 +1,8 @@
 from django import forms
 from bootstrap.forms import BootstrapForm
 
-from go.conversation.view_definition import ConversationViewDefinitionBase
+from go.conversation.view_definition import (
+    ConversationViewDefinitionBase, EditConversationView)
 
 
 class SubscriptionForm(BootstrapForm):
@@ -18,7 +19,11 @@ SubscriptionFormSet = forms.formsets.formset_factory(
     SubscriptionForm, can_delete=True, extra=1)
 
 
-class ConversationViewDefinition(ConversationViewDefinitionBase):
-    edit_conversation_forms = (
+class EditSubscriptionView(EditConversationView):
+    edit_forms = (
         ('handlers', SubscriptionFormSet),
     )
+
+
+class ConversationViewDefinition(ConversationViewDefinitionBase):
+    edit_view = EditSubscriptionView
