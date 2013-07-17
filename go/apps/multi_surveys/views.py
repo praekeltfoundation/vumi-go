@@ -16,7 +16,7 @@ from go.base.utils import (make_read_only_form, make_read_only_formset,
 from go.vumitools.exceptions import ConversationSendError
 from go.conversation.forms import ReplyToMessageForm
 from go.conversation.old_forms import ConversationForm, ConversationGroupForm
-from go.apps.surveys import forms
+from go.apps.multi_surveys import forms
 from go.conversation.tasks import export_conversation_messages
 
 from vxpolls.manager import PollManager
