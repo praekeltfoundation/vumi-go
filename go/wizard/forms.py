@@ -12,7 +12,3 @@ class Wizard1CreateForm(forms.Form):
     channel_kind = forms.ChoiceField(label="Channels", choices=CHANNEL_CHOICES,
                                      required=False, widget=RadioSelect)
     keyword = forms.CharField(label="Define a keyword", max_length=100)
-
-
-class CampaignBulkMessageForm(forms.Form):
-    message = forms.CharField(label="Bulk message text", widget=forms.Textarea)

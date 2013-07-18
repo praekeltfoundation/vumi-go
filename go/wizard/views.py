@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 
-from go.wizard.forms import Wizard1CreateForm, CampaignBulkMessageForm
+from go.wizard.forms import Wizard1CreateForm
 from go.conversation.forms import NewConversationForm
 from go.channel.forms import NewChannelForm
 from go.base.utils import get_conversation_view_definition, conversation_or_404
