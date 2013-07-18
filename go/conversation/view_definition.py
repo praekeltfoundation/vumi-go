@@ -216,7 +216,7 @@ class ShowConversationView(ConversationTemplateView):
 class EditConversationView(ConversationTemplateView):
     """View for editing conversation data.
 
-    Subclass this and set :attr:`edit_conversation_forms` to a list of tuples
+    Subclass this and set :attr:`edit_forms` to a list of tuples
     of the form `('key', FormClass)`.
 
     The `key` should be a key into the conversation's metadata field. If `key`
@@ -224,10 +224,11 @@ class EditConversationView(ConversationTemplateView):
 
     If the default behaviour is insufficient or problematic, implement
     :meth:`make_forms` and :meth:`process_forms`. These are the only two
-    methods that look at :attr:`edit_conversation_forms`.
+    methods that look at :attr:`edit_forms`.
     """
     view_name = 'edit'
     path_suffix = 'edit/'
+    edit_forms = ()
 
     def _render_forms(self, request, conversation, edit_forms):
         def sum_media(form_list):
@@ -259,9 +260,8 @@ class EditConversationView(ConversationTemplateView):
 
     def make_forms(self, conversation):
         config = conversation.get_config()
-        edit_forms = self.view_def.edit_conversation_forms
         return [self.make_form(key, edit_form, config)
-                for key, edit_form in edit_forms]
+                for key, edit_form in self.edit_forms]
 
     def process_form(self, form):
         if hasattr(form, 'to_metadata'):
@@ -270,10 +270,9 @@ class EditConversationView(ConversationTemplateView):
 
     def process_forms(self, request, conversation):
         config = conversation.get_config()
-        edit_forms = self.view_def.edit_conversation_forms
         edit_forms_with_keys = [
             (key, edit_form_cls(request.POST, prefix=key))
-            for key, edit_form_cls in edit_forms]
+            for key, edit_form_cls in self.edit_forms]
         edit_forms = [edit_form for _key, edit_form in edit_forms_with_keys]
 
         for key, edit_form in edit_forms_with_keys:
@@ -401,24 +400,16 @@ class ConversationViewDefinitionBase(object):
 
     Subclass this for your shiny new conversation and set the appropriate
     attributes and/or add special magic code.
-
-    The following more general attributes are passed through to each view:
-
-    :param edit_conversation_forms:
-        If set, the conversation will be editable and form data will be stashed
-        in the conversation metadata field. See :class:`EditConversationView`
-        for details.
     """
 
     # Override these params in your app-specific subclass.
     extra_views = ()
+    edit_view = None
     action_forms = {}
-    edit_conversation_forms = None  # TODO: Better thing than this.
 
     # This doesn't include ConversationActionView because that's special.
     DEFAULT_CONVERSATION_VIEWS = (
         ShowConversationView,
-        EditConversationView,
         StartConversationView,
         ConfirmConversationView,
         StopConversationView,
@@ -430,8 +421,8 @@ class ConversationViewDefinitionBase(object):
         self._conv_def = conv_def
 
         self._views = list(self.DEFAULT_CONVERSATION_VIEWS)
-        if self.edit_conversation_forms is None:
-            self._views.remove(EditConversationView)
+        if self.edit_view is not None:
+            self._views.append(self.edit_view)
         self._views.extend(self.extra_views)
 
         self._view_mapping = {}
@@ -450,7 +441,7 @@ class ConversationViewDefinitionBase(object):
 
     @property
     def is_editable(self):
-        return self.edit_conversation_forms is not None
+        return self.edit_view is not None
 
     def get_actions(self):
         return self._conv_def.get_actions()

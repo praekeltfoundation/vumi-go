@@ -39,7 +39,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         response = self.post_new_conversation()
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
         conv = self.get_latest_conversation()
-        self.assertRedirects(response, self.get_view_url('show', conv.key))
+        self.assertRedirects(response, self.get_view_url('edit', conv.key))
 
     def test_stop(self):
         self.setup_conversation(started=True)
@@ -179,48 +179,11 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
 
     def test_edit(self):
         self.setup_conversation()
-        response = self.client.post(self.get_view_url('edit'), {
-            'questions-TOTAL_FORMS': 1,
-            'questions-INITIAL_FORMS': 0,
-            'questions-MAX_NUM_FORMS': '',
-            'questions-0-copy': 'What is your favorite music?',
-            'questions-0-label': 'favorite music',
-            'questions-0-valid_responses': 'rock, jazz, techno',
-            'completed_response-TOTAL_FORMS': 0,
-            'completed_response-INITIAL_FORMS': 0,
-            'completed_response-MAX_NUM_FORMS': '',
-        })
-        self.assertRedirects(response, self.get_view_url('show'))
-        poll_id = 'poll-%s' % (self.conv_key,)
-        pm, config = get_poll_config(poll_id)
-        [question] = config['questions']
-        self.assertEqual(question['copy'], 'What is your favorite music?')
-        self.assertEqual(question['valid_responses'], [
-            'rock', 'jazz', 'techno'])
-        self.assertEqual(question['label'], 'favorite music')
-
-    def test_edit_continue_editing(self):
-        self.setup_conversation()
-        response = self.client.post(self.get_view_url('edit'), {
-            'questions-TOTAL_FORMS': 1,
-            'questions-INITIAL_FORMS': 0,
-            'questions-MAX_NUM_FORMS': '',
-            'questions-0-copy': 'What is your favorite music?',
-            'questions-0-label': 'favorite music',
-            'questions-0-valid_responses': 'rock, jazz, techno',
-            'completed_response-TOTAL_FORMS': 0,
-            'completed_response-INITIAL_FORMS': 0,
-            'completed_response-MAX_NUM_FORMS': '',
-            '_save_contents': 1
-        })
-        self.assertRedirects(response, self.get_view_url('edit'))
-        poll_id = 'poll-%s' % (self.conv_key,)
-        pm, config = get_poll_config(poll_id)
-        [question] = config['questions']
-        self.assertEqual(question['copy'], 'What is your favorite music?')
-        self.assertEqual(question['valid_responses'], [
-            'rock', 'jazz', 'techno'])
-        self.assertEqual(question['label'], 'favorite music')
+        response = self.client.get(self.get_view_url('edit'))
+        conversation = response.context[0].get('conversation')
+        self.assertEqual(conversation.name, 'Test Conversation')
+        self.assertContains(response, 'Test Conversation')
+        self.assertContains(response, 'diagram')
 
     def test_export_user_data(self):
         self.setup_conversation()
@@ -245,41 +208,6 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(lines[0], 'user_id,user_timestamp,label-1,label-2')
         self.assertTrue(lines[1].startswith('user-1'))
         self.assertTrue(lines[1].endswith(',answer 1,answer 2'))
-
-    def test_aggregates(self):
-        self.setup_conversation(started=True)
-        self.add_messages_to_conv(
-            5, start_date=date(2012, 1, 1), time_multiplier=12)
-        response = self.client.get(self.get_view_url('aggregates'),
-                                   {'direction': 'inbound'})
-        self.assertEqual(response.content, '\r\n'.join([
-            '2011-12-30,1',
-            '2011-12-31,2',
-            '2012-01-01,2',
-            '',  # csv ends with a blank line
-        ]))
-
-    def test_export_messages(self):
-        self.setup_conversation(started=True)
-        self.add_messages_to_conv(
-            5, start_date=date(2012, 1, 1), time_multiplier=12, reply=True)
-        response = self.client.post(self.get_view_url('show'), {
-            '_export_conversation_messages': True,
-        })
-        self.assertRedirects(response, self.get_view_url('show'))
-        [email] = mail.outbox
-        self.assertEqual(email.recipients(), [self.django_user.email])
-        self.assertTrue(self.conversation.name in email.subject)
-        self.assertTrue(self.conversation.name in email.body)
-        [(file_name, contents, mime_type)] = email.attachments
-        self.assertEqual(file_name, 'messages-export.zip')
-
-        zipfile = ZipFile(StringIO(contents), 'r')
-        csv_contents = zipfile.open('messages-export.csv', 'r').read()
-
-        # 1 header, 5 sent, 5 received, 1 trailing newline == 12
-        self.assertEqual(12, len(csv_contents.split('\n')))
-        self.assertEqual(mime_type, 'application/zip')
 
     @skip("The new views don't have this.")
     @patch('go.base.message_store_client.MatchResult')
@@ -334,6 +262,41 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(response2.context['token'], fake_client.token)
         self.assertEqual(len(response2.context['message_page'].object_list),
             10)
+
+    def test_aggregates(self):
+        self.setup_conversation(started=True)
+        self.add_messages_to_conv(
+            5, start_date=date(2012, 1, 1), time_multiplier=12)
+        response = self.client.get(self.get_view_url('aggregates'),
+                                   {'direction': 'inbound'})
+        self.assertEqual(response.content, '\r\n'.join([
+            '2011-12-30,1',
+            '2011-12-31,2',
+            '2012-01-01,2',
+            '',  # csv ends with a blank line
+        ]))
+
+    def test_export_messages(self):
+        self.setup_conversation(started=True)
+        self.add_messages_to_conv(
+            5, start_date=date(2012, 1, 1), time_multiplier=12, reply=True)
+        response = self.client.post(self.get_view_url('show'), {
+            '_export_conversation_messages': True,
+        })
+        self.assertRedirects(response, self.get_view_url('show'))
+        [email] = mail.outbox
+        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertTrue(self.conversation.name in email.subject)
+        self.assertTrue(self.conversation.name in email.body)
+        [(file_name, contents, mime_type)] = email.attachments
+        self.assertEqual(file_name, 'messages-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('messages-export.csv', 'r').read()
+
+        # 1 header, 5 sent, 5 received, 1 trailing newline == 12
+        self.assertEqual(12, len(csv_contents.split('\n')))
+        self.assertEqual(mime_type, 'application/zip')
 
     def test_send_one_off_reply(self):
         self.setup_conversation(started=True)
