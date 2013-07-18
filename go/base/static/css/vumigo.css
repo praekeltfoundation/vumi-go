@@ -171,6 +171,13 @@ button {
   color: #fff;
   background: #b41c30;
 }
+.content .sidebar .nav-list .nav-list {
+  padding: 0;
+  margin: 0;
+}
+.content .sidebar .nav-list .nav-list li {
+  text-indent: 10px;
+}
 .content .sidebar .extra-actions {
   margin-bottom: 1em;
 }
@@ -229,17 +236,173 @@ button {
   max-width: 100%;
   min-width: 80%;
 }
+.modal label input {
+  margin: 0;
+}
+.dialogue .actions .sidebar {
+  background: #d9d8d3;
+}
+.dialogue #diagram * {
+  z-index: 2;
+}
+.dialogue #diagram ._jsPlumb_connector {
+  z-index: 1;
+  opacity: 0.5;
+}
+.dialogue #diagram ._jsPlumb_endpoint {
+  z-index: 5;
+  opacity: 0.5;
+}
+.dialogue #diagram ._jsPlumb_endpoint svg circle:hover {
+  cursor: move;
+}
+.dialogue #diagram ._jsPlumb_dragging {
+  z-index: 3;
+  opacity: 0.5;
+}
+.dialogue #diagram ._jsPlumb_hover {
+  z-index: 3;
+  opacity: 0.75;
+}
+.dialogue #diagram .grid {
+  text-align: center;
+  margin: 0 auto;
+  width: 1280px;
+}
+.dialogue #diagram .grid .placeholder {
+  background: #2f3436;
+  width: 8px;
+  height: 200px;
+  float: left;
+  -webkit-border-radius: 10px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 10px;
+  -moz-background-clip: padding;
+  border-radius: 10px;
+  background-clip: padding-box;
+}
+.dialogue #diagram .grid .row {
+  margin: 0;
+}
+.dialogue #diagram .grid .item {
+  margin: 40px 40px;
+  width: 200px;
+  float: left;
+}
+.dialogue #diagram .add {
+  height: 60px;
+  display: table-cell;
+  vertical-align: center;
+  font-size: 68px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+.dialogue #diagram .state {
+  width: 220px;
+  margin: 30px 40px;
+  float: left;
+}
+.dialogue #diagram .state {
+  padding: 6px;
+  position: relative;
+  color: #2f3436;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+.dialogue #diagram .state .titlebar {
+  font-size: 16px;
+  padding: 8px 6px;
+  margin: -6px;
+  margin-bottom: 10px;
+  background: #b0b0b0;
+  -webkit-border-radius: 5px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 5px;
+  -moz-background-clip: padding;
+  border-radius: 5px;
+  background-clip: padding-box;
+}
+.dialogue #diagram .state .titlebar .name {
+  font-weight: bold;
+  margin-bottom: 0;
+  width: 60px;
+}
+.dialogue #diagram .state .titlebar .remove {
+  color: #eee;
+}
+.dialogue #diagram .state .titlebar:hover {
+  cursor: move;
+}
+.dialogue #diagram .state .edit.mode .actions {
+  background: inherit;
+}
+.dialogue #diagram .state .preview.mode .edit-switch {
+  margin-left: 8px;
+}
+.dialogue #diagram .state .preview.mode .text {
+  margin-left: 8px;
+}
+.dialogue #diagram .state label,
+.dialogue #diagram .state p {
+  color: #2f3436;
+}
+.dialogue #diagram .state textarea {
+  resize: none;
+  max-width: 80%;
+}
+.dialogue #diagram .state p {
+  text-align: left;
+}
+.dialogue #diagram .state .close {
+  font-size: 16px;
+}
+.dialogue #diagram .state .hint {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+.dialogue #diagram .state .important {
+  color: #cc3333;
+}
+.dialogue #diagram .endpoint {
+  z-index: 4;
+  background: #b0b0b0;
+  width: 14px;
+  height: 14px;
+  -webkit-border-radius: 5px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 5px;
+  -moz-background-clip: padding;
+  border-radius: 5px;
+  background-clip: padding-box;
+}
+.dialogue #diagram .endpoint:hover {
+  cursor: pointer;
+}
+.dialogue #diagram .choice.state .edit.mode .choices input {
+  width: 60%;
+  margin-bottom: 0;
+}
+.dialogue #diagram .choice.state .preview.mode .choices {
+  text-align: left;
+}
 .channels.new .channel select {
   display: none;
 }
 .campaigns.dashboard .status {
   text-transform: capitalize;
 }
+.campaigns.dashboard .sidebar p .btn {
+  margin-left: -4px;
+}
 .campaigns.details ul,
 .campaigns.details li {
   list-style-type: none;
-  padding: 0;
-  margin: 0;
+  padding: 0 0 0 5px;
+  margin: 0 0 10px 0;
   width: auto;
 }
 .campaigns.details ul label,
@@ -258,11 +421,11 @@ button {
   list-style-type: none;
 }
 .campaigns.summary .sub-details,
-.campaigns.summary .sub-actions,
-.campaigns.summary .sub-messages {
+.campaigns.summary .sub-messages,
+.campaigns.summary .sub-contacts {
   border-bottom: 1px #c9c9c9 solid;
-  margin: 0 0 18px 0;
-  padding: 0 0 18px 0;
+  margin: 0 18px;
+  padding: 18px 0;
 }
 .campaigns.summary h6 {
   font-weight: bold;
@@ -279,6 +442,11 @@ button {
   padding: 0;
   margin: 0;
   width: auto;
+}
+.campaigns.summary .sub-actions {
+  background: #d9d8d3;
+  margin-top: -5px;
+  padding: 18px;
 }
 .campaigns .header a {
   color: #878b8e;

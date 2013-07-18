@@ -4,26 +4,47 @@
 
 {% block content_extraclass %}campaigns summary{% endblock %}
 
-{% block content_title %}Preview &amp; Activate{% endblock %}
+{% block content_title %}{{ conversation.name }}{% endblock %}
 
 
 {% block content_actions_right %}
-    <a href="{% url 'conversations:index' %}">Cancel</a>
-    {% if is_editable %}
-        <a href="{% conversation_screen conversation 'edit' %}" class="btn btn-primary">Edit</a>
-    {% endif %}
-    {# TODO: Proper lifecycle stuff. #}
     {% if conversation.stopped %}
-        <a href="{% url 'conversations:incoming_list' conversation.key %}" class="btn btn-primary">Start</a>
+
+
+        <a href="{% conversation_screen conversation 'start' %}" 
+            class="btn btn-primary action" 
+            data-name="start"
+            data-value="Start">
+            Activate
+        </a>
+
+        <a href="{% conversation_screen conversation 'archive' %}" 
+            class="btn btn-primary action" 
+            data-name="archive"
+            data-value="Archive">
+            Archive
+        </a>
+        
     {% elif conversation.running %}
-        <a href="{% url 'conversations:incoming_list' conversation.key %}" class="btn btn-primary">Stop</a>
+        <a href="{% conversation_screen conversation 'stop' %}" 
+            class="btn btn-primary action" 
+            data-name="stop"
+            data-value="Stop">
+            Deactivate
+        </a>
     {% else %}
-        <a href="{% conversation_screen conversation %}" class="btn btn-primary">???</a>
+        {# TODO: Figure out what to put here. #}
+        <a href="{% conversation_screen conversation 'stop' %}" 
+            class="btn btn-warning action" 
+            data-name="stop"
+            data-value="Stop">
+            In transition: attempt to stop
+        </a>
     {% endif %}
 {% endblock %}
 
 {% block content_main %}
-<div class="row-fluid indent">
+<div class="row-fluid">
     <div class="span7">
 
         <div class="sub-details">
@@ -40,49 +61,35 @@
             </p>
             <p>
                 <h6>TYPE</h6>
-                {{ conversation.type }}<br>
+                {{ conversation.conversation_type }}<br>
             </p>
 
             <p>
                 <h6>CHANNELS</h6>
-                <!-- TODO:  update the routing table metadata helpers to
-                            be able to answer questions like this.
-                -->
-                USSD<br>
-            </p>
-        </div>
-
-
-        <div class="sub-actions">
-            <h4>Actions</h4>
-
-            <p>
-                <ol>
-                {% for action in actions %}
-                    <li><a href="{% conversation_action conversation action.action_name %}">{{action.action_display_name}}</a></li>
+                <ul>
+                {% for channel in conversation.get_channels %}
+                    <li>{{ channel.name }}</li>
                 {% empty %}
-                    <li>This conversation has no actions.</li>
+                    <li>No channels.</li>
                 {% endfor %}
-                </ol>
+                </ul>
             </p>
         </div>
-
 
         <div class="sub-messages">
             <h4>
                 Messages
-                <a href="{% url 'wizard:edit' conversation.key %}" class="btn btn-primary btn-mini">Edit</a>
+                {% if is_editable %}
+                <a href="{% conversation_screen conversation 'edit' %}" class="btn btn-primary">Edit</a>
+                {% endif %}
             </h4>
 
             <p class="message">
-
                 {{ conversation.description }}
             </p>
         </div>
 
 
-        
-        
         <div class="sub-contacts">
             <h4 class="control-label">
                 Contacts
@@ -100,11 +107,53 @@
             </p>
         </div>
     </div>
+
+    <div class="span5">
+        {% if actions %}
+        <div class="sub-actions pull-right">
+            <ul class="nav nav-pills nav-stacked">
+                {% for action in actions %}
+                    {% with is_disabled=action.is_disabled %}
+                        {% if is_disabled %}
+                            <li>
+                                <a href="#" class="btn disabled" title="This action is disabled" data-content="{{ is_disabled }}">{{ action.action_display_name }}</a>
+                            </li>
+                        {% else %}
+                            <li><a href="{% conversation_action conversation action.action_name %}" class="btn">{{ action.action_display_name }}</a></li>
+                        {% endif %}
+                    {% endwith %}
+                {% empty %}
+                    <li>This conversation has no actions.</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
 </div>
 {% endblock %}
 
 
 {% block ondomready %}
-    {{ block.super }}
-    // highlight the breadcrumbs.
+
+    $('.content .actions .right .action').on('click', function() {
+
+        // confirm if the user wants to perform the action,
+        var $button = $(this);
+        bootbox.confirm('Are you sure you want to ' + $button.attr('data-value') + ' this conversation?', function(submit) {
+            if (submit) {
+                $form = $('<form method="post"></form>')
+                    .attr('action', $button.attr('href'));
+                $form.append("{% csrf_token %}");
+                $form.append('<input type="hidden" name="' + $button.attr('data-name') + '" value="' + $button.attr('data-value') + '">');
+                $form.submit();
+            }
+        });
+
+        return false;
+    });
+
+    $('.content .sub-actions .disabled').popover({placement: 'left'});
+    $('.content .sub-actions .disabled').on('click', function() { return false; });
+
 {% endblock %}

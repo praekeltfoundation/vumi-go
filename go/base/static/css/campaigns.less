@@ -1,9 +1,11 @@
 @import "lesshat.less";
 
-
 .campaigns.dashboard {
   .status {
     text-transform:capitalize;
+  }
+  .sidebar p .btn {
+    margin-left:-4px;
   }
 }
 
@@ -11,8 +13,8 @@
 
   ul, li {
     list-style-type:none;
-    padding:0;
-    margin:0;
+    padding:0 0 0 5px;
+    margin:0 0 10px 0;
     width:auto;
 
     label {
@@ -36,10 +38,10 @@
 
 .campaigns.summary {
 
-  .sub-details, .sub-actions, .sub-messages {
-    border-bottom:1px #c9c9c9 solid;
-    margin:0 0 18px 0;
-    padding:0 0 18px 0;
+  .sub-details, .sub-messages, .sub-contacts {
+    border-bottom: 1px #c9c9c9 solid;
+    margin:0 18px;
+    padding:18px 0;
   }
 
   h6 {
@@ -57,6 +59,12 @@
     padding:0;
     margin:0;
     width:auto;
+  }
+
+  .sub-actions {
+    background:#d9d8d3;
+    margin-top:-5px;
+    padding:18px;
   }
 
 
@@ -172,6 +180,4 @@
       z-index:200;
     }
   }
-
-
 }

@@ -5,18 +5,18 @@ from zipfile import ZipFile
 
 from django.conf import settings
 from django.test import TestCase
-from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.core import mail
 
 from django.core.files.storage import default_storage
-from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.contacts.parsers.base import FieldNormalizer
+from go.base.tests.utils import VumiGoDjangoTestCase
 
 
 TEST_GROUP_NAME = u"Test Group"
 TEST_CONTACT_NAME = u"Name"
 TEST_CONTACT_SURNAME = u"Surname"
+TEST_CONTACT_MSISDN = u"+27761234567"
 
 
 def newest(models):
@@ -31,27 +31,25 @@ def group_url(group_key):
     return reverse('contacts:group', kwargs={'group_key': group_key})
 
 
-class ContactsTestCase(DjangoGoApplicationTestCase):
+def mkcontact(self, name=None, surname=None, msisdn=u'+1234567890', **kwargs):
+    return self.contact_store.new_contact(
+        name=unicode(name or TEST_CONTACT_NAME),
+        surname=unicode(surname or TEST_CONTACT_SURNAME),
+        msisdn=unicode(msisdn), **kwargs)
 
-    fixtures = ['test_user']
+
+class ContactsTestCase(VumiGoDjangoTestCase):
+    use_riak = True
 
     def setUp(self):
         super(ContactsTestCase, self).setUp()
-        self.setup_riak_fixtures()
-        self.client = Client()
-        self.client.login(username='username', password='password')
-        self.contact_store.contacts.enable_search()
-        self.contact_store.groups.enable_search()
+        self.setup_api()
+        self.setup_user_api()
+        self.setup_client()
 
     def test_redirect_index(self):
         response = self.client.get(reverse('contacts:index'))
         self.assertRedirects(response, reverse('contacts:groups'))
-
-    def clear_groups(self, contact_key=None):
-        contact = self.contact_store.get_contact_by_key(
-            contact_key or self.contact_key)
-        contact.groups.clear()
-        contact.save()
 
     def get_all_contacts(self, keys=None):
         if keys is None:
@@ -65,18 +63,20 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         return max(self.get_all_contacts(), key=lambda c: c.created_at)
 
     def test_contact_creation(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
         response = self.client.post(reverse('contacts:new_person'), {
             'name': 'New',
             'surname': 'Person',
             'msisdn': '27761234567',
-            'groups': [self.group_key],
+            'groups': [group.key],
         })
         contact = self.get_latest_contact()
         self.assertRedirects(response, person_url(contact.key))
 
     def test_contact_deleting(self):
+        contact = mkcontact(self)
         person_url = reverse('contacts:person', kwargs={
-            'person_key': self.contact.key,
+            'person_key': contact.key,
         })
         response = self.client.post(person_url, {
             '_delete_contact': True,
@@ -90,15 +90,16 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_contact_update(self):
-        response = self.client.post(person_url(self.contact_key), {
+        contact = mkcontact(self)
+        response = self.client.post(person_url(contact.key), {
             'name': 'changed name',
             'surname': 'changed surname',
             'msisdn': '112',
             'groups': [g.key for g in self.contact_store.list_groups()],
         })
-        self.assertRedirects(response, person_url(self.contact_key))
+        self.assertRedirects(response, person_url(contact.key))
         # reload to check
-        contact = self.contact_store.get_contact_by_key(self.contact_key)
+        contact = self.contact_store.get_contact_by_key(contact.key)
         self.assertEqual(contact.name, 'changed name')
         self.assertEqual(contact.surname, 'changed surname')
         self.assertEqual(contact.msisdn, '112')
@@ -106,9 +107,9 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
             set(contact.groups.keys()),
             set([g.key for g in self.contact_store.list_groups()]))
 
-    def specify_columns(self, group_key=None, columns=None):
+    def specify_columns(self, group_key, columns=None):
         group_url = reverse('contacts:group', kwargs={
-            'group_key': group_key or self.group_key
+            'group_key': group_key,
         })
         defaults = {
             'column-0': 'name',
@@ -127,7 +128,6 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
                         'fixtures', 'sample-contacts.csv'))
 
-        self.clear_groups()
         response = self.client.post(reverse('contacts:people'), {
             'file': csv_file,
             'name': 'a new group',
@@ -138,57 +138,57 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, group_url(group.key))
         self.assertEqual(len(group.backlinks.contacts()), 0)
 
-        self.specify_columns(group_key=group.key)
+        self.specify_columns(group.key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_contact_upload_into_existing_group(self):
-        self.clear_groups()
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
                         'fixtures', 'sample-contacts.csv'), 'r')
         response = self.client.post(reverse('contacts:people'), {
             'file': csv_file,
-            'contact_group': self.group_key
+            'contact_group': group.key
         })
 
-        self.assertRedirects(response, group_url(self.group_key))
-        group = self.contact_store.get_group(self.group_key)
+        self.assertRedirects(response, group_url(group.key))
+        group = self.contact_store.get_group(group.key)
         self.assertEqual(len(group.backlinks.contacts()), 0)
-        self.specify_columns()
+        self.specify_columns(group.key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_uploading_unicode_chars_in_csv(self):
-        self.clear_groups()
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
                                   'fixtures', 'sample-unicode-contacts.csv'))
 
         response = self.client.post(reverse('contacts:people'), {
-            'contact_group': self.group_key,
+            'contact_group': group.key,
             'file': csv_file,
         })
-        self.assertRedirects(response, group_url(self.group_key))
+        self.assertRedirects(response, group_url(group.key))
 
-        self.specify_columns()
-        group = self.contact_store.get_group(self.group_key)
+        self.specify_columns(group.key)
+        group = self.contact_store.get_group(group.key)
         self.assertEqual(len(group.backlinks.contacts()), 3)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_uploading_windows_linebreaks_in_csv(self):
-        self.clear_groups()
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
                                   'fixtures',
                                   'sample-windows-linebreaks-contacts.csv'))
 
         response = self.client.post(reverse('contacts:people'), {
-            'contact_group': self.group_key,
+            'contact_group': group.key,
             'file': csv_file,
         })
-        self.assertRedirects(response, group_url(self.group_key))
+        self.assertRedirects(response, group_url(group.key))
 
-        self.specify_columns(columns={
+        self.specify_columns(group.key, columns={
             'column-0': 'msisdn',
             'column-1': 'area',
             'column-2': 'nairobi_1',
@@ -206,14 +206,13 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
             'normalize-6': '',
             'normalize-7': '',
         })
-        group = self.contact_store.get_group(self.group_key)
+        group = self.contact_store.get_group(group.key)
         self.assertEqual(len(group.backlinks.contacts()), 2)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_uploading_unicode_chars_in_csv_into_new_group(self):
-        self.clear_groups()
         new_group_name = u'Testing a ünicode grøüp'
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
                                   'fixtures', 'sample-unicode-contacts.csv'))
@@ -233,12 +232,12 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_contact_upload_from_group_page(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
 
         group_url = reverse('contacts:group', kwargs={
-            'group_key': self.group_key
+            'group_key': group.key
         })
 
-        self.clear_groups()
         csv_file = open(
             path.join(settings.PROJECT_ROOT, 'base',
                       'fixtures', 'sample-contacts.csv'), 'r')
@@ -262,29 +261,28 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(file_name, 'sample-contacts.csv')
 
         # Nothing should have been written to the db by now.
-        self.assertEqual(len(list(self.group.backlinks.contacts())), 0)
+        self.assertEqual(len(list(group.backlinks.contacts())), 0)
 
         # Now submit the column names and check that things have been written
         # to the db
-        response = self.specify_columns()
+        response = self.specify_columns(group.key)
         # Check the redirect
         self.assertRedirects(response, group_url)
         # 3 records should have been written to the db.
-        self.assertEqual(len(list(self.group.backlinks.contacts())), 3)
+        self.assertEqual(len(list(group.backlinks.contacts())), 3)
         self.assertEqual(len(mail.outbox), 1)
         self.assertTrue('successfully' in mail.outbox[0].subject)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_graceful_error_handling_on_upload_failure(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
         group_url = reverse('contacts:group', kwargs={
-            'group_key': self.group_key
+            'group_key': group.key
         })
 
         # Carefully crafted but bad CSV data
         wrong_file = StringIO(',,\na,b,c\n"')
         wrong_file.name = 'fubar.csv'
-
-        self.clear_groups()
 
         response = self.client.post(group_url, {
             'file': wrong_file
@@ -295,13 +293,13 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
     def test_contact_upload_failure(self):
-        self.assertEqual(len(self.contact_store.list_groups()), 1)
+        self.assertEqual(len(self.contact_store.list_groups()), 0)
         response = self.client.post(reverse('contacts:people'), {
             'name': 'a new group',
             'file': None,
         })
         self.assertContains(response, 'Something went wrong with the upload')
-        self.assertEqual(len(self.contact_store.list_groups()), 1)
+        self.assertEqual(len(self.contact_store.list_groups()), 0)
         self.assertEqual(len(mail.outbox), 0)
         self.assertEqual(default_storage.listdir("tmp"), ([], []))
 
@@ -360,6 +358,7 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
                         contacts]))
 
     def test_contact_querying(self):
+        contact = mkcontact(self)
         people_url = reverse('contacts:people')
 
         # test no-match
@@ -372,24 +371,26 @@ class ContactsTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(people_url, {
             'q': TEST_CONTACT_NAME,
         })
-        self.assertContains(response, person_url(self.contact_key))
+        self.assertContains(response, person_url(contact.key))
 
     def test_contact_key_value_query(self):
+        contact = mkcontact(self)
         people_url = reverse('contacts:people')
         self.client.get(people_url, {
-            'q': 'name:%s' % (self.contact.name,)
+            'q': 'name:%s' % (contact.name,)
         })
 
 
-class GroupsTestCase(DjangoGoApplicationTestCase):
+class GroupsTestCase(VumiGoDjangoTestCase):
+    # TODO: Cleaner test group and contact creation.
 
-    fixtures = ['test_user']
+    use_riak = True
 
     def setUp(self):
         super(GroupsTestCase, self).setUp()
-        self.setup_riak_fixtures()
-        self.client = Client()
-        self.client.login(username='username', password='password')
+        self.setup_api()
+        self.setup_user_api()
+        self.setup_client()
 
     def get_all_contacts(self, keys=None):
         if keys is None:
@@ -413,14 +414,13 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, group_url(group.key))
 
     def test_group_updating(self):
-        new_group_name = 'a new group name'
-        self.assertNotEqual(self.group.name, new_group_name)
+        group = self.contact_store.new_group(u'old name')
         response = self.client.post(
-            reverse('contacts:group', kwargs={'group_key': self.group.key}),
-            {'name': new_group_name, '_save_group': '1'})
-        updated_group = self.contact_store.get_group(self.group.key)
-        self.assertEqual(new_group_name, updated_group.name)
-        self.assertRedirects(response, group_url(self.group.key))
+            reverse('contacts:group', kwargs={'group_key': group.key}),
+            {'name': 'new name', '_save_group': '1'})
+        updated_group = self.contact_store.get_group(group.key)
+        self.assertEqual('new name', updated_group.name)
+        self.assertRedirects(response, group_url(group.key))
 
     def test_groups_creation_with_funny_chars(self):
         response = self.client.post(reverse('contacts:groups'), {
@@ -433,27 +433,30 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, group_url(group.key))
 
     def test_group_contact_querying(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        contact = mkcontact(self, groups=[group])
         # test no-match
-        response = self.client.get(group_url(self.group_key), {
+        response = self.client.get(group_url(group.key), {
             'q': 'this should not match',
         })
         self.assertContains(response, 'No contacts match')
 
         # test match name
-        response = self.client.get(group_url(self.group_key), {
+        response = self.client.get(group_url(group.key), {
             'q': TEST_CONTACT_NAME,
         })
-        self.assertContains(response, person_url(self.contact_key))
+        self.assertContains(response, person_url(contact.key))
 
     def test_group_contact_query_limits(self):
-        default_limit = self.client.get(group_url(self.group_key), {
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        default_limit = self.client.get(group_url(group.key), {
             'q': TEST_CONTACT_NAME,
         })
-        custom_limit = self.client.get(group_url(self.group_key), {
+        custom_limit = self.client.get(group_url(group.key), {
             'q': TEST_CONTACT_NAME,
             'limit': 10,
         })
-        no_limit = self.client.get(group_url(self.group_key), {
+        no_limit = self.client.get(group_url(group.key), {
             'q': TEST_CONTACT_NAME,
             'limit': 0,
         })
@@ -467,13 +470,27 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         # during rendering.
         self.assertNotContains(no_limit, 'alert-success')
 
+    def test_multiple_group_deletion(self):
+        group_1 = self.contact_store.new_group(TEST_GROUP_NAME)
+        group_2 = self.contact_store.new_group(TEST_GROUP_NAME)
+
+        # Delete the groups
+        groups_url = reverse('contacts:groups')
+        response = self.client.post(groups_url, {
+            'group': [group_1.key, group_2.key],
+            '_delete': True,
+        })
+        self.assertEqual(self.contact_store.list_groups(), [])
+
     def test_group_deletion(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+
         # Create a contact in the group
         response = self.client.post(reverse('contacts:new_person'), {
             'name': 'New',
             'surname': 'Person',
             'msisdn': '27761234567',
-            'groups': [self.group_key],
+            'groups': [group.key],
         })
 
         contact = self.get_latest_contact()
@@ -481,7 +498,7 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
 
         # Delete the group
         group_url = reverse('contacts:group', kwargs={
-            'group_key': self.group.key,
+            'group_key': group.key,
         })
         response = self.client.post(group_url, {
             '_delete_group': True,
@@ -495,12 +512,13 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(reloaded_contact.groups.keys(), [])
 
     def test_group_clearing(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
         # Create a contact in the group
         response = self.client.post(reverse('contacts:new_person'), {
             'name': 'New',
             'surname': 'Person',
             'msisdn': '27761234567',
-            'groups': [self.group_key],
+            'groups': [group.key],
         })
 
         contact = self.get_latest_contact()
@@ -508,7 +526,7 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
 
         # Clear the group
         group_url = reverse('contacts:group', kwargs={
-            'group_key': self.group.key,
+            'group_key': group.key,
         })
         response = self.client.post(group_url, {
             '_delete_group_contacts': True,
@@ -516,19 +534,21 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, group_url)
 
         self.assertEqual(
-            self.contact_store.get_contacts_for_group(self.group), [])
+            self.contact_store.get_contacts_for_group(group), [])
         self.assertFalse(contact in self.contact_store.list_contacts())
 
     def test_group_contact_export(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        contact = mkcontact(self, groups=[group])
         # Clear the group
         group_url = reverse('contacts:group', kwargs={
-            'group_key': self.group.key,
+            'group_key': group.key,
         })
 
         # add some extra info to ensure it gets exported properly
-        self.contact.extra['foo'] = u'bar'
-        self.contact.extra['bar'] = u'baz'
-        self.contact.save()
+        contact.extra['foo'] = u'bar'
+        contact.extra['bar'] = u'baz'
+        contact.save()
 
         response = self.client.post(group_url, {
             '_export_group_contacts': True,
@@ -539,11 +559,11 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         [email] = mail.outbox
         [(file_name, contents, mime_type)] = email.attachments
 
-        self.assertEqual(email.recipients(), [self.user.email])
+        self.assertEqual(email.recipients(), [self.django_user.email])
         self.assertTrue(
-            '%s contacts export' % (self.group.name,) in email.subject)
+            '%s contacts export' % (group.name,) in email.subject)
         self.assertTrue(
-            '1 contact(s) from group "%s" attached' % (self.group.name,)
+            '1 contact(s) from group "%s" attached' % (group.name,)
             in email.body)
         self.assertEqual(file_name, 'contacts-export.zip')
 
@@ -563,15 +583,89 @@ class GroupsTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(mime_type, 'application/zip')
 
 
-class SmartGroupsTestCase(DjangoGoApplicationTestCase):
 
-    fixtures = ['test_user']
+    def test_multiple_group_exportation(self):
+        group_1 = self.contact_store.new_group(TEST_GROUP_NAME)
+        contact_1 = mkcontact(self, groups=[group_1])
+        contact_1.extra['foo'] = u'bar'
+        contact_1.extra['bar'] = u'baz'
+        contact_1.save()
+        
+        group_2 = self.contact_store.new_group(TEST_GROUP_NAME)
+        contact_2 = mkcontact(self, groups=[group_2])
+        contact_2.extra['foo'] = u'bar'
+        contact_2.extra['bar'] = u'baz'
+        contact_2.save()
+
+        groups_url = reverse('contacts:groups')
+        response = self.client.post(groups_url, {
+            'group': [group_1.key, group_2.key],
+            '_export_group_contacts': True,
+        })
+
+        # test first email
+        self.assertEqual(len(mail.outbox), 2)
+        [email_1, email_2] = mail.outbox
+        [(file_name, contents, mime_type)] = email_1.attachments
+
+        self.assertEqual(email_1.recipients(), [self.django_user.email])
+        self.assertTrue(
+            '%s contacts export' % (group_1.name,) in email_1.subject)
+        self.assertTrue(
+            '1 contact(s) from group "%s" attached' % (group_1.name,)
+            in email_1.body)
+        self.assertEqual(file_name, 'contacts-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('contacts-export.csv', 'r').read()
+
+        [header, contact, _] = csv_contents.split('\r\n')
+
+        self.assertEqual(
+            header,
+            ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
+                      'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                      'created_at', 'extras-bar', 'extras-foo']))
+
+        self.assertTrue(contact.endswith('baz,bar'))
+        self.assertTrue(contents)
+        self.assertEqual(mime_type, 'application/zip')
+
+        # test the 2nd email.
+        [(file_name, contents, mime_type)] = email_2.attachments
+
+        self.assertEqual(email_2.recipients(), [self.django_user.email])
+        self.assertTrue(
+            '%s contacts export' % (group_1.name,) in email_2.subject)
+        self.assertTrue(
+            '1 contact(s) from group "%s" attached' % (group_1.name,)
+            in email_2.body)
+        self.assertEqual(file_name, 'contacts-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('contacts-export.csv', 'r').read()
+
+        [header, contact, _] = csv_contents.split('\r\n')
+
+        self.assertEqual(
+            header,
+            ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
+                      'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                      'created_at', 'extras-bar', 'extras-foo']))
+
+        self.assertTrue(contact.endswith('baz,bar'))
+        self.assertTrue(contents)
+        self.assertEqual(mime_type, 'application/zip')
+
+
+class SmartGroupsTestCase(VumiGoDjangoTestCase):
+    # TODO: Cleaner test group and contact creation.
 
     def setUp(self):
         super(SmartGroupsTestCase, self).setUp()
-        self.setup_riak_fixtures()
-        self.client = Client()
-        self.client.login(username='username', password='password')
+        self.setup_api()
+        self.setup_user_api()
+        self.setup_client()
 
     def mksmart_group(self, query, name='a smart group'):
         response = self.client.post(reverse('contacts:groups'), {
@@ -584,7 +678,7 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
         return group
 
     def add_to_group(self, contact, group):
-        contact.add_to_group(self.group)
+        contact.add_to_group(group)
         contact.save()
         return contact
 
@@ -603,7 +697,7 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(group not in self.contact_store.list_groups())
 
     def test_smart_group_clearing(self):
-        contact = self.mkcontact()
+        contact = mkcontact(self)
         group = self.mksmart_group('msisdn:\+12*')
         self.assertEqual([contact.key],
                          self.contact_store.get_contacts_for_group(group))
@@ -633,7 +727,7 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
             '_new_smart_group': '1',
         })
         group = newest(self.contact_store.list_groups())
-        conversation = self.mkconversation()
+        conversation = self.create_conversation()
         conversation.groups.add(group)
         conversation.save()
 
@@ -651,9 +745,9 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
             '_new_smart_group': '1',
         })
 
-        contact = self.mkcontact()
+        contact = mkcontact(self)
         group = newest(self.contact_store.list_groups())
-        conversation = self.mkconversation()
+        conversation = self.create_conversation()
         conversation.groups.add(group)
         conversation.save()
 
@@ -676,12 +770,12 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
             '_new_smart_group': '1',
         })
 
-        self.mkcontact(surname='bar'),
-        self.mkcontact(name='foo'),
-        match = self.mkcontact(name='foo', surname='bar')
+        mkcontact(self, surname='bar'),
+        mkcontact(self, name='foo'),
+        match = mkcontact(self, name='foo', surname='bar')
 
         group = newest(self.contact_store.list_groups())
-        conversation = self.mkconversation()
+        conversation = self.create_conversation()
         conversation.groups.add(group)
         conversation.save()
 
@@ -696,12 +790,12 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
             '_new_smart_group': '1',
         })
 
-        contact1 = self.mkcontact(surname='bar')
-        contact2 = self.mkcontact(name='foo')
-        contact3 = self.mkcontact(name='foo', surname='bar')
+        contact1 = mkcontact(self, surname='bar')
+        contact2 = mkcontact(self, name='foo')
+        contact3 = mkcontact(self, name='foo', surname='bar')
 
         group = newest(self.contact_store.list_groups())
-        conv = self.mkconversation()
+        conv = self.create_conversation()
         conv.groups.add(group)
         conv.save()
 
@@ -746,9 +840,9 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
             '_new_smart_group': '1',
         })
 
-        self.mkcontact(surname='bar')
-        self.mkcontact(name='foo')
-        self.mkcontact(name='foo', surname='bar')
+        mkcontact(self, surname='bar')
+        mkcontact(self, name='foo')
+        mkcontact(self, name='foo', surname='bar')
 
         group = newest(self.contact_store.list_groups())
         group_url = reverse('contacts:group', kwargs={
@@ -772,7 +866,7 @@ class SmartGroupsTestCase(DjangoGoApplicationTestCase):
         zipfile = ZipFile(StringIO(contents), 'r')
         csv_contents = zipfile.open('contacts-export.csv', 'r').read()
 
-        self.assertEqual(email.recipients(), [self.user.email])
+        self.assertEqual(email.recipients(), [self.django_user.email])
         self.assertTrue(
             '%s contacts export' % (group.name,) in email.subject)
         self.assertTrue(

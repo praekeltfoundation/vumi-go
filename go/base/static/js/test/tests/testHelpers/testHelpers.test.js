@@ -1,5 +1,6 @@
 describe("go.testHelpers", function() {
   var testHelpers = go.testHelpers,
+      unregisterModels = testHelpers.unregisterModels,
       assertFails = testHelpers.assertFails;
 
   beforeEach(function() {
@@ -11,7 +12,7 @@ describe("go.testHelpers", function() {
       "</div>"
     ].join(''));
 
-    Backbone.Relational.store.reset();
+    unregisterModels();
   });
 
   afterEach(function() {

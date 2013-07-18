@@ -3,13 +3,14 @@
 // Structures for the dialogue diagram (the main view for the dialogue screen).
 
 (function(exports) {
-  var diagrams = go.components.plumbing.diagrams,
+  var components = go.components;
+
+  var diagrams = components.plumbing.diagrams,
       DiagramView = diagrams.DiagramView;
 
   var dialogue = go.campaign.dialogue,
       connections = dialogue.connections,
-      states = dialogue.states,
-      grid = dialogue.grid;
+      states = dialogue.states;
 
   // The main view containing all the dialogue states and connections
   var DialogueDiagramView = DiagramView.extend({
@@ -20,15 +21,18 @@
     connectionCollectionType: connections.DialogueConnectionCollection,
 
     initialize: function(options) {
-      this.grid = new grid.DialogueGridView({diagram: this});
-      DiagramView.prototype.initialize.call(this, options);
+      DialogueDiagramView.__super__.initialize.call(this, options);
+      if (!this.states.size()) { this.newState(); }
+
+      this.connections.on('error:unsupported', this.onUnsupportedConnection);
     },
 
-    render: function() {
-      this.grid.render();
-      this.states.render();
-      this.connections.render();
-      return this;
+    newState: function() {
+      return this.states.add('states');
+    },
+
+    onUnsupportedConnection: function(source, target, plumbConnection) {
+      jsPlumb.detach(plumbConnection, {fireEvent: false});
     }
   });
 

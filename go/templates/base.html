@@ -9,10 +9,6 @@
     <meta content="no" http-equiv="imagetoolbar" />
     <title>{% block page_title %}Vumi Go{% endblock %}</title>
 
-    {% block extrahead %}
-    {% endblock %}
-    
-    {# I think I only want to show these on public facing pages. #}
     <meta name="description" content="A super scalable conversation engine for 
         distribution of SMS, star menu and chat messages">
     <meta name="author" content="Praekelt Foundation">
@@ -23,6 +19,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     {% compressed_css 'all' %}
+
+    <script type="text/javascript">
+        // Create window.go.configs namespace ahead of time so that Django 
+        // widgets have a place to put their config information even though 
+        // other javascript has yet to be loaded.
+        window.go = {}
+        window.go.configs = {}
+    </script>
 
 </head>
 <body>
@@ -40,7 +44,6 @@
         {% block content %}
         {% endblock %}
 
-
         {% block footer %}
         <div class="footer">
             <p>&copy; 2012 <a href="http://praekelt.com">Praekelt Group</a>. <a href="mailto:hello@vumi.org">Contact</a>. <a href="https://github.com/praekelt/vumi">Github</a></p>
@@ -53,6 +56,9 @@
 
     {% compressed_js 'lib' %}
     {% compressed_js 'go' %}
+
+    {% block extramedia %}
+    {% endblock %}
 
     {% block extrascript %}
     {% endblock %}

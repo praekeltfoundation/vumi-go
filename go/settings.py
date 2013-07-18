@@ -154,9 +154,11 @@ INSTALLED_APPS = (
     'djcelery_email',
     'go.base',
     'go.conversation',
+    'go.channel',
     'go.wizard',
     'go.contacts',
     'go.account',
+    'go.apps.multi_surveys',
 
 
     'vxpolls.djdashboard',
@@ -186,8 +188,6 @@ DEBUG_TOOLBAR_CONFIG = {
 }
 
 SESSION_ENGINE = 'go.api.go_api.session'
-
-
 
 
 # A sample logging configuration. The only tangible logging
@@ -226,7 +226,11 @@ BROKER_VHOST = "/develop"
 # If we're running in DEBUG mode then skip RabbitMQ and execute tasks
 # immediate instead of deferring them to the queue / workers.
 CELERY_ALWAYS_EAGER = DEBUG
-CELERY_IMPORTS = ("go.vumitools.api_celery",)
+CELERY_IMPORTS = (
+    "go.contacts.tasks",
+    "go.account.tasks",
+    "go.conversation.tasks",
+)
 CELERY_RESULT_BACKEND = "amqp"
 EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
 SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
@@ -265,13 +269,9 @@ VUMI_INSTALLED_APPS = {
         'namespace': 'subscription',
         'display_name': 'Subscription Manager',
     },
-    'go.apps.wikipedia.ussd': {
-        'namespace': 'wikipedia_ussd',
-        'display_name': 'Wikipedia USSD Connection',
-    },
-    'go.apps.wikipedia.sms': {
-        'namespace': 'wikipedia_sms',
-        'display_name': 'Wikipedia SMS Connection',
+    'go.apps.wikipedia': {
+        'namespace': 'wikipedia',
+        'display_name': 'Wikipedia',
     },
     'go.apps.jsbox': {
         'namespace': 'jsbox',
@@ -334,7 +334,6 @@ ACCOUNT_ACTIVATION_DAYS = 7
 
 # PIPELINES CONFIGURATION
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
-PIPELINE_JS_COMPRESSOR = False
 PIPELINE_CSS = {
     'all': {
         'source_filenames': (
@@ -344,6 +343,10 @@ PIPELINE_CSS = {
         'output_filename': 'export/all.css',
     },
 }
+
+PIPELINE_TEMPLATE_FUNC = '_.template'
+PIPELINE_TEMPLATE_NAMESPACE = 'window.JST'
+PIPELINE_TEMPLATE_EXT = '.jst'
 
 PIPELINE_JS = {
     'lib': {
@@ -367,6 +370,17 @@ PIPELINE_JS = {
     },
     'go': {
         'source_filenames': (
+            'templates/campaign/dialogue/states/modes/preview.jst',
+            'templates/campaign/dialogue/states/modes/edit.jst',
+            'templates/campaign/dialogue/states/choice/edit.jst',
+            'templates/campaign/dialogue/states/choice/preview.jst',
+            'templates/campaign/dialogue/states/freetext/edit.jst',
+            'templates/campaign/dialogue/states/freetext/preview.jst',
+            'templates/campaign/dialogue/states/end/edit.jst',
+            'templates/campaign/dialogue/states/end/preview.jst',
+            'templates/components/confirm.jst',
+            'templates/dummy/dummy.jst',
+
             'js/src/go.js',
             'js/src/utils.js',
             'js/src/errors.js',
@@ -374,6 +388,7 @@ PIPELINE_JS = {
             'js/src/components/models.js',
             'js/src/components/views.js',
             'js/src/components/structures.js',
+            'js/src/components/grid.js',
             'js/src/components/stateMachine.js',
             'js/src/components/plumbing/plumbing.js',
             'js/src/components/plumbing/endpoints.js',
@@ -388,7 +403,15 @@ PIPELINE_JS = {
             'js/src/campaign/routing/views.js',
             'js/src/campaign/dialogue/dialogue.js',
             'js/src/campaign/dialogue/models.js',
-            'js/src/campaign/dialogue/views.js',
+            'js/src/campaign/dialogue/connections.js',
+            'js/src/campaign/dialogue/states/states.js',
+            'js/src/campaign/dialogue/states/partials.js',
+            'js/src/campaign/dialogue/states/dummy.js',
+            'js/src/campaign/dialogue/states/choice.js',
+            'js/src/campaign/dialogue/states/freetext.js',
+            'js/src/campaign/dialogue/states/end.js',
+            'js/src/campaign/dialogue/diagram.js',
+            'js/src/campaign/dialogue/style.js',
 
             # TODO This is here so we can access the test model data. This
             # gives us the data we need for a 'demo' of the routing screen.

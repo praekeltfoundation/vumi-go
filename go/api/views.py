@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 @require_http_methods(['GET', 'POST'])
 def go_api_proxy(request):
     url = settings.GO_API_URL
-    auth = ('session_id', request.COOKIES['sessionid'])
+    auth = ('session_id', request.session.session_key)
 
     # FIXME: This hackery shouldn't be necessary:
     req_data = json.loads(request.body)

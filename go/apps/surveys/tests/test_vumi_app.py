@@ -76,9 +76,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         # Make the contact store searchable
         yield self.user_api.contact_store.contacts.enable_search()
 
-        self.conversation = yield self.create_conversation(
-            delivery_tag_pool=u'pool',
-            delivery_class=self.transport_type)
+        self.conversation = yield self.create_conversation()
         self.conversation.add_group(self.group)
         yield self.conversation.save()
 
@@ -135,7 +133,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         returnValue(msgs[-1 * nr_of_messages:])
 
     @inlineCallbacks
-    def test_start(self):
+    def test_start_old_style(self):
         # We need to wait for process_command_send_survey() to finish
         # completely. Since it runs in response to an async command, we need to
         # wrap it in something that fires a deferred at the appropriate time.
@@ -150,13 +148,26 @@ class TestSurveyApplication(AppWorkerTestCase):
             surname=u'Contact', msisdn=u'+27831234568', groups=[self.group])
         yield self.create_survey(self.conversation)
         with LogCatcher() as log:
-            yield self.start_conversation(self.conversation)
+            yield self.start_conversation_old_style(self.conversation)
             self.assertEqual(log.errors, [])
 
         yield pcss_d
         [msg1, msg2] = self.get_dispatched_messages()
         self.assertEqual(msg1['content'], self.default_questions[0]['copy'])
         self.assertEqual(msg2['content'], self.default_questions[0]['copy'])
+
+    @inlineCallbacks
+    def send_send_survey_command(self, conversation):
+        batch_id = yield self.conversation.get_latest_batch_key()
+        yield self.dispatch_command(
+            "send_survey",
+            user_account_key=self.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=batch_id,
+            msg_options={},
+            is_client_initiated=False,
+            delivery_class=conversation.delivery_class,
+        )
 
     @inlineCallbacks
     def test_clearing_old_survey_data(self):
@@ -173,6 +184,7 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         self.create_survey(self.conversation)
         yield self.start_conversation(self.conversation)
+        yield self.send_send_survey_command(self.conversation)
         yield self.submit_answers(self.default_questions,
             answers=[
                 '2',  # Yellow, skips the second question because of the check
@@ -259,6 +271,7 @@ class TestSurveyApplication(AppWorkerTestCase):
             msisdn=u'+27831234567', groups=[self.group])
         self.create_survey(self.conversation)
         yield self.start_conversation(self.conversation)
+        yield self.send_send_survey_command(self.conversation)
         yield self.complete_survey(self.default_questions)
 
     @inlineCallbacks
@@ -267,6 +280,7 @@ class TestSurveyApplication(AppWorkerTestCase):
             msisdn=u'+27831234567', groups=[self.group])
         self.create_survey(self.conversation)
         yield self.start_conversation(self.conversation)
+        yield self.send_send_survey_command(self.conversation)
         yield self.complete_survey(self.default_questions)
         # This participant should be empty
         poll_id = 'poll-%s' % (self.conversation.key,)

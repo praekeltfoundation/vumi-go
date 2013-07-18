@@ -17,19 +17,21 @@ from vumi.persist.riak_manager import RiakManager
 from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.txredis_manager import TxRedisManager
-from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
 from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
+from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
-from go.vumitools.middleware import DebitAccountMiddleware
+from go.vumitools.router import RouterStore
 from go.vumitools.token_manager import TokenManager
 
 from django.conf import settings
 from django.utils.datastructures import SortedDict
+
+from vumi.message import TransportUserMessage
 
 
 class TagpoolSet(object):
@@ -98,6 +100,10 @@ class VumiUserApi(object):
         self.conversation_store = ConversationStore(self.api.manager,
                                                     self.user_account_key)
         self.contact_store = ContactStore(self.api.manager,
+                                          self.user_account_key)
+        self.router_store = RouterStore(self.api.manager,
+                                        self.user_account_key)
+        self.channel_store = ChannelStore(self.api.manager,
                                           self.user_account_key)
 
     def exists(self):
@@ -168,6 +174,17 @@ class VumiUserApi(object):
         # TODO: Get rid of this once the old UI finally goes away.
         conversations = yield self.active_conversations()
         returnValue([c for c in conversations if c.is_draft()])
+
+    @Manager.calls_manager
+    def active_channels(self):
+        channels = []
+        endpoints = yield self.list_endpoints()
+        for tag in endpoints:
+            tagpool_meta = yield self.api.tpm.get_metadata(tag[0])
+            channel = yield self.channel_store.get_channel_by_tag(
+                tag, tagpool_meta)
+            channels.append(channel)
+        returnValue(channels)
 
     @Manager.calls_manager
     def tagpools(self):
@@ -370,27 +387,6 @@ class VumiUserApi(object):
                     routing_connectors,))
 
     @Manager.calls_manager
-    def msg_options(self, tag, tagpool_metadata=None):
-        """Return a dictionary of message options needed to send a message
-        from this user to the given tag.
-        """
-        if tagpool_metadata is None:
-            tagpool_metadata = yield self.api.tpm.get_metadata(tag[0])
-        msg_options = {}
-        # TODO: transport_type is probably irrelevant
-        msg_options['transport_type'] = tagpool_metadata.get('transport_type')
-        # TODO: not sure whether to declare that tag names must always be
-        #       valid from_addr values or whether to put in a mapping somewhere
-        msg_options['from_addr'] = tag[1]
-        if 'transport_name' in tagpool_metadata:
-            msg_options['transport_name'] = tagpool_metadata['transport_name']
-        msg_options.update(tagpool_metadata.get('msg_options', {}))
-        TaggingMiddleware.add_tag_to_payload(msg_options, tag)
-        DebitAccountMiddleware.add_user_to_payload(msg_options,
-                                                   self.user_account_key)
-        returnValue(msg_options)
-
-    @Manager.calls_manager
     def _update_tag_data_for_acquire(self, user_account, tag):
         user_account.tags.append(tag)
         tag_info = yield self.api.mdb.get_tag_info(tag)
@@ -467,8 +463,25 @@ class VumiUserApi(object):
             tag_info = yield self.api.mdb.get_tag_info(tag)
             del tag_info.metadata['user_account']
             yield tag_info.save()
+
+            # Clean up routing table entries.
+            routing_table = yield self.get_routing_table(user_account)
+            rt_helper = RoutingTableHelper(routing_table)
+            rt_helper.remove_transport_tag(tag)
+
             yield user_account.save()
         yield self.api.tpm.release_tag(tag)
+
+    def delivery_class_for_msg(self, msg):
+        # Sometimes we need a `delivery_class` but we don't always have (or
+        # want) one. This builds one from `msg['transport_type']`.
+        return {
+            TransportUserMessage.TT_SMS: 'sms',
+            TransportUserMessage.TT_USSD: 'ussd',
+            TransportUserMessage.TT_XMPP: 'gtalk',
+            TransportUserMessage.TT_TWITTER: 'twitter',
+        }.get(msg['transport_type'],
+              msg['transport_type'])
 
 
 class VumiApi(object):

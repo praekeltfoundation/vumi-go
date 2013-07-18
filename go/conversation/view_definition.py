@@ -1,5 +1,6 @@
 import csv
 import logging
+import functools
 from StringIO import StringIO
 
 from django.views.generic import View, TemplateView
@@ -57,7 +58,7 @@ class StartConversationView(ConversationApiView):
     def post(self, request, conversation):
         # TODO: Better conversation start error handling.
         try:
-            conversation.start(send_initial_action_hack=False)
+            conversation.start()
         except ConversationSendError as error:
             messages.add_message(request, messages.ERROR, str(error))
         else:
@@ -136,6 +137,18 @@ class StopConversationView(ConversationApiView):
         return self.redirect_to('show', conversation_key=conversation.key)
 
 
+class ArchiveConversationView(ConversationApiView):
+    view_name = 'archive'
+    path_suffix = 'archive/'
+
+    def post(self, request, conversation):
+        conversation.archive_conversation()
+        messages.add_message(
+            request, messages.INFO, '%s archived' % (
+                self.view_def.conversation_display_name,))
+        return redirect(reverse('conversations:index'))
+
+
 class ShowConversationView(ConversationTemplateView):
     view_name = 'show'
     path_suffix = ''
@@ -143,8 +156,7 @@ class ShowConversationView(ConversationTemplateView):
     def get(self, request, conversation):
         params = {
             'conversation': conversation,
-            'is_editable': (
-                self.view_def.edit_conversation_forms is not None),
+            'is_editable': self.view_def.is_editable,
             'user_api': request.user_api,
             'actions': self.view_def.get_actions(),
         }
@@ -169,9 +181,6 @@ class ShowConversationView(ConversationTemplateView):
         if inbound_message is None:
             logger.info('Replying to an unknown message: %s' % (in_reply_to,))
 
-        [tag] = conversation.get_tags()
-        msg_options = conversation.make_message_options(tag)
-        msg_options['in_reply_to'] = in_reply_to
         conversation.dispatch_command(
             'send_message', user_api.user_account_key, conversation.key,
             command_data={
@@ -179,7 +188,7 @@ class ShowConversationView(ConversationTemplateView):
                 "conversation_key": conversation.key,
                 "to_addr": inbound_message['from_addr'],
                 "content": content,
-                "msg_options": msg_options,
+                "msg_options": {'in_reply_to': in_reply_to},
            }
         )
 
@@ -207,7 +216,7 @@ class ShowConversationView(ConversationTemplateView):
 class EditConversationView(ConversationTemplateView):
     """View for editing conversation data.
 
-    Subclass this and set :attr:`edit_conversation_forms` to a list of tuples
+    Subclass this and set :attr:`edit_forms` to a list of tuples
     of the form `('key', FormClass)`.
 
     The `key` should be a key into the conversation's metadata field. If `key`
@@ -215,10 +224,11 @@ class EditConversationView(ConversationTemplateView):
 
     If the default behaviour is insufficient or problematic, implement
     :meth:`make_forms` and :meth:`process_forms`. These are the only two
-    methods that look at :attr:`edit_conversation_forms`.
+    methods that look at :attr:`edit_forms`.
     """
     view_name = 'edit'
     path_suffix = 'edit/'
+    edit_forms = ()
 
     def _render_forms(self, request, conversation, edit_forms):
         def sum_media(form_list):
@@ -250,9 +260,8 @@ class EditConversationView(ConversationTemplateView):
 
     def make_forms(self, conversation):
         config = conversation.get_config()
-        edit_forms = self.view_def.edit_conversation_forms
         return [self.make_form(key, edit_form, config)
-                for key, edit_form in edit_forms]
+                for key, edit_form in self.edit_forms]
 
     def process_form(self, form):
         if hasattr(form, 'to_metadata'):
@@ -261,10 +270,9 @@ class EditConversationView(ConversationTemplateView):
 
     def process_forms(self, request, conversation):
         config = conversation.get_config()
-        edit_forms = self.view_def.edit_conversation_forms
         edit_forms_with_keys = [
             (key, edit_form_cls(request.POST, prefix=key))
-            for key, edit_form_cls in edit_forms]
+            for key, edit_form_cls in self.edit_forms]
         edit_forms = [edit_form for _key, edit_form in edit_forms_with_keys]
 
         for key, edit_form in edit_forms_with_keys:
@@ -274,6 +282,26 @@ class EditConversationView(ConversationTemplateView):
             config[key] = self.process_form(edit_form)
         conversation.set_config(config)
         conversation.save()
+
+
+def check_action_is_enabled(f):
+    """Decorator to check that the action is not disabled.
+
+    Redirections to 'show' conversation with an appropriate message
+    if the action is disabled. Calls the original function otherwise.
+
+    Only wraps functions of the form
+    `f(request, conversation, *args, **kw)`.
+    """
+    @functools.wraps(f)
+    def wrapper(self, request, conversation, *args, **kw):
+        disabled = self.action.is_disabled()
+        if disabled is not None:
+            messages.warning(request, 'Action disabled: %s' % (disabled,))
+            return self.redirect_to(
+                'show', conversation_key=conversation.key)
+        return f(self, request, conversation, *args, **kw)
+    return wrapper
 
 
 class ConversationActionView(ConversationTemplateView):
@@ -293,6 +321,7 @@ class ConversationActionView(ConversationTemplateView):
             'action_display_name': self.action.action_display_name,
         })
 
+    @check_action_is_enabled
     def get(self, request, conversation):
         form_cls = self.view_def.get_action_form(self.action.action_name)
         if form_cls is None:
@@ -300,6 +329,7 @@ class ConversationActionView(ConversationTemplateView):
             return self._action_done(request, conversation)
         return self._render_form(request, conversation, form_cls)
 
+    @check_action_is_enabled
     def post(self, request, conversation):
         action_data = {}
         form_cls = self.view_def.get_action_form(self.action.action_name)
@@ -318,6 +348,7 @@ class ConversationActionView(ConversationTemplateView):
 
         return self.perform_action(request, conversation, action_data)
 
+    @check_action_is_enabled
     def perform_action(self, request, conversation, action_data):
         self.action.perform_action(action_data)
         messages.info(request, 'Action successful: %s!' % (
@@ -369,27 +400,20 @@ class ConversationViewDefinitionBase(object):
 
     Subclass this for your shiny new conversation and set the appropriate
     attributes and/or add special magic code.
-
-    The following more general attributes are passed through to each view:
-
-    :param edit_conversation_forms:
-        If set, the conversation will be editable and form data will be stashed
-        in the conversation metadata field. See :class:`EditConversationView`
-        for details.
     """
 
     # Override these params in your app-specific subclass.
     extra_views = ()
+    edit_view = None
     action_forms = {}
-    edit_conversation_forms = None  # TODO: Better thing than this.
 
     # This doesn't include ConversationActionView because that's special.
     DEFAULT_CONVERSATION_VIEWS = (
         ShowConversationView,
-        EditConversationView,
         StartConversationView,
         ConfirmConversationView,
         StopConversationView,
+        ArchiveConversationView,
         AggregatesConversationView,
     )
 
@@ -397,8 +421,8 @@ class ConversationViewDefinitionBase(object):
         self._conv_def = conv_def
 
         self._views = list(self.DEFAULT_CONVERSATION_VIEWS)
-        if self.edit_conversation_forms is None:
-            self._views.remove(EditConversationView)
+        if self.edit_view is not None:
+            self._views.append(self.edit_view)
         self._views.extend(self.extra_views)
 
         self._view_mapping = {}
@@ -410,6 +434,14 @@ class ConversationViewDefinitionBase(object):
     @property
     def conversation_display_name(self):
         return self._conv_def.conversation_display_name
+
+    @property
+    def extra_static_endpoints(self):
+        return self._conv_def.extra_static_endpoints
+
+    @property
+    def is_editable(self):
+        return self.edit_view is not None
 
     def get_actions(self):
         return self._conv_def.get_actions()

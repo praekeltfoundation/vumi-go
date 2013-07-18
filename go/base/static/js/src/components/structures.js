@@ -42,10 +42,19 @@
     addDefaults: {silent: false, sort: true},
     removeDefaults: {silent: false, sort: true},
 
-    ordered: false,
-    comparator: function(v) { return v; },
+    ordered: false,  // whether the lookup's items have an ordering
+    comparator: function(v) { return v.ordinal || 0; },
 
-    constructor: function(items) {
+    arrangeable: false, // whether the lookup's items can be reordered
+    arranger: function(v, ordinal) { return v.ordinal = ordinal; },
+
+    constructor: function(items, options) {
+      options = options || {};
+      this.ordered = options.ordered || this.ordered;
+      this.comparator = options.comparator || this.comparator;
+      this.arrangeable = options.ordered || this.arrangeable;
+      this.arranger = options.arranger || this.arranger;
+
       this._items = {};
       this._itemList = [];
 
@@ -98,6 +107,8 @@
 
     where: function(props) { return _.where(this.values(), props); },
 
+    findWhere: function(props) { return _.findWhere(this.values(), props); },
+
     callAt: function(i, fn, that) {
       var item = this._itemList[i];
       fn.call(that, item.key, item.value, i);
@@ -141,14 +152,18 @@
 
     indexOfKey: function(k) { return this._indexOf('key', k); },
 
+    last: function() { return this.at(this.size() - 1); },
+
+    lastKey: function() { return this.keyAt(this.size() - 1); },
+
     add: function(key, value, options) {
       options = _(options || {}).defaults(this.addDefaults);
 
       this._items[key] = value;
       this._itemList.push({key: key, value: value});
 
-      if (!options.silent) { this.trigger('add', key, value); }
       if (options.sort) { this.sort(); }
+      if (!options.silent) { this.trigger('add', key, value); }
 
       return this;
     },
@@ -171,6 +186,13 @@
         this._itemList = this._sorter(this._itemList, this._comparator, this);
       }
       return this;
+    },
+
+    rearrange: function(keys) {
+      if (this.ordered && this.arrangeable) {
+        keys.forEach(function(k, i) { this.arranger(this.get(k), i); }, this);
+        this.sort();
+      }
     }
   });
 
@@ -184,8 +206,8 @@
   //   - 'add' (key, value) - Emitted when an item is added
   //   - 'remove' (key, value) - Emitted when an item is removed
   var LookupGroup = Lookup.extend({
-    constructor: function(lookups) {
-      Lookup.prototype.constructor.call(this);
+    constructor: function(lookups, options) {
+      Lookup.prototype.constructor.call(this, {}, options);
       this.members = new Lookup();
 
       // Lookup of item owners by item keys
@@ -266,13 +288,8 @@
     // The default options passed to each new view
     viewOptions: {},
 
-    // Determines whether or not the ViewCollection is ordered
-    ordered: false,
-
-    // Default comparator that sorts based on the model collection's comparator
-    comparator: function(v1, v2) {
-      return this.models.comparator(v1.model, v2.model);
-    },
+    // The default attributes for each new view's model
+    modelDefaults: {},
 
     addDefaults: _({
       render: true,  // render view after adding
@@ -285,8 +302,7 @@
     }).defaults(Lookup.prototype.removeDefaults),
 
     constructor: function(options) {
-      Lookup.prototype.constructor.call(this);
-      options = options || {};
+      Lookup.prototype.constructor.call(this, {}, options);
 
       this._byModelId = {};
       this.models = this._ensureCollection(options.models);
@@ -321,9 +337,14 @@
     },
 
     _ensureModel: function(obj) {
-      return obj instanceof Backbone.Model
-        ? obj
-        : new this.models.model(obj || {});
+      if (obj instanceof Backbone.Model) { return obj; }
+
+      var modelType = this.models.model,
+          attrs = _(obj || {}).defaults(_(this).result('modelDefaults'));
+
+      return modelType.build
+        ? modelType.build(attrs)
+        : new modelType(attrs);
     },
 
     _ensureCollection: function(obj) {
@@ -362,7 +383,7 @@
       options = _(options || {}).defaults(this.addDefaults);
 
       var model = view.model;
-      if (model) {
+      if (model || options.addModel) {
         view.model = model = this._ensureModel(model);
         if (options.addModel) { this.models.add(model, {silent: true}); }
       }

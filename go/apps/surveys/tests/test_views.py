@@ -2,8 +2,6 @@ from datetime import date
 from zipfile import ZipFile
 from StringIO import StringIO
 
-from django.test.client import Client
-from django.core.urlresolvers import reverse
 from django.core import mail
 from django.utils.unittest import skip
 
@@ -11,7 +9,6 @@ from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.apps.surveys.view_definition import get_poll_config
 from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
-from go.base.utils import get_conversation_view_definition
 
 from mock import patch
 
@@ -19,34 +16,16 @@ from mock import patch
 class SurveyTestCase(DjangoGoApplicationTestCase):
 
     TEST_CONVERSATION_TYPE = u'survey'
+    TEST_CHANNEL_METADATA = {
+        "supports": {
+            "generic_sends": True,
+        },
+    }
 
     def setUp(self):
         super(SurveyTestCase, self).setUp()
-        self.setup_riak_fixtures()
-        self.client = Client()
-        self.client.login(username='username', password='password')
         self.patch_settings(
             VXPOLLS_REDIS_CONFIG=self._persist_config['redis_manager'])
-
-    def get_view_url(self, view, conv_key=None):
-        if conv_key is None:
-            conv_key = self.conv_key
-        view_def = get_conversation_view_definition(
-            self.TEST_CONVERSATION_TYPE)
-        return view_def.get_view_url(view, conversation_key=conv_key)
-
-    def get_new_view_url(self):
-        return reverse('conversations:new_conversation')
-
-    def get_action_view_url(self, action_name, conv_key=None):
-        if conv_key is None:
-            conv_key = self.conv_key
-        return reverse('conversations:conversation_action', kwargs={
-            'conversation_key': conv_key, 'action_name': action_name})
-
-    def get_wrapped_conv(self):
-        conv = self.conv_store.get_conversation_by_key(self.conv_key)
-        return self.user_api.wrap_conversation(conv)
 
     def create_poll(self, conversation, **kwargs):
         poll_id = 'poll-%s' % (conversation.key,)
@@ -54,38 +33,16 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         config.update(kwargs)
         return pm, pm.register(poll_id, config)
 
-    def run_new_conversation(self, selected_option, pool, tag):
-        self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        # post the form
-        response = self.client.post(self.get_new_view_url(), {
-            'name': 'conversation name',
-            'type': self.TEST_CONVERSATION_TYPE,
-        })
-        self.assertEqual(len(self.conv_store.list_conversations()), 2)
-        conv = self.get_latest_conversation()
-        # self.assertEqual(conv.delivery_class, 'sms')
-        # self.assertEqual(conv.delivery_tag_pool, pool)
-        # self.assertEqual(conv.delivery_tag, tag)
-        self.assertRedirects(response, self.get_view_url('show', conv.key))
-
     def test_new_conversation(self):
-        """test the creation of a new conversation"""
-        self.run_new_conversation('longcode:', 'longcode', None)
-
-    def test_new_conversation_with_user_selected_tags(self):
-        tp_meta = self.api.tpm.get_metadata('longcode')
-        tp_meta['user_selects_tag'] = True
-        self.api.tpm.set_metadata('longcode', tp_meta)
-        self.run_new_conversation('longcode:default10001', 'longcode',
-                                  'default10001')
+        self.add_app_permission(u'go.apps.surveys')
+        self.assertEqual(len(self.conv_store.list_conversations()), 0)
+        response = self.post_new_conversation()
+        self.assertEqual(len(self.conv_store.list_conversations()), 1)
+        conv = self.get_latest_conversation()
+        self.assertRedirects(response, self.get_view_url('edit', conv.key))
 
     def test_stop(self):
-        """
-        Test ending the conversation
-        """
-        conversation = self.get_wrapped_conv()
-        conversation.set_status_started()
-        conversation.save()
+        self.setup_conversation(started=True)
         response = self.client.post(self.get_view_url('stop'), follow=True)
         self.assertRedirects(response, self.get_view_url('show'))
         [msg] = response.context['messages']
@@ -94,39 +51,62 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(conversation.stopping())
 
     def test_action_send_survey_get(self):
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
         response = self.client.get(self.get_action_view_url('send_survey'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
         self.assertEqual([], self.get_api_commands_sent())
 
     def test_action_send_survey_post(self):
-        # Start the conversation
-        self.client.post(self.get_view_url('start'))
-        self.assertEqual(1, len(self.get_api_commands_sent()))
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
         response = self.client.post(
-            self.get_action_view_url('send_survey'), {})
+            self.get_action_view_url('send_survey'), {}, follow=True)
         self.assertRedirects(response, self.get_view_url('show'))
-        [bulk_send_cmd] = self.get_api_commands_sent()
-        conversation = self.user_api.get_wrapped_conversation(self.conv_key)
-        self.assertEqual(bulk_send_cmd, VumiApiCommand.command(
+        [send_survey_cmd] = self.get_api_commands_sent()
+        conversation = self.get_wrapped_conv()
+        self.assertEqual(send_survey_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
             'send_survey',
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.get_batches()[0].key, msg_options={},
+            delivery_class=conversation.delivery_class,
             is_client_initiated=False))
 
-    @skip("The new views don't handle this kind of thing very well yet.")
-    def test_action_send_survey_fails(self):
-        """
-        Test failure to send messages
-        """
-        self.acquire_all_longcode_tags()
-        response = self.client.post(self.get_view_url('start'), follow=True)
-        self.assertRedirects(response, self.get_view_url('start'))
-        [] = self.get_api_commands_sent()
+    def test_action_send_survey_no_group(self):
+        self.setup_conversation(started=True)
+        response = self.client.post(
+            self.get_action_view_url('send_survey'), {}, follow=True)
+        self.assertRedirects(response, self.get_view_url('show'))
         [msg] = response.context['messages']
-        self.assertEqual(str(msg), "No spare messaging tags.")
+        self.assertEqual(
+            str(msg), "Action disabled: This action needs a contact group.")
+        self.assertEqual([], self.get_api_commands_sent())
+
+    def test_action_send_survey_not_running(self):
+        self.setup_conversation(with_group=True)
+        response = self.client.post(
+            self.get_action_view_url('send_survey'), {}, follow=True)
+        self.assertRedirects(response, self.get_view_url('show'))
+        [msg] = response.context['messages']
+        self.assertEqual(
+            str(msg),
+            "Action disabled: This action needs a running conversation.")
+        self.assertEqual([], self.get_api_commands_sent())
+
+    def test_action_send_survey_no_channel(self):
+        self.setup_conversation(started=True, with_group=True)
+        response = self.client.post(
+            self.get_action_view_url('send_survey'), {}, follow=True)
+        self.assertRedirects(response, self.get_view_url('show'))
+        [msg] = response.context['messages']
+        self.assertEqual(
+            str(msg),
+            "Action disabled: This action needs channels capable"
+            " of sending messages attached to this conversation.")
+        self.assertEqual([], self.get_api_commands_sent())
 
     @skip("The new views don't have this yet.")
     def test_group_selection(self):
@@ -142,13 +122,32 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         """
         Test the start conversation view
         """
+        self.setup_conversation()
         response = self.client.post(self.get_view_url('start'))
         self.assertRedirects(response, self.get_view_url('show'))
 
         conversation = self.get_wrapped_conv()
         [start_cmd] = self.get_api_commands_sent()
         [batch] = conversation.get_batches()
-        [tag] = list(batch.tags)
+        self.assertEqual([], list(batch.tags))
+
+        self.assertEqual(start_cmd, VumiApiCommand.command(
+            '%s_application' % (conversation.conversation_type,), 'start',
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key))
+
+    def test_start_with_group(self):
+        """
+        Test the start conversation view
+        """
+        self.setup_conversation(with_group=True, with_contact=True)
+        response = self.client.post(self.get_view_url('start'))
+        self.assertRedirects(response, self.get_view_url('show'))
+
+        conversation = self.get_wrapped_conv()
+        [start_cmd] = self.get_api_commands_sent()
+        [batch] = conversation.get_batches()
+        self.assertEqual([], list(batch.tags))
         [contact] = self.get_contacts_for_conversation(conversation)
 
         self.assertEqual(start_cmd, VumiApiCommand.command(
@@ -156,58 +155,38 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key))
 
-    def test_show(self):
+    def test_show_stopped(self):
         """
         Test showing the conversation
         """
+        self.setup_conversation()
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')
+        self.assertNotContains(
+            response, self.get_action_view_url('send_survey'))
+
+    def test_show_running(self):
+        """
+        Test showing the conversation
+        """
+        self.setup_conversation(started=True, with_group=True,
+                                with_channel=True)
+        response = self.client.get(self.get_view_url('show'))
+        conversation = response.context[0].get('conversation')
+        self.assertEqual(conversation.name, 'Test Conversation')
+        self.assertContains(response, self.get_action_view_url('send_survey'))
 
     def test_edit(self):
-        response = self.client.post(self.get_view_url('edit'), {
-            'questions-TOTAL_FORMS': 1,
-            'questions-INITIAL_FORMS': 0,
-            'questions-MAX_NUM_FORMS': '',
-            'questions-0-copy': 'What is your favorite music?',
-            'questions-0-label': 'favorite music',
-            'questions-0-valid_responses': 'rock, jazz, techno',
-            'completed_response-TOTAL_FORMS': 0,
-            'completed_response-INITIAL_FORMS': 0,
-            'completed_response-MAX_NUM_FORMS': '',
-        })
-        self.assertRedirects(response, self.get_view_url('show'))
-        poll_id = 'poll-%s' % (self.conv_key,)
-        pm, config = get_poll_config(poll_id)
-        [question] = config['questions']
-        self.assertEqual(question['copy'], 'What is your favorite music?')
-        self.assertEqual(question['valid_responses'], [
-            'rock', 'jazz', 'techno'])
-        self.assertEqual(question['label'], 'favorite music')
-
-    def test_edit_continue_editing(self):
-        response = self.client.post(self.get_view_url('edit'), {
-            'questions-TOTAL_FORMS': 1,
-            'questions-INITIAL_FORMS': 0,
-            'questions-MAX_NUM_FORMS': '',
-            'questions-0-copy': 'What is your favorite music?',
-            'questions-0-label': 'favorite music',
-            'questions-0-valid_responses': 'rock, jazz, techno',
-            'completed_response-TOTAL_FORMS': 0,
-            'completed_response-INITIAL_FORMS': 0,
-            'completed_response-MAX_NUM_FORMS': '',
-            '_save_contents': 1
-        })
-        self.assertRedirects(response, self.get_view_url('edit'))
-        poll_id = 'poll-%s' % (self.conv_key,)
-        pm, config = get_poll_config(poll_id)
-        [question] = config['questions']
-        self.assertEqual(question['copy'], 'What is your favorite music?')
-        self.assertEqual(question['valid_responses'], [
-            'rock', 'jazz', 'techno'])
-        self.assertEqual(question['label'], 'favorite music')
+        self.setup_conversation()
+        response = self.client.get(self.get_view_url('edit'))
+        conversation = response.context[0].get('conversation')
+        self.assertEqual(conversation.name, 'Test Conversation')
+        self.assertContains(response, 'Test Conversation')
+        self.assertContains(response, 'diagram')
 
     def test_export_user_data(self):
+        self.setup_conversation()
         pm, poll = self.create_poll(self.conversation, questions=[{
                 'copy': 'question-1',
                 'label': 'label-1',
@@ -229,43 +208,6 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(lines[0], 'user_id,user_timestamp,label-1,label-2')
         self.assertTrue(lines[1].startswith('user-1'))
         self.assertTrue(lines[1].endswith(',answer 1,answer 2'))
-
-    def test_aggregates(self):
-        self.put_sample_messages_in_conversation(
-            self.user_api, self.conv_key, 10, start_date=date(2012, 1, 1),
-            time_multiplier=12)
-        response = self.client.get(self.get_view_url('aggregates'),
-                                   {'direction': 'inbound'})
-        self.assertEqual(response.content, '\r\n'.join([
-            '2011-12-28,2',
-            '2011-12-29,2',
-            '2011-12-30,2',
-            '2011-12-31,2',
-            '2012-01-01,2',
-            '',  # csv ends with a blank line
-        ]))
-
-    def test_export_messages(self):
-        self.put_sample_messages_in_conversation(
-            self.user_api, self.conv_key, 10, start_date=date(2012, 1, 1),
-            time_multiplier=12)
-        response = self.client.post(self.get_view_url('show'), {
-            '_export_conversation_messages': True,
-        })
-        self.assertRedirects(response, self.get_view_url('show'))
-        [email] = mail.outbox
-        self.assertEqual(email.recipients(), [self.user.email])
-        self.assertTrue(self.conversation.name in email.subject)
-        self.assertTrue(self.conversation.name in email.body)
-        [(file_name, contents, mime_type)] = email.attachments
-        self.assertEqual(file_name, 'messages-export.zip')
-
-        zipfile = ZipFile(StringIO(contents), 'r')
-        csv_contents = zipfile.open('messages-export.csv', 'r').read()
-
-        # 1 header, 10 sent, 10 received, 1 trailing newline == 22
-        self.assertEqual(22, len(csv_contents.split('\n')))
-        self.assertEqual(mime_type, 'application/zip')
 
     @skip("The new views don't have this.")
     @patch('go.base.message_store_client.MatchResult')
@@ -321,9 +263,44 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(len(response2.context['message_page'].object_list),
             10)
 
+    def test_aggregates(self):
+        self.setup_conversation(started=True)
+        self.add_messages_to_conv(
+            5, start_date=date(2012, 1, 1), time_multiplier=12)
+        response = self.client.get(self.get_view_url('aggregates'),
+                                   {'direction': 'inbound'})
+        self.assertEqual(response.content, '\r\n'.join([
+            '2011-12-30,1',
+            '2011-12-31,2',
+            '2012-01-01,2',
+            '',  # csv ends with a blank line
+        ]))
+
+    def test_export_messages(self):
+        self.setup_conversation(started=True)
+        self.add_messages_to_conv(
+            5, start_date=date(2012, 1, 1), time_multiplier=12, reply=True)
+        response = self.client.post(self.get_view_url('show'), {
+            '_export_conversation_messages': True,
+        })
+        self.assertRedirects(response, self.get_view_url('show'))
+        [email] = mail.outbox
+        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertTrue(self.conversation.name in email.subject)
+        self.assertTrue(self.conversation.name in email.body)
+        [(file_name, contents, mime_type)] = email.attachments
+        self.assertEqual(file_name, 'messages-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('messages-export.csv', 'r').read()
+
+        # 1 header, 5 sent, 5 received, 1 trailing newline == 12
+        self.assertEqual(12, len(csv_contents.split('\n')))
+        self.assertEqual(mime_type, 'application/zip')
+
     def test_send_one_off_reply(self):
-        self.put_sample_messages_in_conversation(self.user_api,
-                                                    self.conv_key, 1)
+        self.setup_conversation(started=True)
+        self.add_messages_to_conv(1)
         conversation = self.get_wrapped_conv()
         [msg] = conversation.received_messages()
         response = self.client.post(self.get_view_url('show'), {
@@ -334,10 +311,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         })
         self.assertRedirects(response, self.get_view_url('show'))
 
-        [start_cmd, hack_cmd, reply_to_cmd] = self.get_api_commands_sent()
-        [tag] = conversation.get_tags()
-        msg_options = conversation.make_message_options(tag)
-        msg_options['in_reply_to'] = msg['message_id']
+        [reply_to_cmd] = self.get_api_commands_sent()
         self.assertEqual(reply_to_cmd['worker_name'],
                          'survey_application')
         self.assertEqual(reply_to_cmd['command'], 'send_message')
@@ -346,5 +320,5 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             'conversation_key': conversation.key,
             'content': 'foo',
             'to_addr': msg['from_addr'],
-            'msg_options': msg_options,
+            'msg_options': {'in_reply_to': msg['message_id']},
         })

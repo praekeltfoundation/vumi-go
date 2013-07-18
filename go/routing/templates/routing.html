@@ -22,7 +22,7 @@
           <div class="span4 column-container">
             <span class="title">Channels</span>
             {# TODO Go to to new channel screen #}
-            <a href="" class="btn btn-primary new">+</a>
+            <a href="{% url 'channels:new_channel' %}" class="btn btn-primary new">+</a>
             <div class="column" id="channels"></div>
           </div>
 
@@ -36,7 +36,7 @@
           <div class="span4 column-container">
             <span class="title">Conversations</span>
             {# TODO Go to to new conversation screen #}
-            <a href="" class="btn btn-primary new">+</a>
+            <a href="{% url 'conversations:new_conversation' %}" class="btn btn-primary new">+</a>
             <div class="column" id="conversations"></div>
           </div>
       </div>
@@ -78,7 +78,7 @@ jsPlumb.ready(function() {
 
   $('#reset').click(function(e) {
       e.preventDefault();
-      diagram.model.fetch({reset: true});
+      diagram.model.set(modelData);
   });
 });
 {% endblock %}

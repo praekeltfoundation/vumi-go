@@ -3,6 +3,21 @@ from django import forms
 from bootstrap.forms import BootstrapForm
 
 
+class NewConversationForm(forms.Form):
+
+    name = forms.CharField(label="Conversation name", max_length=100)
+    description = forms.CharField(
+        label="Conversation description", required=False)
+
+    def __init__(self, user_api, *args, **kwargs):
+        super(NewConversationForm, self).__init__(*args, **kwargs)
+        type_choices = [(app['namespace'], app['display_name'])
+                        for app in user_api.applications().itervalues()]
+        self.fields['conversation_type'] = forms.ChoiceField(
+            label="Which kind of conversation would you like?",
+            choices=type_choices)
+
+
 class ConfirmConversationForm(BootstrapForm):
     token = forms.CharField(required=True, widget=forms.HiddenInput)
 

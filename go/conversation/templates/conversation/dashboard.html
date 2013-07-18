@@ -31,18 +31,25 @@
     <div class="row-fluid">
         <div class="span3 sidebar">
 
+            
+            <p>
+                <a href="{% url 'routing' %}" class="btn btn-primary">Configure channels (alpha)</a>
+            <p>
+            
+
             <ul class="nav nav-list">
+                
                 <li>
                     <a href="{% url 'conversations:index' %}">All campaigns</a>
                     <ul class="nav nav-list">
-                        <li><a href="{% url 'conversations:index' %}?conversation_status=running">Running Smoothly</a></li>
-                        <li><a href="{% url 'conversations:index' %}?conversation_status=finished">Offline</a></li>
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=running">Activated</a></li>
                         <!-- TODO: we don't have a backend service for this yet -->
                         <!--
                         <li><a href="#">Some problems</a></li>
                         <li><a href="#">Paused</a></li>
                         -->
-                        <li><a href="{% url 'conversations:index' %}?conversation_status=draft">Drafts</a></li>
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=draft">Deactivated</a></li>
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=finished">Archived</a></li>
                     </ul>
                 </li>
 
@@ -52,7 +59,6 @@
                 <!-- <li><a href="#">All Channels</a></li> -->
 
             </ul>
-
         </div>
         <div class="span9">
 
@@ -93,7 +99,7 @@
                                 <td>{{ conversation.created_at|naturaltime }}</td>
                                 <td>
                                     <a href="{% url 'conversations:incoming_list' conversation.key %}">Messages</a>
-                                    <a href="{% url 'todo' %}">Reports</a>
+                                    {# <a href="{% url 'todo' %}">Reports</a> #}
                                 </td>
                             </tr>
                             {% endfor %}

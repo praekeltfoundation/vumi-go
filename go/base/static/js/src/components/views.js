@@ -4,11 +4,13 @@
 
 (function(exports) {
   var utils = go.utils,
-      functor = utils.functor;
+      functor = utils.functor,
+      maybeByName = utils.maybeByName;
 
   // A view that can be uniquely identified by its `uuid` property.
   var UniqueView = Backbone.View.extend({
     constructor: function(options) {
+      options = options || {};
       Backbone.View.prototype.constructor.call(this, options);
 
       this.uuid = options.uuid || this.uuid || uuid.v4();
@@ -80,9 +82,124 @@
     }
   });
 
+  var ConfirmView = Backbone.View.extend({
+    className: 'modal hide fade in',
+
+    template: 'JST.components_confirm',
+
+    events: {
+      'click .ok': 'onOk',
+      'click .cancel': 'onCancel'
+    },
+
+    optional: false,
+    animated: true,
+
+    initialize: function(options) {
+      options = _(options || {}).defaults({
+        optional: this.optional,
+        animate: this.animated,
+        content: ''
+      });
+
+      this.dontShow = false;
+      this.content = options.content;
+      this.optional = options.optional;
+      this.animate(options.animate);
+
+      this.resetActionHandlers();
+    },
+
+    resetActionHandlers: function() {
+      this.off('ok');
+      this.off('cancel');
+
+      this.on('ok', this.resetActionHandlers, this);
+      this.on('cancel', this.resetActionHandlers, this);
+    },
+
+    animate: function(animated) {
+      if (animated) { this.$el.addClass('fade in'); }
+      else { this.$el.removeClass('fade in'); }
+    },
+
+    onOk: function() {
+      if (this.optional) {
+        this.dontShow = this.$('.dont-show').is(':checked');
+      }
+
+      this.trigger('ok');
+      this.hide();
+    },
+
+    onCancel: function() {
+      this.trigger('cancel');
+      this.hide();
+    },
+
+    show: function() {
+      if (this.dontShow) { this.trigger('ok'); }
+      else { this.render(); }
+      return this;
+    },
+
+    hide: function() {
+      this.$el.modal('hide');
+      return this;
+    },
+
+    render: function() {
+      this.$el
+        .appendTo($('body'))
+        .html(maybeByName(this.template)({self: this}))
+        .modal('show');
+
+      return this;
+    }
+  });
+
+  var TemplateView = Backbone.View.extend({
+    jst: null,
+
+    partials: {},
+
+    data: {},
+
+    initialize: function(options) {
+      if (options.data) { this.data = options.data; }
+
+      if (options.jst) { this.jst = options.jst; }
+      this.partials = _({}).extend(this.partials, options.partials || {});
+    },
+
+    renderPartial: function(name) {
+      var partial = this.partials[name],
+          $el;
+
+      if (partial instanceof Backbone.View) {
+        partial.render();
+        $el = partial.$el;
+      } else {
+        $el = $(maybeByName(partial)(_(this).result('data')));
+      }
+
+      $el.attr('data-partial', name);
+      this.$('[data-partial="' + name + '"]').replaceWith($el);
+      return this;
+    },
+
+    render: function() {
+      this.$el.html(maybeByName(this.jst)(_(this).result('data')));
+      _(this.partials).keys().forEach(this.renderPartial, this);
+      return this;
+    }
+  });
+
   _.extend(exports, {
     LabelView: LabelView,
     UniqueView: UniqueView,
+    ConfirmView: ConfirmView,
+    TemplateView: TemplateView,
     MessageTextView: MessageTextView
   });
 })(go.components.views = {});

@@ -65,6 +65,13 @@
       return _.defaults({of: this.$el}, _(this).result('labelOptions'));
     },
 
+    isConnected: function() {
+      var connections = this.state.diagram.connections;
+
+      return connections.findWhere({source: this})
+          || connections.findWhere({target: this});
+    },
+
     destroy: function() {
       this.$el.remove();
       return this;
@@ -205,7 +212,7 @@
   var FollowingEndpointView = PositionableEndpointView.extend({
     initialize: function(options) {
       PositionableEndpointView.prototype.initialize.call(this, options);
-      this.target = options.target;
+      this.target = functor(options.target || this.target);
       this.position = this.positioners[this.side];
     },
 
@@ -228,7 +235,7 @@
     },
 
     targetOffset: function() {
-      var $target = this.state.$(this.target);
+      var $target = this.state.$(this.target());
       return $target.position().top + ($target.outerHeight() / 2);
     }
   });

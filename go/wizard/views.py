@@ -1,3 +1,4 @@
+import json
 from urllib import urlencode
 
 from django.shortcuts import render, redirect
@@ -5,10 +6,15 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
 
-from go.wizard.forms import (
-    CampaignGeneralForm, CampaignConfigurationForm, CampaignBulkMessageForm,
-    CampaignSurveryInitiateForm)
-from go.base.utils import conversation_or_404
+from go.wizard.forms import Wizard1CreateForm, CampaignBulkMessageForm
+from go.conversation.forms import NewConversationForm
+from go.channel.forms import NewChannelForm
+from go.base.utils import get_conversation_view_definition, conversation_or_404
+from go.vumitools.account import RoutingTableHelper
+
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -19,37 +25,63 @@ def create(request, conversation_key=None):
     some kind of workflow.
 
     """
-
-    form_general = CampaignGeneralForm()
-    form_config_new = CampaignConfigurationForm()
+    wizard_form = Wizard1CreateForm()
+    conversation_form = NewConversationForm(request.user_api)
+    channel_form = NewChannelForm(request.user_api)
 
     conversation = None
     if conversation_key:
         conversation = conversation_or_404(request.user_api, conversation_key)
-        form_general = CampaignGeneralForm(data={'name': conversation.name})
+        conversation_form = NewConversationForm(
+            request.user_api, data={'name': conversation.name})
 
     if request.method == 'POST':
-        form = CampaignGeneralForm(request.POST)
-        if form.is_valid():
-            conversation_type = form.cleaned_data['type']
+        # TODO: Reuse new conversation/channel view logic here.
+        posted_conv_form = NewConversationForm(request.user_api, request.POST)
+        posted_chan_form = NewChannelForm(request.user_api, request.POST)
+        if posted_conv_form.is_valid() and posted_chan_form.is_valid():
+
+            # Create channel
+            chan_data = posted_chan_form.cleaned_data
+            pool, tag = chan_data['channel'].split(':')
+            if tag:
+                got_tag = request.user_api.acquire_specific_tag((pool, tag))
+            else:
+                got_tag = request.user_api.acquire_tag(pool)
+
+            # Create conversation
+            conv_data = posted_conv_form.cleaned_data
+            conversation_type = conv_data['conversation_type']
+
+            view_def = get_conversation_view_definition(conversation_type)
             conversation = request.user_api.new_conversation(
-                conversation_type, name=form.cleaned_data['name'],
-                description=u'', config={})
+                conversation_type, name=conv_data['name'],
+                description=conv_data['description'], config={},
+                extra_endpoints=list(view_def.extra_static_endpoints),
+            )
             messages.info(request, 'Conversation created successfully.')
 
-            action = request.POST.get('action')
-            if action == 'draft':
-                # save and go back to list.
-                return redirect('conversations:index')
+            # TODO: Factor this out into a helper of some kind.
+            user_account = request.user_api.get_user_account()
+            routing_table = request.user_api.get_routing_table(user_account)
+            rt_helper = RoutingTableHelper(routing_table)
+            rt_helper.add_oldstyle_conversation(conversation, got_tag)
+            user_account.save()
 
-            # TODO save and go to next step.
-            return redirect(
-                'wizard:edit', conversation_key=conversation.key)
+            if view_def.is_editable:
+                return redirect(view_def.get_view_url(
+                    'edit', conversation_key=conversation.key))
+            else:
+                return redirect(view_def.get_view_url(
+                    'show', conversation_key=conversation.key))
+        else:
+            logger.info("Validation failed: %r %r" % (
+                posted_conv_form.errors, posted_chan_form.errors))
 
     return render(request, 'wizard_views/wizard_1_create.html', {
-        'form_general': form_general,
-        'form_config_new': form_config_new,
-        'conversation_key': conversation_key,
+        'wizard_form': wizard_form,
+        'conversation_form': conversation_form,
+        'channel_form': channel_form,
         'conversation': conversation,
     })
 
@@ -60,27 +92,6 @@ def edit(request, conversation_key):
 
     to = 'wizard:edit_%s' % conversation.conversation_type
     return redirect(to, conversation_key=conversation.key)
-
-
-@login_required
-def edit_survey(request, conversation_key):
-    conversation = conversation_or_404(request.user_api, conversation_key)
-    initiate_form = CampaignSurveryInitiateForm()
-    if request.method == 'POST':
-        initiate_form = CampaignSurveryInitiateForm(request.POST)
-        action = request.POST.get('action')
-        if action == 'draft':
-            # save and go back to list.
-            return redirect('conversations:index')
-
-        # TODO save and go to next step.
-        return redirect('wizard:contacts', conversation_key=conversation.key)
-
-    return render(request, 'wizard_views/wizard_2_edit_survey.html', {
-        'conversation_key': conversation_key,
-        'conversation': conversation,
-        'initiate_form': initiate_form
-    })
 
 
 @login_required
@@ -127,8 +138,6 @@ def contacts(request, conversation_key):
                     key=lambda group: group.created_at,
                     reverse=True)
 
-
-    contact_store = request.user_api.contact_store
     selected_groups = list(group.key for group in conversation.get_groups())
 
     for group in groups:

@@ -138,12 +138,12 @@ class SequentialSendApplication(GoApplicationWorker):
         config = self.get_config_for_conversation(conv)
         messages = config.messages
         batch_id = conv.get_batch_keys()[0]
-        tag = (conv.c.delivery_tag_pool, conv.c.delivery_tag)
-        message_options = yield conv.make_message_options(tag)
+        message_options = {}
         conv.set_go_helper_metadata(
             message_options.setdefault('helper_metadata', {}))
 
-        for contacts in (yield conv.get_opted_in_contact_bunches()):
+        for contacts in (yield conv.get_opted_in_contact_bunches(
+                conv.delivery_class)):
             for contact in (yield contacts):
                 index_key = 'scheduled_message_index_%s' % (conv.key,)
                 message_index = int(contact.extra[index_key] or '0')

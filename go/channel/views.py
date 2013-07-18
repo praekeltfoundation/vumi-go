@@ -1,13 +1,65 @@
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django.contrib import messages
+import logging
 
-from go.channel.forms import CampaignConfigurationForm
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, Http404
+from django.contrib import messages
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+from go.channel.forms import NewChannelForm
+from go.channel.view_definition import ChannelViewDefinitionBase
+from go.vumitools.channel.models import CheapPlasticChannel
+
+
+CHANNELS_PER_PAGE = 12
+
+
+logger = logging.getLogger(__name__)
+
+
+class ChannelDefinition(object):
+    """Definition of channel lifecycle and possible actions.
+
+    TODO: Replace this standin with a real thing once we have actual channels.
+    """
+
+    channel_type = None
+    display_name = 'Channel'
+
+    def __init__(self, channel=None):
+        self.channel = channel
+
+
+class ChannelViewDefinition(ChannelViewDefinitionBase):
+    pass
+
+
+def get_channel_view_definition(channel):
+    # TODO: Replace this with a real thing when we have channel models.
+    chan_def = ChannelDefinition(channel)
+    return ChannelViewDefinition(chan_def)
 
 
 @login_required
 def index(request):
-    raise NotImplementedError("TODO: List channels")
+    # grab the fields from the GET request
+    user_api = request.user_api
+
+    channels = sorted(user_api.active_channels(), key=lambda ch: ch.name)
+
+    paginator = Paginator(channels, CHANNELS_PER_PAGE)
+    try:
+        page = paginator.page(request.GET.get('p', 1))
+    except PageNotAnInteger:
+        page = paginator.page(1)
+    except EmptyPage:
+        page = paginator.page(paginator.num_pages)
+
+    return render(request, 'channel/dashboard.html', {
+        'channels': channels,
+        'paginator': paginator,
+        'pagination_params': '',
+        'page': page,
+    })
 
 
 @login_required
@@ -17,7 +69,7 @@ def new_channel(request):
     """
 
     if request.method == 'POST':
-        form = CampaignConfigurationForm(request.user_api, request.POST)
+        form = NewChannelForm(request.user_api, request.POST)
         if form.is_valid():
             # TODO: Better validation?
             pool, tag = form.cleaned_data['channel'].split(':')
@@ -25,15 +77,40 @@ def new_channel(request):
                 got_tag = request.user_api.acquire_specific_tag((pool, tag))
             else:
                 got_tag = request.user_api.acquire_tag(pool)
-            # TODO: Acquire tag, etc.
-            messages.info(request, 'Acquired tag: %r.' % (got_tag,))
 
-            # TODO save and go to next step.
-            return redirect('conversations:index')
+            channel_key = u'%s:%s' % got_tag
+
+            messages.info(request, 'Acquired tag: %s.' % (channel_key,))
+
+            view_def = get_channel_view_definition(
+                CheapPlasticChannel(pool, tag, None))
+            return redirect(
+                view_def.get_view_url('show', channel_key=channel_key))
         else:
             raise ValueError(repr('Error: %s' % (form.errors,)))
 
-    form_config_new = CampaignConfigurationForm(request.user_api)
+    new_channel_form = NewChannelForm(request.user_api)
     return render(request, 'channel/new.html', {
-        'form_config_new': form_config_new,
+        'new_channel_form': new_channel_form,
     })
+
+
+def channel_or_404(user_api, channel_key):
+    # TODO: Replace this with a real thing when we have channel models.
+    pool, _, tag = channel_key.partition(':')
+    tags = user_api.list_endpoints()
+    if (pool, tag) not in tags:
+        raise Http404
+
+    tagpool_meta = user_api.api.tpm.get_metadata(pool)
+    return CheapPlasticChannel(pool, tag, tagpool_meta)
+
+
+@login_required
+def channel(request, channel_key, path_suffix):
+    # TODO: Rewrite this when we have a proper channel object.
+    # NOTE: We assume "channel_key" is "tagpool:tag" for now.
+    channel = channel_or_404(request.user_api, channel_key)
+    view_def = get_channel_view_definition(channel)
+    view = view_def.get_view(path_suffix)
+    return view(request, channel)

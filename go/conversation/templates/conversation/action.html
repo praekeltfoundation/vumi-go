@@ -1,39 +1,43 @@
 {% extends "app.html" %}
 
-{% block extra_header %}
-<link type="text/css" href="{{STATIC_URL}}css/smoothness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />
-<link type="text/css" href="{{STATIC_URL}}css/jquery-ui-timepicker.css" rel="stylesheet" />
+{% block content_title %}{{ action_display_name }}{% endblock %}
+
+{% block content_actions_right %}
+<div class="pull-right">
+    <button type="submit" name="submit" class="btn btn-primary" value="Save">Save</button>
+</div>
 {% endblock %}
 
 {% block content_main %}
-<form name="conversation_action" id="conversation_action" method="post" action="">
+
+{% if message %}
+<div class="row-fluid">
+    <div class="span12">
+        {% include "base/includes/messages.html" %}
+    </div>
+</div>
+{% endif %}
+
+<form name="conversation_action" class="indent" id="conversation_action" method="post" action="">
     {% csrf_token %}
-    <div class="row">
-        <div class="span12">
-            <div class="pull-right padtop">
-                <input type="submit" name="submit" class="btn btn-success" value="Next">
-            </div>
-            <div class="pull-right padtop" style="margin-right: 10px">
-                <input type="reset" class="btn" value="Cancel">
-            </div>
-            <div id="welcome">
-                <h1>{{action_display_name}}</h1>
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="span12">
-            {% include "base/includes/messages.html" %}
-        </div>
-    </div>
-    <div class="row">
+    <div class="row-fluid">
         <div class="span12">
             <div class="box shadow survey-box survey-questions">
-                <h3>Action</h3>
-                <br>
                 {{ form }}
             </div>
         </div>
     </div>
 </form>
+
+
+{% endblock %}
+
+{% block extramedia %}
+    {{ form.media }}
+{% endblock %}
+
+{% block ondomready %}
+    $('.actions .right button').on('click', function(e) {
+        $('#conversation_action').submit();
+    });    
 {% endblock %}

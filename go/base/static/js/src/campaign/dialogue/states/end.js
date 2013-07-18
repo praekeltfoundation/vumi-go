@@ -5,25 +5,36 @@
 
 (function(exports) {
   var states = go.campaign.dialogue.states,
+      EntryEndpointView = states.EntryEndpointView,
       DialogueStateView = states.DialogueStateView,
       DialogueStateEditView = states.DialogueStateEditView,
-      DialogueStatePreviewView = states.DialogueStatePreviewView;
+      DialogueStatePreviewView = states.DialogueStatePreviewView,
+      TextEditView = states.partials.TextEditView;
 
   var EndStateEditView = DialogueStateEditView.extend({
-    template: JST.campaign_dialogue_states_end_edit
+    bodyOptions: function() {
+      return {
+        jst: 'JST.campaign_dialogue_states_end_edit',
+        partials: {text: new TextEditView({mode: this})}
+      };
+    }
   });
 
   var EndStatePreviewView = DialogueStatePreviewView.extend({
-    template: JST.campaign_dialogue_states_end_preview
+    bodyOptions: function() {
+      return {
+        jst: 'JST.campaign_dialogue_states_end_preview'
+      };
+    }
   });
 
   var EndStateView = DialogueStateView.extend({
+    typeName: 'end',
+
     editModeType: EndStateEditView,
     previewModeType: EndStatePreviewView,
 
-    endpointSchema: [
-      {attr: 'entry_endpoint'},
-      {attr: 'choice_endpoints'}]
+    endpointSchema: [{attr: 'entry_endpoint', type: EntryEndpointView}]
   });
 
   _(exports).extend({

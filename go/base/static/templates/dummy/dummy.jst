@@ -1,0 +1,23 @@
+<!--
+
+If this is how your templates dir looks:
+
+```
+a/pirate/jedi/1.jst
+a/pirate/jedi/2.jst
+a/pirate/sith/1.jst
+```
+
+Django Pipelines will make these available as:
+
+```
+JST.jedi_1.jst
+JST.jedi_2.jst
+JST.sith_1.jst
+```
+
+In other words, it removes the common part of the path. Obviously, this causes
+problems when we add another file, say, `b/ninja/jedi/1.jst`, since the paths
+will all change. This is the reason I am here.
+
+-->

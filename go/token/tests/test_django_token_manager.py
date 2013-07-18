@@ -4,12 +4,12 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib import messages
 
-from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.base.tests.utils import VumiGoDjangoTestCase
 from go.vumitools.token_manager import TokenManager
 from go.token.django_token_manager import DjangoTokenManager
 
 
-class DjangoTokenManagerTestCase(DjangoGoApplicationTestCase):
+class DjangoTokenManagerTestCase(VumiGoDjangoTestCase):
 
     use_riak = False
 

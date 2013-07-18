@@ -44,6 +44,17 @@ describe("go.components.plumbing.states", function() {
         ['a1L1', 'a1L2', 'a1R1', 'a1R2']);
     });
 
+    describe(".isConnected", function() {
+      it("should determine whether the state is connected", function() {
+        diagram.connections.remove('b1R2-a2L2');
+
+        assert(diagram.states.get('a1').isConnected());
+        assert(diagram.states.get('b2').isConnected());
+        assert(!diagram.states.get('b1').isConnected());
+        assert(!diagram.states.get('a2').isConnected());
+      });
+    });
+
     describe(".render", function() {
       it("should add the state view to the diagram", function() {
         assert(_.isEmpty(diagram.$('[data-uuid="a1"]').get()));
