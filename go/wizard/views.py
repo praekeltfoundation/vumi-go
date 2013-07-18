@@ -87,49 +87,6 @@ def create(request, conversation_key=None):
 
 
 @login_required
-def edit(request, conversation_key):
-    conversation = conversation_or_404(request.user_api, conversation_key)
-
-    to = 'wizard:edit_%s' % conversation.conversation_type
-    return redirect(to, conversation_key=conversation.key)
-
-
-@login_required
-def edit_survey(request, conversation_key):
-    conversation = conversation_or_404(request.user_api, conversation_key)
-
-    # TODO get existing model data from api and bootstrap it to page load
-    model_data = json.dumps({'conversation_key': conversation_key})
-
-    return render(request, 'wizard_views/wizard_2_edit_survey.html', {
-        'conversation_key': conversation_key,
-        'conversation': conversation,
-        'model_data': model_data
-    })
-
-
-@login_required
-def edit_bulk_message(request, conversation_key):
-    """The simpler of the two messages."""
-    conversation = conversation_or_404(request.user_api, conversation_key)
-    form = CampaignBulkMessageForm()
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        if action == 'draft':
-            # save and go back to list.
-            return redirect('conversations:index')
-
-        # TODO save and go to next step.
-        return redirect('wizard:contacts', conversation_key=conversation.key)
-
-    return render(request, 'wizard_views/wizard_2_edit_bulk_message.html', {
-        'form': form,
-        'conversation': conversation,
-        'conversation_key': conversation_key
-    })
-
-
-@login_required
 def contacts(request, conversation_key):
     conversation = conversation_or_404(request.user_api, conversation_key)
     if request.method == 'POST':
