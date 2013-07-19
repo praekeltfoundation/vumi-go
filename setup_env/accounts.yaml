@@ -4,6 +4,7 @@ user1@example.org:
     last_name: One
     applications:
         - go.apps.bulk_message
+        - go.apps.dialogue
         - go.apps.surveys
         - go.apps.jsbox
         - go.apps.subscription
@@ -21,6 +22,7 @@ user2@example.org:
     last_name: Two
     applications:
         - go.apps.bulk_message
+        - go.apps.dialogue
         - go.apps.surveys
         - go.apps.jsbox
         - go.apps.subscription

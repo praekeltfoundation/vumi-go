@@ -36,6 +36,18 @@
 
 -
   key: conversation4
+  account: user2@example.org
+  conversation_type: dialogue
+  name: name
+  delivery_class: ussd
+  delivery_tag_pool: ussd_tagpool
+  delivery_tag: '*120*10003#'
+  config:
+    foo: bar
+    baz: zab
+
+-
+  key: conversation5
   start: true
   account: user1@example.org
   conversation_type: wikipedia_ussd
