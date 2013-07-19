@@ -2,9 +2,9 @@ from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 
 
-class SendSurveyAction(ConversationAction):
-    action_name = 'send_survey'
-    action_display_name = 'Send Survey'
+class SendDialogueAction(ConversationAction):
+    action_name = 'send_dialogue'
+    action_display_name = 'Send Dialogue'
 
     needs_confirmation = True
 
@@ -31,9 +31,9 @@ class DownloadUserDataAction(ConversationAction):
 
 
 class ConversationDefinition(ConversationDefinitionBase):
-    conversation_type = 'surveys'
+    conversation_type = 'dialogue'
 
     actions = (
-        SendSurveyAction,
+        SendDialogueAction,
         DownloadUserDataAction,
     )
