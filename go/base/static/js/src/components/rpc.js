@@ -18,7 +18,7 @@
     });
   };
 
-  var ajaxOptions = function(method, model, options) {
+  var ajaxOptions = function(method, model) {
     return {
       contentType: 'application/json; charset=utf-8',
       type: 'POST',
