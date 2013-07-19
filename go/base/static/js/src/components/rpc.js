@@ -28,7 +28,9 @@
   };
 
   var sync = function(method, model, options) {
-    options = _(options || {}).extend(ajaxOptions(method, model, options));
+    options = _({}).extend(
+      ajaxOptions(method, model, options),
+      options || {});
 
     var success = options.success;
     if (success) { options.success = function(resp) { success(resp.result); }; }
