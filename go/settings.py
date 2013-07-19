@@ -124,6 +124,7 @@ TEMPLATE_DIRS = (
     abspath("base", "templates"),
     abspath("contacts", "templates"),
     abspath("account", "templates"),
+    abspath("apps", "dialogue", "templates"),
     abspath("apps", "surveys", "templates"),
     abspath("apps", "multi_surveys", "templates"),
     abspath("apps", "jsbox", "templates"),
