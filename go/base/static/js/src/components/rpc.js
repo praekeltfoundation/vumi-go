@@ -27,13 +27,22 @@
     };
   };
 
+
   var sync = function(method, model, options) {
     options = _({}).extend(
       ajaxOptions(method, model, options),
       options || {});
 
-    var success = options.success;
-    if (success) { options.success = function(resp) { success(resp.result); }; }
+    var success = options.success,
+        error = options.error;
+
+    options.success = function(resp, textStatus, jqXHR) {
+      if (_.isNull(resp.result)) {
+        if (error) { error(jqXHR, 'error', resp.error); }
+      } else {
+        if (success) { success(resp.result, textStatus, jqXHR); }
+      }
+    };
 
     return Backbone.sync(method, model, options);
   };

@@ -49,6 +49,29 @@ describe("go.components.rpc", function() {
       server.assertRequest('r', [{foo: 'lerp', bar: 'larp'}]);
     });
 
+    it("should pass the rpc response's result the success callback",
+    function(done) {
+      var success = function(resp) {
+        assert.deepEqual(resp, {foo: 'lerp', bar: 'larp'});
+        done();
+      };
+
+      rpc.sync('read', model, {success: success});
+      server.respondWith({foo: 'lerp', bar: 'larp'});
+    });
+
+    it("should pass an rpc error response to the error callback",
+    function(done) {
+      var error = function(jqXHR, textStatus, errorThrown) {
+        assert.equal(textStatus, 'error');
+        assert.equal(errorThrown, 'aaah!');
+        done();
+      };
+
+      rpc.sync('read', model, {error: error});
+      server.rpcErrorWith('aaah!');
+    });
+
     describe("fetching", function() {
       it("should update the model using on the rpc response", function() {
         model.fetch();
