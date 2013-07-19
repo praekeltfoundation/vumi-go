@@ -1,4 +1,4 @@
-# -*- test-case-name: go.apps.surveys.tests.test_vumi_app -*-
+# -*- test-case-name: go.apps.dialogue.tests.test_vumi_app -*-
 
 from twisted.internet.defer import inlineCallbacks
 from vxpolls.example import PollApplication
@@ -10,14 +10,14 @@ from vumi import log
 from go.vumitools.app_worker import GoApplicationMixin, GoWorkerConfigMixin
 
 
-class SurveyConfig(PollApplication.CONFIG_CLASS, GoWorkerConfigMixin):
+class DialogueConfig(PollApplication.CONFIG_CLASS, GoWorkerConfigMixin):
     pass
 
 
-class SurveyApplication(PollApplication, GoApplicationMixin):
-    CONFIG_CLASS = SurveyConfig
+class DialogueApplication(PollApplication, GoApplicationMixin):
+    CONFIG_CLASS = DialogueConfig
 
-    worker_name = 'survey_application'
+    worker_name = 'dialogue_application'
 
     def validate_config(self):
         # vxpolls
@@ -63,7 +63,7 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
                 participant.set_label(key, value)
 
         yield self.pm.save_participant(poll_id, participant)
-        yield super(SurveyApplication, self).consume_user_message(message)
+        yield super(DialogueApplication, self).consume_user_message(message)
 
     def start_survey(self, to_addr, contact, conversation, **msg_options):
         log.debug('Starting %r -> %s' % (conversation, to_addr))
@@ -101,13 +101,14 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
             'transport_type': message['transport_type'],
             'participant': participant.dump(),
         })
-        yield super(SurveyApplication, self).end_session(participant, poll,
+        yield super(DialogueApplication, self).end_session(participant, poll,
             message)
 
     @inlineCallbacks
-    def process_command_send_survey(self, user_account_key, conversation_key,
-                                    batch_id, msg_options, is_client_initiated,
-                                    delivery_class, **extra_params):
+    def process_command_send_dialogue(self, user_account_key, conversation_key,
+                                      batch_id, msg_options,
+                                      is_client_initiated,
+                                      delivery_class, **extra_params):
 
         if is_client_initiated:
             log.debug('Conversation %r is client initiated, no need to notify '
@@ -167,4 +168,4 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
         # message without having horrible app-specific view logic.
         # TODO: Remove this when we've decoupled the various conversation
         # actions from the lifecycle.
-        return self.process_command_send_survey(*args, **kwargs)
+        return self.process_command_send_dialogue(*args, **kwargs)

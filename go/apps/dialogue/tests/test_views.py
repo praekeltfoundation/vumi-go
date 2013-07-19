@@ -7,15 +7,14 @@ from django.utils.unittest import skip
 
 from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
-from go.apps.surveys.view_definition import get_poll_config
 from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
 
 from mock import patch
 
 
-class SurveyTestCase(DjangoGoApplicationTestCase):
+class DialogueTestCase(DjangoGoApplicationTestCase):
 
-    TEST_CONVERSATION_TYPE = u'survey'
+    TEST_CONVERSATION_TYPE = u'dialogue'
     TEST_CHANNEL_METADATA = {
         "supports": {
             "generic_sends": True,
@@ -23,18 +22,12 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
     }
 
     def setUp(self):
-        super(SurveyTestCase, self).setUp()
+        super(DialogueTestCase, self).setUp()
         self.patch_settings(
             VXPOLLS_REDIS_CONFIG=self._persist_config['redis_manager'])
 
-    def create_poll(self, conversation, **kwargs):
-        poll_id = 'poll-%s' % (conversation.key,)
-        pm, config = get_poll_config(poll_id)
-        config.update(kwargs)
-        return pm, pm.register(poll_id, config)
-
     def test_new_conversation(self):
-        self.add_app_permission(u'go.apps.surveys')
+        self.add_app_permission(u'go.apps.dialogue')
         self.assertEqual(len(self.conv_store.list_conversations()), 0)
         response = self.post_new_conversation()
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
@@ -50,45 +43,45 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         conversation = self.get_wrapped_conv()
         self.assertTrue(conversation.stopping())
 
-    def test_action_send_survey_get(self):
+    def test_action_send_dialogue_get(self):
         self.setup_conversation(started=True, with_group=True,
                                 with_channel=True)
-        response = self.client.get(self.get_action_view_url('send_survey'))
+        response = self.client.get(self.get_action_view_url('send_dialogue'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
         self.assertEqual([], self.get_api_commands_sent())
 
-    def test_action_send_survey_post(self):
+    def test_action_send_dialogue_post(self):
         self.setup_conversation(started=True, with_group=True,
                                 with_channel=True)
         response = self.client.post(
-            self.get_action_view_url('send_survey'), {}, follow=True)
+            self.get_action_view_url('send_dialogue'), {}, follow=True)
         self.assertRedirects(response, self.get_view_url('show'))
-        [send_survey_cmd] = self.get_api_commands_sent()
+        [send_dialogue_cmd] = self.get_api_commands_sent()
         conversation = self.get_wrapped_conv()
-        self.assertEqual(send_survey_cmd, VumiApiCommand.command(
+        self.assertEqual(send_dialogue_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,),
-            'send_survey',
+            'send_dialogue',
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
             batch_id=conversation.get_batches()[0].key, msg_options={},
             delivery_class=conversation.delivery_class,
             is_client_initiated=False))
 
-    def test_action_send_survey_no_group(self):
+    def test_action_send_dialogue_no_group(self):
         self.setup_conversation(started=True)
         response = self.client.post(
-            self.get_action_view_url('send_survey'), {}, follow=True)
+            self.get_action_view_url('send_dialogue'), {}, follow=True)
         self.assertRedirects(response, self.get_view_url('show'))
         [msg] = response.context['messages']
         self.assertEqual(
             str(msg), "Action disabled: This action needs a contact group.")
         self.assertEqual([], self.get_api_commands_sent())
 
-    def test_action_send_survey_not_running(self):
+    def test_action_send_dialogue_not_running(self):
         self.setup_conversation(with_group=True)
         response = self.client.post(
-            self.get_action_view_url('send_survey'), {}, follow=True)
+            self.get_action_view_url('send_dialogue'), {}, follow=True)
         self.assertRedirects(response, self.get_view_url('show'))
         [msg] = response.context['messages']
         self.assertEqual(
@@ -96,10 +89,10 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             "Action disabled: This action needs a running conversation.")
         self.assertEqual([], self.get_api_commands_sent())
 
-    def test_action_send_survey_no_channel(self):
+    def test_action_send_dialogue_no_channel(self):
         self.setup_conversation(started=True, with_group=True)
         response = self.client.post(
-            self.get_action_view_url('send_survey'), {}, follow=True)
+            self.get_action_view_url('send_dialogue'), {}, follow=True)
         self.assertRedirects(response, self.get_view_url('show'))
         [msg] = response.context['messages']
         self.assertEqual(
@@ -164,7 +157,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')
         self.assertNotContains(
-            response, self.get_action_view_url('send_survey'))
+            response, self.get_action_view_url('send_dialogue'))
 
     def test_show_running(self):
         """
@@ -175,7 +168,8 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')
-        self.assertContains(response, self.get_action_view_url('send_survey'))
+        self.assertContains(response,
+                            self.get_action_view_url('send_dialogue'))
 
     def test_edit(self):
         self.setup_conversation()
@@ -187,27 +181,10 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
 
     def test_export_user_data(self):
         self.setup_conversation()
-        pm, poll = self.create_poll(self.conversation, questions=[{
-                'copy': 'question-1',
-                'label': 'label-1',
-            }, {
-                'copy': 'question-2',
-                'label': 'label-2',
-            }])
-
-        participant = pm.get_participant(poll.poll_id, 'user-1')
-        participant.has_unanswered_question = True
-        participant.set_last_question_index(0)
-        poll.submit_answer(participant, 'answer 1')
-        participant.set_last_question_index(1)
-        poll.submit_answer(participant, 'answer 2')
 
         response = self.client.get(self.get_view_url('user_data'))
         self.assertEqual(response['Content-Type'], 'application/csv')
-        lines = response.content.split('\r\n')
-        self.assertEqual(lines[0], 'user_id,user_timestamp,label-1,label-2')
-        self.assertTrue(lines[1].startswith('user-1'))
-        self.assertTrue(lines[1].endswith(',answer 1,answer 2'))
+        self.assertEqual(response.content, "TODO: write data export.")
 
     @skip("The new views don't have this.")
     @patch('go.base.message_store_client.MatchResult')
@@ -313,7 +290,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
 
         [reply_to_cmd] = self.get_api_commands_sent()
         self.assertEqual(reply_to_cmd['worker_name'],
-                         'survey_application')
+                         'dialogue_application')
         self.assertEqual(reply_to_cmd['command'], 'send_message')
         self.assertEqual(reply_to_cmd['kwargs']['command_data'], {
             'batch_id': conversation.get_latest_batch_key(),
