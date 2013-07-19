@@ -5,7 +5,7 @@ describe("go.components.rpc", function() {
       assertModelAttrs = testHelpers.assertModelAttrs,
       fakeServer = testHelpers.rpc.fakeServer;
 
-  describe.only(".sync", function() {
+  describe(".sync", function() {
     var ToyModel = Backbone.Model.extend({
       url: '/test',
       methods: {

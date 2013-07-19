@@ -59,8 +59,8 @@ var stateMachine = go.components.stateMachine,
 
   var CampaignRoutingModel = StateMachineModel.extend({
     methods: {
-      read: ['routing_table', 'campaign_id'],
-      update: ['update_routing_table', 'campaign_id', 'self']
+      read: {method: 'routing_table', params: ['campaign_id']},
+      update: {method: 'update_routing_table', params: ['campaign_id', 'self']}
     },
 
     idAttribute: 'campaign_id',
