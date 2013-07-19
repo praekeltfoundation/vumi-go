@@ -9,13 +9,9 @@ describe("go.components.models", function() {
     var Model = models.Model;
 
     var ToyModel = Model.extend({
-      rpc: new Backbone.Rpc({
-        namespace: '',
-        namespaceDelimiter: '',
-        exceptionHandler: function () {}
-      }),
-
-      methods: {read: ['thing', 'self']},
+      methods: {
+        read: {param: 'thing', params: ['self']}
+      },
 
       relations: [{
         type: Backbone.HasMany,
