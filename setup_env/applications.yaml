@@ -29,6 +29,24 @@ bulk_message:
     middleware:
       - logging_mw: vumi.middleware.logging.LoggingMiddleware
 
+dialogue:
+  class: go.apps.dialogue.vumi_app.DialogueApplication
+  config:
+    batch_size: 2
+    metrics_prefix: dialogue_application
+    redis_manager:
+      key_prefix: "vumigo"
+      db: 1
+    riak_manager:
+      bucket_prefix: vumigo.
+    send_to:
+      default:
+        transport_name: "invalid broken transport"
+    vxpolls:
+      prefix: vxpolls
+    middleware:
+      - logging_mw: vumi.middleware.logging.LoggingMiddleware
+
 survey:
   class: go.apps.surveys.vumi_app.SurveyApplication
   config:
