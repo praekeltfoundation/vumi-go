@@ -249,13 +249,17 @@ VUMI_INSTALLED_APPS = {
         'namespace': 'bulk_message',
         'display_name': 'Group Message',
     },
+    'go.apps.dialogue': {
+        'namespace': 'dialogue',
+        'display_name': 'Dialogue',
+    },
     'go.apps.surveys': {
         'namespace': 'survey',
-        'display_name': 'Dialogue',
+        'display_name': 'Old Surveys',
     },
     'go.apps.multi_surveys': {
         'namespace': 'multi_survey',
-        'display_name': 'Multiple Dialogues',
+        'display_name': 'Multiple Old Surveys',
     },
     'go.apps.opt_out': {
         'namespace': 'opt_out',
