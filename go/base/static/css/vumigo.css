@@ -389,6 +389,9 @@ button {
 .dialogue #diagram .choice.state .preview.mode .choices {
   text-align: left;
 }
+.channels.dashboard td:first-child {
+  width: 30px;
+}
 .channels.new .channel select {
   display: none;
 }
