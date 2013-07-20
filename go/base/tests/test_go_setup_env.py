@@ -169,6 +169,18 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
             'display_name': 'Pool 1'
         })
 
+    def test_tagpool_loading_clears_existing_pools(self):
+        self.tagpool.declare_tags([
+            ("pool1", "default0"), ("pool1", "default1")
+        ])
+        self.tagpool.acquire_specific_tag(("pool1", "default0"))
+        self.command.setup_tagpools(self.tagpool_file.name)
+        self.assertTrue('Tag pools created: pool1, pool2' in
+                            self.command.stdout.getvalue())
+        self.assertEqual(self.tagpool.inuse_tags("pool1"), [])
+        self.assertEqual(sorted(self.tagpool.free_tags("pool1")),
+                         [("pool1", "default%d" % i) for i in range(10)])
+
     def test_account_loading(self):
         self.command.setup_tagpools(self.tagpool_file.name)
         self.command.setup_accounts(self.account_file.name)
