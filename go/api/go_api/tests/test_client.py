@@ -10,10 +10,20 @@ from mock import patch
 
 class ClientTestCase(TestCase):
     @patch('requests.request')
-    def test_rpc(self, mock_post):
+    def test_request(self, mock_req):
+        client.request('123', 'lorem ipsum', 'GET')
+
+        mock_req.assert_called_with(
+            'GET',
+            settings.GO_API_URL,
+            auth=('session_id', '123'),
+            data='lorem ipsum')
+
+    @patch('requests.request')
+    def test_rpc(self, mock_req):
         client.rpc('123', 'do_something', ['foo', 'bar'], id='abc')
 
-        mock_post.assert_called_with(
+        mock_req.assert_called_with(
             'POST',
             settings.GO_API_URL,
             auth=('session_id', '123'),
