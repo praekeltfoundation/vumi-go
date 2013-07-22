@@ -441,14 +441,7 @@ class GoRouterConfig(BaseWorker.CONFIG_CLASS, GoWorkerConfigMixin):
 
 class GoRouterWorker(GoRouterMixin, BaseWorker):
     """
-    A base class for Vumi Go router worker.
-
-    Configuration parameters:
-
-    :type worker_name: str
-    :param worker_name:
-        The name of this worker, used for receiving control messages.
-
+    A base class for Vumi Go router workers.
     """
     CONFIG_CLASS = GoRouterConfig
 
@@ -459,14 +452,6 @@ class GoRouterWorker(GoRouterMixin, BaseWorker):
 
     def teardown_router(self):
         return self._go_teardown_worker()
-
-    def _publish_message(self, message, endpoint_name=None):
-        if not self.get_metadata_helper(message).get_conversation_info:
-            log.error(
-                "Conversation metadata missing for message for %s: %s" % (
-                    type(self).__name__, message))
-        return super(GoApplicationWorker, self)._publish_message(
-            message, endpoint_name)
 
     def setup_worker(self):
         d = maybeDeferred(self.setup_router)
@@ -494,14 +479,9 @@ class GoRouterWorker(GoRouterMixin, BaseWorker):
         self.publish_event(event, endpoint=endpoint)
 
     def _mkhandler(self, handler_func, connector_name):
-        def errback(f):
-            log.error("Error routing message for %s" % (connector_name,))
-            log.error(f)
-
         def handler(msg):
             d = self.get_config(msg)
             d.addCallback(handler_func, msg, connector_name)
-            d.addErrback(errback)
             return d
         return handler
 
