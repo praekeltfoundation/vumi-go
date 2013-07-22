@@ -294,6 +294,10 @@ class GoRouterWorkerTestMixin(GoWorkerTestMixin):
         self.add_router_md_to_msg(msg, router, endpoint)
         return self.dispatch_outbound(msg, 'ro_conn')
 
+    def dispatch_event_to_router(self, msg, router, endpoint=None):
+        self.add_router_md_to_msg(msg, router, endpoint)
+        return self.dispatch_event(msg, 'ri_conn')
+
 
 class AppWorkerTestCase(GoAppWorkerTestMixin, ApplicationTestCase):
 

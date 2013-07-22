@@ -3,8 +3,6 @@
 
 import re
 
-from twisted.internet.defer import inlineCallbacks
-
 from vumi import log
 from vumi.config import ConfigDict
 
@@ -25,25 +23,12 @@ class KeywordRouter(GoRouterWorker):
 
     worker_name = 'keyword_router'
 
-    def get_config(self, msg):
-        return self.get_message_config(msg)
-
     def lookup_target(self, config, msg):
         first_word = ((msg['content'] or '').strip().split() + [''])[0]
         for keyword_re, target in config.keyword_endpoint_mapping.iteritems():
             if re.match(keyword_re, first_word, re.IGNORECASE):
                 return target
         return 'default'
-
-    @inlineCallbacks
-    def handle_event(self, config, event, conn_name):
-        log.debug("Handling event: %s" % (event,))
-        message = yield self.find_message_for_event(event)
-        if message is None:
-            log.error('Unable to find message for %s, user_message_id: %s' % (
-                event['event_type'], event.get('user_message_id')))
-            return
-        # TODO: handle the event.
 
     def handle_inbound(self, config, msg, conn_name):
         log.debug("Handling inbound: %s" % (msg,))

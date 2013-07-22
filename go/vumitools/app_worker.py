@@ -388,9 +388,8 @@ class GoRouterMixin(GoWorkerMixin):
 
     @inlineCallbacks
     def get_message_config(self, msg):
-        if isinstance(msg, TransportEvent):
-            msg = yield self.find_message_for_event(msg)
-
+        # By the time we get an event here, the metadata has already been
+        # populated for us from the original message.
         msg_mdh = self.get_metadata_helper(msg)
         router = yield msg_mdh.get_router()
 
@@ -478,14 +477,21 @@ class GoRouterWorker(GoRouterMixin, BaseWorker):
         self.pause_connectors()
         return self.teardown_router()
 
+    def get_config(self, msg):
+        return self.get_message_config(msg)
+
     def handle_inbound(self, config, msg):
         raise NotImplementedError()
 
     def handle_outbound(self, config, msg):
         raise NotImplementedError()
 
-    def handle_event(self, config, event):
-        raise NotImplementedError()
+    def handle_event(self, config, event, conn_name):
+        log.debug("Handling event: %s" % (event,))
+        # To avoid circular import.
+        from go.vumitools.routing import RoutingMetadata
+        endpoint = RoutingMetadata(event).next_router_endpoint()
+        self.publish_event(event, endpoint=endpoint)
 
     def _mkhandler(self, handler_func, connector_name):
         def errback(f):
