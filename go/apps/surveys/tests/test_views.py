@@ -39,7 +39,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         response = self.post_new_conversation()
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
         conv = self.get_latest_conversation()
-        self.assertRedirects(response, self.get_view_url('show', conv.key))
+        self.assertRedirects(response, self.get_view_url('edit', conv.key))
 
     def test_stop(self):
         self.setup_conversation(started=True)

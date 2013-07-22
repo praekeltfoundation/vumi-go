@@ -4,31 +4,12 @@
 
 {% block content_extraclass %}channels{% endblock %}
 
-{% block content_breadcrumbs %}
-    {# TODO: Use bootstrap breadcrumbs #}
-    <a href="{% channel_screen channel %}">Details</a>
-{% endblock %}
-
-{% block content_actions_right %}
-    {# TODO: Put something sensible in here. #}
-{% endblock %}
-
 {% block content_main_header %}
     {% if messages %}
     <div class="row-fluid">
         <div class="span12">
-            {% include "base/includes/messages.html" %}
+        {% include "base/includes/messages.html" %}
         </div>
     </div>
     {% endif %}
-{% endblock %}
-
-{% block ondomready %}
-    $('.actions .right button').on('click', function(e) {
-        e.preventDefault();
-        var $form = $('form');
-        // append the action of the button, draft or save.
-        $form.prepend('<input type="hidden" name="action" value="' + $(this).attr('data-action') + '">');
-        $form.submit();
-    });
 {% endblock %}

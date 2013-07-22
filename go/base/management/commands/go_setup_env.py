@@ -228,6 +228,10 @@ class Command(BaseCommand):
             tags = (eval(listed_tags, {}, {})
                     if isinstance(listed_tags, basestring)
                     else listed_tags)
+            # release and remove old tags
+            for tag in self.tagpool.inuse_tags(pool_name):
+                self.tagpool.release_tag(tag)
+            self.tagpool.purge_pool(pool_name)
             self.tagpool.declare_tags([(pool_name, tag) for tag in tags])
             self.tagpool.set_metadata(pool_name, pool_data['metadata'])
 
