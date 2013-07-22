@@ -4,12 +4,12 @@
 
 {% block content_extraclass %}channels{% endblock %}
 
-{% block ondomready %}
-    $('.actions .right button').on('click', function(e) {
-        e.preventDefault();
-        var $form = $('form');
-        // append the action of the button, draft or save.
-        $form.prepend('<input type="hidden" name="action" value="' + $(this).attr('data-action') + '">');
-        $form.submit();
-    });
+{% block content_main_header %}
+    {% if messages %}
+    <div class="row-fluid">
+        <div class="span12">
+        {% include "base/includes/messages.html" %}
+        </div>
+    </div>
+    {% endif %}
 {% endblock %}
