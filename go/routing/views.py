@@ -3,12 +3,13 @@ import json
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 
-from go.api.go_api.client import rpc, GoApiError
+from go.api.go_api import client
+from go.api.go_api.client import GoApiError
 
 
 @login_required
 def routing(request):
-    r = rpc(
+    r = client.rpc(
         request.session.session_key,
         'routing_table',
         [request.user_api.user_account_key])

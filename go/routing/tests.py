@@ -14,14 +14,13 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
     # we're correctly injecting initial state into the template.
 
     use_riak = True
-    mock_rpc = MockRpc()
 
     def setUp(self):
         super(RoutingScreenTestCase, self).setUp()
         self.setup_api()
         self.setup_user_api()
         self.setup_client()
-        self.mock_rpc.setUp()
+        self.mock_rpc = MockRpc()
 
     def tearDown(self):
         super(RoutingScreenTestCase, self).tearDown()
@@ -57,7 +56,6 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
         for src, dst in routing:
             routing_table[u'routing_entries'].append(
                 RoutingEntryType.format_entry(mkconn(src), mkconn(dst)))
-
         return routing_table
 
     def check_model_data(self, response, routing_table):

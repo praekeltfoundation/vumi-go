@@ -6,7 +6,7 @@ from mock import Mock, patch
 
 
 class MockRpc(object):
-    def setUp(self):
+    def __init__(self):
         self.response = self.set_response()
         self.request = None
 
