@@ -1,0 +1,73 @@
+{% extends "app.html" %}
+{% load url from future %}
+
+
+{% block content_extraclass %}dashboard campaigns{% endblock %}
+
+{% block content_title %}Dashboard{% endblock %}
+
+{% block content_actions_left %}
+    <a href="{% url 'wizard:create' %}" class="btn btn-primary">New conversation</a>
+{% endblock %}
+
+{% block content_actions_right %}
+    <div class="table-form-view-buttons pull-left">
+        <button class="btn" data-action="copy" disabled="disabled">Copy</button>
+        <button class="btn" data-action="archive" disabled="disabled">Archive</button>
+        <button class="btn" data-action="edit" disabled="disabled">Edit</button>
+    </div>
+
+    <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
+        <input type="text" class="search-query" placeholder="Search" name="{{ search_form.query.name }}" value="{{ search_form.query.value|default:"" }}">
+        <button type="submit" class="btn" id="search-filter-btn">Search</button>
+    </form>
+{% endblock %}
+
+{% block content_main %}
+    <div class="row-fluid">
+        <div class="span3 sidebar">
+
+            
+            <p>
+                <a href="{% url 'routing' %}" class="btn btn-primary">Configure channels (alpha)</a>
+            <p>
+            
+
+            <ul class="nav nav-list">
+                
+                <li>
+                    <a href="{% url 'conversations:index' %}">All campaigns</a>
+                    <ul class="nav nav-list">
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=running">Activated</a></li>
+                        <!-- TODO: we don't have a backend service for this yet -->
+                        <!--
+                        <li><a href="#">Some problems</a></li>
+                        <li><a href="#">Paused</a></li>
+                        -->
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=draft">Deactivated</a></li>
+                        <li><a href="{% url 'conversations:index' %}?conversation_status=finished">Archived</a></li>
+                    </ul>
+                </li>
+
+
+                <li>
+                    <a href="{% url 'channels:index' %}">All channels</a>
+                </li>
+           </ul>
+        </div>
+        <div class="span9">
+
+            {% include "base/includes/messages.html" %}
+
+            {% block content_dashboard %}
+            {% endblock %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block ondomready %}
+    var tableFormView = new go.components.tables.TableFormView({
+        el: '.table-form-view',
+        actions: '.table-form-view-buttons button'
+    });
+{% endblock %}
