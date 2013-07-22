@@ -40,6 +40,14 @@
         req.success(response(req.data.id, data));
       },
 
+      rpcErrorWith: function(error) {
+        var req = requests.shift();
+
+        req.success(_({}).extend(
+          response(req.data.id, null),
+          {error: error}));
+      },
+
       errorWith: function(status, statusText, errorThrown) {
         var req = requests.shift(),
             jqXHR = {status: status, statusText: statusText};

@@ -54,9 +54,7 @@ describe("go.campaign.routing (models)", function() {
         model.fetch();
         server.respondWith(modelData);
 
-        // Backbone.rpc adds an extra `_rpcId` attribute which isn't part of
-        // our test model data. We need to exclude it for the assertion
-        assert.deepEqual(_(model.toJSON()).omit('_rpcId'), {
+        assert.deepEqual(model.toJSON(), {
           campaign_id: 'campaign1',
           channels: [{
             uuid: 'channel1',
