@@ -10,8 +10,16 @@
 {% endblock %}
 
 {% block content_actions_right %}
+  <div class="pull-left">
+    
+    <input type="checkbox" name="multiple_surveys" id="multiple_surveys">
+    Enable users to submit multiple surveys
+  </div>
+
+  <div class="pull-right">
     <a href="{% url 'conversations:index' %}">Cancel</a>
     <button class="btn btn-primary" data-action="save">Save</button>
+  </div>
 {% endblock %}
 
 {% block content_main %}
@@ -36,6 +44,9 @@
 
   $('.actions button[data-action="save"]').click(function(e) {
       e.preventDefault();
+
+      // TODO, we've got to inject the value of the multiple-survey
+      // button.
 
       // TODO uncomment once the screen is hooked up to the api
       //diagram.model.save();
