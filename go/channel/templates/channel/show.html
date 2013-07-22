@@ -2,17 +2,13 @@
 {% load url from future %}
 {% load channel_tags %}
 
-{% block content_title %}Channel{% endblock %}
-
-{% block content_extraclass %}channel summary{% endblock %}
+{% block content_title %}{{ channel.tag }}{% endblock %}
 
 {% block content_actions_right %}
-    {# TODO: Better URL than conversation index. #}
-    <a href="{% url 'conversations:index' %}">Cancel</a>
-    <form action="{% channel_screen channel 'release' %}" class="form-horizontal" method="post">
-        {% csrf_token %}
-        <input type="submit" class="btn btn-primary" name="start" value="Release">
-    </form>
+<form action="{% channel_screen channel 'release' %}" class="pull-right" method="post">
+    {% csrf_token %}
+    <input type="submit" class="btn btn-primary" name="start" value="Release">
+</form>
 {% endblock %}
 
 {% block content_main %}
@@ -20,13 +16,6 @@
     <div class="span7">
 
         <div class="sub-details">
-            <h4>
-                Details
-                <a href="{% channel_screen channel %}" class="btn btn-primary btn-mini">
-                    Edit
-                </a>
-            </h4>
-
             <p>
                 <h6>TAGPOOL</h6>
                 {{ channel.tagpool }}<br>
