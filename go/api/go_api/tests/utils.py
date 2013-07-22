@@ -12,9 +12,12 @@ class MockRpc(object):
 
         self.rpc_patcher = patch('go.api.go_api.client.rpc')
         self.mock_rpc = self.rpc_patcher.start()
-        self.mock_rpc.side_effect = self.set_request
+        self.mock_rpc.side_effect = self.stubbed_rpc
 
-    def set_request(self, session_id, method, params, id=None):
+    def tearDown(self):
+        self.rpc_patcher.stop()
+
+    def stubbed_rpc(self, session_id, method, params, id=None):
         self.request = {
             'session_id': session_id,
             'method': method,
@@ -23,9 +26,6 @@ class MockRpc(object):
         }
 
         return self.response
-
-    def tearDown(self):
-        self.rpc_patcher.stop()
 
     @staticmethod
     def make_response_data(result={}, id=None):
