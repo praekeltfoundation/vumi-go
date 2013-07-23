@@ -1,0 +1,37 @@
+{% extends "router/router_base.html" %}
+{% load url from future %}
+{% load router_tags %}
+
+{% block content_title %}{{ router.tag }}{% endblock %}
+
+{% block content_actions_right %}
+{% endblock %}
+
+{% block content_main %}
+<div class="row-fluid indent">
+    <div class="span7">
+
+        <div class="sub-details">
+            <h4>
+                Details
+                <a href="{% router_screen router %}" class="btn btn-primary btn-mini">
+                    Edit
+                </a>
+            </h4>
+
+            <p>
+                <h6>NAME</h6>
+                {{ router.name }}<br>
+            </p>
+            <p>
+                <h6>DESCRIPTION</h6>
+                {{ router.description }}<br>
+            </p>
+            <p>
+                <h6>TYPE</h6>
+                {{ router.router_type }}<br>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
