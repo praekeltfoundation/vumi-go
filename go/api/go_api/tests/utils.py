@@ -56,14 +56,3 @@ class MockRpc(object):
         response.status_code = code
         response.text = text
         self.response = response
-
-    def check_request(self, session_id, method, params, id=None):
-        self.mock_post.assert_called_once_with(
-            settings.GO_API_URL,
-            auth=('session_id', session_id),
-            data=json.dumps({
-                'jsonrpc': '2.0',
-                'id': id,
-                'params': params,
-                'method': method,
-            }))
