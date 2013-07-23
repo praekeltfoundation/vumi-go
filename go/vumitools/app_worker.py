@@ -372,9 +372,9 @@ class GoApplicationMixin(GoWorkerMixin):
 
     @inlineCallbacks
     def get_message_config(self, msg):
-        if isinstance(msg, TransportEvent):
-            msg = yield self.find_message_for_event(msg)
-
+        # By the time we get an event here, the metadata has already been
+        # populated for us from the original message by the routing table
+        # dispatcher.
         msg_mdh = self.get_metadata_helper(msg)
         conversation = yield msg_mdh.get_conversation()
 
@@ -389,7 +389,8 @@ class GoRouterMixin(GoWorkerMixin):
     @inlineCallbacks
     def get_message_config(self, msg):
         # By the time we get an event here, the metadata has already been
-        # populated for us from the original message.
+        # populated for us from the original message by the routing table
+        # dispatcher.
         msg_mdh = self.get_metadata_helper(msg)
         router = yield msg_mdh.get_router()
 
