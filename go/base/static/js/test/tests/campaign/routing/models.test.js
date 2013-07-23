@@ -3,7 +3,9 @@ describe("go.campaign.routing (models)", function() {
       modelData = routing.testHelpers.modelData;
 
   var testHelpers = go.testHelpers,
-      fakeServer = testHelpers.rpc.fakeServer;
+      response = testHelpers.rpc.response,
+      errorResponse = testHelpers.rpc.errorResponse,
+      assertRequest = testHelpers.rpc.assertRequest;
 
   afterEach(function() {
     go.testHelpers.unregisterModels();
@@ -15,7 +17,7 @@ describe("go.campaign.routing (models)", function() {
     var server;
 
     beforeEach(function() {
-      server = fakeServer('/api/v1/go/api');
+      server = sinon.fakeServer.create();
     });
 
     afterEach(function() {
@@ -23,14 +25,21 @@ describe("go.campaign.routing (models)", function() {
     });
 
     describe(".fetch", function() {
-      it("should issue the correct api request", function() {
+      it("should issue the correct api request", function(done) {
         var model = new CampaignRoutingModel({campaign_id: 'campaign1'});
+
+        server.respondWith(function(req) {
+          assertRequest(req, '/api/v1/go/api', 'routing_table', ['campaign1']);
+          done();
+        });
+
         model.fetch();
-        server.assertRequest('routing_table', ['campaign1']);
+        server.respond();
       });
 
       it("should ensure duplicate routing entries aren't made", function() {
         var model = new CampaignRoutingModel({campaign_id: 'campaign1'});
+        server.respondWith(response(modelData));
 
         var assertEntries = function() {
           var entries = model.get('routing_entries');
@@ -41,18 +50,20 @@ describe("go.campaign.routing (models)", function() {
         };
 
         model.fetch();
-        server.respondWith(modelData);
+        server.respond();
         assertEntries();
 
         model.fetch();
-        server.respondWith(modelData);
+        server.respond();
         assertEntries();
       });
 
       it("should update the model on the client side", function() {
         var model = new CampaignRoutingModel();
+        server.respondWith(response(modelData));
+
         model.fetch();
-        server.respondWith(modelData);
+        server.respond();
 
         assert.deepEqual(model.toJSON(), {
           campaign_id: 'campaign1',
@@ -121,10 +132,21 @@ describe("go.campaign.routing (models)", function() {
     });
 
     describe(".save", function() {
-      it("should issue the correct api request", function() {
+      it("should issue the correct api request", function(done) {
         var model = new CampaignRoutingModel(modelData);
+
+        server.respondWith(function(req) {
+          assertRequest(
+            req,
+            '/api/v1/go/api',
+            'update_routing_table',
+            ['campaign1', modelData]);
+
+          done();
+        });
+
         model.save();
-        server.assertRequest('update_routing_table', ['campaign1', modelData]);
+        server.respond();
       });
     });
   });
