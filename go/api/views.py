@@ -14,6 +14,15 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 @require_http_methods(['GET', 'POST'])
 def go_api_proxy(request):
+    """
+    Proxies client requests to the go api worker.
+
+    NOTE: This is a straight passthrough to the api, no extra behaviour should
+    be added.
+
+    NOTE: This proxy is a fallback for dev purposes only. A more sensible
+    proxying solution should be used in production (eg. haproxy).
+    """
     response = client.request(
         request.session.session_key,
         data=request.body,
