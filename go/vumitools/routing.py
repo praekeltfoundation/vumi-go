@@ -128,7 +128,9 @@ class RoutingMetadata(object):
         """
         hops = self.get_hops()
         outbound_hops = self.get_outbound_hops()
-        if not hops or not outbound_hops or len(hops) > len(outbound_hops) - 1:
+        if hops is None or outbound_hops is None:
+            return None
+        if len(hops) > len(outbound_hops) - 1:
             return None
         [outbound_src, outbound_dst] = outbound_hops[-len(hops) - 1]
         return outbound_dst[1]
