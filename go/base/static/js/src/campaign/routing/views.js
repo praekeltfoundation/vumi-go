@@ -235,7 +235,12 @@
 
     onSaveClick: function(e) {
       e.preventDefault();
-      this.diagram.model.save({}, {sessionId: this.sessionId});
+      this.diagram.model.save({}, {
+        sessionId: this.sessionId,
+        error: function() {
+          bootbox.alert("Something bad happened, changes couldn't be saved.");
+        }
+      });
     },
 
     onResetClick: function(e) {

@@ -269,11 +269,16 @@ describe("go.campaign.routing (views)", function() {
       });
 
       diagram.render();
+      bootbox.animate(false);
     });
 
     afterEach(function() {
       actions.remove();
       server.restore();
+
+      $('.bootbox')
+      .modal('hide')
+      .remove();
     });
 
     describe("when the save button is clicked", function() {
@@ -295,6 +300,21 @@ describe("go.campaign.routing (views)", function() {
 
         actions.$('[data-action=save]').click();
         server.respond();
+      });
+
+      it("should notify the user if an error occured", function() {
+        server.respondWith(errorResponse('Aaah!'));
+
+        // modify the diagram
+        assert(noElExists('.modal'));
+
+        actions.$('[data-action=save]').click();
+        server.respond();
+
+        assert(oneElExists('.modal'));
+        assert.include(
+          $('.modal').text(),
+          "Something bad happened, changes couldn't be save");
       });
     });
 
