@@ -3,7 +3,7 @@ describe("go.components.models", function() {
 
   var testHelpers = go.testHelpers,
       assertModelAttrs = testHelpers.assertModelAttrs,
-      fakeServer = testHelpers.rpc.fakeServer;
+      response = testHelpers.rpc.response;
 
   describe(".Model", function() {
     var Model = models.Model;
@@ -24,7 +24,8 @@ describe("go.components.models", function() {
         model;
 
     beforeEach(function() {
-      server = fakeServer('/api/v1/go/api');
+      server = sinon.fakeServer.create();
+
       model = new ToyModel({
         uuid: 'jimmy',
         a: 'red',
@@ -45,13 +46,15 @@ describe("go.components.models", function() {
       describe("when `reset` is `true`", function() {
         it("should reset to the server's state if the fetch was successful",
         function() {
-          model.fetch({reset: true});
-          server.respondWith({
+          server.respondWith(response({
             uuid: 'jimmy',
             a: 'blue',
             b: 'green',
             submodels: [{uuid: 'two', spoon: 'ham'}]
-          });
+          }));
+
+          model.fetch({reset: true});
+          server.respond();
 
           assertModelAttrs(model, {
             uuid: 'jimmy',
@@ -62,8 +65,10 @@ describe("go.components.models", function() {
         });
 
         it("shouldn't change if the fetch was unsuccessful", function() {
+          server.respondWith([400, {}, 'Error!']);
+
           model.fetch({reset: true});
-          server.errorWith(0, 'error', 'Error!');
+          server.respond();
 
           assertModelAttrs(model, {
             uuid: 'jimmy',
