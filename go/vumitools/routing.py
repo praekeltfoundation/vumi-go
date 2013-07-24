@@ -118,6 +118,23 @@ class RoutingMetadata(object):
             return None
         return outbound_src
 
+    def next_router_endpoint(self):
+        """Computes the next endpoint to dispatch this message to from a router
+        assuming this message is following the inverse of the hops contained in
+        the cached outbound hops list.
+
+        Returns the appropriate endpoint or `None` if no appropriate endpoint
+        can be determined.
+        """
+        hops = self.get_hops()
+        outbound_hops = self.get_outbound_hops()
+        if hops is None or outbound_hops is None:
+            return None
+        if len(hops) > len(outbound_hops) - 1:
+            return None
+        [outbound_src, outbound_dst] = outbound_hops[-len(hops) - 1]
+        return outbound_dst[1]
+
 
 class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
                                           GoWorkerConfigMixin):

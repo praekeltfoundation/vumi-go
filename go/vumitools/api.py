@@ -23,6 +23,7 @@ from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
 from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
+from go.vumitools.router import RouterStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
 from go.vumitools.router import RouterStore
@@ -140,6 +141,9 @@ class VumiUserApi(object):
         if conversation:
             returnValue(self.wrap_conversation(conversation))
 
+    def get_router(self, router_key):
+        return self.router_store.get_router_by_key(router_key)
+
     @Manager.calls_manager
     def finished_conversations(self):
         conv_store = self.conversation_store
@@ -231,6 +235,9 @@ class VumiUserApi(object):
 
     def new_conversation(self, *args, **kw):
         return self.conversation_store.new_conversation(*args, **kw)
+
+    def new_router(self, *args, **kw):
+        return self.router_store.new_router(*args, **kw)
 
     @Manager.calls_manager
     def list_conversation_endpoints(self):
