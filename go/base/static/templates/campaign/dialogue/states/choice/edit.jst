@@ -1,16 +1,20 @@
-<label>Your message</label>
+<label>Define the question</label>
 <div data-partial='text'></div>
 
-<label>Recipient's options</label>
+<label>Define the answers</label>
 <ol class='choices'>
 <% model.get('choice_endpoints').each(function(choice) { %>
   <li
    class='choice'
    data-endpoint-id="<%= choice.get('uuid') %>">
-   <input type='text' value="<%= choice.get('label') %>">
-   <button class='close remove'>x</button>
+    <input type='text' value="<%= choice.get('label') %>">
+
+    <i class="icon-info-sign"></i>
+    
+    <i class='close remove'>&times;</i>
+
   </li>
 <% }); %>
 </ol>
 
-<a class='btn btn-primary new-choice'>Add another answer</a>
+<button class='btn btn-primary new-choice'>Add another answer</button>

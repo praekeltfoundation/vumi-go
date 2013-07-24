@@ -1,3 +1,4 @@
+
 .dialogue {
   .actions {
     .sidebar {
@@ -6,7 +7,6 @@
   }
 
   #diagram {
-    @state-padding: 6px;
 
     * {
       z-index: 2;
@@ -55,7 +55,6 @@
 
       .item {
         margin: 40px 40px;
-        width: 200px;
         float: left;
       }
     }
@@ -73,35 +72,38 @@
       width: 220px;
       margin: 30px 40px;
       float: left;
+      text-align: left;
     }
 
     .state {
-      padding: @state-padding;
       position: relative;
       color: #2f3436;
       .user-select(none);
 
-      .titlebar {
-        font-size: 16px;
-        padding: 8px 6px;
-
-        // Set the margin to the reverse of the state's padding so the titlebar
-        // actually looks like a titlebar
-        margin: -@state-padding;
-
-        margin-bottom: 10px;
-
+      .titlebar, label {
         background: #b0b0b0;
+        height: 35px;
+        line-height: 35px;
+        font-size: 14px;
+        padding: 0 6px;
+        text-indent: 0;
+        font-weight: normal;
+        text-align: left;
+      }
+
+      .titlebar {
+        margin-top: -14px;
+        margin-bottom: 10px;
         .border-radius(5px);
 
-        .name {
-          font-weight: bold;
-          margin-bottom: 0;
-          width: 60px;
-        }
-
         .remove {
+          float: right;
+          height: 22px;
+          width: 20px;
+          margin-top: 6px;
+          padding-bottom: 4px;          
           color: #eee;
+          background: #000;
         }
       }
 
@@ -126,13 +128,21 @@
       }
 
       label, p {
+        cursor: default;
         color: #2f3436;
+      }
+
+      textarea, select, input {
+        width: 154px;
+        margin-left: 3px;
       }
 
       textarea {
         resize: none;
         max-width: 80%;
       }
+
+      
 
       p {
         text-align: left;
@@ -156,23 +166,75 @@
 
     .endpoint {
       z-index: 4;
-      background: #b0b0b0;
-      width: 14px;
-      height: 14px;
-      .border-radius(5px);
+      background: teal;
+      width: 15px;
+      height: 15px;
+      .border-radius(15px);
     }
 
     .endpoint:hover {
       cursor: pointer;
+
     }
+
+    
 
     .choice.state {
       .edit.mode {
+
+
+
         .choices {
+
+          font-size: 11px;
+          margin-left: 20px;
+
+
+          li { 
+            padding: 0; 
+            margin: 0 0 18px 0;
+          }
+          
           input {
-            width: 60%;
+            font-size: 11px;
+            min-width: 140px;
+            width: 140px;
             margin-bottom: 0;
           }
+          .close {
+            margin: 4px 10px 0 0;
+
+          }
+
+
+
+
+        }
+
+
+        .search_enabled {
+
+          input {
+            margin: 0;
+            margin-left: 3px;
+            padding: 0;
+            width: auto;
+            display: inline;
+          }
+
+          label {
+            margin: 0;
+            text-indent: 0;
+            padding: 0;
+            display: inline;
+            background: transparent;
+            font-size: 10px;
+            color: #666;
+          }
+        }
+
+        .new-choice {
+          margin-left: 25px;
         }
       }
 

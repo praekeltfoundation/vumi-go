@@ -286,7 +286,6 @@ button {
 }
 .dialogue #diagram .grid .item {
   margin: 40px 40px;
-  width: 200px;
   float: left;
 }
 .dialogue #diagram .add {
@@ -302,21 +301,29 @@ button {
   width: 220px;
   margin: 30px 40px;
   float: left;
+  text-align: left;
 }
 .dialogue #diagram .state {
-  padding: 6px;
   position: relative;
   color: #2f3436;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
 }
-.dialogue #diagram .state .titlebar {
-  font-size: 16px;
-  padding: 8px 6px;
-  margin: -6px;
-  margin-bottom: 10px;
+.dialogue #diagram .state .titlebar,
+.dialogue #diagram .state label {
   background: #b0b0b0;
+  height: 35px;
+  line-height: 35px;
+  font-size: 14px;
+  padding: 0 6px;
+  text-indent: 0;
+  font-weight: normal;
+  text-align: left;
+}
+.dialogue #diagram .state .titlebar {
+  margin-top: -14px;
+  margin-bottom: 10px;
   -webkit-border-radius: 5px;
   -webkit-background-clip: padding-box;
   -moz-border-radius: 5px;
@@ -324,13 +331,14 @@ button {
   border-radius: 5px;
   background-clip: padding-box;
 }
-.dialogue #diagram .state .titlebar .name {
-  font-weight: bold;
-  margin-bottom: 0;
-  width: 60px;
-}
 .dialogue #diagram .state .titlebar .remove {
+  float: right;
+  height: 22px;
+  width: 20px;
+  margin-top: 6px;
+  padding-bottom: 4px;
   color: #eee;
+  background: #000;
 }
 .dialogue #diagram .state .titlebar:hover {
   cursor: move;
@@ -346,7 +354,14 @@ button {
 }
 .dialogue #diagram .state label,
 .dialogue #diagram .state p {
+  cursor: default;
   color: #2f3436;
+}
+.dialogue #diagram .state textarea,
+.dialogue #diagram .state select,
+.dialogue #diagram .state input {
+  width: 154px;
+  margin-left: 3px;
 }
 .dialogue #diagram .state textarea {
   resize: none;
@@ -369,22 +384,54 @@ button {
 }
 .dialogue #diagram .endpoint {
   z-index: 4;
-  background: #b0b0b0;
-  width: 14px;
-  height: 14px;
-  -webkit-border-radius: 5px;
+  background: teal;
+  width: 15px;
+  height: 15px;
+  -webkit-border-radius: 15px;
   -webkit-background-clip: padding-box;
-  -moz-border-radius: 5px;
+  -moz-border-radius: 15px;
   -moz-background-clip: padding;
-  border-radius: 5px;
+  border-radius: 15px;
   background-clip: padding-box;
 }
 .dialogue #diagram .endpoint:hover {
   cursor: pointer;
 }
+.dialogue #diagram .choice.state .edit.mode .choices {
+  font-size: 11px;
+  margin-left: 20px;
+}
+.dialogue #diagram .choice.state .edit.mode .choices li {
+  padding: 0;
+  margin: 0 0 18px 0;
+}
 .dialogue #diagram .choice.state .edit.mode .choices input {
-  width: 60%;
+  font-size: 11px;
+  min-width: 140px;
+  width: 140px;
   margin-bottom: 0;
+}
+.dialogue #diagram .choice.state .edit.mode .choices .close {
+  margin: 4px 10px 0 0;
+}
+.dialogue #diagram .choice.state .edit.mode .search_enabled input {
+  margin: 0;
+  margin-left: 3px;
+  padding: 0;
+  width: auto;
+  display: inline;
+}
+.dialogue #diagram .choice.state .edit.mode .search_enabled label {
+  margin: 0;
+  text-indent: 0;
+  padding: 0;
+  display: inline;
+  background: transparent;
+  font-size: 10px;
+  color: #666;
+}
+.dialogue #diagram .choice.state .edit.mode .new-choice {
+  margin-left: 25px;
 }
 .dialogue #diagram .choice.state .preview.mode .choices {
   text-align: left;
