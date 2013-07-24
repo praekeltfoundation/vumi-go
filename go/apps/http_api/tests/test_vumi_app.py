@@ -338,7 +338,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                              concurrency_limit=-1)
         config = yield self.app.get_config(msg=None, ctxt=ctxt)
         self.assertTrue(
-            conv_resource.is_allowed(config, self.account.key))
+            (yield conv_resource.is_allowed(config, self.account.key)))
 
     @inlineCallbacks
     def test_backlog_on_connect(self):
