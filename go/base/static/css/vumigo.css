@@ -345,6 +345,7 @@ button {
 }
 .dialogue #diagram .state .edit.mode .actions {
   background: inherit;
+  margin: 10px 5px 0 0;
 }
 .dialogue #diagram .state .preview.mode .edit-switch {
   margin-left: 8px;
