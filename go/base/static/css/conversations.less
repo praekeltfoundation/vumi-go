@@ -84,7 +84,7 @@
         background: #b0b0b0;
         height: 35px;
         line-height: 35px;
-        font-size: 14px;
+        font-size: 11px;
         padding: 0 6px;
         text-indent: 0;
         font-weight: normal;
@@ -113,8 +113,13 @@
 
       .edit.mode {
         .actions {
+
           background: inherit;
           margin:10px 5px 0 0;
+
+          a {
+            font-size: 12px;
+          }
         }
       }
 
@@ -136,6 +141,7 @@
       textarea, select, input {
         width: 154px;
         margin-left: 3px;
+        font-size: 11px;
       }
 
       textarea {
@@ -156,7 +162,7 @@
       .hint {
         margin: 0;
         text-align: center;
-        font-size: 12px;
+        font-size: 10px;
         font-weight: bold;
       }
 
@@ -178,10 +184,39 @@
 
     }
 
+    .search_enabled {
+      display:none;
+
+      input {
+        margin: 0;
+        margin-left: 3px;
+        padding: 0;
+        width: auto;
+        display: inline;
+      }
+
+      label {
+        margin: 0;
+        text-indent: 0;
+        padding: 0;
+        display: inline;
+        background: transparent;
+        font-size: 10px;
+        color: #666;
+      }
+    }
+
+
+
     
 
     .choice.state {
       .edit.mode {
+
+
+        .search_enabled {
+          display:block;
+        }
 
 
 
@@ -197,7 +232,6 @@
           }
           
           input {
-            font-size: 11px;
             min-width: 140px;
             width: 140px;
             margin-bottom: 0;
@@ -213,29 +247,13 @@
         }
 
 
-        .search_enabled {
-
-          input {
-            margin: 0;
-            margin-left: 3px;
-            padding: 0;
-            width: auto;
-            display: inline;
-          }
-
-          label {
-            margin: 0;
-            text-indent: 0;
-            padding: 0;
-            display: inline;
-            background: transparent;
-            font-size: 10px;
-            color: #666;
-          }
-        }
+        
 
         .new-choice {
-          margin-left: 25px;
+          float: right;
+          font-size: 11px;
+          margin-right: 43px;
+
         }
       }
 

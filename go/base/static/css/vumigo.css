@@ -315,7 +315,7 @@ button {
   background: #b0b0b0;
   height: 35px;
   line-height: 35px;
-  font-size: 14px;
+  font-size: 11px;
   padding: 0 6px;
   text-indent: 0;
   font-weight: normal;
@@ -347,6 +347,9 @@ button {
   background: inherit;
   margin: 10px 5px 0 0;
 }
+.dialogue #diagram .state .edit.mode .actions a {
+  font-size: 12px;
+}
 .dialogue #diagram .state .preview.mode .edit-switch {
   margin-left: 8px;
 }
@@ -363,6 +366,7 @@ button {
 .dialogue #diagram .state input {
   width: 154px;
   margin-left: 3px;
+  font-size: 11px;
 }
 .dialogue #diagram .state textarea {
   resize: none;
@@ -377,7 +381,7 @@ button {
 .dialogue #diagram .state .hint {
   margin: 0;
   text-align: center;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: bold;
 }
 .dialogue #diagram .state .important {
@@ -398,6 +402,28 @@ button {
 .dialogue #diagram .endpoint:hover {
   cursor: pointer;
 }
+.dialogue #diagram .search_enabled {
+  display: none;
+}
+.dialogue #diagram .search_enabled input {
+  margin: 0;
+  margin-left: 3px;
+  padding: 0;
+  width: auto;
+  display: inline;
+}
+.dialogue #diagram .search_enabled label {
+  margin: 0;
+  text-indent: 0;
+  padding: 0;
+  display: inline;
+  background: transparent;
+  font-size: 10px;
+  color: #666;
+}
+.dialogue #diagram .choice.state .edit.mode .search_enabled {
+  display: block;
+}
 .dialogue #diagram .choice.state .edit.mode .choices {
   font-size: 11px;
   margin-left: 20px;
@@ -407,7 +433,6 @@ button {
   margin: 0 0 18px 0;
 }
 .dialogue #diagram .choice.state .edit.mode .choices input {
-  font-size: 11px;
   min-width: 140px;
   width: 140px;
   margin-bottom: 0;
@@ -415,24 +440,10 @@ button {
 .dialogue #diagram .choice.state .edit.mode .choices .close {
   margin: 4px 10px 0 0;
 }
-.dialogue #diagram .choice.state .edit.mode .search_enabled input {
-  margin: 0;
-  margin-left: 3px;
-  padding: 0;
-  width: auto;
-  display: inline;
-}
-.dialogue #diagram .choice.state .edit.mode .search_enabled label {
-  margin: 0;
-  text-indent: 0;
-  padding: 0;
-  display: inline;
-  background: transparent;
-  font-size: 10px;
-  color: #666;
-}
 .dialogue #diagram .choice.state .edit.mode .new-choice {
-  margin-left: 25px;
+  float: right;
+  font-size: 11px;
+  margin-right: 43px;
 }
 .dialogue #diagram .choice.state .preview.mode .choices {
   text-align: left;
