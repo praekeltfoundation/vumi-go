@@ -3,6 +3,7 @@ describe("go.campaign.routing (views)", function() {
 
   var setUp = routing.testHelpers.setUp,
       tearDown = routing.testHelpers.tearDown,
+      modelData = routing.testHelpers.modelData,
       newRoutingDiagram = routing.testHelpers.newRoutingDiagram;
 
   var plumbing = go.components.plumbing,
@@ -10,7 +11,10 @@ describe("go.campaign.routing (views)", function() {
 
   var testHelpers = go.testHelpers,
       noElExists = testHelpers.noElExists,
-      oneElExists = testHelpers.oneElExists;
+      oneElExists = testHelpers.oneElExists,
+      response = testHelpers.rpc.response,
+      errorResponse = testHelpers.rpc.errorResponse,
+      assertRequest = testHelpers.rpc.assertRequest;
 
   var diagram;
 
@@ -241,6 +245,69 @@ describe("go.campaign.routing (views)", function() {
           jsPlumb.getConnections(),
           [e1_e4.plumbConnection]
         );
+      });
+    });
+  });
+
+  describe(".RoutingActionsView", function() {
+    var RoutingActionsView = routing.RoutingActionsView;
+
+    var actions,
+        server;
+
+    beforeEach(function() {
+      server = sinon.fakeServer.create();
+
+      var $el = $('<div>')
+        .append($('<button>').attr('data-action', 'save'))
+        .append($('<button>').attr('data-action', 'reset'));
+
+      actions = new RoutingActionsView({
+        el: $el,
+        diagram: diagram,
+        sessionId: '123'
+      });
+
+      diagram.render();
+    });
+
+    afterEach(function() {
+      actions.remove();
+      server.restore();
+    });
+
+    describe("when the save button is clicked", function() {
+      it("should issue a save api call with the routing table changes",
+      function(done) {
+        server.respondWith(function(req) {
+          assertRequest(
+            req,
+            '/api/v1/go/api',
+            'update_routing_table',
+            ['campaign1', diagram.model.toJSON()]);
+
+          done();
+        });
+
+        // modify the diagram
+        diagram.connections.remove('endpoint1-endpoint4');
+        assert.notDeepEqual(diagram.model.toJSON(), modelData);
+
+        actions.$('[data-action=save]').click();
+        server.respond();
+      });
+    });
+
+    describe("when the reset button is clicked", function() {
+      it("should reset the routing table changes", function() {
+        assert.deepEqual(diagram.model.toJSON(), modelData);
+
+        // modify the diagram
+        diagram.connections.remove('endpoint1-endpoint4');
+        assert.notDeepEqual(diagram.model.toJSON(), modelData);
+
+        actions.$('[data-action=reset]').click();
+        assert.deepEqual(diagram.model.toJSON(), modelData);
       });
     });
   });

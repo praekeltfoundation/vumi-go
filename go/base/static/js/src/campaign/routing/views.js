@@ -221,8 +221,32 @@
     }
   });
 
+  var RoutingActionsView = Backbone.View.extend({
+    events: {
+      'click [data-action=save]': 'onSaveClick',
+      'click [data-action=reset]': 'onResetClick'
+    },
+
+    initialize: function(options) {
+      this.sessionId = options.sessionId;
+      this.diagram = options.diagram;
+      this.modelBackup = this.diagram.model.toJSON();
+    },
+
+    onSaveClick: function(e) {
+      e.preventDefault();
+      this.diagram.model.save({}, {sessionId: this.sessionId});
+    },
+
+    onResetClick: function(e) {
+      e.preventDefault();
+      this.diagram.model.set(this.modelBackup);
+    }
+  });
+
   _(exports).extend({
     RoutingDiagramView: RoutingDiagramView,
+    RoutingActionsView: RoutingActionsView,
 
     RoutingColumnView: RoutingColumnView,
     ChannelColumnView: ChannelColumnView,

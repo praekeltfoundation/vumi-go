@@ -12,8 +12,8 @@
     <a href="{% url 'conversations:index' %}">Cancel</a>
 
     {# TODO Send model data back to server when clicked #}
-    <a id="reset" href="" class="btn">Reset</a>
-    <a id="save" href="" class="btn btn-primary">Save</a>
+    <button data-action="reset" href="" class="btn">Reset</button>
+    <button data-action="save" href="" class="btn btn-primary">Save</button>
 {% endblock %}
 
 {% block content_main %}
@@ -50,7 +50,8 @@ jsPlumb.ready(function() {
   var routing = go.campaign.routing,
       modelData = {{ model_data|safe }},
       CampaignRoutingModel = routing.CampaignRoutingModel,
-      RoutingDiagramView = routing.RoutingDiagramView;
+      RoutingDiagramView = routing.RoutingDiagramView,
+      RoutingActionsView = routing.RoutingActionsView;
 
   jsPlumb.Defaults.Connector = ['StateMachine'];
 
@@ -69,16 +70,12 @@ jsPlumb.ready(function() {
     model: new CampaignRoutingModel(modelData)
   });
 
+  var actions = new RoutingActionsView({
+    el: '.actions',
+    diagram: diagram,
+    sessionId: "{{ session_id|safe }}"
+  });
+
   diagram.render();
-
-  $('#save').click(function(e) {
-      e.preventDefault();
-      diagram.model.save({}, {sessionId: "{{ session_id|safe }}"});
-  });
-
-  $('#reset').click(function(e) {
-      e.preventDefault();
-      diagram.model.set(modelData);
-  });
 });
 {% endblock %}
