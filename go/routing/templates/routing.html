@@ -73,7 +73,7 @@ jsPlumb.ready(function() {
 
   $('#save').click(function(e) {
       e.preventDefault();
-      diagram.model.save();
+      diagram.model.save({}, {sessionId: "{{ session_id|safe }}"});
   });
 
   $('#reset').click(function(e) {

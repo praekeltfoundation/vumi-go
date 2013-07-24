@@ -23,5 +23,6 @@ def routing(request):
     model_data.update(r.json['result'])
 
     return render(request, 'routing.html', {
+        'session_id': request.session.session_key,
         'model_data': json.dumps(model_data),
     })

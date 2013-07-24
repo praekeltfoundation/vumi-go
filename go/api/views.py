@@ -2,12 +2,8 @@ from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-
-from go.api.go_api import client
-
-
-import logging
-logger = logging.getLogger(__name__)
+from django.conf import settings
+import requests
 
 
 @login_required
@@ -23,10 +19,16 @@ def go_api_proxy(request):
     NOTE: This proxy is a fallback for dev purposes only. A more sensible
     proxying solution should be used in production (eg. haproxy).
     """
-    response = client.request(
-        request.session.session_key,
+
+    headers = {}
+    if 'HTTP_AUTHORIZATION' in request.META:
+        headers['Authorization'] = request.META['HTTP_AUTHORIZATION']
+
+    response = requests.request(
+        request.method,
+        settings.GO_API_URL,
         data=request.body,
-        method=request.method)
+        headers=headers)
 
     return HttpResponse(
         response.content,
