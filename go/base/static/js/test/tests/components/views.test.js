@@ -201,7 +201,8 @@ describe("go.components.views", function() {
   });
 
   describe(".TemplateView", function() {
-    var TemplateView = views.TemplateView;
+    var ViewCollection = go.components.structures.ViewCollection,
+        TemplateView = views.TemplateView;
 
     var ToyView = Backbone.View.extend({
       initialize: function(options) {
@@ -226,8 +227,6 @@ describe("go.components.views", function() {
       });
 
       it("should apply its view partials", function() {
-        var i = 0;
-
         var template = new TemplateView({
           jst: _.template([
             '<script data-partial="p1" type="partial"></script>',
@@ -250,8 +249,6 @@ describe("go.components.views", function() {
       });
 
       it("should apply its template function partials", function() {
-        var i = 0;
-
         var template = new TemplateView({
           jst: _.template([
             '<script data-partial="p1" type="partial"></script>',
@@ -270,6 +267,54 @@ describe("go.components.views", function() {
           template.$el.html(), [
           '<div data-partial="p1">I am the Eggman</div>',
           '<div data-partial="p2">They are the Eggmen</div>'
+        ].join(''));
+      });
+
+      it("should apply its view collection partials", function() {
+        var template = new TemplateView({
+          jst: _.template([
+            '<script data-partial="p"></script>',
+            '<script data-partial="p"></script>'
+          ].join('')),
+
+          partials: {
+            p: new ViewCollection({
+              type: ToyView,
+              views: [{thing: 'Walrus'}, {thing: 'Eggman'}]
+            })
+          }
+        });
+
+        template.render();
+
+        assert.equal(
+          template.$el.html(), [
+          '<div data-partial="p">Walrus</div>',
+          '<div data-partial="p">Eggman</div>'
+        ].join(''));
+      });
+
+      it("should apply its list partials", function() {
+        var template = new TemplateView({
+          jst: _.template([
+            '<script data-partial="p"></script>',
+            '<script data-partial="p"></script>'
+          ].join('')),
+
+          partials: {
+            p: [
+              new ToyView({thing: 'Walrus'}),
+              new ToyView({thing: 'Eggman'})
+            ]
+          }
+        });
+
+        template.render();
+
+        assert.equal(
+          template.$el.html(), [
+          '<div data-partial="p">Walrus</div>',
+          '<div data-partial="p">Eggman</div>'
         ].join(''));
       });
     });
