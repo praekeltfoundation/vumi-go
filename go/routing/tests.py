@@ -2,9 +2,9 @@ import json
 
 from django.core.urlresolvers import reverse
 
-from mock import patch
-
 from go.base.tests.utils import VumiGoDjangoTestCase
+from go.api.go_api.tests.utils import MockRpc
+
 from go.api.go_api.api_types import (
     ChannelType, ConversationType, RoutingEntryType)
 
@@ -20,10 +20,11 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
         self.setup_api()
         self.setup_user_api()
         self.setup_client()
+        self.mock_rpc = MockRpc()
 
-    def get_routing_table(self, user_account_key, session_id):
-        self.assertEqual(user_account_key, self.user_api.user_account_key)
-        return self.routing_table_api_response
+    def tearDown(self):
+        super(RoutingScreenTestCase, self).tearDown()
+        self.mock_rpc.tearDown()
 
     def make_routing_table(self, tags=(), conversations=(), routing=()):
         routing_table = {
@@ -40,6 +41,7 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
         for conv in conversations:
             routing_table[u'conversations'].append(
                 ConversationType.format_conversation(conv))
+
         # TODO: Routing blocks
 
         def mkconn(thing):
@@ -54,30 +56,46 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
         for src, dst in routing:
             routing_table[u'routing_entries'].append(
                 RoutingEntryType.format_entry(mkconn(src), mkconn(dst)))
+        return routing_table
 
-        return json.dumps(routing_table)
-
-    @patch('go.routing.views._get_routing_table')
-    def test_empty_routing(self, mock_routing):
-        mock_routing.side_effect = self.get_routing_table
-        self.routing_table_api_response = self.make_routing_table()
-        response = self.client.get(reverse('routing'))
+    def check_model_data(self, response, routing_table):
         model_data = response.context['model_data']
-        self.assertEqual(self.routing_table_api_response, model_data)
+
+        self.assertEqual(
+            json.loads(model_data),
+            json.loads(json.dumps(routing_table)))
+
         self.assertContains(response, model_data)
+
+    def check_api_request(self):
+        request = self.mock_rpc.request
+        self.assertEqual(request['method'], 'routing_table')
+        self.assertEqual(request['params'], [self.user_api.user_account_key])
+
+    def test_empty_routing(self):
+        routing_table = self.make_routing_table()
+
+        self.mock_rpc.set_response(result=routing_table)
+        response = self.client.get(reverse('routing'))
+
+        self.check_api_request()
+        self.check_model_data(response, routing_table)
         self.assertContains(response, reverse('channels:new_channel'))
         self.assertContains(
             response, reverse('conversations:new_conversation'))
 
-    @patch('go.routing.views._get_routing_table')
-    def test_non_empty_routing(self, mock_routing):
+    def test_non_empty_routing(self):
         conv = self.create_conversation()
-        mock_routing.side_effect = self.get_routing_table
         tag = (u'pool', u'tag')
-        self.routing_table_api_response = self.make_routing_table(
+        routing_table = self.make_routing_table(
             tags=[tag], conversations=[conv],
             routing=[(conv, tag), (tag, conv)])
+
+        self.mock_rpc.set_response(result=routing_table)
         response = self.client.get(reverse('routing'))
-        model_data = response.context['model_data']
-        self.assertEqual(self.routing_table_api_response, model_data)
-        self.assertContains(response, model_data)
+
+        self.check_api_request()
+        self.check_model_data(response, routing_table)
+        self.assertContains(response, reverse('channels:new_channel'))
+        self.assertContains(
+            response, reverse('conversations:new_conversation'))
