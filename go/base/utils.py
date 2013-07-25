@@ -151,10 +151,10 @@ def get_router_view_definition(router_type, router=None):
     # HACK: Assume 'namespace' is 'router_type'.
     for module, data in settings.VUMI_INSTALLED_ROUTERS.iteritems():
         if data['namespace'] == router_type:
-            app_pkg = __import__(module,
-                                 fromlist=['definition', 'view_definition'])
-            conv_def = app_pkg.definition.RouterDefinition(router)
-            if not hasattr(app_pkg, 'view_definition'):
+            router_pkg = __import__(module,
+                                    fromlist=['definition', 'view_definition'])
+            conv_def = router_pkg.definition.RouterDefinition(router)
+            if not hasattr(router_pkg, 'view_definition'):
                 return RouterViewDefinitionBase(conv_def)
-            return app_pkg.view_definition.RouterViewDefinition(conv_def)
+            return router_pkg.view_definition.RouterViewDefinition(conv_def)
     raise Exception("Can't find router_type: %s" % (router_type,))

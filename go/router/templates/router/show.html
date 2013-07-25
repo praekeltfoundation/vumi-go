@@ -5,6 +5,10 @@
 {% block content_title %}{{ router.tag }}{% endblock %}
 
 {% block content_actions_right %}
+<form action="{% router_screen router 'archive' %}" class="pull-right" method="post">
+    {% csrf_token %}
+    <input type="submit" class="btn btn-primary" name="start" value="Archive">
+</form>
 {% endblock %}
 
 {% block content_main %}

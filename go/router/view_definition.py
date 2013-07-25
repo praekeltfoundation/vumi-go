@@ -5,6 +5,7 @@ from django import forms
 from django.shortcuts import redirect, Http404
 from django.core.urlresolvers import reverse
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
 
 
 logger = logging.getLogger(__name__)
@@ -62,8 +63,13 @@ class ArchiveRouterView(RouterApiView):
     view_name = 'archive'
     path_suffix = 'archive/'
 
-    def post(self, request, conversation):
-        raise NotImplementedError('TODO')
+    def post(self, request, router):
+        router.set_status_finished()
+        router.save()
+        messages.add_message(
+            request, messages.INFO, '%s archived' % (
+                self.view_def.router_display_name,))
+        return redirect(reverse('routers:index'))
 
 
 class ShowRouterView(RouterTemplateView):
@@ -176,6 +182,7 @@ class RouterViewDefinitionBase(object):
 
     DEFAULT_ROUTER_VIEWS = (
         ShowRouterView,
+        ArchiveRouterView,
     )
 
     def __init__(self, router_def):
