@@ -21,21 +21,18 @@
       <div id="routing-diagram" class="row">
           <div class="span4 column-container">
             <span class="title">Channels</span>
-            {# TODO Go to to new channel screen #}
             <a href="{% url 'channels:new_channel' %}" class="btn btn-primary new">+</a>
             <div class="column" id="channels"></div>
           </div>
 
           <div class="span4 column-container">
             <span class="title">Routing Blocks</span>
-            {# TODO Go to to new routing block screen #}
-            <a href="" class="btn btn-primary new">+</a>
+            <a href="{% url 'routers:new_router' %}" class="btn btn-primary new">+</a>
             <div class="column" id="routing-blocks"></div>
           </div>
 
           <div class="span4 column-container">
             <span class="title">Conversations</span>
-            {# TODO Go to to new conversation screen #}
             <a href="{% url 'conversations:new_conversation' %}" class="btn btn-primary new">+</a>
             <div class="column" id="conversations"></div>
           </div>
