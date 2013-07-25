@@ -7,6 +7,8 @@
       functor = utils.functor,
       maybeByName = utils.maybeByName;
 
+  var ViewCollection = go.components.structures.ViewCollection;
+
   // A view that can be uniquely identified by its `uuid` property.
   var UniqueView = Backbone.View.extend({
     constructor: function(options) {
@@ -172,25 +174,37 @@
       this.partials = _({}).extend(this.partials, options.partials || {});
     },
 
-    renderPartial: function(name) {
-      var partial = this.partials[name],
-          $el;
-
+    renderPartial: function(partial) {
       if (partial instanceof Backbone.View) {
         partial.render();
-        $el = partial.$el;
+        return partial.$el;
       } else {
-        $el = $(maybeByName(partial)(_(this).result('data')));
+        console.log(partial);
+        return $(maybeByName(partial)(_(this).result('data')));
       }
+    },
 
-      $el.attr('data-partial', name);
-      this.$('[data-partial="' + name + '"]').replaceWith($el);
+    renderPartials: function(name) {
+      var partials = this.partials[name],
+          $placeholders = this.$('[data-partial="' + name + '"]');
+
+      if (partials instanceof ViewCollection) { partials = partials.values(); }
+      else if (!_.isArray(partials)) { partials = [partials]; }
+
+      partials.forEach(function(p, i) {
+        var $at = $placeholders.eq(i),
+            $p = this.renderPartial(p);
+
+        $at.replaceWith($p);
+        $p.attr('data-partial', name);
+      }, this);
+
       return this;
     },
 
     render: function() {
       this.$el.html(maybeByName(this.jst)(_(this).result('data')));
-      _(this.partials).keys().forEach(this.renderPartial, this);
+      _(this.partials).keys().forEach(this.renderPartials, this);
       return this;
     }
   });
