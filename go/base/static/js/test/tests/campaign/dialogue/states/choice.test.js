@@ -39,12 +39,12 @@ describe("go.campaign.dialogue.states.choice", function() {
         .get('choice:endpoint1');
     });
 
-    describe("when its input has changed", function() {
+    describe("when .label has changed", function() {
       it("should update its model's label attribute",
       function() {
         assert.equal(choice.model.get('label'), 'Red');
 
-        choice.$('input')
+        choice.$('.label')
           .val('Diplodocus')
           .change();
 

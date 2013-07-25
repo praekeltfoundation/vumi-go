@@ -41,7 +41,7 @@
     uuid: function() { return 'choice:' + this.model.get('uuid'); },
 
     events: {
-      'change input': 'onLabelChange',
+      'change .label': 'onLabelChange',
       'click .remove': 'onRemoveClick'
     },
 
