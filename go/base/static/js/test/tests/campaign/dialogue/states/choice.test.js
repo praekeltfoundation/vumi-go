@@ -36,7 +36,7 @@ describe("go.campaign.dialogue.states.choice", function() {
         .body
         .partials
         .choices
-        .get('uuid:endpoint1');
+        .get('choice:endpoint1');
     });
 
     describe("when its input has changed", function() {

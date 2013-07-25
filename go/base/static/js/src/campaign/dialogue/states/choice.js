@@ -26,11 +26,19 @@
     target: function() { return '.choice[data-endpoint-id="' + this.uuid() + '"]'; }
   });
 
+  var ChoiceEndpointCollection = EndpointViewCollection.extend({
+    type: ChoiceEndpointView,
+
+    addDefaults: _({
+      render: false
+    }).defaults(EndpointViewCollection.prototype.addDefaults)
+  });
+
   var ChoiceEditView = UniqueView.extend({
     tagName: 'li',
     className: 'choice',
 
-    uuid: function() { return 'uuid:' + this.model.get('uuid'); },
+    uuid: function() { return 'choice:' + this.model.get('uuid'); },
 
     attributes: function() {
       return {'data-endpoint-id': this.model.get('uuid')};
@@ -58,6 +66,13 @@
     }
   });
 
+  var ChoiceEditCollection = ViewCollection.extend({
+    type: ChoiceEditView,
+    addDefaults: _({
+      render: false
+    }).defaults(ViewCollection.prototype.addDefaults)
+  });
+
   var ChoiceStateEditView = DialogueStateEditView.extend({
     events: _({
       'click .new-choice': 'onNewChoice',
@@ -69,8 +84,7 @@
         jst: 'JST.campaign_dialogue_states_choice_edit',
         partials: {
           text: new TextEditView({mode: this}),
-          choices: new ViewCollection({
-            type: ChoiceEditView,
+          choices: new ChoiceEditCollection({
             models: this.state.model.get('choice_endpoints')
           })
         }
@@ -102,17 +116,20 @@
       e.preventDefault();
 
       var $choice = $(e.target).parent();
-      this.state.endpoints.remove($choice.attr('data-endpoint-id'));
+      this.state.model
+        .get('choice_endpoints')
+        .remove($choice.attr('data-endpoint-id'));
 
       this.state.render();
       jsPlumb.repaintEverything();
     },
 
     newChoice: function() {
-      return this.state.endpoints.add(
-        'choice_endpoints',
-        {model: {uuid: uuid.v4()}},
-        {render: false});
+      this.state.model
+        .get('choice_endpoints')
+        .add({uuid: uuid.v4()});
+
+      return this;
     }
   });
 
@@ -134,7 +151,7 @@
     }, {
       attr: 'choice_endpoints',
       type: ChoiceEndpointView,
-      collectionType: EndpointViewCollection
+      collectionType: ChoiceEndpointCollection
     }]
   });
 
@@ -143,6 +160,7 @@
 
     ChoiceStateEditView: ChoiceStateEditView,
     ChoiceStatePreviewView: ChoiceStatePreviewView,
-    ChoiceEndpointView: ChoiceEndpointView
+    ChoiceEndpointView: ChoiceEndpointView,
+    ChoiceEditView: ChoiceEditView
   });
 })(go.campaign.dialogue.states.choice = {});
