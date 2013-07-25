@@ -95,8 +95,8 @@ class RoutingTableHelperTestCase(TestCase):
     CONV_2 = "CONVERSATION:dummy:2"
     CHANNEL_2 = "TRANSPORT_TAG:pool:tag2"
     CHANNEL_3 = "TRANSPORT_TAG:pool:tag3"
-    ROUTER_1_INBOUND = "ROUTING_BLOCK:dummy:1:INBOUND"
-    ROUTER_1_OUTBOUND = "ROUTING_BLOCK:dummy:1:OUTBOUND"
+    ROUTER_1_INBOUND = "ROUTER:dummy:1:INBOUND"
+    ROUTER_1_OUTBOUND = "ROUTER:dummy:1:OUTBOUND"
 
     DEFAULT_ROUTING = {
         CONV_1: {
@@ -333,14 +333,14 @@ class GoConnectorTestCase(TestCase):
         self.assertEqual(c.conv_key, "12345")
         self.assertEqual(str(c), "CONVERSATION:conv_type_1:12345")
 
-    def test_create_routing_block_connector(self):
-        c = GoConnector.for_routing_block("rb_type_1", "12345",
+    def test_create_router_connector(self):
+        c = GoConnector.for_router("rb_type_1", "12345",
                                           GoConnector.INBOUND)
-        self.assertEqual(c.ctype, GoConnector.ROUTING_BLOCK)
-        self.assertEqual(c.rblock_type, "rb_type_1")
-        self.assertEqual(c.rblock_key, "12345")
+        self.assertEqual(c.ctype, GoConnector.ROUTER)
+        self.assertEqual(c.router_type, "rb_type_1")
+        self.assertEqual(c.router_key, "12345")
         self.assertEqual(c.direction, GoConnector.INBOUND)
-        self.assertEqual(str(c), "ROUTING_BLOCK:rb_type_1:12345:INBOUND")
+        self.assertEqual(str(c), "ROUTER:rb_type_1:12345:INBOUND")
 
     def test_create_transport_tag_connector(self):
         c = GoConnector.for_transport_tag("tagpool_1", "tag_1")
@@ -360,11 +360,11 @@ class GoConnectorTestCase(TestCase):
         self.assertEqual(c.conv_type, "conv_type_1")
         self.assertEqual(c.conv_key, "12345")
 
-    def test_parse_routing_block_connector(self):
-        c = GoConnector.parse("ROUTING_BLOCK:rb_type_1:12345:OUTBOUND")
-        self.assertEqual(c.ctype, GoConnector.ROUTING_BLOCK)
-        self.assertEqual(c.rblock_type, "rb_type_1")
-        self.assertEqual(c.rblock_key, "12345")
+    def test_parse_router_connector(self):
+        c = GoConnector.parse("ROUTER:rb_type_1:12345:OUTBOUND")
+        self.assertEqual(c.ctype, GoConnector.ROUTER)
+        self.assertEqual(c.router_type, "rb_type_1")
+        self.assertEqual(c.router_key, "12345")
         self.assertEqual(c.direction, GoConnector.OUTBOUND)
 
     def test_parse_transport_tag_connector(self):
@@ -387,17 +387,17 @@ class GoConnectorTestCase(TestCase):
         self.assertRaises(GoConnectorError, GoConnector.parse,
                           "CONVERSATION:foo:bar:baz")  # three parts
 
-    def test_flip_routing_block_connector(self):
-        c1 = GoConnector.for_routing_block(
+    def test_flip_router_connector(self):
+        c1 = GoConnector.for_router(
             "dummy", "1", GoConnector.INBOUND)
         c2 = c1.flip_direction()
         self.assertEqual(c2.direction, GoConnector.OUTBOUND)
-        self.assertEqual(c2.ctype, GoConnector.ROUTING_BLOCK)
-        self.assertEqual(c2.rblock_type, "dummy")
-        self.assertEqual(c2.rblock_key, "1")
+        self.assertEqual(c2.ctype, GoConnector.ROUTER)
+        self.assertEqual(c2.router_type, "dummy")
+        self.assertEqual(c2.router_key, "1")
         c3 = c2.flip_direction()
         self.assertEqual(c3.direction, GoConnector.INBOUND)
 
-    def test_flip_non_routing_block_connector(self):
+    def test_flip_non_router_connector(self):
         c = GoConnector.for_conversation("dummy", "1")
         self.assertRaises(GoConnectorError, c.flip_direction)

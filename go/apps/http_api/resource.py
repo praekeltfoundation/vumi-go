@@ -264,6 +264,8 @@ class ConversationResource(resource.Resource):
 
     @inlineCallbacks
     def is_allowed(self, config, user_id):
+        if config.concurrency_limit < 0:
+            returnValue(True)
         count = int((yield self.redis.get(self.key(user_id))) or 0)
         returnValue(count < config.concurrency_limit)
 
