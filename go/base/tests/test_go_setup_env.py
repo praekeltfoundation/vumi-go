@@ -148,6 +148,21 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
     def get_user_api(self, username):
         return vumi_api_for_user(User.objects.get(username=username))
 
+    def test_ignores_ignore_block(self):
+        yaml_with_ignore = NamedTemporaryFile()
+        yaml_with_ignore.write('\n'.join([
+            '__ignore__:',
+            '  foo: &FOO',
+            '    - bar',
+            '    - baz',
+            'thing:',
+            '  quux: *FOO',
+        ]))
+        yaml_with_ignore.flush()
+        self.assertEqual(self.command.read_yaml(yaml_with_ignore.name), {
+            'thing': {'quux': ['bar', 'baz']},
+        })
+
     def test_tagpool_loading(self):
         self.command.setup_tagpools(self.tagpool_file.name)
         self.assertTrue('Tag pools created: pool1, pool2' in

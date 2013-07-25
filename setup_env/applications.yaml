@@ -1,3 +1,13 @@
+__ignore__:
+    redis_manager: &REDIS-MANAGER
+      key_prefix: "vumigo"
+      db: 1
+    riak_manager: &RIAK-MANAGER
+      bucket_prefix: vumigo.
+    send_to: &SEND-TO
+      default:
+        transport_name: "invalid broken transport"
+
 wikipedia:
   class: go.apps.wikipedia.vumi_app.WikipediaApplication
   config:
@@ -6,11 +16,8 @@ wikipedia:
     incoming_sms_transport: wikipedia_transport
     max_sms_content_length: 450
     max_sms_unicode_length: 190
-    redis_manager:
-      key_prefix: "vumigo"
-      db: 1
-    riak_manager:
-      bucket_prefix: vumigo.
+    redis_manager: *REDIS-MANAGER
+    riak_manager: *RIAK-MANAGER
     middleware:
       - logging_mw: vumi.middleware.logging.LoggingMiddleware
 
@@ -18,14 +25,9 @@ bulk_message:
   class: go.apps.bulk_message.vumi_app.BulkMessageApplication
   config:
     metrics_prefix: bulk_message_application
-    redis_manager:
-      key_prefix: "vumigo"
-      db: 1
-    riak_manager:
-      bucket_prefix: vumigo.
-    send_to:
-      default:
-        transport_name: "invalid broken transport"
+    redis_manager: *REDIS-MANAGER
+    riak_manager: *RIAK-MANAGER
+    send_to: *SEND-TO
     middleware:
       - logging_mw: vumi.middleware.logging.LoggingMiddleware
 
@@ -34,14 +36,9 @@ dialogue:
   config:
     batch_size: 2
     metrics_prefix: dialogue_application
-    redis_manager:
-      key_prefix: "vumigo"
-      db: 1
-    riak_manager:
-      bucket_prefix: vumigo.
-    send_to:
-      default:
-        transport_name: "invalid broken transport"
+    redis_manager: *REDIS-MANAGER
+    riak_manager: *RIAK-MANAGER
+    send_to: *SEND-TO
     vxpolls:
       prefix: vxpolls
     middleware:
@@ -52,14 +49,9 @@ survey:
   config:
     batch_size: 2
     metrics_prefix: survey_application
-    redis_manager:
-      key_prefix: "vumigo"
-      db: 1
-    riak_manager:
-      bucket_prefix: vumigo.
-    send_to:
-      default:
-        transport_name: "invalid broken transport"
+    redis_manager: *REDIS-MANAGER
+    riak_manager: *RIAK-MANAGER
+    send_to: *SEND-TO
     vxpolls:
       prefix: vxpolls
     middleware:
@@ -69,27 +61,17 @@ sequential_send:
   class: go.apps.sequential_send.vumi_app.SequentialSendApplication
   config:
     metrics_prefix: sequential_send_application
-    redis_manager:
-      key_prefix: "vumigo"
-      db: 1
-    riak_manager:
-      bucket_prefix: vumigo.
-    send_to:
-      default:
-        transport_name: "invalid broken transport"
+    redis_manager: *REDIS-MANAGER
+    riak_manager: *RIAK-MANAGER
+    send_to: *SEND-TO
 
 subscription:
   class: go.apps.subscription.vumi_app.SubscriptionApplication
   config:
     metrics_prefix: subscription_application
-    redis_manager:
-      key_prefix: "vumigo"
-      db: 1
-    riak_manager:
-      bucket_prefix: vumigo.
-    send_to:
-      default:
-        transport_name: "invalid broken transport"
+    redis_manager: *REDIS-MANAGER
+    riak_manager: *RIAK-MANAGER
+    send_to: *SEND-TO
 
 jsbox:
   class: go.apps.jsbox.vumi_app.JsBoxApplication
@@ -120,27 +102,17 @@ jsbox:
       RLIMIT_STACK: [2097152, 2097152] # 2 MB
       RLIMIT_AS: [268435456, 268435456] # 256 MB
 
-    redis_manager:
-      key_prefix: "vumigo"
-      db: 1
-    riak_manager:
-      bucket_prefix: vumigo.
-    send_to:
-      default:
-        transport_name: "invalid broken transport"
+    redis_manager: *REDIS-MANAGER
+    riak_manager: *RIAK-MANAGER
+    send_to: *SEND-TO
 
 opt_out:
   class: go.apps.opt_out.vumi_app.OptOutApplication
   config:
     metrics_prefix: opt_out_application
-    redis_manager:
-      key_prefix: "vumigo"
-      db: 1
-    riak_manager:
-      bucket_prefix: vumigo.
-    send_to:
-      default:
-        transport_name: "invalid broken transport"
+    redis_manager: *REDIS-MANAGER
+    riak_manager: *RIAK-MANAGER
+    send_to: *SEND-TO
 
 http_api:
   class: go.apps.http_api.vumi_app.StreamingHTTPWorker
@@ -148,8 +120,5 @@ http_api:
     web_path: /api/v1/go/http_api/
     web_port: 8001
     metrics_prefix: http_api_application
-    redis_manager:
-      key_prefix: "vumigo"
-      db: 1
-    riak_manager:
-      bucket_prefix: vumigo.
+    redis_manager: *REDIS-MANAGER
+    riak_manager: *RIAK-MANAGER

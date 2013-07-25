@@ -193,7 +193,12 @@ class Command(BaseCommand):
         self.api = VumiApi(self.riak, self.redis)
 
     def read_yaml(self, file_path):
-        return yaml.safe_load(open(file_path, 'rb'))
+        # We remove a top-level '__ignore__' key which can contain blocks
+        # referenced elsewhere.
+        yaml_data = yaml.safe_load(open(file_path, 'rb'))
+        if isinstance(yaml_data, dict) and '__ignore__' in yaml_data:
+            yaml_data.pop('__ignore__')
+        return yaml_data
 
     def write_yaml(self, fp, data):
         yaml.safe_dump(data, stream=fp, default_flow_style=False)
@@ -378,7 +383,7 @@ class Command(BaseCommand):
     def create_application_configs(self, file_path):
         applications = self.read_yaml(file_path)
         application_names = []
-        for application_name, application_info in applications.items():
+        for application_name, application_info in applications.iteritems():
             application_names.append(application_name)
             application_names.extend(
                 application_info.get('extra_application_names', []))
