@@ -6,7 +6,7 @@ from vumi.rpc import RpcCheckError
 
 from go.api.go_api.api_types import (
     CampaignType, EndpointType, ConversationType, ChannelType,
-    RoutingBlockType, RoutingEntryType, RoutingType)
+    RouterType, RoutingEntryType, RoutingType)
 
 
 class BaseTypeTest(TestCase):
@@ -77,11 +77,11 @@ class ChannelTypeTestCase(BaseTypeTest):
         self.basic_checks(ChannelType())
 
 
-class RoutingBlockTypeTestCase(BaseTypeTest):
+class RouterTypeTestCase(BaseTypeTest):
     DEFAULTS = {
-        u'uuid': u'routing-block-uuid-1',
+        u'uuid': u'router-uuid-1',
         u'type': u'keyword',
-        u'name': u'keyword-routing-block',
+        u'name': u'keyword-router',
         u'description': u'Keyword',
         u'channel_endpoints': [
             {u'uuid': u'endpoint-uuid-2', u'name': u'default'}
@@ -92,7 +92,7 @@ class RoutingBlockTypeTestCase(BaseTypeTest):
     }
 
     def test_basic_checks(self):
-        self.basic_checks(RoutingBlockType())
+        self.basic_checks(RouterType())
 
 
 class RoutingEntryTypeTestCase(BaseTypeTest):
@@ -108,7 +108,7 @@ class RoutingEntryTypeTestCase(BaseTypeTest):
 class RoutingTypeTestCase(BaseTypeTest):
     DEFAULTS = {
         u'channels': [ChannelTypeTestCase.DEFAULTS],
-        u'routing_blocks': [RoutingBlockTypeTestCase.DEFAULTS],
+        u'routers': [RouterTypeTestCase.DEFAULTS],
         u'conversations': [ConversationTypeTestCase.DEFAULTS],
         u'routing_entries': [RoutingEntryTypeTestCase.DEFAULTS],
     }
