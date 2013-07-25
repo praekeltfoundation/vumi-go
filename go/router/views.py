@@ -56,6 +56,10 @@ def new_router(request):
         router = request.user_api.new_router(
             router_type, name=form.cleaned_data['name'],
             description=form.cleaned_data['description'], config={},
+            extra_inbound_endpoints=list(
+                view_def.extra_static_inbound_endpoints),
+            extra_outbound_endpoints=list(
+                view_def.extra_static_outbound_endpoints),
         )
         messages.info(request, 'Conversation created successfully.')
 

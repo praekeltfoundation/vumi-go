@@ -204,6 +204,14 @@ class RouterViewDefinitionBase(object):
         return self._router_def.router_display_name
 
     @property
+    def extra_static_inbound_endpoints(self):
+        return self._router_def.extra_static_inbound_endpoints
+
+    @property
+    def extra_static_outbound_endpoints(self):
+        return self._router_def.extra_static_outbound_endpoints
+
+    @property
     def is_editable(self):
         return self.edit_view is not None
 
