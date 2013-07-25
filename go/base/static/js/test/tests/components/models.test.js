@@ -82,6 +82,21 @@ describe("go.components.models", function() {
         });
       });
     });
+
+    describe(".sync", function() {
+      it("should add an auth header if a session id is provided",
+      function(done) {
+        server.respondWith(function(req) {
+          assert.equal(
+            req.requestHeaders.Authorization,
+            'Basic ' + Base64.encode('session_id:123'));
+          done();
+        });
+
+        model.sync('read', model, {sessionId: '123'});
+        server.respond();
+      });
+    });
   });
 });
 

@@ -5,6 +5,10 @@
 (function(exports) {
   var rpc = go.components.rpc;
 
+  var basicAuth = function(sessionId) {
+    return 'Basic ' + Base64.encode('session_id:' + sessionId);
+  };
+
   // Base model for syncing with our api.
   var Model = Backbone.RelationalModel.extend({
     idAttribute: 'uuid',
@@ -46,7 +50,18 @@
       return Backbone.Model.prototype.fetch.call(this, options);
     },
 
-    sync: function() { return rpc.sync.apply(this, arguments); }
+    sync: function(method, model, options) {
+      options = options || {};
+
+      var sessionId = options.sessionId;
+      if (sessionId) {
+        options.beforeSend = function(xhr) {
+          xhr.setRequestHeader('Authorization', basicAuth(sessionId));
+        };
+      }
+
+      return rpc.sync.call(this, method, model, options);
+    }
   });
 
   _.extend(exports, {
