@@ -433,8 +433,8 @@ button {
   margin: 0 0 18px 0;
 }
 .dialogue #diagram .choice.state .edit.mode .choices input {
-  min-width: 140px;
-  width: 140px;
+  min-width: 130px;
+  width: 130px;
   margin-bottom: 0;
 }
 .dialogue #diagram .choice.state .edit.mode .choices .close {
