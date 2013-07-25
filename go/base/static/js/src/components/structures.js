@@ -46,7 +46,7 @@
     comparator: function(v) { return v.ordinal || 0; },
 
     arrangeable: false, // whether the lookup's items can be reordered
-    arranger: function(v, ordinal) { return v.ordinal = ordinal; },
+    arranger: function(v, ordinal) { v.ordinal = ordinal; },
 
     constructor: function(items, options) {
       options = options || {};
@@ -306,8 +306,11 @@
 
       this._byModelId = {};
       this.models = this._ensureCollection(options.models);
-      this.models.on('add', function(m) { this.add({model: m}); }, this);
-      this.models.on('remove', function(m) { this.removeByModel(m); }, this);
+
+      this.addLock = false;
+      this.removeLock = false;
+      this.listenTo(this.models, 'add', this.onModelAdd);
+      this.listenTo(this.models, 'remove', this.onModelRemove);
 
       this.type = options.type || this.type;
       this.typeAttr = this.type.prototype.typeAttr || this.typeAttr;
@@ -359,6 +362,18 @@
         : this.create(obj);
     },
 
+    onModelAdd: function(model) {
+      // Don't try add the view if we added the model
+      if (this.addLock) { this.addLock = false; }
+      else { this.add({model: model}); }
+    },
+
+    onModelRemove: function(model) {
+      // Don't try remove the view if we are removed the model
+      if (this.removeLock) { this.removeLock = false; }
+      else { this.removeByModel(model); }
+    },
+
     determineType: function(options) {
       var type = this.type,
           subtypes = type.prototype.subtypes;
@@ -385,7 +400,11 @@
       var model = view.model;
       if (model || options.addModel) {
         view.model = model = this._ensureModel(model);
-        if (options.addModel) { this.models.add(model, {silent: true}); }
+
+        if (options.addModel) {
+          if (!options.silent) { this.addLock = true; }
+          this.models.add(model, {silent: options.silent});
+        }
       }
 
       view = this._ensureView(view);
@@ -406,9 +425,13 @@
       if (typeof view.destroy === 'function') { view.destroy(); }
 
       var model = view.model;
-      if (model) {
+      if (model && this.models.get(model)) {
         delete this._byModelId[this.idOfModel(model)];
-        if (options.removeModel) { this.models.remove(model, {silent: true}); }
+
+        if (options.removeModel) {
+          if (!options.silent) { this.removeLock = true; }
+          this.models.remove(model, {silent: options.silent});
+        }
       }
 
       return Lookup.prototype.remove.call(this, id, options);
