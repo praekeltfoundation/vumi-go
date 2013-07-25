@@ -131,6 +131,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         self.contact_store.contacts.enable_search()
         self.contact_store.groups.enable_search()
         self.conv_store = self.user_api.conversation_store
+        self.router_store = self.user_api.router_store
 
     def mk_django_user(self):
         user = User.objects.create_user(
@@ -158,6 +159,16 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
             conv.save()
 
         return conv
+
+    def create_router(self, **kwargs):
+        params = {
+            'router_type': u'test_router_type',
+            'name': u'router name',
+            'description': u'hello world',
+            'config': {},
+        }
+        params.update(kwargs)
+        return self.router_store.new_router(**params)
 
     def add_messages_to_conv(self, message_count, conversation, reply=False,
                              ack=False, start_date=None, time_multiplier=10):

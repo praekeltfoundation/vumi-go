@@ -99,13 +99,13 @@ class ShowRouterView(RouterTemplateView):
 
 
 class EditRouterView(RouterTemplateView):
-    """View for editing conversation data.
+    """View for editing router data.
 
     Subclass this and set :attr:`edit_forms` to a list of tuples
     of the form `('key', FormClass)`.
 
-    The `key` should be a key into the conversation's metadata field. If `key`
-    is `None`, the whole of the metadata field will be used.
+    The `key` should be a key into the router's config field. If `key`
+    is `None`, the whole of the config field will be used.
 
     If the default behaviour is insufficient or problematic, implement
     :meth:`make_forms` and :meth:`process_forms`. These are the only two
@@ -115,46 +115,46 @@ class EditRouterView(RouterTemplateView):
     path_suffix = 'edit/'
     edit_forms = ()
 
-    def _render_forms(self, request, conversation, edit_forms):
+    def _render_forms(self, request, router, edit_forms):
         def sum_media(form_list):
             return sum((f.media for f in form_list), forms.Media())
 
         return self.render_to_response({
-                'conversation': conversation,
+                'router': router,
                 'edit_forms_media': sum_media(edit_forms),
                 'edit_forms': edit_forms,
                 })
 
-    def get(self, request, conversation):
-        edit_forms = self.make_forms(conversation)
-        return self._render_forms(request, conversation, edit_forms)
+    def get(self, request, router):
+        edit_forms = self.make_forms(router)
+        return self._render_forms(request, router, edit_forms)
 
-    def post(self, request, conversation):
-        response = self.process_forms(request, conversation)
+    def post(self, request, router):
+        response = self.process_forms(request, router)
         if response is not None:
             return response
 
-        return self.redirect_to(self.get_next_view(conversation),
-                                conversation_key=conversation.key)
+        return self.redirect_to(
+            self.get_next_view(router), router_key=router.key)
 
     def make_form(self, key, form, metadata):
         data = metadata.get(key, {})
-        if hasattr(form, 'initial_from_metadata'):
-            data = form.initial_from_metadata(data)
+        if hasattr(form, 'initial_from_config'):
+            data = form.initial_from_config(data)
         return form(prefix=key, initial=data)
 
-    def make_forms(self, conversation):
-        config = conversation.get_config()
+    def make_forms(self, router):
+        config = router.config
         return [self.make_form(key, edit_form, config)
                 for key, edit_form in self.edit_forms]
 
     def process_form(self, form):
-        if hasattr(form, 'to_metadata'):
-            return form.to_metadata()
+        if hasattr(form, 'to_config'):
+            return form.to_config()
         return form.cleaned_data
 
-    def process_forms(self, request, conversation):
-        config = conversation.get_config()
+    def process_forms(self, request, router):
+        config = router.config
         edit_forms_with_keys = [
             (key, edit_form_cls(request.POST, prefix=key))
             for key, edit_form_cls in self.edit_forms]
@@ -163,10 +163,14 @@ class EditRouterView(RouterTemplateView):
         for key, edit_form in edit_forms_with_keys:
             # Is this a good idea?
             if not edit_form.is_valid():
-                return self._render_forms(request, conversation, edit_forms)
+                return self._render_forms(request, router, edit_forms)
             config[key] = self.process_form(edit_form)
-        conversation.set_config(config)
-        conversation.save()
+        router.extra_inbound_endpoints = self.view_def.get_inbound_endpoints(
+            config)
+        router.extra_outbound_endpoints = self.view_def.get_outbound_endpoints(
+            config)
+        router.config = config
+        router.save()
 
 
 class RouterViewDefinitionBase(object):
@@ -210,6 +214,20 @@ class RouterViewDefinitionBase(object):
     @property
     def extra_static_outbound_endpoints(self):
         return self._router_def.extra_static_outbound_endpoints
+
+    def get_inbound_endpoints(self, config):
+        endpoints = list(self.extra_static_inbound_endpoints)
+        for endpoint in self._router_def.configured_inbound_endpoints(config):
+            if (endpoint != 'default') and (endpoint not in endpoints):
+                endpoints.append(endpoint)
+        return endpoints
+
+    def get_outbound_endpoints(self, config):
+        endpoints = list(self.extra_static_outbound_endpoints)
+        for endpoint in self._router_def.configured_outbound_endpoints(config):
+            if (endpoint != 'default') and (endpoint not in endpoints):
+                endpoints.append(endpoint)
+        return endpoints
 
     @property
     def is_editable(self):

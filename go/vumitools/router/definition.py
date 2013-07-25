@@ -15,3 +15,9 @@ class RouterDefinitionBase(object):
 
     def is_config_valid(self):
         raise NotImplementedError()
+
+    def configured_inbound_endpoints(self, config):
+        return []
+
+    def configured_outbound_endpoints(self, config):
+        return []

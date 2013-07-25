@@ -58,9 +58,7 @@ class RouterViewsTestCase(VumiGoDjangoTestCase):
         }
         response = self.client.post(reverse('routers:new_router'), router_data)
         [router] = self.user_api.active_routers()
-        show_url = reverse('routers:router', kwargs={
-            'router_key': router.key, 'path_suffix': ''})
-        self.assertRedirects(response, show_url)
+        self.assertRedirects(response, self.get_view_url('edit', router.key))
         self.assertEqual(router.name, 'new router')
         self.assertEqual(router.router_type, 'keyword')
 
