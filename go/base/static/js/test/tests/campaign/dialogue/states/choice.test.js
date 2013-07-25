@@ -51,6 +51,23 @@ describe("go.campaign.dialogue.states.choice", function() {
         assert.equal(choice.model.get('label'), 'Diplodocus');
       });
     });
+
+    describe("when '.remove' is clicked", function() {
+      it("should remove the choice endpoint from the state's model",
+      function() {
+        var choiceEndpoints = state.model.get('choice_endpoints');
+
+        assert.isDefined(choiceEndpoints.get('endpoint1'));
+        choice.$('.remove').click();
+        assert.isUndefined(choiceEndpoints.get('endpoint1'));
+      });
+
+      it("should remove the choice element", function() {
+        assert(oneElExists(editMode.$('[data-uuid="choice:endpoint1"]')));
+        choice.$('.remove').click();
+        assert(noElExists(editMode.$('[data-uuid="choice:endpoint1"]')));
+      });
+    });
   });
 
   describe(".ChoiceStateEditView", function() {
@@ -127,35 +144,12 @@ describe("go.campaign.dialogue.states.choice", function() {
         var choiceEndpoints = state.model.get('choice_endpoints');
 
         assert(noElExists(
-          editMode.$('.choice[data-endpoint-id="new-endpoint"]')));
+          editMode.$('[data-uuid="choice:new-endpoint"]')));
 
         editMode.$('.new-choice').click();
 
         assert(oneElExists(
-          editMode.$('.choice[data-endpoint-id="new-endpoint"]')));
-      });
-    });
-
-    describe("when a '.choice .remove' button is clicked", function() {
-      it("should remove the choice endpoint from the state's model",
-      function() {
-        var choiceEndpoints = state.model.get('choice_endpoints');
-
-        assert.isDefined(choiceEndpoints.get('endpoint1'));
-        editMode.$('.choice .remove').eq(0).click();
-        assert.isUndefined(choiceEndpoints.get('endpoint1'));
-      });
-
-      it("should remove the choice element", function() {
-        var choiceEndpoints = state.model.get('choice_endpoints');
-
-        assert(oneElExists(
-          editMode.$('.choice[data-endpoint-id="endpoint1"]')));
-
-        editMode.$('.choice .remove').eq(0).click();
-
-        assert(noElExists(
-          editMode.$('.choice[data-endpoint-id="endpoint1"]')));
+          editMode.$('[data-uuid="choice:new-endpoint"]')));
       });
     });
   });

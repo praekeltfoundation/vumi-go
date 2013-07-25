@@ -23,7 +23,7 @@
     className: 'choice endpoint',
     side: 'right',
     isTarget: false,
-    target: function() { return '.choice[data-endpoint-id="' + this.uuid() + '"]'; }
+    target: function() { return '[data-uuid="choice:' + this.uuid() + '"]'; }
   });
 
   var ChoiceEndpointCollection = EndpointViewCollection.extend({
@@ -40,15 +40,14 @@
 
     uuid: function() { return 'choice:' + this.model.get('uuid'); },
 
-    attributes: function() {
-      return {'data-endpoint-id': this.model.get('uuid')};
-    },
-
     events: {
-      'change input': 'onLabelChange'
+      'change input': 'onLabelChange',
+      'click .remove': 'onRemoveClick'
     },
 
-    initialize: function() {
+    initialize: function(options) {
+      this.mode = options.mode;
+
       this.template = new TemplateView({
         el: this.$el,
         jst: 'JST.campaign_dialogue_states_choice_choice_edit',
@@ -60,6 +59,17 @@
       this.model.set('label', this.$('input').prop('value'), {silent: true});
     },
 
+    onRemoveClick: function(e) {
+      e.preventDefault();
+
+      this.mode.state.model
+        .get('choice_endpoints')
+        .remove(this.model);
+
+      this.mode.state.render();
+      jsPlumb.repaintEverything();
+    },
+
     render: function() {
       this.template.render();
       return this;
@@ -68,15 +78,21 @@
 
   var ChoiceEditCollection = ViewCollection.extend({
     type: ChoiceEditView,
+
     addDefaults: _({
       render: false
-    }).defaults(ViewCollection.prototype.addDefaults)
+    }).defaults(ViewCollection.prototype.addDefaults),
+
+    viewOptions: function() { return {mode: this.mode}; },
+
+    initialize: function(options) {
+      this.mode = options.mode;
+    }
   });
 
   var ChoiceStateEditView = DialogueStateEditView.extend({
     events: _({
-      'click .new-choice': 'onNewChoice',
-      'click .choice .remove': 'onRemoveChoice',
+      'click .new-choice': 'onNewChoice'
     }).defaults(DialogueStateEditView.prototype.events),
 
     bodyOptions: function() {
@@ -85,6 +101,7 @@
         partials: {
           text: new TextEditView({mode: this}),
           choices: new ChoiceEditCollection({
+            mode: this,
             models: this.state.model.get('choice_endpoints')
           })
         }
@@ -108,18 +125,6 @@
     onNewChoice: function(e) {
       e.preventDefault();
       this.newChoice();
-      this.state.render();
-      jsPlumb.repaintEverything();
-    },
-
-    onRemoveChoice: function(e) {
-      e.preventDefault();
-
-      var $choice = $(e.target).parent();
-      this.state.model
-        .get('choice_endpoints')
-        .remove($choice.attr('data-endpoint-id'));
-
       this.state.render();
       jsPlumb.repaintEverything();
     },
