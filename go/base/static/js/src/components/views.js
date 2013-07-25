@@ -169,19 +169,27 @@
 
     initialize: function(options) {
       if (options.data) { this.data = options.data; }
-
       if (options.jst) { this.jst = options.jst; }
       this.partials = _({}).extend(this.partials, options.partials || {});
     },
 
-    renderPartial: function(partial) {
-      if (partial instanceof Backbone.View) {
-        partial.render();
-        return partial.$el;
+    insertPartial: function($p, $at, name) {
+      $at.replaceWith($p);
+      $p.attr('data-partial', name);
+      return this;
+    },
+
+    renderPartial: function(p, $at, name) {
+      if (p instanceof Backbone.View) {
+        p.render();
+        this.insertPartial(p.$el, $at, name);
+        p.delegateEvents();
       } else {
-        console.log(partial);
-        return $(maybeByName(partial)(_(this).result('data')));
+        p = $(maybeByName(p)(_(this).result('data')));
+        this.insertPartial(p, $at, name);
       }
+
+      return this;
     },
 
     renderPartials: function(name) {
@@ -192,11 +200,7 @@
       else if (!_.isArray(partials)) { partials = [partials]; }
 
       partials.forEach(function(p, i) {
-        var $at = $placeholders.eq(i),
-            $p = this.renderPartial(p);
-
-        $at.replaceWith($p);
-        $p.attr('data-partial', name);
+        this.renderPartial(p, $placeholders.eq(i), name);
       }, this);
 
       return this;
