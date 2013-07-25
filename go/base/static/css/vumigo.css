@@ -288,10 +288,10 @@ button {
   float: left;
 }
 .dialogue #diagram .add {
-  height: 60px;
-  display: table-cell;
-  vertical-align: center;
+  height: 65px;
+  width: 65px;
   font-size: 68px;
+  padding-bottom: 18px;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
@@ -409,6 +409,7 @@ button {
   margin-left: 3px;
   padding: 0;
   width: auto;
+  min-width: 10px;
   display: inline;
 }
 .dialogue #diagram .search_enabled label {
