@@ -3,7 +3,9 @@ describe("go.components.rpc", function() {
 
   var testHelpers = go.testHelpers,
       assertModelAttrs = testHelpers.assertModelAttrs,
-      fakeServer = testHelpers.rpc.fakeServer;
+      assertRequest = testHelpers.rpc.assertRequest,
+      response = testHelpers.rpc.response,
+      errorResponse = testHelpers.rpc.errorResponse;
 
   describe(".sync", function() {
     var ToyModel = Backbone.Model.extend({
@@ -19,7 +21,7 @@ describe("go.components.rpc", function() {
         model;
 
     beforeEach(function() {
-      server = fakeServer('/test');
+      server = sinon.fakeServer.create();
 
       model = new ToyModel({
         foo: 'lerp',
@@ -32,12 +34,17 @@ describe("go.components.rpc", function() {
     });
 
     it("should make a request using the corresponding model method and params",
-    function() {
+    function(done) {
+      server.respondWith(function(req) {
+        assertRequest(req, '/test', 'r', ['lerp', 'larp']);
+        done();
+      });
+
       rpc.sync('read', model);
-      server.assertRequest('r', ['lerp', 'larp']);
+      server.respond();
     });
 
-    it("should allow the model instance to be used as a param", function() {
+    it("should allow the model instance to be used as a param", function(done) {
       var Model = Backbone.Model.extend({
         url: '/test',
         methods: {
@@ -45,23 +52,32 @@ describe("go.components.rpc", function() {
         }
       });
 
+      server.respondWith(function(req) {
+        assertRequest(req, '/test', 'r', [{foo: 'lerp', bar: 'larp'}]);
+        done();
+      });
+
       rpc.sync('read', new Model({foo: 'lerp', bar: 'larp'}));
-      server.assertRequest('r', [{foo: 'lerp', bar: 'larp'}]);
+      server.respond();
     });
 
     it("should pass the rpc response's result the success callback",
     function(done) {
+      server.respondWith(response({foo: 'lerp', bar: 'larp'}));
+
       var success = function(resp) {
         assert.deepEqual(resp, {foo: 'lerp', bar: 'larp'});
         done();
       };
 
       rpc.sync('read', model, {success: success});
-      server.respondWith({foo: 'lerp', bar: 'larp'});
+      server.respond();
     });
 
     it("should pass an rpc error response to the error callback",
     function(done) {
+      server.respondWith(errorResponse('aaah!'));
+
       var error = function(jqXHR, textStatus, errorThrown) {
         assert.equal(textStatus, 'error');
         assert.equal(errorThrown, 'aaah!');
@@ -69,13 +85,16 @@ describe("go.components.rpc", function() {
       };
 
       rpc.sync('read', model, {error: error});
-      server.rpcErrorWith('aaah!');
+      server.respond();
     });
 
     describe("fetching", function() {
       it("should update the model using on the rpc response", function() {
+        server.respondWith(response({foo: 'lerp', bar: 'larp'}));
+
         model.fetch();
-        server.respondWith({foo: 'lerp', bar: 'larp'});
+        server.respond();
+
         assertModelAttrs(model, {foo: 'lerp', bar: 'larp'});
       });
     });

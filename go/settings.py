@@ -356,6 +356,7 @@ PIPELINE_TEMPLATE_EXT = '.jst'
 PIPELINE_JS = {
     'lib': {
         'source_filenames': (
+            'js/vendor/base64-2.12.js',
             'js/vendor/uuid-1.4.0.js',
             'js/vendor/jquery-1.9.1.js',
             'js/vendor/lodash.underscore-1.2.1.js',
@@ -388,8 +389,8 @@ PIPELINE_JS = {
             'js/src/components/components.js',
             'js/src/components/rpc.js',
             'js/src/components/models.js',
-            'js/src/components/views.js',
             'js/src/components/structures.js',
+            'js/src/components/views.js',
             'js/src/components/grid.js',
             'js/src/components/stateMachine.js',
             'js/src/components/plumbing/plumbing.js',
