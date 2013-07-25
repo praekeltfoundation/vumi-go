@@ -401,7 +401,7 @@
       if (model || options.addModel) {
         view.model = model = this._ensureModel(model);
 
-        if (options.addModel) {
+        if (options.addModel && !this.models.get(model)) {
           if (!options.silent) { this.addLock = true; }
           this.models.add(model, {silent: options.silent});
         }
