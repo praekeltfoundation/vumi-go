@@ -26,17 +26,16 @@
     target: function() { return '.choice[data-endpoint-id="' + this.uuid() + '"]'; }
   });
 
-  // View for an individual choice/answer in a choice state
-  var ChoiceView = UniqueView.extend({
+  var ChoiceEditView = UniqueView.extend({
     tagName: 'li',
     className: 'choice',
+
     uuid: function() { return 'uuid:' + this.model.get('uuid'); },
+
     attributes: function() {
       return {'data-endpoint-id': this.model.get('uuid')};
-    }
-  });
+    },
 
-  var ChoiceEditView = ChoiceView.extend({
     events: {
       'change input': 'onLabelChange'
     },
@@ -55,13 +54,6 @@
 
     render: function() {
       this.template.render();
-      return this;
-    }
-  });
-
-  var ChoicePreviewView = ChoiceView.extend({
-    render: function() {
-      this.$el.text(this.model.get('label'));
       return this;
     }
   });
@@ -126,15 +118,7 @@
 
   var ChoiceStatePreviewView = DialogueStatePreviewView.extend({
     bodyOptions: function() {
-      return {
-        jst: 'JST.campaign_dialogue_states_choice_preview',
-        partials: {
-          choices: new ViewCollection({
-            type: ChoicePreviewView,
-            models: this.state.model.get('choice_endpoints')
-          })
-        }
-      };
+      return {jst: 'JST.campaign_dialogue_states_choice_preview'};
     }
   });
 
