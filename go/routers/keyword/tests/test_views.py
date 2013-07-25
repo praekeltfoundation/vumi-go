@@ -42,10 +42,10 @@ class KeywordViewTests(DjangoGoRouterTestCase):
             'keyword_endpoint_mapping-TOTAL_FORMS': ['2'],
             'keyword_endpoint_mapping-INITIAL_FORMS': ['0'],
             'keyword_endpoint_mapping-MAX_NUM_FORMS': [''],
-            'keyword_endpoint_mapping-0-keyword_regex': ['foo'],
+            'keyword_endpoint_mapping-0-keyword': ['foo'],
             'keyword_endpoint_mapping-0-target_endpoint': ['bar'],
             'keyword_endpoint_mapping-0-DELETE': [''],
-            'keyword_endpoint_mapping-1-keyword_regex': ['baz'],
+            'keyword_endpoint_mapping-1-keyword': ['baz'],
             'keyword_endpoint_mapping-1-target_endpoint': ['quux'],
             'keyword_endpoint_mapping-1-DELETE': [''],
         })
