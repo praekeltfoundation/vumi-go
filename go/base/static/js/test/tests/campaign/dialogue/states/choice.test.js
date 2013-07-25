@@ -21,6 +21,38 @@ describe("go.campaign.dialogue.states.choice", function() {
     tearDown();
   });
 
+  describe(".ChoiceEditView", function() {
+    var state,
+        editMode,
+        choice;
+
+    beforeEach(function() {
+      state = diagram.states.get('state1');
+      editMode = state.modes.edit;
+      state.edit();
+
+      choice = editMode
+        .partials
+        .body
+        .partials
+        .choices
+        .get('uuid:endpoint1');
+    });
+
+    describe("when its input has changed", function() {
+      it("should update its model's label attribute",
+      function() {
+        assert.equal(choice.model.get('label'), 'Red');
+
+        choice.$('input')
+          .val('Diplodocus')
+          .change();
+
+        assert.equal(choice.model.get('label'), 'Diplodocus');
+      });
+    });
+  });
+
   describe(".ChoiceStateEditView", function() {
     var ChoiceStateEditView = states.choice.ChoiceStateEditView;
 
@@ -40,6 +72,7 @@ describe("go.campaign.dialogue.states.choice", function() {
         var choices = state.endpoints.members.get('choice_endpoints');
         choices.each(function(c) { choices.remove(c); });
         state.render();
+
         assert.equal(choices.size(), 0);
         assert(noElExists(editMode.$('.choice')));
         assert(noElExists(state.$('.choice.endpoint')));
@@ -123,24 +156,6 @@ describe("go.campaign.dialogue.states.choice", function() {
 
         assert(noElExists(
           editMode.$('.choice[data-endpoint-id="endpoint1"]')));
-      });
-    });
-
-    describe("when a '.choice input' has changed", function() {
-      it("should update the corresponding endpoint model's label attribute",
-      function() {
-        var endpoint = state.model
-          .get('choice_endpoints')
-          .get('endpoint2');
-
-        assert.equal(endpoint.get('label'), 'Blue');
-
-        editMode.$('.choice input')
-          .eq(1)
-          .val('Diplodocus')
-          .change();
-
-        assert.equal(endpoint.get('label'), 'Diplodocus');
       });
     });
   });
