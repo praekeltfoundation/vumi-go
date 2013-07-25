@@ -248,6 +248,27 @@ describe("go.components.views", function() {
         ].join(''));
       });
 
+      it("should ensure its view partials keep their delegated events",
+      function(done) {
+        var i = 0;
+
+        var p = new Backbone.View({
+          tagName: 'button',
+          events: {'click': function() { i++ && done(); }}
+        });
+
+        var template = new TemplateView({
+          jst: _.template('<script data-partial="p"></script>'),
+          partials: {p: p}
+        });
+
+        template.render();
+        p.$el.click();
+
+        template.render();
+        p.$el.click();
+      });
+
       it("should apply its template function partials", function() {
         var template = new TemplateView({
           jst: _.template([
