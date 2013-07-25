@@ -21,6 +21,55 @@ describe("go.campaign.dialogue.states.choice", function() {
     tearDown();
   });
 
+  describe(".ChoiceEditView", function() {
+    var state,
+        editMode,
+        choice;
+
+    beforeEach(function() {
+      state = diagram.states.get('state1');
+      editMode = state.modes.edit;
+      state.edit();
+
+      choice = editMode
+        .partials
+        .body
+        .partials
+        .choices
+        .get('choice:endpoint1');
+    });
+
+    describe("when .label has changed", function() {
+      it("should update its model's label attribute",
+      function() {
+        assert.equal(choice.model.get('label'), 'Red');
+
+        choice.$('.label')
+          .val('Diplodocus')
+          .change();
+
+        assert.equal(choice.model.get('label'), 'Diplodocus');
+      });
+    });
+
+    describe("when '.remove' is clicked", function() {
+      it("should remove the choice endpoint from the state's model",
+      function() {
+        var choiceEndpoints = state.model.get('choice_endpoints');
+
+        assert.isDefined(choiceEndpoints.get('endpoint1'));
+        choice.$('.remove').click();
+        assert.isUndefined(choiceEndpoints.get('endpoint1'));
+      });
+
+      it("should remove the choice element", function() {
+        assert(oneElExists(editMode.$('[data-uuid="choice:endpoint1"]')));
+        choice.$('.remove').click();
+        assert(noElExists(editMode.$('[data-uuid="choice:endpoint1"]')));
+      });
+    });
+  });
+
   describe(".ChoiceStateEditView", function() {
     var ChoiceStateEditView = states.choice.ChoiceStateEditView;
 
@@ -40,6 +89,7 @@ describe("go.campaign.dialogue.states.choice", function() {
         var choices = state.endpoints.members.get('choice_endpoints');
         choices.each(function(c) { choices.remove(c); });
         state.render();
+
         assert.equal(choices.size(), 0);
         assert(noElExists(editMode.$('.choice')));
         assert(noElExists(state.$('.choice.endpoint')));
@@ -94,53 +144,12 @@ describe("go.campaign.dialogue.states.choice", function() {
         var choiceEndpoints = state.model.get('choice_endpoints');
 
         assert(noElExists(
-          editMode.$('.choice[data-endpoint-id="new-endpoint"]')));
+          editMode.$('[data-uuid="choice:new-endpoint"]')));
 
         editMode.$('.new-choice').click();
 
         assert(oneElExists(
-          editMode.$('.choice[data-endpoint-id="new-endpoint"]')));
-      });
-    });
-
-    describe("when a '.choice .remove' button is clicked", function() {
-      it("should remove the choice endpoint from the state's model",
-      function() {
-        var choiceEndpoints = state.model.get('choice_endpoints');
-
-        assert.isDefined(choiceEndpoints.get('endpoint1'));
-        editMode.$('.choice .remove').eq(0).click();
-        assert.isUndefined(choiceEndpoints.get('endpoint1'));
-      });
-
-      it("should remove the choice element", function() {
-        var choiceEndpoints = state.model.get('choice_endpoints');
-
-        assert(oneElExists(
-          editMode.$('.choice[data-endpoint-id="endpoint1"]')));
-
-        editMode.$('.choice .remove').eq(0).click();
-
-        assert(noElExists(
-          editMode.$('.choice[data-endpoint-id="endpoint1"]')));
-      });
-    });
-
-    describe("when a '.choice input' has changed", function() {
-      it("should update the corresponding endpoint model's label attribute",
-      function() {
-        var endpoint = state.model
-          .get('choice_endpoints')
-          .get('endpoint2');
-
-        assert.equal(endpoint.get('label'), 'Blue');
-
-        editMode.$('.choice input')
-          .eq(1)
-          .val('Diplodocus')
-          .change();
-
-        assert.equal(endpoint.get('label'), 'Diplodocus');
+          editMode.$('[data-uuid="choice:new-endpoint"]')));
       });
     });
   });
