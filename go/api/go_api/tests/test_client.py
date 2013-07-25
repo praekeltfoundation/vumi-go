@@ -9,12 +9,11 @@ from mock import patch
 
 
 class ClientTestCase(TestCase):
-    @patch('requests.request')
+    @patch('requests.post')
     def test_rpc(self, mock_req):
         client.rpc('123', 'do_something', ['foo', 'bar'], id='abc')
 
         mock_req.assert_called_with(
-            'POST',
             settings.GO_API_URL,
             auth=('session_id', '123'),
             data=json.dumps({
