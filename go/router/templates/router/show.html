@@ -18,9 +18,9 @@
         <div class="sub-details">
             <h4>
                 Details
-                <a href="{% router_screen router %}" class="btn btn-primary btn-mini">
-                    Edit
-                </a>
+                {% if is_editable %}
+                <a href="{% router_screen router 'edit' %}" class="btn btn-primary">Edit</a>
+                {% endif %}
             </h4>
 
             <p>
