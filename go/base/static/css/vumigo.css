@@ -289,9 +289,7 @@ button {
 }
 .dialogue #diagram .add {
   height: 65px;
-  width: 65px;
-  font-size: 68px;
-  padding-bottom: 18px;
+  font-size: 65px;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
