@@ -21,7 +21,7 @@ ROUTER_STOPPED = u'stopped'
 
 
 class Router(Model):
-    """A routing block for sending messages to interesting places."""
+    """A router for sending messages to interesting places."""
 
     VERSION = 1
     MIGRATOR = None

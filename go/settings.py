@@ -385,6 +385,7 @@ PIPELINE_JS = {
             'templates/campaign/dialogue/states/modes/edit.jst',
             'templates/campaign/dialogue/states/choice/edit.jst',
             'templates/campaign/dialogue/states/choice/preview.jst',
+            'templates/campaign/dialogue/states/choice/choice/edit.jst',
             'templates/campaign/dialogue/states/freetext/edit.jst',
             'templates/campaign/dialogue/states/freetext/preview.jst',
             'templates/campaign/dialogue/states/end/edit.jst',

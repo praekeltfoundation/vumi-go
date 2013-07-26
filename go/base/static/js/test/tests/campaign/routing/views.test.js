@@ -214,14 +214,14 @@ describe("go.campaign.routing (views)", function() {
         assert(oneElExists($channels.find('[data-uuid="channel3"]')));
       });
 
-      it("should render the states in its routing blocks column", function() {
-        var $blocks = $('#routing-diagram #routing-blocks');
+      it("should render the states in its routers column", function() {
+        var $blocks = $('#routing-diagram #routers');
 
         assert(noElExists($blocks.find('.state')));
         diagram.render();
 
-        assert(oneElExists($blocks.find('[data-uuid="routing-block1"]')));
-        assert(oneElExists($blocks.find('[data-uuid="routing-block2"]')));
+        assert(oneElExists($blocks.find('[data-uuid="router1"]')));
+        assert(oneElExists($blocks.find('[data-uuid="router2"]')));
       });
 
       it("should render the states in its conversations column", function() {

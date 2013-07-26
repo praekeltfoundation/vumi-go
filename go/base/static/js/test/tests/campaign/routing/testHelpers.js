@@ -27,17 +27,17 @@
       description: 'Larp Sms: *141#',
       endpoints: [{uuid: 'endpoint3', name: 'default'}]
     }],
-    routing_blocks: [{
-      uuid: 'routing-block1',
+    routers: [{
+      uuid: 'router1',
       type: 'keyword',
-      name: 'keyword-routing-block',
+      name: 'keyword-router',
       description: 'Keyword',
       channel_endpoints: [{uuid: 'endpoint4', name: 'default'}],
       conversation_endpoints: [{uuid: 'endpoint5', name: 'default'}]
     }, {
-      uuid: 'routing-block2',
+      uuid: 'router2',
       type: 'keyword',
-      name: 'keyword-routing-block',
+      name: 'keyword-router',
       description: 'Keyword',
       channel_endpoints: [{uuid: 'endpoint6', name: 'default'}],
       conversation_endpoints: [{uuid: 'endpoint7', name: 'default'}]
@@ -83,7 +83,7 @@
     $('body').append([
       "<div id='routing-diagram'>",
         "<div class='column' id='channels'></div>",
-        "<div class='column' id='routing-blocks'></div>",
+        "<div class='column' id='routers'></div>",
         "<div class='column' id='conversations'></div>",
       "</div>"
     ].join(''));
