@@ -54,9 +54,9 @@
         data: {model: this.choice.model}
       });
 
-      this.modelBackup = null;
+      this.valueBackup = null;
       this.on('show', function() {
-        this.modelBackup = this.choice.model.toJSON();
+        this.valueBackup = this.choice.model.get('value');
       }, this);
     },
 
@@ -66,7 +66,7 @@
 
     onCancelClick: function(e) {
       e.preventDefault();
-      this.choice.model.set('value', this.modelBackup.value);
+      this.choice.model.set('value', this.valueBackup);
       this.hide();
     },
 
