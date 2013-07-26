@@ -21,6 +21,66 @@ describe("go.campaign.dialogue.states.choice", function() {
     tearDown();
   });
 
+  describe(".ChoiceEditExtrasView", function() {
+    var state,
+        editMode,
+        choice,
+        extras;
+
+    beforeEach(function() {
+      state = diagram.states.get('state1');
+      editMode = state.modes.edit;
+      state.edit();
+
+      choice = editMode
+        .partials
+        .body
+        .partials
+        .choices
+        .get('choice:endpoint1');
+
+       extras = choice.extras;
+       extras.show();
+    });
+
+    describe("when '.value' has changed", function() {
+      it("should update the choice model's 'value' attribute", function() {
+        assert.equal(
+          choice.model.get('value'),
+          'value1');
+
+        extras.$('.value')
+          .val('In Which Our Hero Finds A Faithful Sidekick')
+          .change();
+
+        assert.equal(
+          choice.model.get('value'),
+          'in-which-our-hero-finds-a-faithful-sidekick');
+      });
+    });
+
+    describe("when '.ok' is clicked", function() {
+      it("should hide the popover", function(done) {
+        extras.on('hide', function() { done(); });
+        extras.$('.ok').click();
+      });
+    });
+
+    describe("when '.cancel' is clicked", function() {
+      it("should hide the popover", function(done) {
+        extras.on('hide', function() { done(); });
+        extras.$('.cancel').click();
+      });
+
+      it("reset the choice's 'value' attribute to its original value",
+      function() {
+        choice.model.set('value', 'A fish');
+        extras.$('.cancel').click();
+        assert.equal(choice.model.get('value'), 'value1');
+      });
+    });
+  });
+
   describe(".ChoiceEditView", function() {
     var state,
         editMode,

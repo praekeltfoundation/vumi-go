@@ -4,7 +4,8 @@
 
 (function(exports) {
   var TemplateView = go.components.views.TemplateView,
-      UniqueView = go.components.views.UniqueView;
+      UniqueView = go.components.views.UniqueView,
+      PopoverView = go.components.views.PopoverView;
 
   var ViewCollection = go.components.structures.ViewCollection;
 
@@ -34,6 +35,52 @@
     }).defaults(EndpointViewCollection.prototype.addDefaults)
   });
 
+  var ChoiceEditExtrasView = PopoverView.extend({
+    target: function() { return this.choice.$('.extras'); },
+
+    events: {
+      'click .ok': 'onOkClick',
+      'click .cancel': 'onCancelClick',
+      'change .value': 'onValueChange'
+    },
+
+    initialize: function(options) {
+      ChoiceEditExtrasView.__super__.initialize.call(this, options);
+      this.choice = options.choice;
+
+      this.template = new TemplateView({
+        el: this.$el,
+        jst: 'JST.campaign_dialogue_states_choice_choice_extras',
+        data: {model: this.choice.model}
+      });
+
+      this.modelBackup = null;
+      this.on('show', function() {
+        this.modelBackup = this.choice.model.toJSON();
+      }, this);
+    },
+
+    onValueChange: function(e) {
+      this.choice.model.set('value', go.utils.slugify(this.$('.value').val()));
+    },
+
+    onCancelClick: function(e) {
+      e.preventDefault();
+      this.choice.model.set('value', this.modelBackup.value);
+      this.hide();
+    },
+
+    onOkClick: function(e) {
+      this.hide();
+    },
+
+    render: function() {
+      this.template.render();
+      this.$('.info').tooltip();
+      return this;
+    }
+  });
+
   var ChoiceEditView = UniqueView.extend({
     tagName: 'li',
     className: 'choice',
@@ -42,7 +89,8 @@
 
     events: {
       'change .choice-label': 'onLabelChange',
-      'click .remove': 'onRemoveClick'
+      'click .remove': 'onRemoveClick',
+      'click .extras': 'onExtrasClick'
     },
 
     initialize: function(options) {
@@ -53,6 +101,8 @@
         jst: 'JST.campaign_dialogue_states_choice_choice_edit',
         data: {model: this.model}
       });
+
+      this.extras = new ChoiceEditExtrasView({choice: this});
     },
 
     onLabelChange: function(e) {
@@ -71,6 +121,10 @@
 
       this.mode.state.render();
       jsPlumb.repaintEverything();
+    },
+
+    onExtrasClick: function(e) {
+      this.extras.toggle();
     },
 
     render: function() {
@@ -169,6 +223,8 @@
     ChoiceStateEditView: ChoiceStateEditView,
     ChoiceStatePreviewView: ChoiceStatePreviewView,
     ChoiceEndpointView: ChoiceEndpointView,
-    ChoiceEditView: ChoiceEditView
+
+    ChoiceEditView: ChoiceEditView,
+    ChoiceEditExtrasView: ChoiceEditExtrasView
   });
 })(go.campaign.dialogue.states.choice = {});
