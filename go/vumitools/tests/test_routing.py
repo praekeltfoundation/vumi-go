@@ -234,12 +234,12 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                 "default": ["TRANSPORT_TAG:pool1:9012", "default"],
             },
             # Router outbound
-            "ROUTING_BLOCK:router:router1:INBOUND": {
+            "ROUTER:router:router1:INBOUND": {
                 "default": ["TRANSPORT_TAG:pool1:1234", "default"],
                 "other": ["TRANSPORT_TAG:pool1:5678", "default"],
             },
             # Router inbound
-            "ROUTING_BLOCK:router:router1:OUTBOUND": {
+            "ROUTER:router:router1:OUTBOUND": {
                 "default": ["CONVERSATION:app1:conv1", "default"],
                 "other": ["CONVERSATION:app2:conv2", "yet-another"],
             },
@@ -391,7 +391,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('router_ro.inbound', 'app1.inbound')
         self.with_md(msg, conv=("app1", "conv1"),
                      hops=[
-                         ['ROUTING_BLOCK:router:router1:OUTBOUND', 'default'],
+                         ['ROUTER:router:router1:OUTBOUND', 'default'],
                          ['CONVERSATION:app1:conv1', 'default'],
                      ])
         self.assertEqual([msg], self.get_dispatched_inbound('app1'))
@@ -405,7 +405,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('router_ro.inbound', 'app2.inbound')
         self.with_md(msg, conv=("app2", "conv2"), endpoint='yet-another',
                      hops=[
-                         ['ROUTING_BLOCK:router:router1:OUTBOUND', 'other'],
+                         ['ROUTER:router:router1:OUTBOUND', 'other'],
                          ['CONVERSATION:app2:conv2', 'yet-another'],
                      ])
         self.assertEqual([msg], self.get_dispatched_inbound('app2'))
@@ -472,7 +472,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('router_ri.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "1234"),
                      hops=[
-                         ['ROUTING_BLOCK:router:router1:INBOUND', 'default'],
+                         ['ROUTER:router:router1:INBOUND', 'default'],
                          ['TRANSPORT_TAG:pool1:1234', 'default'],
                      ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
@@ -486,7 +486,7 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('router_ri.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "5678"), endpoint='default',
                      hops=[
-                         ['ROUTING_BLOCK:router:router1:INBOUND', 'other'],
+                         ['ROUTER:router:router1:INBOUND', 'other'],
                          ['TRANSPORT_TAG:pool1:5678', 'default'],
                      ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))

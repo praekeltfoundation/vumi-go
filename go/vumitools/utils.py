@@ -12,7 +12,7 @@ class MessageMetadataHelper(object):
     and `conversation_key` are set once the message gets routed to the
     conversation.
 
-    TODO: Something about non-conversation routing blocks.
+    TODO: Something about non-conversation routers.
 
     We store metadata in two places:
 

@@ -197,11 +197,10 @@ class RoutingTableHelper(object):
         * If the destination is a conversation, channel or opt-out
           connector no extra sources to search are added.
 
-        * If the destination is a routing block, the connector on
-          the other side of the routing block is added to the list
-          of sources to search from (i.e. the inbound side if an
-          outbound routing block connector is the target and vice
-          versa).
+        * If the destination is a router, the connector on the other
+          side of the router is added to the list of sources to search
+          from (i.e. the inbound side if an outbound router connector
+          is the target and vice versa).
 
         :param str src_conn: source connector to start search with.
         :rtype: set of destination connector strings.
@@ -215,7 +214,7 @@ class RoutingTableHelper(object):
             for _src_endpoint, (dst_conn, _dst_endpoint) in destinations:
                 results.add(dst_conn)
                 parsed_dst = GoConnector.parse(dst_conn)
-                if parsed_dst.ctype != GoConnector.ROUTING_BLOCK:
+                if parsed_dst.ctype != GoConnector.ROUTER:
                     continue
                 extra_src = str(parsed_dst.flip_direction())
                 if extra_src not in sources_seen:
@@ -235,11 +234,10 @@ class RoutingTableHelper(object):
         * If the sources is a conversation, channel or opt-out
           connector no extra destinations to search are added.
 
-        * If the source is a routing block, the connector on
-          the other side of the routing block is added to the list
-          of destinations to search from (i.e. the inbound side if an
-          outbound routing block connector is the source and vice
-          versa).
+        * If the source is a router, the connector on the other side
+          of the router is added to the list of destinations to search
+          from (i.e. the inbound side if an outbound router connector
+          is the source and vice versa).
 
         :param str dst_conn: destination connector to start search with.
         :rtype: set of source connector strings.
@@ -253,7 +251,7 @@ class RoutingTableHelper(object):
             for _dst_endpoint, (src_conn, _src_endpoint) in sources:
                 results.add(src_conn)
                 parsed_src = GoConnector.parse(src_conn)
-                if parsed_src.ctype != GoConnector.ROUTING_BLOCK:
+                if parsed_src.ctype != GoConnector.ROUTER:
                     continue
                 extra_dst = str(parsed_src.flip_direction())
                 if extra_dst not in destinations_seen:
@@ -272,11 +270,11 @@ class GoConnector(object):
     # Types of connectors in Go routing tables
 
     CONVERSATION = "CONVERSATION"
-    ROUTING_BLOCK = "ROUTING_BLOCK"
+    ROUTER = "ROUTER"
     TRANSPORT_TAG = "TRANSPORT_TAG"
     OPT_OUT = "OPT_OUT"
 
-    # Directions for routing block entries
+    # Directions for router entries
 
     INBOUND = "INBOUND"
     OUTBOUND = "OUTBOUND"
@@ -294,14 +292,14 @@ class GoConnector(object):
         return self._attrs[name]
 
     def flip_direction(self):
-        if self.ctype != self.ROUTING_BLOCK:
+        if self.ctype != self.ROUTER:
             raise GoConnectorError(
-                "Attempt to call .flip_direction on %r which is not a routing"
-                " block connector." % (self,))
+                "Attempt to call .flip_direction on %r which is not a router"
+                " connector." % (self,))
         direction = (self.INBOUND if self.direction == self.OUTBOUND
                      else self.OUTBOUND)
-        return GoConnector.for_routing_block(
-            self.rblock_type, self.rblock_key, direction)
+        return GoConnector.for_router(
+            self.router_type, self.router_key, direction)
 
     @classmethod
     def for_conversation(cls, conv_type, conv_key):
@@ -309,10 +307,10 @@ class GoConnector(object):
                    [conv_type, conv_key])
 
     @classmethod
-    def for_routing_block(cls, rblock_type, rblock_key, direction):
-        return cls(cls.ROUTING_BLOCK,
-                   ["rblock_type", "rblock_key", "direction"],
-                   [rblock_type, rblock_key, direction])
+    def for_router(cls, router_type, router_key, direction):
+        return cls(cls.ROUTER,
+                   ["router_type", "router_key", "direction"],
+                   [router_type, router_key, direction])
 
     @classmethod
     def for_transport_tag(cls, tagpool, tagname):
@@ -329,7 +327,7 @@ class GoConnector(object):
         ctype, parts = parts[0], parts[1:]
         constructors = {
             cls.CONVERSATION: cls.for_conversation,
-            cls.ROUTING_BLOCK: cls.for_routing_block,
+            cls.ROUTER: cls.for_router,
             cls.TRANSPORT_TAG: cls.for_transport_tag,
             cls.OPT_OUT: cls.for_opt_out,
         }

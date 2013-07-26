@@ -86,17 +86,17 @@ describe("go.campaign.routing (models)", function() {
             description: 'Larp Sms: *141#',
             endpoints: [{uuid: 'endpoint3', name: 'default'}]
           }],
-          routing_blocks: [{
-            uuid: 'routing-block1',
+          routers: [{
+            uuid: 'router1',
             type: 'keyword',
-            name: 'keyword-routing-block',
+            name: 'keyword-router',
             description: 'Keyword',
             channel_endpoints: [{uuid: 'endpoint4', name: 'default'}],
             conversation_endpoints: [{uuid: 'endpoint5', name: 'default'}]
           }, {
-            uuid: 'routing-block2',
+            uuid: 'router2',
             type: 'keyword',
-            name: 'keyword-routing-block',
+            name: 'keyword-router',
             description: 'Keyword',
             channel_endpoints: [{uuid: 'endpoint6', name: 'default'}],
             conversation_endpoints: [{uuid: 'endpoint7', name: 'default'}]
