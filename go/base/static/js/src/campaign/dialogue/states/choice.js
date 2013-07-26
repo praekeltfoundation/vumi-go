@@ -3,6 +3,11 @@
 // Structures for choice states (states where users enter any text they want)
 
 (function(exports) {
+  var TemplateView = go.components.views.TemplateView,
+      UniqueView = go.components.views.UniqueView;
+
+  var ViewCollection = go.components.structures.ViewCollection;
+
   var states = go.campaign.dialogue.states,
       EntryEndpointView = states.EntryEndpointView,
       DialogueStateView = states.DialogueStateView,
@@ -18,22 +23,88 @@
     className: 'choice endpoint',
     side: 'right',
     isTarget: false,
-    target: function() {
-      return '.choice[data-endpoint-id="' + this.uuid() + '"]';
+    target: function() { return '[data-uuid="choice:' + this.uuid() + '"]'; }
+  });
+
+  var ChoiceEndpointCollection = EndpointViewCollection.extend({
+    type: ChoiceEndpointView,
+
+    addDefaults: _({
+      render: false
+    }).defaults(EndpointViewCollection.prototype.addDefaults)
+  });
+
+  var ChoiceEditView = UniqueView.extend({
+    tagName: 'li',
+    className: 'choice',
+
+    uuid: function() { return 'choice:' + this.model.get('uuid'); },
+
+    events: {
+      'change .label': 'onLabelChange',
+      'click .remove': 'onRemoveClick'
+    },
+
+    initialize: function(options) {
+      this.mode = options.mode;
+
+      this.template = new TemplateView({
+        el: this.$el,
+        jst: 'JST.campaign_dialogue_states_choice_choice_edit',
+        data: {model: this.model}
+      });
+    },
+
+    onLabelChange: function(e) {
+      this.model.set('label', this.$('input').prop('value'), {silent: true});
+    },
+
+    onRemoveClick: function(e) {
+      e.preventDefault();
+
+      this.mode.state.model
+        .get('choice_endpoints')
+        .remove(this.model);
+
+      this.mode.state.render();
+      jsPlumb.repaintEverything();
+    },
+
+    render: function() {
+      this.template.render();
+      return this;
+    }
+  });
+
+  var ChoiceEditCollection = ViewCollection.extend({
+    type: ChoiceEditView,
+
+    addDefaults: _({
+      render: false
+    }).defaults(ViewCollection.prototype.addDefaults),
+
+    viewOptions: function() { return {mode: this.mode}; },
+
+    initialize: function(options) {
+      this.mode = options.mode;
     }
   });
 
   var ChoiceStateEditView = DialogueStateEditView.extend({
     events: _({
-      'click .new-choice': 'onNewChoice',
-      'click .choice .remove': 'onRemoveChoice',
-      'change .choice input': 'onChoiceChange'
+      'click .new-choice': 'onNewChoice'
     }).defaults(DialogueStateEditView.prototype.events),
 
     bodyOptions: function() {
       return {
         jst: 'JST.campaign_dialogue_states_choice_edit',
-        partials: {text: new TextEditView({mode: this})}
+        partials: {
+          text: new TextEditView({mode: this}),
+          choices: new ChoiceEditCollection({
+            mode: this,
+            models: this.state.model.get('choice_endpoints')
+          })
+        }
       };
     },
 
@@ -44,6 +115,7 @@
 
     onActivate: function() {
       var choices = this.state.endpoints.members.get('choice_endpoints');
+
       if (!choices.size()) {
         this.newChoice();
         this.state.render();
@@ -57,38 +129,18 @@
       jsPlumb.repaintEverything();
     },
 
-    onRemoveChoice: function(e) {
-      e.preventDefault();
-
-      var $choice = $(e.target).parent();
-      this.state.endpoints.remove($choice.attr('data-endpoint-id'));
-
-      this.state.render();
-      jsPlumb.repaintEverything();
-    },
-
-    onChoiceChange: function(e) {
-      var $choice = $(e.target).parent();
-
+    newChoice: function() {
       this.state.model
         .get('choice_endpoints')
-        .get($choice.attr('data-endpoint-id'))
-        .set('label', $choice.find('input').prop('value'), {silent: true});
-    },
+        .add({uuid: uuid.v4()});
 
-    newChoice: function() {
-      return this.state.endpoints.add(
-        'choice_endpoints',
-        {model: {uuid: uuid.v4()}},
-        {render: false});
+      return this;
     }
   });
 
   var ChoiceStatePreviewView = DialogueStatePreviewView.extend({
     bodyOptions: function() {
-      return {
-        jst: 'JST.campaign_dialogue_states_choice_preview'
-      };
+      return {jst: 'JST.campaign_dialogue_states_choice_preview'};
     }
   });
 
@@ -104,7 +156,7 @@
     }, {
       attr: 'choice_endpoints',
       type: ChoiceEndpointView,
-      collectionType: EndpointViewCollection
+      collectionType: ChoiceEndpointCollection
     }]
   });
 
@@ -113,6 +165,7 @@
 
     ChoiceStateEditView: ChoiceStateEditView,
     ChoiceStatePreviewView: ChoiceStatePreviewView,
-    ChoiceEndpointView: ChoiceEndpointView
+    ChoiceEndpointView: ChoiceEndpointView,
+    ChoiceEditView: ChoiceEditView
   });
 })(go.campaign.dialogue.states.choice = {});
