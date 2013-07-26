@@ -13,7 +13,7 @@ from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import VumiWorkerTestCase, PersistenceMixin
 
 from go.vumitools.api import VumiApiCommand
-from go.vumitools.account import UserAccount
+from go.vumitools.account import UserAccount, RoutingTableHelper
 from go.vumitools.contact import Contact, ContactGroup
 from go.vumitools.utils import MessageMetadataHelper
 
@@ -135,15 +135,16 @@ class GoWorkerTestMixin(GoPersistenceMixin):
         return self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
 
     @inlineCallbacks
-    def setup_tagpool(self, pool, tags, transport_name=None, permission=True):
+    def setup_tagpool(self, pool, tags, transport_name=None, metadata=None,
+                      permission=True):
         tags = [(pool, tag) for tag in tags]
         if transport_name is None:
             transport_name = self.transport_name
+        metadata = metadata.copy() if metadata is not None else {}
+        metadata.setdefault("transport_type", self.transport_type)
+        metadata.setdefault("transport_name", transport_name)
         yield self.vumi_api.tpm.declare_tags(tags)
-        yield self.vumi_api.tpm.set_metadata(pool, {
-            "transport_type": self.transport_type,
-            "transport_name": transport_name,
-        })
+        yield self.vumi_api.tpm.set_metadata(pool, metadata)
         if permission:
             yield self.add_tagpool_permission(pool)
         returnValue(tags)
@@ -227,6 +228,16 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
             yield self.dispatch_command(
                 cmd.payload['command'], *cmd.payload['args'],
                 **cmd.payload['kwargs'])
+
+    @inlineCallbacks
+    def add_channel_to_conversation(self, conv, tag):
+        # TODO: This is a duplicate of the method in
+        #       go.base.test.utils.VumiGoDjangoTestCase but
+        #       there is no suitable common base class.
+        user_account = yield self.user_api.get_user_account()
+        rt = RoutingTableHelper(user_account.routing_table)
+        rt.add_oldstyle_conversation(conv, tag)
+        yield user_account.save()
 
     @inlineCallbacks
     def start_conversation(self, conversation):

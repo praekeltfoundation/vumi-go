@@ -20,6 +20,7 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi import log
 
 from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
+from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.router import RouterStore
@@ -70,6 +71,9 @@ class TagpoolSet(object):
     def display_name(self, pool):
         return self._pools[pool].get('display_name', pool)
 
+    def country_name(self, pool, default):
+        return self._pools[pool].get('country_name', default)
+
     def user_selects_tag(self, pool):
         return self._pools[pool].get('user_selects_tag', False)
 
@@ -97,8 +101,10 @@ class VumiUserApi(object):
                                                     self.user_account_key)
         self.contact_store = ContactStore(self.api.manager,
                                           self.user_account_key)
-        self.router_store = RouterStore(
-            self.api.manager, self.user_account_key)
+        self.router_store = RouterStore(self.api.manager,
+                                        self.user_account_key)
+        self.channel_store = ChannelStore(self.api.manager,
+                                          self.user_account_key)
 
     def exists(self):
         return self.api.user_exists(self.user_account_key)
@@ -173,6 +179,27 @@ class VumiUserApi(object):
         returnValue([c for c in conversations if c.is_draft()])
 
     @Manager.calls_manager
+    def active_routers(self):
+        keys = yield self.router_store.list_active_routers()
+        # NOTE: This assumes that we don't have very large numbers of active
+        #       routers.
+        routers = []
+        for routers_bunch in self.router_store.load_all_bunches(keys):
+            routers.extend((yield routers_bunch))
+        returnValue(routers)
+
+    @Manager.calls_manager
+    def active_channels(self):
+        channels = []
+        endpoints = yield self.list_endpoints()
+        for tag in endpoints:
+            tagpool_meta = yield self.api.tpm.get_metadata(tag[0])
+            channel = yield self.channel_store.get_channel_by_tag(
+                tag, tagpool_meta)
+            channels.append(channel)
+        returnValue(channels)
+
+    @Manager.calls_manager
     def tagpools(self):
         user_account = yield self.get_user_account()
         active_conversations = yield self.active_conversations()
@@ -209,6 +236,14 @@ class VumiUserApi(object):
                         app_settings[application])
                         for application in sorted(applications)
                         if application in app_settings]))
+
+    @Manager.calls_manager
+    def router_types(self):
+        # TODO: Permissions.
+        yield None
+        router_settings = settings.VUMI_INSTALLED_ROUTERS
+        returnValue(SortedDict([(router_type, router_settings[router_type])
+                                for router_type in sorted(router_settings)]))
 
     @Manager.calls_manager
     def list_groups(self):
