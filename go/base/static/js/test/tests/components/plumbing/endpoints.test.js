@@ -27,7 +27,7 @@ describe("go.components.plumbing.endpoints", function() {
     var EndpointModel = stateMachine.EndpointModel,
         EndpointView = plumbing.endpoints.EndpointView;
 
-    var ToyEndpointView = EndpointView.extend({labelled: true});
+    var ToyEndpointView = EndpointView.extend();
 
     var x,
         x1;
@@ -69,12 +69,6 @@ describe("go.components.plumbing.endpoints", function() {
         assert(noElExists('[data-uuid="x4"]'));
         x4.render();
         assert(oneElExists('[data-uuid="x4"]'));
-      });
-
-      it("should add a label to the endpoint if labelling is enabled",
-      function() {
-        x4.render();
-        assert(oneElExists('[data-uuid="x4"] .label'));
       });
     });
   });
