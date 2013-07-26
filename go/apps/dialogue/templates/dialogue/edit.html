@@ -30,8 +30,6 @@
   {{ block.super }}
   var dialogue = go.campaign.dialogue;
 
-  $('.breadcrumbs a').eq(1).addClass('active');
-
   var diagram = new dialogue.diagram.DialogueDiagramView({
     el: '.dialogue #diagram',
     model: new dialogue.models.DialogueModel({{ model_data|safe }})
