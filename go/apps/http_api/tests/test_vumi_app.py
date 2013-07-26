@@ -11,12 +11,13 @@ from vumi.utils import http_request_full
 from vumi.message import TransportUserMessage, TransportEvent
 from vumi.tests.utils import MockHttpServer
 from vumi.transports.vumi_bridge.client import StreamingClient
+from vumi.config import ConfigContext
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApiCommand
 
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
-from go.apps.http_api.resource import StreamResource
+from go.apps.http_api.resource import StreamResource, ConversationResource
 
 
 class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
@@ -328,6 +329,16 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             'Too many concurrent connections' in maxed_out_resp.delivered_body)
 
         [r.disconnect() for r in max_receivers]
+
+    @inlineCallbacks
+    def test_disabling_concurrency_limit(self):
+        conv_resource = ConversationResource(self.app, self.conversation.key)
+        # negative concurrency limit disables it
+        ctxt = ConfigContext(user_account=self.account.key,
+                             concurrency_limit=-1)
+        config = yield self.app.get_config(msg=None, ctxt=ctxt)
+        self.assertTrue(
+            (yield conv_resource.is_allowed(config, self.account.key)))
 
     @inlineCallbacks
     def test_backlog_on_connect(self):

@@ -33,8 +33,8 @@
   });
 
   var ChannelEndpointView = RoutingEndpointView.extend(),
-      RoutingBlockChannelEndpointView = RoutingEndpointView.extend(),
-      RoutingBlockConversationEndpointView = RoutingEndpointView.extend(),
+      RouterChannelEndpointView = RoutingEndpointView.extend(),
+      RouterConversationEndpointView = RoutingEndpointView.extend(),
       ConversationEndpointView = RoutingEndpointView.extend();
 
   // Routing entries (connections)
@@ -42,8 +42,8 @@
 
   var RoutingEntryCollection = ConnectionViewCollection.extend({
     acceptedPairs: [
-      [ChannelEndpointView, RoutingBlockChannelEndpointView],
-      [ConversationEndpointView, RoutingBlockConversationEndpointView],
+      [ChannelEndpointView, RouterChannelEndpointView],
+      [ConversationEndpointView, RouterConversationEndpointView],
       [ChannelEndpointView, ConversationEndpointView]],
 
     accepts: function(source, target) {
@@ -96,16 +96,16 @@
     }]
   });
 
-  var RoutingBlockStateView = RoutingStateView.extend({
-    className: 'state routing-block',
+  var RouterStateView = RoutingStateView.extend({
+    className: 'state router',
     endpointSchema: [{
       attr: 'channel_endpoints',
       side: 'left',
-      type: RoutingBlockChannelEndpointView
+      type: RouterChannelEndpointView
     }, {
       attr: 'conversation_endpoints',
       side: 'right',
-      type: RoutingBlockConversationEndpointView
+      type: RouterConversationEndpointView
     }]
   });
 
@@ -133,7 +133,7 @@
   // -------
 
   // A vertical section of the routing diagram dedicated to a particular
-  // collection of the three state types (Channel, RoutingBlock or
+  // collection of the three state types (Channel, Router or
   // Conversation).
   var RoutingColumnView = Backbone.View.extend({
     initialize: function(options) {
@@ -162,9 +162,9 @@
     collectionName: 'channels'
   });
 
-  var RoutingBlockColumnView = RoutingColumnView.extend({
-    id: 'routing-blocks',
-    collectionName: 'routing_blocks'
+  var RouterColumnView = RoutingColumnView.extend({
+    id: 'routers',
+    collectionName: 'routers'
   });
 
   var ConversationColumnView = RoutingColumnView.extend({
@@ -182,9 +182,9 @@
       type: ChannelStateView,
       columnEl: '#channels'
     }, {
-      attr: 'routing_blocks',
-      type: RoutingBlockStateView,
-      columnEl: '#routing-blocks'
+      attr: 'routers',
+      type: RouterStateView,
+      columnEl: '#routers'
     }, {
       attr: 'conversations',
       type: ConversationStateView,
@@ -198,7 +198,7 @@
     initialize: function(options) {
       DiagramView.prototype.initialize.call(this, options);
       this.channels = new ChannelColumnView({diagram: this});
-      this.routingBlocks = new RoutingBlockColumnView({diagram: this});
+      this.routers = new RouterColumnView({diagram: this});
       this.conversations = new ConversationColumnView({diagram: this});
 
       // Give the jsPlumb connectors arrow overlays
@@ -214,7 +214,7 @@
 
     render: function() {
       this.channels.render();
-      this.routingBlocks.render();
+      this.routers.render();
       this.conversations.render();
       this.connections.render();
       return this;
@@ -255,13 +255,13 @@
 
     RoutingColumnView: RoutingColumnView,
     ChannelColumnView: ChannelColumnView,
-    RoutingBlockColumnView: RoutingBlockColumnView,
+    RouterColumnView: RouterColumnView,
     ConversationColumnView: ConversationColumnView,
 
     RoutingStateView: RoutingStateView,
     RoutingStateCollection: RoutingStateCollection,
     ChannelStateView: ChannelStateView,
-    RoutingBlockStateView: RoutingBlockStateView,
+    RouterStateView: RouterStateView,
     ConversationStateView: ConversationStateView,
 
     RoutingEndpointView: RoutingEndpointView,

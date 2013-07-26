@@ -144,9 +144,9 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         ])
 
     @inlineCallbacks
-    def test_routing_blocks_with_no_routing_blocks(self):
+    def test_routers_with_no_routers(self):
         result = yield self.proxy.callRemote(
-            "routing_blocks", self.campaign_key)
+            "routers", self.campaign_key)
         self.assertEqual(result, [])
 
     @inlineCallbacks
@@ -224,7 +224,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
                     ],
                 }
             ],
-            u'routing_blocks': [
+            u'routers': [
             ],
             u'routing_entries': [
                 {
@@ -245,7 +245,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     def mk_routing_table(self, entries):
         return {
-            'channels': [], 'conversations': [], 'routing_blocks': [],
+            'channels': [], 'conversations': [], 'routers': [],
             'routing_entries': [self.mk_routing_entry(*e) for e in entries],
         }
 

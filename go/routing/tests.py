@@ -31,7 +31,7 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
             u'campaign_id': self.user_api.user_account_key,
             u'channels': [],
             u'conversations': [],
-            u'routing_blocks': [],
+            u'routers': [],
             u'routing_entries': [],
         }
 
@@ -42,7 +42,7 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
             routing_table[u'conversations'].append(
                 ConversationType.format_conversation(conv))
 
-        # TODO: Routing blocks
+        # TODO: routers
 
         def mkconn(thing):
             if isinstance(thing, tuple):
