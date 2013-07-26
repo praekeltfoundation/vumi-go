@@ -19,6 +19,13 @@ def conversation_or_404(user_api, key):
     return user_api.wrap_conversation(conversation)
 
 
+def router_or_404(user_api, key):
+    router = user_api.router_store.get_router_by_key(key)
+    if router is None:
+        raise Http404("Router not found.")
+    return router
+
+
 def vumi_api():
     """Return a Vumi API instance."""
     return VumiApi.from_config_sync(settings.VUMI_API_CONFIG, connection)
@@ -118,6 +125,11 @@ def configured_conversation_types():
                 for a in settings.VUMI_INSTALLED_APPS.itervalues())
 
 
+def configured_router_types():
+    return dict((a['namespace'], a['display_name'])
+                for a in settings.VUMI_INSTALLED_ROUTERS.itervalues())
+
+
 def get_conversation_view_definition(conversation_type, conv=None):
     # Scoped import to avoid circular deps.
     from go.conversation.view_definition import ConversationViewDefinitionBase
@@ -131,3 +143,18 @@ def get_conversation_view_definition(conversation_type, conv=None):
                 return ConversationViewDefinitionBase(conv_def)
             return app_pkg.view_definition.ConversationViewDefinition(conv_def)
     raise Exception("Can't find conversation_type: %s" % (conversation_type,))
+
+
+def get_router_view_definition(router_type, router=None):
+    # Scoped import to avoid circular deps.
+    from go.router.view_definition import RouterViewDefinitionBase
+    # HACK: Assume 'namespace' is 'router_type'.
+    for module, data in settings.VUMI_INSTALLED_ROUTERS.iteritems():
+        if data['namespace'] == router_type:
+            router_pkg = __import__(module,
+                                    fromlist=['definition', 'view_definition'])
+            conv_def = router_pkg.definition.RouterDefinition(router)
+            if not hasattr(router_pkg, 'view_definition'):
+                return RouterViewDefinitionBase(conv_def)
+            return router_pkg.view_definition.RouterViewDefinition(conv_def)
+    raise Exception("Can't find router_type: %s" % (router_type,))

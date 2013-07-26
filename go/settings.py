@@ -129,6 +129,7 @@ TEMPLATE_DIRS = (
     abspath("apps", "multi_surveys", "templates"),
     abspath("apps", "jsbox", "templates"),
     abspath("conversation", "templates"),
+    abspath("router", "templates"),
     abspath("channel", "templates"),
     abspath("routing", "templates"),
     abspath("wizard", "templates"),
@@ -155,6 +156,7 @@ INSTALLED_APPS = (
     'djcelery_email',
     'go.base',
     'go.conversation',
+    'go.router',
     'go.channel',
     'go.wizard',
     'go.contacts',
@@ -285,6 +287,13 @@ VUMI_INSTALLED_APPS = {
     'go.apps.http_api': {
         'namespace': 'http_api',
         'display_name': 'HTTP API',
+    },
+}
+
+VUMI_INSTALLED_ROUTERS = {
+    'go.routers.keyword': {
+        'namespace': 'keyword',
+        'display_name': 'Keyword',
     },
 }
 
