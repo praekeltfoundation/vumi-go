@@ -378,6 +378,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                     "Transport name %r found in tagpool metadata for pool"
                     " %r is invalid." % (transport_name, conn.tagpool), msg)
             dst_connector_name = transport_name
+            msg['transport_name'] = transport_name
+
+            transport_type = tagpool_metadata.get('transport_type')
+            if transport_type is not None:
+                msg['transport_type'] = transport_type
 
         elif conn.ctype == conn.OPT_OUT:
             dst_connector_name = self.opt_out_connector
