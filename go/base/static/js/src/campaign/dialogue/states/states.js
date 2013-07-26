@@ -6,6 +6,7 @@
   var maybeByName = go.utils.maybeByName,
       GridView = go.components.grid.GridView,
       ConfirmView = go.components.views.ConfirmView,
+      PopoverView = go.components.views.PopoverView,
       TemplateView = go.components.views.TemplateView;
 
   var plumbing = go.components.plumbing;
@@ -28,6 +29,54 @@
   var ExitEndpointView = DialogueEndpointView.extend({
     side: 'right',
     isTarget: false
+  });
+
+  var NameEditExtrasView = PopoverView.extend({
+    target: function() { return this.mode.$('.name-extras'); },
+
+    events: {
+      'click .ok': 'onOkClick',
+      'click .cancel': 'onCancelClick',
+      'change .store-as': 'onStoreAsChange'
+    },
+
+    initialize: function(options) {
+      NameEditExtrasView.__super__.initialize.call(this, options);
+      this.mode = options.mode;
+
+      this.template = new TemplateView({
+        el: this.$el,
+        jst: 'JST.campaign_dialogue_states_components_nameExtras',
+        data: {model: this.mode.state.model}
+      });
+
+      this.storeAsBackup = null;
+      this.on('show', function() {
+        this.storeAsBackup = this.mode.state.model.get('store_as');
+      }, this);
+    },
+
+    onStoreAsChange: function(e) {
+      this.mode.state.model.set(
+        'store_as',
+        go.utils.slugify(this.$('.store-as').val()));
+    },
+
+    onCancelClick: function(e) {
+      e.preventDefault();
+      this.mode.state.model.set('store_as', this.storeAsBackup);
+      this.hide();
+    },
+
+    onOkClick: function(e) {
+      this.hide();
+    },
+
+    render: function() {
+      this.template.render();
+      this.$('.info').tooltip();
+      return this;
+    }
   });
 
   // Base 'mode' for state views. Each mode acts as a 'delegate view',
@@ -75,7 +124,8 @@
       'click .actions .ok': 'onOk',
       'click .actions .cancel': 'onCancel',
       'change .type': 'onTypeChange',
-      'change .name': 'onNameChange'
+      'change .name': 'onNameChange',
+      'click .name-extras': 'onNameExtras'
     },
 
     resetModal: new ConfirmView({
@@ -89,6 +139,7 @@
       this.backupModel();
 
       this.on('activate', this.backupModel, this);
+      this.nameExtras = new NameEditExtrasView({mode: this});
     },
 
     onOk: function(e) {
@@ -120,7 +171,10 @@
 
     onNameChange: function(e) {
       this.state.model.set('name', $(e.target).val(), {silent: true});
-      return this;
+    },
+
+    onNameExtras: function(e) {
+      this.nameExtras.toggle();
     },
 
     // Keep a backup to restore the model for when the user cancels the edit

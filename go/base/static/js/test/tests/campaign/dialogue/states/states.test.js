@@ -21,6 +21,52 @@ describe("go.campaign.dialogue.states", function() {
     tearDown();
   });
 
+  describe(".NameEditExtrasView", function() {
+    var state,
+        extras;
+
+    beforeEach(function() {
+      state = diagram.states.get('state1');
+      state.edit();
+
+     extras = state.modes.edit.nameExtras;
+     extras.show();
+    });
+
+    describe("when '.store-as' has changed", function() {
+      it("should update the state model's 'store_as' attribute", function() {
+        assert.equal(state.model.get('store_as'), 'message-1');
+
+        extras.$('.store-as')
+          .val("I'm a computer")
+          .change();
+
+        assert.equal(state.model.get('store_as'), "im-a-computer");
+      });
+    });
+
+    describe("when '.ok' is clicked", function() {
+      it("should hide the popover", function(done) {
+        extras.on('hide', function() { done(); });
+        extras.$('.ok').click();
+      });
+    });
+
+    describe("when '.cancel' is clicked", function() {
+      it("should hide the popover", function(done) {
+        extras.on('hide', function() { done(); });
+        extras.$('.cancel').click();
+      });
+
+      it("reset the state's 'store_as' attribute to its original value",
+      function() {
+        state.model.set('store_as', 'A computer');
+        extras.$('.cancel').click();
+        assert.equal(state.model.get('store_as'), 'message-1');
+      });
+    });
+  });
+
   describe(".DialogueStateModeView", function() {
     var DialogueStateModeView = dialogue.states.DialogueStateModeView;
 
@@ -73,6 +119,7 @@ describe("go.campaign.dialogue.states", function() {
             uuid: 'state4',
             name: 'New Dummy',
             type: 'dummy',
+            store_as: 'dummy-message-1',
             entry_endpoint: {'uuid':'endpoint6'},
             exit_endpoint: {'uuid':'endpoint7'},
             ordinal: 3
@@ -85,6 +132,7 @@ describe("go.campaign.dialogue.states", function() {
           uuid: 'state4',
           name: 'Dummy Message 1',
           type: 'dummy',
+          store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           ordinal: 3
@@ -101,6 +149,7 @@ describe("go.campaign.dialogue.states", function() {
           uuid: 'state4',
           name: 'Dummy Message 1',
           type: 'dummy',
+          store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           ordinal: 3
@@ -113,6 +162,7 @@ describe("go.campaign.dialogue.states", function() {
           uuid: 'state4',
           name: 'Dummy Message 1',
           type: 'dummy',
+          store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           ordinal: 3
@@ -212,6 +262,7 @@ describe("go.campaign.dialogue.states", function() {
           uuid: 'state4',
           name: 'Dummy Message 1',
           type: 'dummy',
+          store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           ordinal: 3
@@ -224,6 +275,7 @@ describe("go.campaign.dialogue.states", function() {
           uuid: 'state4',
           name: 'Dummy Message 1',
           type: 'dummy',
+          store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           ordinal: 3

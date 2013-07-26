@@ -382,6 +382,7 @@ PIPELINE_JS = {
             'templates/campaign/dialogue/states/freetext/preview.jst',
             'templates/campaign/dialogue/states/end/edit.jst',
             'templates/campaign/dialogue/states/end/preview.jst',
+            'templates/campaign/dialogue/states/components/nameExtras.jst',
             'templates/components/confirm.jst',
             'templates/dummy/dummy.jst',
 
