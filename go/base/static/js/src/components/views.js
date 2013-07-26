@@ -7,6 +7,8 @@
       functor = utils.functor,
       maybeByName = utils.maybeByName;
 
+  var ViewCollection = go.components.structures.ViewCollection;
+
   // A view that can be uniquely identified by its `uuid` property.
   var UniqueView = Backbone.View.extend({
     constructor: function(options) {
@@ -167,30 +169,46 @@
 
     initialize: function(options) {
       if (options.data) { this.data = options.data; }
-
       if (options.jst) { this.jst = options.jst; }
       this.partials = _({}).extend(this.partials, options.partials || {});
     },
 
-    renderPartial: function(name) {
-      var partial = this.partials[name],
-          $el;
+    insertPartial: function($p, $at, name) {
+      $at.replaceWith($p);
+      $p.attr('data-partial', name);
+      return this;
+    },
 
-      if (partial instanceof Backbone.View) {
-        partial.render();
-        $el = partial.$el;
+    renderPartial: function(p, $at, name) {
+      if (p instanceof Backbone.View) {
+        p.render();
+        this.insertPartial(p.$el, $at, name);
+        p.delegateEvents();
       } else {
-        $el = $(maybeByName(partial)(_(this).result('data')));
+        p = $(maybeByName(p)(_(this).result('data')));
+        this.insertPartial(p, $at, name);
       }
 
-      $el.attr('data-partial', name);
-      this.$('[data-partial="' + name + '"]').replaceWith($el);
+      return this;
+    },
+
+    renderPartials: function(name) {
+      var partials = this.partials[name],
+          $placeholders = this.$('[data-partial="' + name + '"]');
+
+      if (partials instanceof ViewCollection) { partials = partials.values(); }
+      else if (!_.isArray(partials)) { partials = [partials]; }
+
+      partials.forEach(function(p, i) {
+        this.renderPartial(p, $placeholders.eq(i), name);
+      }, this);
+
       return this;
     },
 
     render: function() {
       this.$el.html(maybeByName(this.jst)(_(this).result('data')));
-      _(this.partials).keys().forEach(this.renderPartial, this);
+      _(this.partials).keys().forEach(this.renderPartials, this);
       return this;
     }
   });
