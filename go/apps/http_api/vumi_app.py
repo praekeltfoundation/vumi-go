@@ -73,7 +73,8 @@ class StreamingHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
         "The path the resource should receive health checks on.",
         default='/health/', static=True)
     concurrency_limit = ConfigInt(
-        "Maximum number of clients per account.",
+        "Maximum number of clients per account. A value less than "
+        "zero disables the limit",
         default=10)
 
 

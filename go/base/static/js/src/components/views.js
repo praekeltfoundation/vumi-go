@@ -25,42 +25,6 @@
     }
   });
 
-  // View for a label which can be attached to an element.
-  //
-  // Options:
-  //   - text: A string or a function returning a string containing the text to
-  //   be displayed by the label
-  //   - of: The target element this label should be attached to
-  //   - my: The point on the label to align with the of
-  //   - at: The point on the target element to align the label against
-  var LabelView = Backbone.View.extend({
-    tagName: 'span',
-    className: 'label',
-
-    initialize: function(options) {
-      this.$of = $(options.of);
-      this.text = functor(options.text);
-      this.my = options.my;
-      this.at = options.at;
-    },
-
-    render: function() {
-      // Append the label to the of element so it can follow the of
-      // around (in the case of moving or draggable ofs)
-      this.$of.append(this.$el);
-
-      this.$el
-        .text(this.text())
-        .position({
-          of: this.$of,
-          my: this.my,
-          at: this.at
-        })
-        .css('position', 'absolute')
-        .css('pointer-events', 'none');
-    }
-  });
-
   var MessageTextView = Backbone.View.extend({
     SMS_MAX_CHARS: 160,
     events: {
@@ -169,19 +133,27 @@
 
     initialize: function(options) {
       if (options.data) { this.data = options.data; }
-
       if (options.jst) { this.jst = options.jst; }
       this.partials = _({}).extend(this.partials, options.partials || {});
     },
 
-    renderPartial: function(partial) {
-      if (partial instanceof Backbone.View) {
-        partial.render();
-        return partial.$el;
+    insertPartial: function($p, $at, name) {
+      $at.replaceWith($p);
+      $p.attr('data-partial', name);
+      return this;
+    },
+
+    renderPartial: function(p, $at, name) {
+      if (p instanceof Backbone.View) {
+        p.render();
+        this.insertPartial(p.$el, $at, name);
+        p.delegateEvents();
       } else {
-        console.log(partial);
-        return $(maybeByName(partial)(_(this).result('data')));
+        p = $(maybeByName(p)(_(this).result('data')));
+        this.insertPartial(p, $at, name);
       }
+
+      return this;
     },
 
     renderPartials: function(name) {
@@ -192,11 +164,7 @@
       else if (!_.isArray(partials)) { partials = [partials]; }
 
       partials.forEach(function(p, i) {
-        var $at = $placeholders.eq(i),
-            $p = this.renderPartial(p);
-
-        $at.replaceWith($p);
-        $p.attr('data-partial', name);
+        this.renderPartial(p, $placeholders.eq(i), name);
       }, this);
 
       return this;
@@ -210,7 +178,6 @@
   });
 
   _.extend(exports, {
-    LabelView: LabelView,
     UniqueView: UniqueView,
     ConfirmView: ConfirmView,
     TemplateView: TemplateView,

@@ -37,7 +37,7 @@ var stateMachine = go.components.stateMachine,
     }]
   });
 
-  var RoutingBlockModel = StateModel.extend({
+  var RouterModel = StateModel.extend({
     relations: [{
       type: Backbone.HasMany,
       key: 'conversation_endpoints',
@@ -71,8 +71,8 @@ var stateMachine = go.components.stateMachine,
       relatedModel: ChannelModel
     }, {
       type: Backbone.HasMany,
-      key: 'routing_blocks',
-      relatedModel: RoutingBlockModel
+      key: 'routers',
+      relatedModel: RouterModel
     }, {
       type: Backbone.HasMany,
       key: 'conversations',
@@ -89,7 +89,7 @@ var stateMachine = go.components.stateMachine,
     CampaignRoutingModel: CampaignRoutingModel,
 
     ChannelModel: ChannelModel,
-    RoutingBlockModel: RoutingBlockModel,
+    RouterModel: RouterModel,
     ConversationModel: ConversationModel,
 
     RoutingEntryModel: RoutingEntryModel,
