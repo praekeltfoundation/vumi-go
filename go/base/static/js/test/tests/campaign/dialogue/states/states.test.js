@@ -405,13 +405,13 @@ describe("go.campaign.dialogue.states", function() {
           states.keys(),
           ['state1','state2','state3','state4']);
 
-        $('[data-uuid="state4"] .titlebar')
+        $('[data-uuid="state3"] .titlebar')
           .simulate('mousedown')
           .simulate('drag', {dx: -350});
 
         assert.deepEqual(
           states.keys(),
-          ['state1','state2','state4','state3']);
+          ['state1','state3','state2','state4']);
       });
 
       it("should not let the state be sorted if it is connected", function() {
