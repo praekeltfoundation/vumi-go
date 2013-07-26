@@ -13,8 +13,7 @@
       SubviewCollectionGroup = structures.SubviewCollectionGroup;
 
   var views = go.components.views,
-      UniqueView = views.UniqueView,
-      LabelView = views.LabelView;
+      UniqueView = views.UniqueView;
 
   // Base components
   // ---------------
@@ -37,9 +36,6 @@
     plumbSourceOptions: {anchor: 'Continuous', maxConnections: 1},
     plumbTargetOptions: {anchor: 'Continuous'},
 
-    labelled: false,
-    labelOptions: {my: 'right center', at: 'left center', text: ''},
-
     initialize: function(options) {
       // the state view that this endpoint is part of
       this.state = options.state;
@@ -55,14 +51,6 @@
       if (this.isTarget) {
         jsPlumb.makeTarget(this.$el, _(this).result('plumbTargetOptions'));
       }
-
-      if (this.labelled) {
-        this.label = new LabelView(this._labelOptions());
-      }
-    },
-
-    _labelOptions: function() {
-      return _.defaults({of: this.$el}, _(this).result('labelOptions'));
     },
 
     isConnected: function() {
@@ -79,7 +67,6 @@
 
     render: function() {
       this.collection.appendToView(this);
-      if (this.labelled) { this.label.render(); }
     }
   });
 
