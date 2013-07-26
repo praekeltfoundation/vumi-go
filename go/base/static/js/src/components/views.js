@@ -145,15 +145,18 @@
     show: function() {
       this.render();
 
-      this.popover = _(this)
-        .result('target')
-        .popover(
-          _({content: this.$el, html: true}).defaults(
-          _(this).result('popoverOptions')))
-        .data('popover');
+      if (!this.popover) {
+        this.popover = _(this)
+          .result('target')
+          .popover(
+            _({content: this.$el, html: true}).defaults(
+            _(this).result('popoverOptions')))
+          .data('popover');
+      }
 
       this.popover.show();
       this.hidden = false;
+      this.trigger('show');
       return this;
     },
 
@@ -162,6 +165,8 @@
         this.popover.hide();
         this.hidden = true;
       }
+
+      this.trigger('hide');
       return this;
     },
 

@@ -192,6 +192,12 @@ describe("go.components.views", function() {
           $('.popover-content').text(),
           'Put away those fiery biscuits.');
       });
+
+      it("should trigger a 'show' event", function(done) {
+        popover
+          .on('show', function() { done(); })
+          .show();
+      });
     });
 
     describe(".hide", function() {
@@ -203,6 +209,12 @@ describe("go.components.views", function() {
         assert(oneElExists('.popover'));
         popover.hide();
         assert(noElExists('.popover'));
+      });
+
+      it("should trigger a 'hide' event", function(done) {
+        popover
+          .on('hide', function() { done(); })
+          .hide();
       });
     });
 
