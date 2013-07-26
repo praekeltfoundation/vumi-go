@@ -383,6 +383,10 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             transport_type = tagpool_metadata.get('transport_type')
             if transport_type is not None:
                 msg['transport_type'] = transport_type
+            else:
+                log.error(
+                    "No transport type found for tagpool %r while routing %s"
+                    % (conn.tagpool, msg))
 
         elif conn.ctype == conn.OPT_OUT:
             dst_connector_name = self.opt_out_connector
