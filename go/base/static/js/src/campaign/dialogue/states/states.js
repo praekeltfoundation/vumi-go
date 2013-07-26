@@ -72,8 +72,8 @@
     className: 'edit mode',
 
     events: {
-      'click .ok': 'onOk',
-      'click .cancel': 'onCancel',
+      'click .actions .ok': 'onOk',
+      'click .actions .cancel': 'onCancel',
       'change .type': 'onTypeChange',
       'change .name': 'onNameChange'
     },
