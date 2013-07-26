@@ -41,7 +41,7 @@
     uuid: function() { return 'choice:' + this.model.get('uuid'); },
 
     events: {
-      'change .label': 'onLabelChange',
+      'change .choice-label': 'onLabelChange',
       'click .remove': 'onRemoveClick'
     },
 
@@ -56,7 +56,10 @@
     },
 
     onLabelChange: function(e) {
-      this.model.set('label', this.$('input').prop('value'), {silent: true});
+      this.model.set(
+        'label',
+        this.$('.choice-label').prop('value'),
+        {silent: true});
     },
 
     onRemoveClick: function(e) {
