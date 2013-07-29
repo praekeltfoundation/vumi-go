@@ -84,6 +84,39 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         ])
 
     @inlineCallbacks
+    def test_conversation_with_extra_endpoints(self):
+        conv = yield self.user_api.conversation_store.new_conversation(
+            u'jsbox', u'My Conversation', u'A description', {},
+            extra_endpoints=[u'foo', u'bar'])
+        result = yield self.proxy.callRemote(
+            "conversations", self.campaign_key)
+        self.assertEqual(result, [
+            {
+                'uuid': conv.key,
+                'type': conv.conversation_type,
+                'name': conv.name,
+                'description': conv.description,
+                'endpoints': [
+                    {
+                        u'name': u'default',
+                        u'uuid': u'CONVERSATION:%s:%s:default' % (
+                            conv.conversation_type, conv.key),
+                    },
+                    {
+                        u'name': u'foo',
+                        u'uuid': u'CONVERSATION:%s:%s:foo' % (
+                            conv.conversation_type, conv.key),
+                    },
+                    {
+                        u'name': u'bar',
+                        u'uuid': u'CONVERSATION:%s:%s:bar' % (
+                            conv.conversation_type, conv.key),
+                    },
+                ],
+            },
+        ])
+
+    @inlineCallbacks
     def test_conversations_with_no_conversations(self):
         result = yield self.proxy.callRemote(
             "conversations", self.campaign_key)
