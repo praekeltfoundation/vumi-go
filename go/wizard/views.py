@@ -63,7 +63,9 @@ class WizardCreateView(BaseWizardView):
         messages.info(request, 'Conversation created successfully.')
 
         # Set up routing
+        logger.info("POST: %s" % (request.POST,))
         keyword = wiz_form.cleaned_data['keyword']
+        logger.info("keyword: %s" % (keyword,))
         if keyword:
             # Create router
             router = self._create_keyword_router(
