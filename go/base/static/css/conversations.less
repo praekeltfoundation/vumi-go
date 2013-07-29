@@ -1,3 +1,14 @@
+.popover {
+  z-index: 20 !important;
+  font-size: 11px;
+  width: 220px;
+
+  input {
+    font-size:11px;
+    width:90%;
+  }
+}
+
 
 .dialogue {
   .actions {
@@ -6,11 +17,9 @@
     }
   }
 
-  #diagram {
 
-    * {
-      z-index: 2;
-    }
+
+  #diagram {
 
     ._jsPlumb_connector {
       z-index: 1;
@@ -55,6 +64,7 @@
       .item {
         margin:40px 20px;
         float: left;
+        z-index: 2;
       }
     }
 
@@ -214,17 +224,6 @@
         .search_enabled {
           display: block;
         }
-
-        .arrow::after {
-          border-right-color: #eee;
-        }
-
-        .popover {
-          z-index: 100;
-          font-size: 11px;
-          background: #eee !important;
-        }
-
 
 
         .choices {

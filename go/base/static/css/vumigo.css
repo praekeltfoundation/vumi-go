@@ -239,11 +239,17 @@ button {
 .modal label input {
   margin: 0;
 }
+.popover {
+  z-index: 20 !important;
+  font-size: 11px;
+  width: 220px;
+}
+.popover input {
+  font-size: 11px;
+  width: 90%;
+}
 .dialogue .actions .sidebar {
   background: #d9d8d3;
-}
-.dialogue #diagram * {
-  z-index: 2;
 }
 .dialogue #diagram ._jsPlumb_connector {
   z-index: 1;
@@ -286,6 +292,7 @@ button {
 .dialogue #diagram .grid .item {
   margin: 40px 20px;
   float: left;
+  z-index: 2;
 }
 .dialogue #diagram .add {
   height: 65px;
@@ -420,14 +427,6 @@ button {
 }
 .dialogue #diagram .choice.state .edit.mode .search_enabled {
   display: block;
-}
-.dialogue #diagram .choice.state .edit.mode .arrow::after {
-  border-right-color: #eee;
-}
-.dialogue #diagram .choice.state .edit.mode .popover {
-  z-index: 100;
-  font-size: 11px;
-  background: #eee !important;
 }
 .dialogue #diagram .choice.state .edit.mode .choices {
   font-size: 11px;
