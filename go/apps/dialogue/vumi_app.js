@@ -22,13 +22,20 @@ function DialogueStateCreator() {
     self.poll = null;  // poll is set in on_config_read
 
     self.on_config_read = function(event) {
-        self.poll = event.config.poll || {};
-        self.start_state = self.poll.start_state.uuid;
-        var states = self.poll.states || [];
-        states.forEach(function(state_description) {
-            self.add_creator(state.uuid,
-                             self.mk_state_creator(state_description));
-        });
+        var p = new Promise;
+        event.im.fetch_config_value("poll", true,
+            function (poll) {
+                self.poll = poll;
+                self.start_state = poll.start_state.uuid;
+                var states = poll.states || [];
+                states.forEach(function(state_description) {
+                    self.add_creator(state_description.uuid,
+                                     self.mk_state_creator(state_description));
+                });
+                p.callback();
+            }
+        );
+        return p;
     };
 
     self.get_connection = function(source) {
@@ -65,10 +72,10 @@ function DialogueStateCreator() {
 
     self.generic_state_creator = function(state_name, im, state_description) {
         var creator = self[state_description.type + '_state_creator'];
-        if (typeof handler === 'undefined') {
-            handler = self.unknown_state_creator;
+        if (typeof creator === 'undefined') {
+            creator = self.unknown_state_creator;
         }
-        return handler(state_name, im, state_description);
+        return creator(state_name, im, state_description);
     };
 
     self.choice_state_creator = function(state_name, im, state_description) {
@@ -108,6 +115,14 @@ function DialogueStateCreator() {
             state_name,
             state_description.text,
             next_state
+        );
+    };
+
+    self.unknown_state_creator = function(state_name, im, state_description) {
+        return new EndState(
+            state_name,
+            "An error occurred. Please try dial in again later.",
+            self.start_state
         );
     };
 }
