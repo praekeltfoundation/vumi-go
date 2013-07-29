@@ -60,8 +60,17 @@ class Conversation(Model):
         # TODO: Get rid of this once the old UI finally goes away.
         return self.archived()
 
+    def starting(self):
+        return self.status == CONVERSATION_STARTING
+
     def running(self):
         return self.status == CONVERSATION_RUNNING
+
+    def stopping(self):
+        return self.status == CONVERSATION_STOPPING
+
+    def stopped(self):
+        return self.status == CONVERSATION_STOPPED
 
     def is_draft(self):
         # TODO: Get rid of this once the old UI finally goes away.
