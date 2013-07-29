@@ -284,7 +284,7 @@ button {
   margin: 0;
 }
 .dialogue #diagram .grid .item {
-  margin: 40px 40px;
+  margin: 40px 20px;
   float: left;
 }
 .dialogue #diagram .add {
@@ -295,8 +295,7 @@ button {
   -ms-user-select: none;
 }
 .dialogue #diagram .state {
-  width: 220px;
-  margin: 30px 40px;
+  width: 260px;
   float: left;
   text-align: left;
 }
@@ -361,7 +360,7 @@ button {
 .dialogue #diagram .state textarea,
 .dialogue #diagram .state select,
 .dialogue #diagram .state input {
-  width: 154px;
+  width: 80%;
   margin-left: 3px;
   font-size: 11px;
 }
@@ -440,7 +439,7 @@ button {
 }
 .dialogue #diagram .choice.state .edit.mode .choices input {
   min-width: 130px;
-  width: 130px;
+  width: 170px;
   margin-bottom: 0;
 }
 .dialogue #diagram .choice.state .edit.mode .choices .close {
