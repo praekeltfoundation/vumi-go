@@ -1,6 +1,6 @@
 var simple_poll = {
   conversation: "conversation-key",
-  start_state: {uuid: "state-1"},
+  start_state: {uuid: "choice-1"},
   poll_metadata: {
     repeatable: true,
   },
@@ -40,7 +40,11 @@ var simple_poll = {
        entry_endpoint: "endpoint-5",
        // end specific
        text: "Thank you for taking our survey"
-    }
+    },
+    {
+       uuid: "unknown-1",
+       type: "unknown-or-garbled",
+    },
   ],
   connections: [
      {

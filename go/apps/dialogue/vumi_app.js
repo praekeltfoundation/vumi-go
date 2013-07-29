@@ -28,6 +28,7 @@ function DialogueStateCreator() {
                 self.poll = poll;
                 self.start_state = poll.start_state.uuid;
                 var states = poll.states || [];
+                self.state_creators = {};
                 states.forEach(function(state_description) {
                     self.add_creator(state_description.uuid,
                                      self.mk_state_creator(state_description));
@@ -36,6 +37,11 @@ function DialogueStateCreator() {
             }
         );
         return p;
+    };
+
+    self.get_metadata = function(key) {
+        var metadata = self.poll.poll_metadata || {};
+        return metadata[key];
     };
 
     self.get_connection = function(source) {
@@ -61,7 +67,7 @@ function DialogueStateCreator() {
         if (connection === null) {
             return null;
         }
-        return self.get_state_by_entry_endpoint(connection.endpoint.uuid);
+        return self.get_state_by_entry_endpoint(connection.target.uuid);
     };
 
     self.mk_state_creator = function(state_description) {
