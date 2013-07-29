@@ -7,7 +7,9 @@
       functor = utils.functor,
       maybeByName = utils.maybeByName;
 
-  var ViewCollection = go.components.structures.ViewCollection;
+  var structures = go.components.structures,
+      Extendable = structures.Extendable,
+      ViewCollection = structures.ViewCollection;
 
   // A view that can be uniquely identified by its `uuid` property.
   var UniqueView = Backbone.View.extend({
@@ -124,6 +126,72 @@
     }
   });
 
+  var Partials = Extendable.extend({
+    constructor: function(items) {
+      this.items = {};
+      _(items).each(this.add, this);
+    },
+
+    _ensureArray: function(obj) {
+      if (obj instanceof ViewCollection) { return obj.values(); }
+
+      return _.isArray(obj)
+        ? obj
+        : [obj];
+    },
+
+    add: function(partial, name) {
+      this.items[name] = this._ensureArray(partial);
+      return this;
+    },
+
+    toPlaceholders: function() {
+      var placeholders = {};
+
+      _(this.items).each(function(partial, name) {
+        var placeholder = placeholders[name] = [];
+
+        return partial.forEach(function(p, i) {
+          placeholder.push('<div '
+            + 'data-partial="' + name + '" '
+            + 'data-partial-index="' + i + '"'
+            + "></div>");
+        });
+      });
+
+      return placeholders;
+    },
+
+    applyPartial: function(p, $at, data) {
+      if (p instanceof Backbone.View) {
+        p.render();
+        $at.replaceWith(p.$el);
+        p.delegateEvents();
+      } else {
+        p = $(maybeByName(p)(data));
+        $at.replaceWith(p);
+      }
+
+      return this;
+    },
+
+    applyTo: function(target, data) {
+      var self = this;
+      data = data || {};
+
+      _(this.items).each(function(partial, name) {
+        target.find('[data-partial="' + name + '"]').each(function() {
+          var $at = $(this),
+              i = $at.attr('data-partial-index');
+
+          self.applyPartial(partial[i], $at, data);
+        });
+      });
+
+      return this;
+    }
+  });
+
   var TemplateView = Backbone.View.extend({
     jst: null,
 
@@ -137,42 +205,14 @@
       this.partials = _({}).extend(this.partials, options.partials || {});
     },
 
-    insertPartial: function($p, $at, name) {
-      $at.replaceWith($p);
-      $p.attr('data-partial', name);
-      return this;
-    },
-
-    renderPartial: function(p, $at, name) {
-      if (p instanceof Backbone.View) {
-        p.render();
-        this.insertPartial(p.$el, $at, name);
-        p.delegateEvents();
-      } else {
-        p = $(maybeByName(p)(_(this).result('data')));
-        this.insertPartial(p, $at, name);
-      }
-
-      return this;
-    },
-
-    renderPartials: function(name) {
-      var partials = this.partials[name],
-          $placeholders = this.$('[data-partial="' + name + '"]');
-
-      if (partials instanceof ViewCollection) { partials = partials.values(); }
-      else if (!_.isArray(partials)) { partials = [partials]; }
-
-      partials.forEach(function(p, i) {
-        this.renderPartial(p, $placeholders.eq(i), name);
-      }, this);
-
-      return this;
-    },
-
     render: function() {
-      this.$el.html(maybeByName(this.jst)(_(this).result('data')));
-      _(this.partials).keys().forEach(this.renderPartials, this);
+      var partials = new Partials(this.partials),
+          data = _(this).result('data');
+
+      data.partials = partials.toPlaceholders();
+      this.$el.html(maybeByName(this.jst)(data));
+
+      partials.applyTo(this.$el, data);
       return this;
     }
   });
@@ -180,6 +220,7 @@
   _.extend(exports, {
     UniqueView: UniqueView,
     ConfirmView: ConfirmView,
+    Partials: Partials, 
     TemplateView: TemplateView,
     MessageTextView: MessageTextView
   });
