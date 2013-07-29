@@ -5,6 +5,19 @@ describe("go.components.views", function() {
 
   var views = go.components.views;
 
+  var ViewCollection = go.components.structures.ViewCollection,
+      TemplateView = views.TemplateView;
+
+  var ToyView = Backbone.View.extend({
+    initialize: function(options) {
+      this.thing = options.thing;
+    },
+
+    render: function() {
+      this.$el.text(this.thing);
+    }
+  });
+
   beforeEach(function() {
     $('body').append("<div id='dummy'></div>");
   });
@@ -156,20 +169,68 @@ describe("go.components.views", function() {
     });
   });
 
-  describe(".TemplateView", function() {
-    var ViewCollection = go.components.structures.ViewCollection,
-        TemplateView = views.TemplateView;
+  describe(".Partials", function() {
+    var Partials = views.Partials;
 
-    var ToyView = Backbone.View.extend({
-      initialize: function(options) {
-        this.thing = options.thing;
-      },
+    var partials;
 
-      render: function() {
-        this.$el.text(this.thing);
-      }
+    beforeEach(function() {
+      partials = new Partials({
+        a: _.template('<div>a</div>'),
+        b: new ToyView({thing: 'b'}),
+        c: [
+          _.template('<div>c1</div>'),
+          _.template('<div>c2</div>')],
+        d: new ViewCollection({
+          type: ToyView,
+          views: [
+            {thing: 'd1'},
+            {thing: 'd2'}]
+        })
+      });
     });
 
+    describe(".toPlaceholders", function() {
+      it("should convert the partials to placeholders", function() {
+        assert.deepEqual(partials.toPlaceholders(), {
+          a: ['<div data-partial="a" data-partial-index="0"></div>'],
+          b: ['<div data-partial="b" data-partial-index="0"></div>'],
+          c: ['<div data-partial="c" data-partial-index="0"></div>',
+              '<div data-partial="c" data-partial-index="1"></div>'],
+          d: ['<div data-partial="d" data-partial-index="0"></div>',
+              '<div data-partial="d" data-partial-index="1"></div>']
+        });
+      });
+    });
+
+    describe(".applyPartial", function() {
+      it("should apply its partials to the target", function() {
+        var $target = $([
+          '<div>',
+            '<div data-partial="a" data-partial-index="0"></div>',
+            '<div data-partial="b" data-partial-index="0"></div>',
+            '<div data-partial="c" data-partial-index="0"></div>', 
+            '<div data-partial="c" data-partial-index="1"></div>', 
+            '<div data-partial="d" data-partial-index="0"></div>', 
+            '<div data-partial="d" data-partial-index="1"></div>', 
+          '</div>'
+        ].join(''));
+
+        partials.applyTo($target);
+
+        assert.equal($target.html(), [
+          '<div>a</div>',
+          '<div>b</div>',
+          '<div>c1</div>',
+          '<div>c2</div>',
+          '<div>d1</div>',
+          '<div>d2</div>'
+        ].join(''));
+      });
+    });
+  });
+
+  describe(".TemplateView", function() {
     describe(".render", function() {
       it("should apply the jst template", function()  {
         var template = new TemplateView({
@@ -185,8 +246,8 @@ describe("go.components.views", function() {
       it("should apply its view partials", function() {
         var template = new TemplateView({
           jst: _.template([
-            '<script data-partial="p1" type="partial"></script>',
-            '<script data-partial="p2" type="partial"></script>'
+            '<%= partials.p1 %>',
+            '<%= partials.p2 %>'
           ].join('')),
 
           partials: {
@@ -199,8 +260,8 @@ describe("go.components.views", function() {
 
         assert.equal(
           template.$el.html(), [
-          '<div data-partial="p1">Walrus</div>',
-          '<div data-partial="p2">Eggman</div>'
+          '<div>Walrus</div>',
+          '<div>Eggman</div>'
         ].join(''));
       });
 
@@ -214,7 +275,7 @@ describe("go.components.views", function() {
         });
 
         var template = new TemplateView({
-          jst: _.template('<script data-partial="p"></script>'),
+          jst: _.template('<%= partials.p %>'),
           partials: {p: p}
         });
 
@@ -228,8 +289,8 @@ describe("go.components.views", function() {
       it("should apply its template function partials", function() {
         var template = new TemplateView({
           jst: _.template([
-            '<script data-partial="p1" type="partial"></script>',
-            '<script data-partial="p2" type="partial"></script>'
+            '<%= partials.p1 %>',
+            '<%= partials.p2 %>'
           ].join('')),
 
           partials: {
@@ -242,16 +303,16 @@ describe("go.components.views", function() {
 
         assert.equal(
           template.$el.html(), [
-          '<div data-partial="p1">I am the Eggman</div>',
-          '<div data-partial="p2">They are the Eggmen</div>'
+          '<div>I am the Eggman</div>',
+          '<div>They are the Eggmen</div>'
         ].join(''));
       });
 
       it("should apply its view collection partials", function() {
         var template = new TemplateView({
           jst: _.template([
-            '<script data-partial="p"></script>',
-            '<script data-partial="p"></script>'
+            '<%= partials.p[0] %>',
+            '<%= partials.p[1] %>'
           ].join('')),
 
           partials: {
@@ -266,16 +327,16 @@ describe("go.components.views", function() {
 
         assert.equal(
           template.$el.html(), [
-          '<div data-partial="p">Walrus</div>',
-          '<div data-partial="p">Eggman</div>'
+          '<div>Walrus</div>',
+          '<div>Eggman</div>'
         ].join(''));
       });
 
       it("should apply its list partials", function() {
         var template = new TemplateView({
           jst: _.template([
-            '<script data-partial="p"></script>',
-            '<script data-partial="p"></script>'
+            '<%= partials.p[0] %>',
+            '<%= partials.p[1] %>'
           ].join('')),
 
           partials: {
@@ -290,8 +351,8 @@ describe("go.components.views", function() {
 
         assert.equal(
           template.$el.html(), [
-          '<div data-partial="p">Walrus</div>',
-          '<div data-partial="p">Eggman</div>'
+          '<div>Walrus</div>',
+          '<div>Eggman</div>'
         ].join(''));
       });
     });
