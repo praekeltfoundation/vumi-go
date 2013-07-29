@@ -426,6 +426,7 @@ button {
   border-right-color: #eee;
 }
 .dialogue #diagram .choice.state .edit.mode .popover {
+  z-index: 100;
   font-size: 11px;
   background: #eee !important;
 }
