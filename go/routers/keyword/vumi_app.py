@@ -1,8 +1,6 @@
 # -*- test-case-name: go.routers.keyword.tests.test_vumi_app -*-
 # -*- coding: utf-8 -*-
 
-import re
-
 from vumi import log
 from vumi.config import ConfigDict
 
@@ -25,8 +23,8 @@ class KeywordRouter(GoRouterWorker):
 
     def lookup_target(self, config, msg):
         first_word = ((msg['content'] or '').strip().split() + [''])[0]
-        for keyword_re, target in config.keyword_endpoint_mapping.iteritems():
-            if re.match(keyword_re, first_word, re.IGNORECASE):
+        for keyword, target in config.keyword_endpoint_mapping.iteritems():
+            if keyword.lower() == first_word.lower():
                 return target
         return 'default'
 

@@ -60,10 +60,11 @@ class TestKeywordRouter(RouterWorkerTestCase):
             self.mkmsg_in("baz quux"), router, 'default')
 
     @inlineCallbacks
-    def test_inbound_simple_keyword(self):
+    def test_inbound_keyword(self):
         router = yield self.setup_router({
             'keyword_endpoint_mapping': {
                 'foo': 'app1',
+                'abc123': 'app2',
             },
         })
         yield self.assert_routed_inbound(
@@ -72,20 +73,8 @@ class TestKeywordRouter(RouterWorkerTestCase):
             self.mkmsg_in("baz quux"), router, 'default')
         yield self.assert_routed_inbound(
             self.mkmsg_in(" FoO bar"), router, 'app1')
-
-    @inlineCallbacks
-    def test_inbound_regex_keyword(self):
-        router = yield self.setup_router({
-            'keyword_endpoint_mapping': {
-                'f[o0]+': 'app1',
-            },
-        })
         yield self.assert_routed_inbound(
-            self.mkmsg_in("fo bar"), router, 'app1')
-        yield self.assert_routed_inbound(
-            self.mkmsg_in("baz quux"), router, 'default')
-        yield self.assert_routed_inbound(
-            self.mkmsg_in(" Fo0O bar"), router, 'app1')
+            self.mkmsg_in(" aBc123 baz"), router, 'app2')
 
     @inlineCallbacks
     def test_outbound_no_config(self):

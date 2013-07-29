@@ -1,0 +1,51 @@
+{% extends "conversation/dashboard_base.html" %}
+{% load url from future %}
+{% load humanize %}
+{% load router_tags %}
+
+
+{% block content_extraclass %}dashboard routers{% endblock %}
+
+{% block content_title %}All routers{% endblock %}
+
+
+{% block content_actions_right %}
+    <div class="table-form-view-buttons pull-left">
+        <button class="btn" data-action="archive" disabled="disabled">Archive</button>
+    </div>
+{% endblock %}
+
+{% block content_dashboard %}
+<form class="table-form-view" method="post" action="">
+    {% csrf_token %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th><input type="checkbox"></th>
+                <th>Routers</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if routers %}
+                {% for router in page.object_list %}
+                <tr data-url="{% router_screen router %}">
+                    <td><input type="checkbox" name="router_key" value="{{ router.key }}"></td>
+                    <td>
+                        <a href="{% router_screen router %}">
+                            {{ router.name }}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="9">
+                    No routers.
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+    {% include "base/includes/pagination.html" %}
+</form>
+{% endblock %}

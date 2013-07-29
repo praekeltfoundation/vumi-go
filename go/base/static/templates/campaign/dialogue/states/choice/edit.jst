@@ -1,10 +1,10 @@
 <label>Define the question</label>
-<div data-partial='text'></div>
+<%= partials.text %>
 
 <label>Define the answers</label>
 <ol class='choices'>
-<% model.get('choice_endpoints').each(function() { %>
-  <li data-partial='choices'></li>
+<% partials.choices.forEach(function(choice) { %>
+  <%= choice %>
 <% }); %>
 </ol>
 

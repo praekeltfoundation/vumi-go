@@ -545,3 +545,23 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                          ['CONVERSATION:app1:conv1', 'other']
                      ], outbound_hops_from=msg)
         self.assertEqual([ack], self.get_dispatched_events('app1'))
+
+    @inlineCallbacks
+    def test_outbound_message_gets_transport_fields(self):
+        yield self.get_dispatcher()
+        yield self.vumi_api.tpm.set_metadata("pool1", {
+            'transport_name': 'sphex',
+            'transport_type': 'sms',
+        })
+        msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'))
+        msg['transport_name'] = None
+        msg['transport_type'] = None
+        yield self.dispatch_outbound(msg, 'app1')
+        self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
+        msg['transport_name'] = 'sphex'
+        msg['transport_type'] = 'sms'
+        self.with_md(msg, tag=("pool1", "1234"), hops=[
+            ['CONVERSATION:app1:conv1', 'default'],
+            ['TRANSPORT_TAG:pool1:1234', 'default'],
+        ])
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))

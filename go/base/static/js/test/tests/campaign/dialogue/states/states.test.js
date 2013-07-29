@@ -73,7 +73,7 @@ describe("go.campaign.dialogue.states", function() {
     var ToyStateModeView = DialogueStateModeView.extend({
       className: 'toy mode',
 
-      jst: _.template('<script data-partial="body" type="partial"></script>'),
+      jst: _.template('<%= partials.body %>'),
       bodyOptions: {
         jst: _.template("toy mode: <%= model.get('name') %>")
       }
@@ -94,7 +94,7 @@ describe("go.campaign.dialogue.states", function() {
 
         assert.equal(
           mode.$el.html(),
-          '<div data-partial="body">toy mode: Dummy Message 1</div>');
+          '<div>toy mode: Dummy Message 1</div>');
       });
     });
   });
