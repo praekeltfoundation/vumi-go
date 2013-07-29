@@ -422,6 +422,13 @@ button {
 .dialogue #diagram .choice.state .edit.mode .search_enabled {
   display: block;
 }
+.dialogue #diagram .choice.state .edit.mode .arrow::after {
+  border-right-color: #eee;
+}
+.dialogue #diagram .choice.state .edit.mode .popover {
+  font-size: 11px;
+  background: #eee !important;
+}
 .dialogue #diagram .choice.state .edit.mode .choices {
   font-size: 11px;
   margin-left: 20px;
