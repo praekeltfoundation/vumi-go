@@ -66,10 +66,10 @@ class WizardCreateView(BaseWizardView):
         keyword = wiz_form.cleaned_data['keyword']
         if keyword:
             # Create router
-            router = self._create_keyword_router(
+            endpoint, router = self._create_keyword_router(
                 request, keyword, conversation.name)
             self._setup_keyword_routing(
-                request, conversation, tag, router, keyword)
+                request, conversation, tag, router, endpoint)
         else:
             self._setup_basic_routing(request, conversation, tag)
 
@@ -103,12 +103,14 @@ class WizardCreateView(BaseWizardView):
         # TODO: Avoid duplicating stuff we already do elsewhere.
         view_def = get_router_view_definition('keyword', None)
         # TODO: Validate keyword?
-        config = {'keyword_endpoint_mapping': {keyword: keyword}}
-        return request.user_api.new_router(
+        endpoint = 'keyword_%s' % (keyword.lower(),)
+        config = {'keyword_endpoint_mapping': {keyword: endpoint}}
+        router = request.user_api.new_router(
             router_type=u'keyword', name=u'%s router' % (conv_name,),
             description=u'Keyword router for %s' % (conv_name,), config=config,
             extra_inbound_endpoints=view_def.get_inbound_endpoints(config),
         )
+        return endpoint, router
 
     def _setup_basic_routing(self, request, conv, tag):
         user_account = request.user_api.get_user_account()
@@ -122,7 +124,7 @@ class WizardCreateView(BaseWizardView):
         rt_helper.add_entry(tag_conn, "default", conv_conn, "default")
         user_account.save()
 
-    def _setup_keyword_routing(self, request, conv, tag, router, keyword):
+    def _setup_keyword_routing(self, request, conv, tag, router, endpoint):
         user_account = request.user_api.get_user_account()
         routing_table = request.user_api.get_routing_table(user_account)
         rt_helper = RoutingTableHelper(routing_table)
@@ -136,8 +138,8 @@ class WizardCreateView(BaseWizardView):
         rout_conn = str(
             GoConnector.for_router(
                 router.router_type, router.key, GoConnector.OUTBOUND))
-        rt_helper.add_entry(conv_conn, "default", rin_conn, keyword)
-        rt_helper.add_entry(rin_conn, keyword, conv_conn, "default")
+        rt_helper.add_entry(conv_conn, "default", rin_conn, endpoint)
+        rt_helper.add_entry(rin_conn, endpoint, conv_conn, "default")
         rt_helper.add_entry(rout_conn, "default", tag_conn, "default")
         rt_helper.add_entry(tag_conn, "default", rout_conn, "default")
 
