@@ -32,6 +32,8 @@
   });
 
   var NameEditExtrasView = PopoverView.extend({
+    popoverOptions: {container: 'body'},
+
     target: function() { return this.mode.$('.name-extras'); },
 
     events: {
@@ -53,7 +55,6 @@
       this.storeAsBackup = null;
       this.on('show', function() {
         this.storeAsBackup = this.mode.state.model.get('store_as');
-        this.delegateEvents();
       }, this);
     },
 

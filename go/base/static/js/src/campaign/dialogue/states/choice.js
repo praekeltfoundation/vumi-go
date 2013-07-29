@@ -36,6 +36,8 @@
   });
 
   var ChoiceEditExtrasView = PopoverView.extend({
+    popoverOptions: {container: 'body'},
+
     target: function() { return this.choice.$('.extras'); },
 
     events: {
@@ -57,7 +59,6 @@
       this.valueBackup = null;
       this.on('show', function() {
         this.valueBackup = this.choice.model.get('value');
-        this.delegateEvents();
       }, this);
     },
 
