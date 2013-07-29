@@ -45,6 +45,7 @@
     initialize: function(options) {
       NameEditExtrasView.__super__.initialize.call(this, options);
       this.mode = options.mode;
+      this.model = this.mode.state.model;
 
       this.template = new TemplateView({
         el: this.$el,
@@ -60,14 +61,14 @@
     },
 
     onStoreAsChange: function(e) {
-      this.mode.state.model.set(
-        'store_as',
-        go.utils.slugify(this.$('.store-as').val()));
+      this.model.setStoreAs(this.$('.store-as').val());
+      this.model.set('user_defined_store_as', true);
+      return this;
     },
 
     onCancelClick: function(e) {
       e.preventDefault();
-      this.mode.state.model.set('store_as', this.storeAsBackup);
+      this.model.set('store_as', this.storeAsBackup);
       this.hide();
     },
 
@@ -173,7 +174,7 @@
     },
 
     onNameChange: function(e) {
-      this.state.model.set('name', $(e.target).val(), {silent: true});
+      this.state.model.set('name', $(e.target).val());
     },
 
     onNameExtras: function(e) {

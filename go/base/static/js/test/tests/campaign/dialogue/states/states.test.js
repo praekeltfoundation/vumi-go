@@ -119,9 +119,10 @@ describe("go.campaign.dialogue.states", function() {
             uuid: 'state4',
             name: 'New Dummy',
             type: 'dummy',
-            store_as: 'dummy-message-1',
+            store_as: 'new-dummy',
             entry_endpoint: {'uuid':'endpoint6'},
             exit_endpoint: {'uuid':'endpoint7'},
+            user_defined_store_as: false,
             ordinal: 3
           });
 
@@ -135,6 +136,7 @@ describe("go.campaign.dialogue.states", function() {
           store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
+          user_defined_store_as: false,
           ordinal: 3
         });
 
@@ -152,6 +154,7 @@ describe("go.campaign.dialogue.states", function() {
           store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
+          user_defined_store_as: false,
           ordinal: 3
         });
 
@@ -165,6 +168,7 @@ describe("go.campaign.dialogue.states", function() {
           store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
+          user_defined_store_as: false,
           ordinal: 3
         });
       });
@@ -265,6 +269,7 @@ describe("go.campaign.dialogue.states", function() {
           store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
+          user_defined_store_as: false,
           ordinal: 3
         });
 
@@ -278,6 +283,7 @@ describe("go.campaign.dialogue.states", function() {
           store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
+          user_defined_store_as: false,
           ordinal: 3
         });
       });

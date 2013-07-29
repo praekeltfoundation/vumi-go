@@ -47,7 +47,7 @@ describe("go.campaign.dialogue.states.choice", function() {
       it("should update the choice model's 'value' attribute", function() {
         assert.equal(
           choice.model.get('value'),
-          'value1');
+          'red');
 
         extras.$('.value')
           .val('In Which Our Hero Finds A Faithful Sidekick')
@@ -76,7 +76,7 @@ describe("go.campaign.dialogue.states.choice", function() {
       function() {
         choice.model.set('value', 'A fish');
         extras.$('.cancel').click();
-        assert.equal(choice.model.get('value'), 'value1');
+        assert.equal(choice.model.get('value'), 'red');
       });
     });
   });

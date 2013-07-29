@@ -49,6 +49,7 @@
     initialize: function(options) {
       ChoiceEditExtrasView.__super__.initialize.call(this, options);
       this.choice = options.choice;
+      this.model = this.choice.model;
 
       this.template = new TemplateView({
         el: this.$el,
@@ -64,12 +65,13 @@
     },
 
     onValueChange: function(e) {
-      this.choice.model.set('value', go.utils.slugify(this.$('.value').val()));
+      this.model.setValue(this.$('.value').val());
+      this.model.set('user_defined_value', true);
     },
 
     onCancelClick: function(e) {
       e.preventDefault();
-      this.choice.model.set('value', this.valueBackup);
+      this.model.set('value', this.valueBackup);
       this.hide();
     },
 
@@ -111,8 +113,7 @@
     onLabelChange: function(e) {
       this.model.set(
         'label',
-        this.$('.choice-label').prop('value'),
-        {silent: true});
+        this.$('.choice-label').prop('value'));
     },
 
     onRemoveClick: function(e) {
