@@ -6,6 +6,7 @@
             <th>Name</th>
             <th>No. of contacts</th>
             <th>Date created</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -26,10 +27,13 @@
             <td>
                 {# TODO: group date created #}
             </td>
+            <td>
+                <button class="btn btn-mini">Export</button>
+            </td>
         </tr>
     {% empty %}
         <tr>
-            <td colspan="4">
+            <td colspan="5">
             {% if query %}
                 No group names match <strong>{{ query }}</strong>
             {% else %}
