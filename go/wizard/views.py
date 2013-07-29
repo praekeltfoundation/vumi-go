@@ -1,10 +1,11 @@
-import json
 from urllib import urlencode
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
+from django.views.generic import TemplateView
+from django.utils.decorators import method_decorator
 
 from go.wizard.forms import Wizard1CreateForm
 from go.conversation.forms import NewConversationForm
@@ -17,56 +18,44 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@login_required
-def create(request, conversation_key=None):
-    """
-    TODO: This is a fake implementation, it's not based on anything
-    other than displaying the views and perhaps formulating
-    some kind of workflow.
+class BaseWizardView(TemplateView):
+    template_base = 'wizard_views'
+    view_name = None
 
-    """
-    wizard_form = Wizard1CreateForm()
-    conversation_form = NewConversationForm(request.user_api)
-    channel_form = NewChannelForm(request.user_api)
+    @method_decorator(login_required)
+    def dispatch(self, *args, **kwargs):
+        return super(BaseWizardView, self).dispatch(*args, **kwargs)
 
-    conversation = None
-    if conversation_key:
-        conversation = conversation_or_404(request.user_api, conversation_key)
-        conversation_form = NewConversationForm(
-            request.user_api, data={'name': conversation.name})
+    def get_template_names(self):
+        return ['%s/%s.html' % (self.template_base, self.view_name)]
 
-    if request.method == 'POST':
+
+class WizardCreateView(BaseWizardView):
+    view_name = 'wizard_1_create'
+
+    def get(self, request):
+        return self.render_to_response({
+            'wizard_form': Wizard1CreateForm(),
+            'conversation_form': NewConversationForm(request.user_api),
+            'channel_form': NewChannelForm(request.user_api),
+        })
+
+    def post(self, request):
         # TODO: Reuse new conversation/channel view logic here.
-        posted_conv_form = NewConversationForm(request.user_api, request.POST)
-        posted_chan_form = NewChannelForm(request.user_api, request.POST)
-        if posted_conv_form.is_valid() and posted_chan_form.is_valid():
+        conv_form = NewConversationForm(request.user_api, request.POST)
+        chan_form = NewChannelForm(request.user_api, request.POST)
+        if conv_form.is_valid() and chan_form.is_valid():
 
             # Create channel
-            chan_data = posted_chan_form.cleaned_data
-            pool, tag = chan_data['channel'].split(':')
-            if tag:
-                got_tag = request.user_api.acquire_specific_tag((pool, tag))
-            else:
-                got_tag = request.user_api.acquire_tag(pool)
+            tag = self._create_channel(request, chan_form.cleaned_data)
 
             # Create conversation
-            conv_data = posted_conv_form.cleaned_data
-            conversation_type = conv_data['conversation_type']
-
-            view_def = get_conversation_view_definition(conversation_type)
-            conversation = request.user_api.new_conversation(
-                conversation_type, name=conv_data['name'],
-                description=conv_data['description'], config={},
-                extra_endpoints=list(view_def.extra_static_endpoints),
-            )
+            view_def, conversation = self._create_conversation(
+                request, conv_form.cleaned_data)
             messages.info(request, 'Conversation created successfully.')
 
             # TODO: Factor this out into a helper of some kind.
-            user_account = request.user_api.get_user_account()
-            routing_table = request.user_api.get_routing_table(user_account)
-            rt_helper = RoutingTableHelper(routing_table)
-            rt_helper.add_oldstyle_conversation(conversation, got_tag)
-            user_account.save()
+            self._setup_routing(request, conversation, tag)
 
             if view_def.is_editable:
                 return redirect(view_def.get_view_url(
@@ -76,14 +65,34 @@ def create(request, conversation_key=None):
                     'show', conversation_key=conversation.key))
         else:
             logger.info("Validation failed: %r %r" % (
-                posted_conv_form.errors, posted_chan_form.errors))
+                conv_form.errors, chan_form.errors))
+            return self.get(request)
 
-    return render(request, 'wizard_views/wizard_1_create.html', {
-        'wizard_form': wizard_form,
-        'conversation_form': conversation_form,
-        'channel_form': channel_form,
-        'conversation': conversation,
-    })
+    def _create_channel(self, request, channel_data):
+        # Create channel
+        pool, tag = channel_data['channel'].split(':')
+        if tag:
+            return request.user_api.acquire_specific_tag((pool, tag))
+        else:
+            return request.user_api.acquire_tag(pool)
+
+    def _create_conversation(self, request, conv_data):
+        conversation_type = conv_data['conversation_type']
+
+        view_def = get_conversation_view_definition(conversation_type)
+        conversation = request.user_api.new_conversation(
+            conversation_type, name=conv_data['name'],
+            description=conv_data['description'], config={},
+            extra_endpoints=list(view_def.extra_static_endpoints),
+        )
+        return view_def, conversation
+
+    def _setup_routing(self, request, conversation, tag):
+        user_account = request.user_api.get_user_account()
+        routing_table = request.user_api.get_routing_table(user_account)
+        rt_helper = RoutingTableHelper(routing_table)
+        rt_helper.add_oldstyle_conversation(conversation, tag)
+        user_account.save()
 
 
 @login_required
