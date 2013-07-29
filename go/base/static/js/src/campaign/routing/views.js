@@ -99,13 +99,13 @@
   var RouterStateView = RoutingStateView.extend({
     className: 'state router',
     endpointSchema: [{
-      attr: 'channel_endpoints',
-      side: 'left',
-      type: RouterChannelEndpointView
-    }, {
       attr: 'conversation_endpoints',
-      side: 'right',
+      side: 'left',
       type: RouterConversationEndpointView
+    }, {
+      attr: 'channel_endpoints',
+      side: 'right',
+      type: RouterChannelEndpointView
     }]
   });
 
