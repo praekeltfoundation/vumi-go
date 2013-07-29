@@ -21,11 +21,12 @@
     <option value="end">Recipients are shown text and the session ends</option>
   </select>
 
-  <!-- only displayed if `choice` is selected, controlled via CSS. -->
-  <div class="search_enabled">
-    <input type="checkbox" name="search" id="search"> 
-    <label for="id_search">Display this question in search results</label>
-  </div>
+  <% if (model.storableOnContact) { %>
+    <div class="search_enabled">
+      <input class="store-on-contact" type="checkbox" name="search" id="search"> 
+      <label for="id_search">Display this question in search results</label>
+    </div>
+  <% } %>
 
   <%= partials.body %>
 

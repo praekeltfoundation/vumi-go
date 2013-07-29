@@ -405,9 +405,6 @@ button {
 .dialogue #diagram .endpoint:hover {
   cursor: pointer;
 }
-.dialogue #diagram .search_enabled {
-  display: none;
-}
 .dialogue #diagram .search_enabled input {
   margin: 0;
   margin-left: 3px;
@@ -424,9 +421,6 @@ button {
   background: transparent;
   font-size: 10px;
   color: #666;
-}
-.dialogue #diagram .choice.state .edit.mode .search_enabled {
-  display: block;
 }
 .dialogue #diagram .choice.state .edit.mode .choices {
   font-size: 11px;

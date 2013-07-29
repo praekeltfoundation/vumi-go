@@ -123,6 +123,7 @@ describe("go.campaign.dialogue.states", function() {
             entry_endpoint: {'uuid':'endpoint6'},
             exit_endpoint: {'uuid':'endpoint7'},
             user_defined_store_as: false,
+            store_on_contact: false,
             ordinal: 3
           });
 
@@ -137,6 +138,7 @@ describe("go.campaign.dialogue.states", function() {
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           user_defined_store_as: false,
+          store_on_contact: false,
           ordinal: 3
         });
 
@@ -155,6 +157,7 @@ describe("go.campaign.dialogue.states", function() {
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           user_defined_store_as: false,
+          store_on_contact: false,
           ordinal: 3
         });
 
@@ -169,6 +172,7 @@ describe("go.campaign.dialogue.states", function() {
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           user_defined_store_as: false,
+          store_on_contact: false,
           ordinal: 3
         });
       });
@@ -270,6 +274,7 @@ describe("go.campaign.dialogue.states", function() {
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           user_defined_store_as: false,
+          store_on_contact: false,
           ordinal: 3
         });
 
@@ -284,6 +289,7 @@ describe("go.campaign.dialogue.states", function() {
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
           user_defined_store_as: false,
+          store_on_contact: false,
           ordinal: 3
         });
       });
@@ -295,11 +301,24 @@ describe("go.campaign.dialogue.states", function() {
       });
     });
 
-    describe("when '.ok' button is clicked", function() {
+    describe("when the '.ok' button is clicked", function() {
       it("should switch back to the preview view", function() {
         assert.equal(state.modeName, 'edit');
         editMode.$('.ok').click();
         assert.equal(state.modeName, 'preview');
+      });
+    });
+
+    describe("when '.store-on-contact' changes", function() {
+      it("should set its model's 'store_on_contact' attr accordingly",
+      function() {
+        assert.equal(state.model.get('store_on_contact'), false);
+
+        editMode.$('.store-on-contact')
+          .prop(':checked', true)
+          .change();
+
+        assert.equal(state.model.get('store_on_contact'), true);
       });
     });
   });

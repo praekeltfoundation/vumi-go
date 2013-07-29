@@ -26,6 +26,8 @@
   });
 
   var DialogueStateModel = StateModel.extend({
+    storableOnContact: true,
+
     relations: [],
 
     subModelTypes: {
@@ -38,7 +40,8 @@
     defaults: function() {
       return {
         uuid: uuid.v4(),
-        user_defined_store_as: false
+        user_defined_store_as: false,
+        store_on_contact: false,
       };
     },
 
@@ -113,6 +116,8 @@
   });
 
   var EndStateModel = DialogueStateModel.extend({
+    storableOnContact: false,
+
     relations: [{
       type: Backbone.HasOne,
       key: 'entry_endpoint',

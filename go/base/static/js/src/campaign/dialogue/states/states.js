@@ -91,7 +91,7 @@
       return {
         mode: this,
         state: this.state,
-        model: this.state.model
+        model: this.model
       };
     },
 
@@ -100,6 +100,7 @@
     initialize: function(options) {
       DialogueStateModeView.__super__.initialize.call(this, options);
       this.state = options.state;
+      this.model = this.state.model;
 
       this.partials.body = new TemplateView(
         _({data: this.data.bind(this)}).extend(
@@ -129,7 +130,8 @@
       'click .actions .cancel': 'onCancel',
       'change .type': 'onTypeChange',
       'change .name': 'onNameChange',
-      'click .name-extras': 'onNameExtras'
+      'click .name-extras': 'onNameExtras',
+      'change .store-on-contact': 'onStoreOnContact'
     },
 
     resetModal: new ConfirmView({
@@ -174,21 +176,25 @@
     },
 
     onNameChange: function(e) {
-      this.state.model.set('name', $(e.target).val());
+      this.model.set('name', $(e.target).val());
     },
 
     onNameExtras: function(e) {
       this.nameExtras.toggle();
     },
 
+    onStoreOnContact: function(e) {
+      this.model.set('store_on_contact', this.$('.store-on-contact').prop(':checked'));
+    },
+
     // Keep a backup to restore the model for when the user cancels the edit
     backupModel: function() {
-      this.modelBackup = this.state.model.toJSON();
+      this.modelBackup = this.model.toJSON();
       return this;
     },
 
     cancel: function() {
-      var model = this.state.model;
+      var model = this.model;
       if (this.modelBackup) { model.set(this.modelBackup); }
       return this;
     },
