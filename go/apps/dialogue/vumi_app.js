@@ -23,8 +23,8 @@ function DialogueStateCreator() {
 
     self.on_config_read = function(event) {
         self.poll = event.config.poll || {};
-        var states = poll.states || [];
-        self.start_state = states[0].uuid;
+        self.start_state = self.poll.start_state.uuid;
+        var states = self.poll.states || [];
         states.forEach(function(state_description) {
             self.add_creator(state.uuid,
                              self.mk_state_creator(state_description));
