@@ -57,6 +57,7 @@
       this.valueBackup = null;
       this.on('show', function() {
         this.valueBackup = this.choice.model.get('value');
+        this.delegateEvents();
       }, this);
     },
 
