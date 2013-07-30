@@ -1,6 +1,7 @@
 from django.core.urlresolvers import reverse
 
 from go.base.tests.utils import VumiGoDjangoTestCase
+from go.vumitools.account import GoConnector
 
 
 class WizardViewsTestCase(VumiGoDjangoTestCase):
@@ -29,20 +30,36 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         self.add_app_permission(u'go.apps.bulk_message')
         self.declare_tags(u'longcode', 4)
         self.add_tagpool_permission(u'longcode')
-        self.assertEqual(0, len(self.user_api.active_conversations()))
-        self.assertEqual(0, len(self.user_api.list_endpoints()))
+        self.assertEqual([], self.user_api.active_conversations())
+        self.assertEqual([], self.user_api.active_routers())
+        self.assertEqual(set(), self.user_api.list_endpoints())
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'bulk_message',
             'name': 'My Conversation',
             'country': 'International',
             'channel': 'longcode:',
         })
+
         [conv] = self.user_api.active_conversations()
-        self.assertEqual(1, len(self.user_api.list_endpoints()))
+        self.assertEqual('bulk_message', conv.conversation_type)
+        self.assertEqual('My Conversation', conv.name)
         self.assertRedirects(
             response, reverse('conversations:conversation', kwargs={
                 'conversation_key': conv.key, 'path_suffix': '',
             }))
+
+        self.assertEqual([], self.user_api.active_routers())
+
+        [tag] = list(self.user_api.list_endpoints())
+        self.assertEqual((u'longcode', u'default10001'), tag)
+
+        conv_conn = str(
+            GoConnector.for_conversation(conv.conversation_type, conv.key))
+        tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
+        self.assertEqual(self.user_api.get_routing_table(), {
+            conv_conn: {u'default': [tag_conn, u'default']},
+            tag_conn: {u'default': [conv_conn, u'default']},
+        })
 
     def test_post_create_view_editable_conversation(self):
         self.add_app_permission(u'go.apps.jsbox')
@@ -117,3 +134,105 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         # TODO: Test that we do the right thing with the bad form when we do
         #       the right thing with the bad form.
         self.assertEqual(response.status_code, 200)
+
+    def test_post_create_view_with_keyword(self):
+        self.add_app_permission(u'go.apps.bulk_message')
+        self.declare_tags(u'longcode', 4)
+        self.add_tagpool_permission(u'longcode')
+        self.assertEqual([], self.user_api.active_conversations())
+        self.assertEqual([], self.user_api.active_routers())
+        self.assertEqual(set(), self.user_api.list_endpoints())
+        response = self.client.post(reverse('wizard:create'), {
+            'conversation_type': 'bulk_message',
+            'name': 'My Conversation',
+            'country': 'International',
+            'channel': 'longcode:',
+            'keyword': 'foo',
+        })
+
+        [conv] = self.user_api.active_conversations()
+        self.assertEqual('bulk_message', conv.conversation_type)
+        self.assertEqual('My Conversation', conv.name)
+        self.assertRedirects(
+            response, reverse('conversations:conversation', kwargs={
+                'conversation_key': conv.key, 'path_suffix': '',
+            }))
+
+        [router] = self.user_api.active_routers()
+        self.assertEqual('keyword', router.router_type)
+        self.assertEqual('My Conversation router', router.name)
+        self.assertEqual(
+            ['keyword_foo'], list(router.extra_outbound_endpoints))
+        self.assertEqual({
+            'keyword_endpoint_mapping': {'foo': 'keyword_foo'},
+        }, router.config)
+
+        [tag] = list(self.user_api.list_endpoints())
+        self.assertEqual((u'longcode', u'default10001'), tag)
+
+        conv_conn = str(
+            GoConnector.for_conversation(conv.conversation_type, conv.key))
+        tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
+        rin_conn = str(
+            GoConnector.for_router(
+                router.router_type, router.key, GoConnector.INBOUND))
+        rout_conn = str(
+            GoConnector.for_router(
+                router.router_type, router.key, GoConnector.OUTBOUND))
+        self.assertEqual(self.user_api.get_routing_table(), {
+            conv_conn: {u'default': [rout_conn, u'keyword_foo']},
+            tag_conn: {u'default': [rin_conn, u'default']},
+            rout_conn: {u'keyword_foo': [conv_conn, u'default']},
+            rin_conn: {u'default': [tag_conn, u'default']},
+        })
+
+    def test_post_create_view_with_keyword_default(self):
+        self.add_app_permission(u'go.apps.bulk_message')
+        self.declare_tags(u'longcode', 4)
+        self.add_tagpool_permission(u'longcode')
+        self.assertEqual([], self.user_api.active_conversations())
+        self.assertEqual([], self.user_api.active_routers())
+        self.assertEqual(set(), self.user_api.list_endpoints())
+        response = self.client.post(reverse('wizard:create'), {
+            'conversation_type': 'bulk_message',
+            'name': 'My Conversation',
+            'country': 'International',
+            'channel': 'longcode:',
+            'keyword': 'default',
+        })
+
+        [conv] = self.user_api.active_conversations()
+        self.assertEqual('bulk_message', conv.conversation_type)
+        self.assertEqual('My Conversation', conv.name)
+        self.assertRedirects(
+            response, reverse('conversations:conversation', kwargs={
+                'conversation_key': conv.key, 'path_suffix': '',
+            }))
+
+        [router] = self.user_api.active_routers()
+        self.assertEqual('keyword', router.router_type)
+        self.assertEqual('My Conversation router', router.name)
+        self.assertEqual(
+            ['keyword_default'], list(router.extra_outbound_endpoints))
+        self.assertEqual({
+            'keyword_endpoint_mapping': {'default': 'keyword_default'},
+        }, router.config)
+
+        [tag] = list(self.user_api.list_endpoints())
+        self.assertEqual((u'longcode', u'default10001'), tag)
+
+        conv_conn = str(
+            GoConnector.for_conversation(conv.conversation_type, conv.key))
+        tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
+        rin_conn = str(
+            GoConnector.for_router(
+                router.router_type, router.key, GoConnector.INBOUND))
+        rout_conn = str(
+            GoConnector.for_router(
+                router.router_type, router.key, GoConnector.OUTBOUND))
+        self.assertEqual(self.user_api.get_routing_table(), {
+            conv_conn: {u'default': [rout_conn, u'keyword_default']},
+            tag_conn: {u'default': [rin_conn, u'default']},
+            rout_conn: {u'keyword_default': [conv_conn, u'default']},
+            rin_conn: {u'default': [tag_conn, u'default']},
+        })

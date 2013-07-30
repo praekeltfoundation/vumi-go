@@ -105,7 +105,6 @@ class RouterStore(PerAccountStore):
     def list_running_routers(self):
         return self.routers.index_keys('status', ROUTER_RUNNING)
 
-    @Manager.calls_manager
     def list_active_routers(self):
         return self.routers.index_keys('archive_status', ROUTER_ACTIVE)
 

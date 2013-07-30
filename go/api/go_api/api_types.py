@@ -155,12 +155,28 @@ class RouterType(Dict):
         super(RouterType, self).__init__(*args, **kw)
 
     @classmethod
-    def format_router(cls, uuid, rb_type, name, description, channel_endpoints,
-                      conversation_endpoints):
+    def format_router(cls, router):
+        in_conn = GoConnector.for_router(
+            router.router_type, router.key, GoConnector.INBOUND)
+        out_conn = GoConnector.for_router(
+            router.router_type, router.key, GoConnector.OUTBOUND)
+        channel_endpoints = router.extra_inbound_endpoints
+        conversation_endpoints = router.extra_outbound_endpoints
         return {
-            'uuid': uuid, 'type': rb_type, 'name': name,
-            'description': description, 'channel_endpoints': channel_endpoints,
-            'conversation_endpoints': conversation_endpoints,
+            'uuid': router.key,
+            'type': router.router_type,
+            'name': router.name,
+            'description': router.description,
+            'channel_endpoints': [
+                EndpointType.format_endpoint(
+                    uuid=u"%s:%s" % (in_conn, endpoint), name=endpoint)
+                for endpoint in [u'default'] + list(channel_endpoints)
+            ],
+            'conversation_endpoints': [
+                EndpointType.format_endpoint(
+                    uuid=u"%s:%s" % (out_conn, endpoint), name=endpoint)
+                for endpoint in [u'default'] + list(conversation_endpoints)
+            ],
         }
 
 

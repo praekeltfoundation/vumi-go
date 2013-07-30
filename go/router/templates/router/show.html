@@ -1,0 +1,41 @@
+{% extends "router/router_base.html" %}
+{% load url from future %}
+{% load router_tags %}
+
+{% block content_title %}{{ router.tag }}{% endblock %}
+
+{% block content_actions_right %}
+<form action="{% router_screen router 'archive' %}" class="pull-right" method="post">
+    {% csrf_token %}
+    <input type="submit" class="btn btn-primary" name="start" value="Archive">
+</form>
+{% endblock %}
+
+{% block content_main %}
+<div class="row-fluid indent">
+    <div class="span7">
+
+        <div class="sub-details">
+            <h4>
+                Details
+                {% if is_editable %}
+                <a href="{% router_screen router 'edit' %}" class="btn btn-primary">Edit</a>
+                {% endif %}
+            </h4>
+
+            <p>
+                <h6>NAME</h6>
+                {{ router.name }}<br>
+            </p>
+            <p>
+                <h6>DESCRIPTION</h6>
+                {{ router.description }}<br>
+            </p>
+            <p>
+                <h6>TYPE</h6>
+                {{ router.router_type }}<br>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

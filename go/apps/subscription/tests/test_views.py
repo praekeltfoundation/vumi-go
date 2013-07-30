@@ -58,3 +58,10 @@ class SubscriptionTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+
+    def test_content_block(self):
+        # FIXME: This kind of thing probably belongs in generic view tests.
+        self.setup_conversation()
+        response = self.client.get(self.get_view_url('show'))
+        self.assertContains(response, 'Content')
+        self.assertContains(response, self.get_view_url('edit'))

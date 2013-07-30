@@ -60,6 +60,10 @@
                 {{ conversation.name }}<br>
             </p>
             <p>
+                <h6>DESCRIPTION</h6>
+                {{ conversation.description }}<br>
+            </p>
+            <p>
                 <h6>TYPE</h6>
                 {{ conversation.conversation_type }}<br>
             </p>
@@ -76,18 +80,14 @@
             </p>
         </div>
 
+        {% if is_editable %}
         <div class="sub-messages">
             <h4>
-                Messages
-                {% if is_editable %}
+                Content
                 <a href="{% conversation_screen conversation 'edit' %}" class="btn btn-primary">Edit</a>
-                {% endif %}
             </h4>
-
-            <p class="message">
-                {{ conversation.description }}
-            </p>
         </div>
+      {% endif %}
 
 
         <div class="sub-contacts">

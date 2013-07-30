@@ -425,3 +425,10 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             'to_addr': msg['from_addr'],
             'msg_options': {'in_reply_to': msg['message_id']},
         })
+
+    def test_no_content_block(self):
+        # FIXME: This kind of thing probably belongs in generic view tests.
+        self.setup_conversation()
+        response = self.client.get(self.get_view_url('show'))
+        self.assertNotContains(response, 'Content')
+        self.assertNotContains(response, self.get_view_url('show') + 'edit/')

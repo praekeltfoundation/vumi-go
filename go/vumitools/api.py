@@ -26,7 +26,6 @@ from go.vumitools.conversation import ConversationStore
 from go.vumitools.router import RouterStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
-from go.vumitools.router import RouterStore
 from go.vumitools.token_manager import TokenManager
 
 from django.conf import settings
@@ -180,6 +179,16 @@ class VumiUserApi(object):
         returnValue([c for c in conversations if c.is_draft()])
 
     @Manager.calls_manager
+    def active_routers(self):
+        keys = yield self.router_store.list_active_routers()
+        # NOTE: This assumes that we don't have very large numbers of active
+        #       routers.
+        routers = []
+        for routers_bunch in self.router_store.load_all_bunches(keys):
+            routers.extend((yield routers_bunch))
+        returnValue(routers)
+
+    @Manager.calls_manager
     def active_channels(self):
         channels = []
         endpoints = yield self.list_endpoints()
@@ -227,6 +236,14 @@ class VumiUserApi(object):
                         app_settings[application])
                         for application in sorted(applications)
                         if application in app_settings]))
+
+    @Manager.calls_manager
+    def router_types(self):
+        # TODO: Permissions.
+        yield None
+        router_settings = settings.VUMI_INSTALLED_ROUTERS
+        returnValue(SortedDict([(router_type, router_settings[router_type])
+                                for router_type in sorted(router_settings)]))
 
     @Manager.calls_manager
     def list_groups(self):
