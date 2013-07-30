@@ -1,7 +1,7 @@
 import sys
 import traceback
 from StringIO import StringIO
-from zipfile import ZipFile
+from zipfile import ZipFile, ZIP_DEFLATED
 
 from celery.task import task
 
@@ -53,7 +53,7 @@ def delete_group_contacts(account_key, group_key):
 
 def zipped_file(filename, data):
     zipio = StringIO()
-    zf = ZipFile(zipio, "a")
+    zf = ZipFile(zipio, "a", ZIP_DEFLATED)
     zf.writestr(filename, data)
     zf.close()
     return zipio.getvalue()
