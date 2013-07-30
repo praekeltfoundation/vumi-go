@@ -182,25 +182,37 @@ class RoutingTableHelperTestCase(TestCase):
 
     def test_add_entry(self):
         rt = self.mk_helper()
-        rt.add_entry("new_conn", "default4", "conn4", "default5")
+        tag_conn = 'TRANSPORT_TAG:new:tag1'
+        conv_conn = 'CONVERSATION:new:12345'
+        rt.add_entry(tag_conn, "default4", conv_conn, "default5")
         self.assertEqual(sorted(rt.entries()), [
             (self.CONV_1, "default1.1", self.CHANNEL_2, "default2"),
             (self.CONV_1, "default1.2", self.CHANNEL_3, "default3"),
-            ("new_conn", "default4", "conn4", "default5"),
+            (tag_conn, "default4", conv_conn, "default5"),
         ])
 
     def test_add_entry_that_exists(self):
         rt = self.mk_helper()
+        tag_conn = 'TRANSPORT_TAG:new:tag1'
         with LogCatcher() as lc:
-            rt.add_entry(self.CONV_1, "default1.2", "conn4", "default4")
+            rt.add_entry(self.CONV_1, "default1.2", tag_conn, "default4")
             self.assertEqual(lc.messages(), [
                 "Replacing routing entry for ('%s', 'default1.2'):"
-                " was ['%s', 'default3'], now ['conn4', 'default4']" % (
-                    self.CONV_1, self.CHANNEL_3)
+                " was ['%s', 'default3'], now ['%s', 'default4']" % (
+                    self.CONV_1, self.CHANNEL_3, tag_conn)
             ])
         self.assertEqual(sorted(rt.entries()), [
             (self.CONV_1, "default1.1", self.CHANNEL_2, "default2"),
-            (self.CONV_1, "default1.2", "conn4", "default4"),
+            (self.CONV_1, "default1.2", tag_conn, "default4"),
+        ])
+
+    def test_add_invalid_entry(self):
+        rt = self.mk_helper()
+        self.assertRaises(
+            ValueError, rt.add_entry, self.CONV_1, "foo", self.CONV_2, "bar")
+        self.assertEqual(sorted(rt.entries()), [
+            (self.CONV_1, "default1.1", self.CHANNEL_2, "default2"),
+            (self.CONV_1, "default1.2", self.CHANNEL_3, "default3"),
         ])
 
     def test_remove_entry(self):
@@ -238,18 +250,19 @@ class RoutingTableHelperTestCase(TestCase):
     def test_remove_conversation(self):
         rt = self.mk_helper({})
         conv = mock.Mock(conversation_type="conv_type_1", key="12345")
-        rt.add_entry(
-            str(GoConnector.for_conversation(
-                conv.conversation_type, conv.key)),
-            "default", "TRANSPORT_TAG:pool:tag1", "default2")
+        conv_conn = str(
+            GoConnector.for_conversation(conv.conversation_type, conv.key))
+        rt.add_entry(conv_conn, "default", self.CHANNEL_2, "default")
+        rt.add_entry(self.CHANNEL_2, "default", conv_conn, "default")
         rt.remove_conversation(conv)
         self.assertEqual(sorted(rt.entries()), [])
 
     def test_remove_transport_tag(self):
         tag = ["pool1", "tag1"]
         rt = self.mk_helper({})
-        rt.add_entry(str(GoConnector.for_transport_tag(*tag)),
-                     "default", "TRANSPORT_TAG:pool:tag1", "default2")
+        tag_conn = str(GoConnector.for_transport_tag(*tag))
+        rt.add_entry(tag_conn, "default", self.CONV_1, "default")
+        rt.add_entry(self.CONV_1, "default", tag_conn, "default")
         rt.remove_transport_tag(tag)
         self.assertEqual(sorted(rt.entries()), [])
 
@@ -333,47 +346,43 @@ class RoutingTableHelperTestCase(TestCase):
         def assert_invalid(src_conn, dst_conn):
             self.assertRaises(ValueError, validate, src_conn, dst_conn)
 
-        conv_conn = "CONVERSATION:conv_type_1:12345"
-        tag_conn = "TRANSPORT_TAG:tagpool_1:tag_1"
-        rin_conn = "ROUTER:rb_type_1:12345:INBOUND"
-        rout_conn = "ROUTER:rb_type_1:12345:OUTBOUND"
+        validate(self.CONV_1, self.CHANNEL_2)
+        validate(self.CHANNEL_2, self.CONV_1)
+        validate(self.CONV_1, self.ROUTER_1_OUTBOUND)
+        validate(self.ROUTER_1_OUTBOUND, self.CONV_1)
+        validate(self.ROUTER_1_INBOUND, self.CHANNEL_2)
+        validate(self.CHANNEL_2, self.ROUTER_1_INBOUND)
 
-        validate(conv_conn, tag_conn)
-        validate(tag_conn, conv_conn)
-        validate(conv_conn, rout_conn)
-        validate(rout_conn, conv_conn)
-        validate(rin_conn, tag_conn)
-        validate(tag_conn, rin_conn)
-
-        assert_invalid(conv_conn, conv_conn)
-        assert_invalid(tag_conn, tag_conn)
-        assert_invalid(conv_conn, rin_conn)
-        assert_invalid(rin_conn, conv_conn)
-        assert_invalid(rout_conn, tag_conn)
-        assert_invalid(tag_conn, rout_conn)
+        assert_invalid(self.CONV_1, self.CONV_1)
+        assert_invalid(self.CHANNEL_2, self.CHANNEL_2)
+        assert_invalid(self.CONV_1, self.ROUTER_1_INBOUND)
+        assert_invalid(self.ROUTER_1_INBOUND, self.CONV_1)
+        assert_invalid(self.ROUTER_1_OUTBOUND, self.CHANNEL_2)
+        assert_invalid(self.CHANNEL_2, self.ROUTER_1_OUTBOUND)
 
     def test_validate_all_entries(self):
         rt = self.mk_helper({})
-        conv_conn = "CONVERSATION:conv_type_1:12345"
-        tag_conn = "TRANSPORT_TAG:tagpool_1:tag_1"
-        rin_conn = "ROUTER:rb_type_1:12345:INBOUND"
-        rout_conn = "ROUTER:rb_type_1:12345:OUTBOUND"
+
+        def add_entry(src_conn, src_endpoint, dst_conn, dst_endpoint):
+            # This allows us to add invalid entries.
+            connector_dict = rt.routing_table.setdefault(src_conn, {})
+            connector_dict[src_endpoint] = [dst_conn, dst_endpoint]
 
         rt.validate_all_entries()
 
-        rt.add_entry(tag_conn, "default", conv_conn, "default")
+        add_entry(self.CHANNEL_2, "default", self.CONV_1, "default")
         rt.validate_all_entries()
 
-        rt.add_entry(rin_conn, "default", conv_conn, "foo")
+        add_entry(self.ROUTER_1_INBOUND, "default", self.CONV_1, "foo")
         self.assertRaises(ValueError, rt.validate_all_entries)
 
-        rt.remove_entry(rin_conn, "default")
+        rt.remove_entry(self.ROUTER_1_INBOUND, "default")
         rt.validate_all_entries()
 
-        rt.add_entry(rout_conn, "default", conv_conn, "foo")
+        add_entry(self.ROUTER_1_OUTBOUND, "default", self.CONV_1, "foo")
         rt.validate_all_entries()
 
-        rt.add_entry(conv_conn, "bar", conv_conn, "baz")
+        add_entry(self.CONV_1, "bar", self.CONV_1, "baz")
         self.assertRaises(ValueError, rt.validate_all_entries)
 
 

@@ -112,6 +112,7 @@ class RoutingTableHelper(object):
                 yield (src_conn, src_endp, dst_conn, dst_endp)
 
     def add_entry(self, src_conn, src_endpoint, dst_conn, dst_endpoint):
+        self.validate_entry(src_conn, src_endpoint, dst_conn, dst_endpoint)
         connector_dict = self.routing_table.setdefault(src_conn, {})
         if src_endpoint in connector_dict:
             log.warning(
