@@ -476,7 +476,7 @@ class GroupsTestCase(VumiGoDjangoTestCase):
 
         # Delete the groups
         groups_url = reverse('contacts:groups')
-        response = self.client.post(groups_url, {
+        self.client.post(groups_url, {
             'group': [group_1.key, group_2.key],
             '_delete': True,
         })
@@ -582,44 +582,42 @@ class GroupsTestCase(VumiGoDjangoTestCase):
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'application/zip')
 
-
-
     def test_multiple_group_exportation(self):
-        group_1 = self.contact_store.new_group(TEST_GROUP_NAME)
+        group_1 = self.contact_store.new_group(u'Test Group 1')
         contact_1 = mkcontact(self, groups=[group_1])
         contact_1.extra['foo'] = u'bar'
         contact_1.extra['bar'] = u'baz'
         contact_1.save()
-        
-        group_2 = self.contact_store.new_group(TEST_GROUP_NAME)
+
+        group_2 = self.contact_store.new_group(u'Test Group 2')
         contact_2 = mkcontact(self, groups=[group_2])
-        contact_2.extra['foo'] = u'bar'
-        contact_2.extra['bar'] = u'baz'
+        contact_2.extra['foo'] = u'lorem'
+        contact_2.extra['bar'] = u'ipsum'
         contact_2.save()
 
         groups_url = reverse('contacts:groups')
-        response = self.client.post(groups_url, {
+        self.client.post(groups_url, {
             'group': [group_1.key, group_2.key],
             '_export_group_contacts': True,
         })
 
-        # test first email
-        self.assertEqual(len(mail.outbox), 2)
-        [email_1, email_2] = mail.outbox
-        [(file_name, contents, mime_type)] = email_1.attachments
+        self.assertEqual(len(mail.outbox), 1)
+        [email] = mail.outbox
+        [(file_name, contents, mime_type)] = email.attachments
 
-        self.assertEqual(email_1.recipients(), [self.django_user.email])
+        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertTrue('Contacts export' in email.subject)
         self.assertTrue(
-            '%s contacts export' % (group_1.name,) in email_1.subject)
-        self.assertTrue(
-            '1 contact(s) from group "%s" attached' % (group_1.name,)
-            in email_1.body)
+            '2 contact(s) from the following groups:',
+            '\n  - Test Group 1'
+            '\n  - Test Group 2'
+            in email.body)
         self.assertEqual(file_name, 'contacts-export.zip')
 
         zipfile = ZipFile(StringIO(contents), 'r')
         csv_contents = zipfile.open('contacts-export.csv', 'r').read()
 
-        [header, contact, _] = csv_contents.split('\r\n')
+        [header, c1_data, c2_data, _] = csv_contents.split('\r\n')
 
         self.assertEqual(
             header,
@@ -627,33 +625,8 @@ class GroupsTestCase(VumiGoDjangoTestCase):
                       'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
                       'created_at', 'extras-bar', 'extras-foo']))
 
-        self.assertTrue(contact.endswith('baz,bar'))
-        self.assertTrue(contents)
-        self.assertEqual(mime_type, 'application/zip')
-
-        # test the 2nd email.
-        [(file_name, contents, mime_type)] = email_2.attachments
-
-        self.assertEqual(email_2.recipients(), [self.django_user.email])
-        self.assertTrue(
-            '%s contacts export' % (group_1.name,) in email_2.subject)
-        self.assertTrue(
-            '1 contact(s) from group "%s" attached' % (group_1.name,)
-            in email_2.body)
-        self.assertEqual(file_name, 'contacts-export.zip')
-
-        zipfile = ZipFile(StringIO(contents), 'r')
-        csv_contents = zipfile.open('contacts-export.csv', 'r').read()
-
-        [header, contact, _] = csv_contents.split('\r\n')
-
-        self.assertEqual(
-            header,
-            ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
-                      'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-                      'created_at', 'extras-bar', 'extras-foo']))
-
-        self.assertTrue(contact.endswith('baz,bar'))
+        self.assertTrue(c1_data.endswith('baz,bar'))
+        self.assertTrue(c2_data.endswith('ipsum,lorem'))
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'application/zip')
 

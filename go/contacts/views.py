@@ -67,10 +67,10 @@ def groups(request, type=None):
             messages.info(request, '%d groups will be deleted '
                                    'shortly.' % len(groups))
         elif '_export_group_contacts' in request.POST:
-            groups = request.POST.getlist('group')
-            for group_key in groups:
-                tasks.export_group_contacts.delay(
-                    request.user_api.user_account_key, group_key, True)
+            tasks.export_many_group_contacts.delay(
+                request.user_api.user_account_key,
+                request.POST.getlist('group'))
+
             messages.info(request, 'The export is scheduled and should '
                                    'complete within a few minutes.')
     else:
@@ -149,7 +149,9 @@ def _static_group(request, contact_store, group):
             return redirect(_group_url(group.key))
         elif '_export_group_contacts' in request.POST:
             tasks.export_group_contacts.delay(
-                request.user_api.user_account_key, group.key, True)
+                request.user_api.user_account_key,
+                group.key)
+
             messages.info(request,
                           'The export is scheduled and should '
                           'complete within a few minutes.')
