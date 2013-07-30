@@ -108,7 +108,7 @@ class WizardCreateView(BaseWizardView):
         router = request.user_api.new_router(
             router_type=u'keyword', name=u'%s router' % (conv_name,),
             description=u'Keyword router for %s' % (conv_name,), config=config,
-            extra_inbound_endpoints=view_def.get_inbound_endpoints(config),
+            extra_outbound_endpoints=view_def.get_outbound_endpoints(config),
         )
         return endpoint, router
 
@@ -138,10 +138,10 @@ class WizardCreateView(BaseWizardView):
         rout_conn = str(
             GoConnector.for_router(
                 router.router_type, router.key, GoConnector.OUTBOUND))
-        rt_helper.add_entry(conv_conn, "default", rin_conn, endpoint)
-        rt_helper.add_entry(rin_conn, endpoint, conv_conn, "default")
-        rt_helper.add_entry(rout_conn, "default", tag_conn, "default")
-        rt_helper.add_entry(tag_conn, "default", rout_conn, "default")
+        rt_helper.add_entry(conv_conn, "default", rout_conn, endpoint)
+        rt_helper.add_entry(rout_conn, endpoint, conv_conn, "default")
+        rt_helper.add_entry(rin_conn, "default", tag_conn, "default")
+        rt_helper.add_entry(tag_conn, "default", rin_conn, "default")
 
         user_account.save()
 
