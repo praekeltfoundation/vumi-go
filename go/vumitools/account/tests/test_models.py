@@ -324,6 +324,58 @@ class RoutingTableHelperTestCase(TestCase):
         self.assertEqual(sorted(rt.transitive_sources(self.ROUTER_1_OUTBOUND)),
                          [self.CONV_1, self.CONV_2])
 
+    def test_entry_validation(self):
+        rt = self.mk_helper()
+
+        def validate(src_conn, dst_conn):
+            rt.validate_entry(src_conn, "default", dst_conn, "default")
+
+        def assert_invalid(src_conn, dst_conn):
+            self.assertRaises(ValueError, validate, src_conn, dst_conn)
+
+        conv_conn = "CONVERSATION:conv_type_1:12345"
+        tag_conn = "TRANSPORT_TAG:tagpool_1:tag_1"
+        rin_conn = "ROUTER:rb_type_1:12345:INBOUND"
+        rout_conn = "ROUTER:rb_type_1:12345:OUTBOUND"
+
+        validate(conv_conn, tag_conn)
+        validate(tag_conn, conv_conn)
+        validate(conv_conn, rout_conn)
+        validate(rout_conn, conv_conn)
+        validate(rin_conn, tag_conn)
+        validate(tag_conn, rin_conn)
+
+        assert_invalid(conv_conn, conv_conn)
+        assert_invalid(tag_conn, tag_conn)
+        assert_invalid(conv_conn, rin_conn)
+        assert_invalid(rin_conn, conv_conn)
+        assert_invalid(rout_conn, tag_conn)
+        assert_invalid(tag_conn, rout_conn)
+
+    def test_validate_all_entries(self):
+        rt = self.mk_helper({})
+        conv_conn = "CONVERSATION:conv_type_1:12345"
+        tag_conn = "TRANSPORT_TAG:tagpool_1:tag_1"
+        rin_conn = "ROUTER:rb_type_1:12345:INBOUND"
+        rout_conn = "ROUTER:rb_type_1:12345:OUTBOUND"
+
+        rt.validate_all_entries()
+
+        rt.add_entry(tag_conn, "default", conv_conn, "default")
+        rt.validate_all_entries()
+
+        rt.add_entry(rin_conn, "default", conv_conn, "foo")
+        self.assertRaises(ValueError, rt.validate_all_entries)
+
+        rt.remove_entry(rin_conn, "default")
+        rt.validate_all_entries()
+
+        rt.add_entry(rout_conn, "default", conv_conn, "foo")
+        rt.validate_all_entries()
+
+        rt.add_entry(conv_conn, "bar", conv_conn, "baz")
+        self.assertRaises(ValueError, rt.validate_all_entries)
+
 
 class GoConnectorTestCase(TestCase):
     def test_create_conversation_connector(self):
@@ -401,3 +453,18 @@ class GoConnectorTestCase(TestCase):
     def test_flip_non_router_connector(self):
         c = GoConnector.for_conversation("dummy", "1")
         self.assertRaises(GoConnectorError, c.flip_direction)
+
+    def test_connector_direction(self):
+        def assert_inbound(conn):
+            self.assertEqual(GoConnector.INBOUND, conn.direction)
+
+        def assert_outbound(conn):
+            self.assertEqual(GoConnector.OUTBOUND, conn.direction)
+
+        assert_inbound(GoConnector.for_opt_out())
+        assert_inbound(GoConnector.for_conversation("conv_type_1", "12345"))
+        assert_outbound(GoConnector.for_transport_tag("tagpool_1", "tag_1"))
+        assert_inbound(
+            GoConnector.for_router("rb_type_1", "12345", GoConnector.INBOUND))
+        assert_outbound(
+            GoConnector.for_router("rb_type_1", "12345", GoConnector.OUTBOUND))

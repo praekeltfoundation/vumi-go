@@ -259,6 +259,29 @@ class RoutingTableHelper(object):
                     destinations_seen.add(extra_dst)
         return results
 
+    def validate_entry(self, src_conn, src_endpoint, dst_conn, dst_endpoint):
+        """Validate the provided entry.
+
+        This method currently only validates that the source and destination
+        have opposite directionality (IN->OUT or OUT->IN).
+
+        TODO: More validation?
+        """
+        parsed_src = GoConnector.parse(src_conn)
+        parsed_dst = GoConnector.parse(dst_conn)
+        if parsed_src.direction == parsed_dst.direction:
+            raise ValueError(
+                "Invalid routing table entry: %s source (%s, %s) maps to %s"
+                " destination (%s, %s)" % (
+                    parsed_src.direction, src_conn, src_endpoint,
+                    parsed_dst.direction, dst_conn, dst_endpoint))
+
+    def validate_all_entries(self):
+        """Validates all entries in the routing table.
+        """
+        for entry in self.entries():
+            self.validate_entry(*entry)
+
 
 class GoConnectorError(Exception):
     """Raised when attempting to construct an invalid connector."""
@@ -284,6 +307,15 @@ class GoConnector(object):
         self._names = names
         self._parts = parts
         self._attrs = dict(zip(self._names, self._parts))
+
+    @property
+    def direction(self):
+        return {
+            self.OPT_OUT: self.INBOUND,
+            self.CONVERSATION: self.INBOUND,
+            self.TRANSPORT_TAG: self.OUTBOUND,
+            self.ROUTER: self._attrs.get('direction'),
+        }[self.ctype]
 
     def __str__(self):
         return ":".join([self.ctype] + self._parts)
