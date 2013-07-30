@@ -184,8 +184,7 @@
       // -------
       // The connection was removed in the UI, so the model and view still
       // exist. We need to remove them.
-      var collection = this.ownerOf(connectionId);
-      collection.remove(connectionId, {removeModel: true});
+      this.remove(connectionId);
     }
   });
 
