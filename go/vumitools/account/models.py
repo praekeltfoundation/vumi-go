@@ -265,8 +265,6 @@ class RoutingTableHelper(object):
 
         This method currently only validates that the source and destination
         have opposite directionality (IN->OUT or OUT->IN).
-
-        TODO: More validation?
         """
         parsed_src = GoConnector.parse(src_conn)
         parsed_dst = GoConnector.parse(dst_conn)
