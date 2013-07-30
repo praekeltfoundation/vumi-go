@@ -27,6 +27,11 @@
     };
   };
 
+  var isRpcError = function(resp) {
+    // Accomodate both jsonrpc v1 and v2 responses
+    return (_.isObject(resp.error))
+        && (_.isNull(resp.result) || _.isUndefined(resp.result));
+  };
 
   var sync = function(method, model, options) {
     options = _({}).extend(
@@ -37,7 +42,7 @@
         error = options.error;
 
     options.success = function(resp, textStatus, jqXHR) {
-      if (_.isNull(resp.result)) {
+      if (isRpcError(resp)) {
         if (error) { error(jqXHR, 'error', resp.error.message); }
       } else {
         if (success) { success(resp.result, textStatus, jqXHR); }
@@ -48,6 +53,7 @@
   };
 
   _.extend(exports, {
-    sync: sync
+    sync: sync,
+    isRpcError: isRpcError
   });
 })(go.components.rpc = {});
