@@ -7,7 +7,7 @@ describe("go.components.rpc", function() {
       response = testHelpers.rpc.response,
       errorResponse = testHelpers.rpc.errorResponse;
 
-  describe(".sync", function() {
+  describe.only(".sync", function() {
     var ToyModel = Backbone.Model.extend({
       url: '/test',
       methods: {

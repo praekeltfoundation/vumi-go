@@ -38,7 +38,7 @@
 
     options.success = function(resp, textStatus, jqXHR) {
       if (_.isNull(resp.result)) {
-        if (error) { error(jqXHR, 'error', resp.error); }
+        if (error) { error(jqXHR, 'error', resp.error.message); }
       } else {
         if (success) { success(resp.result, textStatus, jqXHR); }
       }
