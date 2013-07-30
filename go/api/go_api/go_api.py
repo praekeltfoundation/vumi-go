@@ -6,7 +6,7 @@
 import itertools
 
 from twisted.application.internet import StreamServerEndpointService
-from twisted.internet.defer import inlineCallbacks, succeed, DeferredList
+from twisted.internet.defer import inlineCallbacks, DeferredList
 
 from txjsonrpc.jsonrpc import addIntrospection
 from txjsonrpc.jsonrpclib import Fault

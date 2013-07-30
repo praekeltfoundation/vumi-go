@@ -476,7 +476,7 @@ class GroupsTestCase(VumiGoDjangoTestCase):
 
         # Delete the groups
         groups_url = reverse('contacts:groups')
-        response = self.client.post(groups_url, {
+        self.client.post(groups_url, {
             'group': [group_1.key, group_2.key],
             '_delete': True,
         })
@@ -582,15 +582,13 @@ class GroupsTestCase(VumiGoDjangoTestCase):
         self.assertTrue(contents)
         self.assertEqual(mime_type, 'application/zip')
 
-
-
     def test_multiple_group_exportation(self):
         group_1 = self.contact_store.new_group(TEST_GROUP_NAME)
         contact_1 = mkcontact(self, groups=[group_1])
         contact_1.extra['foo'] = u'bar'
         contact_1.extra['bar'] = u'baz'
         contact_1.save()
-        
+
         group_2 = self.contact_store.new_group(TEST_GROUP_NAME)
         contact_2 = mkcontact(self, groups=[group_2])
         contact_2.extra['foo'] = u'bar'
@@ -598,7 +596,7 @@ class GroupsTestCase(VumiGoDjangoTestCase):
         contact_2.save()
 
         groups_url = reverse('contacts:groups')
-        response = self.client.post(groups_url, {
+        self.client.post(groups_url, {
             'group': [group_1.key, group_2.key],
             '_export_group_contacts': True,
         })
