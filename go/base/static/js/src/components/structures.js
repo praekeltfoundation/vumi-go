@@ -431,6 +431,12 @@
         if (options.removeModel) {
           if (!options.silent) { this.removeLock = true; }
           this.models.remove(model, {silent: options.silent});
+
+          // Ensure the model is removed from the store so it won't cause
+          // duplication errors if a new model with the same id is added to the
+          // store (backbone-relational does not appear to do this
+          // automatically)
+          Backbone.Relational.store.unregister(model);
         }
       }
 
