@@ -161,8 +161,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         [router] = self.user_api.active_routers()
         self.assertEqual('keyword', router.router_type)
         self.assertEqual('My Conversation router', router.name)
-        self.assertEqual(
-            ['keyword_foo'], list(router.extra_outbound_endpoints))
+        self.assertEqual(['keyword_foo'], list(router.extra_inbound_endpoints))
         self.assertEqual({
             'keyword_endpoint_mapping': {'foo': 'keyword_foo'},
         }, router.config)
@@ -180,10 +179,10 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
             GoConnector.for_router(
                 router.router_type, router.key, GoConnector.OUTBOUND))
         self.assertEqual(self.user_api.get_routing_table(), {
-            conv_conn: {u'default': [rout_conn, u'keyword_foo']},
-            tag_conn: {u'default': [rin_conn, u'default']},
-            rout_conn: {u'keyword_foo': [conv_conn, u'default']},
-            rin_conn: {u'default': [tag_conn, u'default']},
+            conv_conn: {u'default': [rin_conn, u'keyword_foo']},
+            tag_conn: {u'default': [rout_conn, u'default']},
+            rin_conn: {u'keyword_foo': [conv_conn, u'default']},
+            rout_conn: {u'default': [tag_conn, u'default']},
         })
 
     def test_post_create_view_with_keyword_default(self):
@@ -213,7 +212,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         self.assertEqual('keyword', router.router_type)
         self.assertEqual('My Conversation router', router.name)
         self.assertEqual(
-            ['keyword_default'], list(router.extra_outbound_endpoints))
+            ['keyword_default'], list(router.extra_inbound_endpoints))
         self.assertEqual({
             'keyword_endpoint_mapping': {'default': 'keyword_default'},
         }, router.config)
@@ -231,8 +230,8 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
             GoConnector.for_router(
                 router.router_type, router.key, GoConnector.OUTBOUND))
         self.assertEqual(self.user_api.get_routing_table(), {
-            conv_conn: {u'default': [rout_conn, u'keyword_default']},
-            tag_conn: {u'default': [rin_conn, u'default']},
-            rout_conn: {u'keyword_default': [conv_conn, u'default']},
-            rin_conn: {u'default': [tag_conn, u'default']},
+            conv_conn: {u'default': [rin_conn, u'keyword_default']},
+            tag_conn: {u'default': [rout_conn, u'default']},
+            rin_conn: {u'keyword_default': [conv_conn, u'default']},
+            rout_conn: {u'default': [tag_conn, u'default']},
         })

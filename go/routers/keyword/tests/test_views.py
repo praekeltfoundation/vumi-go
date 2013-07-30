@@ -55,6 +55,3 @@ class KeywordViewTests(DjangoGoRouterTestCase):
             'foo': 'bar',
             'baz': 'quux',
         }})
-        self.assertEqual(set(router.extra_inbound_endpoints), set())
-        self.assertEqual(
-            set(router.extra_outbound_endpoints), set(['bar', 'quux']))
