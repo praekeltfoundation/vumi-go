@@ -212,11 +212,11 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         user_account = yield self.user_api.get_user_account()
         rt_helper = RoutingTableHelper(user_account.routing_table)
         rt_helper.add_entry(
-            channel_conn, 'default', router_out_conn, 'default')
-        rt_helper.add_entry(router_in_conn, 'default', conv_conn, 'default')
-        rt_helper.add_entry(conv_conn, 'default', router_in_conn, 'default')
-        rt_helper.add_entry(
-            router_out_conn, 'default', channel_conn, 'default')
+            channel_conn, 'default', router_in_conn, 'default')
+        rt_helper.add_entry(router_out_conn, 'default', conv_conn, 'default')
+        rt_helper.add_entry(conv_conn, 'default', router_out_conn, 'default')
+        rt_helper.add_entry(router_in_conn, 'default', channel_conn, 'default')
+        rt_helper.validate_all_entries()
         yield user_account.save()
 
     @inlineCallbacks
@@ -241,23 +241,23 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
             {
                 u'source': {u'uuid': u'CONVERSATION:jsbox:%s:default'
                             % conv.key},
-                u'target': {u'uuid': u'ROUTER:keyword:%s:INBOUND:default'
+                u'target': {u'uuid': u'ROUTER:keyword:%s:OUTBOUND:default'
                             % router.key},
             },
             {
                 u'source': {u'uuid': u'ROUTER:keyword:%s:INBOUND:default'
                             % router.key},
-                u'target': {u'uuid': u'CONVERSATION:jsbox:%s:default'
-                            % conv.key},
+                u'target': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'}
             },
             {
                 u'source': {u'uuid': u'ROUTER:keyword:%s:OUTBOUND:default'
                             % router.key},
-                u'target': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'}
+                u'target': {u'uuid': u'CONVERSATION:jsbox:%s:default'
+                            % conv.key},
             },
             {
                 u'source': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'},
-                u'target': {u'uuid': u'ROUTER:keyword:%s:OUTBOUND:default'
+                u'target': {u'uuid': u'ROUTER:keyword:%s:INBOUND:default'
                             % router.key},
             },
         ])
@@ -316,23 +316,23 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
                 {
                     u'source': {u'uuid': u'CONVERSATION:jsbox:%s:default'
                                 % conv.key},
-                    u'target': {u'uuid': u'ROUTER:keyword:%s:INBOUND:default'
+                    u'target': {u'uuid': u'ROUTER:keyword:%s:OUTBOUND:default'
                                 % router.key},
                 },
                 {
                     u'source': {u'uuid': u'ROUTER:keyword:%s:INBOUND:default'
                                 % router.key},
-                    u'target': {u'uuid': u'CONVERSATION:jsbox:%s:default'
-                                % conv.key},
+                    u'target': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'}
                 },
                 {
                     u'source': {u'uuid': u'ROUTER:keyword:%s:OUTBOUND:default'
                                 % router.key},
-                    u'target': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'}
+                    u'target': {u'uuid': u'CONVERSATION:jsbox:%s:default'
+                                % conv.key},
                 },
                 {
                     u'source': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'},
-                    u'target': {u'uuid': u'ROUTER:keyword:%s:OUTBOUND:default'
+                    u'target': {u'uuid': u'ROUTER:keyword:%s:INBOUND:default'
                                 % router.key},
                 },
             ],
