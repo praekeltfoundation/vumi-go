@@ -755,18 +755,19 @@ describe("go.components.structures", function() {
           }]
         });
 
-        var thing = new ThingModel({subthings: {id: 'thing'}}),
+        var thing = new ThingModel({subthings: {id: 'subthing'}}),
             subthings = thing.get('subthings'),
-            subthing = subthings.get('thing');
+            subthing = subthings.get('subthing'),
+            storeSubthings = Backbone.Relational.store.getCollection(subthing);
 
         var views = new ViewCollection({
           type: ToyView,
           models: subthings
         });
 
-        assert(Backbone.Relational.store.getCollection(thing).size(), 1);
-        views.remove('thing', {removeModel: true});
-        assert(Backbone.Relational.store.getCollection(thing).size(), 0);
+        assert.isDefined(storeSubthings.get('subthing'));
+        views.remove('subthing', {removeModel: true});
+        assert.isUndefined(storeSubthings.get('subthing'));
       });
 
       it("should remove the view from the 'by model' lookup", function() {
