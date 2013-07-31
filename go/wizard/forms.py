@@ -10,7 +10,7 @@ class Wizard1CreateForm(forms.Form):
     )
 
     channel_kind = forms.ChoiceField(label="Channels", choices=CHANNEL_CHOICES,
-                                     required=False, widget=RadioSelect)
+                                     widget=RadioSelect)
     keyword = forms.CharField(label="Define a keyword", max_length=100,
                               required=False)
     new_keyword = forms.CharField(label="Define a new keyword", max_length=100,

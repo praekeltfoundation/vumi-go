@@ -46,51 +46,62 @@ class WizardCreateView(BaseWizardView):
         # TODO: Reuse new conversation/channel view logic here.
         wiz_form = Wizard1CreateForm(request.user_api, request.POST)
         conv_form = NewConversationForm(request.user_api, request.POST)
-        chan_form = NewChannelForm(request.user_api, request.POST)
 
-        if not all(frm.is_valid() for frm in [conv_form, chan_form, wiz_form]):
+        if not (wiz_form.is_valid() and conv_form.is_valid()):
             # TODO: Better validation.
             logger.info("Validation failed: %r %r" % (
-                conv_form.errors, chan_form.errors))
+                wiz_form.errors, conv_form.errors))
             return self.get(request)
 
-        # Create channel
-        tag = self._create_channel(request, chan_form.cleaned_data)
-
         # Create conversation
-        view_def, conversation = self._create_conversation(
+        view_def, conv = self._create_conversation(
             request, conv_form.cleaned_data)
+
+        wiz_data = wiz_form.cleaned_data
+        if wiz_data['channel_kind'] == 'new':
+            chan_form = NewChannelForm(request.user_api, request.POST)
+            if not chan_form.is_valid():
+                # TODO: Better validation.
+                logger.info("Validation failed: %r" % (chan_form.errors,))
+                return self.get(request)
+            self._handle_new_channel(
+                request, chan_form.cleaned_data, wiz_data['keyword'], conv)
+        else:
+            self._handle_existing_channel(
+                request, wiz_data['existing_router'], wiz_data['new_keyword'],
+                conv)
+
         messages.info(request, 'Conversation created successfully.')
+        if view_def.is_editable:
+            return redirect(view_def.get_view_url(
+                'edit', conversation_key=conv.key))
+        else:
+            return redirect(view_def.get_view_url(
+                'show', conversation_key=conv.key))
+
+    def _handle_new_channel(self, request, chan_data, keyword, conv):
+        channel = chan_data['channel'].split(':')
+        if channel[1]:
+            tag = request.user_api.acquire_specific_tag(channel)
+        else:
+            tag = request.user_api.acquire_tag(channel[0])
 
         # Set up routing
-        keyword = wiz_form.cleaned_data['keyword']
         if keyword:
             # Create router
             endpoint, router = self._create_keyword_router(
                 request, keyword, ':'.join(tag))
             self._setup_keyword_routing(
-                request, conversation, tag, router, endpoint)
+                request, conv, tag, router, endpoint)
         else:
-            self._setup_basic_routing(request, conversation, tag)
+            self._setup_basic_routing(request, conv, tag)
 
-        if view_def.is_editable:
-            return redirect(view_def.get_view_url(
-                'edit', conversation_key=conversation.key))
-        else:
-            return redirect(view_def.get_view_url(
-                'show', conversation_key=conversation.key))
+    def _handle_existing_channel(self, request, router_key, keyword, conv):
+        raise NotImplementedError()
 
     def _get_existing_keywords(self, request):
         routers = request.user_api.active_routers()
         return routers
-
-    def _create_channel(self, request, channel_data):
-        # Create channel
-        pool, tag = channel_data['channel'].split(':')
-        if tag:
-            return request.user_api.acquire_specific_tag((pool, tag))
-        else:
-            return request.user_api.acquire_tag(pool)
 
     def _create_conversation(self, request, conv_data):
         conversation_type = conv_data['conversation_type']

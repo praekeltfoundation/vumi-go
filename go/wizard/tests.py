@@ -90,6 +90,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'bulk_message',
             'name': 'My Conversation',
+            'channel_kind': 'new',
             'country': 'International',
             'channel': 'longcode:',
         })
@@ -117,6 +118,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'jsbox',
             'name': 'My Conversation',
+            'channel_kind': 'new',
             'country': 'International',
             'channel': 'longcode:',
         })
@@ -135,6 +137,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'wikipedia',
             'name': 'My Conversation',
+            'channel_kind': 'new',
             'country': 'International',
             'channel': 'longcode:',
         })
@@ -150,6 +153,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'foo',
             'name': 'My Conversation',
+            'channel_kind': 'new',
             'country': 'International',
             'channel': 'longcode:',
         })
@@ -162,6 +166,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'bulk_message',
             'name': 'My Conversation',
+            'channel_kind': 'new',
             'country': 'Nowhere',
             'channel': 'longcode:',
         })
@@ -174,6 +179,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'bulk_message',
             'name': 'My Conversation',
+            'channel_kind': 'new',
             'country': 'International',
             'channel': 'badpool:',
         })
@@ -189,6 +195,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'bulk_message',
             'name': 'My Conversation',
+            'channel_kind': 'new',
             'country': 'International',
             'channel': 'longcode:',
             'keyword': 'foo',
@@ -226,6 +233,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         response = self.client.post(reverse('wizard:create'), {
             'conversation_type': 'bulk_message',
             'name': 'My Conversation',
+            'channel_kind': 'new',
             'country': 'International',
             'channel': 'longcode:',
             'keyword': 'default',
