@@ -37,16 +37,16 @@ class WizardCreateView(BaseWizardView):
 
     def get(self, request):
         return self.render_to_response({
-            'wizard_form': Wizard1CreateForm(),
+            'wizard_form': Wizard1CreateForm(request.user_api),
             'conversation_form': NewConversationForm(request.user_api),
             'channel_form': NewChannelForm(request.user_api),
         })
 
     def post(self, request):
         # TODO: Reuse new conversation/channel view logic here.
+        wiz_form = Wizard1CreateForm(request.user_api, request.POST)
         conv_form = NewConversationForm(request.user_api, request.POST)
         chan_form = NewChannelForm(request.user_api, request.POST)
-        wiz_form = Wizard1CreateForm(request.POST)
 
         if not all(frm.is_valid() for frm in [conv_form, chan_form, wiz_form]):
             # TODO: Better validation.
@@ -79,6 +79,10 @@ class WizardCreateView(BaseWizardView):
         else:
             return redirect(view_def.get_view_url(
                 'show', conversation_key=conversation.key))
+
+    def _get_existing_keywords(self, request):
+        routers = request.user_api.active_routers()
+        return routers
 
     def _create_channel(self, request, channel_data):
         # Create channel

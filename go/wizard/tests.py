@@ -26,6 +26,23 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         # Check that we have a tagpool/tag in the response
         self.assertContains(response, 'longcode:')
 
+    def test_get_create_view_with_existing_routers(self):
+        self.add_app_permission(u'go.apps.bulk_message')
+        self.add_app_permission(u'go.apps.subscription')
+        self.declare_tags(u'longcode', 4)
+        self.add_tagpool_permission(u'longcode')
+        self.create_router(name=u"non-kw-router")
+        self.create_router(name=u"existing-kw-router", router_type=u"keyword")
+        response = self.client.get(reverse('wizard:create'))
+        # Check that we have a few conversation types in the response
+        self.assertContains(response, 'bulk_message')
+        self.assertContains(response, 'subscription')
+        self.assertNotContains(response, 'survey')
+        self.assertContains(response, 'existing-kw-router')
+        self.assertNotContains(response, 'non-kw-router')
+        # Check that we have a tagpool/tag in the response
+        self.assertContains(response, 'longcode:')
+
     def test_post_create_view_valid(self):
         self.add_app_permission(u'go.apps.bulk_message')
         self.declare_tags(u'longcode', 4)

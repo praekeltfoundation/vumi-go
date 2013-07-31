@@ -67,7 +67,6 @@
                     <label for="id_{{ wizard_form.keyword.name }}">
                       {{ wizard_form.keyword.label }}
                     </label>
-                    
                     {{ wizard_form.keyword }}
                 </div>
             </div>
@@ -77,23 +76,20 @@
         <fieldset class="configuration_existing row-fluid boxes">
             <div class="span4">
                 <div class="box">
-                    <label for="id_channel">
-                        Select an existing channel
+                    <label for="id_{{ wizard_form.existing_router.name }}">
+                        {{ wizard_form.existing_router.label }}
                     </label>
-                    <select name="channel" id="id_channel">
-                        <option value=""></option>
-                        <option value="">Channel A</option>
-                        <option value="">Channel B</option>
-                    </select>
+
+                    {{ wizard_form.existing_router }}
                 </div>
             </div>
 
             <div class="span4">
                 <div class="box">
-                    <label for="id_keyword2">
-                      Define a new keyword
+                    <label for="id_{{ wizard_form.new_keyword.name }}">
+                      {{ wizard_form.bew_keyword.label }}
                     </label>
-                    <input type="text" name="keyword2" id="id_keyword2">
+                    {{ wizard_form.new_keyword }}
                 </div>
             </div>
 
@@ -115,9 +111,6 @@
 
 {% block ondomready %}
     {{ block.super }}
-
-    
-
 
     $('input[name=channel_kind]').on('change', function() {
         $('.configuration').show();
