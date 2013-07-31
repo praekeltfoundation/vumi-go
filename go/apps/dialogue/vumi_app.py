@@ -16,7 +16,7 @@ class DialogueConfig(JsBoxConfig):
     @property
     def javascript(self):
         if self._cached_javascript is None:
-            self._cached_javascript = pkg_resources(
+            self._cached_javascript = pkg_resources.resource_string(
                 "go.apps.dialogue", "vumi_app.js")
         return self._cached_javascript
 
@@ -26,7 +26,6 @@ class DialogueApplication(JsBoxApplication):
 
     worker_name = 'dialogue_application'
 
-    @inlineCallbacks
     def send_first_dialogue_message(self, to_addr, contact, conversation,
                                     msg_options):
         log.debug('Starting %r -> %s' % (conversation, to_addr))
