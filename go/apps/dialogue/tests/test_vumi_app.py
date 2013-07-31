@@ -39,7 +39,7 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
             ),
             'sandbox': {
                 'config': {
-                    'cls': 'go.apps.jsbox.vumi_app.ConversationConfigResource'
+                    'cls': 'go.apps.dialogue.vumi_app.PollConfigResource',
                 },
                 'kv': {
                     'cls': 'vumi.application.sandbox.RedisResource',
@@ -66,10 +66,7 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
     def setup_conversation(self, contact_count=2,
                            from_addr=u'+27831234567{0}',
                            config={}):
-        config["jsbox_app_config"] = {
-            "config": {"value": json.dumps({})},
-            "poll": {"value": json.dumps(simple_poll)}
-        }
+        config["poll"] = json.dumps(simple_poll)
 
         user_api = self.user_api
         group = yield user_api.contact_store.new_group(u'test group')
