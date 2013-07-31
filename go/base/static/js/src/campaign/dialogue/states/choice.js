@@ -84,7 +84,6 @@
 
     render: function() {
       this.template.render();
-      this.$('.info').tooltip();
       return this;
     }
   });
