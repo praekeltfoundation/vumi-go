@@ -299,7 +299,7 @@ describe("go.components.structures", function() {
         comparator: function(v) { return v.ordinal; },
 
         arrangeable: true,
-        arranger: function(v, ordinal) { return v.ordinal = ordinal; }
+        arranger: function(v, ordinal) { v.ordinal = ordinal; }
       });
 
       beforeEach(function() {
@@ -742,6 +742,32 @@ describe("go.components.structures", function() {
       it("should remove the view's model if 'removeModel' is true", function() {
         views.remove('c', {removeModel: true});
         assert.isUndefined(views.models.get('c'));
+      });
+
+      it("should unregister the model from the relational model store", function() {
+        var SubthingModel = Backbone.RelationalModel.extend();
+
+        var ThingModel = Backbone.RelationalModel.extend({
+          relations: [{
+            type: Backbone.HasMany,
+            key: 'subthings',
+            relatedModel: SubthingModel
+          }]
+        });
+
+        var thing = new ThingModel({subthings: {id: 'subthing'}}),
+            subthings = thing.get('subthings'),
+            subthing = subthings.get('subthing'),
+            storeSubthings = Backbone.Relational.store.getCollection(subthing);
+
+        var views = new ViewCollection({
+          type: ToyView,
+          models: subthings
+        });
+
+        assert.isDefined(storeSubthings.get('subthing'));
+        views.remove('subthing', {removeModel: true});
+        assert.isUndefined(storeSubthings.get('subthing'));
       });
 
       it("should remove the view from the 'by model' lookup", function() {

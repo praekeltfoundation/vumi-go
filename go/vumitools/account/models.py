@@ -112,6 +112,7 @@ class RoutingTableHelper(object):
                 yield (src_conn, src_endp, dst_conn, dst_endp)
 
     def add_entry(self, src_conn, src_endpoint, dst_conn, dst_endpoint):
+        self.validate_entry(src_conn, src_endpoint, dst_conn, dst_endpoint)
         connector_dict = self.routing_table.setdefault(src_conn, {})
         if src_endpoint in connector_dict:
             log.warning(
@@ -166,6 +167,17 @@ class RoutingTableHelper(object):
         conv_conn = str(GoConnector.for_conversation(conv.conversation_type,
                                                      conv.key))
         self.remove_connector(conv_conn)
+
+    def remove_router(self, router):
+        """Remove all entries linking to or from a given router.
+
+        Useful when archiving a router to ensure it is no longer present in the
+        routing table.
+        """
+        self.remove_connector(str(GoConnector.for_router(
+            router.router_type, router.key, GoConnector.INBOUND)))
+        self.remove_connector(str(GoConnector.for_router(
+            router.router_type, router.key, GoConnector.OUTBOUND)))
 
     def remove_transport_tag(self, tag):
         """Remove all entries linking to or from a given transport tag.
@@ -259,6 +271,27 @@ class RoutingTableHelper(object):
                     destinations_seen.add(extra_dst)
         return results
 
+    def validate_entry(self, src_conn, src_endpoint, dst_conn, dst_endpoint):
+        """Validate the provided entry.
+
+        This method currently only validates that the source and destination
+        have opposite directionality (IN->OUT or OUT->IN).
+        """
+        parsed_src = GoConnector.parse(src_conn)
+        parsed_dst = GoConnector.parse(dst_conn)
+        if parsed_src.direction == parsed_dst.direction:
+            raise ValueError(
+                "Invalid routing table entry: %s source (%s, %s) maps to %s"
+                " destination (%s, %s)" % (
+                    parsed_src.direction, src_conn, src_endpoint,
+                    parsed_dst.direction, dst_conn, dst_endpoint))
+
+    def validate_all_entries(self):
+        """Validates all entries in the routing table.
+        """
+        for entry in self.entries():
+            self.validate_entry(*entry)
+
 
 class GoConnectorError(Exception):
     """Raised when attempting to construct an invalid connector."""
@@ -284,6 +317,15 @@ class GoConnector(object):
         self._names = names
         self._parts = parts
         self._attrs = dict(zip(self._names, self._parts))
+
+    @property
+    def direction(self):
+        return {
+            self.OPT_OUT: self.INBOUND,
+            self.CONVERSATION: self.INBOUND,
+            self.TRANSPORT_TAG: self.OUTBOUND,
+            self.ROUTER: self._attrs.get('direction'),
+        }[self.ctype]
 
     def __str__(self):
         return ":".join([self.ctype] + self._parts)

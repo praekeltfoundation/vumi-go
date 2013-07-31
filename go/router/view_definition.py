@@ -64,8 +64,9 @@ class ArchiveRouterView(RouterApiView):
     path_suffix = 'archive/'
 
     def post(self, request, router):
-        router.set_status_finished()
-        router.save()
+        router_api = request.user_api.get_router_api(
+            router.router_type, router.key)
+        router_api.archive_router()
         messages.add_message(
             request, messages.INFO, '%s archived' % (
                 self.view_def.router_display_name,))

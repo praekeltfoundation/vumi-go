@@ -1,7 +1,7 @@
 import sys
 import traceback
 from StringIO import StringIO
-from zipfile import ZipFile
+from zipfile import ZipFile, ZIP_DEFLATED
 
 from celery.task import task
 
@@ -51,14 +51,80 @@ def delete_group_contacts(account_key, group_key):
         contact_store.get_contact_by_key(contact_key).delete()
 
 
+def zipped_file(filename, data):
+    zipio = StringIO()
+    zf = ZipFile(zipio, "a", ZIP_DEFLATED)
+    zf.writestr(filename, data)
+    zf.close()
+    return zipio.getvalue()
+
+
+_contact_fields = [
+    'name',
+    'surname',
+    'email_address',
+    'msisdn',
+    'dob',
+    'twitter_handle',
+    'facebook_id',
+    'bbm_pin',
+    'gtalk_id',
+    'created_at',
+]
+
+
+def contacts_to_csv(contacts, include_extra=True):
+    contacts = sorted(contacts, key=lambda c: c.created_at)
+
+    io = StringIO()
+    writer = UnicodeCSVWriter(io)
+
+    # Collect the possible field names for this set of contacts, depending
+    # the number of contacts found this could be potentially expensive.
+    extra_fields = set()
+    if include_extra:
+        for contact in contacts:
+            extra_fields.update(contact.extra.keys())
+    extra_fields = sorted(extra_fields)
+
+    # write the CSV header
+    writer.writerow(_contact_fields + ['extras-%s' % f for f in extra_fields])
+
+    # loop over the contacts and create the row populated with
+    # the values of the selected fields.
+    for contact in contacts:
+        row = [unicode(getattr(contact, field, None) or '')
+               for field in _contact_fields]
+
+        if include_extra:
+            row.extend([unicode(contact.extra[extra_field] or '')
+                        for extra_field in extra_fields])
+
+        writer.writerow(row)
+
+    return io.getvalue()
+
+
+def get_group_contacts(contact_store, *groups):
+    contact_keys = []
+    for group in groups:
+        contact_keys.extend(contact_store.get_contacts_for_group(group))
+
+    contacts = []
+    for bunch in contact_store.contacts.load_all_bunches(contact_keys):
+        contacts.extend(bunch)
+
+    return contacts
+
+
 @task(ignore_result=True)
-def export_group_contacts(account_key, group_key, include_extra):
+def export_group_contacts(account_key, group_key, include_extra=True):
     """
-    Export the a groups' contacts as a CSV file and email to the account
+    Export a group's contacts as a CSV file and email to the account
     holders' email address.
 
     :param str account_key:
-        The account holder's account key
+        The account holders account key
     :param str group_key:
         The group to export contacts for (can be either static or smart groups)
     :param bool include_extra:
@@ -67,62 +133,65 @@ def export_group_contacts(account_key, group_key, include_extra):
 
     api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
     contact_store = api.contact_store
+
     group = contact_store.get_group(group_key)
-    contact_keys = contact_store.get_contacts_for_group(group)
+    contacts = get_group_contacts(contact_store, group)
+    data = contacts_to_csv(contacts, include_extra)
+    file = zipped_file('contacts-export.csv', data)
 
     # Get the profile for this user so we can email them when the import
     # has been completed.
     user_profile = UserProfile.objects.get(user_account=account_key)
 
-    io = StringIO()
-    writer = UnicodeCSVWriter(io)
-
-    contacts = []
-    for bunch in contact_store.contacts.load_all_bunches(contact_keys):
-        contacts.extend(bunch)
-
-    contacts = sorted(contacts, key=lambda c: c.created_at)
-
-    # collect all names that we can export
-    fields = ['name', 'surname', 'email_address', 'msisdn', 'dob',
-              'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
-              'created_at']
-
-    # Collect the possible field names for this set of contacts, depending
-    # the number of contacts found this could be potentially expensive.
-    extra_fields = set()
-    if include_extra:
-        for contact in contacts:
-            extra_fields.update(contact.extra.keys())
-
-    # write the CSV header
-    extra_fields = sorted(extra_fields)
-    writer.writerow(fields + ['extras-%s' % (key,) for key in extra_fields])
-
-    # loop over the contacts and create the row populated with
-    # the values of the selected fields.
-    for contact in contacts:
-        row = [unicode(getattr(contact, field, None) or '')
-               for field in fields]
-
-        if include_extra:
-            row.extend([unicode(contact.extra[extra_field] or '')
-                        for extra_field in extra_fields])
-
-        writer.writerow(row)
-
-    zipio = StringIO()
-    zf = ZipFile(zipio, "a")
-    zf.writestr("contacts-export.csv", io.getvalue())
-    zf.close()
-
     email = EmailMessage(
         '%s contacts export' % (group.name,),
+
         'Please find the CSV data for %s contact(s) from '
-        'group "%s" attached.\n\n' % (len(contact_keys), group.name),
+        'group "%s" attached.\n\n' % (len(contacts), group.name),
+
         settings.DEFAULT_FROM_EMAIL, [user_profile.user.email])
 
-    email.attach('contacts-export.zip', zipio.getvalue(), 'application/zip')
+    email.attach('contacts-export.zip', file, 'application/zip')
+    email.send()
+
+
+@task(ignore_result=True)
+def export_many_group_contacts(account_key, group_keys, include_extra=True):
+    """
+    Export multiple group contacts as a single CSV file and email to the
+    account holders' email address.
+
+    :param str account_key:
+        The account holders account key
+    :param list group_keys:
+        The groups to export contacts for
+        (can be either static or smart groups)
+    :param bool include_extra:
+        Whether or not to include the extra data stored in the dynamic field.
+    """
+
+    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
+    contact_store = api.contact_store
+
+    groups = [contact_store.get_group(k) for k in group_keys]
+    contacts = get_group_contacts(contact_store, *groups)
+    data = contacts_to_csv(contacts, include_extra)
+    file = zipped_file('contacts-export.csv', data)
+
+    # Get the profile for this user so we can email them when the import
+    # has been completed.
+    user_profile = UserProfile.objects.get(user_account=account_key)
+
+    email = EmailMessage(
+        'Contacts export',
+
+        'Please find the attached CSV data for %s contact(s) from the '
+        'following groups:\n%s\n' %
+        (len(contacts), '\n'.join('  - %s' % g.name for g in groups)),
+
+        settings.DEFAULT_FROM_EMAIL, [user_profile.user.email])
+
+    email.attach('contacts-export.zip', file, 'application/zip')
     email.send()
 
 

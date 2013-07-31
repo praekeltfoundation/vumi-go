@@ -169,6 +169,85 @@ describe("go.components.views", function() {
     });
   });
 
+  describe(".PopoverView", function() {
+    var PopoverView = views.PopoverView;
+
+    var ToyPopoverView = PopoverView.extend({
+      render: function() { this.$el.text('Put away those fiery biscuits.'); }
+    });
+
+    var popover;
+
+    beforeEach(function() {
+      popover = new ToyPopoverView({
+        target: $('#dummy'),
+        popover: {animation: false}
+      });
+    });
+
+    afterEach(function() {
+      popover.remove();
+    });
+
+    describe(".show", function() {
+      it("should show the popover", function() {
+        assert(noElExists('.popover'));
+        popover.show();
+        assert(oneElExists('.popover'));
+      });
+
+      it("render the view as the contents of the popover", function() {
+        assert(noElExists('.popover-content'));
+
+        popover.show();
+
+        assert.equal(
+          $('.popover-content').text(),
+          'Put away those fiery biscuits.');
+      });
+
+      it("should trigger a 'show' event", function(done) {
+        popover
+          .on('show', function() { done(); })
+          .show();
+      });
+    });
+
+    describe(".hide", function() {
+      beforeEach(function() {
+        popover.show();
+      });
+
+      it("should hide the popover", function() {
+        assert(oneElExists('.popover'));
+        popover.hide();
+        assert(noElExists('.popover'));
+      });
+
+      it("should trigger a 'hide' event", function(done) {
+        popover
+          .on('hide', function() { done(); })
+          .hide();
+      });
+    });
+
+    describe(".toggle", function() {
+      it("should show the popover if it is hidden", function() {
+        assert(noElExists('.popover'));
+        popover.toggle();
+        assert(oneElExists('.popover'));
+      });
+
+      it("should hide the popover if it is not hidden", function() {
+        popover.show();
+
+        assert(oneElExists('.popover'));
+        popover.toggle();
+        assert(noElExists('.popover'));
+      });
+    });
+  });
+
   describe(".Partials", function() {
     var Partials = views.Partials;
 

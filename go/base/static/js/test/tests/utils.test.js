@@ -58,4 +58,26 @@ describe("go.utils", function() {
       assert.equal(maybeByName(23), 23);
     });
   });
+
+  describe(".unaccentify", function() {
+    var unaccentify = go.utils.unaccentify;
+
+    it("should unaccentify its input", function() {
+      assert.equal(
+        unaccentify("Sôl austan, Mâni vestan"),
+        'sol austan, mani vestan');
+    });
+  });
+
+  describe(".slugify", function() {
+    var slugify = go.utils.slugify;
+
+    it("should slugify its input", function() {
+      assert.equal(slugify("I'm a creep"), 'im-a-creep');
+
+      assert.equal(
+        slugify("Sôl austan, Mâni vestan"),
+        'sol-austan-mani-vestan');
+    });
+  });
 });

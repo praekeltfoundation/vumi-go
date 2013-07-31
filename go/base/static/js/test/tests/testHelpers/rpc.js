@@ -14,8 +14,13 @@
     return JSON.stringify({id: id, jsonrpc: '2.0', result: data});
   };
 
-  var errorResponse = function(error, id) {
-    return JSON.stringify({id: id, jsonrpc: '2.0', result: null, error: error});
+  var errorResponse = function(error, id, code) {
+    return JSON.stringify({
+      id: id || null,
+      jsonrpc: '2.0',
+      result: null,
+      error: {code: code || 400, message: error || ''}
+    });
   };
 
   _.extend(exports, {
