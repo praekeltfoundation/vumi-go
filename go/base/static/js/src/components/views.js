@@ -147,14 +147,12 @@
     show: function() {
       this.render();
 
-      if (!this.popover) {
-        this.popover = _(this)
-          .result('target')
-          .popover(
-            _({content: this.$el, html: true}).defaults(
-            _(this).result('popoverOptions')))
-          .data('popover');
-      }
+      this.popover = _(this)
+        .result('target')
+        .popover(
+          _({content: this.$el, html: true}).defaults(
+          _(this).result('popoverOptions')))
+        .data('popover');
 
       this.popover.show();
       this.hidden = false;
