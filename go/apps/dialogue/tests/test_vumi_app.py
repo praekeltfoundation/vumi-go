@@ -94,7 +94,6 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
             user_account_key=self.user_account.key,
             conversation_key=conversation.key,
             batch_id=batch_id,
-            msg_options={},
             delivery_class=conversation.delivery_class,
         )
 
