@@ -67,7 +67,7 @@ class WizardCreateView(BaseWizardView):
         if keyword:
             # Create router
             endpoint, router = self._create_keyword_router(
-                request, keyword, conversation.name)
+                request, keyword, ':'.join(tag))
             self._setup_keyword_routing(
                 request, conversation, tag, router, endpoint)
         else:
@@ -99,15 +99,16 @@ class WizardCreateView(BaseWizardView):
         )
         return view_def, conversation
 
-    def _create_keyword_router(self, request, keyword, conv_name):
+    def _create_keyword_router(self, request, keyword, channel_name):
         # TODO: Avoid duplicating stuff we already do elsewhere.
         view_def = get_router_view_definition('keyword', None)
         # TODO: Validate keyword?
         endpoint = 'keyword_%s' % (keyword.lower(),)
         config = {'keyword_endpoint_mapping': {keyword: endpoint}}
         router = request.user_api.new_router(
-            router_type=u'keyword', name=u'%s router' % (conv_name,),
-            description=u'Keyword router for %s' % (conv_name,), config=config,
+            router_type=u'keyword', name=u'Keywords for %s' % (channel_name,),
+            description=u'Keyword router for %s' % (channel_name,),
+            config=config,
             extra_outbound_endpoints=view_def.get_outbound_endpoints(config),
         )
         return endpoint, router

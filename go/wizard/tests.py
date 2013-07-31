@@ -160,7 +160,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
 
         [router] = self.user_api.active_routers()
         self.assertEqual('keyword', router.router_type)
-        self.assertEqual('My Conversation router', router.name)
+        self.assertEqual('Keywords for longcode:default10001', router.name)
         self.assertEqual(
             ['keyword_foo'], list(router.extra_outbound_endpoints))
         self.assertEqual({
@@ -211,7 +211,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
 
         [router] = self.user_api.active_routers()
         self.assertEqual('keyword', router.router_type)
-        self.assertEqual('My Conversation router', router.name)
+        self.assertEqual('Keywords for longcode:default10001', router.name)
         self.assertEqual(
             ['keyword_default'], list(router.extra_outbound_endpoints))
         self.assertEqual({
