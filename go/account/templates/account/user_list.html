@@ -30,7 +30,7 @@
                 <table class="table">
                     <thead>
                     <tr>
-                        <th><input type="checkbox"></th>
+                        <th><input class="action-marker" type="checkbox"></th>
                         <th>Email</th>
                         <th>Name</th>
                         <th>Role</th>
@@ -45,7 +45,7 @@
                         <tr>
                         {% endif %}
                             <td>
-                                <input type="checkbox" name="user" value="{{ user.id }}">
+                                <input class="action-marker" type="checkbox" name="user" value="{{ user.id }}">
                             </td>
                             <td>
                                 <a href="{% url 'account:user_list' user.pk %}">

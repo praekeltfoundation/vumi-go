@@ -1,56 +1,107 @@
-describe("go.components.tables", function() {
+describe.only("go.components.tables", function() {
+  var testHelpers = go.testHelpers,
+      noElExists = testHelpers.noElExists,
+      oneElExists = testHelpers.oneElExists;
 
   describe(".TableFormView", function() {
+    var $buttons,
+        $form,
+        table;
 
-    var $buttons;
-    var $form;
-    var tableFormView;
     beforeEach(function() {
+      $buttons = $([
+        '<div class="buttons">',
+          '<button data-action="delete" disabled="disabled">delete</button>',
+          '<button data-action="edit" disabled="disabled">edit</button>',
+        '</div>'
+      ].join(''));
 
-      $buttons = $('<div class="buttons"></div>');
-      $buttons.append('<button data-action="delete" disabled="disabled">Delete</button');
-      $buttons.append('<button data-action="edit" disabled="disabled">Edit</button');
+      $form = $([
+        '<form>',
+          '<table>',
+            '<thead>',
+              '<tr>',
+                '<th><input class="action-marker" name="h1" type="checkbox"></th>',
+                '<th>head</th>',
+              '</tr>',
+            '</thead>',
+            '<tbody>',
+              '<tr data-url="abc">',
+               '<td><input class="action-marker" name="c1" type="checkbox"></td>',
+               '<td>body</td>',
+              '</tr>',
+              '<tr data-url="abc">',
+               '<td><input class="action-marker" name="c2" type="checkbox"></td>',
+               '<td>body</td>',
+              '</tr>',
+            '</tbody>',
+          '</table>',
+        '</form>',
+      ].join(''));
 
-      $form = $('<form><table><thead></thead><tbody></tbody></table></form>');
-      $form.find('thead').append('<tr><th><input name="h1" type="checkbox"></th><th>head</th></tr>');
-      $form.find('tbody').append('<tr data-url="abc"><td><input name="c1" type="checkbox"></td><td>body</td></tr>');
-      $form.find('tbody').append('<tr data-url-alt="def"><td><input name="c2" type="checkbox"></td><td>body</td></tr>');
-
-      tableFormView = new go.components.tables.TableFormView({
+      table = new go.components.tables.TableFormView({
         el: $form,
-        onCheckedSelector: $buttons.find('button')
+        actions: $buttons.find('button')
       });
     });
 
-    it('should toggle the header checkbox when all checkboxes are checked', function() {
-
-      assert.isFalse($form.find('thead input:checkbox').prop('checked'));
-      var $cbs = $form.find('tbody tr td:first-child');
-      $cbs.trigger('click');
-      assert.isTrue($form.find('thead input:checkbox').prop('checked'));
+    afterEach(function() {
+      $('.modal').remove();
     });
 
-    it('should execute `onCheckedCallback` when a checkbox is checked', function(done) {
-
-      tableFormView.options.onCheckedCallback = function() {
-        done();
-      };
-      var $cb = $form.find('tbody tr td:first-child').eq(0);
-      $cb.trigger('click');
+    describe("when all checkboxes are checked", function() {
+      it('should toggle the header checkbox', function() {
+        assert.isFalse(table.$('thead .action-marker').is(':checked'));
+          table.$('tbody tr td:first-child').click();
+        assert.isTrue(table.$('thead .action-marker').is(':checked'));
+      });
     });
 
-    it('should toggle disabled on elements from `onCheckedSelector.`', function() {
-      // enabled
-      var $cb = $form.find('tbody input:checkbox').eq(0);
-      $cb.trigger('click');
-      assert.isTrue($cb.prop('checked'));
+    describe("when a checkbox is checked", function() {
+      it('should toggle disabled action elements', function() {
+        var $marker = table.$('tbody .action-marker').eq(0),
+            $edit = $buttons.find('[data-action="edit"]');
 
-      // disabled
-      $cb.trigger('click');
-      assert.isFalse($cb.prop('checked'));
-      assert.isTrue($buttons.find('button').eq(0).prop('disabled'));
+        // enabled
+        $marker.prop('checked', true).change();
+        assert(!$edit.is(':disabled'));
 
+        // disabled
+        $marker.prop('checked', false).change();
+        assert($edit.is(':disabled'));
+      });
     });
 
+    describe("when an action button is clicked", function() {
+      var $edit;
+
+      beforeEach(function() {
+        $edit = $buttons
+          .find('[data-action="edit"]')
+          .prop('disabled', false);
+      });
+
+      it("should show a confirmation modal", function() {
+        assert(noElExists('.modal'));
+        $edit.click();
+        assert(oneElExists('.modal'));
+      });
+
+      describe("when the confirmation modal is shown", function() {
+        it("should submit the action", function() {
+          assert(noElExists(table.$('[name=_edit]')));
+
+          table.$el.submit(function(e) {
+            e.preventDefault();
+            assert(oneElExists(table.$('[name=_edit]')));
+          });
+
+          $edit.click();
+          $('.modal').find('[data-handler="1"]').click();
+
+          assert(noElExists(table.$('[name=_edit]')));
+        });
+      });
+    });
   });
 });
