@@ -97,7 +97,17 @@ class WizardCreateView(BaseWizardView):
             self._setup_basic_routing(request, conv, tag)
 
     def _handle_existing_channel(self, request, router_key, keyword, conv):
-        raise NotImplementedError()
+        # TODO: Check that keyword is unused.
+        router = request.user_api.get_router(router_key)
+        endpoint = 'keyword_%s' % (keyword.lower(),)
+        # TODO: Better way to manage this kind of thing.
+        kem = router.config.setdefault('keyword_endpoint_mapping', {})
+        kem[keyword] = endpoint
+        if endpoint not in router.extra_outbound_endpoints:
+            router.extra_outbound_endpoints.append(endpoint)
+        router.save()
+
+        self._setup_keyword_routing(request, conv, None, router, endpoint)
 
     def _get_existing_keywords(self, request):
         routers = request.user_api.active_routers()
@@ -145,19 +155,21 @@ class WizardCreateView(BaseWizardView):
         routing_table = request.user_api.get_routing_table(user_account)
         rt_helper = RoutingTableHelper(routing_table)
 
+        if tag is not None:
+            tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
+            rin_conn = str(
+                GoConnector.for_router(
+                    router.router_type, router.key, GoConnector.INBOUND))
+            rt_helper.add_entry(rin_conn, "default", tag_conn, "default")
+            rt_helper.add_entry(tag_conn, "default", rin_conn, "default")
+
         conv_conn = str(
             GoConnector.for_conversation(conv.conversation_type, conv.key))
-        tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
-        rin_conn = str(
-            GoConnector.for_router(
-                router.router_type, router.key, GoConnector.INBOUND))
         rout_conn = str(
             GoConnector.for_router(
                 router.router_type, router.key, GoConnector.OUTBOUND))
         rt_helper.add_entry(conv_conn, "default", rout_conn, endpoint)
         rt_helper.add_entry(rout_conn, endpoint, conv_conn, "default")
-        rt_helper.add_entry(rin_conn, "default", tag_conn, "default")
-        rt_helper.add_entry(tag_conn, "default", rin_conn, "default")
 
         user_account.save()
 

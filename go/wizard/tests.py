@@ -262,3 +262,37 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         self.assert_routing_table(
             tag_router=[(tag, router)],
             router_conv=[(router, 'keyword_default', conv)])
+
+    def test_post_create_view_with_existing_router(self):
+        self.add_app_permission(u'go.apps.bulk_message')
+        self.declare_tags(u'longcode', 4)
+        self.add_tagpool_permission(u'longcode')
+        existing_router = self.create_router(router_type=u"keyword")
+        self.assert_stored_models(routers=[existing_router])
+        response = self.client.post(reverse('wizard:create'), {
+            'conversation_type': 'bulk_message',
+            'name': 'My Conversation',
+            'channel_kind': 'existing',
+            'existing_router': existing_router.key,
+            'new_keyword': 'foo',
+        })
+
+        [conv] = self.user_api.active_conversations()
+        self.assertEqual('bulk_message', conv.conversation_type)
+        self.assertEqual('My Conversation', conv.name)
+        self.assertRedirects(
+            response, reverse('conversations:conversation', kwargs={
+                'conversation_key': conv.key, 'path_suffix': '',
+            }))
+
+        [router] = self.user_api.active_routers()
+        self.assertEqual(existing_router.key, router.key)
+        self.assertEqual(
+            ['keyword_foo'], list(router.extra_outbound_endpoints))
+        self.assertEqual({
+            'keyword_endpoint_mapping': {'foo': 'keyword_foo'},
+        }, router.config)
+
+        self.assertEqual(set(), self.user_api.list_endpoints())
+
+        self.assert_routing_table(router_conv=[(router, 'keyword_foo', conv)])
