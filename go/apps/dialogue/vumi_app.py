@@ -35,6 +35,11 @@ class DialogueApplication(JsBoxApplication):
         from_addr = msg_options.pop('from_addr')
         conversation.set_go_helper_metadata(
             msg_options.setdefault('helper_metadata', {}))
+        # TODO: This generates a fake message id that is then used in
+        #       the reply to field of the outbound message. We need to
+        #       write special version of the GoOutboundResource that
+        #       will set in_reply_to to None on these messages so the
+        #       invalid ids don't escape into the rest of the system.
         msg = TransportUserMessage(from_addr=to_addr, to_addr=from_addr,
                                    content=None, **msg_options)
         return self.consume_user_message(msg)
