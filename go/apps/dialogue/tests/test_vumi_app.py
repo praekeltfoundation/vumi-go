@@ -113,3 +113,24 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
             self.assertEqual(go_metadata["conversation_key"], conv.key)
         self.assertEqual(sorted([m["to_addr"] for m in msgs]),
                          ["+278312345670", "+278312345671"])
+
+    @inlineCallbacks
+    def test_user_message(self):
+        conversation = yield self.setup_conversation()
+        yield self.start_conversation(conversation)
+        msg = self.mkmsg_in()
+        yield self.dispatch_to_conv(msg, conversation)
+        [reply] = yield self.get_dispatched_outbound()
+        self.assertEqual(reply["content"],
+                         "What is your favourite colour?\n1. Red\n2. Blue")
+
+    @inlineCallbacks
+    def test_event(self):
+        conversation = yield self.setup_conversation()
+        yield self.start_conversation(conversation)
+        msg = self.mkmsg_in()
+        conversation.set_go_helper_metadata(msg['helper_metadata'])
+        yield self.store_outbound_msg(msg, conversation)
+        event = self.mkmsg_ack(user_message_id=msg['message_id'])
+        conversation.set_go_helper_metadata(event['helper_metadata'])
+        yield self.dispatch_event(event)
