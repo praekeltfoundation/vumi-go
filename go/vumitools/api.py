@@ -507,6 +507,38 @@ class VumiUserApi(object):
         }.get(msg['transport_type'],
               msg['transport_type'])
 
+    def get_router_api(self, router_type, router_key):
+        return VumiRouterApi(self, router_type, router_key)
+
+
+class VumiRouterApi(object):
+    def __init__(self, user_api, router_type, router_key):
+        self.user_api = user_api
+        self.manager = user_api.manager
+        self.router_type = router_type
+        self.router_key = router_key
+
+    def get_router(self):
+        return self.user_api.get_router(self.router_key)
+
+    @Manager.calls_manager
+    def archive_router(self, router=None):
+        if router is None:
+            router = yield self.get_router()
+        router.set_status_finished()
+        yield router.save()
+        yield self._remove_from_routing_table(router)
+
+    @Manager.calls_manager
+    def _remove_from_routing_table(self, router):
+        """Remove routing entries for this router.
+        """
+        user_account = yield self.user_api.get_user_account()
+        routing_table = yield self.user_api.get_routing_table(user_account)
+        rt_helper = RoutingTableHelper(routing_table)
+        rt_helper.remove_router(router)
+        yield user_account.save()
+
 
 class VumiApi(object):
     def __init__(self, manager, redis, sender=None):

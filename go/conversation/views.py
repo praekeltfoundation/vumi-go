@@ -1,3 +1,4 @@
+import re
 from urllib import urlencode
 
 from django.contrib.auth.decorators import login_required

@@ -7,6 +7,22 @@ describe("go.components.rpc", function() {
       response = testHelpers.rpc.response,
       errorResponse = testHelpers.rpc.errorResponse;
 
+  describe(".isRpcError", function() {
+    it("should accomodate jsonrpc v1 responses", function() {
+      assert.isTrue(rpc.isRpcError({
+        result: null,
+        error: {code: 400, message: 'sigh'}
+      }));
+
+      assert.isFalse(rpc.isRpcError({result: null, error: null}));
+    });
+
+    it("should accomodate jsonrpc v2 responses", function() {
+      assert.isTrue(rpc.isRpcError({error: {code: 400, message: 'sigh'}}));
+      assert.isFalse(rpc.isRpcError({result: null}));
+    });
+  });
+
   describe(".sync", function() {
     var ToyModel = Backbone.Model.extend({
       url: '/test',

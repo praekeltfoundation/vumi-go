@@ -6,7 +6,7 @@
 import itertools
 
 from twisted.application.internet import StreamServerEndpointService
-from twisted.internet.defer import inlineCallbacks, succeed, DeferredList
+from twisted.internet.defer import inlineCallbacks, DeferredList
 
 from txjsonrpc.jsonrpc import addIntrospection
 from txjsonrpc.jsonrpclib import Fault
@@ -61,7 +61,7 @@ class GoApiServer(JSONRPC):
             return [RouterType.format_router(rb)
                     for rb in routers]
 
-        d = succeed([])  # TODO: complete once routers exist
+        d = user_api.active_routers()
         d.addCallback(format_routers)
         return d
 
@@ -107,7 +107,7 @@ class GoApiServer(JSONRPC):
 
     @signature(campaign_key=Unicode("Campaign key."),
                returns=List("List of routers.",
-                            item_type=ChannelType()))
+                            item_type=RouterType()))
     def jsonrpc_routers(self, campaign_key):
         """List the active routers under a particular campaign.
            """
