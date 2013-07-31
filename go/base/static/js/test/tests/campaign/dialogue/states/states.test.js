@@ -21,6 +21,52 @@ describe("go.campaign.dialogue.states", function() {
     tearDown();
   });
 
+  describe(".NameEditExtrasView", function() {
+    var state,
+        extras;
+
+    beforeEach(function() {
+      state = diagram.states.get('state1');
+      state.edit();
+
+     extras = state.modes.edit.nameExtras;
+     extras.show();
+    });
+
+    describe("when '.store-as' has changed", function() {
+      it("should update the state model's 'store_as' attribute", function() {
+        assert.equal(state.model.get('store_as'), 'message-1');
+
+        extras.$('.store-as')
+          .val("I'm a computer")
+          .change();
+
+        assert.equal(state.model.get('store_as'), "im-a-computer");
+      });
+    });
+
+    describe("when '.ok' is clicked", function() {
+      it("should hide the popover", function(done) {
+        extras.on('hide', function() { done(); });
+        extras.$('.ok').click();
+      });
+    });
+
+    describe("when '.cancel' is clicked", function() {
+      it("should hide the popover", function(done) {
+        extras.on('hide', function() { done(); });
+        extras.$('.cancel').click();
+      });
+
+      it("reset the state's 'store_as' attribute to its original value",
+      function() {
+        state.model.set('store_as', 'A computer');
+        extras.$('.cancel').click();
+        assert.equal(state.model.get('store_as'), 'message-1');
+      });
+    });
+  });
+
   describe(".DialogueStateModeView", function() {
     var DialogueStateModeView = dialogue.states.DialogueStateModeView;
 
@@ -73,8 +119,11 @@ describe("go.campaign.dialogue.states", function() {
             uuid: 'state4',
             name: 'New Dummy',
             type: 'dummy',
+            store_as: 'new-dummy',
             entry_endpoint: {'uuid':'endpoint6'},
             exit_endpoint: {'uuid':'endpoint7'},
+            user_defined_store_as: false,
+            store_on_contact: false,
             ordinal: 3
           });
 
@@ -85,8 +134,11 @@ describe("go.campaign.dialogue.states", function() {
           uuid: 'state4',
           name: 'Dummy Message 1',
           type: 'dummy',
+          store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
+          user_defined_store_as: false,
+          store_on_contact: false,
           ordinal: 3
         });
 
@@ -101,8 +153,11 @@ describe("go.campaign.dialogue.states", function() {
           uuid: 'state4',
           name: 'Dummy Message 1',
           type: 'dummy',
+          store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
+          user_defined_store_as: false,
+          store_on_contact: false,
           ordinal: 3
         });
 
@@ -113,8 +168,11 @@ describe("go.campaign.dialogue.states", function() {
           uuid: 'state4',
           name: 'Dummy Message 1',
           type: 'dummy',
+          store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
+          user_defined_store_as: false,
+          store_on_contact: false,
           ordinal: 3
         });
       });
@@ -212,8 +270,11 @@ describe("go.campaign.dialogue.states", function() {
           uuid: 'state4',
           name: 'Dummy Message 1',
           type: 'dummy',
+          store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
+          user_defined_store_as: false,
+          store_on_contact: false,
           ordinal: 3
         });
 
@@ -224,8 +285,11 @@ describe("go.campaign.dialogue.states", function() {
           uuid: 'state4',
           name: 'Dummy Message 1',
           type: 'dummy',
+          store_as: 'dummy-message-1',
           entry_endpoint: {'uuid':'endpoint6'},
           exit_endpoint: {'uuid':'endpoint7'},
+          user_defined_store_as: false,
+          store_on_contact: false,
           ordinal: 3
         });
       });
@@ -237,11 +301,24 @@ describe("go.campaign.dialogue.states", function() {
       });
     });
 
-    describe("when '.ok' button is clicked", function() {
+    describe("when the '.ok' button is clicked", function() {
       it("should switch back to the preview view", function() {
         assert.equal(state.modeName, 'edit');
         editMode.$('.ok').click();
         assert.equal(state.modeName, 'preview');
+      });
+    });
+
+    describe("when '.store-on-contact' changes", function() {
+      it("should set its model's 'store_on_contact' attr accordingly",
+      function() {
+        assert.equal(state.model.get('store_on_contact'), false);
+
+        editMode.$('.store-on-contact')
+          .prop(':checked', true)
+          .change();
+
+        assert.equal(state.model.get('store_on_contact'), true);
       });
     });
   });
@@ -405,13 +482,13 @@ describe("go.campaign.dialogue.states", function() {
           states.keys(),
           ['state1','state2','state3','state4']);
 
-        $('[data-uuid="state4"] .titlebar')
+        $('[data-uuid="state3"] .titlebar')
           .simulate('mousedown')
           .simulate('drag', {dx: -350});
 
         assert.deepEqual(
           states.keys(),
-          ['state1','state2','state4','state3']);
+          ['state1','state3','state2','state4']);
       });
 
       it("should not let the state be sorted if it is connected", function() {

@@ -239,11 +239,17 @@ button {
 .modal label input {
   margin: 0;
 }
+.popover {
+  z-index: 20 !important;
+  font-size: 11px;
+  width: 220px;
+}
+.popover input {
+  font-size: 11px;
+  width: 90%;
+}
 .dialogue .actions .sidebar {
   background: #d9d8d3;
-}
-.dialogue #diagram * {
-  z-index: 2;
 }
 .dialogue #diagram ._jsPlumb_connector {
   z-index: 1;
@@ -267,7 +273,6 @@ button {
 .dialogue #diagram .grid {
   text-align: center;
   margin: 0 auto;
-  width: 1280px;
 }
 .dialogue #diagram .grid .placeholder {
   background: #2f3436;
@@ -285,38 +290,43 @@ button {
   margin: 0;
 }
 .dialogue #diagram .grid .item {
-  margin: 40px 40px;
-  width: 200px;
+  margin: 40px 20px;
   float: left;
+  z-index: 2;
 }
 .dialogue #diagram .add {
-  height: 60px;
-  display: table-cell;
-  vertical-align: center;
-  font-size: 68px;
+  height: 65px;
+  font-size: 65px;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
 }
 .dialogue #diagram .state {
-  width: 220px;
-  margin: 30px 40px;
+  width: 260px;
   float: left;
+  text-align: left;
 }
 .dialogue #diagram .state {
-  padding: 6px;
   position: relative;
   color: #2f3436;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
 }
-.dialogue #diagram .state .titlebar {
-  font-size: 16px;
-  padding: 8px 6px;
-  margin: -6px;
-  margin-bottom: 10px;
+.dialogue #diagram .state .titlebar,
+.dialogue #diagram .state label {
   background: #b0b0b0;
+  height: 35px;
+  line-height: 35px;
+  font-size: 11px;
+  padding: 0 6px;
+  text-indent: 0;
+  font-weight: normal;
+  text-align: left;
+}
+.dialogue #diagram .state .titlebar {
+  margin-top: -14px;
+  margin-bottom: 10px;
   -webkit-border-radius: 5px;
   -webkit-background-clip: padding-box;
   -moz-border-radius: 5px;
@@ -324,19 +334,24 @@ button {
   border-radius: 5px;
   background-clip: padding-box;
 }
-.dialogue #diagram .state .titlebar .name {
-  font-weight: bold;
-  margin-bottom: 0;
-  width: 60px;
-}
 .dialogue #diagram .state .titlebar .remove {
+  float: right;
+  height: 22px;
+  width: 20px;
+  margin-top: 6px;
+  padding-bottom: 4px;
   color: #eee;
+  background: #000;
 }
 .dialogue #diagram .state .titlebar:hover {
   cursor: move;
 }
 .dialogue #diagram .state .edit.mode .actions {
   background: inherit;
+  margin: 10px 5px 0 0;
+}
+.dialogue #diagram .state .edit.mode .actions a {
+  font-size: 12px;
 }
 .dialogue #diagram .state .preview.mode .edit-switch {
   margin-left: 8px;
@@ -346,7 +361,15 @@ button {
 }
 .dialogue #diagram .state label,
 .dialogue #diagram .state p {
+  cursor: default;
   color: #2f3436;
+}
+.dialogue #diagram .state textarea,
+.dialogue #diagram .state select,
+.dialogue #diagram .state input {
+  width: 80%;
+  margin-left: 3px;
+  font-size: 11px;
 }
 .dialogue #diagram .state textarea {
   resize: none;
@@ -361,7 +384,7 @@ button {
 .dialogue #diagram .state .hint {
   margin: 0;
   text-align: center;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: bold;
 }
 .dialogue #diagram .state .important {
@@ -369,22 +392,56 @@ button {
 }
 .dialogue #diagram .endpoint {
   z-index: 4;
-  background: #b0b0b0;
-  width: 14px;
-  height: 14px;
-  -webkit-border-radius: 5px;
+  background: teal;
+  width: 15px;
+  height: 15px;
+  -webkit-border-radius: 15px;
   -webkit-background-clip: padding-box;
-  -moz-border-radius: 5px;
+  -moz-border-radius: 15px;
   -moz-background-clip: padding;
-  border-radius: 5px;
+  border-radius: 15px;
   background-clip: padding-box;
 }
 .dialogue #diagram .endpoint:hover {
   cursor: pointer;
 }
+.dialogue #diagram .search_enabled input {
+  margin: 0;
+  margin-left: 3px;
+  padding: 0;
+  width: auto;
+  min-width: 10px;
+  display: inline;
+}
+.dialogue #diagram .search_enabled label {
+  margin: 0;
+  text-indent: 0;
+  padding: 0;
+  display: inline;
+  background: transparent;
+  font-size: 10px;
+  color: #666;
+}
+.dialogue #diagram .choice.state .edit.mode .choices {
+  font-size: 11px;
+  margin-left: 20px;
+}
+.dialogue #diagram .choice.state .edit.mode .choices li {
+  padding: 0;
+  margin: 0 0 18px 0;
+}
 .dialogue #diagram .choice.state .edit.mode .choices input {
-  width: 60%;
+  min-width: 130px;
+  width: 170px;
   margin-bottom: 0;
+}
+.dialogue #diagram .choice.state .edit.mode .choices .close {
+  margin: 4px 10px 0 0;
+}
+.dialogue #diagram .choice.state .edit.mode .new-choice {
+  float: right;
+  font-size: 11px;
+  margin-right: 43px;
 }
 .dialogue #diagram .choice.state .preview.mode .choices {
   text-align: left;

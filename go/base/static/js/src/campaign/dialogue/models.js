@@ -13,9 +13,21 @@
     defaults: function() { return {uuid: uuid.v4()}; }
   });
 
-  var ChoiceEndpointModel = DialogueEndpointModel.extend();
+  var ChoiceEndpointModel = DialogueEndpointModel.extend({
+    defaults: {user_defined_value: false},
+
+    initialize: function() {
+      this.on('change:label', function(m, v) {
+        if (!this.get('user_defined_value')) { this.setValue(v); }
+      }, this);
+    },
+
+    setValue: function(v) { return this.set('value', go.utils.slugify(v)); }
+  });
 
   var DialogueStateModel = StateModel.extend({
+    storableOnContact: true,
+
     relations: [],
 
     subModelTypes: {
@@ -23,7 +35,23 @@
       choice: 'go.campaign.dialogue.models.ChoiceStateModel',
       freetext: 'go.campaign.dialogue.models.FreeTextStateModel',
       end: 'go.campaign.dialogue.models.EndStateModel'
-    }
+    },
+
+    defaults: function() {
+      return {
+        uuid: uuid.v4(),
+        user_defined_store_as: false,
+        store_on_contact: false,
+      };
+    },
+
+    initialize: function() {
+      this.on('change:name', function(m, v) {
+        if (!this.get('user_defined_store_as')) { this.setStoreAs(v); }
+      }, this);
+    },
+
+    setStoreAs: function(v) { return this.set('store_as', go.utils.slugify(v)); }
   });
 
   var DialogueStateModelCollection = Backbone.Collection.extend({
@@ -43,11 +71,10 @@
     }],
 
     defaults: function() {
-      return {
-        uuid: uuid.v4(),
+      return _({
         entry_endpoint: {},
         exit_endpoint: {}
-      };
+      }).defaults(DummyStateModel.__super__.defaults.call(this));
     }
   });
 
@@ -63,10 +90,9 @@
     }],
 
     defaults: function() {
-      return {
-        uuid: uuid.v4(),
+      return _({
         entry_endpoint: {}
-      };
+      }).defaults(ChoiceStateModel.__super__.defaults.call(this));
     }
   });
 
@@ -82,15 +108,16 @@
     }],
 
     defaults: function() {
-      return {
-        uuid: uuid.v4(),
+      return _({
         entry_endpoint: {},
         exit_endpoint: {}
-      };
+      }).defaults(FreeTextStateModel.__super__.defaults.call(this));
     }
   });
 
   var EndStateModel = DialogueStateModel.extend({
+    storableOnContact: false,
+
     relations: [{
       type: Backbone.HasOne,
       key: 'entry_endpoint',
@@ -98,10 +125,9 @@
     }],
 
     defaults: function() {
-      return {
-        uuid: uuid.v4(),
+      return _({
         entry_endpoint: {}
-      };
+      }).defaults(EndStateModel.__super__.defaults.call(this));
     }
   });
 
