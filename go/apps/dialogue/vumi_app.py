@@ -20,7 +20,10 @@ class PollConfigResource(SandboxResource):
         :returns:
             JSON string containg the configuration dictionary.
         """
-        config = {}
+        config = {
+            "metric_store": "poll-%s" % conversation.key,
+            "user_store": "poll-%s" % conversation.key,
+        }
         return json.dumps(config)
 
     def _get_poll(self, conversation):
