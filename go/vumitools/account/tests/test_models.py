@@ -257,6 +257,21 @@ class RoutingTableHelperTestCase(TestCase):
         rt.remove_conversation(conv)
         self.assertEqual(sorted(rt.entries()), [])
 
+    def test_remove_router(self):
+        rt = self.mk_helper({})
+        router = mock.Mock(router_type="router_1", key="12345")
+        rin_conn = str(GoConnector.for_router(
+            router.router_type, router.key, GoConnector.INBOUND))
+        rout_conn = str(GoConnector.for_router(
+            router.router_type, router.key, GoConnector.OUTBOUND))
+        rt.add_entry(self.CHANNEL_2, 'default', rin_conn, 'default')
+        rt.add_entry(rin_conn, 'default', self.CHANNEL_2, 'default')
+        rt.add_entry(self.CONV_1, 'default', rout_conn, 'default')
+        rt.add_entry(rout_conn, 'default', self.CONV_1, 'default')
+        self.assertNotEqual(list(rt.entries()), [])
+        rt.remove_router(router)
+        self.assertEqual(list(rt.entries()), [])
+
     def test_remove_transport_tag(self):
         tag = ["pool1", "tag1"]
         rt = self.mk_helper({})
