@@ -334,7 +334,7 @@ def _people(request):
     group = None
 
     if request.method == 'POST':
-        
+
         if '_delete' in request.POST:
             contacts = request.POST.getlist('contact')
             for person_key in contacts:
@@ -348,7 +348,8 @@ def _people(request):
         else:
             # first parse the CSV file and create Contact instances
             # from them for attaching to a group later
-            upload_contacts_form = UploadContactsForm(request.POST, request.FILES)
+            upload_contacts_form = UploadContactsForm(
+                request.POST, request.FILES)
             if upload_contacts_form.is_valid():
                 # We could be creating a new contact group.
                 if request.POST.get('name'):
@@ -375,7 +376,8 @@ def _people(request):
                         request, file_name, file_path)
                     return redirect(_group_url(group.key))
             else:
-                messages.error(request, 'Something went wrong with the upload.')        
+                messages.error(
+                    request, 'Something went wrong with the upload.')
     else:
         upload_contacts_form = UploadContactsForm()
 
