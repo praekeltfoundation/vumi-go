@@ -490,6 +490,80 @@ class TestVumiUserApi(TestTxVumiUserApi):
     sync_persistence = True
 
 
+class TestTxVumiRouterApi(AppWorkerTestCase):
+    @inlineCallbacks
+    def setUp(self):
+        yield super(TestTxVumiRouterApi, self).setUp()
+        if self.sync_persistence:
+            self.vumi_api = VumiApi.from_config_sync(self._persist_config)
+        else:
+            self.vumi_api = yield VumiApi.from_config_async(
+                self._persist_config)
+        self.user_account = yield self.mk_user(self.vumi_api, u'Buster')
+        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+
+    def create_router(self, **kw):
+        # TODO: Fix test infrastructe to avoid duplicating this stuff.
+        router_type = kw.pop('router_type', u'keyword')
+        name = kw.pop('name', u'routername')
+        description = kw.pop('description', u'')
+        config = kw.pop('config', {})
+        self.assertTrue(isinstance(config, dict))
+        return self.user_api.new_router(
+            router_type, name, description, config, **kw)
+
+    @inlineCallbacks
+    def get_router_api(self, router=None):
+        if router is None:
+            router = yield self.create_router()
+        returnValue(
+            self.user_api.get_router_api(router.router_type, router.key))
+
+    def test_get_router(self):
+        router = yield self.create_router()
+        router_api = yield self.get_router_api(router)
+        got_router = yield router_api.get_router()
+        self.assertEqual(router.router_type, got_router.router_type)
+        self.assertEqual(router.key, got_router.key)
+        self.assertEqual(router.name, got_router.name)
+        self.assertEqual(router.description, got_router.description)
+        self.assertEqual(router.config, got_router.config)
+
+    @inlineCallbacks
+    def _add_routing_entries(self, rapi):
+        conv_conn = 'CONVERSATION:type:key'
+        tag_conn = 'TRANSPORT_TAG:pool:tag'
+        rin_conn = str(GoConnector.for_router(
+            rapi.router_type, rapi.router_key, GoConnector.INBOUND))
+        rout_conn = str(GoConnector.for_router(
+            rapi.router_type, rapi.router_key, GoConnector.OUTBOUND))
+
+        user_account = yield self.user_api.get_user_account()
+        rt_helper = RoutingTableHelper(user_account.routing_table)
+        rt_helper.add_entry(tag_conn, 'default', rin_conn, 'default')
+        rt_helper.add_entry(rin_conn, 'default', tag_conn, 'default')
+        rt_helper.add_entry(conv_conn, 'default', rout_conn, 'default')
+        rt_helper.add_entry(rout_conn, 'default', conv_conn, 'default')
+        yield user_account.save()
+
+    @inlineCallbacks
+    def test_archive_router(self):
+        router = yield self.create_router()
+        router_api = yield self.get_router_api(router)
+        yield self._add_routing_entries(router_api)
+        self.assertEqual(router.archive_status, 'active')
+        self.assertNotEqual({}, (yield self.user_api.get_routing_table()))
+
+        yield router_api.archive_router()
+        router = yield router_api.get_router()
+        self.assertEqual(router.archive_status, 'archived')
+        self.assertEqual({}, (yield self.user_api.get_routing_table()))
+
+
+class TestVumiRouterApi(TestTxVumiRouterApi):
+    sync_persistence = True
+
+
 class TestVumiApiCommand(TestCase):
     def test_default_routing_config(self):
         cfg = VumiApiCommand.default_routing_config()

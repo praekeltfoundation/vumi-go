@@ -168,6 +168,17 @@ class RoutingTableHelper(object):
                                                      conv.key))
         self.remove_connector(conv_conn)
 
+    def remove_router(self, router):
+        """Remove all entries linking to or from a given router.
+
+        Useful when archiving a router to ensure it is no longer present in the
+        routing table.
+        """
+        self.remove_connector(str(GoConnector.for_router(
+            router.router_type, router.key, GoConnector.INBOUND)))
+        self.remove_connector(str(GoConnector.for_router(
+            router.router_type, router.key, GoConnector.OUTBOUND)))
+
     def remove_transport_tag(self, tag):
         """Remove all entries linking to or from a given transport tag.
 
