@@ -8,12 +8,13 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.trial.unittest import TestCase
 from twisted.web.server import Site
 
-from vumi.tests.utils import VumiWorkerTestCase
+from vumi.tests.utils import VumiWorkerTestCase, LogCatcher
 from vumi.utils import http_request
 
 from go.vumitools.account.models import GoConnector, RoutingTableHelper
 from go.vumitools.api import VumiApi
 from go.vumitools.tests.utils import GoAppWorkerTestMixin
+from go.api.go_api.action_dispatcher import ActionError
 from go.api.go_api.api_types import RoutingEntryType
 from go.api.go_api.go_api import GoApiWorker, GoApiServer
 
@@ -416,20 +417,37 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         self.assertIdentical(result, None)
 
     @inlineCallbacks
-    def test_conversation_action(self):
+    def test_conversation_action_error(self):
         conv = yield self.user_api.conversation_store.new_conversation(
             u'jsbox', u'My Conversation', u'A description', {})
-        result = yield self.proxy.callRemote(
+        d = self.proxy.callRemote(
             "conversation_action", self.campaign_key, conv.key,
             "foo", {"param": 1})
+        with LogCatcher() as lc:
+            yield self.assert_faults(d, 400, u"Unknown action.")
+            [failure] = lc.errors
+            self.assertTrue(failure["why"].startswith(
+                "Action u'foo' on 'conversation' <Conversation "))
+        # flush the error logged by the action dispatcher
+        [err] = self.flushLoggedErrors(ActionError)
+        self.assertEqual(err.value.faultString, u"Unknown action.")
 
     @inlineCallbacks
-    def test_router_action(self):
+    def test_router_action_error(self):
         router = yield self.user_api.router_store.new_router(
             u'keyword', u'My Router', u'A description', {})
-        result = yield self.proxy.callRemote(
+        d = self.proxy.callRemote(
             "router_action", self.campaign_key, router.key,
             "foo", {"param": 1})
+        with LogCatcher() as lc:
+            yield self.assert_faults(d, 400, u"Unknown action.")
+            [failure] = lc.errors
+            self.assertTrue(failure["why"].startswith(
+                "Action u'foo' on 'router' <Router "))
+        # flush the error logged by the action dispatcher
+        [err] = self.flushLoggedErrors(ActionError)
+        print err.value.message, type(err.value.message)
+        self.assertEqual(err.value.faultString, u"Unknown action.")
 
 
 class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):

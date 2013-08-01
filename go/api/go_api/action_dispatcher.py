@@ -1,10 +1,15 @@
 """Conversation, router and channel action dispatch handlers for Go API."""
 
+from txjsonrpc.jsonrpclib import Fault
+
 from vumi import log
 
 
-class ActionError(Exception):
+class ActionError(Fault):
     """Raise this to report an error from within an action handler."""
+
+    def __init__(self, msg, fault_code=400):
+        super(ActionError, self).__init__(fault_code, msg)
 
 
 class ActionDispatcher(object):
