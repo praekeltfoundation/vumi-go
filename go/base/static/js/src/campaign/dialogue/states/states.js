@@ -57,7 +57,10 @@
       this.on('show', function() {
         this.storeAsBackup = this.mode.state.model.get('store_as');
         this.delegateEvents();
+        this.$('.info').tooltip();
       }, this);
+      
+      this.on('hide', function() { this.$('.info').tooltip('destroy'); }, this);
     },
 
     onStoreAsChange: function(e) {
@@ -78,7 +81,6 @@
 
     render: function() {
       this.template.render();
-      this.$('.info').tooltip();
       return this;
     }
   });
