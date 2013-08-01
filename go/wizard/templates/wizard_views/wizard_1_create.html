@@ -20,7 +20,11 @@
         {{ wizard_form.channel_kind }}
     </div>
 
+
+
     <div class="configuration">
+
+
 
         <label>
             How would you like to reach and interact with users?
@@ -70,6 +74,8 @@
             </div>
         </fieldset>
 
+
+
         <fieldset class="configuration_existing row-fluid boxes">
             <div class="span4">
                 <div class="box">
@@ -91,12 +97,21 @@
             </div>
 
             <div class="span4">
-                <div class="box">
-                    <label for="">
+                <div class="box existing_keywords">
+                    <label>
                       Your existing keywords
                     </label>
 
-                    Dan, Sam, Plan, Rodger, Pink, Rabble.
+
+                    
+                    {% for k, v in router_form.router_keywords.items %}
+                    <p data-key="{{ k }}" class="hide">
+                        {% for keyword in v %}
+                        {{ keyword }},
+                        {% endfor %}
+                    </p>
+                    {% endfor %}
+
                 </div>
             </div>
         </fieldset>
@@ -134,6 +149,16 @@
     // if a channel is already selected then we should show the
     // configuration view for it.
     $('input[name=channel_kind]:checked').trigger('change');
+
+
+
+    $('select[name=existing_router]').on('change', function() {
+        var v = $(this).find(':checked').val();
+        $('.existing_keywords p').hide();
+        $('.existing_keywords p[data-key=' + v + ']').show();
+    });
+    // trigger change in order to show the first select box.
+    $('select[name=existing_router]').trigger('change');
 
 
 {% endblock %}
