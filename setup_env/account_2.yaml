@@ -1,0 +1,63 @@
+account:
+  email: "user2@example.org"
+  password: password
+  first_name: User
+  last_name: Two
+  applications:
+    - go.apps.bulk_message
+    - go.apps.dialogue
+    - go.apps.surveys
+    - go.apps.jsbox
+    - go.apps.subscription
+    - go.apps.sequential_send
+    - go.apps.wikipedia
+  tagpools:
+    - [longcode_tagpool, 10]
+    - [longcode_tagpool_2, null]
+    - [ussd_tagpool, 10]
+
+channels:
+  # conversation2
+  - "longcode_tagpool:longcode-10005"
+  # conversation3
+  - "ussd_tagpool:*120*10003#"
+  # conversation4
+  - "ussd_tagpool:*120*10004#"
+
+conversations:
+  - key: conversation2
+    start: false
+    conversation_type: bulk_message
+    name: name
+    config:
+      message: message
+      foo: bar
+
+  - key: conversation3
+    conversation_type: survey
+    name: name
+    config:
+      foo: bar
+      baz: zab
+
+  - key: conversation4
+    conversation_type: dialogue
+    name: name
+    config:
+      foo: bar
+      baz: zab
+
+routing_entries:
+  - ["longcode_tagpool:longcode-10005", "default", "conversation2", "default"]
+  - ["conversation2", "default", "longcode_tagpool:longcode-10005", "default"]
+
+  - ["ussd_tagpool:*120*10003#", "default", "conversation3", "default"]
+  - ["conversation3", "default", "ussd_tagpool:*120*10003#", "default"]
+
+  - ["ussd_tagpool:*120*10004#", "default", "conversation4", "default"]
+  - ["conversation4", "default", "ussd_tagpool:*120*10004#", "default"]
+
+contact_groups:
+  - key: group2
+    name: group2
+    contacts_csv: setup_env/contacts.csv
