@@ -2,6 +2,8 @@
 
 from txjsonrpc.jsonrpclib import Fault
 
+from twisted.internet.defer import maybeDeferred
+
 from vumi import log
 
 
@@ -22,22 +24,29 @@ class ActionDispatcher(object):
     def __init__(self, user_api):
         self.user_api = user_api
 
+    def _log_error(self, err, obj, action, params):
+        log.err(err,
+            "Action %(action)r on %(type_name)r %(obj)r (key: %(key)r)"
+            " with params %(params)r failed." % {
+                "action": action,
+                "type_name": self.dispatcher_type_name,
+                "obj": obj,
+                "key": obj.key,
+                "params": params,
+                })
+        return err
+
+    def _log_success(self, result, obj, action, params):
+        log.info("Performed action %r on %s %r." % (
+            action, self.dispatcher_type_name, obj.key))
+        return result
+
     def dispatch_action(self, obj, action, params):
         handler = getattr(self, "handle_%s" % action, self.unknown_action)
-        try:
-            return handler(obj, **params)
-        except:
-            log.err(None,
-                "Action %(action)r on"
-                " %(type_name)r %(obj)r (key: %(key)r)"
-                " with params %(params)r failed." % {
-                    "action": action,
-                    "type_name": self.dispatcher_type_name,
-                    "obj": obj,
-                    "key": obj.key,
-                    "params": params,
-                    })
-            raise
+        d = maybeDeferred(handler, obj, **params)
+        d.addErrback(self._log_error, obj, action, params)
+        d.addCallback(self._log_success, obj, action, params)
+        return d
 
     def unknown_action(self, obj, **kw):
         raise ActionError("Unknown action.")
