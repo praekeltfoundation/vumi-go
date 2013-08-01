@@ -114,10 +114,6 @@ class WizardCreateView(BaseWizardView):
 
         self._setup_keyword_routing(request, conv, None, router, endpoint)
 
-    def _get_existing_keywords(self, request):
-        routers = request.user_api.active_routers()
-        return routers
-
     def _create_conversation(self, request, conv_data):
         conversation_type = conv_data['conversation_type']
 
