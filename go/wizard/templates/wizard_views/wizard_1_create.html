@@ -72,24 +72,23 @@
             </div>
         </fieldset>
 
-        {# TODO: This form needs to be built in Django land. #}
         <fieldset class="configuration_existing row-fluid boxes">
             <div class="span4">
                 <div class="box">
-                    <label for="id_{{ wizard_form.existing_router.name }}">
-                        {{ wizard_form.existing_router.label }}
+                    <label for="id_{{ router_form.existing_router.name }}">
+                        {{ router_form.existing_router.label }}
                     </label>
 
-                    {{ wizard_form.existing_router }}
+                    {{ router_form.existing_router }}
                 </div>
             </div>
 
             <div class="span4">
                 <div class="box">
-                    <label for="id_{{ wizard_form.new_keyword.name }}">
-                      {{ wizard_form.new_keyword.label }}
+                    <label for="id_{{ router_form.new_keyword.name }}">
+                      {{ router_form.new_keyword.label }}
                     </label>
-                    {{ wizard_form.new_keyword }}
+                    {{ router_form.new_keyword }}
                 </div>
             </div>
 

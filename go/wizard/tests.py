@@ -157,6 +157,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
             'country': 'International',
             'channel': 'longcode:',
         })
+        self.assert_stored_models()
         # TODO: Test that we do the right thing with the bad form when we do
         #       the right thing with the bad form.
         self.assertEqual(response.status_code, 200)
@@ -170,6 +171,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
             'country': 'Nowhere',
             'channel': 'longcode:',
         })
+        self.assert_stored_models()
         # TODO: Test that we do the right thing with the bad form when we do
         #       the right thing with the bad form.
         self.assertEqual(response.status_code, 200)
@@ -183,6 +185,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
             'country': 'International',
             'channel': 'badpool:',
         })
+        self.assert_stored_models()
         # TODO: Test that we do the right thing with the bad form when we do
         #       the right thing with the bad form.
         self.assertEqual(response.status_code, 200)
@@ -293,6 +296,26 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
             'keyword_endpoint_mapping': {'foo': 'keyword_foo'},
         }, router.config)
 
-        self.assertEqual(set(), self.user_api.list_endpoints())
-
+        self.assert_stored_models(routers=[existing_router], convs=[conv])
         self.assert_routing_table(router_conv=[(router, 'keyword_foo', conv)])
+
+    def test_post_create_view_with_existing_keyword(self):
+        self.add_app_permission(u'go.apps.bulk_message')
+        self.declare_tags(u'longcode', 4)
+        self.add_tagpool_permission(u'longcode')
+        existing_router = self.create_router(router_type=u"keyword", config={
+            'keyword_endpoint_mapping': {'foo': 'keyword_foo'},
+        })
+        self.assert_stored_models(routers=[existing_router])
+        response = self.client.post(reverse('wizard:create'), {
+            'conversation_type': 'bulk_message',
+            'name': 'My Conversation',
+            'channel_kind': 'existing',
+            'existing_router': existing_router.key,
+            'new_keyword': 'foo',
+        })
+
+        self.assert_stored_models(routers=[existing_router])
+        # TODO: Test that we do the right thing with the bad form when we do
+        #       the right thing with the bad form.
+        self.assertEqual(response.status_code, 200)

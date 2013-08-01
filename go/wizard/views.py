@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.views.generic import TemplateView
 from django.utils.decorators import method_decorator
 
-from go.wizard.forms import Wizard1CreateForm
+from go.wizard.forms import Wizard1CreateForm, Wizard1ExistingRouterForm
 from go.conversation.forms import NewConversationForm
 from go.channel.forms import NewChannelForm
 from go.base.utils import (
@@ -37,20 +37,30 @@ class WizardCreateView(BaseWizardView):
 
     def get(self, request):
         return self.render_to_response({
-            'wizard_form': Wizard1CreateForm(request.user_api),
+            'wizard_form': Wizard1CreateForm(),
             'conversation_form': NewConversationForm(request.user_api),
             'channel_form': NewChannelForm(request.user_api),
+            'router_form': Wizard1ExistingRouterForm(request.user_api),
         })
 
     def post(self, request):
         # TODO: Reuse new conversation/channel view logic here.
-        wiz_form = Wizard1CreateForm(request.user_api, request.POST)
+        wiz_form = Wizard1CreateForm(request.POST)
         conv_form = NewConversationForm(request.user_api, request.POST)
+        chan_form = NewChannelForm(request.user_api, request.POST)
+        router_form = Wizard1ExistingRouterForm(request.user_api, request.POST)
 
-        if not (wiz_form.is_valid() and conv_form.is_valid()):
+        forms_to_validate = [wiz_form, conv_form]
+        # We do this on the raw POST data so we can validate in one step.
+        if request.POST.get('channel_kind') == 'new':
+            forms_to_validate.append(chan_form)
+        elif request.POST.get('channel_kind') == 'existing':
+            forms_to_validate.append(router_form)
+
+        if not all(form.is_valid() for form in forms_to_validate):
             # TODO: Better validation.
-            logger.info("Validation failed: %r %r" % (
-                wiz_form.errors, conv_form.errors))
+            logger.info("Validation failed: %s" % (
+                [frm.errors for frm in forms_to_validate],))
             return self.get(request)
 
         # Create conversation
@@ -59,17 +69,11 @@ class WizardCreateView(BaseWizardView):
 
         wiz_data = wiz_form.cleaned_data
         if wiz_data['channel_kind'] == 'new':
-            chan_form = NewChannelForm(request.user_api, request.POST)
-            if not chan_form.is_valid():
-                # TODO: Better validation.
-                logger.info("Validation failed: %r" % (chan_form.errors,))
-                return self.get(request)
             self._handle_new_channel(
                 request, chan_form.cleaned_data, wiz_data['keyword'], conv)
         else:
             self._handle_existing_channel(
-                request, wiz_data['existing_router'], wiz_data['new_keyword'],
-                conv)
+                request, router_form.cleaned_data, conv)
 
         messages.info(request, 'Conversation created successfully.')
         if view_def.is_editable:
@@ -96,9 +100,10 @@ class WizardCreateView(BaseWizardView):
         else:
             self._setup_basic_routing(request, conv, tag)
 
-    def _handle_existing_channel(self, request, router_key, keyword, conv):
+    def _handle_existing_channel(self, request, router_data, conv):
         # TODO: Check that keyword is unused.
-        router = request.user_api.get_router(router_key)
+        router = request.user_api.get_router(router_data['existing_router'])
+        keyword = router_data['new_keyword']
         endpoint = 'keyword_%s' % (keyword.lower(),)
         # TODO: Better way to manage this kind of thing.
         kem = router.config.setdefault('keyword_endpoint_mapping', {})
