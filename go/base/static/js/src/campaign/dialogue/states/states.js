@@ -6,6 +6,7 @@
   var maybeByName = go.utils.maybeByName,
       GridView = go.components.grid.GridView,
       ConfirmView = go.components.views.ConfirmView,
+      PopoverView = go.components.views.PopoverView,
       TemplateView = go.components.views.TemplateView;
 
   var plumbing = go.components.plumbing;
@@ -30,6 +31,58 @@
     isTarget: false
   });
 
+  var NameEditExtrasView = PopoverView.extend({
+    popoverOptions: {container: 'body'},
+
+    target: function() { return this.mode.$('.name-extras'); },
+
+    events: {
+      'click .ok': 'onOkClick',
+      'click .cancel': 'onCancelClick',
+      'change .store-as': 'onStoreAsChange'
+    },
+
+    initialize: function(options) {
+      NameEditExtrasView.__super__.initialize.call(this, options);
+      this.mode = options.mode;
+      this.model = this.mode.state.model;
+
+      this.template = new TemplateView({
+        el: this.$el,
+        jst: 'JST.campaign_dialogue_states_components_nameExtras',
+        data: {model: this.mode.state.model}
+      });
+
+      this.storeAsBackup = null;
+      this.on('show', function() {
+        this.storeAsBackup = this.mode.state.model.get('store_as');
+        this.delegateEvents();
+      }, this);
+    },
+
+    onStoreAsChange: function(e) {
+      this.model.setStoreAs(this.$('.store-as').val());
+      this.model.set('user_defined_store_as', true);
+      return this;
+    },
+
+    onCancelClick: function(e) {
+      e.preventDefault();
+      this.model.set('store_as', this.storeAsBackup);
+      this.hide();
+    },
+
+    onOkClick: function(e) {
+      this.hide();
+    },
+
+    render: function() {
+      this.template.render();
+      this.$('.info').tooltip();
+      return this;
+    }
+  });
+
   // Base 'mode' for state views. Each mode acts as a 'delegate view',
   // targeting a dialogue view's element and acting according to the mode type
   // (for eg, `edit`) and state type (for eg, `freetext`).
@@ -38,7 +91,7 @@
       return {
         mode: this,
         state: this.state,
-        model: this.state.model
+        model: this.model
       };
     },
 
@@ -47,6 +100,7 @@
     initialize: function(options) {
       DialogueStateModeView.__super__.initialize.call(this, options);
       this.state = options.state;
+      this.model = this.state.model;
 
       this.partials.body = new TemplateView(
         _({data: this.data.bind(this)}).extend(
@@ -72,10 +126,12 @@
     className: 'edit mode',
 
     events: {
-      'click .ok': 'onOk',
-      'click .cancel': 'onCancel',
+      'click .actions .ok': 'onOk',
+      'click .actions .cancel': 'onCancel',
       'change .type': 'onTypeChange',
-      'change .name': 'onNameChange'
+      'change .name': 'onNameChange',
+      'click .name-extras': 'onNameExtras',
+      'change .store-on-contact': 'onStoreOnContact'
     },
 
     resetModal: new ConfirmView({
@@ -89,6 +145,7 @@
       this.backupModel();
 
       this.on('activate', this.backupModel, this);
+      this.nameExtras = new NameEditExtrasView({mode: this});
     },
 
     onOk: function(e) {
@@ -119,18 +176,25 @@
     },
 
     onNameChange: function(e) {
-      this.state.model.set('name', $(e.target).val(), {silent: true});
-      return this;
+      this.model.set('name', $(e.target).val());
+    },
+
+    onNameExtras: function(e) {
+      this.nameExtras.toggle();
+    },
+
+    onStoreOnContact: function(e) {
+      this.model.set('store_on_contact', this.$('.store-on-contact').prop(':checked'));
     },
 
     // Keep a backup to restore the model for when the user cancels the edit
     backupModel: function() {
-      this.modelBackup = this.state.model.toJSON();
+      this.modelBackup = this.model.toJSON();
       return this;
     },
 
     cancel: function() {
-      var model = this.state.model;
+      var model = this.model;
       if (this.modelBackup) { model.set(this.modelBackup); }
       return this;
     },

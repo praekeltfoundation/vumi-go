@@ -58,6 +58,41 @@
       : _(obj).result('id') || obj;
   };
 
+  var unaccentify = (function() {
+    var accents     = 'àáâãäåçèéêëìíîïñðóòôõöøùúûüýÿ',
+        accentRepls = 'aaaaaaceeeeiiiinooooooouuuuyy';
+
+    var unaccentifyChar = function(c) {
+      var i = accents.indexOf(c);
+
+      return i < 0
+        ? c
+        : accentRepls[i];
+    };
+
+    return function(s) {
+      var r = '',
+          i = -1,
+          n = s.length;
+
+      s = s.toLowerCase();
+      while (++i < n) { r += unaccentifyChar(s[i]); }
+
+      return r;
+    };
+  })();
+
+  var slugify = (function() {
+    var wierdCharRe = /[^-A-Za-z0-9]/g,
+        whitespaceRe = /\s+/g;
+
+    return function(s) {
+      return unaccentify(s)
+        .replace(whitespaceRe, '-')
+        .replace(wierdCharRe, '');
+    };
+  })();
+
   _.extend(exports, {
     merge: merge,
     functor: functor,
@@ -65,6 +100,8 @@
     maybeByName: maybeByName,
     idOfModel: idOfModel,
     idOfView: idOfView,
+    slugify: slugify,
+    unaccentify: unaccentify,
     highlightActiveLinks: highlightActiveLinks
   });
 })(go.utils = {});

@@ -386,10 +386,12 @@ PIPELINE_JS = {
             'templates/campaign/dialogue/states/choice/edit.jst',
             'templates/campaign/dialogue/states/choice/preview.jst',
             'templates/campaign/dialogue/states/choice/choice/edit.jst',
+            'templates/campaign/dialogue/states/choice/choice/extras.jst',
             'templates/campaign/dialogue/states/freetext/edit.jst',
             'templates/campaign/dialogue/states/freetext/preview.jst',
             'templates/campaign/dialogue/states/end/edit.jst',
             'templates/campaign/dialogue/states/end/preview.jst',
+            'templates/campaign/dialogue/states/components/nameExtras.jst',
             'templates/components/confirm.jst',
             'templates/dummy/dummy.jst',
 
