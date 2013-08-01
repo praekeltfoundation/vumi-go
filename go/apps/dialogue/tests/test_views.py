@@ -30,9 +30,10 @@ class DialogueTestCase(DjangoGoApplicationTestCase):
         super(DialogueTestCase, self).tearDown()
         self.mock_rpc.tearDown()
 
-    def check_model_data(self, response, poll):
+    def check_model_data(self, response, conv, poll):
         expected = poll.copy()
         expected["campaign_id"] = self.user_api.user_account_key
+        expected["conversation_key"] = conv.key
         model_data = response.context["model_data"]
         self.assertEqual(model_data, expected)
 
@@ -191,7 +192,7 @@ class DialogueTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(conversation.name, 'Test Conversation')
         self.assertContains(response, 'Test Conversation')
         self.assertContains(response, 'diagram')
-        self.check_model_data(response, poll)
+        self.check_model_data(response, conversation, poll)
 
     def test_export_user_data(self):
         self.setup_conversation()

@@ -25,7 +25,10 @@ class DialogueEditView(ConversationTemplateView):
                 "Failed to load routing table from Go API:"
                 " (%r) %r." % (r.status_code, r.text))
 
-        model_data = {'campaign_id': request.user_api.user_account_key}
+        model_data = {
+            'campaign_id': request.user_api.user_account_key,
+            'conversation_key': conversation.key,
+        }
         model_data.update(r.json['result']['poll'])
 
         return self.render_to_response({
