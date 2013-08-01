@@ -72,6 +72,26 @@ describe("go.components.actions", function() {
         action.invoke();
         server.respond();
       });
+
+      describe("when the request is successful", function() {
+        it("should emit a 'success' event", function(done) {
+          action.on('success', function() { done(); });
+          server.respondWith(response());
+
+          action.invoke();
+          server.respond();
+        });
+      });
+
+      describe("when the request is not successful", function() {
+        it("should emit a 'failure' event", function(done) {
+          action.on('error', function() { done(); });
+          server.respondWith([400, {}, '']);
+
+          action.invoke();
+          server.respond();
+        });
+      });
     });
   });
 
@@ -163,7 +183,7 @@ describe("go.components.actions", function() {
         });
       });
 
-      describe("when the ajax request is unsuccessful", function() {
+      describe("when the ajax request is not successful", function() {
         it("call the original error callback", function(done) {
           server.respondWith([400, {}, '']);
           action.ajax = {error: function() { done(); }};
