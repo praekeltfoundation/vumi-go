@@ -1,4 +1,4 @@
-describe.only("go.components.actions", function() {
+describe("go.components.actions", function() {
   var actions = go.components.actions;
 
   var Model = go.components.models.Model;
