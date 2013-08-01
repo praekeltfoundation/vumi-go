@@ -68,6 +68,8 @@ class DialogueApplication(JsBoxApplication):
 
     worker_name = 'dialogue_application'
 
+    FAKED_DIALOGUE_START_MSG = "FAKED_DIALOGUE_START_MSG"
+
     def send_first_dialogue_message(self, to_addr, contact, conversation):
         log.debug('Starting %r -> %s' % (conversation, to_addr))
 
@@ -75,6 +77,9 @@ class DialogueApplication(JsBoxApplication):
             'transport_name': None,
             'transport_type': None,
             'helper_metadata': {},
+            # mark this message as special so that it can be idenitified
+            # if it accidentally ends up elsewhere.
+            self.FAKED_DIALOGUE_START_MSG: True,
         }
         conversation.set_go_helper_metadata(msg_options['helper_metadata'])
 
