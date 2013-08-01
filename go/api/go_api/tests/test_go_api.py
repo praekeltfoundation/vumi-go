@@ -427,7 +427,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
             yield self.assert_faults(d, 400, u"Unknown action.")
             [failure] = lc.errors
             self.assertTrue(failure["why"].startswith(
-                "Action u'foo' on 'conversation' <Conversation "))
+                "Action u'foo' on conversation <Conversation "))
         # flush the error logged by the action dispatcher
         [err] = self.flushLoggedErrors(ActionError)
         self.assertEqual(err.value.faultString, u"Unknown action.")
@@ -443,7 +443,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
             yield self.assert_faults(d, 400, u"Unknown action.")
             [failure] = lc.errors
             self.assertTrue(failure["why"].startswith(
-                "Action u'foo' on 'router' <Router "))
+                "Action u'foo' on router <Router "))
         # flush the error logged by the action dispatcher
         [err] = self.flushLoggedErrors(ActionError)
         print err.value.message, type(err.value.message)

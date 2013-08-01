@@ -14,6 +14,8 @@ from go.api.go_api.action_dispatcher import (
 
 class SimpleActionDispatcher(ActionDispatcher):
 
+    dispatcher_type_name = "simple object"
+
     def handle_do_thing(self, obj, foo):
         self.user_api.do_thing(obj, foo)
         return {"success": True}
@@ -39,13 +41,15 @@ class ActionDispatcherTestCase(TestCase):
             result = yield dispatcher.dispatch_action(
                 obj, "do_thing", {"foo": "bar"})
             [msg] = lc.messages()
-            self.assertEqual(msg, "Performed action 'do_thing' on None 'abc'.")
+            self.assertEqual(msg,
+                             "Performed action 'do_thing' on"
+                             " simple object 'abc'.")
         self.assertEqual(result, {"success": True})
         self.assertTrue(user_api.do_thing.called_once_with(obj, "bar"))
 
     @inlineCallbacks
     def test_dispatch_action_which_errors(self):
-        dispatcher = ActionDispatcher(Mock())
+        dispatcher = SimpleActionDispatcher(Mock())
         obj = Mock(key="abc")
         with LogCatcher() as lc:
             try:
@@ -57,8 +61,9 @@ class ActionDispatcherTestCase(TestCase):
                 self.fail("Expected ActionError.")
             [err] = lc.errors
             self.assertEqual(err["why"],
-                             "Action 'weird_action' on None %r (key: 'abc')"
-                             " with params {'foo': 'bar'} failed." % obj)
+                             "Action 'weird_action' on simple object %r"
+                             " (key: 'abc') with params {'foo': 'bar'} failed."
+                             % obj)
         [err] = self.flushLoggedErrors(ActionError)
         self.assertEqual(err.value.faultString, "Unknown action.")
 

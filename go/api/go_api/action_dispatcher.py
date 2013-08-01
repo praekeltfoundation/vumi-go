@@ -26,7 +26,7 @@ class ActionDispatcher(object):
 
     def _log_error(self, err, obj, action, params):
         log.err(err,
-            "Action %(action)r on %(type_name)r %(obj)r (key: %(key)r)"
+            "Action %(action)r on %(type_name)s %(obj)r (key: %(key)r)"
             " with params %(params)r failed." % {
                 "action": action,
                 "type_name": self.dispatcher_type_name,
