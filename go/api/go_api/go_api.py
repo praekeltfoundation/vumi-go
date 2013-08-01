@@ -249,9 +249,9 @@ class GoApiServer(JSONRPC):
         d = user_api.get_conversation(conversation_key)
 
         def conversation_action(conv):
-            conv_def = get_conversation_definition(
-                conv.conversation_type, conv)
-            return conv_def.api_action(action, params)
+            conv_def = get_conversation_definition(conv.conversation_type)
+            api_dispatcher = conv_def.api_dispatcher_cls(user_api)
+            return api_dispatcher.dispatch_action(conv, action, params)
 
         d.addCallback(conversation_action)
         return d
@@ -267,9 +267,9 @@ class GoApiServer(JSONRPC):
         d = user_api.get_router(router_key)
 
         def router_action(router):
-            router_def = get_router_definition(
-                router.router_type, router)
-            return router_def.api_action(action, params)
+            router_def = get_router_definition(router.router_type)
+            api_dispatcher = router_def.api_dispatcher_cls(user_api)
+            return api_dispatcher.dispatch_action(router, action, params)
 
         d.addCallback(router_action)
         return d

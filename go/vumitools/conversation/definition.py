@@ -1,3 +1,4 @@
+from go.api.go_api.action_dispatcher import ConversationActionDispatcher
 
 
 class ConversationDefinitionBase(object):
@@ -14,6 +15,8 @@ class ConversationDefinitionBase(object):
     extra_static_endpoints = ()
 
     actions = ()
+
+    api_dispatcher_cls = ConversationActionDispatcher
 
     def __init__(self, conv=None):
         self.conv = conv

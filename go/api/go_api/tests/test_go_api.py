@@ -415,6 +415,22 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
             "update_routing_table", self.campaign_key, routing_table)
         self.assertIdentical(result, None)
 
+    @inlineCallbacks
+    def test_conversation_action(self):
+        conv = yield self.user_api.conversation_store.new_conversation(
+            u'jsbox', u'My Conversation', u'A description', {})
+        result = yield self.proxy.callRemote(
+            "conversation_action", self.campaign_key, conv.key,
+            "foo", {"param": 1})
+
+    @inlineCallbacks
+    def test_router_action(self):
+        router = yield self.user_api.router_store.new_router(
+            u'keyword', u'My Router', u'A description', {})
+        result = yield self.proxy.callRemote(
+            "router_action", self.campaign_key, router.key,
+            "foo", {"param": 1})
+
 
 class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):
 
