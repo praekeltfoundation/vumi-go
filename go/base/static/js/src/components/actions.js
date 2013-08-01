@@ -15,10 +15,37 @@
   });
 
   // View for saving a model to the server side
-  var SaveView = ActionView.extend();
+  var SaveActionView = ActionView.extend({
+    initialize: function(options) {
+      if (options.sessionId) { this.sessionId = options.sessionId; }
+    },
+
+    invoke: function() {
+      var options = {
+        success: function() { this.trigger('success'); }.bind(this),
+        error: function() { this.trigger('error'); }.bind(this)
+      };
+
+      if (this.sessionId) { options.sessionId = this.sessionId; }
+      this.model.save({}, options);
+      this.trigger('invoke');
+
+      return this;
+    }
+  });
 
   // View for resetting a model to its initial state
-  var ResetView = ActionView.extend();
+  var ResetActionView = ActionView.extend({
+    initialize: function() {
+      this.backup = this.model.toJSON();
+    },
+
+    invoke: function() {
+      this.model.set(this.backup);
+      this.trigger('invoke');
+      return this;
+    }
+  });
 
   // View that invokes its action by sending an ajax request to the server side
   var CallActionView = ActionView.extend({
@@ -69,13 +96,15 @@
 
       $.ajax(ajax);
       this.trigger('invoke');
+
+      return this;
     }
   });
 
   _(exports).extend({
     ActionView: ActionView,
-    SaveView: SaveView,
-    ResetView: ResetView,
+    SaveActionView: SaveActionView,
+    ResetActionView: ResetActionView,
     CallActionView: CallActionView
   });
 })(go.components.actions = {});
