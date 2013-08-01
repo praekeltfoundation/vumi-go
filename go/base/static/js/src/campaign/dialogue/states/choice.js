@@ -61,7 +61,10 @@
       this.on('show', function() {
         this.valueBackup = this.choice.model.get('value');
         this.delegateEvents();
+        this.$('.info').tooltip();
       }, this);
+
+      this.on('hide', function() { this.$('.info').tooltip('destroy'); }, this);
     },
 
     onValueChange: function(e) {
@@ -81,7 +84,6 @@
 
     render: function() {
       this.template.render();
-      this.$('.info').tooltip();
       return this;
     }
   });
