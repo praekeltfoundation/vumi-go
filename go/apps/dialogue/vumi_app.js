@@ -39,6 +39,12 @@ function DialogueStateCreator() {
         return p;
     };
 
+    self.on_inbound_event = function(event) {
+        var vumi_ev = event.data.event;
+        event.im.log("Saw " + vumi_ev.event_type + " for message "
+                     + vumi_ev.user_message_id + ".");
+    };
+
     self.get_metadata = function(key) {
         var metadata = self.poll.poll_metadata || {};
         return metadata[key];
