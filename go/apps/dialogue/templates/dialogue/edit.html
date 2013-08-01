@@ -46,8 +46,12 @@
       // TODO, we've got to inject the value of the multiple-survey
       // button.
 
-      // TODO uncomment once the screen is hooked up to the api
-      //diagram.model.save();
+      diagram.model.save({}, {
+        sessionId: "{{ session_id|safe }}",
+        error: function() {
+          bootbox.alert("Something bad happened, changes couldn't be saved.");
+        }
+      });
 
       // send user to conversation show page
       window.location.href = "/conversations/{{ conversation_key }}/";
