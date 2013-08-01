@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.views.generic import TemplateView
 from django.utils.decorators import method_decorator
 
-from go.wizard.forms import Wizard1CreateForm
+from go.wizard.forms import Wizard1CreateForm, Wizard1ExistingRouterForm
 from go.conversation.forms import NewConversationForm
 from go.channel.forms import NewChannelForm
 from go.base.utils import (
@@ -40,53 +40,79 @@ class WizardCreateView(BaseWizardView):
             'wizard_form': Wizard1CreateForm(),
             'conversation_form': NewConversationForm(request.user_api),
             'channel_form': NewChannelForm(request.user_api),
+            'router_form': Wizard1ExistingRouterForm(request.user_api),
         })
 
     def post(self, request):
         # TODO: Reuse new conversation/channel view logic here.
+        wiz_form = Wizard1CreateForm(request.POST)
         conv_form = NewConversationForm(request.user_api, request.POST)
         chan_form = NewChannelForm(request.user_api, request.POST)
-        wiz_form = Wizard1CreateForm(request.POST)
+        router_form = Wizard1ExistingRouterForm(request.user_api, request.POST)
 
-        if not all(frm.is_valid() for frm in [conv_form, chan_form, wiz_form]):
+        forms_to_validate = [wiz_form, conv_form]
+        # We do this on the raw POST data so we can validate in one step.
+        if request.POST.get('channel_kind') == 'new':
+            forms_to_validate.append(chan_form)
+        elif request.POST.get('channel_kind') == 'existing':
+            forms_to_validate.append(router_form)
+
+        if not all(form.is_valid() for form in forms_to_validate):
             # TODO: Better validation.
-            logger.info("Validation failed: %r %r" % (
-                conv_form.errors, chan_form.errors))
+            logger.info("Validation failed: %s" % (
+                [frm.errors for frm in forms_to_validate],))
             return self.get(request)
 
-        # Create channel
-        tag = self._create_channel(request, chan_form.cleaned_data)
-
         # Create conversation
-        view_def, conversation = self._create_conversation(
+        view_def, conv = self._create_conversation(
             request, conv_form.cleaned_data)
+
+        wiz_data = wiz_form.cleaned_data
+        if wiz_data['channel_kind'] == 'new':
+            self._handle_new_channel(
+                request, chan_form.cleaned_data, wiz_data['keyword'], conv)
+        else:
+            self._handle_existing_channel(
+                request, router_form.cleaned_data, conv)
+
         messages.info(request, 'Conversation created successfully.')
+        if view_def.is_editable:
+            return redirect(view_def.get_view_url(
+                'edit', conversation_key=conv.key))
+        else:
+            return redirect(view_def.get_view_url(
+                'show', conversation_key=conv.key))
+
+    def _handle_new_channel(self, request, chan_data, keyword, conv):
+        channel = chan_data['channel'].split(':')
+        if channel[1]:
+            tag = request.user_api.acquire_specific_tag(channel)
+        else:
+            tag = request.user_api.acquire_tag(channel[0])
 
         # Set up routing
-        keyword = wiz_form.cleaned_data['keyword']
         if keyword:
             # Create router
             endpoint, router = self._create_keyword_router(
-                request, keyword, conversation.name)
+                request, keyword, ':'.join(tag))
             self._setup_keyword_routing(
-                request, conversation, tag, router, endpoint)
+                request, conv, tag, router, endpoint)
         else:
-            self._setup_basic_routing(request, conversation, tag)
+            self._setup_basic_routing(request, conv, tag)
 
-        if view_def.is_editable:
-            return redirect(view_def.get_view_url(
-                'edit', conversation_key=conversation.key))
-        else:
-            return redirect(view_def.get_view_url(
-                'show', conversation_key=conversation.key))
+    def _handle_existing_channel(self, request, router_data, conv):
+        # TODO: Check that keyword is unused.
+        router = request.user_api.get_router(router_data['existing_router'])
+        keyword = router_data['new_keyword']
+        endpoint = 'keyword_%s' % (keyword.lower(),)
+        # TODO: Better way to manage this kind of thing.
+        kem = router.config.setdefault('keyword_endpoint_mapping', {})
+        kem[keyword] = endpoint
+        if endpoint not in router.extra_outbound_endpoints:
+            router.extra_outbound_endpoints.append(endpoint)
+        router.save()
 
-    def _create_channel(self, request, channel_data):
-        # Create channel
-        pool, tag = channel_data['channel'].split(':')
-        if tag:
-            return request.user_api.acquire_specific_tag((pool, tag))
-        else:
-            return request.user_api.acquire_tag(pool)
+        self._setup_keyword_routing(request, conv, None, router, endpoint)
 
     def _create_conversation(self, request, conv_data):
         conversation_type = conv_data['conversation_type']
@@ -99,15 +125,16 @@ class WizardCreateView(BaseWizardView):
         )
         return view_def, conversation
 
-    def _create_keyword_router(self, request, keyword, conv_name):
+    def _create_keyword_router(self, request, keyword, channel_name):
         # TODO: Avoid duplicating stuff we already do elsewhere.
         view_def = get_router_view_definition('keyword', None)
         # TODO: Validate keyword?
         endpoint = 'keyword_%s' % (keyword.lower(),)
         config = {'keyword_endpoint_mapping': {keyword: endpoint}}
         router = request.user_api.new_router(
-            router_type=u'keyword', name=u'%s router' % (conv_name,),
-            description=u'Keyword router for %s' % (conv_name,), config=config,
+            router_type=u'keyword', name=u'Keywords for %s' % (channel_name,),
+            description=u'Keyword router for %s' % (channel_name,),
+            config=config,
             extra_outbound_endpoints=view_def.get_outbound_endpoints(config),
         )
         return endpoint, router
@@ -129,19 +156,21 @@ class WizardCreateView(BaseWizardView):
         routing_table = request.user_api.get_routing_table(user_account)
         rt_helper = RoutingTableHelper(routing_table)
 
+        if tag is not None:
+            tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
+            rin_conn = str(
+                GoConnector.for_router(
+                    router.router_type, router.key, GoConnector.INBOUND))
+            rt_helper.add_entry(rin_conn, "default", tag_conn, "default")
+            rt_helper.add_entry(tag_conn, "default", rin_conn, "default")
+
         conv_conn = str(
             GoConnector.for_conversation(conv.conversation_type, conv.key))
-        tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
-        rin_conn = str(
-            GoConnector.for_router(
-                router.router_type, router.key, GoConnector.INBOUND))
         rout_conn = str(
             GoConnector.for_router(
                 router.router_type, router.key, GoConnector.OUTBOUND))
         rt_helper.add_entry(conv_conn, "default", rout_conn, endpoint)
         rt_helper.add_entry(rout_conn, endpoint, conv_conn, "default")
-        rt_helper.add_entry(rin_conn, "default", tag_conn, "default")
-        rt_helper.add_entry(tag_conn, "default", rin_conn, "default")
 
         user_account.save()
 
