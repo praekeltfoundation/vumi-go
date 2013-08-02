@@ -9,7 +9,6 @@ from twisted.application.internet import StreamServerEndpointService
 from twisted.internet.defer import inlineCallbacks, DeferredList
 
 from txjsonrpc.jsonrpc import addIntrospection
-from txjsonrpc.jsonrpclib import Fault
 from txjsonrpc.web.jsonrpc import JSONRPC
 
 from vumi.config import ConfigDict, ConfigText, ConfigServerEndpoint
@@ -24,23 +23,19 @@ from go.api.go_api.api_types import (
 from go.api.go_api.action_dispatcher import (
     ConversationSubhandler, RouterSubhandler)
 from go.api.go_api.auth import GoUserRealm, GoUserAuthSessionWrapper
+from go.api.go_api.utils import GoApiSubHandler, GoApiError
 from go.vumitools.account import RoutingTableHelper
 from go.vumitools.api import VumiApi
 
 
-class InvalidRoutingTable(Fault):
+class InvalidRoutingTable(GoApiError):
     """Raised when a routing table contains invalid endpoints."""
-    FAULT_CODE = 400
-
-    def __init__(self, msg):
-        super(InvalidRoutingTable, self).__init__(self.FAULT_CODE, msg)
 
 
-class GoApiServer(JSONRPC):
+class GoApiServer(JSONRPC, GoApiSubHandler):
     def __init__(self, user_account_key, vumi_api):
         JSONRPC.__init__(self)
-        self.user_account_key = user_account_key
-        self.vumi_api = vumi_api
+        GoApiSubHandler.__init__(self, user_account_key, vumi_api)
         self.putSubHandler('conversation',
                            ConversationSubhandler(user_account_key, vumi_api))
         self.putSubHandler('router',
@@ -99,7 +94,7 @@ class GoApiServer(JSONRPC):
     def jsonrpc_conversations(self, campaign_key):
         """List the active conversations under a particular campaign.
            """
-        user_api = self.vumi_api.get_user_api(campaign_key)
+        user_api = self.get_user_api(campaign_key)
         return self._conversations(user_api)
 
     @signature(campaign_key=Unicode("Campaign key."),
@@ -108,7 +103,7 @@ class GoApiServer(JSONRPC):
     def jsonrpc_channels(self, campaign_key):
         """List the active channels under a particular campaign.
            """
-        user_api = self.vumi_api.get_user_api(campaign_key)
+        user_api = self.get_user_api(campaign_key)
         return self._channels(user_api)
 
     @signature(campaign_key=Unicode("Campaign key."),
@@ -117,7 +112,7 @@ class GoApiServer(JSONRPC):
     def jsonrpc_routers(self, campaign_key):
         """List the active routers under a particular campaign.
            """
-        user_api = self.vumi_api.get_user_api(campaign_key)
+        user_api = self.get_user_api(campaign_key)
         return self._routers(user_api)
 
     @signature(campaign_key=Unicode("Campaign key."),
@@ -126,7 +121,7 @@ class GoApiServer(JSONRPC):
     def jsonrpc_routing_entries(self, campaign_key):
         """List the routing entries from a particular campaign's routing table.
            """
-        user_api = self.vumi_api.get_user_api(campaign_key)
+        user_api = self.get_user_api(campaign_key)
         return self._routing_entries(user_api)
 
     @signature(campaign_key=Unicode("Campaign key."),
@@ -136,7 +131,7 @@ class GoApiServer(JSONRPC):
         """List the channels, conversations, routers and routing table
         entries that make up a campaign's routing.
         """
-        user_api = self.vumi_api.get_user_api(campaign_key)
+        user_api = self.get_user_api(campaign_key)
         deferreds = []
         deferreds.append(self._channels(user_api))
         deferreds.append(self._routers(user_api))
@@ -159,7 +154,7 @@ class GoApiServer(JSONRPC):
     @signature(campaign_key=Unicode("Campaign key."),
                routing=RoutingType("Description of the new routing table."))
     def jsonrpc_update_routing_table(self, campaign_key, routing):
-        user_api = self.vumi_api.get_user_api(campaign_key)
+        user_api = self.get_user_api(campaign_key)
         deferreds = []
         deferreds.append(self._channels(user_api))
         deferreds.append(self._routers(user_api))
