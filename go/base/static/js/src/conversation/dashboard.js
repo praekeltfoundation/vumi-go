@@ -9,8 +9,11 @@
     initialize: function(options) {
       ConversationDashboardView.__super__.initialize.call(this, options);
 
-      this.actions = this.$('.inline-action').map(function() {
-        return new ConversationActionView({el: $(this)});
+      this.actions = this.$('.action').map(function() {
+        return new ConversationActionView({
+          el: $(this),
+          csrfToken: options.csrfToken
+        });
       }).get();
     }
   });

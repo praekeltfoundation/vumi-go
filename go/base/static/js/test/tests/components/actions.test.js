@@ -159,8 +159,8 @@ describe("go.components.actions", function() {
       it("should send an ajax request", function(done) {
         server.respondWith(function(req) {
           assert.deepEqual(
-            JSON.parse(req.requestBody),
-            {action: 'start', id: 'something'});
+            req.requestBody,
+            'id=something&action=start');
 
           done();
         });

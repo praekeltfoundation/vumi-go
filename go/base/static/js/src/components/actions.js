@@ -74,9 +74,7 @@
 
       var ajax = _({
         type: 'post',
-        dataType: 'json',
-        contentType: 'application/json; charset=utf-8',
-        data: JSON.stringify(_(this).result('data'))
+        data: _(this).result('data')
       }).extend(
         url ? {url: url} : {},
         _(this).result('ajax'));

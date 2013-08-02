@@ -1,0 +1,25 @@
+{% load conversation_tags %}
+
+{% if conversation.stopped %}
+    <button  class="btn btn-primary action" 
+        data-url="{% conversation_screen conversation 'start' %}">
+        Activate
+    </button>
+
+    <button  class="btn btn-primary action" 
+        data-url="{% conversation_screen conversation 'archive' %}">
+        Archive
+    </button>
+    
+{% elif conversation.running %}
+    <button  class="btn btn-primary action" 
+        data-url="{% conversation_screen conversation 'stop' %}">
+        Deactivate
+    </button>
+{% else %}
+    {# TODO: Figure out what to put here. #}
+    <button  class="btn btn-primary action" 
+        data-url="{% conversation_screen conversation 'stop' %}">
+        In transition: attempt to stop
+    </button>
+{% endif %}

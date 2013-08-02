@@ -10,7 +10,6 @@
     <table class="table">
         <thead>
             <tr>
-                <th><input class="action-marker" type="checkbox"></th>
                 <th>Campaigns</th>
                 <th>Status</th>
                 <th>Interactions</th>
@@ -25,7 +24,6 @@
             {% if conversations %}
                 {% for conversation in page.object_list %}
                 <tr data-url="{% conversation_screen conversation %}">
-                    <td><input class="action-marker" type="checkbox" name="conversation_key" value="{{ conversation.key }}"></td>
                     <td>
                         <a href="{% conversation_screen conversation %}">
                             {{ conversation.name }}
@@ -38,6 +36,9 @@
                     <td>
                         <a href="{% url 'conversations:incoming_list' conversation.key %}">Messages</a>
                         {# <a href="{% url 'todo' %}">Reports</a> #}
+                    </td>
+                    <td>
+                      {% include "conversation/includes/actions.html" with conversation=conversation %}
                     </td>
                 </tr>
                 {% endfor %}

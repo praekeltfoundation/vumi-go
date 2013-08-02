@@ -93,12 +93,17 @@
           .change();
       },
 
-      'click tbody tr': function(e) {
+      'click tbody tr td': function(e) {
         var $el = $(e.target).parents('tr'),
             url = $el.attr(this.options.rowLinkAttribute);
 
         // Follow the link associated with the row
         if (typeof url !== 'undefined') { window.location = url; }
+      },
+
+      'click tbody tr td *': function(e) {
+        // Prevent the column's click events from propagating to its elements
+        e.stopPropagation();
       }
     }
   });

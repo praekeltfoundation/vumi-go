@@ -21,7 +21,7 @@ describe("go.conversation.dashboard", function() {
                 '<tr>',
                   '<td>',
                     '<button ',
-                     'class="inline-action"',
+                     'class="action"',
                      'data-url="/conversation/action">',
                       'Action',
                     '</button>',
@@ -38,7 +38,7 @@ describe("go.conversation.dashboard", function() {
       server.restore();
     });
 
-    describe("when an '.inline-action' button is clicked", function() {
+    describe("when an '.action' button is clicked", function() {
       it("should issue a conversation action request to the appropriate url",
       function(done) {
         server.respondWith(function(req) {
@@ -46,7 +46,7 @@ describe("go.conversation.dashboard", function() {
           done();
         });
 
-        dashboard.$('.inline-action').eq(0).click();
+        dashboard.$('.action').eq(0).click();
         server.respond();
       });
     });

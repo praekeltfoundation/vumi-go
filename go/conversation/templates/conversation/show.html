@@ -6,41 +6,8 @@
 
 {% block content_title %}{{ conversation.name }}{% endblock %}
 
-
 {% block content_actions_right %}
-    {% if conversation.stopped %}
-
-
-        <a href="{% conversation_screen conversation 'start' %}" 
-            class="btn btn-primary action" 
-            data-name="start"
-            data-value="Start">
-            Activate
-        </a>
-
-        <a href="{% conversation_screen conversation 'archive' %}" 
-            class="btn btn-primary action" 
-            data-name="archive"
-            data-value="Archive">
-            Archive
-        </a>
-        
-    {% elif conversation.running %}
-        <a href="{% conversation_screen conversation 'stop' %}" 
-            class="btn btn-primary action" 
-            data-name="stop"
-            data-value="Stop">
-            Deactivate
-        </a>
-    {% else %}
-        {# TODO: Figure out what to put here. #}
-        <a href="{% conversation_screen conversation 'stop' %}" 
-            class="btn btn-warning action" 
-            data-name="stop"
-            data-value="Stop">
-            In transition: attempt to stop
-        </a>
-    {% endif %}
+    {% include "conversation/includes/actions.html" with conversation=conversation %}
 {% endblock %}
 
 {% block content_main %}
