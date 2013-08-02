@@ -1,5 +1,5 @@
 // go.routing.testHelpers
-// ===============================
+// ======================
 
 (function(exports) {
   var dialogue = go.apps.dialogue,
