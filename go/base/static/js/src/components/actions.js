@@ -48,6 +48,11 @@
   });
 
   // View that invokes its action by sending an ajax request to the server side
+  //
+  // NOTE: Ideally, only our models should be interacting with the server side.
+  // This view is a temporary solution, and should be replaced as soon as we
+  // are in a position where the data on our pages can be managed by models
+  // syncing with our api.
   var CallActionView = ActionView.extend({
     url: function() { return this.$el.attr('data-url'); },
 
