@@ -1,5 +1,3 @@
-
-
 class RouterDefinitionBase(object):
     """Definition of router lifecycle and possible actions.
     """
@@ -9,6 +7,10 @@ class RouterDefinitionBase(object):
 
     extra_static_inbound_endpoints = ()
     extra_static_outbound_endpoints = ()
+
+    # set to an sub-class of go.api.go_api.action_dispatcher
+    # .RouterActionDispatcher to provide API methods
+    api_dispatcher_cls = None
 
     def __init__(self, router=None):
         self.router = router

@@ -140,6 +140,10 @@ class VumiUserApi(object):
         if conversation:
             returnValue(self.wrap_conversation(conversation))
 
+    def get_conversation(self, conversation_key):
+        return self.conversation_store.get_conversation_by_key(
+            conversation_key)
+
     def get_router(self, router_key):
         return self.router_store.get_router_by_key(router_key)
 

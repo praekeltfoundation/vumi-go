@@ -1,6 +1,8 @@
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 
+from go.apps.dialogue.dialogue_api import DialogueActionDispatcher
+
 
 class SendDialogueAction(ConversationAction):
     action_name = 'send_dialogue'
@@ -36,3 +38,5 @@ class ConversationDefinition(ConversationDefinitionBase):
         SendDialogueAction,
         DownloadUserDataAction,
     )
+
+    api_dispatcher_cls = DialogueActionDispatcher
