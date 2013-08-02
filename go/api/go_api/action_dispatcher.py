@@ -68,7 +68,7 @@ class ActionDispatcherMetaClass(type):
         return jsonrpc_handler
 
 
-class ActionDispatcher(object):
+class ActionDispatcher(BaseSubhandler, object):
     """Dispatcher for actions on vumi.persist model instances."""
 
     __metaclass__ = ActionDispatcherMetaClass
@@ -78,6 +78,7 @@ class ActionDispatcher(object):
     dispatcher_type_name = None
 
     def __init__(self, user_account_key, vumi_api):
+        BaseSubhandler.__init__(self)
         self.user_account_key = user_account_key
         self.vumi_api = vumi_api
 
@@ -115,6 +116,7 @@ class CachedDynamicSubhandler(BaseSubhandler, object):
     _cached_subhandler_classes = {}
 
     def __init__(self, user_account_key, vumi_api):
+        BaseSubhandler.__init__(self)
         subhandler_classes = self.get_cached_subhandler_classes()
         for prefix, subhandler_cls in subhandler_classes.iteritems():
             subhandler = subhandler_cls(user_account_key, vumi_api)
@@ -141,7 +143,7 @@ class ConversationSubhandler(CachedDynamicSubhandler):
         subhandler_classes = {}
         for conversation_type in configured_conversation_types().keys():
             conv_def = get_conversation_definition(conversation_type)
-            if conv_def.api_dispatcher_cls is None:
+            if conv_def is None or conv_def.api_dispatcher_cls is None:
                 continue
             subhandler_classes[conversation_type] = (
                 conv_def.api_dispatcher_cls)
@@ -155,7 +157,7 @@ class RouterSubhandler(CachedDynamicSubhandler):
         subhandler_classes = {}
         for router_type in configured_router_types().keys():
             router_def = get_router_definition(router_type)
-            if router_def.api_dispatcher_cls is None:
+            if router_def is None or router_def.api_dispatcher_cls is None:
                 continue
             subhandler_classes[router_type] = router_def.api_dispatcher_cls
         return subhandler_classes
