@@ -16,9 +16,9 @@ class DialogueEditView(ConversationTemplateView):
 
     def get(self, request, conversation):
         r = client.rpc(
-            request.session.session_key, 'conversation_action',
+            request.session.session_key, 'conversation.dialogue.get_poll',
             [request.user_api.user_account_key,
-             conversation.key, 'get_poll'])
+             conversation.key])
 
         if r.status_code != 200:
             raise GoApiError(
