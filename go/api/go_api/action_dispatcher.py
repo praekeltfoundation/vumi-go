@@ -1,5 +1,7 @@
 """Conversation, router and channel action dispatch handlers for Go API."""
 
+from twisted.internet.defer import maybeDeferred
+
 from txjsonrpc.jsonrpc import BaseSubhandler
 from txjsonrpc.jsonrpclib import Fault
 
@@ -41,7 +43,8 @@ class ActionDispatcherMetaClass(type):
 
         return type.__new__(mcs, name, bases, dict)
 
-    def mk_jsonrpc_handler(mcs, name, handler, type_name):
+    @staticmethod
+    def mk_jsonrpc_handler(name, handler, type_name):
         sig = signature(**{
             "campaign_key": Unicode("Campaign key."),
             ("%s_key" % type_name): Unicode("%s key." % type_name.title()),
@@ -52,11 +55,12 @@ class ActionDispatcherMetaClass(type):
         jsonrpc_name = "jsonrpc_%s" % (name,)
 
         # we use compile and exec to get exactly the signature we need
-        code = compile("""
-        def %s(self, campaign_key, %s_key, params):
-            return self.dispatch_action(handler, campaign_key, %s_key, params)
-        """ % (jsonrpc_name, type_name, type_name),
-        "<mk_jsonrpc_handler>", "exec")
+        code = compile((
+            "def %s(self, campaign_key, %s_key, params):"
+            "    return self.dispatch_action("
+            "        handler, campaign_key, %s_key, params)"
+            ) % (jsonrpc_name, type_name, type_name),
+            "<mk_jsonrpc_handler>", "exec")
 
         locs = {"handler": handler}
         exec(code, locs)
@@ -67,7 +71,7 @@ class ActionDispatcherMetaClass(type):
 class ActionDispatcher(object):
     """Dispatcher for actions on vumi.persist model instances."""
 
-    ___metaclass__ = ActionDispatcherMetaClass
+    __metaclass__ = ActionDispatcherMetaClass
 
     # sub-classes should set this to an appropriate name (e.g.
     # 'conversation' or 'router'.
@@ -79,11 +83,15 @@ class ActionDispatcher(object):
 
     def dispatch_action(self, handler, campaign_key, obj_key, params):
         user_api = self.vumi_api.get_user_api(campaign_key)
-        d = self.get_object_by_key(user_api, obj_key)
-        d.addCallback(handler, **params)
+        d = maybeDeferred(self.get_object_by_key, user_api, obj_key)
+
+        def action(obj):
+            return handler(self, user_api, obj, **params)
+
+        d.addCallback(action)
         return d
 
-    def get_object_by_key(user_api, key):
+    def get_object_by_key(self, user_api, key):
         raise NotImplementedError(
             "Sub-classes should implement .get_object_by_key")
 

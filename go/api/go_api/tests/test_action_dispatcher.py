@@ -14,11 +14,14 @@ from go.api.go_api.action_dispatcher import (
 
 class SimpleActionDispatcher(ActionDispatcher):
 
-    dispatcher_type_name = "simple object"
+    dispatcher_type_name = "simple_object"
 
-    def handle_do_thing(self, obj, foo):
-        self.user_api.do_thing(obj, foo)
+    def action_do_thing(self, user_api, obj, foo):
+        user_api.do_thing(obj, foo)
         return {"success": True}
+
+    def get_object_by_key(self, user_api, obj_key):
+        return user_api.get_object(obj_key)
 
 
 class ActionDispatcherTestCase(TestCase):
@@ -26,46 +29,33 @@ class ActionDispatcherTestCase(TestCase):
     def test_dispatcher_type_name(self):
         self.assertEqual(ActionDispatcher.dispatcher_type_name, None)
 
-    def test_unknown_action(self):
-        dispatcher = ActionDispatcher(Mock())
-        obj = Mock(key="abc")
-        self.assertRaises(ActionError, dispatcher.unknown_action,
-                          obj, foo="bar")
+    def mk_dispatcher(self, user_account_key=u"abc", object_key=u"xyz"):
+        obj = Mock(key=object_key)
+        user_api = Mock(do_thing=Mock(), get_object=Mock(return_value=obj))
+        vumi_api = Mock(get_user_api=Mock(return_value=user_api))
+        dispatcher = SimpleActionDispatcher(user_account_key, vumi_api)
+        return obj, user_api, dispatcher
+
+    @inlineCallbacks
+    def test_jsonrpc_handler(self):
+        user_account_key = u"abc"
+        obj, user_api, dispatcher = self.mk_dispatcher(user_account_key)
+        result = yield dispatcher.jsonrpc_do_thing(
+            user_account_key, obj.key, {"foo": "bar"})
+        self.assertEqual(result, {"success": True})
 
     @inlineCallbacks
     def test_dispatch_action(self):
-        user_api = Mock(do_thing=Mock())
-        dispatcher = SimpleActionDispatcher(user_api)
-        obj = Mock(key="abc")
-        with LogCatcher() as lc:
-            result = yield dispatcher.dispatch_action(
-                obj, "do_thing", {"foo": "bar"})
-            [msg] = lc.messages()
-            self.assertEqual(msg,
-                             "Performed action 'do_thing' on"
-                             " simple object 'abc'.")
+        user_account_key = u"abc"
+        obj, user_api, dispatcher = self.mk_dispatcher(user_account_key)
+        handler = dispatcher.__class__.action_do_thing
+        result = yield dispatcher.dispatch_action(
+            handler, u"abc", obj.key, {"foo": "bar"})
         self.assertEqual(result, {"success": True})
         self.assertTrue(user_api.do_thing.called_once_with(obj, "bar"))
-
-    @inlineCallbacks
-    def test_dispatch_action_which_errors(self):
-        dispatcher = SimpleActionDispatcher(Mock())
-        obj = Mock(key="abc")
-        with LogCatcher() as lc:
-            try:
-                yield dispatcher.dispatch_action(
-                    obj, "weird_action", {"foo": "bar"})
-            except ActionError, e:
-                self.assertEqual(e.faultString, "Unknown action.")
-            else:
-                self.fail("Expected ActionError.")
-            [err] = lc.errors
-            self.assertEqual(err["why"],
-                             "Action 'weird_action' on simple object %r"
-                             " (key: 'abc') with params {'foo': 'bar'} failed."
-                             % obj)
-        [err] = self.flushLoggedErrors(ActionError)
-        self.assertEqual(err.value.faultString, "Unknown action.")
+        self.assertTrue(
+            dispatcher.vumi_api.get_user_api.called_once_with(
+                user_account_key))
 
 
 class ConversationAcitonDispatcherTestCase(TestCase):
