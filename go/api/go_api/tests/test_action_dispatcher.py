@@ -5,8 +5,6 @@ from mock import Mock
 from twisted.internet.defer import inlineCallbacks
 from twisted.trial.unittest import TestCase
 
-from vumi.tests.utils import LogCatcher
-
 from go.api.go_api.action_dispatcher import (
     ActionDispatcher, ActionError, ConversationActionDispatcher,
     RouterActionDispatcher)
@@ -56,6 +54,13 @@ class ActionDispatcherTestCase(TestCase):
         self.assertTrue(
             dispatcher.vumi_api.get_user_api.called_once_with(
                 user_account_key))
+
+
+class ActionErrorTestCase(TestCase):
+    def test_action_error(self):
+        err = ActionError("Testing")
+        self.assertEqual(err.faultString, "Testing")
+        self.assertEqual(err.faultCode, 400)
 
 
 class ConversationAcitonDispatcherTestCase(TestCase):
