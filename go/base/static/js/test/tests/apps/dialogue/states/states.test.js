@@ -196,10 +196,7 @@ describe("go.apps.dialogue.states", function() {
 
       afterEach(function() {
         uuid.v4.restore();
-
-        editMode.resetModal
-         .off()
-         .hide();
+        editMode.resetModal.remove();
       });
 
       it("should display a modal to confirm the user's decision", function() {
