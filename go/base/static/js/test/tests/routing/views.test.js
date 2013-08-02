@@ -1,5 +1,5 @@
-describe("go.campaign.routing (views)", function() {
-  var routing = go.campaign.routing;
+describe("go.routing (views)", function() {
+  var routing = go.routing;
 
   var setUp = routing.testHelpers.setUp,
       tearDown = routing.testHelpers.tearDown,

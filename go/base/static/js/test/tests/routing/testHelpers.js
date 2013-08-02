@@ -1,8 +1,8 @@
-// go.campaign.routing.testHelpers
+// go.routing.testHelpers
 // ===============================
 
 (function(exports) {
-  var routing = go.campaign.routing,
+  var routing = go.routing,
       CampaignRoutingModel = routing.CampaignRoutingModel,
       RoutingDiagramView = routing.RoutingDiagramView;
 
@@ -103,4 +103,4 @@
     modelData: modelData,
     newRoutingDiagram: newRoutingDiagram
   });
-})(go.campaign.routing.testHelpers = {});
+})(go.routing.testHelpers = {});

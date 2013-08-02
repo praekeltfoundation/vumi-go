@@ -1,6 +1,6 @@
-// go.campaign.routing (views)
-// ===========================
-// Views for campaign routing diagram.
+// go.routing (views)
+// ==================
+// Views for routing diagram.
 
 (function(exports) {
   var actions = go.components.actions,
@@ -264,4 +264,4 @@
     RoutingEndpointView: RoutingEndpointView,
     RoutingEntryCollection: RoutingEntryCollection
   });
-})(go.campaign.routing);
+})(go.routing);

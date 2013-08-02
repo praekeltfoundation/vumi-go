@@ -1,4 +1,4 @@
-// go.campaign.routing.testHelpers
+// go.routing.testHelpers
 // ===============================
 
 (function(exports) {

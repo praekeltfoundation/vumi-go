@@ -1,5 +1,5 @@
-describe("go.campaign.routing (models)", function() {
-  var routing = go.campaign.routing,
+describe("go.routing (models)", function() {
+  var routing = go.routing,
       modelData = routing.testHelpers.modelData;
 
   var testHelpers = go.testHelpers,
