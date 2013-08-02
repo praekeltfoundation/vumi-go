@@ -65,6 +65,6 @@
 {% block ondomready %}
     var dashboard = new go.conversation.dashboard.ConversationDashboardView({
         el: '.table-form-view',
-        csrfToken: "{{ csrf_token|safe }}"
+        csrfToken: '{{ csrf_token|safe }}'
     });
 {% endblock %}
