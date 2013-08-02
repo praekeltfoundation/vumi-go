@@ -102,22 +102,9 @@
 
 
 {% block ondomready %}
-
-    $('.content .actions .right .action').on('click', function() {
-
-        // confirm if the user wants to perform the action,
-        var $button = $(this);
-        bootbox.confirm('Are you sure you want to ' + $button.attr('data-value') + ' this conversation?', function(submit) {
-            if (submit) {
-                $form = $('<form method="post"></form>')
-                    .attr('action', $button.attr('href'));
-                $form.append("{% csrf_token %}");
-                $form.append('<input type="hidden" name="' + $button.attr('data-name') + '" value="' + $button.attr('data-value') + '">');
-                $form.submit();
-            }
-        });
-
-        return false;
+    var actions = new go.conversation.show.ConversationActionsView({
+        el: '.content .actions .right',
+        csrfToken: "{{ csrf_token|safe }}"
     });
 
     $('.content .sub-actions .disabled').popover({placement: 'left'});
