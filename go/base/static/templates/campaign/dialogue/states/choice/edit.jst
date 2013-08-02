@@ -1,11 +1,11 @@
-<label>Your message</label>
+<label>Define the question</label>
 <%= partials.text %>
 
-<label>Recipient's options</label>
+<label>Define the answers</label>
 <ol class='choices'>
-<% partials.choices.forEach(function(choice) { %>
-  <%= choice %>
-<% }); %>
+  <% partials.choices.forEach(function(choice) { %>
+    <%= choice %>
+  <% }); %>
 </ol>
 
-<a class='btn btn-primary new-choice'>Add another answer</a>
+<button class='btn btn-primary new-choice'>Add another answer</button>

@@ -126,6 +126,60 @@
     }
   });
 
+  var PopoverView = Backbone.View.extend({
+    target: null,
+
+    popoverOptions: {},
+
+    initialize: function(options) {
+      if (options.target) { this.target = options.target; }
+      if (options.popover) { this.popoverOptions = options.popover; }
+
+      this.popover = null;
+      this.hidden = true;
+    },
+
+    remove: function() {
+      PopoverView.__super__.remove.apply(this, arguments);
+      if (this.popover) { this.popover.destroy(); }
+    },
+
+    show: function() {
+      if (this.hidden) {
+        this.render();
+
+        this.popover = _(this)
+          .result('target')
+          .popover(
+            _({content: this.$el, html: true}).defaults(
+            _(this).result('popoverOptions')))
+          .data('popover');
+
+        this.popover.show();
+        this.hidden = false;
+        this.trigger('show');
+      }
+
+      return this;
+    },
+
+    hide: function() {
+      if (!this.hidden) {
+        if (this.popover) { this.popover.hide(); }
+        this.hidden = true;
+        this.trigger('hide');
+      }
+
+      return this;
+    },
+
+    toggle: function() {
+      return this.hidden
+        ? this.show()
+        : this.hide();
+    }
+  });
+
   var Partials = Extendable.extend({
     constructor: function(items) {
       this.items = {};
@@ -220,6 +274,7 @@
   _.extend(exports, {
     UniqueView: UniqueView,
     ConfirmView: ConfirmView,
+    PopoverView: PopoverView,
     Partials: Partials, 
     TemplateView: TemplateView,
     MessageTextView: MessageTextView

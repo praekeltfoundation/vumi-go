@@ -4,7 +4,8 @@
 
 (function(exports) {
   var TemplateView = go.components.views.TemplateView,
-      UniqueView = go.components.views.UniqueView;
+      UniqueView = go.components.views.UniqueView,
+      PopoverView = go.components.views.PopoverView;
 
   var ViewCollection = go.components.structures.ViewCollection;
 
@@ -34,6 +35,59 @@
     }).defaults(EndpointViewCollection.prototype.addDefaults)
   });
 
+  var ChoiceEditExtrasView = PopoverView.extend({
+    popoverOptions: {container: 'body'},
+
+    target: function() { return this.choice.$('.extras'); },
+
+    events: {
+      'click .ok': 'onOkClick',
+      'click .cancel': 'onCancelClick',
+      'change .value': 'onValueChange'
+    },
+
+    initialize: function(options) {
+      ChoiceEditExtrasView.__super__.initialize.call(this, options);
+      this.choice = options.choice;
+      this.model = this.choice.model;
+
+      this.template = new TemplateView({
+        el: this.$el,
+        jst: 'JST.campaign_dialogue_states_choice_choice_extras',
+        data: {model: this.choice.model}
+      });
+
+      this.valueBackup = null;
+      this.on('show', function() {
+        this.valueBackup = this.choice.model.get('value');
+        this.delegateEvents();
+        this.$('.info').tooltip();
+      }, this);
+
+      this.on('hide', function() { this.$('.info').tooltip('destroy'); }, this);
+    },
+
+    onValueChange: function(e) {
+      this.model.setValue(this.$('.value').val());
+      this.model.set('user_defined_value', true);
+    },
+
+    onCancelClick: function(e) {
+      e.preventDefault();
+      this.model.set('value', this.valueBackup);
+      this.hide();
+    },
+
+    onOkClick: function(e) {
+      this.hide();
+    },
+
+    render: function() {
+      this.template.render();
+      return this;
+    }
+  });
+
   var ChoiceEditView = UniqueView.extend({
     tagName: 'li',
     className: 'choice',
@@ -41,8 +95,9 @@
     uuid: function() { return 'choice:' + this.model.get('uuid'); },
 
     events: {
-      'change .label': 'onLabelChange',
-      'click .remove': 'onRemoveClick'
+      'change .choice-label': 'onLabelChange',
+      'click .remove': 'onRemoveClick',
+      'click .extras': 'onExtrasClick'
     },
 
     initialize: function(options) {
@@ -53,10 +108,14 @@
         jst: 'JST.campaign_dialogue_states_choice_choice_edit',
         data: {model: this.model}
       });
+
+      this.extras = new ChoiceEditExtrasView({choice: this});
     },
 
     onLabelChange: function(e) {
-      this.model.set('label', this.$('input').prop('value'), {silent: true});
+      this.model.set(
+        'label',
+        this.$('.choice-label').prop('value'));
     },
 
     onRemoveClick: function(e) {
@@ -68,6 +127,10 @@
 
       this.mode.state.render();
       jsPlumb.repaintEverything();
+    },
+
+    onExtrasClick: function(e) {
+      this.extras.toggle();
     },
 
     render: function() {
@@ -166,6 +229,8 @@
     ChoiceStateEditView: ChoiceStateEditView,
     ChoiceStatePreviewView: ChoiceStatePreviewView,
     ChoiceEndpointView: ChoiceEndpointView,
-    ChoiceEditView: ChoiceEditView
+
+    ChoiceEditView: ChoiceEditView,
+    ChoiceEditExtrasView: ChoiceEditExtrasView
   });
 })(go.campaign.dialogue.states.choice = {});

@@ -1,22 +1,32 @@
-<div class='titlebar'>
-  <input
+<div class='titlebar'>  
+  Name the question:
+  <button class='close remove'>&times;</button>
+</div>
+
+<input
    type='text'
    class='name'
    value='<%= model.get('name') %>'
-   placeholder='Message name' />
+   placeholder='for e.g. "Age"' />
 
-  <div class='pull-right'>
-    <button class='close remove'>x</button>
-  </div>
-</div>
+   <i class="icon-info-sign name-extras"></i>
 
 <div class='main'>
-  <label>Type of message</label>
-  <select class='type'>
+
+  <label for="id_type">Choose the type of question</label>
+
+  <select class='type' id="id_type">
     <option value="choice">Recipients select one option from a list</option>
     <option value="freetext">Recipients can reply with their own text</option>
     <option value="end">Recipients are shown text and the session ends</option>
   </select>
+
+  <% if (model.storableOnContact) { %>
+    <div class="search_enabled">
+      <input class="store-on-contact" type="checkbox" name="search" id="search"> 
+      <label for="id_search">Display this question in search results</label>
+    </div>
+  <% } %>
 
   <%= partials.body %>
 

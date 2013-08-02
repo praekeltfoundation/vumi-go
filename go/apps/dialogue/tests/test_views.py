@@ -64,9 +64,8 @@ class DialogueTestCase(DjangoGoApplicationTestCase):
             'send_dialogue',
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
-            batch_id=conversation.get_batches()[0].key, msg_options={},
-            delivery_class=conversation.delivery_class,
-            is_client_initiated=False))
+            batch_id=conversation.get_batches()[0].key,
+            delivery_class=conversation.delivery_class))
 
     def test_action_send_dialogue_no_group(self):
         self.setup_conversation(started=True)

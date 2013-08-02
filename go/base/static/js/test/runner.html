@@ -43,10 +43,12 @@
         'campaign/dialogue/states/choice/edit.jst',
         'campaign/dialogue/states/choice/preview.jst',
         'campaign/dialogue/states/choice/choice/edit.jst',
+        'campaign/dialogue/states/choice/choice/extras.jst',
         'campaign/dialogue/states/freetext/edit.jst',
         'campaign/dialogue/states/freetext/preview.jst',
         'campaign/dialogue/states/end/edit.jst',
-        'campaign/dialogue/states/end/preview.jst'
+        'campaign/dialogue/states/end/preview.jst',
+        'campaign/dialogue/states/components/nameExtras.jst'
       ];
 
       window.templates.forEach(helpers.loadTemplate);
@@ -61,6 +63,7 @@
     <script src="../src/components/models.js"></script>
     <script src="../src/components/structures.js"></script>
     <script src="../src/components/views.js"></script>
+    <script src="../src/components/actions.js"></script>
     <script src="../src/components/grid.js"></script>
     <script src="../src/components/stateMachine.js"></script>
     <script src="../src/components/plumbing/plumbing.js"></script>
@@ -95,6 +98,7 @@
     <script src="tests/components/models.test.js"></script>
     <script src="tests/components/structures.test.js"></script>
     <script src="tests/components/views.test.js"></script>
+    <script src="tests/components/actions.test.js"></script>
     <script src="tests/components/grid.test.js"></script>
     <script src="tests/components/stateMachine.test.js"></script>
     <script src="tests/components/plumbing/testHelpers.js"></script>

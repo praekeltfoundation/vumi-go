@@ -13,6 +13,7 @@
       uuid: 'state1',
       name: 'Message 1',
       type: 'choice',
+      store_as: 'message-1',
       text: 'What is your favourite colour?',
       entry_endpoint: {uuid: 'endpoint0'},
       choice_endpoints: [
@@ -22,6 +23,7 @@
       uuid: 'state2',
       name: 'Message 2',
       type: 'freetext',
+      store_as: 'message-2',
       entry_endpoint: {uuid: 'endpoint3'},
       exit_endpoint: {uuid: 'endpoint4'},
       text: 'What is your name?'
@@ -29,12 +31,14 @@
       uuid: 'state3',
       name: 'Ending 1',
       type: 'end',
+      store_as: 'ending-1',
       entry_endpoint: {uuid: 'endpoint5'},
       text: 'Thank you for taking our survey'
     }, {
       uuid: 'state4',
       name: 'Dummy Message 1',
       type: 'dummy',
+      store_as: 'dummy-message-1',
       entry_endpoint: {uuid: 'endpoint6'},
       exit_endpoint: {uuid: 'endpoint7'}
     }],
