@@ -3,6 +3,10 @@
 // Views for campaign routing diagram.
 
 (function(exports) {
+  var actions = go.components.actions,
+      SaveActionView = actions.SaveActionView,
+      ResetActionView = actions.ResetActionView;
+
   var plumbing = go.components.plumbing;
 
   var states = plumbing.states,
@@ -222,30 +226,23 @@
   });
 
   var RoutingActionsView = Backbone.View.extend({
-    events: {
-      'click [data-action=save]': 'onSaveClick',
-      'click [data-action=reset]': 'onResetClick'
-    },
-
     initialize: function(options) {
-      this.sessionId = options.sessionId;
       this.diagram = options.diagram;
-      this.modelBackup = this.diagram.model.toJSON();
-    },
 
-    onSaveClick: function(e) {
-      e.preventDefault();
-      this.diagram.model.save({}, {
-        sessionId: this.sessionId,
-        error: function() {
-          bootbox.alert("Something bad happened, changes couldn't be saved.");
-        }
+      this.save = new SaveActionView({
+        el: this.$('[data-action=save]'),
+        sessionId: options.sessionId,
+        model: this.diagram.model
       });
-    },
 
-    onResetClick: function(e) {
-      e.preventDefault();
-      this.diagram.model.set(this.modelBackup);
+      this.reset = new ResetActionView({
+        el: this.$('[data-action=reset]'),
+        model: this.diagram.model
+      });
+
+      this.save.on('error', function() {
+        bootbox.alert("Something bad happened, changes couldn't be saved.");
+      });
     }
   });
 

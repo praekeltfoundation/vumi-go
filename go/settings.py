@@ -403,6 +403,7 @@ PIPELINE_JS = {
             'js/src/components/models.js',
             'js/src/components/structures.js',
             'js/src/components/views.js',
+            'js/src/components/actions.js',
             'js/src/components/grid.js',
             'js/src/components/stateMachine.js',
             'js/src/components/plumbing/plumbing.js',

@@ -11,7 +11,11 @@
   };
 
   var response = function(data, id) {
-    return JSON.stringify({id: id, jsonrpc: '2.0', result: data});
+    return JSON.stringify({
+      id: id || null,
+      jsonrpc: '2.0',
+      result: data || {}
+    });
   };
 
   var errorResponse = function(error, id, code) {
