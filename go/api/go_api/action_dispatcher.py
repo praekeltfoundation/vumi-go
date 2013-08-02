@@ -2,21 +2,16 @@
 
 from twisted.internet.defer import maybeDeferred
 
-from txjsonrpc.jsonrpc import BaseSubhandler
-from txjsonrpc.jsonrpclib import Fault
-
 from vumi.rpc import signature, Unicode, Dict
 
 from go.base.utils import (
     configured_conversation_types, configured_router_types,
     get_conversation_definition, get_router_definition)
+from go.api.go_api.utils import GoApiSubHandler, GoApiError
 
 
-class ActionError(Fault):
+class ActionError(GoApiError):
     """Raise this to report an error from within an action handler."""
-
-    def __init__(self, msg, fault_code=400):
-        super(ActionError, self).__init__(fault_code, msg)
 
 
 class ActionDispatcherMetaClass(type):
@@ -68,7 +63,7 @@ class ActionDispatcherMetaClass(type):
         return jsonrpc_handler
 
 
-class ActionDispatcher(BaseSubhandler, object):
+class ActionDispatcher(GoApiSubHandler):
     """Dispatcher for actions on vumi.persist model instances."""
 
     __metaclass__ = ActionDispatcherMetaClass
@@ -77,13 +72,8 @@ class ActionDispatcher(BaseSubhandler, object):
     # 'conversation' or 'router'.
     dispatcher_type_name = None
 
-    def __init__(self, user_account_key, vumi_api):
-        BaseSubhandler.__init__(self)
-        self.user_account_key = user_account_key
-        self.vumi_api = vumi_api
-
     def dispatch_action(self, handler, campaign_key, obj_key, params):
-        user_api = self.vumi_api.get_user_api(campaign_key)
+        user_api = self.get_user_api(campaign_key)
         d = maybeDeferred(self.get_object_by_key, user_api, obj_key)
 
         def action(obj):
@@ -111,12 +101,13 @@ class RouterActionDispatcher(ActionDispatcher):
         return user_api.get_router(router_key)
 
 
-class CachedDynamicSubhandler(BaseSubhandler, object):
+class CachedDynamicSubhandler(GoApiSubHandler):
 
     _cached_subhandler_classes = {}
 
     def __init__(self, user_account_key, vumi_api):
-        BaseSubhandler.__init__(self)
+        super(CachedDynamicSubhandler, self).__init__(
+            user_account_key, vumi_api)
         subhandler_classes = self.get_cached_subhandler_classes()
         for prefix, subhandler_cls in subhandler_classes.iteritems():
             subhandler = subhandler_cls(user_account_key, vumi_api)
