@@ -1,5 +1,7 @@
 """Tests for go.api.go_api.go_api"""
 
+from xmlrpclib import METHOD_NOT_FOUND
+
 from txjsonrpc.web.jsonrpc import Proxy
 from txjsonrpc.jsonrpclib import Fault
 
@@ -418,36 +420,21 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     @inlineCallbacks
     def test_conversation_action_error(self):
-        conv = yield self.user_api.conversation_store.new_conversation(
-            u'jsbox', u'My Conversation', u'A description', {})
+        campaign_key, conv_key = u"campaign-1", u"conv-1"
         d = self.proxy.callRemote(
-            "conversation_action", self.campaign_key, conv.key,
-            "foo", {"param": 1})
-        with LogCatcher() as lc:
-            yield self.assert_faults(d, 400, u"Unknown action.")
-            [failure] = lc.errors
-            self.assertTrue(failure["why"].startswith(
-                "Action u'foo' on conversation <Conversation "))
-        # flush the error logged by the action dispatcher
-        [err] = self.flushLoggedErrors(ActionError)
-        self.assertEqual(err.value.faultString, u"Unknown action.")
+            "conversation.unknown.bar", campaign_key, conv_key,
+            {"param": 1})
+        yield self.assert_faults(d, METHOD_NOT_FOUND,
+                                 u"no such sub-handler unknown")
 
     @inlineCallbacks
     def test_router_action_error(self):
-        router = yield self.user_api.router_store.new_router(
-            u'keyword', u'My Router', u'A description', {})
+        campaign_key, router_key = u"campaign-1", u"router-1"
         d = self.proxy.callRemote(
-            "router_action", self.campaign_key, router.key,
-            "foo", {"param": 1})
-        with LogCatcher() as lc:
-            yield self.assert_faults(d, 400, u"Unknown action.")
-            [failure] = lc.errors
-            self.assertTrue(failure["why"].startswith(
-                "Action u'foo' on router <Router "))
-        # flush the error logged by the action dispatcher
-        [err] = self.flushLoggedErrors(ActionError)
-        print err.value.message, type(err.value.message)
-        self.assertEqual(err.value.faultString, u"Unknown action.")
+            "router.unknown.foo", campaign_key, router_key,
+            {"param": 1})
+        yield self.assert_faults(d, METHOD_NOT_FOUND,
+                                 u"no such sub-handler unknown")
 
 
 class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):
