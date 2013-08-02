@@ -21,6 +21,8 @@ from vumi.worker import BaseWorker
 from go.api.go_api.api_types import (
     CampaignType, ConversationType, ChannelType, RouterType,
     RoutingEntryType, RoutingType)
+from go.api.go_api.action_dispatcher import (
+    ConversationSubhandler, RouterSubhandler)
 from go.api.go_api.auth import GoUserRealm, GoUserAuthSessionWrapper
 from go.vumitools.account import RoutingTableHelper
 from go.vumitools.api import VumiApi
@@ -39,6 +41,10 @@ class GoApiServer(JSONRPC):
         JSONRPC.__init__(self)
         self.user_account_key = user_account_key
         self.vumi_api = vumi_api
+        self.putSubHandler('conversation',
+                           ConversationSubhandler(user_account_key, vumi_api))
+        self.putSubHandler('router',
+                           RouterSubhandler(user_account_key, vumi_api))
 
     def _conversations(self, user_api):
         def format_conversations(convs):
