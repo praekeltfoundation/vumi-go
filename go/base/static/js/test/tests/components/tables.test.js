@@ -1,4 +1,4 @@
-describe.only("go.components.tables", function() {
+describe("go.components.tables", function() {
   var testHelpers = go.testHelpers,
       noElExists = testHelpers.noElExists,
       oneElExists = testHelpers.oneElExists;

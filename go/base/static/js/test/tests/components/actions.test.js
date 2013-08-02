@@ -125,10 +125,19 @@ describe("go.components.actions", function() {
   describe("CallActionView", function() {
     var CallActionView = actions.CallActionView;
 
+    var ToyCallActionView = CallActionView.extend({
+      data: function() {
+        return {
+          id:  this.$el.attr('data-id'),
+          action: this.$el.attr('data-action')
+        };
+      }
+    });
+
     var action;
 
     beforeEach(function() {
-      action = new CallActionView();
+      action = new ToyCallActionView();
 
       action.$el
         .attr('data-url', '/hypothetical-basking-shark')
