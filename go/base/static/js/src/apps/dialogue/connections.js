@@ -1,5 +1,5 @@
-// go.campaign.dialogue.connections
-// ================================
+// go.apps.dialogue.connections
+// ============================
 // Structures and logic for the connections between states in the dialogue
 // diagram.
 
@@ -23,4 +23,4 @@
     DialogueConnectionView: DialogueConnectionView,
     DialogueConnectionCollection: DialogueConnectionCollection
   });
-})(go.campaign.dialogue.connections = {});
+})(go.apps.dialogue.connections = {});

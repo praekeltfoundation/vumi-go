@@ -1,12 +1,12 @@
-describe("go.campaign.dialogue.partials", function() {
-  var partials = go.campaign.dialogue.states.partials;
+describe("go.apps.dialogue.partials", function() {
+  var partials = go.apps.dialogue.states.partials;
 
   var testHelpers = go.testHelpers,
       oneElExists = testHelpers.oneElExists,
       noElExists = testHelpers.noElExists;
 
-  var dialogue = go.campaign.dialogue,
-      states = go.campaign.dialogue.states;
+  var dialogue = go.apps.dialogue,
+      states = go.apps.dialogue.states;
 
   var setUp = dialogue.testHelpers.setUp,
       tearDown = dialogue.testHelpers.tearDown,

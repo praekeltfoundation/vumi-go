@@ -38,17 +38,17 @@
 
       window.templates = [
         'components/confirm.jst',
-        'campaign/dialogue/states/modes/preview.jst',
-        'campaign/dialogue/states/modes/edit.jst',
-        'campaign/dialogue/states/choice/edit.jst',
-        'campaign/dialogue/states/choice/preview.jst',
-        'campaign/dialogue/states/choice/choice/edit.jst',
-        'campaign/dialogue/states/choice/choice/extras.jst',
-        'campaign/dialogue/states/freetext/edit.jst',
-        'campaign/dialogue/states/freetext/preview.jst',
-        'campaign/dialogue/states/end/edit.jst',
-        'campaign/dialogue/states/end/preview.jst',
-        'campaign/dialogue/states/components/nameExtras.jst'
+        'apps/dialogue/states/modes/preview.jst',
+        'apps/dialogue/states/modes/edit.jst',
+        'apps/dialogue/states/choice/edit.jst',
+        'apps/dialogue/states/choice/preview.jst',
+        'apps/dialogue/states/choice/choice/edit.jst',
+        'apps/dialogue/states/choice/choice/extras.jst',
+        'apps/dialogue/states/freetext/edit.jst',
+        'apps/dialogue/states/freetext/preview.jst',
+        'apps/dialogue/states/end/edit.jst',
+        'apps/dialogue/states/end/preview.jst',
+        'apps/dialogue/states/components/nameExtras.jst'
       ];
 
       window.templates.forEach(helpers.loadTemplate);
@@ -73,21 +73,21 @@
     <script src="../src/components/plumbing/diagrams.js"></script>
     <script src="../src/components/tables.js"></script>
 
-    <script src="../src/campaign/campaign.js"></script>
-    <script src="../src/campaign/interactive.js"></script>
+    <script src="../src/apps/apps.js"></script>
+    <script src="../src/apps/interactive.js"></script>
     <script src="../src/routing/routing.js"></script>
     <script src="../src/routing/models.js"></script>
     <script src="../src/routing/views.js"></script>
-    <script src="../src/campaign/dialogue/dialogue.js"></script>
-    <script src="../src/campaign/dialogue/models.js"></script>
-    <script src="../src/campaign/dialogue/connections.js"></script>
-    <script src="../src/campaign/dialogue/states/states.js"></script>
-    <script src="../src/campaign/dialogue/states/partials.js"></script>
-    <script src="../src/campaign/dialogue/states/dummy.js"></script>
-    <script src="../src/campaign/dialogue/states/choice.js"></script>
-    <script src="../src/campaign/dialogue/states/freetext.js"></script>
-    <script src="../src/campaign/dialogue/states/end.js"></script>
-    <script src="../src/campaign/dialogue/diagram.js"></script>
+    <script src="../src/apps/dialogue/dialogue.js"></script>
+    <script src="../src/apps/dialogue/models.js"></script>
+    <script src="../src/apps/dialogue/connections.js"></script>
+    <script src="../src/apps/dialogue/states/states.js"></script>
+    <script src="../src/apps/dialogue/states/partials.js"></script>
+    <script src="../src/apps/dialogue/states/dummy.js"></script>
+    <script src="../src/apps/dialogue/states/choice.js"></script>
+    <script src="../src/apps/dialogue/states/freetext.js"></script>
+    <script src="../src/apps/dialogue/states/end.js"></script>
+    <script src="../src/apps/dialogue/diagram.js"></script>
 
     <script src="tests/testHelpers/testHelpers.js"></script>
     <script src="tests/testHelpers/testHelpers.test.js"></script>
@@ -110,15 +110,15 @@
     <script src="tests/routing/testHelpers.js"></script>
     <script src="tests/routing/models.test.js"></script>
     <script src="tests/routing/views.test.js"></script>
-    <script src="tests/campaign/dialogue/testHelpers.js"></script>
-    <script src="tests/campaign/dialogue/models.test.js"></script>
-    <script src="tests/campaign/dialogue/diagram.test.js"></script>
-    <script src="tests/campaign/dialogue/connections.test.js"></script>
-    <script src="tests/campaign/dialogue/states/states.test.js"></script>
-    <script src="tests/campaign/dialogue/states/partials.test.js"></script>
-    <script src="tests/campaign/dialogue/states/choice.test.js"></script>
-    <script src="tests/campaign/dialogue/states/freetext.test.js"></script>
-    <script src="tests/campaign/dialogue/states/end.test.js"></script>
+    <script src="tests/apps/dialogue/testHelpers.js"></script>
+    <script src="tests/apps/dialogue/models.test.js"></script>
+    <script src="tests/apps/dialogue/diagram.test.js"></script>
+    <script src="tests/apps/dialogue/connections.test.js"></script>
+    <script src="tests/apps/dialogue/states/states.test.js"></script>
+    <script src="tests/apps/dialogue/states/partials.test.js"></script>
+    <script src="tests/apps/dialogue/states/choice.test.js"></script>
+    <script src="tests/apps/dialogue/states/freetext.test.js"></script>
+    <script src="tests/apps/dialogue/states/end.test.js"></script>
     <script>
       if (window.mochaPhantomJS) { mochaPhantomJS.run(); }
       else { mocha.run(); }

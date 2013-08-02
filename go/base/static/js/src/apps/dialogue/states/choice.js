@@ -1,5 +1,5 @@
-// go.campaign.dialogue.states.choice
-// ==================================
+// go.apps.dialogue.states.choice
+// ==============================
 // Structures for choice states (states where users enter any text they want)
 
 (function(exports) {
@@ -9,7 +9,7 @@
 
   var ViewCollection = go.components.structures.ViewCollection;
 
-  var states = go.campaign.dialogue.states,
+  var states = go.apps.dialogue.states,
       EntryEndpointView = states.EntryEndpointView,
       DialogueStateView = states.DialogueStateView,
       DialogueStateEditView = states.DialogueStateEditView,
@@ -53,7 +53,7 @@
 
       this.template = new TemplateView({
         el: this.$el,
-        jst: 'JST.campaign_dialogue_states_choice_choice_extras',
+        jst: 'JST.apps_dialogue_states_choice_choice_extras',
         data: {model: this.choice.model}
       });
 
@@ -105,7 +105,7 @@
 
       this.template = new TemplateView({
         el: this.$el,
-        jst: 'JST.campaign_dialogue_states_choice_choice_edit',
+        jst: 'JST.apps_dialogue_states_choice_choice_edit',
         data: {model: this.model}
       });
 
@@ -160,7 +160,7 @@
 
     bodyOptions: function() {
       return {
-        jst: 'JST.campaign_dialogue_states_choice_edit',
+        jst: 'JST.apps_dialogue_states_choice_edit',
         partials: {
           text: new TextEditView({mode: this}),
           choices: new ChoiceEditCollection({
@@ -203,7 +203,7 @@
 
   var ChoiceStatePreviewView = DialogueStatePreviewView.extend({
     bodyOptions: function() {
-      return {jst: 'JST.campaign_dialogue_states_choice_preview'};
+      return {jst: 'JST.apps_dialogue_states_choice_preview'};
     }
   });
 
@@ -233,4 +233,4 @@
     ChoiceEditView: ChoiceEditView,
     ChoiceEditExtrasView: ChoiceEditExtrasView
   });
-})(go.campaign.dialogue.states.choice = {});
+})(go.apps.dialogue.states.choice = {});

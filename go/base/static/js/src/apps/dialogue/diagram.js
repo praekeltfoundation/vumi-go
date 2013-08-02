@@ -1,5 +1,5 @@
-// go.campaign.dialogue.diagram
-// ============================
+// go.apps.dialogue.diagram
+// ========================
 // Structures for the dialogue diagram (the main view for the dialogue screen).
 
 (function(exports) {
@@ -8,7 +8,7 @@
   var diagrams = components.plumbing.diagrams,
       DiagramView = diagrams.DiagramView;
 
-  var dialogue = go.campaign.dialogue,
+  var dialogue = go.apps.dialogue,
       connections = dialogue.connections,
       states = dialogue.states;
 
@@ -39,4 +39,4 @@
   _(exports).extend({
     DialogueDiagramView: DialogueDiagramView
   });
-})(go.campaign.dialogue.diagram = {});
+})(go.apps.dialogue.diagram = {});

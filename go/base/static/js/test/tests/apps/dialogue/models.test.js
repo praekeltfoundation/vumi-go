@@ -1,5 +1,5 @@
-describe("go.campaign.dialogue.models", function() {
-  var dialogue = go.campaign.dialogue;
+describe("go.apps.dialogue.models", function() {
+  var dialogue = go.apps.dialogue;
 
   describe(".ChoiceEndpointModel", function() {
     var ChoiceEndpointModel = dialogue.models.ChoiceEndpointModel;

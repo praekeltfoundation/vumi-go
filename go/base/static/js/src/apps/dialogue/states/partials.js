@@ -1,5 +1,5 @@
-// go.campaign.dialogue.states.partials
-// ====================================
+// go.apps.dialogue.states.partials
+// ================================
 // Partials or components that can be fitted into dialogue states
 
 (function(exports) {
@@ -33,4 +33,4 @@
     DialogueStatePartialView: DialogueStatePartialView,
     TextEditView: TextEditView
   });
-})(go.campaign.dialogue.states.partials = {});
+})(go.apps.dialogue.states.partials = {});

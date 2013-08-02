@@ -1,5 +1,5 @@
-// go.campaign.dialogue.models
-// ===========================
+// go.apps.dialogue.models
+// =======================
 // Models for dialogue screen.
 
 (function(exports) {
@@ -31,10 +31,10 @@
     relations: [],
 
     subModelTypes: {
-      dummy: 'go.campaign.dialogue.models.DummyStateModel',
-      choice: 'go.campaign.dialogue.models.ChoiceStateModel',
-      freetext: 'go.campaign.dialogue.models.FreeTextStateModel',
-      end: 'go.campaign.dialogue.models.EndStateModel'
+      dummy: 'go.apps.dialogue.models.DummyStateModel',
+      choice: 'go.apps.dialogue.models.ChoiceStateModel',
+      freetext: 'go.apps.dialogue.models.FreeTextStateModel',
+      end: 'go.apps.dialogue.models.EndStateModel'
     },
 
     defaults: function() {
@@ -183,4 +183,4 @@
     FreeTextStateModel: FreeTextStateModel,
     EndStateModel: EndStateModel
   });
-})(go.campaign.dialogue.models = {});
+})(go.apps.dialogue.models = {});

@@ -1,9 +1,9 @@
-// go.campaign.dialogue.states.freetext
-// ====================================
+// go.apps.dialogue.states.freetext
+// ================================
 // Structures for freetext states (states where users enter any text they want)
 
 (function(exports) {
-  var states = go.campaign.dialogue.states,
+  var states = go.apps.dialogue.states,
       EntryEndpointView = states.EntryEndpointView,
       ExitEndpointView = states.ExitEndpointView,
       DialogueStateView = states.DialogueStateView,
@@ -14,7 +14,7 @@
   var FreeTextStateEditView = DialogueStateEditView.extend({
     bodyOptions: function() {
       return {
-        jst: 'JST.campaign_dialogue_states_freetext_edit',
+        jst: 'JST.apps_dialogue_states_freetext_edit',
         partials: {text: new TextEditView({mode: this})}
       };
     }
@@ -23,7 +23,7 @@
   var FreeTextStatePreviewView = DialogueStatePreviewView.extend({
     bodyOptions: function() {
       return {
-        jst: 'JST.campaign_dialogue_states_freetext_preview'
+        jst: 'JST.apps_dialogue_states_freetext_preview'
       };
     }
   });
@@ -45,4 +45,4 @@
     FreeTextStateEditView: FreeTextStateEditView,
     FreeTextStatePreviewView: FreeTextStatePreviewView
   });
-})(go.campaign.dialogue.states.freetext = {});
+})(go.apps.dialogue.states.freetext = {});

@@ -2,7 +2,7 @@
 // ===============================
 
 (function(exports) {
-  var dialogue = go.campaign.dialogue,
+  var dialogue = go.apps.dialogue,
       DialogueModel = dialogue.models.DialogueModel,
       DialogueDiagramView = dialogue.diagram.DialogueDiagramView;
 
@@ -80,4 +80,4 @@
     modelData: modelData,
     newDialogueDiagram: newDialogueDiagram
   });
-})(go.campaign.dialogue.testHelpers = {});
+})(go.apps.dialogue.testHelpers = {});

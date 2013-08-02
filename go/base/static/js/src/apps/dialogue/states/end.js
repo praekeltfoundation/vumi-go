@@ -1,10 +1,10 @@
-// go.campaign.dialogue.states.end
-// ===============================
+// go.apps.dialogue.states.end
+// ===========================
 // Structures for end states (states which display something to the user and
 // end the session)
 
 (function(exports) {
-  var states = go.campaign.dialogue.states,
+  var states = go.apps.dialogue.states,
       EntryEndpointView = states.EntryEndpointView,
       DialogueStateView = states.DialogueStateView,
       DialogueStateEditView = states.DialogueStateEditView,
@@ -14,7 +14,7 @@
   var EndStateEditView = DialogueStateEditView.extend({
     bodyOptions: function() {
       return {
-        jst: 'JST.campaign_dialogue_states_end_edit',
+        jst: 'JST.apps_dialogue_states_end_edit',
         partials: {text: new TextEditView({mode: this})}
       };
     }
@@ -23,7 +23,7 @@
   var EndStatePreviewView = DialogueStatePreviewView.extend({
     bodyOptions: function() {
       return {
-        jst: 'JST.campaign_dialogue_states_end_preview'
+        jst: 'JST.apps_dialogue_states_end_preview'
       };
     }
   });
@@ -43,4 +43,4 @@
     EndStateEditView: EndStateEditView,
     EndStatePreviewView: EndStatePreviewView
   });
-})(go.campaign.dialogue.states.end = {});
+})(go.apps.dialogue.states.end = {});

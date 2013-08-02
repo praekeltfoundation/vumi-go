@@ -1,5 +1,5 @@
-// go.campaign.dialogue.states
-// ===========================
+// go.apps.dialogue.states
+// =======================
 // Structures for each dialogue state type
 
 (function(exports) {
@@ -49,7 +49,7 @@
 
       this.template = new TemplateView({
         el: this.$el,
-        jst: 'JST.campaign_dialogue_states_components_nameExtras',
+        jst: 'JST.apps_dialogue_states_components_nameExtras',
         data: {model: this.mode.state.model}
       });
 
@@ -123,7 +123,7 @@
   // Mode allowing the user to make changes to the dialogue state. Acts as a
   // base for each state type's `edit` mode
   var DialogueStateEditView = DialogueStateModeView.extend({
-    jst: 'JST.campaign_dialogue_states_modes_edit',
+    jst: 'JST.apps_dialogue_states_modes_edit',
 
     className: 'edit mode',
 
@@ -211,7 +211,7 @@
   // Mode for a 'read-only' preview of the dialogue state. Acts as a base for
   // each state type's `preview` mode
   var DialogueStatePreviewView = DialogueStateModeView.extend({
-    jst: 'JST.campaign_dialogue_states_modes_preview',
+    jst: 'JST.apps_dialogue_states_modes_preview',
 
     className: 'preview mode',
 
@@ -239,10 +239,10 @@
     endpointCollectionType: AligningEndpointCollection,
 
     subtypes: {
-      dummy: 'go.campaign.dialogue.states.dummy.DummyStateView',
-      choice: 'go.campaign.dialogue.states.choice.ChoiceStateView',
-      freetext: 'go.campaign.dialogue.states.freetext.FreeTextStateView',
-      end: 'go.campaign.dialogue.states.end.EndStateView'
+      dummy: 'go.apps.dialogue.states.dummy.DummyStateView',
+      choice: 'go.apps.dialogue.states.choice.ChoiceStateView',
+      freetext: 'go.apps.dialogue.states.freetext.FreeTextStateView',
+      end: 'go.apps.dialogue.states.end.EndStateView'
     },
 
     events: {
@@ -458,4 +458,4 @@
     DialogueStateGridView: DialogueStateGridView,
     DialogueStateCollection: DialogueStateCollection
   });
-})(go.campaign.dialogue.states = {});
+})(go.apps.dialogue.states = {});

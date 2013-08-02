@@ -1,5 +1,5 @@
-// go.campaign.dialogue.style
-// ==========================
+// go.apps.dialogue.style
+// ======================
 // Styling for the dialogue screen that cannot be done through css
 
 (function(exports) {
@@ -40,4 +40,4 @@
   _(exports).extend({
     initialize: initialize
   });
-})(go.campaign.dialogue.style = {});
+})(go.apps.dialogue.style = {});

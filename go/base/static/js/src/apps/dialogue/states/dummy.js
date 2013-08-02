@@ -1,9 +1,9 @@
-// go.campaign.dialogue.states.dummy
-// =================================
+// go.apps.dialogue.states.dummy
+// =============================
 // A dummy state type for testing
 
 (function(exports) {
-  var states = go.campaign.dialogue.states,
+  var states = go.apps.dialogue.states,
       EntryEndpointView = states.EntryEndpointView,
       ExitEndpointView = states.ExitEndpointView,
       DialogueStateView = states.DialogueStateView,
@@ -39,4 +39,4 @@
     DummyStateEditView: DummyStateEditView,
     DummyStateView: DummyStateView
   });
-})(go.campaign.dialogue.states.dummy = {});
+})(go.apps.dialogue.states.dummy = {});

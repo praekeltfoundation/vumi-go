@@ -1,10 +1,10 @@
-describe("go.campaign.dialogue.states", function() {
+describe("go.apps.dialogue.states", function() {
   var testHelpers = go.testHelpers,
       oneElExists = testHelpers.oneElExists,
       noElExists = testHelpers.noElExists,
       unregisterModels = testHelpers.unregisterModels;
 
-  var dialogue = go.campaign.dialogue;
+  var dialogue = go.apps.dialogue;
 
   var setUp = dialogue.testHelpers.setUp,
       tearDown = dialogue.testHelpers.tearDown,

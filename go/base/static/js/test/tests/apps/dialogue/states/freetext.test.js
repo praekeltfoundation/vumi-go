@@ -1,6 +1,6 @@
-describe("go.campaign.dialogue.states.end", function() {
-  var dialogue = go.campaign.dialogue,
-      states = go.campaign.dialogue.states;
+describe("go.apps.dialogue.states.freetext", function() {
+  var dialogue = go.apps.dialogue,
+      states = go.apps.dialogue.states;
 
   var setUp = dialogue.testHelpers.setUp,
       tearDown = dialogue.testHelpers.tearDown,
@@ -17,12 +17,12 @@ describe("go.campaign.dialogue.states.end", function() {
     tearDown();
   });
 
-  describe(".EndStateEditView", function() {
+  describe(".FreeTextStateEditView", function() {
     var state,
         editMode;
 
     beforeEach(function() {
-      state = diagram.states.get('state3');
+      state = diagram.states.get('state2');
       editMode = state.modes.edit;
       state.edit();
     });
@@ -32,16 +32,16 @@ describe("go.campaign.dialogue.states.end", function() {
       function() {
         assert.equal(
           state.model.get('text'),
-          'Thank you for taking our survey');
+          'What is your name?');
 
         editMode
           .$('.text')
-          .val('So Long, and Thanks for All the Fish')
+          .val('What is your parrot doing?')
           .change();
 
         assert.equal(
           state.model.get('text'),
-          'So Long, and Thanks for All the Fish');
+          'What is your parrot doing?');
       });
     });
   });

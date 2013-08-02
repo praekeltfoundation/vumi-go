@@ -1,4 +1,4 @@
-describe("go.campaign.dialogue.diagram", function() {
+describe("go.apps.dialogue.diagram", function() {
   var testHelpers = go.testHelpers,
       oneElExists = testHelpers.oneElExists,
       noElExists = testHelpers.noElExists;
@@ -6,8 +6,8 @@ describe("go.campaign.dialogue.diagram", function() {
   var plumbing = go.components.plumbing,
       noConnections = plumbing.testHelpers.noConnections;
 
-  var dialogue = go.campaign.dialogue,
-      states = go.campaign.dialogue.states;
+  var dialogue = go.apps.dialogue,
+      states = go.apps.dialogue.states;
 
   var setUp = dialogue.testHelpers.setUp,
       tearDown = dialogue.testHelpers.tearDown,
