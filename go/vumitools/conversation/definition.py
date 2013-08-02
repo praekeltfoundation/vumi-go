@@ -1,6 +1,3 @@
-from go.api.go_api.action_dispatcher import ConversationActionDispatcher
-
-
 class ConversationDefinitionBase(object):
     """Definition of conversation lifecycle and possible actions.
 
@@ -16,7 +13,9 @@ class ConversationDefinitionBase(object):
 
     actions = ()
 
-    api_dispatcher_cls = ConversationActionDispatcher
+    # set to an sub-class of go.api.go_api.action_dispatcher
+    # .ConversationActionDispatcher to provide API methods
+    api_dispatcher_cls = None
 
     def __init__(self, conv=None):
         self.conv = conv

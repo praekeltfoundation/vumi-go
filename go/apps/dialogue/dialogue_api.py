@@ -4,10 +4,10 @@ from go.api.go_api.action_dispatcher import ConversationActionDispatcher
 
 
 class DialogueActionDispatcher(ConversationActionDispatcher):
-    def handle_get_poll(self, conv):
+    def action_get_poll(self, conv):
         return {"poll": conv.config.get("poll")}
 
-    def handle_save_poll(self, conv, poll):
+    def action_save_poll(self, conv, poll):
         conv.config["poll"] = poll
         d = conv.save()
         d.addCallback(lambda r: {"saved": True})

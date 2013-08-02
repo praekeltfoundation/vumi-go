@@ -13,7 +13,7 @@ from txjsonrpc.jsonrpclib import Fault
 from txjsonrpc.web.jsonrpc import JSONRPC
 
 from vumi.config import ConfigDict, ConfigText, ConfigServerEndpoint
-from vumi.rpc import signature, Unicode, List, Dict
+from vumi.rpc import signature, Unicode, List
 from vumi.transports.httprpc import httprpc
 from vumi.utils import build_web_site
 from vumi.worker import BaseWorker
@@ -21,8 +21,9 @@ from vumi.worker import BaseWorker
 from go.api.go_api.api_types import (
     CampaignType, ConversationType, ChannelType, RouterType,
     RoutingEntryType, RoutingType)
+from go.api.go_api.action_dispatcher import (
+    ConversationSubhandler, RouterSubhandler)
 from go.api.go_api.auth import GoUserRealm, GoUserAuthSessionWrapper
-from go.base.utils import get_conversation_definition, get_router_definition
 from go.vumitools.account import RoutingTableHelper
 from go.vumitools.api import VumiApi
 
@@ -40,6 +41,10 @@ class GoApiServer(JSONRPC):
         JSONRPC.__init__(self)
         self.user_account_key = user_account_key
         self.vumi_api = vumi_api
+        self.putSubHandler('conversation',
+                           ConversationSubhandler(user_account_key, vumi_api))
+        self.putSubHandler('router',
+                           RouterSubhandler(user_account_key, vumi_api))
 
     def _conversations(self, user_api):
         def format_conversations(convs):
@@ -236,42 +241,6 @@ class GoApiServer(JSONRPC):
         d.addCallback(check_routing_table)
         d.addCallback(populate_routing_table)
         d.addCallback(swallow_result)
-        return d
-
-    @signature(campaign_key=Unicode("Campaign key."),
-               conversation_key=Unicode("Conversation key."),
-               action=Unicode("Name of action."),
-               params=Dict("Additional action paramaters.", null=True),
-               returns=Dict("Result of the action.", null=True))
-    def jsonrpc_conversation_action(self, campaign_key, conversation_key,
-                                    action, params):
-        user_api = self.vumi_api.get_user_api(campaign_key)
-        d = user_api.get_conversation(conversation_key)
-
-        def conversation_action(conv):
-            conv_def = get_conversation_definition(conv.conversation_type)
-            api_dispatcher = conv_def.api_dispatcher_cls(user_api)
-            return api_dispatcher.dispatch_action(conv, action, params)
-
-        d.addCallback(conversation_action)
-        return d
-
-    @signature(campaign_key=Unicode("Campaign key."),
-               router_key=Unicode("Router key."),
-               action=Unicode("Name of action."),
-               params=Dict("Additional action paramaters.", null=True),
-               returns=Dict("Result of the action.", null=True))
-    def jsonrpc_router_action(self, campaign_key, router_key,
-                              action, params):
-        user_api = self.vumi_api.get_user_api(campaign_key)
-        d = user_api.get_router(router_key)
-
-        def router_action(router):
-            router_def = get_router_definition(router.router_type)
-            api_dispatcher = router_def.api_dispatcher_cls(user_api)
-            return api_dispatcher.dispatch_action(router, action, params)
-
-        d.addCallback(router_action)
         return d
 
 
