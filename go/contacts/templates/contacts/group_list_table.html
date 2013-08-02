@@ -2,7 +2,7 @@
 <table class="table">
     <thead>
         <tr>
-            <th><input class="action-marker" type="checkbox"></th>
+            <th><input type="checkbox"></th>
             <th>Name</th>
             <th>No. of contacts</th>
             <th>Date created</th>
@@ -12,7 +12,7 @@
     {% for group in page.object_list %}
         <tr data-url="{% url 'contacts:group' group_key=group.key %}">
             <td>
-                <input class="action-marker" type="checkbox" name="group" value="{{ group.key }}" {% if group.selected %}checked{% endif %}>
+                <input type="checkbox" name="group" value="{{ group.key }}" {% if group.selected %}checked{% endif %}>
             </td>
             <td>
                 <a href="{% url 'contacts:group' group_key=group.key %}">

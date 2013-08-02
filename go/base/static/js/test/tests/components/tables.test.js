@@ -21,17 +21,17 @@ describe("go.components.tables", function() {
           '<table>',
             '<thead>',
               '<tr>',
-                '<th><input class="action-marker" name="h1" type="checkbox"></th>',
+                '<th><input name="h1" type="checkbox"></th>',
                 '<th>head</th>',
               '</tr>',
             '</thead>',
             '<tbody>',
               '<tr data-url="abc">',
-               '<td><input class="action-marker" name="c1" type="checkbox"></td>',
+               '<td><input name="c1" type="checkbox"></td>',
                '<td>body</td>',
               '</tr>',
               '<tr data-url="abc">',
-               '<td><input class="action-marker" name="c2" type="checkbox"></td>',
+               '<td><input name="c2" type="checkbox"></td>',
                '<td>body</td>',
               '</tr>',
             '</tbody>',
@@ -55,15 +55,15 @@ describe("go.components.tables", function() {
 
     describe("when all checkboxes are checked", function() {
       it('should toggle the header checkbox', function() {
-        assert.isFalse(table.$('thead .action-marker').is(':checked'));
-          table.$('tbody tr td:first-child').click();
-        assert.isTrue(table.$('thead .action-marker').is(':checked'));
+        assert.isFalse(table.$('th:first-child input').is(':checked'));
+        table.$('tr td:first-child input').prop('checked', true).change();
+        assert.isTrue(table.$('th:first-child input').is(':checked'));
       });
     });
 
     describe("when a checkbox is checked", function() {
       it('should toggle disabled action elements', function() {
-        var $marker = table.$('tbody .action-marker').eq(0),
+        var $marker = table.$('td:first-child input').eq(0),
             $edit = $buttons.find('[data-action="edit"]');
 
         // enabled

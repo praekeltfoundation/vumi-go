@@ -31,12 +31,16 @@
       this.$actions.click(this.onAction.bind(this));
     },
 
+    $headActionMarker: function() {
+      return this.$('th:first-child input');
+    },
+
     allChecked: function() {
-      return !this.$('tbody .action-marker:not(:checked)').length;
+      return !this.$('td:first-child input:not(:checked)').length;
     },
 
     numChecked: function() {
-      return this.$('tbody .action-marker:checked').length;
+      return this.$('td:first-child input:checked').length;
     },
 
     refreshButtons: function() {
@@ -77,18 +81,18 @@
     events: {
       // select or deselect all the checkboxes based on the state of the 
       // single checkbox in the header.
-      'change thead .action-marker': function(e) {
-        this.$('tbody .action-marker').prop('checked', $(e.target).prop('checked'));
+      'change th:first-child': function(e) {
+        this.$headActionMarker().prop('checked', $(e.target).prop('checked'));
         this.refreshButtons();
       },
 
-      'change tbody .action-marker': function(e) {
-        this.$('thead .action-marker').prop('checked', this.allChecked());
+      'change td:first-child input': function(e) {
+        this.$headActionMarker().prop('checked', this.allChecked());
         this.refreshButtons();
       },
 
-      'click tbody tr td:first-child': function(e) {
-        $(e.target).find('.action-marker')
+      'click td:first-child': function(e) {
+        $(e.target).find('input')
           .prop('checked', true)
           .change();
       },
