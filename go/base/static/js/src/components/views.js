@@ -116,12 +116,18 @@
       return this;
     },
 
+    remove: function() {
+      this.off();
+      return ConfirmView.__super__.remove.call(this);
+    },
+
     render: function() {
       this.$el
         .appendTo($('body'))
         .html(maybeByName(this.template)({self: this}))
         .modal('show');
 
+      this.delegateEvents();
       return this;
     }
   });
