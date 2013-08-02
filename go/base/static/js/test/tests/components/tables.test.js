@@ -43,10 +43,14 @@ describe("go.components.tables", function() {
         el: $form,
         actions: $buttons.find('button')
       });
+
+      bootbox.animate(false);
     });
 
     afterEach(function() {
-      $('.modal').remove();
+      $('.bootbox')
+        .hide()
+        .remove();
     });
 
     describe("when all checkboxes are checked", function() {
