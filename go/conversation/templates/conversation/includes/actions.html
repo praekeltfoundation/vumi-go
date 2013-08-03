@@ -22,5 +22,19 @@
          data-url="{% conversation_screen conversation 'stop' %}">
             Deactivate
         </button>
+    {% elif conversation.stopping %}
+      <button
+       class="btn btn-primary action" 
+       data-action='stop'
+       data-url="{% conversation_screen conversation 'stop' %}">
+          Deactivating: Attempt to stop
+      </button>
+    {% elif conversation.starting %}
+      <button
+       class="btn btn-primary action" 
+       data-action='stop'
+       data-url="{% conversation_screen conversation 'stop' %}">
+          Activating: Attempt to stop
+      </button>
     {% endif %}
 {% endif %}
