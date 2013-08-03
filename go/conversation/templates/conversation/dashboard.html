@@ -10,7 +10,7 @@
     <table class="table">
         <thead>
             <tr>
-                <th><input type="checkbox"></th>
+                <th>{# Action markers go here, dashboard does not use them #}</th>
                 <th>Campaigns</th>
                 <th>Status</th>
                 <th>Interactions</th>
@@ -25,7 +25,7 @@
             {% if conversations %}
                 {% for conversation in page.object_list %}
                 <tr data-url="{% conversation_screen conversation %}">
-                    <td><input type="checkbox" name="conversation_key" value="{{ conversation.key }}"></td>
+                    <td>{# Action markers go here, dashboard does not use them #}</td>
                     <td>
                         <a href="{% conversation_screen conversation %}">
                             {{ conversation.name }}
@@ -38,6 +38,9 @@
                     <td>
                         <a href="{% url 'conversations:incoming_list' conversation.key %}">Messages</a>
                         {# <a href="{% url 'todo' %}">Reports</a> #}
+                    </td>
+                    <td>
+                      {% include "conversation/includes/actions.html" with conversation=conversation %}
                     </td>
                 </tr>
                 {% endfor %}

@@ -11,12 +11,6 @@
 {% endblock %}
 
 {% block content_actions_right %}
-    <div class="table-form-view-buttons pull-left">
-        <button class="btn" data-action="copy" disabled="disabled">Copy</button>
-        <button class="btn" data-action="archive" disabled="disabled">Archive</button>
-        <button class="btn" data-action="edit" disabled="disabled">Edit</button>
-    </div>
-
     <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
         <input type="text" class="search-query" placeholder="Search" name="{{ search_form.query.name }}" value="{{ search_form.query.value|default:"" }}">
         <button type="submit" class="btn" id="search-filter-btn">Search</button>
@@ -69,8 +63,8 @@
 {% endblock %}
 
 {% block ondomready %}
-    var tableFormView = new go.components.tables.TableFormView({
+    var dashboard = new go.conversation.dashboard.ConversationDashboardView({
         el: '.table-form-view',
-        actions: '.table-form-view-buttons button'
+        csrfToken: '{{ csrf_token|safe }}'
     });
 {% endblock %}

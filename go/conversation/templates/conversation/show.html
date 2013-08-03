@@ -6,41 +6,8 @@
 
 {% block content_title %}{{ conversation.name }}{% endblock %}
 
-
 {% block content_actions_right %}
-    {% if conversation.stopped %}
-
-
-        <a href="{% conversation_screen conversation 'start' %}" 
-            class="btn btn-primary action" 
-            data-name="start"
-            data-value="Start">
-            Activate
-        </a>
-
-        <a href="{% conversation_screen conversation 'archive' %}" 
-            class="btn btn-primary action" 
-            data-name="archive"
-            data-value="Archive">
-            Archive
-        </a>
-        
-    {% elif conversation.running %}
-        <a href="{% conversation_screen conversation 'stop' %}" 
-            class="btn btn-primary action" 
-            data-name="stop"
-            data-value="Stop">
-            Deactivate
-        </a>
-    {% else %}
-        {# TODO: Figure out what to put here. #}
-        <a href="{% conversation_screen conversation 'stop' %}" 
-            class="btn btn-warning action" 
-            data-name="stop"
-            data-value="Stop">
-            In transition: attempt to stop
-        </a>
-    {% endif %}
+    {% include "conversation/includes/actions.html" with conversation=conversation %}
 {% endblock %}
 
 {% block content_main %}
@@ -135,22 +102,9 @@
 
 
 {% block ondomready %}
-
-    $('.content .actions .right .action').on('click', function() {
-
-        // confirm if the user wants to perform the action,
-        var $button = $(this);
-        bootbox.confirm('Are you sure you want to ' + $button.attr('data-value') + ' this conversation?', function(submit) {
-            if (submit) {
-                $form = $('<form method="post"></form>')
-                    .attr('action', $button.attr('href'));
-                $form.append("{% csrf_token %}");
-                $form.append('<input type="hidden" name="' + $button.attr('data-name') + '" value="' + $button.attr('data-value') + '">');
-                $form.submit();
-            }
-        });
-
-        return false;
+    var actions = new go.conversation.show.ConversationActionsView({
+        el: '.content .actions .right',
+        csrfToken: '{{ csrf_token|safe }}'
     });
 
     $('.content .sub-actions .disabled').popover({placement: 'left'});
