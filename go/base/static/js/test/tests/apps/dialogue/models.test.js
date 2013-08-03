@@ -1,5 +1,15 @@
-describe("go.apps.dialogue.models", function() {
-  var dialogue = go.apps.dialogue;
+describe.only("go.apps.dialogue.models", function() {
+  var dialogue = go.apps.dialogue,
+      modelData = dialogue.testHelpers.modelData;
+
+  var testHelpers = go.testHelpers,
+      response = testHelpers.rpc.response,
+      errorResponse = testHelpers.rpc.errorResponse,
+      assertRequest = testHelpers.rpc.assertRequest;
+
+  afterEach(function() {
+    go.testHelpers.unregisterModels();
+  });
 
   describe(".ChoiceEndpointModel", function() {
     var ChoiceEndpointModel = dialogue.models.ChoiceEndpointModel;
@@ -73,6 +83,71 @@ describe("go.apps.dialogue.models", function() {
         assert(!model.has('store_as'));
         model.setStoreAs('Some Value');
         assert.equal(model.get('store_as'), 'some-value');
+      });
+    });
+  });
+
+  describe(".DialogueModel", function() {
+    var DialogueModel = dialogue.models.DialogueModel;
+
+    var server;
+
+    beforeEach(function() {
+      server = sinon.fakeServer.create();
+    });
+
+    afterEach(function() {
+      server.restore();
+    });
+
+    describe(".fetch", function() {
+      it("should issue the correct api request", function(done) {
+        var model = new DialogueModel({
+          campaign_id: 'campaign-1',
+          conversation_key: 'conversation-1',
+        });
+
+        server.respondWith(function(req) {
+          assertRequest(
+            req,
+            '/api/v1/go/api',
+            'conversation.dialogue.get_poll',
+            ['campaign-1', 'conversation-1']);
+
+          done();
+        });
+
+        model.fetch();
+        server.respond();
+      });
+
+      it("should update the model on the client side", function() {
+        var model = new DialogueModel();
+        server.respondWith(response(modelData));
+
+        model.fetch();
+        server.respond();
+
+        assert.deepEqual(model.toJSON(), modelData);
+      });
+    });
+
+    describe(".save", function() {
+      it("should issue the correct api request", function(done) {
+        var model = new DialogueModel(modelData);
+
+        server.respondWith(function(req) {
+          assertRequest(
+            req,
+            '/api/v1/go/api',
+            'conversation.dialogue.save_poll',
+            ['campaign-1', 'conversation-1', modelData]);
+
+          done();
+        });
+
+        model.save();
+        server.respond();
       });
     });
   });

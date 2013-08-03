@@ -9,6 +9,8 @@
       StateModel = stateMachine.StateModel,
       StateMachineModel = stateMachine.StateMachineModel;
 
+  var Model = go.components.models.Model;
+
   var DialogueEndpointModel = EndpointModel.extend({
     defaults: function() { return {uuid: uuid.v4()}; }
   });
@@ -145,8 +147,20 @@
     }]
   });
 
-  var DialogueModel = Backbone.RelationalModel.extend({
+  var DialogueModel = Model.extend({
+    methods: {
+      read: {
+        method: 'conversation.dialogue.get_poll',
+        params: ['campaign_id', 'conversation_key']
+      },
+      update: {
+        method: 'conversation.dialogue.save_poll',
+        params: ['campaign_id', 'conversation_key', 'self']
+      }
+    },
+
     idAttribute: 'conversation_key',
+
     relations: [{
       type: Backbone.HasMany,
       key: 'states',
