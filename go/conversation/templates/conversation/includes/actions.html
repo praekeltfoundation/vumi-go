@@ -8,6 +8,13 @@
          data-url="{% conversation_screen conversation 'start' %}">
             Activate
         </button>
+
+        <button
+         class="btn btn-primary action" 
+         data-action='archive'
+         data-url="{% conversation_screen conversation 'archive' %}">
+            Archive
+        </button>
     {% elif conversation.running %}
         <button
          class="btn btn-primary action" 
@@ -16,12 +23,4 @@
             Deactivate
         </button>
     {% endif %}
-
-    <button
-     class="btn btn-primary action" 
-     data-action='archive'
-     data-url="{% conversation_screen conversation 'archive' %}">
-        Archive
-    </button>
-
 {% endif %}
