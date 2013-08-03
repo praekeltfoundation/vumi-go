@@ -426,6 +426,7 @@ PIPELINE_JS = {
             'js/src/campaign/dialogue/states/freetext.js',
             'js/src/campaign/dialogue/states/end.js',
             'js/src/campaign/dialogue/diagram.js',
+            'js/src/campaign/dialogue/actions.js',
             'js/src/campaign/dialogue/style.js',
 
             # TODO This is here so we can access the test model data. This

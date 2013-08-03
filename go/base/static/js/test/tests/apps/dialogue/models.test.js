@@ -1,4 +1,4 @@
-describe.only("go.apps.dialogue.models", function() {
+describe("go.apps.dialogue.models", function() {
   var dialogue = go.apps.dialogue,
       modelData = dialogue.testHelpers.modelData;
 
