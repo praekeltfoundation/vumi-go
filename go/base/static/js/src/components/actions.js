@@ -56,12 +56,7 @@
   var CallActionView = ActionView.extend({
     url: function() { return this.$el.attr('data-url'); },
 
-    data: function() {
-      return {
-        id:  this.$el.attr('data-id'),
-        action: this.$el.attr('data-action')
-      };
-    },
+    data: {},
 
     ajax: {},
 
@@ -79,9 +74,7 @@
 
       var ajax = _({
         type: 'post',
-        dataType: 'json',
-        contentType: 'application/json; charset=utf-8',
-        data: JSON.stringify(_(this).result('data'))
+        data: _(this).result('data')
       }).extend(
         url ? {url: url} : {},
         _(this).result('ajax'));

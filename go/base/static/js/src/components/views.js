@@ -82,8 +82,8 @@
       this.off('ok');
       this.off('cancel');
 
-      this.on('ok', this.resetActionHandlers, this);
-      this.on('cancel', this.resetActionHandlers, this);
+      this.on('ok', this.resetActionHandlers);
+      this.on('cancel', this.resetActionHandlers);
     },
 
     animate: function(animated) {
