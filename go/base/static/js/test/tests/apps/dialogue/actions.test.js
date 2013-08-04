@@ -64,7 +64,7 @@ describe("go.apps.dialogue.actions", function() {
             req,
             '/api/v1/go/api',
             'conversation.dialogue.save_poll',
-            ['campaign-1', 'conversation-1', diagram.model.toJSON()]);
+            ['campaign-1', 'conversation-1', {poll: diagram.model.toJSON()}]);
 
           done();
         });

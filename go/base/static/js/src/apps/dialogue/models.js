@@ -151,11 +151,15 @@
     methods: {
       read: {
         method: 'conversation.dialogue.get_poll',
-        params: ['campaign_id', 'conversation_key']
+        params: ['campaign_id', 'conversation_key'],
+        parse: function(resp) { return resp.poll; }
       },
       update: {
         method: 'conversation.dialogue.save_poll',
-        params: ['campaign_id', 'conversation_key', 'self']
+        params: [
+          'campaign_id',
+          'conversation_key',
+          function() { return {poll: this}; }]
       }
     },
 
