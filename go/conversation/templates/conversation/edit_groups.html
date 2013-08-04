@@ -12,7 +12,7 @@
 <div class="row-fluid">
     <div class="span12">
         <div class="indent">
-            <h3>Select contacts</h3>
+            <h3>Select contact groups</h3>
             <form id="form-conversation" method="post" action="">
                 {% csrf_token %}
                 {% include "contacts/group_list_table.html" %}
@@ -31,9 +31,6 @@
 
 {% block ondomready %}
     {{ block.super }}
-    // highlight the breadcrumbs.
-    $('.breadcrumbs a').eq(2).addClass('active');
-
     var tableFormView = new go.components.tables.TableFormView({
         el: '#form-conversation'
     });
