@@ -41,6 +41,24 @@ class ConversationTestCase(VumiGoDjangoTestCase):
         self.assertEqual(conv.name, 'new conv')
         self.assertEqual(conv.conversation_type, 'bulk_message')
 
+    def test_edit_conversation_details(self):
+        conv = self.create_conversation(conversation_type=u'bulk_message',
+                                        name=u'test', description=u'test')
+
+        response = self.client.post(
+            reverse('conversations:conversation', kwargs={
+                'conversation_key': conv.key, 'path_suffix': 'edit_detail/',
+            }), {
+                'name': 'foo',
+                'description': 'bar',
+            })
+        show_url = reverse('conversations:conversation', kwargs={
+            'conversation_key': conv.key, 'path_suffix': ''})
+        self.assertRedirects(response, show_url)
+        reloaded_conv = self.user_api.get_wrapped_conversation(conv.key)
+        self.assertEqual(reloaded_conv.name, 'foo')
+        self.assertEqual(reloaded_conv.description, 'bar')
+
     def test_post_new_conversation_extra_endpoints(self):
         self.add_app_permission(u'go.apps.wikipedia')
         conv_data = {

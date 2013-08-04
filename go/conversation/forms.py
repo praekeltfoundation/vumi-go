@@ -3,11 +3,13 @@ from django import forms
 from bootstrap.forms import BootstrapForm
 
 
-class NewConversationForm(forms.Form):
-
-    name = forms.CharField(label="Conversation name", max_length=100)
+class ConversationDetailForm(BootstrapForm):
+    name = forms.CharField(label='Conversation name', max_length=100)
     description = forms.CharField(
         label="Conversation description", required=False)
+
+
+class NewConversationForm(ConversationDetailForm):
 
     def __init__(self, user_api, *args, **kwargs):
         super(NewConversationForm, self).__init__(*args, **kwargs)
