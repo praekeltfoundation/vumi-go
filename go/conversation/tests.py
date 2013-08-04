@@ -59,7 +59,7 @@ class ConversationTestCase(VumiGoDjangoTestCase):
         self.assertEqual(reloaded_conv.name, 'foo')
         self.assertEqual(reloaded_conv.description, 'bar')
 
-    def test_conversation_contact_management(self):
+    def test_conversation_contact_group_listing(self):
         conv = self.create_conversation(conversation_type=u'bulk_message',
                                         name=u'test', description=u'test')
         group1 = self.user_api.contact_store.new_group(u'Contact Group 1')
@@ -70,22 +70,29 @@ class ConversationTestCase(VumiGoDjangoTestCase):
 
         show_url = reverse('conversations:conversation', kwargs={
             'conversation_key': conv.key, 'path_suffix': ''})
-        groups_url = reverse('conversations:conversation', kwargs={
-            'conversation_key': conv.key, 'path_suffix': 'edit_groups/'})
 
         resp = self.client.get(show_url)
         self.assertContains(resp, 'Contact Group 1')
         self.assertNotContains(resp, 'Contact Group 2')
 
+    def test_conversation_contact_group_assignment(self):
+        conv = self.create_conversation(conversation_type=u'bulk_message',
+                                        name=u'test', description=u'test')
+        group1 = self.user_api.contact_store.new_group(u'Contact Group 1')
+        group2 = self.user_api.contact_store.new_group(u'Contact Group 2')
+
+        groups_url = reverse('conversations:conversation', kwargs={
+            'conversation_key': conv.key, 'path_suffix': 'edit_groups/'})
+
         resp = self.client.post(groups_url, {
             'group': [group2.key]
         })
 
-        self.assertRedirects(resp, show_url)
+        self.assertEqual(resp.status_code, 302)
 
-        resp = self.client.get(show_url)
-        self.assertNotContains(resp, 'Contact Group 1')
-        self.assertContains(resp, 'Contact Group 2')
+        reloaded_conv = self.user_api.get_wrapped_conversation(conv.key)
+        self.assertFalse(group1.key in reloaded_conv.groups.keys())
+        self.assertTrue(group2.key in reloaded_conv.groups.keys())
 
     def test_post_new_conversation_extra_endpoints(self):
         self.add_app_permission(u'go.apps.wikipedia')
