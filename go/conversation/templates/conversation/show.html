@@ -60,7 +60,7 @@
         <div class="sub-contacts">
             <h4 class="control-label">
                 Contacts
-                <a href="{% url 'wizard:contacts' conversation.key %}" class="btn btn-primary btn-mini">Edit</a>
+                <a href="{% conversation_screen conversation 'edit_groups' %}" class="btn btn-primary btn-mini">Edit</a>
             </h4>
             <p class="contacts">
                 {# TODO: List of groups contacts #}

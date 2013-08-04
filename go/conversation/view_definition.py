@@ -393,6 +393,17 @@ class AggregatesConversationView(ConversationTemplateView):
             content_type='text/csv; charset=utf-8')
 
 
+class EditConversationGroupsView(ConversationTemplateView):
+    view_name = 'edit_groups'
+    path_suffix = 'edit_groups/'
+
+    def get(self, request, conversation):
+        pass
+
+    def post(self, request, conversation):
+        pass
+
+
 class ConversationViewDefinitionBase(object):
     """Definition of conversation UI.
 
@@ -410,6 +421,7 @@ class ConversationViewDefinitionBase(object):
     # This doesn't include ConversationActionView because that's special.
     DEFAULT_CONVERSATION_VIEWS = (
         ShowConversationView,
+        EditConversationGroupsView,
         StartConversationView,
         ConfirmConversationView,
         StopConversationView,
