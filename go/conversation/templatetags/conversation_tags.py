@@ -23,11 +23,14 @@ def conversation_screen(conv, view_name='show'):
     try:
         view_def = get_conversation_view_definition(
             conv.conversation_type, conv)
-        return view_def.get_view_url(view_name, conversation_key=conv.key)
-    except AttributeError:  # If there's not view definition
+    except AttributeError:  # If there's no view definition
         return '/conversations/%s/' % (conv.key,)
-    except KeyError:  # if the given view_name doesn't exist
+
+    # NOTE: In some cases (like Wikipedia) we don't have an edit view.
+    #       in those cases always return the default url.
+    if view_name == 'edit' and view_def.edit_view is None:
         return '/conversations/%s/' % (conv.key,)
+    return view_def.get_view_url(view_name, conversation_key=conv.key)
 
 
 @register.simple_tag
