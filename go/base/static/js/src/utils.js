@@ -93,6 +93,9 @@
     };
   })();
 
+  // For test stubbing purposes
+  var redirect = function(url) { window.location = url; };
+
   _.extend(exports, {
     merge: merge,
     functor: functor,
@@ -102,6 +105,7 @@
     idOfView: idOfView,
     slugify: slugify,
     unaccentify: unaccentify,
+    redirect: redirect,
     highlightActiveLinks: highlightActiveLinks
   });
 })(go.utils = {});

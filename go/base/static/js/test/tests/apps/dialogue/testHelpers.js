@@ -7,7 +7,8 @@
       DialogueDiagramView = dialogue.diagram.DialogueDiagramView;
 
   var modelData = {
-    conversation: 'conversation-key',
+    campaign_id: 'campaign-1',
+    conversation_key: 'conversation-1',
     start_state: {uuid: 'state1'},
     states: [{
       uuid: 'state1',
@@ -15,15 +16,27 @@
       type: 'choice',
       store_as: 'message-1',
       text: 'What is your favourite colour?',
+      user_defined_store_as: false,
+      store_on_contact: false,
       entry_endpoint: {uuid: 'endpoint0'},
-      choice_endpoints: [
-        {value: 'value1', label: 'Red', uuid: 'endpoint1'},
-        {value: 'value2', label: 'Blue', uuid: 'endpoint2'}]
+      choice_endpoints: [{
+        value: 'red',
+        label: 'Red',
+        uuid: 'endpoint1',
+        user_defined_value: false
+      }, {
+        value: 'blue',
+        label: 'Blue',
+        uuid: 'endpoint2',
+        user_defined_value : false
+      }],
     }, {
       uuid: 'state2',
       name: 'Message 2',
       type: 'freetext',
       store_as: 'message-2',
+      user_defined_store_as: false,
+      store_on_contact: false,
       entry_endpoint: {uuid: 'endpoint3'},
       exit_endpoint: {uuid: 'endpoint4'},
       text: 'What is your name?'
@@ -32,17 +45,22 @@
       name: 'Ending 1',
       type: 'end',
       store_as: 'ending-1',
+      user_defined_store_as: false,
+      store_on_contact: false,
       entry_endpoint: {uuid: 'endpoint5'},
       text: 'Thank you for taking our survey'
     }, {
       uuid: 'state4',
       name: 'Dummy Message 1',
       type: 'dummy',
+      user_defined_store_as: false,
+      store_on_contact: false,
       store_as: 'dummy-message-1',
       entry_endpoint: {uuid: 'endpoint6'},
       exit_endpoint: {uuid: 'endpoint7'}
     }],
     connections: [{
+     uuid: 'endpoint1-endpoint3',
      source: {uuid: 'endpoint1'},
      target: {uuid: 'endpoint3'}
     }]
