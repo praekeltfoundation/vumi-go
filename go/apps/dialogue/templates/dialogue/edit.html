@@ -35,28 +35,11 @@
     model: new dialogue.models.DialogueModel({{ model_data|safe }})
   });
 
-  $('.actions [data-action="new-state"]').click(function(e) {
-      e.preventDefault();
-      diagram.newState();
+  var actions = new dialogue.actions.DialogueActions({
+    el: '.actions',
+    diagram: diagram,
+    sessionId: "{{ session_id|safe }}"
   });
-
-  $('.actions button[data-action="save"]').click(function(e) {
-      e.preventDefault();
-
-      // TODO, we've got to inject the value of the multiple-survey
-      // button.
-
-      diagram.model.save({}, {
-        sessionId: "{{ session_id|safe }}",
-        error: function() {
-          bootbox.alert("Something bad happened, changes couldn't be saved.");
-        }
-      });
-
-      // send user to conversation show page
-      window.location.href = "/conversations/{{ conversation_key }}/";
-  });
-
 
   dialogue.style.initialize();
   diagram.render();

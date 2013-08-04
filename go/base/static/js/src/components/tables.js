@@ -91,6 +91,9 @@
         this.refreshButtons();
       },
 
+      // the `td` that houses the checkbox is clickable, this make the
+      // checkbox easier to click because it increases the target
+      // area.
       'click td:first-child': function(e) {
         $(e.target).find('input')
           .prop('checked', true)
