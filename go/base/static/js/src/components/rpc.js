@@ -19,7 +19,7 @@
         return _.isFunction(p)
           ? p.call(model)
           : underrides[p]
-          || model.get(p);
+         || model.get(p);
       });
     },
 
@@ -64,7 +64,7 @@
       } else {
         if (success) { success(rpcMethod.parse(resp.result), textStatus, jqXHR); }
       }
-    }.bind(this);
+    };
 
     return Backbone.sync(method, model, options);
   };

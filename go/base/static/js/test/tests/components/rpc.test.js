@@ -97,6 +97,34 @@ describe("go.components.rpc", function() {
       server.respond();
     });
 
+    it("should allow each rpc method to use its own parser",
+    function(done) {
+      server.respondWith(response({stuff: {foo: 'lerp', bar: 'larp'}}));
+
+      var Model = Backbone.Model.extend({
+        url: '/test',
+        methods: {
+          read: {
+            method: 'r',
+            params: ['foo', 'bar'],
+            parse: function(resp) { return resp.stuff; }
+          }
+        }
+      });
+
+      var success = function(resp) {
+        assert.deepEqual(resp, {foo: 'lerp', bar: 'larp'});
+        done();
+      };
+
+      rpc.sync(
+        'read',
+        new Model({foo: 'lerp', bar: 'larp'}),
+        {success: success});
+
+      server.respond();
+    });
+
     it("should pass the rpc response's result the success callback",
     function(done) {
       server.respondWith(response({foo: 'lerp', bar: 'larp'}));
