@@ -241,8 +241,10 @@ class EditConversationDetailView(ConversationTemplateView):
         if not form.is_valid():
             return self._render_forms(request, conversation, form)
 
-        conversation.name = form.cleaned_data['name']
-        conversation.description = form.cleaned_data['description']
+        # NOTE: we're dealing with a conversation wrapper here so set the
+        #       internal `c` object's attributes.
+        conversation.c.name = form.cleaned_data['name']
+        conversation.c.description = form.cleaned_data['description']
         conversation.save()
 
     def get(self, request, conversation):
