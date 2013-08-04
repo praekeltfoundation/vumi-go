@@ -156,10 +156,12 @@
       },
       update: {
         method: 'conversation.dialogue.save_poll',
-        params: [
-          'campaign_id',
-          'conversation_key',
-          function() { return {poll: this}; }]
+        params: function() {
+          return [
+            this.get('campaign_id'),
+            this.get('conversation_key'),
+            {poll: this}];
+        }
       }
     },
 

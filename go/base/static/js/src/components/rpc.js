@@ -13,14 +13,10 @@
 
     params: function() {
       var model = this.model,
-          underrides = {self: this.model};
+          params = this.spec.params;
 
-      return this.spec.params.map(function(p) {
-        return _.isFunction(p)
-          ? p.call(model)
-          : underrides[p]
-         || model.get(p);
-      });
+      if (_.isFunction(params)) { return params.call(model); }
+      return params.map(function(p) { return model.get(p); });
     },
 
     parse: function(resp) {

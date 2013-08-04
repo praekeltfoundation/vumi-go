@@ -60,30 +60,15 @@ describe("go.components.rpc", function() {
       server.respond();
     });
 
-    it("should allow the model instance to be used as a param", function(done) {
-      var Model = Backbone.Model.extend({
-        url: '/test',
-        methods: {
-          read: {method: 'r', params: ['self']}
-        }
-      });
-
-      server.respondWith(function(req) {
-        assertRequest(req, '/test', 'r', [{foo: 'lerp', bar: 'larp'}]);
-        done();
-      });
-
-      rpc.sync('read', new Model({foo: 'lerp', bar: 'larp'}));
-      server.respond();
-    });
-
-    it("should allow functions to be used as params", function(done) {
+    it("should allow params to be specified using a function", function(done) {
       var Model = Backbone.Model.extend({
         url: '/test',
         methods: {
           read: {
             method: 'r',
-            params: [function() { return {foo: this.get('foo')}; }]
+            params: function() {
+              return [{foo: this.get('foo')}];
+            }
           }
         }
       });
