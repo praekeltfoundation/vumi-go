@@ -3,31 +3,41 @@
 // Components for rpc-ifying Backbone.
 
 (function(exports) {
-  var rpcData = function(method, model) {
-    var spec = _(model).result('methods')[method],
-        underrides = {self: model};
+  var Extendable = go.components.structures.Extendable;
 
-    return JSON.stringify({
-      id: uuid.v4(),
-      jsonrpc: '2.0',
-      method: spec.method,
-      params: spec.params.map(function(p) {
+  var RpcMethod = Extendable.extend({
+    constructor: function(model, method) {
+      this.model = model;
+      this.spec = model.methods[method];
+    },
+
+    params: function() {
+      var model = this.model,
+          underrides = {self: this.model};
+
+      return this.spec.params.map(function(p) {
         return _.isFunction(p)
           ? p.call(model)
           : underrides[p]
           || model.get(p);
-      })
-    });
-  };
+      });
+    },
 
-  var ajaxOptions = function(method, model) {
-    return {
-      contentType: 'application/json; charset=utf-8',
-      type: 'POST',
-      dataType: 'json',
-      data: rpcData(method, model)
-    };
-  };
+    parse: function(resp) {
+      return this.spec.parse
+        ? this.spec.parse(resp)
+        : resp;
+    },
+
+    toJSON: function() {
+      return {
+        id: uuid.v4(),
+        jsonrpc: '2.0',
+        method: this.spec.method,
+        params: this.params()
+      };
+    }
+  });
 
   var isRpcError = function(resp) {
     // Accomodate both jsonrpc v1 and v2 responses
@@ -36,9 +46,14 @@
   };
 
   var sync = function(method, model, options) {
-    options = _({}).extend(
-      ajaxOptions(method, model, options),
-      options || {});
+    var rpcMethod = new RpcMethod(model, method);
+
+    options = _({
+      contentType: 'application/json; charset=utf-8',
+      type: 'POST',
+      dataType: 'json',
+      data: JSON.stringify(rpcMethod)
+    }).extend(options || {});
 
     var success = options.success,
         error = options.error;
@@ -47,15 +62,16 @@
       if (isRpcError(resp)) {
         if (error) { error(jqXHR, 'error', resp.error.message); }
       } else {
-        if (success) { success(resp.result, textStatus, jqXHR); }
+        if (success) { success(rpcMethod.parse(resp.result), textStatus, jqXHR); }
       }
-    };
+    }.bind(this);
 
     return Backbone.sync(method, model, options);
   };
 
   _.extend(exports, {
     sync: sync,
+    RpcMethod: RpcMethod,
     isRpcError: isRpcError
   });
 })(go.components.rpc = {});
