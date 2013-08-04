@@ -22,7 +22,7 @@ class DialogueEditView(ConversationTemplateView):
 
         if r.status_code != 200:
             raise GoApiError(
-                "Failed to load routing table from Go API:"
+                "Failed to load dialogue from Go API:"
                 " (%r) %r." % (r.status_code, r.text))
 
         model_data = {
