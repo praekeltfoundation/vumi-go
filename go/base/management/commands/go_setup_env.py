@@ -406,6 +406,10 @@ class Command(BaseCommand):
             fp.write(self.auto_gen_warning)
             cp = ConfigParser()
             cp.add_section(section)
+            cp.set(
+                section,
+                "environment",
+                "DJANGO_SETTINGS_MODULE=go.settings")
             cp.set(section, "command", " ".join([
                 "twistd -n --pidfile=./tmp/pids/%s.pid" % (program_name,),
                 "start_worker",
