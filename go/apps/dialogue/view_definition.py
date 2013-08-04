@@ -1,3 +1,5 @@
+import json
+
 from django.http import HttpResponse
 from bootstrap.forms import BootstrapForm
 
@@ -34,7 +36,7 @@ class DialogueEditView(ConversationTemplateView):
         return self.render_to_response({
             'conversation': conversation,
             'session_id': request.session.session_key,
-            'model_data': model_data,
+            'model_data': json.dumps(model_data),
         })
 
 

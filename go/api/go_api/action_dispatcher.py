@@ -51,7 +51,7 @@ class ActionDispatcherMetaClass(type):
 
         # we use compile and exec to get exactly the signature we need
         code = compile((
-            "def %s(self, campaign_key, %s_key, params):"
+            "def %s(self, campaign_key, %s_key, params={}):"
             "    return self.dispatch_action("
             "        handler, campaign_key, %s_key, params)"
             ) % (jsonrpc_name, type_name, type_name),
@@ -90,14 +90,14 @@ class ActionDispatcher(GoApiSubHandler):
 class ConversationActionDispatcher(ActionDispatcher):
     dispatcher_type_name = "conversation"
 
-    def get_object_by_key(user_api, conversation_key):
+    def get_object_by_key(self, user_api, conversation_key):
         return user_api.get_conversation(conversation_key)
 
 
 class RouterActionDispatcher(ActionDispatcher):
     dispatcher_type_name = "router"
 
-    def get_object_by_key(user_api, router_key):
+    def get_object_by_key(self, user_api, router_key):
         return user_api.get_router(router_key)
 
 
