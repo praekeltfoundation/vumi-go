@@ -21,8 +21,6 @@
       });
 
       this.listenTo(this.save, 'success', function() {
-        bootbox.alert("Something bad happened, changes couldn't be saved.");
-
         // send user to conversation show page
         go.utils.redirect('/conversations/'
           + this.model.get('conversation_key')
