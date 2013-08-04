@@ -87,7 +87,7 @@ class ConversationTestCase(VumiGoDjangoTestCase):
             return self.client.get(reverse('conversations:index'), {
                 'query': conv.name,
                 'conversation_type': conversation_type,
-                })
+            })
 
         self.assertContains(search('bulk_message'), conv.key)
         self.assertNotContains(search('survey'), conv.key)
@@ -99,7 +99,7 @@ class ConversationTestCase(VumiGoDjangoTestCase):
             return self.client.get(reverse('conversations:index'), {
                 'query': conv.name,
                 'conversation_status': conversation_status,
-                })
+            })
 
         # it should be draft
         self.assertContains(search('draft'), conv.key)
@@ -196,14 +196,14 @@ class ConversationTestCase(VumiGoDjangoTestCase):
             'p': 2,
             'conversation_type': 'bulk_message',
             'conversation_status': 'draft',
-            })
+        })
 
         self.assertNotContains(response, '?p=2')
 
     def test_scrub_tokens(self):
         content = 'Please visit http://example.com/t/6be226/ ' \
-                    'to start your conversation.'
+                  'to start your conversation.'
         expected = 'Please visit http://example.com/t/******/ ' \
-                    'to start your conversation.'
+                   'to start your conversation.'
         self.assertEqual(scrub_tokens(content), expected)
         self.assertEqual(scrub_tokens(content * 2), expected * 2)
