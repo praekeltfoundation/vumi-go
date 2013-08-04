@@ -51,7 +51,7 @@ class ActionDispatcherMetaClass(type):
 
         # we use compile and exec to get exactly the signature we need
         code = compile((
-            "def %s(self, campaign_key, %s_key, params={}):"
+            "def %s(self, campaign_key, %s_key, params=None):"
             "    return self.dispatch_action("
             "        handler, campaign_key, %s_key, params)"
             ) % (jsonrpc_name, type_name, type_name),
@@ -77,6 +77,9 @@ class ActionDispatcher(GoApiSubHandler):
         d = maybeDeferred(self.get_object_by_key, user_api, obj_key)
 
         def action(obj):
+            if params is None:
+                return handler(self, user_api, obj)
+
             return handler(self, user_api, obj, **params)
 
         d.addCallback(action)
