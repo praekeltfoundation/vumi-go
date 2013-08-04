@@ -13,7 +13,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 from go.vumitools.exceptions import ConversationSendError
 from go.token.django_token_manager import DjangoTokenManager
-from go.conversation.forms import ConfirmConversationForm, ReplyToMessageForm
+from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
+                                   ConversationDetailForm)
 from go.conversation.tasks import export_conversation_messages
 
 logger = logging.getLogger(__name__)
@@ -213,6 +214,50 @@ class ShowConversationView(ConversationTemplateView):
         return self.redirect_to('show', conversation_key=conversation.key)
 
 
+class EditConversationDetailView(ConversationTemplateView):
+    """view for editing conversation details such as name & description
+    """
+
+    view_name = 'edit_detail'
+    path_suffix = 'edit_detail/'
+    edit_form = ConversationDetailForm
+
+    def _render_form(self, request, conversation, form):
+        return self.render_to_response({
+            'conversation': conversation,
+            'edit_form_media': sum([form.media], forms.Media()),
+            'edit_form': form,
+        })
+
+    def make_form(self, edit_form, conversation):
+        return self.edit_form(initial={
+            'name': conversation.name,
+            'description': conversation.description,
+        })
+
+    def process_form(self, request, conversation):
+        form = self.edit_form(request.POST)
+        # Is this a good idea?
+        if not form.is_valid():
+            return self._render_forms(request, conversation, form)
+
+        conversation.name = form.cleaned_data['name']
+        conversation.description = form.cleaned_data['description']
+        conversation.save()
+
+    def get(self, request, conversation):
+        form = self.make_form(self.edit_form, conversation)
+        return self._render_form(request, conversation, form)
+
+    def post(self, request, conversation):
+        response = self.process_form(request, conversation)
+        if response is not None:
+            return response
+
+        return self.redirect_to(self.get_next_view(conversation),
+                                conversation_key=conversation.key)
+
+
 class EditConversationView(ConversationTemplateView):
     """View for editing conversation data.
 
@@ -410,6 +455,7 @@ class ConversationViewDefinitionBase(object):
     # This doesn't include ConversationActionView because that's special.
     DEFAULT_CONVERSATION_VIEWS = (
         ShowConversationView,
+        EditConversationDetailView,
         StartConversationView,
         ConfirmConversationView,
         StopConversationView,
