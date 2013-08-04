@@ -59,14 +59,13 @@
 
         <div class="sub-contacts">
             <h4 class="control-label">
-                Contacts
-                <a href="{% url 'wizard:contacts' conversation.key %}" class="btn btn-primary btn-mini">Edit</a>
+                Contact Groups
+                <a href="{% conversation_screen conversation 'edit_groups' %}" class="btn btn-primary btn-mini">Edit</a>
             </h4>
             <p class="contacts">
-                {# TODO: List of groups contacts #}
                 <ol>
-                {% for group, member_count in groups.items %}
-                    <li>{{group}} ({{member_count}} member{{member_count|pluralize}})</li>
+                {% for group in conversation.get_groups %}
+                    <li><a href="{% url 'contacts:group' group_key=group.key %}">{{group.name}}</a></li>
                 {% empty %}
                     <li>You have not specified any contacts.</li>
                 {% endfor %}
