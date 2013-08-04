@@ -4,15 +4,12 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.dispatchers.tests.test_base import DispatcherTestCase
-from vumi.dispatchers.base import BaseDispatchWorker
-from vumi.middleware.tagger import TaggingMiddleware
 from vumi.tests.utils import LogCatcher
 
 from go.vumitools.api_worker import EventDispatcher, CommandDispatcher
-from go.vumitools.api import VumiApi, VumiApiCommand, VumiApiEvent
+from go.vumitools.api import VumiApiCommand, VumiApiEvent
 from go.vumitools.handler import EventHandler, SendMessageCommandHandler
-from go.vumitools.tests.utils import AppWorkerTestCase, GoPersistenceMixin
+from go.vumitools.tests.utils import AppWorkerTestCase
 
 
 class CommandDispatcherTestCase(AppWorkerTestCase):
@@ -171,7 +168,7 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
             conversation_type=u'bulk_message', description=u'message',
             config={}, delivery_tag_pool=u'pool', delivery_class=u'sms')
 
-        yield conversation.start()
+        yield conversation.old_start()
 
         user_account.event_handler_config = [
             [[conversation.key, 'my_event'], [('handler1', {
@@ -187,11 +184,12 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
                 conv_key=conversation.key)
         yield self.publish_event(event)
 
-        [start_command, api_command] = self._amqp.get_messages('vumi',
-                                                               'vumi.api')
-        self.assertEqual(start_command['command'], 'start')
-        self.assertEqual(api_command['worker_name'], 'other_worker')
-        self.assertEqual(api_command['kwargs']['command_data'], {
+        [start_cmd, hack_cmd, api_cmd] = self._amqp.get_messages('vumi',
+                                                                 'vumi.api')
+        self.assertEqual(start_cmd['command'], 'start')
+        self.assertEqual(hack_cmd['command'], 'initial_action_hack')
+        self.assertEqual(api_cmd['worker_name'], 'other_worker')
+        self.assertEqual(api_cmd['kwargs']['command_data'], {
                 'content': 'hello',
                 'batch_id': conversation.batches.keys()[0],
                 'to_addr': '12345',
@@ -204,167 +202,3 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
                     'transport_type': 'other',
                     'from_addr': 'tag1',
                     }})
-
-
-class GoApplicationRouterTestCase(GoPersistenceMixin, DispatcherTestCase):
-    use_riak = True
-    dispatcher_class = BaseDispatchWorker
-    transport_name = 'test_transport'
-
-    @inlineCallbacks
-    def setUp(self):
-        yield super(GoApplicationRouterTestCase, self).setUp()
-        self.dispatcher = yield self.get_dispatcher(self.mk_config({
-            'router_class': 'go.vumitools.api_worker.GoApplicationRouter',
-            'transport_names': [
-                self.transport_name,
-            ],
-            'exposed_names': [
-                'app_1',
-                'app_2',
-                'optout_app',
-            ],
-            'upstream_transport': self.transport_name,
-            'optout_transport': 'optout_app',
-            'conversation_mappings': {
-                'bulk_message': 'app_1',
-                'survey': 'app_2',
-            },
-            }))
-
-        # get the router to test
-        self.vumi_api = yield VumiApi.from_config_async(self._persist_config)
-        self._persist_riak_managers.append(self.vumi_api.manager)
-        self._persist_redis_managers.append(self.vumi_api.redis)
-
-        self.account = yield self.mk_user(self.vumi_api, u'user')
-        self.user_api = self.vumi_api.get_user_api(self.account.key)
-        self.conversation = (
-            yield self.user_api.conversation_store.new_conversation(
-                u'bulk_message', u'name', u'desc', {}))
-
-    @inlineCallbacks
-    def test_tag_retrieval_and_message_dispatching(self):
-        msg = self.mkmsg_in(transport_type='xmpp',
-                                transport_name=self.transport_name)
-
-        tag = (u'xmpp', u'test1@xmpp.org')
-        batch_id = yield self.vumi_api.mdb.batch_start([tag],
-            user_account=unicode(self.account.key))
-        self.conversation.batches.add_key(batch_id)
-        yield self.conversation.save()
-
-        TaggingMiddleware.add_tag_to_msg(msg, tag)
-        with LogCatcher() as log:
-            yield self.dispatch(msg, self.transport_name)
-            self.assertEqual(log.errors, [])
-        [dispatched] = self.get_dispatched_messages('app_1',
-                                                    direction='inbound')
-        go_metadata = dispatched['helper_metadata']['go']
-        self.assertEqual(go_metadata['conversation_type'],
-                         self.conversation.conversation_type)
-        self.assertEqual(go_metadata['conversation_key'],
-                         self.conversation.key)
-
-    @inlineCallbacks
-    def test_batch_id_retrieval_and_event_dispatching(self):
-        # first create an outbound message and then publish an inbound
-        # event for it.
-        msg = self.mkmsg_out(transport_type='xmpp',
-                                transport_name=self.transport_name)
-
-        # Make sure stuff is tagged properly so it can be routed.
-        tag = (u'xmpp', u'test1@xmpp.org')
-        batch_id = yield self.vumi_api.mdb.batch_start([tag],
-            user_account=unicode(self.account.key))
-        self.conversation.batches.add_key(batch_id)
-        yield self.conversation.save()
-        TaggingMiddleware.add_tag_to_msg(msg, tag)
-
-        # Fake that it has been sent by storing it as a sent message
-        yield self.vumi_api.mdb.add_outbound_message(msg, tag=tag,
-            batch_id=batch_id)
-
-        ack = self.mkmsg_ack(
-            user_message_id=msg['message_id'],
-            transport_name=self.transport_name)
-
-        yield self.dispatch(ack, self.transport_name, 'event')
-
-        [event] = self.get_dispatched_messages('app_1', direction='event')
-        self.assertEqual(event['user_message_id'], msg['message_id'])
-
-    @inlineCallbacks
-    def test_batch_id_retrieval_and_event_dispatching_after_conv_close(self):
-        # first create an outbound message and then publish an inbound
-        # event for it.
-        msg = self.mkmsg_out(transport_type='xmpp',
-                                transport_name=self.transport_name)
-
-        # Make sure stuff is tagged properly so it can be routed.
-        tag = (u'xmpp', u'test1@xmpp.org')
-        batch_id = yield self.vumi_api.mdb.batch_start([tag],
-            user_account=unicode(self.account.key))
-        self.conversation.batches.add_key(batch_id)
-        yield self.conversation.save()
-        TaggingMiddleware.add_tag_to_msg(msg, tag)
-
-        # Fake that it has been sent by storing it as a sent message
-        yield self.vumi_api.mdb.add_outbound_message(msg, tag=tag,
-            batch_id=batch_id)
-        # mark the batch as done which is what happens when a conversation
-        # is closed
-        yield self.vumi_api.mdb.batch_done(batch_id)
-
-        ack = self.mkmsg_ack(
-            user_message_id=msg['message_id'],
-            transport_name=self.transport_name)
-
-        yield self.dispatch(ack, self.transport_name, 'event')
-
-        [event] = self.get_dispatched_messages('app_1', direction='event')
-        self.assertEqual(event['user_message_id'], msg['message_id'])
-
-    @inlineCallbacks
-    def test_no_tag(self):
-        msg = self.mkmsg_in(transport_type='xmpp',
-                                transport_name='xmpp_transport')
-        with LogCatcher() as log:
-            yield self.dispatch(msg, self.transport_name)
-            [warning] = log.messages()
-            self.assertTrue('No application setup' in warning)
-
-    @inlineCallbacks
-    def test_unknown_tag(self):
-        msg = self.mkmsg_in(transport_type='xmpp',
-                                transport_name='xmpp_transport')
-        TaggingMiddleware.add_tag_to_msg(msg, ('this', 'does not exist'))
-        with LogCatcher(message=r'No application setup') as log:
-            yield self.dispatch(msg, self.transport_name)
-            self.assertEqual(len(log.messages()), 1)
-
-    @inlineCallbacks
-    def test_optout_message(self):
-        msg = self.mkmsg_in(transport_type='xmpp',
-                            transport_name='xmpp_transport')
-        msg['content'] = 'stop'
-        tag = (u'xmpp', u'test1@xmpp.org')
-        batch_id = yield self.vumi_api.mdb.batch_start([tag],
-            user_account=unicode(self.account.key))
-        self.conversation.batches.add_key(batch_id)
-        self.conversation.save()
-
-        TaggingMiddleware.add_tag_to_msg(msg, tag)
-        # Fake the opt-out middleware processing.
-        msg['helper_metadata']['optout'] = {
-            'optout': True, 'optout_keyword': 'stop'}
-        yield self.dispatch(msg, self.transport_name)
-
-        [dispatched] = self.get_dispatched_messages('optout_app',
-                                                direction='inbound')
-        helper_metadata = dispatched.get('helper_metadata', {})
-        optout_metadata = helper_metadata.get('optout')
-        self.assertEqual(optout_metadata, {
-            'optout': True,
-            'optout_keyword': 'stop',
-        })

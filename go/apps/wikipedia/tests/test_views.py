@@ -1,42 +1,36 @@
-from django.test.client import Client
-from django.core.urlresolvers import reverse
-
 from go.apps.tests.base import DjangoGoApplicationTestCase
 
 
 class WikipediaTestCase(DjangoGoApplicationTestCase):
-
-    def setUp(self):
-        super(WikipediaTestCase, self).setUp()
-        self.setup_riak_fixtures()
-        self.client = Client()
-        self.client.login(username='username', password='password')
+    TEST_CONVERSATION_TYPE = u'wikipedia'
 
     def test_new_conversation(self):
-        # render the form
+        self.add_app_permission(u'go.apps.wikipedia')
+        self.assertEqual(len(self.conv_store.list_conversations()), 0)
+        response = self.post_new_conversation()
         self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        response = self.client.get(reverse('wikipedia_ussd:new'))
-        self.assertEqual(response.status_code, 200)
-        # post the form
-        response = self.client.post(reverse('wikipedia_ussd:new'), {
-            'subject': 'the subject',
-            'message': 'the message',
-            'delivery_class': 'sms',
-            'delivery_tag_pool': 'longcode',
-            'send_from_tagpool': 'devnull',
-            'send_from_tag': '10017@devnull',
-        })
-        self.assertEqual(len(self.conv_store.list_conversations()), 2)
         conversation = self.get_latest_conversation()
-        self.assertEqual(conversation.name, 'the subject')
-        self.assertEqual(conversation.description, 'the message')
-        self.assertEqual(conversation.delivery_class, 'sms')
-        self.assertEqual(conversation.delivery_tag_pool, 'longcode')
-        self.assertEqual(conversation.delivery_tag, None)
-        self.assertEqual(conversation.config, {
-            'send_from_tagpool': 'devnull',
-            'send_from_tag': '10017@devnull',
-            })
-        self.assertRedirects(response, reverse('wikipedia_ussd:start', kwargs={
-            'conversation_key': conversation.key,
-        }))
+        self.assertEqual(conversation.name, 'conversation name')
+        self.assertEqual(conversation.description, '')
+        self.assertEqual(conversation.config, {})
+        self.assertEqual(list(conversation.extra_endpoints), [u'sms_content'])
+        self.assertRedirects(
+            response, self.get_view_url('show', conversation.key))
+
+    def test_show_stopped(self):
+        """
+        Test showing the conversation
+        """
+        self.setup_conversation()
+        response = self.client.get(self.get_view_url('show'))
+        conversation = response.context[0].get('conversation')
+        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
+
+    def test_show_running(self):
+        """
+        Test showing the conversation
+        """
+        self.setup_conversation(started=True)
+        response = self.client.get(self.get_view_url('show'))
+        conversation = response.context[0].get('conversation')
+        self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)

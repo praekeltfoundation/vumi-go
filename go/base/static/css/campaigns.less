@@ -1,0 +1,183 @@
+@import "lesshat.less";
+
+.campaigns.dashboard {
+  .status {
+    text-transform:capitalize;
+  }
+  .sidebar p .btn {
+    margin-left:-4px;
+  }
+}
+
+.campaigns.details {
+
+  ul, li {
+    list-style-type:none;
+    padding:0 0 0 5px;
+    margin:0 0 10px 0;
+    width:auto;
+
+    label {
+      font-weight:normal;
+      display:inline;
+    }
+  }
+
+  .configuration {
+
+    margin:18px 0 0 0;
+    display:none;
+
+    ul, li { 
+      padding:0;
+      margin:0;
+      list-style-type:none; 
+    }
+  }
+}
+
+.campaigns.summary {
+
+  .sub-details, .sub-messages, .sub-contacts {
+    border-bottom: 1px #c9c9c9 solid;
+    margin:0 18px;
+    padding:18px 0;
+  }
+
+  h6 {
+    font-weight:bold;
+    color:#878b8e;
+  }
+
+  h4 {
+    font-size:20px;
+    margin:0 0 18px 0;
+  }
+
+  ol, ul, li {
+    list-style-type:none;
+    padding:0;
+    margin:0;
+    width:auto;
+  }
+
+  .sub-actions {
+    background:#d9d8d3;
+    margin-top:-5px;
+    padding:18px;
+  }
+
+
+
+}
+
+.campaigns {
+
+  // these are the breadcrumb links at the top.
+  .header a {
+    color:#878b8e;
+    font-weight:bold;
+    font-size:16px;
+    margin-right:10px;
+  }
+  .header a.active {
+    color:#000;
+  }
+
+  .actions .right {
+    text-align:right; // cancel, save draft, next step
+
+    // offsets the cancel button a bit.
+    a:first-child {
+      margin-right:20px;
+    }
+  }
+
+  label {
+      color:#000;
+      font-weight:bold;
+
+      a:link, a:visited {
+        color:#000;
+      }
+      a:hover {
+        text-decoration:none;
+      }
+  }
+
+
+  form {
+    .boxes {
+      text-align:center;
+    }
+
+    .title {
+      text-transform:uppercase;
+
+      .tooltip {
+        text-transform:none;
+      }
+    }
+  }
+
+  #routing-diagram {
+    .column-container {
+      text-align:center;
+
+      .title {
+        font-size:22px;
+        margin:10px 0;
+        font-family:inherit;
+        font-weight:bold;
+        display:block;
+        color:inherit;
+        text-rendering:optimizelegibility;
+      }
+
+      .new {
+        font-size:35px;
+        line-height:50px;
+        width:130px;
+        height:50px;
+      }
+
+      .column {
+        margin-top:15px;
+        display:inline-block;
+      }
+
+      .state {
+        background:#d2d0c7;
+        color:#333;
+        font-size:16px;
+        text-align:center;
+        .border-radius(5px);
+
+        width:150px;
+        min-height:100px;
+
+        margin:15px auto;
+        padding-top:10px;
+
+        z-index:0;
+        -webkit-user-select:none;
+
+        .name {
+          margin:10px;
+        }
+      }
+
+      .state:hover {
+        cursor:move;
+      }
+
+      .endpoint:hover {
+        cursor:pointer;
+      }
+    }
+
+    ._jsPlumb_endpoint, ._jsPlumb_connector {
+      z-index:200;
+    }
+  }
+}

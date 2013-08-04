@@ -4,19 +4,31 @@
 {% block navigation %}
 <nav class="main-nav navbar clearfix">
     <div class="pull-left">
-        <a class="brand" href="/">
-            <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi" class="logo">
-        </a>
-        
         <ul class="nav">
-          <li><a href="{% url 'conversations:index' %}">Dashboard</a></li>
-          <li><a href="{% url 'contacts:people' %}">Contacts</a></li>
-          <li><a href="#">Help</a></li>
+            <li class="brand">
+                <a href="/">
+                    <img src="{{ STATIC_URL }}img/logo-lrg.png" alt="Vumi Go" class="logo" width="63">
+                </a>
+            </li>
+            <li><a href="{% url 'conversations:index' %}">Dashboard</a></li>
+            <li><a href="{% url 'contacts:people' %}">Contacts</a></li>
+            {# TODO <li><a href="#">Help</a></li> #}
         </ul>
     </div>
 
     <ul class="nav pull-right">
-        <li><a href="">Balance</a></li>
+        {% comment %} 
+        TODO
+        <li class="dropdown">
+            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                Balance
+                <b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu" role="menu">
+                <li><a href="{% url 'wizard:pricing' %}">Pricing</a></li>
+            </ul>
+        </li>
+        {% endcomment %}
         
         <li class="dropdown">
             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
@@ -24,8 +36,9 @@
                 <b class="caret"></b>
             </a>
             <ul class="dropdown-menu" role="menu">
-                <li><a href="#">Switch account</a></li>
-                <li><a href="#">Logout</a></li>    
+                <li><a href="{% url 'account:details' %}">Details</a></li>
+                {# TODO <li><a href="#">Switch account</a></li> #}
+                <li><a href="{% url 'auth_logout' %}">Logout</a></li>    
             </ul>
         </li>
     </ul>
@@ -52,14 +65,19 @@
         <div class="span3 left">
             <div class="sidebar">{% block content_actions_left %}{% endblock %}</div>
         </div>
-        <div class="span9 right">
+        <div class="right">
             {% block content_actions_right %}
             {% endblock %}
         </div>
     </div>
 
+    {% block content_main_header %}
+    {% endblock %}
 
     {% block content_main %}
+    {% endblock %}
+
+    {% block content_main_footer %}
     {% endblock %}
 </div>
 {% endblock %}

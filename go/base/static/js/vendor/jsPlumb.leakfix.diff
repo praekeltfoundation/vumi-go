@@ -1,0 +1,19 @@
+2699c2699
+< 			_doOne = function(_el) {
+---
+> 			var _doOne = function(_el) {
+2705,2708c2705,2708
+< 				_targetEndpointsUnique[elid] = p.uniqueEndpoint,
+< 				_targetMaxConnections[elid] = maxConnections,
+< 				_targetsEnabled[elid] = true,
+< 				proxyComponent = new jsPlumbUIComponent(p);								
+---
+> 				_targetEndpointsUnique[elid] = p.uniqueEndpoint;
+> 				_targetMaxConnections[elid] = maxConnections;
+> 				_targetsEnabled[elid] = true;
+> 				var proxyComponent = new jsPlumbUIComponent(p);								
+9643c9643
+< f=f/2*Math.cos(d);return[{x:b.point.x+f,y:b.point.y+a},{x:b.point.x-f,y:b.point.y-a}]},locationAlongCurveFrom:function(a,b,f){return t(a,b,f).location},getLength:function(a){if(A(a))return 0;for(var b=s(a,0),f=0,d=0,g=null;1>d;)d+=0.005,g=s(a,d),f+=z(g,b),b=g;return f}}})();
+\ No newline at end of file
+---
+> f=f/2*Math.cos(d);return[{x:b.point.x+f,y:b.point.y+a},{x:b.point.x-f,y:b.point.y-a}]},locationAlongCurveFrom:function(a,b,f){return t(a,b,f).location},getLength:function(a){if(A(a))return 0;for(var b=s(a,0),f=0,d=0,g=null;1>d;)d+=0.005,g=s(a,d),f+=z(g,b),b=g;return f}}})();

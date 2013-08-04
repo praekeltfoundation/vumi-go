@@ -4,33 +4,143 @@
     <title>Mocha</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <link rel="stylesheet" href="vendor/mocha.css" />
+    <link rel="stylesheet" href="../../bootstrap/css/bootstrap.css"/>
+    <link rel="stylesheet" href="../../css/vumigo.css"/>
   </head>
   <body>
     <div id="mocha"></div>
-    <script src="vendor/mocha.js"></script>
-    <script src="vendor/chai.js"></script>
-    <script>
-      mocha.ui('bdd'); 
-      mocha.reporter('html');
-      window.assert = chai.assert;
-    </script>
-
+    <script src="../vendor/base64-2.12.js"></script>
+    <script src="../vendor/uuid-1.4.0.js"></script>
     <script src="../vendor/jquery-1.9.1.js"></script>
     <script src="../vendor/jquery.ui-1.10.3.js"></script>
-    <script src="../vendor/jquery.jsPlumb-1.4.1.js"></script>
+    <script src="../vendor/jquery.jsPlumb-1.4.1.leakfix.js"></script>
     <script src="../vendor/lodash.underscore-1.2.1.js"></script>
     <script src="../vendor/backbone-1.0.0.js"></script>
+    <script src="../vendor/backbone-relational-0.8.5.js"></script>
+    <script src="../../bootstrap/js/bootstrap.js"></script>
+    <script src="../vendor/bootbox.js"></script>
+
+    <script src="vendor/mocha.js"></script>
+    <script src="vendor/chai.js"></script>
+    <script src="vendor/sinon.js"></script>
+    <script src="vendor/jquery.simulate.js"></script>
+
+    <script src="helpers.js"></script>
+
+    <script>
+      window.assert = chai.assert;
+      window.globals = {};
+      window.JST = {};
+
+      mocha
+        .ui('bdd')
+        .reporter('html');
+
+      window.templates = [
+        'components/confirm.jst',
+        'apps/dialogue/states/modes/preview.jst',
+        'apps/dialogue/states/modes/edit.jst',
+        'apps/dialogue/states/choice/edit.jst',
+        'apps/dialogue/states/choice/preview.jst',
+        'apps/dialogue/states/choice/choice/edit.jst',
+        'apps/dialogue/states/choice/choice/extras.jst',
+        'apps/dialogue/states/freetext/edit.jst',
+        'apps/dialogue/states/freetext/preview.jst',
+        'apps/dialogue/states/end/edit.jst',
+        'apps/dialogue/states/end/preview.jst',
+        'apps/dialogue/states/components/nameExtras.jst'
+      ];
+
+      window.templates.forEach(helpers.loadTemplate);
+    </script>
 
     <script src="../src/go.js"></script>
     <script src="../src/errors.js"></script>
     <script src="../src/utils.js"></script>
+
+    <script src="../src/components/components.js"></script>
+    <script src="../src/components/rpc.js"></script>
+    <script src="../src/components/models.js"></script>
+    <script src="../src/components/structures.js"></script>
+    <script src="../src/components/views.js"></script>
+    <script src="../src/components/actions.js"></script>
+    <script src="../src/components/grid.js"></script>
+    <script src="../src/components/stateMachine.js"></script>
+    <script src="../src/components/plumbing/plumbing.js"></script>
+    <script src="../src/components/plumbing/endpoints.js"></script>
+    <script src="../src/components/plumbing/states.js"></script>
+    <script src="../src/components/plumbing/connections.js"></script>
+    <script src="../src/components/plumbing/diagrams.js"></script>
+    <script src="../src/components/tables.js"></script>
+
     <script src="../src/campaign/campaign.js"></script>
     <script src="../src/campaign/interactive.js"></script>
-    <script src="../src/campaign/bulkMessage.js"></script>
+    <script src="../src/campaign/routing/routing.js"></script>
+    <script src="../src/campaign/routing/models.js"></script>
+    <script src="../src/campaign/routing/views.js"></script>
+    <script src="../src/campaign/dialogue/dialogue.js"></script>
+    <script src="../src/campaign/dialogue/models.js"></script>
+    <script src="../src/campaign/dialogue/connections.js"></script>
+    <script src="../src/campaign/dialogue/states/states.js"></script>
+    <script src="../src/campaign/dialogue/states/partials.js"></script>
+    <script src="../src/campaign/dialogue/states/dummy.js"></script>
+    <script src="../src/campaign/dialogue/states/choice.js"></script>
+    <script src="../src/campaign/dialogue/states/freetext.js"></script>
+    <script src="../src/campaign/dialogue/states/end.js"></script>
+    <script src="../src/campaign/dialogue/diagram.js"></script>
+    <script src="../src/apps/apps.js"></script>
+    <script src="../src/apps/interactive.js"></script>
+    <script src="../src/routing/routing.js"></script>
+    <script src="../src/routing/models.js"></script>
+    <script src="../src/routing/views.js"></script>
+    <script src="../src/apps/dialogue/dialogue.js"></script>
+    <script src="../src/apps/dialogue/models.js"></script>
+    <script src="../src/apps/dialogue/connections.js"></script>
+    <script src="../src/apps/dialogue/states/states.js"></script>
+    <script src="../src/apps/dialogue/states/partials.js"></script>
+    <script src="../src/apps/dialogue/states/dummy.js"></script>
+    <script src="../src/apps/dialogue/states/choice.js"></script>
+    <script src="../src/apps/dialogue/states/freetext.js"></script>
+    <script src="../src/apps/dialogue/states/end.js"></script>
+    <script src="../src/apps/dialogue/diagram.js"></script>
+    <script src="../src/conversation/conversation.js"></script>
+    <script src="../src/conversation/views.js"></script>
+    <script src="../src/conversation/dashboard.js"></script>
+    <script src="../src/conversation/show.js"></script>
 
+    <script src="tests/testHelpers/testHelpers.js"></script>
+    <script src="tests/testHelpers/testHelpers.test.js"></script>
+    <script src="tests/testHelpers/rpc.js"></script>
     <script src="tests/errors.test.js"></script>
     <script src="tests/utils.test.js"></script>
-    <script src="tests/campaign/bulkMessage.test.js"></script>
+    <script src="tests/components/rpc.test.js"></script>
+    <script src="tests/components/models.test.js"></script>
+    <script src="tests/components/structures.test.js"></script>
+    <script src="tests/components/views.test.js"></script>
+    <script src="tests/components/actions.test.js"></script>
+    <script src="tests/components/grid.test.js"></script>
+    <script src="tests/components/stateMachine.test.js"></script>
+    <script src="tests/components/plumbing/testHelpers.js"></script>
+    <script src="tests/components/plumbing/endpoints.test.js"></script>
+    <script src="tests/components/plumbing/states.test.js"></script>
+    <script src="tests/components/plumbing/connections.test.js"></script>
+    <script src="tests/components/plumbing/diagrams.test.js"></script>
+    <script src="tests/components/tables.test.js"></script>
+    <script src="tests/routing/testHelpers.js"></script>
+    <script src="tests/routing/models.test.js"></script>
+    <script src="tests/routing/views.test.js"></script>
+    <script src="tests/apps/dialogue/testHelpers.js"></script>
+    <script src="tests/apps/dialogue/models.test.js"></script>
+    <script src="tests/apps/dialogue/diagram.test.js"></script>
+    <script src="tests/apps/dialogue/connections.test.js"></script>
+    <script src="tests/apps/dialogue/states/states.test.js"></script>
+    <script src="tests/apps/dialogue/states/partials.test.js"></script>
+    <script src="tests/apps/dialogue/states/choice.test.js"></script>
+    <script src="tests/apps/dialogue/states/freetext.test.js"></script>
+    <script src="tests/apps/dialogue/states/end.test.js"></script>
+    <script src="tests/conversation/views.test.js"></script>
+    <script src="tests/conversation/dashboard.test.js"></script>
+    <script src="tests/conversation/show.test.js"></script>
     <script>
       if (window.mochaPhantomJS) { mochaPhantomJS.run(); }
       else { mocha.run(); }

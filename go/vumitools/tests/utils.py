@@ -2,22 +2,20 @@
 
 """Utilities for go.vumitools tests."""
 
-import os
 import uuid
-from contextlib import contextmanager
 
-from twisted.python.monkey import MonkeyPatcher
 from twisted.internet.defer import inlineCallbacks, returnValue
-from celery.app import app_or_default
 
-from vumi.persist.fields import ForeignKeyProxy, ManyToManyProxy, DynamicProxy
+from vumi.persist.fields import (
+    ForeignKeyProxy, ManyToManyProxy, DynamicProxy, ListProxy)
 from vumi.message import TransportEvent
 from vumi.application.tests.test_base import ApplicationTestCase
-from vumi.tests.utils import PersistenceMixin
+from vumi.tests.utils import VumiWorkerTestCase, PersistenceMixin
 
 from go.vumitools.api import VumiApiCommand
-from go.vumitools.account import UserAccount
+from go.vumitools.account import UserAccount, RoutingTableHelper
 from go.vumitools.contact import Contact, ContactGroup
+from go.vumitools.utils import MessageMetadataHelper
 
 
 def field_eq(f1, f2):
@@ -29,6 +27,8 @@ def field_eq(f1, f2):
         return f1.key == f2.key
     if isinstance(f1, DynamicProxy) and isinstance(f2, DynamicProxy):
         return f1.items() == f2.items()
+    if isinstance(f1, ListProxy) and isinstance(f2, ListProxy):
+        return list(f1) == list(f2)
     return False
 
 
@@ -44,117 +44,29 @@ def model_eq(m1, m2):
     return True
 
 
-class RabbitConsumerFactory(object):
-    def teardown(self):
-        pass
+class FakeAmqpConnection(object):
+    def __init__(self, amqp_client):
+        self._amqp = amqp_client
+        self._connected = False
+        self.commands = []
 
-    def get_consumer(self, app, **options):
-        connection = app.broker_connection()
-        consumer = app.amqp.TaskConsumer(connection=connection,
-                                         **options)
-        # clear out old messages
-        while True:
-            msg = consumer.fetch()
-            if msg is None:
-                break
-        return consumer
+    def is_connected(self):
+        return self._connected
 
+    def connect(self, dsn=None):
+        self._connected = True
 
-class DummyConsumerFactory(object):
+    def publish_command_message(self, command):
+        # This both sends messages via self._amqp and appends them to
+        # self.commands to support to different use cases -- namely,
+        # testing that messages are succesfully routed and testing that
+        # the correct commands are queue for sending.
+        self.commands.append(command)
+        return self._amqp.publish_raw('vumi', 'vumi.api', command.to_json())
 
-    class DummyConsumer(object):
-        def __init__(self, factory):
-            self.factory = factory
-
-        def fetch(self):
-            return self.factory.fetch()
-
-    class DummyPublisher(object):
-        def __init__(self, factory):
-            self.factory = factory
-
-        def publish(self, payload):
-            self.factory.publish(payload)
-
-    class DummyMessage(object):
-        def __init__(self, payload):
-            self.payload = payload
-
-    def __init__(self):
-        import go.vumitools.api_celery
-        self.queue = []
-        self.monkey = MonkeyPatcher((go.vumitools.api_celery, "get_publisher",
-                                     self.get_publisher))
-        self.monkey.patch()
-
-    def teardown(self):
-        self.monkey.restore()
-
-    def publish(self, payload):
-        self.queue.append(self.DummyMessage(payload))
-
-    def fetch(self):
-        if not self.queue:
-            return None
-        return self.queue.pop(0)
-
-    def get_consumer(self, app, **options):
-        return self.DummyConsumer(self)
-
-    @contextmanager
-    def get_publisher(self, app, **options):
-        yield self.DummyPublisher(self)
-
-
-class CeleryTestMixIn(object):
-
-    # set this to RabbitConsumerFactory to send Vumi API
-    # commands over real RabbitMQ
-    VUMI_COMMANDS_CONSUMER = DummyConsumerFactory
-
-    def setup_celery_for_tests(self):
-        """Setup celery for tests."""
-        celery_config = os.environ.get("CELERY_CONFIG_MODULE")
-        os.environ["CELERY_CONFIG_MODULE"] = "celery.tests.config"
-        self._app = app_or_default()
-        always_eager = self._app.conf.CELERY_ALWAYS_EAGER
-        self._app.conf.CELERY_ALWAYS_EAGER = True
-        self._old_celery = celery_config, always_eager
-        self._consumer_factory = self.VUMI_COMMANDS_CONSUMER()
-
-    def restore_celery(self):
-        self._consumer_factory.teardown()
-        celery_config, always_eager = self._old_celery
-        if celery_config is None:
-            del os.environ["CELERY_CONFIG_MODULE"]
-        else:
-            os.environ["CELERY_CONFIG_MODULE"] = celery_config
-        self._app.conf.CELERY_ALWAYS_EAGER = always_eager
-
-    def get_consumer(self, **options):
-        """Create a command message consumer.
-
-        Call this *before* sending any messages otherwise your
-        tests will fail when run against real RabbitMQ because:
-
-        * Messages sent to non-existent consumers will be lost.
-        * RabbitConsumerFactory clears out any remaining commands
-          from old test runs before returning the consumer.
-        """
-        return self._consumer_factory.get_consumer(self._app, **options)
-
-    def get_cmd_consumer(self):
-        return self.get_consumer(**VumiApiCommand.default_routing_config())
-
-    def fetch_cmds(self, consumer):
-        msgs = []
-        while True:
-            msg = consumer.fetch()
-            if msg is not None:
-                msgs.append(msg.payload)
-            else:
-                break
-        return [VumiApiCommand(**payload) for payload in msgs]
+    def get_commands(self):
+        commands, self.commands = self.commands, []
+        return commands
 
 
 class GoPersistenceMixin(PersistenceMixin):
@@ -203,23 +115,18 @@ class GoPersistenceMixin(PersistenceMixin):
 
     @PersistenceMixin.sync_or_async
     def mk_user(self, vumi_api, username):
-        key = "test-%s-user" % (self._users_created,)
+        key = u"test-%s-user" % (self._users_created,)
         self._users_created += 1
         user = vumi_api.account_store.users(key, username=username)
         yield user.save()
         returnValue(user)
 
 
-class GoAppWorkerTestMixin(GoPersistenceMixin):
+class GoWorkerTestMixin(GoPersistenceMixin):
 
     def _worker_name(self):
         # DummyApplicationWorker has no worker_name attr.
         return getattr(self.application_class, 'worker_name', 'unnamed')
-
-    def _conversation_type(self):
-        # This is a guess based on worker_name.
-        # We need a better way to do this.
-        return self._worker_name().rpartition('_')[0].decode('utf-8')
 
     def _command_rkey(self):
         return "%s.control" % (self._worker_name(),)
@@ -228,15 +135,16 @@ class GoAppWorkerTestMixin(GoPersistenceMixin):
         return self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
 
     @inlineCallbacks
-    def setup_tagpool(self, pool, tags, transport_name=None, permission=True):
+    def setup_tagpool(self, pool, tags, transport_name=None, metadata=None,
+                      permission=True):
         tags = [(pool, tag) for tag in tags]
         if transport_name is None:
             transport_name = self.transport_name
+        metadata = metadata.copy() if metadata is not None else {}
+        metadata.setdefault("transport_type", self.transport_type)
+        metadata.setdefault("transport_name", transport_name)
         yield self.vumi_api.tpm.declare_tags(tags)
-        yield self.vumi_api.tpm.set_metadata(pool, {
-            "transport_type": self.transport_type,
-            "transport_name": transport_name,
-        })
+        yield self.vumi_api.tpm.set_metadata(pool, metadata)
         if permission:
             yield self.add_tagpool_permission(pool)
         returnValue(tags)
@@ -244,7 +152,7 @@ class GoAppWorkerTestMixin(GoPersistenceMixin):
     @inlineCallbacks
     def add_tagpool_permission(self, tagpool, max_keys=None):
         permission = yield self.user_api.api.account_store.tag_permissions(
-           uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
+            uuid.uuid4().hex, tagpool=tagpool, max_keys=max_keys)
         yield permission.save()
         account = yield self.user_api.get_user_account()
         account.tagpools.add(permission)
@@ -264,6 +172,39 @@ class GoAppWorkerTestMixin(GoPersistenceMixin):
     def get_dispatched_app_events(self):
         return self._amqp.get_messages('vumi', 'vumi.event')
 
+    def poll_metrics(self, assert_prefix=None, app=None):
+        if app is None:
+            app = self.app
+        values = {}
+        if assert_prefix is not None:
+            assert_prefix += '.'
+        for name, metric in app.metrics._metrics_lookup.items():
+            if assert_prefix is not None:
+                self.assertTrue(name.startswith(assert_prefix))
+                name = name[len(assert_prefix):]
+            values[name] = [v for _, v in metric.poll()]
+        return values
+
+    def store_outbound_msg(self, msg, conv=None, batch_id=None):
+        if batch_id is None and conv is not None:
+            [batch_id] = conv.get_batch_keys()
+        return self.user_api.api.mdb.add_outbound_message(
+            msg, batch_id=batch_id)
+
+    def store_inbound_msg(self, msg, conv=None, batch_id=None):
+        if batch_id is None and conv is not None:
+            [batch_id] = conv.get_batch_keys()
+        return self.user_api.api.mdb.add_inbound_message(
+            msg, batch_id=batch_id)
+
+
+class GoAppWorkerTestMixin(GoWorkerTestMixin):
+
+    def _conversation_type(self):
+        # This is a guess based on worker_name.
+        # We need a better way to do this.
+        return self._worker_name().rpartition('_')[0].decode('utf-8')
+
     @inlineCallbacks
     def create_conversation(self, **kw):
         conv_type = kw.pop('conversation_type', None)
@@ -278,40 +219,95 @@ class GoAppWorkerTestMixin(GoPersistenceMixin):
         returnValue(self.user_api.wrap_conversation(conversation))
 
     @inlineCallbacks
-    def start_conversation(self, conversation, *args, **kwargs):
-        yield conversation.start(*args, **kwargs)
-        cmd = self.get_dispatcher_commands()[-1].payload
-        yield self.dispatch_command(
-            cmd['command'], *cmd['args'], **cmd['kwargs'])
+    def start_conversation_old_style(self, conv, tagpool=u'pool', **kwargs):
+        old_cmds = len(self.get_dispatcher_commands())
+        conv.c.delivery_tag_pool = tagpool
+        yield conv.save()
+        yield conv.old_start(**kwargs)
+        for cmd in self.get_dispatcher_commands()[old_cmds:]:
+            yield self.dispatch_command(
+                cmd.payload['command'], *cmd.payload['args'],
+                **cmd.payload['kwargs'])
 
-    def poll_metrics(self, assert_prefix=None, app=None):
-        if app is None:
-            app = self.app
-        values = {}
-        if assert_prefix is not None:
-            assert_prefix += '.'
-        for name, metric in app.metrics._metrics_lookup.items():
-            if assert_prefix is not None:
-                self.assertTrue(name.startswith(assert_prefix))
-                name = name[len(assert_prefix):]
-            values[name] = [v for _, v in metric.poll()]
-        return values
+    @inlineCallbacks
+    def add_channel_to_conversation(self, conv, tag):
+        # TODO: This is a duplicate of the method in
+        #       go.base.test.utils.VumiGoDjangoTestCase but
+        #       there is no suitable common base class.
+        user_account = yield self.user_api.get_user_account()
+        rt = RoutingTableHelper(user_account.routing_table)
+        rt.add_oldstyle_conversation(conv, tag)
+        yield user_account.save()
+
+    @inlineCallbacks
+    def start_conversation(self, conversation):
+        old_cmds = len(self.get_dispatcher_commands())
+        yield conversation.start()
+        for cmd in self.get_dispatcher_commands()[old_cmds:]:
+            yield self.dispatch_command(
+                cmd.payload['command'], *cmd.payload['args'],
+                **cmd.payload['kwargs'])
 
     def dispatch_to_conv(self, msg, conv):
         conv.set_go_helper_metadata(msg['helper_metadata'])
         return self.dispatch(msg)
 
-    def store_outbound_msg(self, msg, conv=None, batch_id=None):
-        if batch_id is None and conv is not None:
-            [batch_id] = conv.get_batch_keys()
-        return self.user_api.api.mdb.add_outbound_message(
-            msg, batch_id=batch_id)
 
-    def store_inbound_msg(self, msg, conv=None, batch_id=None):
-        if batch_id is None and conv is not None:
-            [batch_id] = conv.get_batch_keys()
-        return self.user_api.api.mdb.add_inbound_message(
-            msg, batch_id=batch_id)
+class GoRouterWorkerTestMixin(GoWorkerTestMixin):
+
+    def _router_type(self):
+        # This is a guess based on worker_name.
+        # We need a better way to do this.
+        return self._worker_name().rpartition('_')[0].decode('utf-8')
+
+    @inlineCallbacks
+    def get_router_worker(self, config, start=True):
+        if 'worker_name' not in config:
+            config['worker_name'] = self._worker_name()
+        if 'ri_connector_name' not in config:
+            config['ri_connector_name'] = 'ri_conn'
+        if 'ro_connector_name' not in config:
+            config['ro_connector_name'] = 'ro_conn'
+        worker = yield self.get_worker(
+            config, self.application_class, start=start)
+        if hasattr(worker, 'vumi_api'):
+            self._persist_riak_managers.append(worker.vumi_api.manager)
+            self._persist_redis_managers.append(worker.vumi_api.redis)
+        returnValue(worker)
+
+    def setup_router(self, config, **kw):
+        return self.create_router(config=config, **kw)
+
+    def create_router(self, **kw):
+        router_type = kw.pop('router_type', None)
+        if router_type is None:
+            router_type = self._router_type()
+        name = kw.pop('name', u'Subject')
+        description = kw.pop('description', u'')
+        config = kw.pop('config', {})
+        self.assertTrue(isinstance(config, dict))
+        return self.user_api.new_router(
+            router_type, name, description, config, **kw)
+
+    def add_router_md_to_msg(self, msg, router, endpoint):
+        msg.payload.setdefault('helper_metadata', {})
+        md = MessageMetadataHelper(self.vumi_api, msg)
+        md.set_router_info(router.router_type, router.key)
+        md.set_user_account(self.user_account_key)
+        if endpoint is not None:
+            msg.set_routing_endpoint(endpoint)
+
+    def dispatch_inbound_to_router(self, msg, router, endpoint=None):
+        self.add_router_md_to_msg(msg, router, endpoint)
+        return self.dispatch_inbound(msg, 'ri_conn')
+
+    def dispatch_outbound_to_router(self, msg, router, endpoint=None):
+        self.add_router_md_to_msg(msg, router, endpoint)
+        return self.dispatch_outbound(msg, 'ro_conn')
+
+    def dispatch_event_to_router(self, msg, router, endpoint=None):
+        self.add_router_md_to_msg(msg, router, endpoint)
+        return self.dispatch_event(msg, 'ri_conn')
 
 
 class AppWorkerTestCase(GoAppWorkerTestMixin, ApplicationTestCase):
@@ -334,3 +330,17 @@ class AppWorkerTestCase(GoAppWorkerTestMixin, ApplicationTestCase):
             self._persist_riak_managers.append(worker.vumi_api.manager)
             self._persist_redis_managers.append(worker.vumi_api.redis)
         returnValue(worker)
+
+
+class RouterWorkerTestCase(GoRouterWorkerTestMixin, VumiWorkerTestCase):
+
+    use_riak = True
+
+    def setUp(self):
+        self._persist_setUp()
+        super(RouterWorkerTestCase, self).setUp()
+
+    @inlineCallbacks
+    def tearDown(self):
+        yield super(RouterWorkerTestCase, self).tearDown()
+        yield self._persist_tearDown()

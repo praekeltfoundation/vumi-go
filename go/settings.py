@@ -122,17 +122,17 @@ ROOT_URLCONF = 'go.urls'
 TEMPLATE_DIRS = (
     abspath("templates"),
     abspath("base", "templates"),
-    abspath("conversation", "templates"),
     abspath("contacts", "templates"),
     abspath("account", "templates"),
+    abspath("apps", "dialogue", "templates"),
     abspath("apps", "surveys", "templates"),
     abspath("apps", "multi_surveys", "templates"),
-    abspath("apps", "bulk_message", "templates"),
-    abspath("apps", "opt_out", "templates"),
-    abspath("apps", "sequential_send", "templates"),
-    abspath("apps", "wikipedia", "ussd", "templates"),
     abspath("apps", "jsbox", "templates"),
-    abspath("apps", "http_api", "templates"),
+    abspath("conversation", "templates"),
+    abspath("router", "templates"),
+    abspath("channel", "templates"),
+    abspath("routing", "templates"),
+    abspath("wizard", "templates"),
 )
 
 INSTALLED_APPS = (
@@ -156,9 +156,13 @@ INSTALLED_APPS = (
     'djcelery_email',
     'go.base',
     'go.conversation',
+    'go.router',
+    'go.channel',
+    'go.wizard',
     'go.contacts',
     'go.account',
-    'go.campaigns',
+    'go.apps.multi_surveys',
+
 
     'vxpolls.djdashboard',
     'registration',
@@ -186,8 +190,7 @@ DEBUG_TOOLBAR_CONFIG = {
     'ENABLE_STACKTRACES': True,
 }
 
-
-
+SESSION_ENGINE = 'go.api.go_api.session'
 
 
 # A sample logging configuration. The only tangible logging
@@ -216,9 +219,6 @@ LOGGING = {
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 SKIP_SOUTH_TESTS = True
 SOUTH_TESTS_MIGRATE = False
-AUTH_PROFILE_MODULE = 'base.UserProfile'
-
-# celery / RabbitMQ configuration
 
 BROKER_HOST = "localhost"
 BROKER_PORT = 5672
@@ -229,7 +229,11 @@ BROKER_VHOST = "/develop"
 # If we're running in DEBUG mode then skip RabbitMQ and execute tasks
 # immediate instead of deferring them to the queue / workers.
 CELERY_ALWAYS_EAGER = DEBUG
-CELERY_IMPORTS = ("go.vumitools.api_celery",)
+CELERY_IMPORTS = (
+    "go.contacts.tasks",
+    "go.account.tasks",
+    "go.conversation.tasks",
+)
 CELERY_RESULT_BACKEND = "amqp"
 EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
 SEND_FROM_EMAIL_ADDRESS = 'no-reply-vumigo@praekeltfoundation.org'
@@ -248,13 +252,17 @@ VUMI_INSTALLED_APPS = {
         'namespace': 'bulk_message',
         'display_name': 'Group Message',
     },
+    'go.apps.dialogue': {
+        'namespace': 'dialogue',
+        'display_name': 'Dialogue',
+    },
     'go.apps.surveys': {
         'namespace': 'survey',
-        'display_name': 'Dialogue',
+        'display_name': 'Old Surveys',
     },
     'go.apps.multi_surveys': {
         'namespace': 'multi_survey',
-        'display_name': 'Multiple Dialogues',
+        'display_name': 'Multiple Old Surveys',
     },
     'go.apps.opt_out': {
         'namespace': 'opt_out',
@@ -268,13 +276,9 @@ VUMI_INSTALLED_APPS = {
         'namespace': 'subscription',
         'display_name': 'Subscription Manager',
     },
-    'go.apps.wikipedia.ussd': {
-        'namespace': 'wikipedia_ussd',
-        'display_name': 'Wikipedia USSD Connection',
-    },
-    'go.apps.wikipedia.sms': {
-        'namespace': 'wikipedia_sms',
-        'display_name': 'Wikipedia SMS Connection',
+    'go.apps.wikipedia': {
+        'namespace': 'wikipedia',
+        'display_name': 'Wikipedia',
     },
     'go.apps.jsbox': {
         'namespace': 'jsbox',
@@ -283,6 +287,13 @@ VUMI_INSTALLED_APPS = {
     'go.apps.http_api': {
         'namespace': 'http_api',
         'display_name': 'HTTP API',
+    },
+}
+
+VUMI_INSTALLED_ROUTERS = {
+    'go.routers.keyword': {
+        'namespace': 'keyword',
+        'display_name': 'Keyword',
     },
 }
 
@@ -296,6 +307,7 @@ VXPOLLS_PREFIX = 'vxpolls'
 GOOGLE_ANALYTICS_UA = None
 
 MESSAGE_STORE_API_URL = 'http://localhost:8080/api/v1/'
+GO_API_URL = 'http://localhost:8001/api/v1/go/api'
 
 from celery.schedules import crontab
 CELERYBEAT_SCHEDULE = {
@@ -316,8 +328,6 @@ try:
 except ImportError:
     pass
 
-# django-registration tokens expire after a week
-ACCOUNT_ACTIVATION_DAYS = 7
 
 # Compress Less with `lesscpy`
 COMPRESS_PRECOMPILERS = (
@@ -329,15 +339,15 @@ if DEBUG:
 # Password resets are sent from this address
 DEFAULT_FROM_EMAIL = 'Vumi <hello@vumi.org>'
 
-# # Redirect to this URL after a successful login.
-# from django.core.urlresolvers import reverse
+# AUTH CONFIGURATION
+AUTH_PROFILE_MODULE = 'base.UserProfile'
+LOGIN_REDIRECT_URL = '/'
+# django-registration tokens expire after a week
+ACCOUNT_ACTIVATION_DAYS = 7
 
-# LOGIN_REDIRECT_URL = reverse('home')
 
 # PIPELINES CONFIGURATION
-
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
-
 PIPELINE_CSS = {
     'all': {
         'source_filenames': (
@@ -348,27 +358,84 @@ PIPELINE_CSS = {
     },
 }
 
+PIPELINE_TEMPLATE_FUNC = '_.template'
+PIPELINE_TEMPLATE_NAMESPACE = 'window.JST'
+PIPELINE_TEMPLATE_EXT = '.jst'
+
 PIPELINE_JS = {
     'lib': {
         'source_filenames': (
+            'js/vendor/base64-2.12.js',
+            'js/vendor/uuid-1.4.0.js',
             'js/vendor/jquery-1.9.1.js',
+            'js/vendor/jquery.ui-1.10.3.js',
             'js/vendor/lodash.underscore-1.2.1.js',
             'js/vendor/backbone-1.0.0.js',
-            'js/vendor/jquery.jsPlumb-1.4.1.js',
-            'js/vendor/jquery.ui-1.10.3.js',
+            'js/vendor/backbone-relational-0.8.5.js',
             'bootstrap/js/bootstrap.min.js',
+            'js/vendor/bootbox.js',
+            'js/vendor/jquery.jsPlumb-1.4.1.js',
         ),
         'output_filename': 'export/lib.js'
     },
     'go': {
         'source_filenames': (
+            'templates/campaign/dialogue/states/modes/preview.jst',
+            'templates/campaign/dialogue/states/modes/edit.jst',
+            'templates/campaign/dialogue/states/choice/edit.jst',
+            'templates/campaign/dialogue/states/choice/preview.jst',
+            'templates/campaign/dialogue/states/choice/choice/edit.jst',
+            'templates/campaign/dialogue/states/choice/choice/extras.jst',
+            'templates/campaign/dialogue/states/freetext/edit.jst',
+            'templates/campaign/dialogue/states/freetext/preview.jst',
+            'templates/campaign/dialogue/states/end/edit.jst',
+            'templates/campaign/dialogue/states/end/preview.jst',
+            'templates/campaign/dialogue/states/components/nameExtras.jst',
+            'templates/components/confirm.jst',
+            'templates/dummy/dummy.jst',
+
             'js/src/go.js',
             'js/src/utils.js',
             'js/src/errors.js',
-            'js/src/tables.js',
+            'js/src/components/components.js',
+            'js/src/components/rpc.js',
+            'js/src/components/models.js',
+            'js/src/components/structures.js',
+            'js/src/components/views.js',
+            'js/src/components/actions.js',
+            'js/src/components/grid.js',
+            'js/src/components/stateMachine.js',
+            'js/src/components/plumbing/plumbing.js',
+            'js/src/components/plumbing/endpoints.js',
+            'js/src/components/plumbing/states.js',
+            'js/src/components/plumbing/connections.js',
+            'js/src/components/plumbing/diagrams.js',
+            'js/src/components/tables.js',
             'js/src/campaign/campaign.js',
             'js/src/campaign/interactive.js',
-            'js/src/campaign/bulkMessage.js',
+            'js/src/campaign/routing/routing.js',
+            'js/src/campaign/routing/models.js',
+            'js/src/campaign/routing/views.js',
+            'js/src/campaign/dialogue/dialogue.js',
+            'js/src/campaign/dialogue/models.js',
+            'js/src/campaign/dialogue/connections.js',
+            'js/src/campaign/dialogue/states/states.js',
+            'js/src/campaign/dialogue/states/partials.js',
+            'js/src/campaign/dialogue/states/dummy.js',
+            'js/src/campaign/dialogue/states/choice.js',
+            'js/src/campaign/dialogue/states/freetext.js',
+            'js/src/campaign/dialogue/states/end.js',
+            'js/src/campaign/dialogue/diagram.js',
+            'js/src/campaign/dialogue/style.js',
+            'js/src/conversation/conversation.js',
+            'js/src/conversation/views.js',
+            'js/src/conversation/dashboard.js',
+            'js/src/conversation/show.js',
+
+            # TODO This is here so we can access the test model data. This
+            # gives us the data we need for a 'demo' of the routing screen.
+            # Remove once the screen is hooked up to the API.
+            'js/test/tests/campaign/routing/testHelpers.js',
         ),
         'output_filename': 'export/go.js'
     },

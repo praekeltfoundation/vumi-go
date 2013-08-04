@@ -4,8 +4,6 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.middleware.tagger import TaggingMiddleware
-
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.apps.subscription.vumi_app import SubscriptionApplication
 
@@ -42,14 +40,13 @@ class TestSubscriptionApplication(AppWorkerTestCase):
             'reply_copy': reply_copy,
             }
         self.conv = yield self.create_conversation(
-            delivery_tag_pool=u'pool', delivery_class=self.transport_type,
-            config={
+            delivery_tag_pool=u'pool', config={
                 'handlers': [
                     mkhandler('foo', 'foo', 'subscribe', 'Subscribed to foo.'),
                     mkhandler('bar', 'bar', 'subscribe', 'Subscribed to bar.'),
                     mkhandler('stop', 'foo', 'unsubscribe', ''),
                     mkhandler('stop', 'bar', 'unsubscribe', 'Unsubscribed.'),
-                    ]})
+                ]})
         yield self.start_conversation(self.conv)
 
     @inlineCallbacks

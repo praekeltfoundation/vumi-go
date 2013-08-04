@@ -2,7 +2,6 @@ from datetime import date
 from zipfile import ZipFile
 from StringIO import StringIO
 
-from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.core import mail
 
@@ -11,22 +10,28 @@ from go.apps.tests.base import DjangoGoApplicationTestCase
 
 
 class MultiSurveyTestCase(DjangoGoApplicationTestCase):
+    TEST_CONVERSATION_TYPE = u'multi_survey'
 
     def setUp(self):
         super(MultiSurveyTestCase, self).setUp()
-        self.setup_riak_fixtures()
-        self.client = Client()
-        self.client.login(username='username', password='password')
         self.patch_settings(
             VXPOLLS_REDIS_CONFIG=self._persist_config['redis_manager'])
 
-    def get_wrapped_conv(self):
-        conv = self.conv_store.get_conversation_by_key(self.conv_key)
-        return self.user_api.wrap_conversation(conv)
+    def add_tagpool_to_conv(self):
+        self.declare_tags(u'longcode', 4)
+        self.add_tagpool_permission(u'longcode')
+        conv = self.get_wrapped_conv()
+        conv.c.delivery_class = u'sms'
+        conv.c.delivery_tag_pool = u'longcode'
+        conv.save()
+
+    def acquire_all_longcode_tags(self):
+        for _i in range(4):
+            self.user_api.acquire_tag(u"longcode")
 
     def run_new_conversation(self, selected_option, pool, tag):
         # render the form
-        self.assertEqual(len(self.conv_store.list_conversations()), 1)
+        self.assertEqual(len(self.conv_store.list_conversations()), 0)
         response = self.client.get(reverse('multi_survey:new'))
         self.assertEqual(response.status_code, 200)
         # post the form
@@ -36,7 +41,7 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
             'delivery_class': 'sms',
             'delivery_tag_pool': selected_option,
         })
-        self.assertEqual(len(self.conv_store.list_conversations()), 2)
+        self.assertEqual(len(self.conv_store.list_conversations()), 1)
         conversation = self.get_latest_conversation()
         self.assertEqual(conversation.delivery_class, 'sms')
         self.assertEqual(conversation.delivery_tag_pool, pool)
@@ -60,6 +65,7 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         """
         Test ending the conversation
         """
+        self.setup_conversation()
         conversation = self.get_wrapped_conv()
         self.assertFalse(conversation.ended())
         response = self.client.post(reverse('multi_survey:end', kwargs={
@@ -74,6 +80,8 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
     def test_client_or_server_init_distinction(self):
         """A survey should not ask for recipients if the transport
         used only supports client initiated sessions (i.e. USSD)"""
+
+        self.setup_conversation()
 
         self.api.tpm.set_metadata("pool1", {
             "delivery_class": "sms",
@@ -98,6 +106,8 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
         conversation"""
+        self.setup_conversation(with_group=True, with_contact=True)
+        self.add_tagpool_to_conv()
         conversation = self.get_wrapped_conv()
         self.assertFalse(conversation.is_client_initiated())
         response = self.client.post(reverse('multi_survey:people',
@@ -110,7 +120,8 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         """
         Test the start conversation view
         """
-        consumer = self.get_cmd_consumer()
+        self.setup_conversation(with_group=True, with_contact=True)
+        self.add_tagpool_to_conv()
 
         response = self.client.post(reverse('multi_survey:start', kwargs={
             'conversation_key': self.conv_key}))
@@ -118,40 +129,37 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
             'conversation_key': self.conv_key}))
 
         conversation = self.get_wrapped_conv()
-        [cmd] = self.fetch_cmds(consumer)
+        [start_cmd, hack_cmd] = self.get_api_commands_sent()
         [batch] = conversation.get_batches()
         [tag] = list(batch.tags)
         [contact] = self.get_contacts_for_conversation(conversation)
-        msg_options = {
-            "transport_type": "sms",
-            "transport_name": self.transport_name,
-            "from_addr": "default10001",
-            "helper_metadata": {
-                "tag": {"tag": list(tag)},
-                "go": {"user_account": conversation.user_account.key},
-                },
-            }
 
-        self.assertEqual(cmd, VumiApiCommand.command(
-            '%s_application' % (conversation.conversation_type,), 'start',
-            conversation_type=conversation.conversation_type,
-            conversation_key=conversation.key,
-            is_client_initiated=conversation.is_client_initiated(),
-            batch_id=batch.key,
-            msg_options=msg_options
-            ))
+        self.assertEqual(start_cmd, VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,), 'start',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key))
+        self.assertEqual(hack_cmd, VumiApiCommand.command(
+                '%s_application' % (conversation.conversation_type,),
+                'initial_action_hack',
+                user_account_key=conversation.user_account.key,
+                conversation_key=conversation.key,
+                is_client_initiated=conversation.is_client_initiated(),
+                delivery_class=conversation.delivery_class,
+                batch_id=batch.key, msg_options={}))
 
     def test_send_fails(self):
         """
         Test failure to send messages
         """
+        self.setup_conversation(with_group=True, with_contact=True)
+        self.add_tagpool_to_conv()
         self.acquire_all_longcode_tags()
-        consumer = self.get_cmd_consumer()
+
         response = self.client.post(reverse('multi_survey:start', kwargs={
             'conversation_key': self.conv_key}), follow=True)
         self.assertRedirects(response, reverse('multi_survey:start', kwargs={
             'conversation_key': self.conv_key}))
-        [] = self.fetch_cmds(consumer)
+        [] = self.get_api_commands_sent()
         [msg] = response.context['messages']
         self.assertEqual(str(msg), "No spare messaging tags.")
 
@@ -159,32 +167,31 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         """
         Test showing the conversation
         """
+        self.setup_conversation()
         response = self.client.get(reverse('multi_survey:show', kwargs={
             'conversation_key': self.conv_key}))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')
 
     def test_aggregates(self):
-        self.put_sample_messages_in_conversation(self.user_api,
-            self.conv_key, 10, start_timestamp=date(2012, 1, 1),
-            time_multiplier=12)
-        response = self.client.get(reverse('survey:aggregates', kwargs={
+        self.setup_conversation(started=True)
+        self.add_messages_to_conv(
+            5, start_date=date(2012, 1, 1), time_multiplier=12)
+        response = self.client.get(reverse('multi_survey:aggregates', kwargs={
             'conversation_key': self.conv_key
             }), {'direction': 'inbound'})
         self.assertEqual(response.content, '\r\n'.join([
-            '2011-12-28,2',
-            '2011-12-29,2',
-            '2011-12-30,2',
+            '2011-12-30,1',
             '2011-12-31,2',
             '2012-01-01,2',
             '',  # csv ends with a blank line
             ]))
 
     def test_export_messages(self):
-        self.put_sample_messages_in_conversation(self.user_api,
-            self.conv_key, 10, start_timestamp=date(2012, 1, 1),
-            time_multiplier=12)
-        conv_url = reverse('survey:show', kwargs={
+        self.setup_conversation(started=True)
+        self.add_messages_to_conv(
+            5, start_date=date(2012, 1, 1), time_multiplier=12, reply=True)
+        conv_url = reverse('multi_survey:show', kwargs={
             'conversation_key': self.conv_key,
             })
         response = self.client.post(conv_url, {
@@ -192,7 +199,7 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
             })
         self.assertRedirects(response, conv_url)
         [email] = mail.outbox
-        self.assertEqual(email.recipients(), [self.user.email])
+        self.assertEqual(email.recipients(), [self.django_user.email])
         self.assertTrue(self.conversation.name in email.subject)
         self.assertTrue(self.conversation.name in email.body)
         [(file_name, contents, mime_type)] = email.attachments
@@ -201,6 +208,39 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         zipfile = ZipFile(StringIO(contents), 'r')
         csv_contents = zipfile.open('messages-export.csv', 'r').read()
 
-        # 1 header, 10 sent, 10 received, 1 trailing newline == 22
-        self.assertEqual(22, len(csv_contents.split('\n')))
+        # 1 header, 5 sent, 5 received, 1 trailing newline == 12
+        self.assertEqual(12, len(csv_contents.split('\n')))
         self.assertEqual(mime_type, 'application/zip')
+
+    def test_send_one_off_reply(self):
+        self.setup_conversation(with_group=True, with_contact=True)
+        self.add_tagpool_to_conv()
+        self.client.post(reverse('multi_survey:start', kwargs={
+            'conversation_key': self.conv_key}))
+
+        self.add_messages_to_conv(1)
+        conversation = self.get_wrapped_conv()
+        [msg] = conversation.received_messages()
+        response = self.client.post(reverse('multi_survey:show', kwargs={
+            'conversation_key': self.conv_key
+            }), {
+                'in_reply_to': msg['message_id'],
+                'content': 'foo',
+                'to_addr': 'should be ignored',
+                '_send_one_off_reply': True,
+            })
+        self.assertRedirects(response, reverse('multi_survey:show', kwargs={
+            'conversation_key': self.conv_key,
+            }))
+
+        [start_cmd, hack_cmd, reply_to_cmd] = self.get_api_commands_sent()
+        self.assertEqual(reply_to_cmd['worker_name'],
+                            'multi_survey_application')
+        self.assertEqual(reply_to_cmd['command'], 'send_message')
+        self.assertEqual(reply_to_cmd['kwargs']['command_data'], {
+            'batch_id': conversation.get_latest_batch_key(),
+            'conversation_key': conversation.key,
+            'content': 'foo',
+            'to_addr': msg['from_addr'],
+            'msg_options': {'in_reply_to': msg['message_id']},
+            })

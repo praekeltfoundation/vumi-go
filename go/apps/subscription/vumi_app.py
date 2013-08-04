@@ -22,13 +22,6 @@ class SubscriptionApplication(GoApplicationWorker):
         yield self.vumi_api.mdb.add_outbound_message(msg, batch_id=batch_id)
         log.info('Stored outbound %s' % (msg,))
 
-    def process_command_start(self, batch_id, conversation_type,
-                              conversation_key, msg_options,
-                              is_client_initiated, **extra_params):
-        if not is_client_initiated:
-            log.warning('Trying to start a server initiated conversation '
-                        'on a subscription handler.')
-
     def handlers_for_content(self, conv, content):
         words = (content or '').strip().split() + ['']
         keyword = words[0].lower()
@@ -42,8 +35,9 @@ class SubscriptionApplication(GoApplicationWorker):
         user_api = self.get_user_api(msg_mdh.get_account_key())
         conv = yield msg_mdh.get_conversation()
 
+        delivery_class = user_api.delivery_class_for_msg(message)
         contact = yield user_api.contact_store.contact_for_addr(
-            conv.delivery_class, message['from_addr'], create=True)
+            delivery_class, message['from_addr'], create=True)
         # We're guaranteed to have a contact here, because we create one if we
         # can't find an existing one.
 
@@ -69,15 +63,20 @@ class SubscriptionApplication(GoApplicationWorker):
         return self.vumi_api.mdb.add_event(event)
 
     @inlineCallbacks
-    def process_command_send_message(self, *args, **kwargs):
+    def process_command_send_message(self, user_account_key, conversation_key,
+                                     **kwargs):
+        # FIXME: Fix whatever needs updating here?
         # TODO: Update
+        conv = yield self.get_conversation(user_account_key, conversation_key)
         command_data = kwargs['command_data']
         log.info('Processing send_message: %s' % kwargs)
+        msg_options = command_data['msg_options']
+        self.add_conv_to_msg_options(conv, msg_options)
         yield self.send_message(
                 command_data['batch_id'],
                 command_data['to_addr'],
                 command_data['content'],
-                command_data['msg_options'])
+                msg_options)
 
     @inlineCallbacks
     def collect_metrics(self, user_api, conversation_key):

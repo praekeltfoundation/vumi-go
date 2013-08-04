@@ -9,10 +9,6 @@
     <meta content="no" http-equiv="imagetoolbar" />
     <title>{% block page_title %}Vumi Go{% endblock %}</title>
 
-    {% block extrahead %}
-    {% endblock %}
-    
-    {# I think I only want to show these on public facing pages. #}
     <meta name="description" content="A super scalable conversation engine for 
         distribution of SMS, star menu and chat messages">
     <meta name="author" content="Praekelt Foundation">
@@ -23,6 +19,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     {% compressed_css 'all' %}
+
+    <script type="text/javascript">
+        // Create window.go.configs namespace ahead of time so that Django 
+        // widgets have a place to put their config information even though 
+        // other javascript has yet to be loaded.
+        window.go = {}
+        window.go.configs = {}
+    </script>
 
 </head>
 <body>
@@ -40,7 +44,6 @@
         {% block content %}
         {% endblock %}
 
-
         {% block footer %}
         <div class="footer">
             <p>&copy; 2012 <a href="http://praekelt.com">Praekelt Group</a>. <a href="mailto:hello@vumi.org">Contact</a>. <a href="https://github.com/praekelt/vumi">Github</a></p>
@@ -51,33 +54,11 @@
     {% block modals %}
     {% endblock %}
 
-
-
-    {# TODO: I don't know where this fits in just yet. #}
-    <div class="modal hide fade" id="newConv">
-        <div class="modal-header">
-           <a class="close" data-dismiss="modal">×</a>
-           <h3>What type of conversation would you like to start?</h3>
-        </div>
-        <form id="newConversationType" action="">
-            <div class="modal-body">
-                <select id="convtype" class="required">
-                    <option value="" selected="selected">Please choose</option>
-                    {% for application, settings in request.user_api.applications.items %}
-                        <option value="{% url settings.namespace|add:':new' %}">{{settings.display_name}}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="modal-footer">
-               <button type="submit" class="btn btn-primary">Next &rarr;</button>
-               <a data-dismiss="modal" class="btn">Cancel</a>
-            </div>
-        </form>
-    </div>
-
-
     {% compressed_js 'lib' %}
     {% compressed_js 'go' %}
+
+    {% block extramedia %}
+    {% endblock %}
 
     {% block extrascript %}
     {% endblock %}

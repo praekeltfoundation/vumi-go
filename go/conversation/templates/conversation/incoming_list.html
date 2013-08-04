@@ -1,0 +1,105 @@
+{% extends "app.html" %}
+{% load url from future %}
+
+{% block content_extraclass %}conversations{% endblock %}
+
+{% block content_title %}Messages from {{ inbound_uniques_count }} unique people{% endblock %}
+
+{% block content_breadcrumbs %}
+    <form id="search-filter" name="search-filter" action="" method="get" class="navbar-search pull-right">
+        <input type="text" name="q" size="40" placeholder="Search ..." value="{{query|default:""}}" class="input-medium search-query">
+            <input type="hidden" name="direction" value="{{message_direction}}"/>
+            <button type="submit" class="btn">Search</button>
+    </form>
+{% endblock %}
+
+{% block content_actions_right %}
+    <div class="pull-left">
+        <span class="table-form-view-buttons">
+            <!-- TODO: 
+            <button class="btn" disabled="disabled">Delete</button>
+            -->
+        </span>
+
+        &nbsp; With message:
+        <!-- These exist in the previous template, but not the new design.
+        <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=inbound">Download Received Stats</a>
+        <a href="{{ conversation.get_absolute_url }}aggregates.csv?direction=outbound">Download Sent Stats</a>
+        -->
+        <button class="btn" data-toggle="modal" href="#expMessagesFrm">Export</button>
+    </div>
+    
+{% endblock %}
+
+{% block content_main %}
+
+    <div class="row-fluid">
+        <div class="span3 sidebar">
+
+            <ul class="nav nav-list">
+                <li>
+                    <a href="{% url 'conversations:incoming_list' conversation.key %}" class="active">All messages</a>
+                </li>
+            </ul>
+
+        </div>
+        <div class="span9">
+
+            {% include "base/includes/messages.html" %}
+
+            <form class="table-form-view" method="post" action="">
+                <p>
+                    Averaging {{conversation.get_inbound_throughput}} messages
+                    per minute inbound and {{conversation.get_outbound_throughput}} messages
+                    per minute outbound.
+                </p>
+
+                <ul class="nav nav-tabs">
+                    <li {% ifequal message_direction 'inbound' %}class="active"{% endifequal %}>
+                        <a href="?direction=inbound">
+                            {% ifequal message_direction 'inbound' %}<strong>{% endifequal %}
+                            {{inbound_message_paginator.count}} Received
+                            {% ifequal message_direction 'inbound' %}</strong>{% endifequal %}
+                        </a>
+                    </li>
+                    <li {% ifequal message_direction 'outbound' %}class="active"{% endifequal %}>
+                        <a href="?direction=outbound">
+                            {% ifequal message_direction 'outbound' %}<strong>{% endifequal %}
+                            {{outbound_message_paginator.count}} Sent
+                            {% ifequal message_direction 'outbound' %}</strong>{% endifequal %}
+                        </a>
+                    </li>
+                </ul>
+                <div class="tab-content" id="message-page">
+                    {% if message_page.paginator.num_pages %}
+                        {% include "conversation/incoming_list_table.html" %}
+                    {% else %}
+                        {% include "conversation/incoming_list_table_load.html" %}
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+<div class="modal hide fade" id="expMessagesFrm">
+    <div class="modal-header">
+        <a class="close" data-dismiss="modal">×</a>
+        <h3>Schedule CSV Export of Messages</h3>
+    </div>
+    <form method="post" action="" class="form-horizontal">
+        {% csrf_token %}
+        <div class="modal-body">
+            <p><span class="help-block">
+              The file is potentially quite large and as a result the export 
+              will be done in the background. When completed the results will 
+              be sent to you as a CSV file attached to an email.
+            </span><br/></p>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" name="_export_conversation_messages" class="btn btn-primary" data-loading-text="uploading...">Schedule Export</button>
+        </div>
+    </form>
+</div><!--/expContactFrm-->
+{% endblock %}

@@ -1,7 +1,5 @@
 """Tests for go.vumitools.metrics_worker."""
 
-from datetime import datetime
-
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import Clock, LoopingCall
 
@@ -54,7 +52,6 @@ class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
         return conv.save()
 
     def end_conv(self, conv):
-        conv.end_timestamp = datetime.utcnow()
         conv.set_status_finished()
         return conv.save()
 

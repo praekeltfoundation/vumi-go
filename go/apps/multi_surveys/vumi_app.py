@@ -124,7 +124,9 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
 
         # We reverse the to_addr & from_addr since we're faking input
         # from the client to start the survey.
-        from_addr = msg_options.pop('from_addr')
+        from_addr = msg_options.pop('from_addr', None)
+        msg_options.setdefault('transport_type', None)
+        msg_options.setdefault('transport_name', None)
         conversation.set_go_helper_metadata(
             msg_options.setdefault('helper_metadata', {}))
         msg = TransportUserMessage(from_addr=to_addr, to_addr=from_addr,
@@ -133,18 +135,26 @@ class MultiSurveyApplication(MamaPollApplication, GoApplicationMixin):
         return self.consume_user_message(msg)
 
     @inlineCallbacks
-    def process_command_start(self, batch_id, conversation_type,
-                              conversation_key, msg_options,
-                              is_client_initiated, **extra_params):
+    def process_command_send_survey(self, user_account_key, conversation_key,
+                                    batch_id, msg_options, is_client_initiated,
+                                    delivery_class, **extra_params):
 
         if is_client_initiated:
             log.debug('Conversation %r is client initiated, no need to notify '
                 'the application worker' % (conversation_key,))
             return
 
-        conv = yield self.get_conversation(batch_id, conversation_key)
+        conv = yield self.get_conversation(user_account_key, conversation_key)
 
-        for contacts in (yield conv.get_opted_in_contact_bunches()):
+        for contacts in (yield conv.get_opted_in_contact_bunches(
+                delivery_class)):
             for contact in (yield contacts):
-                to_addr = contact.addr_for(conv.delivery_class)
+                to_addr = contact.addr_for(delivery_class)
                 yield self.start_survey(to_addr, conv, **msg_options)
+
+    def process_command_initial_action_hack(self, *args, **kwargs):
+        # HACK: This lets us do whatever we used to do when we got a `start'
+        # message without having horrible app-specific view logic.
+        # TODO: Remove this when we've decoupled the various conversation
+        # actions from the lifecycle.
+        return self.process_command_send_survey(*args, **kwargs)

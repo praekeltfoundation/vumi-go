@@ -1,0 +1,51 @@
+{% extends "conversation/dashboard_base.html" %}
+{% load url from future %}
+{% load humanize %}
+{% load channel_tags %}
+
+
+{% block content_extraclass %}dashboard channels{% endblock %}
+
+{% block content_title %}All channels{% endblock %}
+
+
+{% block content_actions_right %}
+    <div class="table-form-view-buttons pull-left">
+        <button class="btn" data-action="archive" disabled="disabled">Release</button>
+    </div>
+{% endblock %}
+
+{% block content_dashboard %}
+<form class="table-form-view" method="post" action="">
+    {% csrf_token %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th><input type="checkbox"></th>
+                <th>Channels</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if channels %}
+                {% for channel in page.object_list %}
+                <tr data-url="{% channel_screen channel %}">
+                    <td><input type="checkbox" name="channel_key" value="{{ channel.key }}"></td>
+                    <td>
+                        <a href="{% channel_screen channel %}">
+                            {{ channel.name }}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="9">
+                    No channels.
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+    {% include "base/includes/pagination.html" %}
+</form>
+{% endblock %}

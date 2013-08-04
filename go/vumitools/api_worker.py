@@ -6,13 +6,10 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.application import ApplicationWorker
-from vumi.dispatchers.base import BaseDispatchRouter
 from vumi.utils import load_class_by_string
 from vumi import log
 
 from go.vumitools.api import VumiApi, VumiApiCommand, VumiApiEvent
-from go.vumitools.utils import OldGoMessageMetadata
-from go.vumitools.middleware import OptOutMiddleware
 
 
 class CommandDispatcher(ApplicationWorker):
@@ -170,98 +167,3 @@ class EventDispatcher(ApplicationWorker):
         for handler, handler_config in config.get(
                 (event['conversation_key'], event['event_type']), []):
             yield self.handlers[handler].handle_event(event, handler_config)
-
-
-class GoApplicationRouter(BaseDispatchRouter):
-    """
-    Router for a dispatcher that routes messages
-    based on their tags.
-
-    """
-    @inlineCallbacks
-    def setup_routing(self):
-        # map conversation types to applications that deal with them
-        self.conversation_mappings = self.config['conversation_mappings']
-        self.upstream_transport = self.config['upstream_transport']
-        self.optout_transport = self.config['optout_transport']
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
-
-    @inlineCallbacks
-    def find_application_for_msg(self, msg):
-        md = OldGoMessageMetadata(self.vumi_api, msg)
-        conversation_info = yield md.get_conversation_info()
-        if conversation_info:
-            conversation_key, conversation_type = conversation_info
-            returnValue(self.conversation_mappings[conversation_type])
-
-    @inlineCallbacks
-    def find_application_for_event(self, event):
-        """
-        Look up the application for a given event by first looking up the
-        outbound message that the event is for and then using that messages'
-        batch to find which conversation it is associated with.
-        """
-        user_message_id = event.get('user_message_id')
-        if user_message_id is None:
-            log.error('Received event without user_message_id: %s' % (event,))
-            return
-
-        mdb = self.vumi_api.mdb
-        outbound_message = yield mdb.outbound_messages.load(user_message_id)
-        if outbound_message is None:
-            log.error('Unable to find outbound message for event: %s' % (
-                        event,))
-            return
-
-        batch = yield outbound_message.batch.get()
-        if batch is None:
-            log.error(
-                'Outbound message without a batch id. Result of bad routing')
-            return
-
-        account_key = batch.metadata['user_account']
-        user_api = self.vumi_api.get_user_api(account_key)
-        conversations = user_api.conversation_store.conversations
-        mr = conversations.index_lookup('batches', batch.key)
-        [conv_key] = yield mr.get_keys()
-
-        conv = yield user_api.get_wrapped_conversation(conv_key)
-        if conv:
-            returnValue(self.conversation_mappings[conv.conversation_type])
-
-    @inlineCallbacks
-    def dispatch_inbound_message(self, msg):
-        application = yield self.find_application_for_msg(msg)
-        if OptOutMiddleware.is_optout_message(msg):
-            publisher = self.dispatcher.exposed_publisher[
-                self.optout_transport]
-            yield publisher.publish_message(msg)
-        else:
-            if application:
-                publisher = self.dispatcher.exposed_publisher[application]
-                yield publisher.publish_message(msg)
-            else:
-                # This often happens when we have a USSD code like *123*4#
-                # and some random person dials *123*4*1# when that isn't
-                # actually configured to route somewhere.
-                log.warning(
-                    'No application setup for inbound message: %s from %s' % (
-                        msg['to_addr'], msg['transport_name']),
-                    message=msg)
-
-    @inlineCallbacks
-    def dispatch_inbound_event(self, event):
-        application = yield self.find_application_for_event(event)
-        if application:
-            publisher = self.dispatcher.exposed_event_publisher[application]
-            yield publisher.publish_message(event)
-        else:
-            log.warning(
-                'No application setup for inbount event type %s from %s' % (
-                        event['event_type'], event['transport_name']),
-                event=event)
-
-    @inlineCallbacks
-    def dispatch_outbound_message(self, msg):
-        pub = self.dispatcher.transport_publisher[self.upstream_transport]
-        yield pub.publish_message(msg)

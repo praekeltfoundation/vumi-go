@@ -1,0 +1,24 @@
+{% extends "app.html" %}
+{% load url from future %}
+
+{% block content_title %}{{ conversation.name }} logs{% endblock %}
+
+{% block content_main %}
+    <div class="row-fluid">
+        <div class="span12">
+            <div id="logs" class="indent">
+                <table>
+                  <tbody>
+                  {% if logs %}
+                    {% for msg in logs %}
+                      <tr><td>{{ msg }}</td></tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr><td>No logs yet.</td></tr>
+                  {% endif %}
+                  </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

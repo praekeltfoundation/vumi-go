@@ -6,7 +6,7 @@ from StringIO import StringIO
 
 class GoListAccountsCommandTestCase(VumiGoDjangoTestCase):
 
-    USE_RIAK = True
+    use_riak = True
 
     def setUp(self):
         super(GoListAccountsCommandTestCase, self).setUp()

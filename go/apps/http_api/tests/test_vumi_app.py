@@ -11,12 +11,13 @@ from vumi.utils import http_request_full
 from vumi.message import TransportUserMessage, TransportEvent
 from vumi.tests.utils import MockHttpServer
 from vumi.transports.vumi_bridge.client import StreamingClient
+from vumi.config import ConfigContext
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApiCommand
 
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
-from go.apps.http_api.resource import ConversationResource, StreamResource
+from go.apps.http_api.resource import StreamResource, ConversationResource
 
 
 class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
@@ -235,7 +236,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertNotEqual(sent_msg['message_id'], msg['message_id'])
         self.assertEqual(sent_msg['message_id'], put_msg['message_id'])
         self.assertEqual(sent_msg['to_addr'], msg['to_addr'])
-        self.assertEqual(sent_msg['from_addr'], 'tag1')
+        self.assertEqual(sent_msg['from_addr'], None)
 
     @inlineCallbacks
     def test_invalid_in_reply_to(self):
@@ -306,7 +307,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_concurrency_limits(self):
-        concurrency = ConversationResource.CONCURRENCY_LIMIT
+        config = yield self.app.get_config(None)
+        concurrency = config.concurrency_limit
         queue = DeferredQueue()
         url = '%s/%s/messages.json' % (self.url, self.conversation.key)
         max_receivers = [self.client.stream(
@@ -327,6 +329,16 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
             'Too many concurrent connections' in maxed_out_resp.delivered_body)
 
         [r.disconnect() for r in max_receivers]
+
+    @inlineCallbacks
+    def test_disabling_concurrency_limit(self):
+        conv_resource = ConversationResource(self.app, self.conversation.key)
+        # negative concurrency limit disables it
+        ctxt = ConfigContext(user_account=self.account.key,
+                             concurrency_limit=-1)
+        config = yield self.app.get_config(msg=None, ctxt=ctxt)
+        self.assertTrue(
+            (yield conv_resource.is_allowed(config, self.account.key)))
 
     @inlineCallbacks
     def test_backlog_on_connect(self):
@@ -436,15 +448,14 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     def test_send_message_command(self):
         command = VumiApiCommand.command(
             'worker', 'send_message',
+            self.account.key,
+            self.conversation.key,
             command_data={
                 u'batch_id': u'batch-id',
                 u'content': u'foo',
                 u'to_addr': u'to_addr',
                 u'msg_options': {
                     u'helper_metadata': {
-                        u'go': {
-                            u'user_account': u'account-key'
-                        },
                         u'tag': {
                             u'tag': [u'longcode', u'default10080']
                         }
@@ -465,7 +476,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.assertEqual(msg.payload['message_type'], "user_message")
         self.assertEqual(
             msg.payload['helper_metadata']['go']['user_account'],
-            'account-key')
+            self.account.key)
         self.assertEqual(
             msg.payload['helper_metadata']['tag']['tag'],
             ['longcode', 'default10080'])
@@ -476,15 +487,14 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.vumi_api.mdb.add_inbound_message(msg)
         command = VumiApiCommand.command(
             'worker', 'send_message',
+            self.account.key,
+            self.conversation.key,
             command_data={
                 u'batch_id': u'batch-id',
                 u'content': u'foo',
                 u'to_addr': u'to_addr',
                 u'msg_options': {
                     u'helper_metadata': {
-                        u'go': {
-                            u'user_account': u'account-key'
-                        },
                         u'tag': {
                             u'tag': [u'longcode', u'default10080']
                         }

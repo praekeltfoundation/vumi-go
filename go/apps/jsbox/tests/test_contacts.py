@@ -435,12 +435,14 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             name=u'A Random',
             surname=u'Jackal',
             msisdn=u'+27831234567',
+            groups=['a', 'b', 'c'],
             extra={u'foo': u'bar', u'lorem': u'ipsum'})
 
         reply = yield self.dispatch_command('save', contact={
             'key': contact.key,
             'surname': u'Robot',
             'msisdn': u'unknown',
+            'groups': ['a', 'd', 'f'],
             'extra': {u'baz': u'qux'},
         })
 
@@ -448,6 +450,7 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
             'key': contact.key,
             'surname': u'Robot',
             'msisdn': u'unknown',
+            'groups': ['a', 'd', 'f'],
             'extras-baz': u'qux',
         }
         self.check_reply(reply, contact=expected_contact_fields)

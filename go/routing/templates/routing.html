@@ -1,0 +1,78 @@
+{% extends "app.html" %}
+{% load url from future %}
+
+{% block content_extraclass %}campaigns{% endblock %}
+
+{# TODO, title #}
+{% block content_title %}
+    Campaign Routing
+{% endblock %}
+
+{% block content_actions_right %}
+    <a href="{% url 'conversations:index' %}">Cancel</a>
+
+    {# TODO Send model data back to server when clicked #}
+    <button data-action="reset" href="" class="btn">Reset</button>
+    <button data-action="save" href="" class="btn btn-primary">Save</button>
+{% endblock %}
+
+{% block content_main %}
+    <div class="container">
+      <div id="routing-diagram" class="row">
+          <div class="span4 column-container">
+            <span class="title">Channels</span>
+            <a href="{% url 'channels:new_channel' %}" class="btn btn-primary new">+</a>
+            <div class="column" id="channels"></div>
+          </div>
+
+          <div class="span4 column-container">
+            <span class="title">Routers</span>
+            <a href="{% url 'routers:new_router' %}" class="btn btn-primary new">+</a>
+            <div class="column" id="routers"></div>
+          </div>
+
+          <div class="span4 column-container">
+            <span class="title">Conversations</span>
+            <a href="{% url 'conversations:new_conversation' %}" class="btn btn-primary new">+</a>
+            <div class="column" id="conversations"></div>
+          </div>
+      </div>
+    </div>
+{% endblock %}
+
+{% block ondomready %}
+    {{ block.super }}
+
+jsPlumb.ready(function() {
+  var routing = go.campaign.routing,
+      modelData = {{ model_data|safe }},
+      CampaignRoutingModel = routing.CampaignRoutingModel,
+      RoutingDiagramView = routing.RoutingDiagramView,
+      RoutingActionsView = routing.RoutingActionsView;
+
+  jsPlumb.Defaults.Connector = ['StateMachine'];
+
+  _(jsPlumb.Defaults.EndpointStyle).extend({
+    radius: 3,
+    fillStyle: '#2f3436'
+  });
+
+  _(jsPlumb.Defaults.PaintStyle).extend({
+    lineWidth: 2,
+    strokeStyle: '#2f3436'
+  });
+
+  var diagram = new RoutingDiagramView({
+    el: '#routing-diagram',
+    model: new CampaignRoutingModel(modelData)
+  });
+
+  var actions = new RoutingActionsView({
+    el: '.actions',
+    diagram: diagram,
+    sessionId: "{{ session_id|safe }}"
+  });
+
+  diagram.render();
+});
+{% endblock %}

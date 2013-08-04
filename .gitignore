@@ -1,15 +1,18 @@
 *.pyc
+*.swp
 .DS_Store
 /ve/
 /*.egg-info/
 /.coverage
 /coverage-html/
 /coverage.xml
+/node_modules/
 /nosetests.xml
 /pyflakes.log
 /pep8.log
 /htmlcov/
 /_trial_temp/
+/config/*
 /logs/*
 /tmp/*
 requirements.pip.md5
@@ -23,3 +26,4 @@ distribute-0.6.10.tar.gz
 /.tox/
 /test_results.xml
 /pep8.txt
+/docs/_build/

@@ -5,9 +5,14 @@ from django.core.paginator import Paginator
 
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base import utils
+from go.vumitools.conversation.definition import ConversationDefinitionBase
+from go.conversation.view_definition import ConversationViewDefinitionBase
+from go.vumitools.api import VumiApi, VumiUserApi
 
 
 class AuthenticationTestCase(VumiGoDjangoTestCase):
+
+    use_riak = True
 
     def setUp(self):
         super(AuthenticationTestCase, self).setUp()
@@ -52,6 +57,16 @@ class UtilsTestCase(VumiGoDjangoTestCase):
         self.setup_api()
         self.user = self.mk_django_user()
 
+    def test_vumi_api_for_user(self):
+        user_api = utils.vumi_api_for_user(self.user)
+        self.assertTrue(isinstance(user_api, VumiUserApi))
+        self.assertEqual(user_api.user_account_key,
+                         self.user.get_profile().user_account)
+
+    def test_vumi_api(self):
+        vumi_api = utils.vumi_api()
+        self.assertTrue(isinstance(vumi_api, VumiApi))
+
     def test_padded_queryset(self):
         short_list = User.objects.all()[:1]
         padded_list = utils.padded_queryset(short_list)
@@ -86,3 +101,10 @@ class UtilsTestCase(VumiGoDjangoTestCase):
         paginator = Paginator(range(4), 3)
         self.assertEqual(utils.page_range_window(paginator.page(1), 5),
             [1, 2])
+
+    def test_get_conversation_view_definition(self):
+        view_def = utils.get_conversation_view_definition('bulk_message', None)
+        conv_def = view_def._conv_def
+        self.assertTrue(isinstance(view_def, ConversationViewDefinitionBase))
+        self.assertTrue(isinstance(conv_def, ConversationDefinitionBase))
+        self.assertEqual('bulk_message', conv_def.conversation_type)

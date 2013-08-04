@@ -99,7 +99,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         """
 
         # Avoid hitting Riak for the conversation and Redis for poll times.
-        expected = [[conv.get_batch_keys()[0], conv.key] for conv in convs]
+        expected = [[conv.user_account.key, conv.key] for conv in convs]
         poll_times = [(yield self.app._get_last_poll_time())]
         scheduled_conversations = yield self.app._get_scheduled_conversations()
 
@@ -305,7 +305,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         rt = yield self.user_api.get_routing_table()
         self.assertEqual(len(rt), 0)
         yield self.user_api.acquire_specific_tag((u'pool', u'tag1'))
-        yield self.start_conversation(
+        yield self.start_conversation_old_style(
             conv, no_batch_tag=True, acquire_tag=False)
         rt = yield self.user_api.get_routing_table()
         self.assertEqual(len(rt), 1)

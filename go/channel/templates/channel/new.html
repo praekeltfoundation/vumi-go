@@ -1,0 +1,80 @@
+{% extends "app.html" %}
+
+{% block content_title %}New Channel{% endblock %}
+
+{% block content_extraclass %}channels new{% endblock %}
+
+{% block content_main %}
+<div class="row">
+    <div class="span12">
+        {% include "base/includes/messages.html" %}
+    </div>
+</div>
+
+<form id="form-channels" class="indent" method="post" action="">
+    {% csrf_token %}
+
+    <fieldset class="configuration_new row-fluid boxes">
+
+        <div class="span4">
+            <div class="box">
+                <label for="id_{{ new_channel_form.country.name }}">
+                    {{ new_channel_form.country.label }}
+                </label>
+
+                {{ new_channel_form.country }}
+
+            </div>
+        </div>
+
+        <div class="span4 channel">
+            <div class="box">
+                <label for="id_{{ new_channel_form.channel.name }}">
+                  {{ new_channel_form.channel.label }}
+                </label>
+                
+                {% for country, channels in new_channel_form.channel_options.items %}
+                    <select name="{{ new_channel_form.channel.name }}"
+                        data-relation-key="{{ country }}">
+                        {% for channel, tags in channels.items %}
+                        <optgroup label="{{ channel.1 }}">
+                          {% for tag in tags %}
+                          <option value="{{ tag.0 }}">
+                            {{ tag.1 }}
+                          </option>
+                          {% endfor %}
+                        {% endfor %}
+                        </optgroup>
+                    </select>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="span4">
+            <div class="box">
+                <br>
+                <input type="submit" class="btn btn-primary" value="Save">
+            </div>
+        </div>
+    </fieldset>
+</form>
+{% endblock %}
+
+
+{% block ondomready %}
+    {{ block.super }}
+
+    $('select[name=country]').on('change', function() {
+        var v = $(this).find(':checked').val();
+        $('.channel select').hide();
+        $('.channel select[data-relation-key="' + v + '"]').show();
+    });
+    // trigger change in order to show the first select box.
+    $('select[name=country]').trigger('change');
+
+    $('#form-channels').on('submit', function() {
+        // remove all the select elements that are hidden, so that they're
+        // not posted.
+        $(this).find('select:hidden').remove();
+    });
+{% endblock %}

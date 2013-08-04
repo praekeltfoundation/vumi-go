@@ -17,20 +17,21 @@ from vumi.persist.riak_manager import RiakManager
 from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.txredis_manager import TxRedisManager
-from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
 from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
+from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
-from go.vumitools.conversation.models import CONVERSATION_DRAFT
+from go.vumitools.router import RouterStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
-from go.vumitools.middleware import DebitAccountMiddleware
 from go.vumitools.token_manager import TokenManager
 
 from django.conf import settings
 from django.utils.datastructures import SortedDict
+
+from vumi.message import TransportUserMessage
 
 
 class TagpoolSet(object):
@@ -70,6 +71,9 @@ class TagpoolSet(object):
     def display_name(self, pool):
         return self._pools[pool].get('display_name', pool)
 
+    def country_name(self, pool, default):
+        return self._pools[pool].get('country_name', default)
+
     def user_selects_tag(self, pool):
         return self._pools[pool].get('user_selects_tag', False)
 
@@ -96,6 +100,10 @@ class VumiUserApi(object):
         self.conversation_store = ConversationStore(self.api.manager,
                                                     self.user_account_key)
         self.contact_store = ContactStore(self.api.manager,
+                                          self.user_account_key)
+        self.router_store = RouterStore(self.api.manager,
+                                        self.user_account_key)
+        self.channel_store = ChannelStore(self.api.manager,
                                           self.user_account_key)
 
     def exists(self):
@@ -132,6 +140,13 @@ class VumiUserApi(object):
         if conversation:
             returnValue(self.wrap_conversation(conversation))
 
+    def get_conversation(self, conversation_key):
+        return self.conversation_store.get_conversation_by_key(
+            conversation_key)
+
+    def get_router(self, router_key):
+        return self.router_store.get_router_by_key(router_key)
+
     @Manager.calls_manager
     def finished_conversations(self):
         conv_store = self.conversation_store
@@ -163,9 +178,30 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def draft_conversations(self):
+        # TODO: Get rid of this once the old UI finally goes away.
         conversations = yield self.active_conversations()
-        returnValue([c for c in conversations
-                        if c.get_status() == CONVERSATION_DRAFT])
+        returnValue([c for c in conversations if c.is_draft()])
+
+    @Manager.calls_manager
+    def active_routers(self):
+        keys = yield self.router_store.list_active_routers()
+        # NOTE: This assumes that we don't have very large numbers of active
+        #       routers.
+        routers = []
+        for routers_bunch in self.router_store.load_all_bunches(keys):
+            routers.extend((yield routers_bunch))
+        returnValue(routers)
+
+    @Manager.calls_manager
+    def active_channels(self):
+        channels = []
+        endpoints = yield self.list_endpoints()
+        for tag in endpoints:
+            tagpool_meta = yield self.api.tpm.get_metadata(tag[0])
+            channel = yield self.channel_store.get_channel_by_tag(
+                tag, tagpool_meta)
+            channels.append(channel)
+        returnValue(channels)
 
     @Manager.calls_manager
     def tagpools(self):
@@ -206,12 +242,23 @@ class VumiUserApi(object):
                         if application in app_settings]))
 
     @Manager.calls_manager
+    def router_types(self):
+        # TODO: Permissions.
+        yield None
+        router_settings = settings.VUMI_INSTALLED_ROUTERS
+        returnValue(SortedDict([(router_type, router_settings[router_type])
+                                for router_type in sorted(router_settings)]))
+
+    @Manager.calls_manager
     def list_groups(self):
         returnValue(sorted((yield self.contact_store.list_groups()),
             key=lambda group: group.name))
 
     def new_conversation(self, *args, **kw):
         return self.conversation_store.new_conversation(*args, **kw)
+
+    def new_router(self, *args, **kw):
+        return self.router_store.new_router(*args, **kw)
 
     @Manager.calls_manager
     def list_conversation_endpoints(self):
@@ -272,7 +319,7 @@ class VumiUserApi(object):
                         'going with most recent: %r' % (conv_keys,))
 
         conversation = sorted(conversations, reverse=True,
-                              key=lambda c: c.start_timestamp)[0]
+                              key=lambda c: c.created_at)[0]
         returnValue(conversation)
 
     @Manager.calls_manager
@@ -314,8 +361,8 @@ class VumiUserApi(object):
         user_account.routing_table = routing_table
         yield user_account.save()
 
-        # Check that we have routing set up for all our active conversations.
-        convs = yield self.active_conversations()
+        # Check that we have routing set up for all our running conversations.
+        convs = yield self.running_conversations()
         for conv in convs:
             conv_conn = str(GoConnector.for_conversation(
                 conv.conversation_type, conv.key))
@@ -366,27 +413,6 @@ class VumiUserApi(object):
             raise VumiError(
                 "Routing table contains illegal connector names: %s" % (
                     routing_connectors,))
-
-    @Manager.calls_manager
-    def msg_options(self, tag, tagpool_metadata=None):
-        """Return a dictionary of message options needed to send a message
-        from this user to the given tag.
-        """
-        if tagpool_metadata is None:
-            tagpool_metadata = yield self.api.tpm.get_metadata(tag[0])
-        msg_options = {}
-        # TODO: transport_type is probably irrelevant
-        msg_options['transport_type'] = tagpool_metadata.get('transport_type')
-        # TODO: not sure whether to declare that tag names must always be
-        #       valid from_addr values or whether to put in a mapping somewhere
-        msg_options['from_addr'] = tag[1]
-        if 'transport_name' in tagpool_metadata:
-            msg_options['transport_name'] = tagpool_metadata['transport_name']
-        msg_options.update(tagpool_metadata.get('msg_options', {}))
-        TaggingMiddleware.add_tag_to_payload(msg_options, tag)
-        DebitAccountMiddleware.add_user_to_payload(msg_options,
-                                                   self.user_account_key)
-        returnValue(msg_options)
 
     @Manager.calls_manager
     def _update_tag_data_for_acquire(self, user_account, tag):
@@ -465,12 +491,65 @@ class VumiUserApi(object):
             tag_info = yield self.api.mdb.get_tag_info(tag)
             del tag_info.metadata['user_account']
             yield tag_info.save()
+
+            # Clean up routing table entries.
+            routing_table = yield self.get_routing_table(user_account)
+            rt_helper = RoutingTableHelper(routing_table)
+            rt_helper.remove_transport_tag(tag)
+
             yield user_account.save()
         yield self.api.tpm.release_tag(tag)
+
+    def delivery_class_for_msg(self, msg):
+        # Sometimes we need a `delivery_class` but we don't always have (or
+        # want) one. This builds one from `msg['transport_type']`.
+        return {
+            TransportUserMessage.TT_SMS: 'sms',
+            TransportUserMessage.TT_USSD: 'ussd',
+            TransportUserMessage.TT_XMPP: 'gtalk',
+            TransportUserMessage.TT_TWITTER: 'twitter',
+        }.get(msg['transport_type'],
+              msg['transport_type'])
+
+    def get_router_api(self, router_type, router_key):
+        return VumiRouterApi(self, router_type, router_key)
+
+
+class VumiRouterApi(object):
+    def __init__(self, user_api, router_type, router_key):
+        self.user_api = user_api
+        self.manager = user_api.manager
+        self.router_type = router_type
+        self.router_key = router_key
+
+    def get_router(self):
+        return self.user_api.get_router(self.router_key)
+
+    @Manager.calls_manager
+    def archive_router(self, router=None):
+        if router is None:
+            router = yield self.get_router()
+        router.set_status_finished()
+        yield router.save()
+        yield self._remove_from_routing_table(router)
+
+    @Manager.calls_manager
+    def _remove_from_routing_table(self, router):
+        """Remove routing entries for this router.
+        """
+        user_account = yield self.user_api.get_user_account()
+        routing_table = yield self.user_api.get_routing_table(user_account)
+        rt_helper = RoutingTableHelper(routing_table)
+        rt_helper.remove_router(router)
+        yield user_account.save()
 
 
 class VumiApi(object):
     def __init__(self, manager, redis, sender=None):
+        # local import to avoid circular import since
+        # go.api.go_api needs to access VumiApi
+        from go.api.go_api.session_manager import SessionManager
+
         self.manager = manager
         self.redis = redis
 
@@ -481,6 +560,8 @@ class VumiApi(object):
         self.account_store = AccountStore(self.manager)
         self.token_manager = TokenManager(
                                 self.redis.sub_manager('token_manager'))
+        self.session_manager = SessionManager(
+            self.redis.sub_manager('session_manager'))
         self.mapi = sender
 
     @staticmethod
@@ -490,11 +571,13 @@ class VumiApi(object):
         return riak_config, redis_config
 
     @classmethod
-    def from_config_sync(cls, config):
+    def from_config_sync(cls, config, amqp_client=None):
         riak_config, redis_config = cls._parse_config(config)
         manager = RiakManager.from_config(riak_config)
         redis = RedisManager.from_config(redis_config)
-        sender = SyncMessageSender()
+        sender = None
+        if amqp_client is not None:
+            sender = SyncMessageSender(amqp_client)
         return cls(manager, redis, sender)
 
     @classmethod
@@ -616,13 +699,13 @@ class VumiApi(object):
 
 
 class SyncMessageSender(object):
-    def __init__(self):
-        self.publisher_config = VumiApiCommand.default_routing_config()
-        from go.vumitools import api_celery
-        self.api_celery = api_celery
+    def __init__(self, amqp_client):
+        self.amqp_client = amqp_client
 
     def send_command(self, command):
-        self.api_celery.send_command_task.delay(command, self.publisher_config)
+        if not self.amqp_client.is_connected():
+            self.amqp_client.connect()
+        self.amqp_client.publish_command_message(command)
 
 
 class AsyncMessageSender(object):
@@ -667,6 +750,15 @@ class VumiApiCommand(Message):
                                  # JSON.
             'kwargs': kwargs,
         })
+
+    @classmethod
+    def conversation_command(cls, worker_name, command_name, user_account_key,
+                             conversation_key, *args, **kwargs):
+        kwargs.update({
+            'user_account_key': user_account_key,
+            'conversation_key': conversation_key,
+        })
+        return cls.command(worker_name, command_name, *args, **kwargs)
 
 
 class VumiApiEvent(Message):

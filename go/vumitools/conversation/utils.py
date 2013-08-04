@@ -11,7 +11,7 @@ from vumi.persist.model import Manager
 from go.vumitools.exceptions import ConversationSendError
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.utils import MessageMetadataHelper
-from go.vumitools.account import RoutingTableHelper
+from go.vumitools.account import RoutingTableHelper, GoConnector
 
 
 class ConversationWrapper(object):
@@ -39,7 +39,25 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def end_conversation(self):
-        self.c.end_timestamp = datetime.utcnow()
+        # TODO: Remove this once the old UI is gone.
+        # Pretend we're archived, stop_conversation() saves for us.
+        self.c.set_status_finished()
+        # Stop as normal
+        yield self.stop_conversation()
+        # Clean up all the things
+        yield self._remove_from_routing_table()
+        yield self._release_batches()
+
+    @Manager.calls_manager
+    def stop_conversation(self):
+        self.c.set_status_stopping()
+        yield self.c.save()
+        yield self.dispatch_command('stop',
+                                    user_account_key=self.c.user_account.key,
+                                    conversation_key=self.c.key)
+
+    @Manager.calls_manager
+    def archive_conversation(self):
         self.c.set_status_finished()
         yield self.c.save()
         yield self._remove_from_routing_table()
@@ -91,6 +109,41 @@ class ConversationWrapper(object):
         for batch in (yield self.get_batches()):
             tags.extend((yield batch.tags))
         returnValue(tags)
+
+    @Manager.calls_manager
+    def get_channels(self):
+        """
+        Returns lists of channels that can either send messages to or receive
+        messages from this conversation.
+
+        :rtype:
+            List of channel models.
+        """
+        user_account = yield self.c.user_account.get(self.api.manager)
+        routing_table = yield self.user_api.get_routing_table(user_account)
+        rt_helper = RoutingTableHelper(routing_table)
+        conn = GoConnector.for_conversation(
+            self.conversation_type, self.key)
+        incoming = rt_helper.transitive_sources(str(conn))
+        outbound = rt_helper.transitive_targets(str(conn))
+        connectors = incoming | outbound
+        go_connectors = [GoConnector.parse(s) for s in connectors]
+        channels = []
+        for conn in go_connectors:
+            if conn.ctype != conn.TRANSPORT_TAG:
+                continue
+            tag = [conn.tagpool, conn.tagname]
+            metadata = yield self.user_api.api.tpm.get_metadata(conn.tagpool)
+            channel = self.user_api.channel_store.get_channel_by_tag(
+                tag, metadata)
+            channels.append(channel)
+        channels.sort(key=lambda c: c.name)
+        returnValue(channels)
+
+    @Manager.calls_manager
+    def has_channel_supporting(self, **kw):
+        channels = yield self.get_channels()
+        returnValue(any(channel.supports(**kw) for channel in channels))
 
     @Manager.calls_manager
     def get_progress_status(self):
@@ -149,13 +202,6 @@ class ConversationWrapper(object):
             groups.extend((yield bunch))
         returnValue(groups)
 
-    @Manager.calls_manager
-    def make_message_options(self, tag):
-        yield self.get_tagpool_metadata('msg_options')  # force cache update
-        msg_options = yield self.user_api.msg_options(
-            tag, self._tagpool_metadata)
-        returnValue(msg_options)
-
     def set_go_helper_metadata(self, helper_metadata=None):
         if helper_metadata is None:
             helper_metadata = {}
@@ -166,8 +212,8 @@ class ConversationWrapper(object):
         return helper_metadata
 
     @Manager.calls_manager
-    def start(self, no_batch_tag=False, batch_id=None, acquire_tag=True,
-                **extra_params):
+    def old_start(self, no_batch_tag=False, batch_id=None, acquire_tag=True,
+                  send_initial_action_hack=True, **extra_params):
         """
         Send the start command to this conversations application worker.
 
@@ -223,21 +269,48 @@ class ConversationWrapper(object):
             outbound_only = not acquire_tag  # XXX: Hack for seq send.
             yield self._add_to_routing_table(tag, outbound_only=outbound_only)
 
-        msg_options = yield self.make_message_options(tag)
-
-        is_client_initiated = yield self.is_client_initiated()
-        yield self.dispatch_command('start',
-            batch_id=batch_id,
-            conversation_type=self.c.conversation_type,
-            conversation_key=self.c.key,
-            msg_options=msg_options,
-            is_client_initiated=is_client_initiated,
-            **extra_params)
-
         if batch_id not in self.get_batch_keys():
             self.c.batches.add_key(batch_id)
-        self.c.set_status_started()
+        self.c.set_status_starting()
         yield self.c.save()
+
+        yield self.dispatch_command('start',
+                                    user_account_key=self.c.user_account.key,
+                                    conversation_key=self.c.key)
+
+        if send_initial_action_hack:
+            is_client_initiated = yield self.is_client_initiated()
+            yield self.dispatch_command(
+                'initial_action_hack',
+                user_account_key=self.c.user_account.key,
+                conversation_key=self.c.key,
+                batch_id=batch_id,
+                msg_options={},
+                is_client_initiated=is_client_initiated,
+                delivery_class=self.c.delivery_class,
+                **extra_params)
+
+    @Manager.calls_manager
+    def start(self):
+        """Send the start command to this conversations application worker.
+
+        This is used by the new conversation lifecycle and skips all the
+        tagpool and initial_action silliness.
+
+        TODO: Get rid of the old_start() method above and everything that
+              relies on it.
+        """
+        batches = yield self.get_batches()
+        if not batches:
+            batch_id = yield self.start_batch()
+            self.c.batches.add_key(batch_id)
+
+        self.c.set_status_starting()
+        yield self.c.save()
+
+        yield self.dispatch_command('start',
+                                    user_account_key=self.c.user_account.key,
+                                    conversation_key=self.c.key)
 
     @Manager.calls_manager
     def _add_to_routing_table(self, tag, outbound_only=False):
@@ -269,7 +342,7 @@ class ConversationWrapper(object):
         yield user_account.save()
 
     @Manager.calls_manager
-    def send_token_url(self, token_url, msisdn, **extra_params):
+    def send_token_url(self, token_url, msisdn, acquire_tag=True):
         """
         I was tempted to make this a generic 'send_message' function but
         that gets messy with acquiring tags, it becomes unclear whether an
@@ -279,26 +352,29 @@ class ConversationWrapper(object):
         tag needs to be acquired and when the conversation start is actually
         confirmed that tag can be re-used.
         """
-        tag = yield self.acquire_tag()
-        batch_id = yield self.start_batch(tag)
-        msg_options = yield self.make_message_options(tag)
+        # TODO: Get rid of tag silliness when we can.
+        if acquire_tag:
+            tag = yield self.acquire_tag()
+            batch_id = yield self.start_batch(tag)
+            # We need to have routing set up so that we can send the message
+            # with the token in it.
+            yield self._add_to_routing_table(tag)
+        else:
+            batch_id = yield self.get_latest_batch_key()
         # specify this message as being sensitive
-        helper_metadata = msg_options.setdefault('helper_metadata', {})
-        go_metadata = helper_metadata.setdefault('go', {})
-        go_metadata['sensitive'] = True
+        msg_options = {'helper_metadata': {'go': {'sensitive': True}}}
 
-        # We need to have routing set up so that we can send the message with
-        # the token in it.
-        yield self._add_to_routing_table(tag)
-
-        yield self.dispatch_command('send_message', command_data={
-            "batch_id": batch_id,
-            "to_addr": msisdn,
-            "conversation_key": self.c.key,
-            "msg_options": msg_options,
-            "content": ("Please visit %s to start your conversation." %
-                        (token_url,)),
-        })
+        yield self.dispatch_command(
+            'send_message',
+            user_account_key=self.c.user_account.key,
+            conversation_key=self.c.key,
+            command_data={
+                "batch_id": batch_id,
+                "to_addr": msisdn,
+                "msg_options": msg_options,
+                "content": ("Please visit %s to start your conversation." %
+                            (token_url,)),
+                })
         self.c.batches.add_key(batch_id)
         yield self.c.save()
 
@@ -721,9 +797,7 @@ class ConversationWrapper(object):
         return self.get_tagpool_metadata('client_initiated', False)
 
     def get_absolute_url(self):
-        # TODO: Change this back, to original.
-        #return u'/app/%s/%s/' % (self.conversation_type, self.key)
-        return u'/campaigns/details/%s/' % self.key
+        return u'/app/%s/%s/' % (self.conversation_type, self.key)
 
     def get_contact_keys(self):
         """
@@ -755,9 +829,9 @@ class ConversationWrapper(object):
         returnValue(count / (sample_time / 60.0))
 
     @Manager.calls_manager
-    def _filter_opted_out_contacts(self, contacts):
+    def _filter_opted_out_contacts(self, contacts, delivery_class):
         # TODO: Less hacky address type handling.
-        address_type = 'gtalk' if self.delivery_class == 'gtalk' else 'msisdn'
+        address_type = 'gtalk' if delivery_class == 'gtalk' else 'msisdn'
         contacts = yield contacts
         opt_out_store = OptOutStore(
             self.api.manager, self.user_api.user_account_key)
@@ -769,13 +843,13 @@ class ConversationWrapper(object):
 
         filtered_contacts = []
         for contact in contacts:
-            contact_addr = contact.addr_for(self.delivery_class)
+            contact_addr = contact.addr_for(delivery_class)
             if contact_addr and contact_addr not in opted_out_addrs:
                 filtered_contacts.append(contact)
         returnValue(filtered_contacts)
 
     @Manager.calls_manager
-    def get_opted_in_contact_bunches(self):
+    def get_opted_in_contact_bunches(self, delivery_class):
         """
         Get a generator that produces batches the contacts with
         an address attribute that is appropriate for the conversation's
@@ -784,13 +858,14 @@ class ConversationWrapper(object):
         contact_store = self.user_api.contact_store
         contact_keys = yield self.get_contact_keys()
         contacts_iter = yield contact_store.contacts.load_all_bunches(
-                                                            contact_keys)
+            contact_keys)
 
         # We return a generator here. It's important that this is iterated over
         # slowly, otherwise we risk hammering our Riak servers to death.
         def opted_in_contacts_generator():
             # NOTE: This is a generator, *not* an async flattener.
             for contacts_bunch in contacts_iter:
-                yield self._filter_opted_out_contacts(contacts_bunch)
+                yield self._filter_opted_out_contacts(
+                    contacts_bunch, delivery_class)
 
         returnValue(opted_in_contacts_generator())

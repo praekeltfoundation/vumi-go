@@ -76,9 +76,7 @@ class TestSurveyApplication(AppWorkerTestCase):
         # Make the contact store searchable
         yield self.user_api.contact_store.contacts.enable_search()
 
-        self.conversation = yield self.create_conversation(
-            delivery_tag_pool=u'pool',
-            delivery_class=self.transport_type)
+        self.conversation = yield self.create_conversation()
         self.conversation.add_group(self.group)
         yield self.conversation.save()
 
@@ -135,14 +133,14 @@ class TestSurveyApplication(AppWorkerTestCase):
         returnValue(msgs[-1 * nr_of_messages:])
 
     @inlineCallbacks
-    def test_start(self):
-        # We need to wait for process_command_start() to finish completely.
-        # Since it runs in response to an async command, we need to wrap it in
-        # something that fires a deferred at the appropriate time.
-        pcs_d = Deferred()
-        pcs = self.app.process_command_start
-        pcs_wrapper = lambda *args, **kw: pcs(*args, **kw).chainDeferred(pcs_d)
-        self.app.process_command_start = pcs_wrapper
+    def test_start_old_style(self):
+        # We need to wait for process_command_send_survey() to finish
+        # completely. Since it runs in response to an async command, we need to
+        # wrap it in something that fires a deferred at the appropriate time.
+        pcss_d = Deferred()
+        pcss = self.app.process_command_send_survey
+        pcss_wrapper = lambda *a, **kw: pcss(*a, **kw).chainDeferred(pcss_d)
+        self.app.process_command_send_survey = pcss_wrapper
 
         self.contact1 = yield self.create_contact(name=u'First',
             surname=u'Contact', msisdn=u'+27831234567', groups=[self.group])
@@ -150,13 +148,26 @@ class TestSurveyApplication(AppWorkerTestCase):
             surname=u'Contact', msisdn=u'+27831234568', groups=[self.group])
         yield self.create_survey(self.conversation)
         with LogCatcher() as log:
-            yield self.start_conversation(self.conversation)
+            yield self.start_conversation_old_style(self.conversation)
             self.assertEqual(log.errors, [])
 
-        yield pcs_d
+        yield pcss_d
         [msg1, msg2] = self.get_dispatched_messages()
         self.assertEqual(msg1['content'], self.default_questions[0]['copy'])
         self.assertEqual(msg2['content'], self.default_questions[0]['copy'])
+
+    @inlineCallbacks
+    def send_send_survey_command(self, conversation):
+        batch_id = yield self.conversation.get_latest_batch_key()
+        yield self.dispatch_command(
+            "send_survey",
+            user_account_key=self.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=batch_id,
+            msg_options={},
+            is_client_initiated=False,
+            delivery_class=conversation.delivery_class,
+        )
 
     @inlineCallbacks
     def test_clearing_old_survey_data(self):
@@ -173,6 +184,7 @@ class TestSurveyApplication(AppWorkerTestCase):
 
         self.create_survey(self.conversation)
         yield self.start_conversation(self.conversation)
+        yield self.send_send_survey_command(self.conversation)
         yield self.submit_answers(self.default_questions,
             answers=[
                 '2',  # Yellow, skips the second question because of the check
@@ -259,6 +271,7 @@ class TestSurveyApplication(AppWorkerTestCase):
             msisdn=u'+27831234567', groups=[self.group])
         self.create_survey(self.conversation)
         yield self.start_conversation(self.conversation)
+        yield self.send_send_survey_command(self.conversation)
         yield self.complete_survey(self.default_questions)
 
     @inlineCallbacks
@@ -267,6 +280,7 @@ class TestSurveyApplication(AppWorkerTestCase):
             msisdn=u'+27831234567', groups=[self.group])
         self.create_survey(self.conversation)
         yield self.start_conversation(self.conversation)
+        yield self.send_send_survey_command(self.conversation)
         yield self.complete_survey(self.default_questions)
         # This participant should be empty
         poll_id = 'poll-%s' % (self.conversation.key,)
@@ -274,55 +288,61 @@ class TestSurveyApplication(AppWorkerTestCase):
         self.assertEqual(participant.labels, {})
 
     @inlineCallbacks
-    def test_process_command_send_message(self):
-        command = VumiApiCommand.command('worker', 'send_message',
+    def test_send_message_command(self):
+        msg_options = {
+            'transport_name': 'sphex_transport',
+            'from_addr': '666666',
+            'transport_type': 'sphex',
+            'helper_metadata': {'foo': {'bar': 'baz'}},
+        }
+        yield self.start_conversation(self.conversation)
+        batch_id = yield self.conversation.get_latest_batch_key()
+        yield self.dispatch_command(
+            "send_message",
+            user_account_key=self.user_account.key,
+            conversation_key=self.conversation.key,
             command_data={
-                u'batch_id': u'batch-id',
-                u'content': u'foo',
-                u'to_addr': u'to_addr',
-                u'msg_options': {
-                    u'helper_metadata': {
-                        u'go': {
-                            u'user_account': u'account-key'
-                        },
-                        u'tag': {
-                            u'tag': [u'longcode', u'default10080']
-                        }
-                    },
-                    u'transport_name': u'smpp_transport',
-                    u'transport_type': u'sms',
-                    u'from_addr': u'default10080',
-                }
-            })
-        yield self.app.consume_control_command(command)
-        [sent_msg] = self.get_dispatched_messages()
-        self.assertEqual(sent_msg['to_addr'], 'to_addr')
-        self.assertEqual(sent_msg['content'], 'foo')
-        self.assertEqual(sent_msg['in_reply_to'], None)
+            "batch_id": batch_id,
+            "to_addr": "123456",
+            "content": "hello world",
+            "msg_options": msg_options,
+        })
+
+        [msg] = yield self.get_dispatched_messages()
+        self.assertEqual(msg.payload['to_addr'], "123456")
+        self.assertEqual(msg.payload['from_addr'], "666666")
+        self.assertEqual(msg.payload['content'], "hello world")
+        self.assertEqual(msg.payload['transport_name'], "sphex_transport")
+        self.assertEqual(msg.payload['transport_type'], "sphex")
+        self.assertEqual(msg.payload['message_type'], "user_message")
+        self.assertEqual(msg.payload['helper_metadata']['go'], {
+            'user_account': self.user_account.key,
+            'conversation_type': 'survey',
+            'conversation_key': self.conversation.key,
+        })
+        self.assertEqual(msg.payload['helper_metadata']['foo'],
+                         {'bar': 'baz'})
 
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
+        yield self.start_conversation(self.conversation)
+        batch_id = yield self.conversation.get_latest_batch_key()
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
-        yield self.vumi_api.mdb.add_inbound_message(msg)
-        command = VumiApiCommand.command('worker', 'send_message',
+        yield self.store_inbound_msg(msg)
+        command = VumiApiCommand.command(
+            'worker', 'send_message',
+            user_account_key=self.user_account.key,
+            conversation_key=self.conversation.key,
             command_data={
-                u'batch_id': u'batch-id',
+                u'batch_id': batch_id,
                 u'content': u'foo',
                 u'to_addr': u'to_addr',
                 u'msg_options': {
-                    u'helper_metadata': {
-                        u'go': {
-                            u'user_account': u'account-key'
-                        },
-                        u'tag': {
-                            u'tag': [u'longcode', u'default10080']
-                        }
-                    },
                     u'transport_name': u'smpp_transport',
                     u'in_reply_to': msg['message_id'],
                     u'transport_type': u'sms',
                     u'from_addr': u'default10080',
-                }
+                },
             })
         yield self.app.consume_control_command(command)
         [sent_msg] = self.get_dispatched_messages()
@@ -332,22 +352,19 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to_bad_transport_name(self):
+        yield self.start_conversation(self.conversation)
+        batch_id = yield self.conversation.get_latest_batch_key()
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex, transport_name="bad")
-        yield self.vumi_api.mdb.add_inbound_message(msg)
-        command = VumiApiCommand.command('worker', 'send_message',
+        yield self.store_inbound_msg(msg)
+        command = VumiApiCommand.command(
+            'worker', 'send_message',
+            user_account_key=self.user_account.key,
+            conversation_key=self.conversation.key,
             command_data={
-                u'batch_id': u'batch-id',
+                u'batch_id': batch_id,
                 u'content': u'foo',
                 u'to_addr': u'to_addr',
                 u'msg_options': {
-                    u'helper_metadata': {
-                        u'go': {
-                            u'user_account': u'account-key'
-                        },
-                        u'tag': {
-                            u'tag': [u'longcode', u'default10080']
-                        }
-                    },
                     u'transport_name': u'smpp_transport',
                     u'in_reply_to': msg['message_id'],
                     u'transport_type': u'sms',

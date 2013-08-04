@@ -1,15 +1,15 @@
 {% load url from future %}
 
-<table class="table table-bordered table-manage-data" data-table-id="people">
+<table class="table">
     <thead>
-    <tr>
-        <th><input type="checkbox"></th>
-        <th>Phone number</th>
-        <th>Name</th>
-        <th>Surname</th>
-        <th>Email</th>
-        <th>Groups</th>
-    </tr>
+        <tr>
+            <th><input type="checkbox"></th>
+            <th>Phone number</th>
+            <th>Name</th>
+            <th>Surname</th>
+            <th>Email</th>
+            <th>Groups</th>
+        </tr>
     </thead>
     <tbody>
     {% for contact in selected_contacts %}
@@ -18,7 +18,10 @@
                 <input type="checkbox" name="contact" value="{{ contact.key }}">
             </td>
             <td>
-                {{ contact.msisdn }}
+                <a href="{% url 'contacts:person' contact.key %}">
+                    {# NOTE: Is a MSISDN always available on a contact? #}
+                    {{ contact.msisdn }}
+                </a>
             </td>
             <td>
                 {{ contact.name }}

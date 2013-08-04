@@ -1,5 +1,5 @@
 from StringIO import StringIO
-from zipfile import ZipFile
+from zipfile import ZipFile, ZIP_DEFLATED
 
 from celery.task import task
 
@@ -69,7 +69,7 @@ def export_conversation_messages(account_key, conversation_key):
                             for fn in field_names])
 
     zipio = StringIO()
-    zf = ZipFile(zipio, "a")
+    zf = ZipFile(zipio, "a", ZIP_DEFLATED)
     zf.writestr("messages-export.csv", io.getvalue())
     zf.close()
 
@@ -80,24 +80,3 @@ def export_conversation_messages(account_key, conversation_key):
         settings.DEFAULT_FROM_EMAIL, [user_profile.user.email])
     email.attach('messages-export.zip', zipio.getvalue(), 'application/zip')
     email.send()
-
-
-@task(ignore_result=True)
-def send_one_off_reply(account_key, conversation_key, in_reply_to, content):
-    user_api = VumiUserApi.from_config_sync(account_key,
-                                            settings.VUMI_API_CONFIG)
-    inbound_message = user_api.api.mdb.get_inbound_message(in_reply_to)
-    if inbound_message is None:
-        print 'Replying to an unknown message'
-
-    conversation = user_api.get_wrapped_conversation(conversation_key)
-    [tag] = conversation.get_tags()
-    msg_options = conversation.make_message_options(tag)
-    msg_options['in_reply_to'] = in_reply_to
-    conversation.dispatch_command('send_message', command_data={
-        "batch_id": conversation.get_latest_batch_key(),
-        "conversation_key": conversation.key,
-        "to_addr": inbound_message['from_addr'],
-        "content": content,
-        "msg_options": msg_options,
-        })

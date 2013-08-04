@@ -1,14 +1,17 @@
 from zope.interface import implements
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import (
+    inlineCallbacks, returnValue, maybeDeferred, gatherResults)
 
 from vumi import log
+from vumi.worker import BaseWorker
 from vumi.application import ApplicationWorker
 from vumi.blinkenlights.metrics import MetricManager, Metric, MAX
-from vumi.message import TransportEvent
 from vumi.config import IConfigData, ConfigText, ConfigDict
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.utils import MessageMetadataHelper
+from go.vumitools.conversation.models import (
+    CONVERSATION_STARTING, CONVERSATION_STOPPING)
 
 
 class OneShotMetricManager(MetricManager):
@@ -122,20 +125,6 @@ class GoWorkerMixin(object):
     def get_user_api(self, user_account_key):
         return self.vumi_api.get_user_api(user_account_key)
 
-    def get_config_for_conversation(self, conversation):
-        config_data = GoApplicationConfigData(self.config, conversation)
-        return self.CONFIG_CLASS(config_data)
-
-    @inlineCallbacks
-    def get_message_config(self, msg):
-        if isinstance(msg, TransportEvent):
-            msg = yield self.find_message_for_event(msg)
-
-        msg_mdh = self.get_metadata_helper(msg)
-        conversation = yield msg_mdh.get_conversation()
-
-        returnValue(self.get_config_for_conversation(conversation))
-
     def consume_control_command(self, command_message):
         """
         Handle a VumiApiCommand message that has arrived.
@@ -154,13 +143,56 @@ class GoWorkerMixin(object):
             return self.process_unknown_cmd(cmd_method_name, *args, **kwargs)
 
     @inlineCallbacks
+    def process_command_start(self, user_account_key, conversation_key):
+        log.info("Starting conversation '%s' for user '%s'." % (
+            conversation_key, user_account_key))
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        if conv is None:
+            log.warning(
+                "Trying to start missing conversation '%s' for user '%s'." % (
+                    conversation_key, user_account_key))
+            return
+        status = conv.get_status()
+        if status != CONVERSATION_STARTING:
+            log.warning(
+                "Trying to start conversation '%s' for user '%s' with invalid "
+                "status: %s" % (conversation_key, user_account_key, status))
+            return
+        conv.set_status_started()
+        yield conv.save()
+
+    @inlineCallbacks
+    def process_command_stop(self, user_account_key, conversation_key):
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        if conv is None:
+            log.warning(
+                "Trying to stop missing conversation '%s' for user '%s'." % (
+                    conversation_key, user_account_key))
+            return
+        status = conv.get_status()
+        if status != CONVERSATION_STOPPING:
+            log.warning(
+                "Trying to stop conversation '%s' for user '%s' with invalid "
+                "status: %s" % (conversation_key, user_account_key, status))
+            return
+        conv.set_status_stopped()
+        yield conv.save()
+
+    def process_command_initial_action_hack(self, *args, **kwargs):
+        # HACK: This lets us do whatever we used to do when we got a `start'
+        # message without having horrible app-specific view logic.
+        # TODO: Remove this when we've decoupled the various conversation
+        # actions from the lifecycle.
+        pass
+
+    @inlineCallbacks
     def process_command_collect_metrics(self, conversation_key,
                                         user_account_key):
         key_tuple = (conversation_key, user_account_key)
         if key_tuple in self._metrics_conversations:
             log.info("Ignoring conversation %s for user %s because the "
                      "previous collection run is still going." % (
-                        conversation_key, user_account_key))
+                         conversation_key, user_account_key))
             return
         self._metrics_conversations.add(key_tuple)
         user_api = self.get_user_api(user_account_key)
@@ -174,7 +206,7 @@ class GoWorkerMixin(object):
         if key_tuple in self._cache_recon_conversations:
             log.info("Ignoring conversation %s for user %s because the "
                      "previous cache recon run is still going." % (
-                        conversation_key, user_account_key))
+                         conversation_key, user_account_key))
             return
         self._cache_recon_conversations.add(key_tuple)
         user_api = self.get_user_api(user_account_key)
@@ -222,46 +254,17 @@ class GoWorkerMixin(object):
 
         go_metadata = helper_metadata.get('go', {})
         account_key = go_metadata.get('user_account', None)
-        conversation_key = go_metadata.get('conversation_key', None)
 
-        if account_key and conversation_key:
+        if account_key:
             user_api = self.get_user_api(account_key)
-            conv = yield user_api.get_wrapped_conversation(conversation_key)
-
+            delivery_class = user_api.delivery_class_for_msg(message)
             contact = yield user_api.contact_store.contact_for_addr(
-                conv.delivery_class, message.user(), create=create)
+                delivery_class, message.user(), create=create)
             returnValue(contact)
 
-    @inlineCallbacks
-    def get_user_account(self, batch_id):
-        batch = yield self.vumi_api.mdb.get_batch(batch_id)
-        if batch is None:
-            log.error('Cannot find batch for batch_id %s' % (batch_id,))
-            return
-
-        user_account_key = batch.metadata["user_account"]
-        if user_account_key is None:
-            log.error("No account key in batch metadata: %r" % (batch,))
-            return
-
-        user_account = yield self.vumi_api.get_user_account(user_account_key)
-        returnValue(user_account)
-
-    @inlineCallbacks
-    def get_conversation(self, batch_id, conversation_key):
-        batch = yield self.vumi_api.mdb.get_batch(batch_id)
-        if batch is None:
-            log.error('Cannot find batch for batch_id %s' % (batch_id,))
-            return
-
-        user_account_key = batch.metadata["user_account"]
-        if user_account_key is None:
-            log.error("No account key in batch metadata: %r" % (batch,))
-            return
-
+    def get_conversation(self, user_account_key, conversation_key):
         user_api = self.get_user_api(user_account_key)
-        conv = yield user_api.get_wrapped_conversation(conversation_key)
-        returnValue(conv)
+        return user_api.get_wrapped_conversation(conversation_key)
 
     def get_metadata_helper(self, msg):
         return MessageMetadataHelper(self.vumi_api, msg)
@@ -284,6 +287,25 @@ class GoWorkerMixin(object):
         outbound_message = yield self.find_outboundmessage_for_event(event)
         if outbound_message:
             returnValue(outbound_message.msg)
+
+    @inlineCallbacks
+    def find_inboundmessage_for_reply(self, reply):
+        user_message_id = reply.get('in_reply_to')
+        if user_message_id is None:
+            log.error('Received reply without in_reply_to: %s' % (reply,))
+            return
+
+        msg = yield self.vumi_api.mdb.inbound_messages.load(user_message_id)
+        if msg is None:
+            log.error('Unable to find message for reply: %s' % (reply,))
+
+        returnValue(msg)
+
+    @inlineCallbacks
+    def find_message_for_reply(self, reply):
+        inbound_message = yield self.find_inboundmessage_for_reply(reply)
+        if inbound_message:
+            returnValue(inbound_message.msg)
 
     def event_for_message(self, message, event_type, content):
         msg_mdh = self.get_metadata_helper(message)
@@ -343,8 +365,35 @@ class GoWorkerMixin(object):
 
 
 class GoApplicationMixin(GoWorkerMixin):
-    # TODO: Move some stuff to here.
-    pass
+    def get_config_for_conversation(self, conversation):
+        config_data = GoApplicationConfigData(self.config, conversation)
+        return self.CONFIG_CLASS(config_data)
+
+    @inlineCallbacks
+    def get_message_config(self, msg):
+        # By the time we get an event here, the metadata has already been
+        # populated for us from the original message by the routing table
+        # dispatcher.
+        msg_mdh = self.get_metadata_helper(msg)
+        conversation = yield msg_mdh.get_conversation()
+
+        returnValue(self.get_config_for_conversation(conversation))
+
+
+class GoRouterMixin(GoWorkerMixin):
+    def get_config_for_router(self, router):
+        config_data = GoApplicationConfigData(self.config, router)
+        return self.CONFIG_CLASS(config_data)
+
+    @inlineCallbacks
+    def get_message_config(self, msg):
+        # By the time we get an event here, the metadata has already been
+        # populated for us from the original message by the routing table
+        # dispatcher.
+        msg_mdh = self.get_metadata_helper(msg)
+        router = yield msg_mdh.get_router()
+
+        returnValue(self.get_config_for_router(router))
 
 
 class GoApplicationConfig(ApplicationWorker.CONFIG_CLASS, GoWorkerConfigMixin):
@@ -379,3 +428,99 @@ class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):
                     type(self).__name__, message))
         return super(GoApplicationWorker, self)._publish_message(
             message, endpoint_name)
+
+
+class GoRouterConfig(BaseWorker.CONFIG_CLASS, GoWorkerConfigMixin):
+    ri_connector_name = ConfigText(
+        "The name of the receive_inbound connector.",
+        required=True, static=True)
+    ro_connector_name = ConfigText(
+        "The name of the receive_outbound connector.",
+        required=True, static=True)
+
+
+class GoRouterWorker(GoRouterMixin, BaseWorker):
+    """
+    A base class for Vumi Go router workers.
+    """
+    CONFIG_CLASS = GoRouterConfig
+
+    worker_name = None
+
+    def setup_router(self):
+        return self._go_setup_worker()
+
+    def teardown_router(self):
+        return self._go_teardown_worker()
+
+    def setup_worker(self):
+        d = maybeDeferred(self.setup_router)
+        d.addCallback(lambda r: self.unpause_connectors())
+        return d
+
+    def teardown_worker(self):
+        self.pause_connectors()
+        return self.teardown_router()
+
+    def get_config(self, msg):
+        return self.get_message_config(msg)
+
+    def handle_inbound(self, config, msg):
+        raise NotImplementedError()
+
+    def handle_outbound(self, config, msg):
+        raise NotImplementedError()
+
+    def handle_event(self, config, event, conn_name):
+        log.debug("Handling event: %s" % (event,))
+        # To avoid circular import.
+        from go.vumitools.routing import RoutingMetadata
+        endpoint = RoutingMetadata(event).next_router_endpoint()
+        self.publish_event(event, endpoint=endpoint)
+
+    def _mkhandler(self, handler_func, connector_name):
+        def handler(msg):
+            d = self.get_config(msg)
+            d.addCallback(handler_func, msg, connector_name)
+            return d
+        return handler
+
+    def setup_connectors(self):
+        config = self.get_static_config()
+        self._ri_conn_name = config.ri_connector_name
+        self._ro_conn_name = config.ro_connector_name
+
+        def add_ri_handlers(connector, connector_name):
+            connector.set_default_inbound_handler(
+                self._mkhandler(self.handle_inbound, connector_name))
+            connector.set_default_event_handler(
+                self._mkhandler(self.handle_event, connector_name))
+            return connector
+
+        def add_ro_handlers(connector, connector_name):
+            connector.set_default_outbound_handler(
+                self._mkhandler(self.handle_outbound, connector_name))
+            return connector
+
+        deferreds = []
+        d = self.setup_ri_connector(self._ri_conn_name)
+        d.addCallback(add_ri_handlers, self._ri_conn_name)
+        deferreds.append(d)
+
+        d = self.setup_ro_connector(self._ro_conn_name)
+        d.addCallback(add_ro_handlers, self._ro_conn_name)
+        deferreds.append(d)
+
+        return gatherResults(deferreds)
+
+    def publish_inbound(self, msg, endpoint):
+        return self.connectors[self._ro_conn_name].publish_inbound(
+            msg, endpoint)
+
+    def publish_outbound(self, msg, endpoint):
+        return self.connectors[self._ri_conn_name].publish_outbound(
+            msg, endpoint)
+
+    def publish_event(self, event, endpoint):
+        return self.connectors[self._ro_conn_name].publish_event(
+            event, endpoint)

@@ -41,7 +41,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,
-                            from_addr=u'+27831234567{0}'):
+                           from_addr=u'+27831234567{0}'):
         user_api = self.user_api
         group = yield user_api.contact_store.new_group(u'test group')
 
@@ -51,8 +51,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
                 msisdn=from_addr.format(i), groups=[group])
 
         conversation = yield self.create_conversation(
-            description=u'message',
-            delivery_tag_pool=u'pool', delivery_class=u'sms')
+            description=u'message')
         conversation.add_group(group)
         yield conversation.save()
         returnValue(conversation)
@@ -60,15 +59,32 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     @inlineCallbacks
     def get_opted_in_contacts(self, conversation):
         contacts = []
-        for bunch in (yield conversation.get_opted_in_contact_bunches()):
+        for bunch in (yield conversation.get_opted_in_contact_bunches(None)):
             contacts.extend((yield bunch))
         returnValue(sorted(contacts, key=lambda c: c.msisdn))
 
     @inlineCallbacks
     def test_start(self):
-
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
+
+        # Force processing of messages
+        yield self._amqp.kick_delivery()
+
+        # Go past the monitoring interval to ensure the window is
+        # being worked through for delivery
+        self.clock.advance(self.app.monitor_interval + 1)
+
+        # Force processing of messages again
+        yield self._amqp.kick_delivery()
+
+        # Assert that we've sent no messages
+        self.assertEqual([], (yield self.get_dispatched_messages()))
+
+    @inlineCallbacks
+    def test_start_old_style(self):
+        conversation = yield self.setup_conversation()
+        yield self.start_conversation_old_style(conversation)
 
         # Force processing of messages
         yield self._amqp.kick_delivery()
@@ -89,13 +105,13 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         self.assertEqual(msg2['to_addr'], contact2.msisdn)
 
     @inlineCallbacks
-    def test_start_with_deduplication(self):
+    def test_start_old_style_with_deduplication(self):
         # Create two contacts with the same to_addr, they should be deduped
         conversation = yield self.setup_conversation(from_addr=u'27831234567',
             contact_count=2)
 
         # Provide the dedupe option to the conversation
-        yield self.start_conversation(conversation, dedupe=True)
+        yield self.start_conversation_old_style(conversation, dedupe=True)
 
         yield self._amqp.kick_delivery()
 
@@ -118,7 +134,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     @inlineCallbacks
     def test_consume_events(self):
         conversation = yield self.setup_conversation()
-        yield self.start_conversation(conversation)
+        yield self.start_conversation_old_style(conversation)
         batch_id = yield conversation.get_latest_batch_key()
         window_id = self.app.get_window_id(conversation.key, batch_id)
         yield self._amqp.kick_delivery()
@@ -159,9 +175,12 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
         batch_id = yield conversation.get_latest_batch_key()
-        yield self.dispatch_command("send_message", command_data={
+        yield self.dispatch_command(
+            "send_message",
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            command_data={
             "batch_id": batch_id,
-            "conversation_key": conversation.key,
             "to_addr": "123456",
             "content": "hello world",
             "msg_options": msg_options,
@@ -189,10 +208,12 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         batch_id = yield conversation.get_latest_batch_key()
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
         yield self.store_inbound_msg(msg)
-        command = VumiApiCommand.command('worker', 'send_message',
+        command = VumiApiCommand.command(
+            'worker', 'send_message',
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
             command_data={
                 u'batch_id': batch_id,
-                u'conversation_key': conversation.key,
                 u'content': u'foo',
                 u'to_addr': u'to_addr',
                 u'msg_options': {
@@ -215,10 +236,12 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         batch_id = yield conversation.get_latest_batch_key()
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex, transport_name="bad")
         yield self.store_inbound_msg(msg)
-        command = VumiApiCommand.command('worker', 'send_message',
+        command = VumiApiCommand.command(
+            'worker', 'send_message',
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
             command_data={
                 u'batch_id': batch_id,
-                u'conversation_key': conversation.key,
                 u'content': u'foo',
                 u'to_addr': u'to_addr',
                 u'msg_options': {
@@ -237,8 +260,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_collect_metrics(self):
-        conv = yield self.create_conversation(
-            delivery_tag_pool=u'pool', delivery_class=u'sms')
+        conv = yield self.create_conversation()
         yield self.start_conversation(conv)
 
         mkid = TransportUserMessage.generate_id
@@ -261,8 +283,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_reconcile_cache(self):
-        conv = yield self.create_conversation(
-            delivery_tag_pool=u'pool', delivery_class=u'sms')
+        conv = yield self.create_conversation()
 
         with LogCatcher() as logger:
             yield self.dispatch_command(

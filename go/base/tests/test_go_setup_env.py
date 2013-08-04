@@ -7,7 +7,7 @@ from ConfigParser import ConfigParser
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 
-from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_setup_env
 from go.base.utils import vumi_api_for_user
 
@@ -28,13 +28,12 @@ class FakeFile(StringIO):
         pass
 
 
-class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
-
-    USE_RIAK = True
+class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
+    use_riak = True
 
     def setUp(self):
         super(GoBootstrapEnvTestCase, self).setUp()
-        self.setup_riak_fixtures()
+        self.setup_api()
         self.config = self.mk_config({})
 
         self.command = go_setup_env.Command()
@@ -170,6 +169,18 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
             'display_name': 'Pool 1'
         })
 
+    def test_tagpool_loading_clears_existing_pools(self):
+        self.tagpool.declare_tags([
+            ("pool1", "default0"), ("pool1", "default1")
+        ])
+        self.tagpool.acquire_specific_tag(("pool1", "default0"))
+        self.command.setup_tagpools(self.tagpool_file.name)
+        self.assertTrue('Tag pools created: pool1, pool2' in
+                            self.command.stdout.getvalue())
+        self.assertEqual(self.tagpool.inuse_tags("pool1"), [])
+        self.assertEqual(sorted(self.tagpool.free_tags("pool1")),
+                         [("pool1", "default%d" % i) for i in range(10)])
+
     def test_account_loading(self):
         self.command.setup_tagpools(self.tagpool_file.name)
         self.command.setup_accounts(self.account_file.name)
@@ -251,40 +262,25 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
         self.assertTrue(ussd_command.startswith('twistd'))
         self.assertTrue('TelnetServerTransport' in ussd_command)
 
-    def test_create_app_msg_dispatcher_config(self):
+    def test_create_routing_table_dispatcher_config(self):
         fake_file = FakeFile()
         self.command.open_file = Mock(side_effect=[fake_file])
-        self.command.create_app_msg_dispatcher_config([
-            'app1', 'app2'])
+        self.command.create_routing_table_dispatcher_config(
+            ['app1', 'app2'], ['transport1', 'transport2'])
         fake_file.seek(0)
         config = yaml.load(fake_file)
-        self.assertEqual(config['exposed_names'],
-            ['app1_transport', 'app2_transport'])
-        self.assertEqual(config['conversation_mappings'],
-            {
-                'app1': 'app1_transport',
-                'app2': 'app2_transport',
-            })
-        self.assertEqual(config['redis_manager'], {
-            'key_prefix': 'test',
-        })
-        self.assertEqual(config['riak_manager'], {
-            'bucket_prefix': 'test.',
-        })
 
-    def test_create_vumigo_router_config(self):
-        fake_file = FakeFile()
-        self.command.open_file = Mock(side_effect=[fake_file])
-        self.command.create_vumigo_router_config([
-            'transport1', 'transport2'])
-        fake_file.seek(0)
-        config = yaml.load(fake_file)
-        self.assertEqual(config['transport_names'],
-            ['transport1', 'transport2'])
-        self.assertEqual(config['route_mappings'], {
-            'transport1': ['vumigo_router'],
-            'transport2': ['vumigo_router'],
-        })
+        self.assertEqual(config['receive_inbound_connectors'],
+                         ['transport1', 'transport2'])
+
+        self.assertEqual(config['receive_outbound_connectors'],
+                         ['app1_transport', 'app2_transport'])
+
+        self.assertEqual(config['application_connector_mapping'],
+                         {'app1': 'app1_transport', 'app2': 'app2_transport'})
+
+        self.assertEqual(config['redis_manager'], {'key_prefix': 'test'})
+        self.assertEqual(config['riak_manager'], {'bucket_prefix': 'test.'})
 
     def test_create_command_dispatcher_config(self):
         fake_file = FakeFile()
