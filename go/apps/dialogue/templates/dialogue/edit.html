@@ -28,7 +28,7 @@
 
 {% block ondomready %}
   {{ block.super }}
-  var dialogue = go.campaign.dialogue;
+  var dialogue = go.apps.dialogue;
 
   var diagram = new dialogue.diagram.DialogueDiagramView({
     el: '.dialogue #diagram',
