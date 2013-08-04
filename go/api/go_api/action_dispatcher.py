@@ -76,10 +76,10 @@ class ActionDispatcher(GoApiSubHandler):
         user_api = self.get_user_api(campaign_key)
         d = maybeDeferred(self.get_object_by_key, user_api, obj_key)
 
-        def action(obj):
-            if params is None:
-                return handler(self, user_api, obj)
+        if params is None:
+            params = {}
 
+        def action(obj):
             return handler(self, user_api, obj, **params)
 
         d.addCallback(action)
