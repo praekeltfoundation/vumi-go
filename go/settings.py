@@ -307,7 +307,7 @@ VXPOLLS_PREFIX = 'vxpolls'
 GOOGLE_ANALYTICS_UA = None
 
 MESSAGE_STORE_API_URL = 'http://localhost:8080/api/v1/'
-GO_API_URL = 'http://localhost:8000/api/v1/go/api'
+GO_API_URL = 'http://localhost:8001/api/v1/go/api'
 
 from celery.schedules import crontab
 CELERYBEAT_SCHEDULE = {
