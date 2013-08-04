@@ -77,6 +77,26 @@ describe("go.components.rpc", function() {
       server.respond();
     });
 
+    it("should allow functions to be used as params", function(done) {
+      var Model = Backbone.Model.extend({
+        url: '/test',
+        methods: {
+          read: {
+            method: 'r',
+            params: [function() { return {foo: this.get('foo')}; }]
+          }
+        }
+      });
+
+      server.respondWith(function(req) {
+        assertRequest(req, '/test', 'r', [{foo: 'lerp'}]);
+        done();
+      });
+
+      rpc.sync('read', new Model({foo: 'lerp', bar: 'larp'}));
+      server.respond();
+    });
+
     it("should pass the rpc response's result the success callback",
     function(done) {
       server.respondWith(response({foo: 'lerp', bar: 'larp'}));

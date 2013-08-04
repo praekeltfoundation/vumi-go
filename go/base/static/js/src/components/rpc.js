@@ -4,16 +4,18 @@
 
 (function(exports) {
   var rpcData = function(method, model) {
-    var spec = _(model).result('methods')[method];
+    var spec = _(model).result('methods')[method],
+        underrides = {self: model};
 
     return JSON.stringify({
       id: uuid.v4(),
       jsonrpc: '2.0',
       method: spec.method,
       params: spec.params.map(function(p) {
-        return p === 'self'
-          ? model
-          : model.get(p);
+        return _.isFunction(p)
+          ? p.call(model)
+          : underrides[p]
+          || model.get(p);
       })
     });
   };
