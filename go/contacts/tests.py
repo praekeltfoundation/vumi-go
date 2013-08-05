@@ -107,6 +107,47 @@ class ContactsTestCase(VumiGoDjangoTestCase):
             set(contact.groups.keys()),
             set([g.key for g in self.contact_store.list_groups()]))
 
+    def test_contact_exporting(self):
+        c1 = mkcontact(self)
+        c1.extra['foo'] = u'bar'
+        c1.extra['bar'] = u'baz'
+        c1.save()
+
+        c2 = mkcontact(self)
+        c2.extra['foo'] = u'lorem'
+        c2.extra['bar'] = u'ipsum'
+        c2.save()
+
+        self.client.post(reverse('contacts:people'), {
+            '_export': True,
+            'contacts': [c1.key, c2.key],
+        })
+
+        self.assertEqual(len(mail.outbox), 1)
+        [email] = mail.outbox
+        [(file_name, contents, mime_type)] = email.attachments
+
+        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertTrue('Contacts export' in email.subject)
+        self.assertTrue('2 contact(s)' in email.body)
+        self.assertEqual(file_name, 'contacts-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('contacts-export.csv', 'r').read()
+
+        [header, c1_data, c2_data, _] = csv_contents.split('\r\n')
+
+        self.assertEqual(
+            header,
+            ','.join(['name', 'surname', 'email_address', 'msisdn', 'dob',
+                      'twitter_handle', 'facebook_id', 'bbm_pin', 'gtalk_id',
+                      'created_at', 'extras-bar', 'extras-foo']))
+
+        self.assertTrue(c1_data.endswith('baz,bar'))
+        self.assertTrue(c2_data.endswith('ipsum,lorem'))
+        self.assertTrue(contents)
+        self.assertEqual(mime_type, 'application/zip')
+
     def specify_columns(self, group_key, columns=None):
         group_url = reverse('contacts:group', kwargs={
             'group_key': group_key,

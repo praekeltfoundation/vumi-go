@@ -331,20 +331,23 @@ def people(request):
 @csrf_protect
 def _people(request):
     contact_store = request.user_api.contact_store
+    upload_contacts_form = None
     group = None
 
     if request.method == 'POST':
-
         if '_delete' in request.POST:
             contacts = request.POST.getlist('contact')
             for person_key in contacts:
                 contact = contact_store.get_contact_by_key(person_key)
                 contact.delete()
             messages.info(request, '%d Contacts deleted' % len(contacts))
-
         elif '_export' in request.POST:
-            # TODO: Do we have an export method?
-            pass
+            tasks.export_contacts.delay(
+                request.user_api.user_account_key,
+                request.POST.getlist('contacts'))
+
+            messages.info(request, 'The export is scheduled and should '
+                                   'complete within a few minutes.')
         else:
             # first parse the CSV file and create Contact instances
             # from them for attaching to a group later
@@ -378,8 +381,6 @@ def _people(request):
             else:
                 messages.error(
                     request, 'Something went wrong with the upload.')
-    else:
-        upload_contacts_form = UploadContactsForm()
 
     select_contact_group_form = SelectContactGroupForm(
         groups=contact_store.list_groups())
@@ -398,9 +399,9 @@ def _people(request):
 
     limit = int(request.GET.get('limit', 100))
     if limit:
-        messages.info(request,
-            'Showing up to %s random contacts matching your query' % (
-                limit,))
+        messages.info(
+            request,
+            'Showing up to %s random contacts matching your query' % (limit,))
         keys = keys[:limit]
 
     selected_contacts = []
@@ -411,7 +412,7 @@ def _people(request):
     return render(request, 'contacts/contact_list.html', {
         'query': request.GET.get('q'),
         'selected_contacts': selected_contacts,
-        'upload_contacts_form': upload_contacts_form,
+        'upload_contacts_form': upload_contacts_form or UploadContactsForm(),
         'select_contact_group_form': select_contact_group_form,
         'smart_group_form': smart_group_form,
     })
