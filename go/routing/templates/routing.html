@@ -44,7 +44,7 @@
     {{ block.super }}
 
 jsPlumb.ready(function() {
-  var routing = go.campaign.routing,
+  var routing = go.routing,
       modelData = {{ model_data|safe }},
       CampaignRoutingModel = routing.CampaignRoutingModel,
       RoutingDiagramView = routing.RoutingDiagramView,

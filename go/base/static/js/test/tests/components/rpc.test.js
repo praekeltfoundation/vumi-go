@@ -60,20 +60,53 @@ describe("go.components.rpc", function() {
       server.respond();
     });
 
-    it("should allow the model instance to be used as a param", function(done) {
+    it("should allow params to be specified using a function", function(done) {
       var Model = Backbone.Model.extend({
         url: '/test',
         methods: {
-          read: {method: 'r', params: ['self']}
+          read: {
+            method: 'r',
+            params: function() {
+              return [{foo: this.get('foo')}];
+            }
+          }
         }
       });
 
       server.respondWith(function(req) {
-        assertRequest(req, '/test', 'r', [{foo: 'lerp', bar: 'larp'}]);
+        assertRequest(req, '/test', 'r', [{foo: 'lerp'}]);
         done();
       });
 
       rpc.sync('read', new Model({foo: 'lerp', bar: 'larp'}));
+      server.respond();
+    });
+
+    it("should allow each rpc method to use its own parser",
+    function(done) {
+      server.respondWith(response({stuff: {foo: 'lerp', bar: 'larp'}}));
+
+      var Model = Backbone.Model.extend({
+        url: '/test',
+        methods: {
+          read: {
+            method: 'r',
+            params: ['foo', 'bar'],
+            parse: function(resp) { return resp.stuff; }
+          }
+        }
+      });
+
+      var success = function(resp) {
+        assert.deepEqual(resp, {foo: 'lerp', bar: 'larp'});
+        done();
+      };
+
+      rpc.sync(
+        'read',
+        new Model({foo: 'lerp', bar: 'larp'}),
+        {success: success});
+
       server.respond();
     });
 

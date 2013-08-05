@@ -123,7 +123,7 @@ describe("go.apps.dialogue.models", function() {
 
       it("should update the model on the client side", function() {
         var model = new DialogueModel();
-        server.respondWith(response(modelData));
+        server.respondWith(response({poll: modelData}));
 
         model.fetch();
         server.respond();
@@ -141,7 +141,7 @@ describe("go.apps.dialogue.models", function() {
             req,
             '/api/v1/go/api',
             'conversation.dialogue.save_poll',
-            ['campaign-1', 'conversation-1', modelData]);
+            ['campaign-1', 'conversation-1', {poll: modelData}]);
 
           done();
         });

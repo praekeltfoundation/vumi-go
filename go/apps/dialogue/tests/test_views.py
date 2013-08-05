@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from zipfile import ZipFile
 from StringIO import StringIO
@@ -35,7 +36,7 @@ class DialogueTestCase(DjangoGoApplicationTestCase):
         expected["campaign_id"] = self.user_api.user_account_key
         expected["conversation_key"] = conv.key
         model_data = response.context["model_data"]
-        self.assertEqual(model_data, expected)
+        self.assertEqual(json.loads(model_data), expected)
 
     def test_new_conversation(self):
         poll = {"foo": "bar"}
