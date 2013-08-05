@@ -101,7 +101,7 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         [contact] = contacts
         [batch] = conversation.get_batches()
         self.assertEqual(conversation.received_messages(), [])
-        [tag] = self.api.batch_tags(batch.key)
+        [tag] = batch.tags
         to_addr = "+123" + tag[1][-5:]
 
         # TODO: Decide what we want here.
@@ -137,7 +137,7 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         [message_batch] = conversation.get_batches()
         self.assertEqual(len(conversation.get_tags()), 1)
         conversation.end_conversation()
-        [msg_tag] = self.api.batch_tags(message_batch.key)
+        [msg_tag] = message_batch.tags
         tag_batch = lambda t: self.api.mdb.get_tag_info(t).current_batch.key
         self.assertEqual(tag_batch(msg_tag), None)
 

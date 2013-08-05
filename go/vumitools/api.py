@@ -605,35 +605,6 @@ class VumiApi(object):
     def get_user_api(self, user_account_key):
         return VumiUserApi(self, user_account_key)
 
-    def batch_start(self, tags):
-        """Start a message batch.
-
-        :type tags: list of str
-        :param tags:
-            A list of identifiers for linking replies to this
-            batch. Conceptually a tag corresponds to a set of
-            from_addrs that a message goes out on. The from_addrs can
-            then be observed in incoming messages and used to link
-            replies to a specific batch.
-        :rtype:
-            Returns the batch_id of the new batch.
-        """
-        return self.mdb.batch_start(tags)
-
-    def batch_done(self, batch_id):
-        """Mark a batch as completed.
-
-        Once a batch is done, inbound messages will not be mapped
-        to it.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to mark as done.
-        :rtype:
-            None.
-        """
-        return self.mdb.batch_done(batch_id)
-
     def send_command(self, worker_name, command, *args, **kwargs):
         """Create a VumiApiCommand and send it.
 
@@ -646,52 +617,6 @@ class VumiApi(object):
             raise VumiError("No message sender on API object.")
         return self.mapi.send_command(
             VumiApiCommand.command(worker_name, command, *args, **kwargs))
-
-    def batch_status(self, batch_id):
-        """Check the status of a batch of messages.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to check the status of
-        :rtype:
-            dictionary of counts of messages in batch,
-            messages sent, messages acked and messages
-            with delivery reports.
-        """
-        return self.mdb.batch_status(batch_id)
-
-    def batch_outbound_keys(self, batch_id):
-        """Return a list of outbound message keys.
-
-        :param str batch_id:
-            batch to get outbound message keys for
-        :returns:
-            list of message keys.
-        """
-        return self.mdb.batch_outbound_keys(batch_id)
-
-    def batch_inbound_keys(self, batch_id):
-        """Return a list of inbound message keys.
-
-        :param str batch_id:
-            batch to get inbound message keys for
-        :returns:
-            list of message keys.
-        """
-        return self.mdb.batch_inbound_keys(batch_id)
-
-    @Manager.calls_manager
-    def batch_tags(self, batch_id):
-        """Return a list of tags associated with a given batch.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to get tags for
-        :rtype:
-            list of tags
-        """
-        batch = yield self.mdb.get_batch(batch_id)
-        returnValue(list(batch.tags))
 
 
 class SyncMessageSender(object):

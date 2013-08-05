@@ -79,7 +79,8 @@ class SendMessageCommandHandler(EventHandler):
             log.info("No batches found")
             return
 
-        batch_tags = yield user_api.api.batch_tags(batch_id)
+        batch = yield user_api.api.mdb.get_batch(batch_id)
+        batch_tags = list(batch.tags)
         if len(batch_tags) > 0:
             tag = [batch_tags[0][0], batch_tags[0][1]]
         else:
