@@ -48,6 +48,9 @@ class TestChannelStore(GoPersistenceMixin, TestCase):
         self.account = yield self.mk_user(self, u'user')
         self.channel_store = ChannelStore.from_user_account(self.account)
 
+    def tearDown(self):
+        return self._persist_tearDown()
+
     @inlineCallbacks
     def test_get_channel_by_tag(self):
         tag = ["pool", "tag"]
