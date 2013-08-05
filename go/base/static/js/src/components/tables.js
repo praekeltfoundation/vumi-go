@@ -24,15 +24,39 @@
       }
 
       _(this.options).defaults(this.defaults);
+      this._initActions();
+    },
 
-      // the actions are enabled when atleast a single checkbox
-      // is selected.
+    _initActions: function() {
       this.$actions = $(this.options.actions);
-      this.$actions.click(this.onAction.bind(this));
+
+      var self = this;
+      this.$actions.each(function() {
+        var $el = $(this),
+            action = $el.attr('data-action'),
+            modal = $el.attr('data-target');
+
+        if (modal) {
+          // If the action is targeting a modal, we rewire the modal's form to
+          // submit the action instead
+          $(modal).find('form').submit(function(e) {
+            e.preventDefault();
+            self.submitAction(action);
+          });
+        } else {
+          // Otherwise, if the action doesn't target any modal, we show our own
+          // modal with a confirmation message
+          $el.click(function() { self.confirmAction(action); });
+        }
+      });
     },
 
     $headActionMarker: function() {
       return this.$('th:first-child input');
+    },
+
+    $actionMarkers: function() {
+      return this.$('td:first-child input');
     },
 
     allChecked: function() {
@@ -47,42 +71,50 @@
       this.$actions.prop('disabled', !this.numChecked());
     },
 
-    showConfirmationModal: function(options) {
+    submitAction: function(action) {
+        // add an action field to the form; the view to which this
+      // submits can use this field to determine which action
+      // was invoked.
+      var $input = $('<input>')
+        .attr('type', 'hidden')
+        .attr('name', this.options.actionPrefix + action)
+        .appendTo(this.$el);
+
+      this.$el.submit();
+      $input.remove();
+
+      return this;
+    },
+
+    confirmAction: function(action) {
       var numChecked = this.numChecked();
 
       var template = numChecked > 1
-        ? this.templates.singular
-        : this.templates.plural;
+        ? this.templates.plural
+        : this.templates.singular;
 
       var message = template({
-        action: options.action,
+        action: action,
         numChecked: numChecked
       });
 
-      // add an action field to the form; the view to which this
-      // submits can use this field to determine which action
-      // was envoked.
-      var $input = $('<input>')
-        .attr('type', 'hidden')
-        .attr('name', this.options.actionPrefix + options.action)
-        .appendTo(this.$el);
-
-      var $form = this.$el;
       bootbox.confirm(message, function(submit) {
-        if (submit) { $form.submit(); }
-        $input.remove();
-      });
-    },
+        if (submit) { this.submitAction(action); }
+      }.bind(this));
 
-    onAction: function(e) {
-      this.showConfirmationModal({action: $(e.target).attr('data-action')});
+      return this;
     },
 
     events: {
       // select or deselect all the checkboxes based on the state of the 
       // single checkbox in the header.
-      'change th:first-child': function(e) {
-        this.$headActionMarker().prop('checked', $(e.target).prop('checked'));
+      'change th:first-child input': function(e) {
+        var checked = this.$headActionMarker().is(':checked');
+
+        this.$actionMarkers().each(function() {
+          $(this).prop('checked', checked);
+        });
+
         this.refreshButtons();
       },
 

@@ -105,16 +105,54 @@ def contacts_to_csv(contacts, include_extra=True):
     return io.getvalue()
 
 
+def contacts_by_key(contact_store, *keys):
+    contacts = []
+    for bunch in contact_store.contacts.load_all_bunches(keys):
+        contacts.extend(bunch)
+
+    return contacts
+
+
 def get_group_contacts(contact_store, *groups):
     contact_keys = []
     for group in groups:
         contact_keys.extend(contact_store.get_contacts_for_group(group))
 
-    contacts = []
-    for bunch in contact_store.contacts.load_all_bunches(contact_keys):
-        contacts.extend(bunch)
+    return contacts_by_key(contact_store, *contact_keys)
 
-    return contacts
+
+@task(ignore_result=True)
+def export_contacts(account_key, contact_keys, include_extra=True):
+    """
+    Export a list of contacts as a CSV file and email to the account
+    holders' email address.
+
+    :param str account_key:
+        The account holders account key
+    :param str contact_keys:
+        The keys of the contacts to export
+    :param bool include_extra:
+        Whether or not to include the extra data stored in the dynamic field.
+    """
+
+    api = VumiUserApi.from_config_sync(account_key, settings.VUMI_API_CONFIG)
+    contact_store = api.contact_store
+
+    contacts = contacts_by_key(contact_store, *contact_keys)
+    data = contacts_to_csv(contacts, include_extra)
+    file = zipped_file('contacts-export.csv', data)
+
+    # Get the profile for this user so we can email them when the import
+    # has been completed.
+    user_profile = UserProfile.objects.get(user_account=account_key)
+
+    email = EmailMessage(
+        'Contacts export',
+        'Please find the CSV data for %s contact(s)' % len(contacts),
+        settings.DEFAULT_FROM_EMAIL, [user_profile.user.email])
+
+    email.attach('contacts-export.zip', file, 'application/zip')
+    email.send()
 
 
 @task(ignore_result=True)
