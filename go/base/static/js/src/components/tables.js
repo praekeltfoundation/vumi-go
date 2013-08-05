@@ -47,7 +47,22 @@
       this.$actions.prop('disabled', !this.numChecked());
     },
 
-    showConfirmationModal: function(options) {
+    submitAction: function(options) {
+      // add an action field to the form; the view to which this
+      // submits can use this field to determine which action
+      // was envoked.
+      var $input = $('<input>')
+        .attr('type', 'hidden')
+        .attr('name', this.options.actionPrefix + options.action)
+        .appendTo(this.$el);
+
+      this.$el.submit();
+      $input.remove();
+
+      return this;
+    },
+
+    confirmAction: function(options) {
       var numChecked = this.numChecked();
 
       var template = numChecked > 1
@@ -59,23 +74,29 @@
         numChecked: numChecked
       });
 
-      // add an action field to the form; the view to which this
-      // submits can use this field to determine which action
-      // was envoked.
-      var $input = $('<input>')
-        .attr('type', 'hidden')
-        .attr('name', this.options.actionPrefix + options.action)
-        .appendTo(this.$el);
-
-      var $form = this.$el;
       bootbox.confirm(message, function(submit) {
-        if (submit) { $form.submit(); }
-        $input.remove();
-      });
+        if (submit) { this.submitAction(options); }
+      }.bind(this));
+
+      return this;
+    },
+
+    invokeAction: function(options) {
+      options = options || {};
+
+      if (options.confirm) { this.confirmAction(options); }
+      else { this.submitAction(options); }
+
+      return this;
     },
 
     onAction: function(e) {
-      this.showConfirmationModal({action: $(e.target).attr('data-action')});
+      var $el = $(e.target);
+
+      this.invokeAction({
+        action: $el.attr('data-action'),
+        confirm: !$el.attr('data-disable-confirm')
+      });
     },
 
     events: {

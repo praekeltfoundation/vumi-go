@@ -91,13 +91,32 @@ describe("go.components.tables", function() {
         assert(oneElExists('.modal'));
       });
 
+      it("should submit the action immediately if the confirm option is falsy",
+      function(done) {
+        $buttons
+          .find('[data-action=edit]')
+          .attr('data-disable-confirm', 'disabled');
+
+        assert(noElExists(table.$('[name=_edit]')));
+
+        table.$el.submit(function(e) {
+          e.preventDefault();
+          assert(oneElExists(table.$('[name=_edit]')));
+          done();
+        });
+
+        $edit.click();
+        assert(noElExists(table.$('[name=_edit]')));
+      });
+
       describe("when the confirmation modal is shown", function() {
-        it("should submit the action", function() {
+        it("should submit the action", function(done) {
           assert(noElExists(table.$('[name=_edit]')));
 
           table.$el.submit(function(e) {
             e.preventDefault();
             assert(oneElExists(table.$('[name=_edit]')));
+            done();
           });
 
           $edit.click();
