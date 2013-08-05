@@ -186,6 +186,7 @@
     sort: function() {
       if (this.ordered) {
         this._itemList = this._sorter(this._itemList, this._comparator, this);
+        this.trigger('sort');
       }
       return this;
     },

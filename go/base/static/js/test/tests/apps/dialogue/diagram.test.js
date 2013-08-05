@@ -25,7 +25,7 @@ describe("go.apps.dialogue.diagram", function() {
   });
 
   describe(".DialogueDiagramView", function() {
-    describe("on 'error:unsupported' connection events", function() {
+    describe("when an unsupported connection was created", function() {
       beforeEach(function() {
         diagram.render();
       });
@@ -40,6 +40,37 @@ describe("go.apps.dialogue.diagram", function() {
         });
 
         jsPlumb.connect({source: e1.$el, target: e2.$el});
+      });
+    });
+
+    describe("when its states are reordered", function() {
+      var states;
+
+      beforeEach(function() {
+        states = diagram.dialogueStates;
+        diagram.render();
+      });
+
+      it("should change its model's accordingly start state", function() {
+        assert.equal(
+          diagram.model.get('start_state'),
+          states.get('state1').model);
+
+        assert.deepEqual(
+          states.keys(),
+          ['state1','state2','state3','state4']);
+
+        $('[data-uuid="state3"] .titlebar')
+          .simulate('mousedown')
+          .simulate('drag', {dx: -700});
+
+        assert.deepEqual(
+          states.keys(),
+          ['state3','state1','state2','state4']);
+
+        assert.equal(
+          diagram.model.get('start_state'),
+          states.get('state3').model);
       });
     });
 

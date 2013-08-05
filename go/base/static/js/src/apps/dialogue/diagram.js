@@ -22,17 +22,28 @@
 
     initialize: function(options) {
       DialogueDiagramView.__super__.initialize.call(this, options);
-      if (!this.states.size()) { this.newState(); }
 
-      this.connections.on('error:unsupported', this.onUnsupportedConnection);
+      if (!this.states.size()) {
+        var state = this.newState();
+        this.model.set('start_state', state.model);
+      }
+
+      this.dialogueStates = this.states.members.get('states');
+      go.utils.bindEvents(this.bindings, this);
     },
 
     newState: function() {
-      return this.states.add('states');
+      return this.dialogueStates.add();
     },
 
-    onUnsupportedConnection: function(source, target, plumbConnection) {
-      jsPlumb.detach(plumbConnection, {fireEvent: false});
+    bindings: {
+      'error:unsupported connections': function(source, target, plumbConnection) {
+        jsPlumb.detach(plumbConnection, {fireEvent: false});
+      },
+
+      'sort dialogueStates': function() {
+        this.model.set('start_state', this.dialogueStates.at(0).model);
+      }
     }
   });
 
