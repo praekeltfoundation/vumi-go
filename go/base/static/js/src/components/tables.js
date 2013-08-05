@@ -51,8 +51,8 @@
       var numChecked = this.numChecked();
 
       var template = numChecked > 1
-        ? this.templates.singular
-        : this.templates.plural;
+        ? this.templates.plural
+        : this.templates.singular;
 
       var message = template({
         action: options.action,
