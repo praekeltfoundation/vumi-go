@@ -24,11 +24,31 @@
       }
 
       _(this.options).defaults(this.defaults);
+      this._initActions();
+    },
 
-      // the actions are enabled when atleast a single checkbox
-      // is selected.
+    _initActions: function() {
       this.$actions = $(this.options.actions);
-      this.$actions.click(this.onAction.bind(this));
+
+      var self = this;
+      this.$actions.each(function() {
+        var $el = $(this),
+            action = $el.attr('data-action'),
+            modal = $el.attr('data-target');
+
+        if (modal) {
+          // If the action is targeting a modal, we rewire the modal's form to
+          // submit the action instead
+          $(modal).find('form').submit(function(e) {
+            e.preventDefault();
+            self.submitAction(action);
+          });
+        } else {
+          // Otherwise, if the action doesn't target any modal, we show our own
+          // modal with a confirmation message
+          $el.click(function() { self.confirmAction(action); });
+        }
+      });
     },
 
     $headActionMarker: function() {
@@ -47,13 +67,13 @@
       this.$actions.prop('disabled', !this.numChecked());
     },
 
-    submitAction: function(options) {
-      // add an action field to the form; the view to which this
+    submitAction: function(action) {
+        // add an action field to the form; the view to which this
       // submits can use this field to determine which action
-      // was envoked.
+      // was invoked.
       var $input = $('<input>')
         .attr('type', 'hidden')
-        .attr('name', this.options.actionPrefix + options.action)
+        .attr('name', this.options.actionPrefix + action)
         .appendTo(this.$el);
 
       this.$el.submit();
@@ -62,7 +82,7 @@
       return this;
     },
 
-    confirmAction: function(options) {
+    confirmAction: function(action) {
       var numChecked = this.numChecked();
 
       var template = numChecked > 1
@@ -70,33 +90,15 @@
         : this.templates.singular;
 
       var message = template({
-        action: options.action,
+        action: action,
         numChecked: numChecked
       });
 
       bootbox.confirm(message, function(submit) {
-        if (submit) { this.submitAction(options); }
+        if (submit) { this.submitAction(action); }
       }.bind(this));
 
       return this;
-    },
-
-    invokeAction: function(options) {
-      options = options || {};
-
-      if (options.confirm) { this.confirmAction(options); }
-      else { this.submitAction(options); }
-
-      return this;
-    },
-
-    onAction: function(e) {
-      var $el = $(e.target);
-
-      this.invokeAction({
-        action: $el.attr('data-action'),
-        confirm: !$el.attr('data-disable-confirm')
-      });
     },
 
     events: {

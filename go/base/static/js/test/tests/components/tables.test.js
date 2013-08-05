@@ -5,6 +5,7 @@ describe("go.components.tables", function() {
 
   describe(".TableFormView", function() {
     var $buttons,
+        $saveModal,
         $form,
         table;
 
@@ -12,8 +13,7 @@ describe("go.components.tables", function() {
       $buttons = $([
         '<div class="buttons">',
           '<button data-action="delete" disabled="disabled">delete</button>',
-          '<button data-action="edit" disabled="disabled">edit</button>',
-        '</div>'
+          '<button data-action="edit" disabled="disabled">edit</button>'
       ].join(''));
 
       $form = $([
@@ -36,12 +36,12 @@ describe("go.components.tables", function() {
               '</tr>',
             '</tbody>',
           '</table>',
-        '</form>',
+        '</form>'
       ].join(''));
 
       table = new go.components.tables.TableFormView({
-        el: $form,
-        actions: $buttons.find('button')
+        actions: $buttons.find('button'),
+        el: $form
       });
 
       bootbox.animate(false);
@@ -85,32 +85,70 @@ describe("go.components.tables", function() {
           .prop('disabled', false);
       });
 
-      it("should show a confirmation modal", function() {
-        assert(noElExists('.modal'));
-        $edit.click();
-        assert(oneElExists('.modal'));
-      });
+      describe("if the action is targeting a modal", function() {
+        var $saveModal;
 
-      it("should submit the action immediately if the confirm option is falsy",
-      function(done) {
-        $buttons
-          .find('[data-action=edit]')
-          .attr('data-disable-confirm', 'disabled');
+        beforeEach(function() {
+          $buttons.append($([
+            '<button ',
+             'data-action="save" ',
+             'data-toggle="modal" ',
+             'data-target="#saveModal" ',
+             'disabled="disabled">',
+               'save',
+             '</button>'
+          ].join('')));
 
-        assert(noElExists(table.$('[name=_edit]')));
+          $saveModal = $([
+            '<div class="modal hide fade" id="saveModal">',
+              '<form method="post" action="">',
+                '<div class="modal-body">',
+                  'Are you sure you want to save this item?',
+                '</div>',
+                '<div class="modal-footer">',
+                  '<a class="btn" data-dismiss="modal" href="#">Cancel</a>',
+                  '<button type="submit">OK</button>',
+                '</div>',
+              '</form>',
+            '</div>'
+          ].join(''));
 
-        table.$el.submit(function(e) {
-          e.preventDefault();
-          assert(oneElExists(table.$('[name=_edit]')));
-          done();
+          $('body').append($saveModal);
+
+          table = new go.components.tables.TableFormView({
+            actions: $buttons.find('button'),
+            el: $form
+          });
         });
 
-        $edit.click();
-        assert(noElExists(table.$('[name=_edit]')));
+        afterEach(function() {
+          $saveModal.remove();
+        });
+
+        it("should submit the action when the modal's form is submitted",
+        function(done) {
+          assert(noElExists(table.$('[name=_save]')));
+
+          table.$el.submit(function(e) {
+            e.preventDefault();
+            assert(oneElExists(table.$('[name=_save]')));
+            done();
+          });
+
+          $saveModal.find('[type=submit]').click();
+          assert(noElExists(table.$('[name=_save]')));
+        });
       });
 
-      describe("when the confirmation modal is shown", function() {
-        it("should submit the action", function(done) {
+      describe("if the action is is not targeting a modal", function() {
+        it("should show a confirmation modal", function() {
+          assert(noElExists('.modal'));
+          $edit.click();
+          assert(oneElExists('.modal'));
+        });
+
+        it("should submit the action when the action is confirmed",
+        function(done) {
           assert(noElExists(table.$('[name=_edit]')));
 
           table.$el.submit(function(e) {
