@@ -71,26 +71,28 @@
     _initSorting: function() {
       if (_.isString(this.comparator)) {
         this._sorter = _.sortBy;
-        this._comparator = this._stringComparator;
+        this._comparator = this.comparators.string;
       } else if (this.comparator.length === 1) {
         this._sorter = _.sortBy;
-        this._comparator = this._iteratorComparator;
+        this._comparator = this.comparators.iterator;
       } else {
         this._sorter = nativeSort;
-        this._comparator = this._nativeComparator;
+        this._comparator = this.comparators.native;
       }
     },
 
-    _stringComparator: function(item) {
-      return item.value[this.comparator];
-    },
+    comparators: {
+      string: function(item) {
+        return item.value[this.comparator];
+      },
 
-    _iteratorComparator: function(item) {
-      return this.comparator(item.value);
-    },
+      iterator: function(item) {
+        return this.comparator(item.value);
+      },
 
-    _nativeComparator: function(item1, item2) {
-      return this.comparator(item1.value, item2.value);
+      native: function(item1, item2) {
+        return this.comparator(item1.value, item2.value);
+      },
     },
 
     size: function() { return this._itemList.length; },
