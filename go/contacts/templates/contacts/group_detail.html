@@ -10,14 +10,14 @@
         <button class="btn" data-action="delete" disabled="disabled">Delete</button>
     </div>
     <div class="pull-left ">
-        With group: 
+        With group:
         <button class="btn" data-toggle="modal" data-target="#delGroup">Delete</button>
         <button class="btn" data-toggle="modal" data-target="#editGroup">Rename</button>
         <button class="btn" data-toggle="modal" data-target="#expContactFrm">Export</button>
         <button class="btn" data-toggle="modal" data-target="#startCampaign">Start campaign</button>
     </div>
 
-    
+
 {% endblock %}
 
 
@@ -33,6 +33,7 @@
         el: '.table-form-view',
         actions: '.table-form-view-buttons button'
     });
+    $('#recMatchFrm').modal('show');
 {% endblock %}
 
 {% block modals %}
