@@ -22,6 +22,9 @@ class DialogueActionDispatcherTestCase(TestCase, GoAppWorkerTestMixin):
         self.dispatcher = DialogueActionDispatcher(
             self.account.key, self.vumi_api)
 
+    def tearDown(self):
+        return self._persist_tearDown()
+
     def create_dialogue(self, poll):
         config = {
             "poll": poll,
