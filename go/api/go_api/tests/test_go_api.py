@@ -450,7 +450,7 @@ class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):
         for worker in self._workers:
             if worker.running:
                 yield worker.stopService()
-        yield super(GoApiWorkerTestCase, self).tearDown()
+        yield self._persist_tearDown()
 
     @inlineCallbacks
     def get_api_worker(self, config=None, start=True, auth=True):
