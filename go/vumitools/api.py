@@ -250,8 +250,15 @@ class VumiUserApi(object):
         returnValue(sorted((yield self.contact_store.list_groups()),
             key=lambda group: group.name))
 
-    def new_conversation(self, *args, **kw):
-        return self.conversation_store.new_conversation(*args, **kw)
+    @Manager.calls_manager
+    def new_conversation(self, conversation_type, name, description, config,
+                         batch_id=None, **fields):
+        if not batch_id:
+            batch_id = yield self.api.mdb.batch_start(
+                tags=[], user_account=self.user_account_key)
+        conv = yield self.conversation_store.new_conversation(
+            conversation_type, name, description, config, batch_id, **fields)
+        returnValue(conv)
 
     def new_router(self, *args, **kw):
         return self.router_store.new_router(*args, **kw)

@@ -108,14 +108,14 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         #       We get 'contact=None', but everything else is there
         # unknown contact
         # msg = self.mkmsg_in('hello', to_addr=to_addr)
-        # self.api.mdb.add_inbound_message(msg, tag=tag)
+        # self.api.mdb.add_inbound_message(msg, batch_id=batch.key)
         # self.assertEqual(conversation.replies(), [])
 
         # TODO: Actually put the contact in here.
         # known contact
         msg = self.mkmsg_in('hello', to_addr=to_addr,
                             from_addr=contact.msisdn.lstrip('+'))
-        self.api.mdb.add_inbound_message(msg, tag=tag)
+        self.api.mdb.add_inbound_message(msg, batch_id=batch.key)
         [reply_msg] = conversation.received_messages()
         self.assertTrue(reply_msg, msg)
 
@@ -144,7 +144,7 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
     def test_pagination(self):
         # Create 13, we already have 1 from setUp()
         for i in range(12):
-            self.conv_store.new_conversation(
+            self.user_api.new_conversation(
                 conversation_type=u'bulk_message',
                 name=self.TEST_CONVERSATION_NAME, description=u"", config={},
                 delivery_class=u"sms", delivery_tag_pool=u"longcode")
@@ -159,7 +159,7 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         self.add_app_permission(u'go.apps.bulk_message')
         # Create 13, we already have 1 from setUp()
         for i in range(12):
-            self.conv_store.new_conversation(
+            self.user_api.new_conversation(
                 conversation_type=u'bulk_message',
                 name=self.TEST_CONVERSATION_NAME, description=u"", config={},
                 delivery_class=u"sms", delivery_tag_pool=u"longcode")

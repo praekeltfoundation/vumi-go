@@ -70,7 +70,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
             }
         if self.TEST_CONVERSATION_PARAMS:
             params.update(self.TEST_CONVERSATION_PARAMS)
-        self.conversation = self.conv_store.new_conversation(**params)
+        self.conversation = self.user_api.new_conversation(**params)
         self.conv_key = self.conversation.key
 
     def mkconversation(self, **kwargs):
@@ -81,7 +81,7 @@ class DjangoGoApplicationTestCase(VumiGoDjangoTestCase):
             'config': {},
         }
         defaults.update(kwargs)
-        return self.conv_store.new_conversation(**defaults)
+        return self.user_api.new_conversation(**defaults)
 
     def get_latest_conversation(self):
         # We won't have too many here, so doing it naively is fine.
