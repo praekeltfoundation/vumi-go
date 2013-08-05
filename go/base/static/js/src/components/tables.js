@@ -55,6 +55,10 @@
       return this.$('th:first-child input');
     },
 
+    $actionMarkers: function() {
+      return this.$('td:first-child input');
+    },
+
     allChecked: function() {
       return !this.$('td:first-child input:not(:checked)').length;
     },
@@ -104,8 +108,13 @@
     events: {
       // select or deselect all the checkboxes based on the state of the 
       // single checkbox in the header.
-      'change th:first-child': function(e) {
-        this.$headActionMarker().prop('checked', $(e.target).prop('checked'));
+      'change th:first-child input': function(e) {
+        var checked = this.$headActionMarker().is(':checked');
+
+        this.$actionMarkers().each(function() {
+          $(this).prop('checked', checked);
+        });
+
         this.refreshButtons();
       },
 
