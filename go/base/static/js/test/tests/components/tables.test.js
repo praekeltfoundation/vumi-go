@@ -53,6 +53,14 @@ describe("go.components.tables", function() {
         .remove();
     });
 
+    describe("when the head checkbox is checked", function() {
+      it("should toggle the table's body checkboxes", function() {
+        assert.equal(table.numChecked(), 0);
+        table.$('th:first-child input').prop('checked', true).change();
+        assert(table.allChecked());
+      });
+    });
+
     describe("when all checkboxes are checked", function() {
       it('should toggle the header checkbox', function() {
         assert.isFalse(table.$('th:first-child input').is(':checked'));
