@@ -66,7 +66,7 @@ def groups(request, type=None):
                                          group.key)
             messages.info(request, '%d groups will be deleted '
                                    'shortly.' % len(groups))
-        elif '_export_group_contacts' in request.POST:
+        elif '_export' in request.POST:
             tasks.export_many_group_contacts.delay(
                 request.user_api.user_account_key,
                 request.POST.getlist('group'))
@@ -147,7 +147,7 @@ def _static_group(request, contact_store, group):
                 group.save()
             messages.info(request, 'The group name has been updated')
             return redirect(_group_url(group.key))
-        elif '_export_group_contacts' in request.POST:
+        elif '_export' in request.POST:
             tasks.export_group_contacts.delay(
                 request.user_api.user_account_key,
                 group.key)
@@ -276,7 +276,7 @@ def _smart_group(request, contact_store, group):
             group.query = smart_group_form.cleaned_data['query']
             group.save()
             return redirect(_group_url(group.key))
-    elif '_export_group_contacts' in request.POST:
+    elif '_export' in request.POST:
         tasks.export_group_contacts.delay(
             request.user_api.user_account_key, group.key, True)
         messages.info(request, 'The export is scheduled and should '

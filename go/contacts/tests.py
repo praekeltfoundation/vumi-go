@@ -550,9 +550,7 @@ class GroupsTestCase(VumiGoDjangoTestCase):
         contact.extra['bar'] = u'baz'
         contact.save()
 
-        response = self.client.post(group_url, {
-            '_export_group_contacts': True,
-        })
+        response = self.client.post(group_url, {'_export': True})
 
         self.assertRedirects(response, group_url)
         self.assertEqual(len(mail.outbox), 1)
@@ -598,7 +596,7 @@ class GroupsTestCase(VumiGoDjangoTestCase):
         groups_url = reverse('contacts:groups')
         self.client.post(groups_url, {
             'group': [group_1.key, group_2.key],
-            '_export_group_contacts': True,
+            '_export': True,
         })
 
         self.assertEqual(len(mail.outbox), 1)
@@ -822,9 +820,7 @@ class SmartGroupsTestCase(VumiGoDjangoTestCase):
             'group_key': group.key,
         })
         self.assertEqual(group.name, 'a smart group')
-        response = self.client.post(group_url, {
-            '_export_group_contacts': True,
-        })
+        response = self.client.post(group_url, {'_export': True})
 
         contacts = self.contact_store.get_contacts_for_group(group)
         self.assertEqual(len(contacts), 3)
