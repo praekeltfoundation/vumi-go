@@ -252,6 +252,10 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
         conv.set_go_helper_metadata(msg['helper_metadata'])
         return self.dispatch(msg)
 
+    def dispatch_event_to_conv(self, event, conv):
+        conv.set_go_helper_metadata(event['helper_metadata'])
+        return self.dispatch_event(event)
+
 
 class GoRouterWorkerTestMixin(GoWorkerTestMixin):
 
