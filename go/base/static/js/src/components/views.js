@@ -82,8 +82,8 @@
       this.off('ok');
       this.off('cancel');
 
-      this.on('ok', this.resetActionHandlers, this);
-      this.on('cancel', this.resetActionHandlers, this);
+      this.on('ok', this.resetActionHandlers);
+      this.on('cancel', this.resetActionHandlers);
     },
 
     animate: function(animated) {
@@ -116,12 +116,18 @@
       return this;
     },
 
+    remove: function() {
+      this.off();
+      return ConfirmView.__super__.remove.call(this);
+    },
+
     render: function() {
       this.$el
         .appendTo($('body'))
         .html(maybeByName(this.template)({self: this}))
         .modal('show');
 
+      this.delegateEvents();
       return this;
     }
   });

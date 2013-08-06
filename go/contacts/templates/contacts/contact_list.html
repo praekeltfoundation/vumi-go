@@ -13,7 +13,7 @@
     <form action="{% url 'contacts:groups' %}" method="post">
         {% csrf_token %}
         <div class="hide">
-            {# TODO: Name field is no longer required for smart groups %}
+            {# TODO: Name field is no longer required for smart groups #}
             <input type="text" name="name" value="{{ query }}">
             <input type="text" name="query" value="name:{{ query }}">
         </div>
@@ -31,7 +31,7 @@
 {% block content_actions_right %}
     <div class="table-form-view-buttons pull-left">
         <button class="btn" data-action="delete" disabled="disabled">Delete</button>
-        <button class="btn" data-toggle="modal" data-target="#expContactFrm" disabled="disabled">Export</button>
+        <button class="btn" data-action="export" data-toggle="modal" data-target="#expContactFrm" disabled="disabled">Export</button>
         {# TODO <button class="btn" disabled="disabled">Assign to group</button> #}
     </div>
 {% endblock %}

@@ -41,6 +41,59 @@ class ConversationTestCase(VumiGoDjangoTestCase):
         self.assertEqual(conv.name, 'new conv')
         self.assertEqual(conv.conversation_type, 'bulk_message')
 
+    def test_edit_conversation_details(self):
+        conv = self.create_conversation(conversation_type=u'bulk_message',
+                                        name=u'test', description=u'test')
+
+        response = self.client.post(
+            reverse('conversations:conversation', kwargs={
+                'conversation_key': conv.key, 'path_suffix': 'edit_detail/',
+            }), {
+                'name': 'foo',
+                'description': 'bar',
+            })
+        show_url = reverse('conversations:conversation', kwargs={
+            'conversation_key': conv.key, 'path_suffix': ''})
+        self.assertRedirects(response, show_url)
+        reloaded_conv = self.user_api.get_wrapped_conversation(conv.key)
+        self.assertEqual(reloaded_conv.name, 'foo')
+        self.assertEqual(reloaded_conv.description, 'bar')
+
+    def test_conversation_contact_group_listing(self):
+        conv = self.create_conversation(conversation_type=u'bulk_message',
+                                        name=u'test', description=u'test')
+        group1 = self.user_api.contact_store.new_group(u'Contact Group 1')
+        group2 = self.user_api.contact_store.new_group(u'Contact Group 2')
+
+        conv.add_group(group1)
+        conv.save()
+
+        show_url = reverse('conversations:conversation', kwargs={
+            'conversation_key': conv.key, 'path_suffix': ''})
+
+        resp = self.client.get(show_url)
+        self.assertContains(resp, 'Contact Group 1')
+        self.assertNotContains(resp, 'Contact Group 2')
+
+    def test_conversation_contact_group_assignment(self):
+        conv = self.create_conversation(conversation_type=u'bulk_message',
+                                        name=u'test', description=u'test')
+        group1 = self.user_api.contact_store.new_group(u'Contact Group 1')
+        group2 = self.user_api.contact_store.new_group(u'Contact Group 2')
+
+        groups_url = reverse('conversations:conversation', kwargs={
+            'conversation_key': conv.key, 'path_suffix': 'edit_groups/'})
+
+        resp = self.client.post(groups_url, {
+            'group': [group2.key]
+        })
+
+        self.assertEqual(resp.status_code, 302)
+
+        reloaded_conv = self.user_api.get_wrapped_conversation(conv.key)
+        self.assertFalse(group1.key in reloaded_conv.groups.keys())
+        self.assertTrue(group2.key in reloaded_conv.groups.keys())
+
     def test_post_new_conversation_extra_endpoints(self):
         self.add_app_permission(u'go.apps.wikipedia')
         conv_data = {
@@ -87,7 +140,7 @@ class ConversationTestCase(VumiGoDjangoTestCase):
             return self.client.get(reverse('conversations:index'), {
                 'query': conv.name,
                 'conversation_type': conversation_type,
-                })
+            })
 
         self.assertContains(search('bulk_message'), conv.key)
         self.assertNotContains(search('survey'), conv.key)
@@ -99,7 +152,7 @@ class ConversationTestCase(VumiGoDjangoTestCase):
             return self.client.get(reverse('conversations:index'), {
                 'query': conv.name,
                 'conversation_status': conversation_status,
-                })
+            })
 
         # it should be draft
         self.assertContains(search('draft'), conv.key)
@@ -196,14 +249,14 @@ class ConversationTestCase(VumiGoDjangoTestCase):
             'p': 2,
             'conversation_type': 'bulk_message',
             'conversation_status': 'draft',
-            })
+        })
 
         self.assertNotContains(response, '?p=2')
 
     def test_scrub_tokens(self):
         content = 'Please visit http://example.com/t/6be226/ ' \
-                    'to start your conversation.'
+                  'to start your conversation.'
         expected = 'Please visit http://example.com/t/******/ ' \
-                    'to start your conversation.'
+                   'to start your conversation.'
         self.assertEqual(scrub_tokens(content), expected)
         self.assertEqual(scrub_tokens(content * 2), expected * 2)

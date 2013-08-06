@@ -2,6 +2,7 @@ import csv
 import logging
 import functools
 from StringIO import StringIO
+from urllib import urlencode
 
 from django.views.generic import View, TemplateView
 from django import forms
@@ -10,10 +11,12 @@ from django.core.urlresolvers import reverse
 from django.contrib import messages
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from go.vumitools.exceptions import ConversationSendError
 from go.token.django_token_manager import DjangoTokenManager
-from go.conversation.forms import ConfirmConversationForm, ReplyToMessageForm
+from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
+                                   ConversationDetailForm)
 from go.conversation.tasks import export_conversation_messages
 
 logger = logging.getLogger(__name__)
@@ -213,6 +216,51 @@ class ShowConversationView(ConversationTemplateView):
         return self.redirect_to('show', conversation_key=conversation.key)
 
 
+class EditConversationDetailView(ConversationTemplateView):
+    """view for editing conversation details such as name & description
+    """
+
+    view_name = 'edit_detail'
+    path_suffix = 'edit_detail/'
+    edit_form = ConversationDetailForm
+
+    def _render_form(self, request, conversation, form):
+        return self.render_to_response({
+            'conversation': conversation,
+            'edit_form_media': sum([form.media], forms.Media()),
+            'edit_form': form,
+        })
+
+    def make_form(self, edit_form, conversation):
+        return self.edit_form(initial={
+            'name': conversation.name,
+            'description': conversation.description,
+        })
+
+    def process_form(self, request, conversation):
+        form = self.edit_form(request.POST)
+        if not form.is_valid():
+            return self._render_forms(request, conversation, form)
+
+        # NOTE: we're dealing with a conversation wrapper here so set the
+        #       internal `c` object's attributes.
+        conversation.c.name = form.cleaned_data['name']
+        conversation.c.description = form.cleaned_data['description']
+        conversation.save()
+
+    def get(self, request, conversation):
+        form = self.make_form(self.edit_form, conversation)
+        return self._render_form(request, conversation, form)
+
+    def post(self, request, conversation):
+        response = self.process_form(request, conversation)
+        if response is not None:
+            return response
+
+        return self.redirect_to(self.get_next_view(conversation),
+                                conversation_key=conversation.key)
+
+
 class EditConversationView(ConversationTemplateView):
     """View for editing conversation data.
 
@@ -393,6 +441,58 @@ class AggregatesConversationView(ConversationTemplateView):
             content_type='text/csv; charset=utf-8')
 
 
+class EditConversationGroupsView(ConversationTemplateView):
+    view_name = 'edit_groups'
+    path_suffix = 'edit_groups/'
+
+    def _render_groups(self, request, conversation):
+        groups = sorted(request.user_api.list_groups(),
+                        key=lambda group: group.created_at,
+                        reverse=True)
+
+        selected_groups = list(group.key for group
+                               in conversation.get_groups())
+
+        for group in groups:
+            if group.key in selected_groups:
+                group.selected = True
+
+        query = request.GET.get('query', '')
+        p = request.GET.get('p', 1)
+
+        paginator = Paginator(groups, 15)
+        try:
+            page = paginator.page(p)
+        except PageNotAnInteger:
+            page = paginator.page(1)
+        except EmptyPage:
+            page = paginator.page(paginator.num_pages)
+
+        pagination_params = urlencode({
+            'query': query,
+        })
+
+        return self.render_to_response({
+            'paginator': paginator,
+            'page': page,
+            'pagination_params': pagination_params,
+            'conversation': conversation,
+        })
+
+    def get(self, request, conversation):
+        return self._render_groups(request, conversation)
+
+    def post(self, request, conversation):
+        group_keys = request.POST.getlist('group')
+        conversation.groups.clear()
+        for group_key in group_keys:
+            conversation.add_group(group_key)
+        conversation.save()
+
+        return self.redirect_to(self.get_next_view(conversation),
+                                conversation_key=conversation.key)
+
+
 class ConversationViewDefinitionBase(object):
     """Definition of conversation UI.
 
@@ -410,6 +510,8 @@ class ConversationViewDefinitionBase(object):
     # This doesn't include ConversationActionView because that's special.
     DEFAULT_CONVERSATION_VIEWS = (
         ShowConversationView,
+        EditConversationDetailView,
+        EditConversationGroupsView,
         StartConversationView,
         ConfirmConversationView,
         StopConversationView,

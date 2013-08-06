@@ -3,129 +3,151 @@
 // Tables that are used to manage swaths of data.
 
 (function(exports) {
+  var TableFormView = Backbone.View.extend({
+    defaults: {
+      rowLinkAttribute: 'data-url',
+      actionPrefix: '_'
+    },
 
-    var TableFormView = Backbone.View.extend({
+    templates: {
+      singular: _.template(
+        "Are you sure you want to <%=action%> this item?"),
+      plural: _.template(
+        "Are you sure you want to <%=action%> these <%=numChecked%> items?"),
+    },
 
-        template_singular: _.template("Are you sure you want to <%=action%> this item?"),
-        template_plural: _.template("Are you sure you want to <%=action%> these <%=numChecked%> items?"),
+    initialize: function() {
+      // the table is rendered elsewhere, so el is an absolute
+      // requirements.
+      if (!this.$el.is('form')) {
+        throw("TableFormView must get an `el` attribute that's a FORM element");
+      }
 
-        events: {
-            'click thead input:checkbox': 'toggleAllCheckboxes',
-            'click tbody tr td:first-child input:checkbox': 'onClick',
-            'click tbody tr td:first-child': 'onClick',
-            'click tbody tr': 'followLink'
-        },
+      _(this.options).defaults(this.defaults);
+      this._initActions();
+    },
 
-        initialize: function() {
-            // the table is rendered elsewhere, so el is an absolute
-            // requirements.
-            if (!this.$el.is('form')) {
-                throw("TableFormView must get an `el` attribute that's a FORM element")
-            }
+    _initActions: function() {
+      this.$actions = $(this.options.actions);
 
-            _.defaults(this.options, {
-                rowLinkAttribute: 'data-url',
-                actionPrefix: '_'
-            });
+      var self = this;
+      this.$actions.each(function() {
+        var $el = $(this),
+            action = $el.attr('data-action'),
+            modal = $el.attr('data-target');
 
-            _.bindAll(this,
-                'showConfirmationModal'
-            );
-
-            // this event is fired by `toggleAllCheckboxes` and `onClick`
-            // and is fired when you change the value of the checkbox.
-            this.on('checkbox:changed', this.onChanged);
-
-            // the actions are enabled when atleast a single checkbox
-            // is selected.
-            this.$actions = $(this.options.actions);
-            var that = this;
-            this.$actions.each(function() {
-                var action = $(this).attr('data-action');
-                if (typeof(action) !== 'undefined') {
-                    $(this).click(function() {
-                        that.showConfirmationModal({action: action});
-                    });
-                }
-            });
-        },
-
-        // select or deselect all the checkboxes based on the state of the 
-        // single checkbox in the header.
-        toggleAllCheckboxes: function(ev) {
-            this.$el.find('tbody input:checkbox').prop('checked',
-                $(ev.target).prop('checked'));
-
-            this.trigger('checkbox:changed');
-        },
-
-        onClick: function(ev) {
-            ev.stopPropagation();
-            var $this = $(ev.target);
-
-            // the `td` that houses the checkbox is clickable, this make the
-            // checkbox easier to click because it increases the target
-            // area.
-            if ($this.is('td')) {
-                $this.find('input:checkbox').trigger('click');
-            }
-            this.trigger('checkbox:changed');
-        },
-
-        onChanged: function() {
-            // determine if all the checkboxes are selected
-            var allChecked = true;
-            var numChecked = 0;
-            this.$el.find('tbody input:checkbox').each(function() {
-                if (!$(this).prop('checked')) {
-                    // one of our checkboxes isn't checked.
-                    allChecked = false;
-                } else {
-                    numChecked += 1;
-                }
-            });
-
-            this.$el.find('thead input:checkbox').prop('checked', allChecked);
-            // enable/ disable the buttons.
-            this.$actions.prop('disabled', numChecked <= 0);
-            var callback = this.options.onCheckedCallback;
-            if (typeof(callback) !== 'undefined') {
-                callback.call(this, allChecked, numChecked);
-            }
-        },
-
-        followLink: function(ev) {
-            var $this = $(ev.target).parents('tr');
-            var url = $this.attr(this.options.rowLinkAttribute);
-            if (typeof(url) !== 'undefined') window.location = url;
-        },
-
-        showConfirmationModal: function(options) {
-
-            var numChecked = this.$el.find('tbody input:checked').length;
-            var template = this.template_singular;
-            if (numChecked > 1) template = this.template_plural;
-
-            var message = template({
-                action: options.action,
-                numChecked: numChecked
-            });
-
-            var that = this;
-            bootbox.confirm(message, function(submit) {
-                if (submit === false) return;
-                // add an action field to the form; the view to which this
-                // submits can use this field to determine which action
-                // was envoked.
-                that.$el.append('<input type="hidden" name="' +
-                    that.options.actionPrefix + options.action + '">');
-                that.$el.submit();
-            });
+        if (modal) {
+          // If the action is targeting a modal, we rewire the modal's form to
+          // submit the action instead
+          $(modal).find('form').submit(function(e) {
+            e.preventDefault();
+            self.submitAction(action);
+          });
+        } else {
+          // Otherwise, if the action doesn't target any modal, we show our own
+          // modal with a confirmation message
+          $el.click(function() { self.confirmAction(action); });
         }
-    });
+      });
+    },
 
+    $headActionMarker: function() {
+      return this.$('th:first-child input');
+    },
 
-    _.extend(exports, {
-        TableFormView: TableFormView
-    });
+    $actionMarkers: function() {
+      return this.$('td:first-child input');
+    },
+
+    allChecked: function() {
+      return !this.$('td:first-child input:not(:checked)').length;
+    },
+
+    numChecked: function() {
+      return this.$('td:first-child input:checked').length;
+    },
+
+    refreshButtons: function() {
+      this.$actions.prop('disabled', !this.numChecked());
+    },
+
+    submitAction: function(action) {
+        // add an action field to the form; the view to which this
+      // submits can use this field to determine which action
+      // was invoked.
+      var $input = $('<input>')
+        .attr('type', 'hidden')
+        .attr('name', this.options.actionPrefix + action)
+        .appendTo(this.$el);
+
+      this.$el.submit();
+      $input.remove();
+
+      return this;
+    },
+
+    confirmAction: function(action) {
+      var numChecked = this.numChecked();
+
+      var template = numChecked > 1
+        ? this.templates.plural
+        : this.templates.singular;
+
+      var message = template({
+        action: action,
+        numChecked: numChecked
+      });
+
+      bootbox.confirm(message, function(submit) {
+        if (submit) { this.submitAction(action); }
+      }.bind(this));
+
+      return this;
+    },
+
+    events: {
+      // select or deselect all the checkboxes based on the state of the 
+      // single checkbox in the header.
+      'change th:first-child input': function(e) {
+        var checked = this.$headActionMarker().is(':checked');
+
+        this.$actionMarkers().each(function() {
+          $(this).prop('checked', checked);
+        });
+
+        this.refreshButtons();
+      },
+
+      'change td:first-child input': function(e) {
+        this.$headActionMarker().prop('checked', this.allChecked());
+        this.refreshButtons();
+      },
+
+      // the `td` that houses the checkbox is clickable, this make the
+      // checkbox easier to click because it increases the target
+      // area.
+      'click td:first-child': function(e) {
+        $(e.target).find('input')
+          .prop('checked', true)
+          .change();
+      },
+
+      'click tbody tr td': function(e) {
+        var $el = $(e.target).parents('tr'),
+            url = $el.attr(this.options.rowLinkAttribute);
+
+        // Follow the link associated with the row
+        if (typeof url !== 'undefined') { window.location = url; }
+      },
+
+      'click tbody tr td *': function(e) {
+        // Prevent the column's click events from propagating to its elements
+        e.stopPropagation();
+      }
+    }
+  });
+
+  _.extend(exports, {
+    TableFormView: TableFormView
+  });
 })(go.components.tables = {});

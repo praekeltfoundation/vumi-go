@@ -11,7 +11,7 @@
 
 {% block content_actions_right %}
   <div class="pull-left">
-    
+
     <input type="checkbox" name="multiple_surveys" id="multiple_surveys">
     Enable users to submit multiple surveys
   </div>
@@ -28,31 +28,18 @@
 
 {% block ondomready %}
   {{ block.super }}
-  var dialogue = go.campaign.dialogue;
+  var dialogue = go.apps.dialogue;
 
   var diagram = new dialogue.diagram.DialogueDiagramView({
     el: '.dialogue #diagram',
     model: new dialogue.models.DialogueModel({{ model_data|safe }})
   });
 
-  $('.actions [data-action="new-state"]').click(function(e) {
-      e.preventDefault();
-      diagram.newState();
+  var actions = new dialogue.actions.DialogueActionsView({
+    el: '.actions',
+    diagram: diagram,
+    sessionId: "{{ session_id|safe }}"
   });
-
-  $('.actions button[data-action="save"]').click(function(e) {
-      e.preventDefault();
-
-      // TODO, we've got to inject the value of the multiple-survey
-      // button.
-
-      // TODO uncomment once the screen is hooked up to the api
-      //diagram.model.save();
-
-      // send user to conversation show page
-      window.location.href = "/conversations/{{ conversation_key }}/";
-  });
-
 
   dialogue.style.initialize();
   diagram.render();

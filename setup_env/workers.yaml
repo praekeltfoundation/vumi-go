@@ -84,13 +84,35 @@ applications:
   dialogue:
     class: go.apps.dialogue.vumi_app.DialogueApplication
     config:
-      batch_size: 2
+      env:
+        NODE_PATH: "/usr/lib/node_modules"
+      app_context: "{require: function(m) { if (m == 'jed' || m == 'vumigo_v01') return require(m); return null; }, Buffer: Buffer}"
+
+      sandbox:
+        config:
+          cls: go.apps.dialogue.vumi_app.PollConfigResource
+        outbound:
+          cls: go.apps.jsbox.outbound.GoOutboundResource
+        metrics:
+          cls: go.apps.jsbox.metrics.MetricsResource
+        http:
+          cls: vumi.application.sandbox.HttpClientResource
+        kv:
+          cls: vumi.application.sandbox.RedisResource
+          redis_manager:
+            key_prefix: "vumigo.dialogue.kv"
+            db: 1
+          keys_per_user: 10000
+
+      rlimits:
+        RLIMIT_DATA: [67108864, 67108864] # 64 MB
+        RLIMIT_STACK: [2097152, 2097152] # 2 MB
+        RLIMIT_AS: [268435456, 268435456] # 256 MB
+
       metrics_prefix: dialogue_application
       redis_manager: *REDIS-MANAGER
       riak_manager: *RIAK-MANAGER
       send_to: *SEND-TO
-      vxpolls:
-        prefix: vxpolls
       middleware:
         - logging_mw: vumi.middleware.logging.LoggingMiddleware
 

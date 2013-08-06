@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from zipfile import ZipFile
 from StringIO import StringIO
@@ -6,6 +7,7 @@ from django.core import mail
 from django.utils.unittest import skip
 
 from go.vumitools.tests.utils import VumiApiCommand
+from go.api.go_api.tests.utils import MockRpc
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
 
@@ -23,10 +25,22 @@ class DialogueTestCase(DjangoGoApplicationTestCase):
 
     def setUp(self):
         super(DialogueTestCase, self).setUp()
-        self.patch_settings(
-            VXPOLLS_REDIS_CONFIG=self._persist_config['redis_manager'])
+        self.mock_rpc = MockRpc()
+
+    def tearDown(self):
+        super(DialogueTestCase, self).tearDown()
+        self.mock_rpc.tearDown()
+
+    def check_model_data(self, response, conv, poll):
+        expected = poll.copy()
+        expected["campaign_id"] = self.user_api.user_account_key
+        expected["conversation_key"] = conv.key
+        model_data = response.context["model_data"]
+        self.assertEqual(json.loads(model_data), expected)
 
     def test_new_conversation(self):
+        poll = {"foo": "bar"}
+        self.mock_rpc.set_response(result={"poll": poll})
         self.add_app_permission(u'go.apps.dialogue')
         self.assertEqual(len(self.conv_store.list_conversations()), 0)
         response = self.post_new_conversation()
@@ -64,9 +78,8 @@ class DialogueTestCase(DjangoGoApplicationTestCase):
             'send_dialogue',
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
-            batch_id=conversation.get_batches()[0].key, msg_options={},
-            delivery_class=conversation.delivery_class,
-            is_client_initiated=False))
+            batch_id=conversation.get_batches()[0].key,
+            delivery_class=conversation.delivery_class))
 
     def test_action_send_dialogue_no_group(self):
         self.setup_conversation(started=True)
@@ -173,11 +186,14 @@ class DialogueTestCase(DjangoGoApplicationTestCase):
 
     def test_edit(self):
         self.setup_conversation()
+        poll = {"foo": "bar"}
+        self.mock_rpc.set_response(result={"poll": poll})
         response = self.client.get(self.get_view_url('edit'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')
         self.assertContains(response, 'Test Conversation')
         self.assertContains(response, 'diagram')
+        self.check_model_data(response, conversation, poll)
 
     def test_export_user_data(self):
         self.setup_conversation()

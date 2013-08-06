@@ -1,5 +1,3 @@
-
-
 class ConversationDefinitionBase(object):
     """Definition of conversation lifecycle and possible actions.
 
@@ -14,6 +12,10 @@ class ConversationDefinitionBase(object):
     extra_static_endpoints = ()
 
     actions = ()
+
+    # set to an sub-class of go.api.go_api.action_dispatcher
+    # .ConversationActionDispatcher to provide API methods
+    api_dispatcher_cls = None
 
     def __init__(self, conv=None):
         self.conv = conv

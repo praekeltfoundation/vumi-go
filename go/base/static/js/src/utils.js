@@ -33,7 +33,7 @@
   var objectByName = function(name, that) {
     return _(name.split( '.' )).reduce(
       function(obj, propName) { return obj[propName]; },
-      that || window);
+      that || this);
   };
 
   // If given a string, gets the object by name, otherwise just returns what
@@ -93,6 +93,22 @@
     };
   })();
 
+  // For test stubbing purposes
+  var redirect = function(url) { window.location = url; };
+
+  var bindEvents = function(events, that) {
+    that = that || this;
+
+    _(events).each(function(fn, e) {
+      var parts = e.split(' '),
+          event = parts[0],
+          entity = parts[1];
+
+      if (entity) { that.listenTo(objectByName(entity, that), event, fn); }
+      else { that.on(event, fn); }
+    });
+  };
+
   _.extend(exports, {
     merge: merge,
     functor: functor,
@@ -102,6 +118,8 @@
     idOfView: idOfView,
     slugify: slugify,
     unaccentify: unaccentify,
+    redirect: redirect,
+    bindEvents: bindEvents,
     highlightActiveLinks: highlightActiveLinks
   });
 })(go.utils = {});

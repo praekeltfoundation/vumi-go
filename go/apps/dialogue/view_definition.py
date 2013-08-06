@@ -1,7 +1,10 @@
+import json
+
 from django.http import HttpResponse
 from bootstrap.forms import BootstrapForm
 
-
+from go.api.go_api import client
+from go.api.go_api.client import GoApiError
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, ConversationTemplateView)
 
@@ -14,10 +17,26 @@ class DialogueEditView(ConversationTemplateView):
     template_base = 'dialogue'
 
     def get(self, request, conversation):
-        # TODO Use api to get model data and bootstrap it to page load
+        r = client.rpc(
+            request.session.session_key, 'conversation.dialogue.get_poll',
+            [request.user_api.user_account_key,
+             conversation.key])
+
+        if r.status_code != 200:
+            raise GoApiError(
+                "Failed to load dialogue from Go API:"
+                " (%r) %r." % (r.status_code, r.text))
+
+        model_data = {
+            'campaign_id': request.user_api.user_account_key,
+            'conversation_key': conversation.key,
+        }
+        model_data.update(r.json['result']['poll'])
 
         return self.render_to_response({
-            'conversation': conversation
+            'conversation': conversation,
+            'session_id': request.session.session_key,
+            'model_data': json.dumps(model_data),
         })
 
 
