@@ -159,11 +159,13 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                                             Headers(self.auth_headers))
 
         msg1 = self.mkmsg_out(content='in 1', message_id='1')
+        self.conversation.set_go_helper_metadata(msg1['helper_metadata'])
         yield self.store_outbound_msg(msg1, self.conversation)
         ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
         yield self.dispatch_event(ack1)
 
         msg2 = self.mkmsg_out(content='in 1', message_id='2')
+        self.conversation.set_go_helper_metadata(msg2['helper_metadata'])
         yield self.store_outbound_msg(msg2, self.conversation)
         ack2 = self.mkmsg_ack(user_message_id=msg2['message_id'])
         yield self.dispatch_event(ack2)
@@ -253,6 +255,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_in_reply_to(self):
         inbound_msg = self.mkmsg_in(content='in 1', message_id='1')
+        self.conversation.set_go_helper_metadata(
+            inbound_msg['helper_metadata'])
         yield self.store_inbound_msg(inbound_msg, self.conversation)
 
         msg = {
@@ -417,6 +421,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.conversation.save()
 
         msg1 = self.mkmsg_out(content='in 1', message_id='1')
+        self.conversation.set_go_helper_metadata(msg1['helper_metadata'])
         yield self.store_outbound_msg(msg1, self.conversation)
         ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
         event_d = self.dispatch_event(ack1)
@@ -484,6 +489,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
+        self.conversation.set_go_helper_metadata(msg['helper_metadata'])
         yield self.vumi_api.mdb.add_inbound_message(msg)
         command = VumiApiCommand.command(
             'worker', 'send_message',
