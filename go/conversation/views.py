@@ -100,34 +100,31 @@ def conversation_action(request, conversation_key, action_name):
 def new_conversation(request):
     if request.method == 'POST':
         form = NewConversationForm(request.user_api, request.POST)
-        if not form.is_valid():
-            # TODO: Something more sensible here?
-            return HttpResponse(
-                "Invalid form: %s" % (form.errors,), status=400)
-        conversation_type = form.cleaned_data['conversation_type']
+        if form.is_valid():
+            conversation_type = form.cleaned_data['conversation_type']
 
-        view_def = get_conversation_view_definition(conversation_type)
-        conv = request.user_api.new_conversation(
-            conversation_type, name=form.cleaned_data['name'],
-            description=form.cleaned_data['description'], config={},
-            extra_endpoints=list(view_def.extra_static_endpoints),
-        )
-        messages.info(request, 'Conversation created successfully.')
+            view_def = get_conversation_view_definition(conversation_type)
+            conv = request.user_api.new_conversation(
+                conversation_type, name=form.cleaned_data['name'],
+                description=form.cleaned_data['description'], config={},
+                extra_endpoints=list(view_def.extra_static_endpoints),
+            )
+            messages.info(request, 'Conversation created successfully.')
 
-        # Get a new view_def with a conversation object in it.
-        view_def = get_conversation_view_definition(
-            conv.conversation_type, conv)
+            # Get a new view_def with a conversation object in it.
+            view_def = get_conversation_view_definition(
+                conv.conversation_type, conv)
 
-        next_view = 'show'
-        if view_def.is_editable:
-            next_view = 'edit'
+            next_view = 'show'
+            if view_def.is_editable:
+                next_view = 'edit'
 
-        return redirect(view_def.get_view_url(
-            next_view, conversation_key=conv.key))
-
-    conversation_form = NewConversationForm(request.user_api)
+            return redirect(view_def.get_view_url(
+                next_view, conversation_key=conv.key))
+    else:
+        form = NewConversationForm(request.user_api)
     return render(request, 'conversation/new.html', {
-        'conversation_form': conversation_form,
+        'conversation_form': form,
     })
 
 

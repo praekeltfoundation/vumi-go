@@ -35,13 +35,20 @@ class BaseWizardView(TemplateView):
 class WizardCreateView(BaseWizardView):
     view_name = 'wizard_1_create'
 
-    def get(self, request):
+    def _render(self, request, wizard_form=None, conversation_form=None,
+                channel_form=None, router_form=None):
         return self.render_to_response({
-            'wizard_form': Wizard1CreateForm(),
-            'conversation_form': NewConversationForm(request.user_api),
-            'channel_form': NewChannelForm(request.user_api),
-            'router_form': Wizard1ExistingRouterForm(request.user_api),
+            'wizard_form': wizard_form or Wizard1CreateForm(),
+            'conversation_form': (conversation_form or
+                                  NewConversationForm(request.user_api)),
+            'channel_form': (channel_form or NewChannelForm(request.user_api)),
+            'router_form': (router_form or
+                            Wizard1ExistingRouterForm(request.user_api)),
         })
+
+
+    def get(self, request):
+        return self._render(request)
 
     def post(self, request):
         # TODO: Reuse new conversation/channel view logic here.
@@ -61,7 +68,10 @@ class WizardCreateView(BaseWizardView):
             # TODO: Better validation.
             logger.info("Validation failed: %s" % (
                 [frm.errors for frm in forms_to_validate],))
-            return self.get(request)
+            return self._render(request, wizard_form=wiz_form,
+                                conversation_form=conv_form,
+                                channel_form=chan_form,
+                                router_form=router_form)
 
         # Create conversation
         view_def, conv = self._create_conversation(
