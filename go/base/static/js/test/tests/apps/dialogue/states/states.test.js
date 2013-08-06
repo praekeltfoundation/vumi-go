@@ -473,7 +473,7 @@ describe("go.apps.dialogue.states", function() {
         diagram.render();
       });
 
-      it("should allow the state to be sorted if it isn't connected",
+      it("should allow the state to be sorted",
       function() {
         assert.deepEqual(
           states.keys(),
@@ -486,20 +486,6 @@ describe("go.apps.dialogue.states", function() {
         assert.deepEqual(
           states.keys(),
           ['state1','state3','state2','state4']);
-      });
-
-      it("should not let the state be sorted if it is connected", function() {
-        assert.deepEqual(
-          states.keys(),
-          ['state1','state2','state3','state4']);
-
-        $('[data-uuid="state1"] .titlebar')
-          .simulate('mousedown')
-          .simulate('drag', {dx: 150});
-
-        assert.deepEqual(
-          states.keys(),
-          ['state1','state2','state3','state4']);
       });
     });
 
