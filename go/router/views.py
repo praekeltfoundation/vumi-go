@@ -46,35 +46,32 @@ def router(request, router_key, path_suffix):
 def new_router(request):
     if request.method == 'POST':
         form = NewRouterForm(request.user_api, request.POST)
-        if not form.is_valid():
-            # TODO: Something more sensible here?
-            return HttpResponse(
-                "Invalid form: %s" % (form.errors,), status=400)
-        router_type = form.cleaned_data['router_type']
+        if form.is_valid():
+            router_type = form.cleaned_data['router_type']
 
-        view_def = get_router_view_definition(router_type)
-        router = request.user_api.new_router(
-            router_type, name=form.cleaned_data['name'],
-            description=form.cleaned_data['description'], config={},
-            extra_inbound_endpoints=list(
-                view_def.extra_static_inbound_endpoints),
-            extra_outbound_endpoints=list(
-                view_def.extra_static_outbound_endpoints),
-        )
-        messages.info(request, 'Conversation created successfully.')
+            view_def = get_router_view_definition(router_type)
+            router = request.user_api.new_router(
+                router_type, name=form.cleaned_data['name'],
+                description=form.cleaned_data['description'], config={},
+                extra_inbound_endpoints=list(
+                    view_def.extra_static_inbound_endpoints),
+                extra_outbound_endpoints=list(
+                    view_def.extra_static_outbound_endpoints),
+            )
+            messages.info(request, 'Conversation created successfully.')
 
-        # Get a new view_def with a conversation object in it.
-        view_def = get_router_view_definition(
-            router.router_type, router)
+            # Get a new view_def with a conversation object in it.
+            view_def = get_router_view_definition(
+                router.router_type, router)
 
-        next_view = 'show'
-        if view_def.is_editable:
-            next_view = 'edit'
+            next_view = 'show'
+            if view_def.is_editable:
+                next_view = 'edit'
 
-        return redirect(view_def.get_view_url(
-            next_view, router_key=router.key))
-
-    router_form = NewRouterForm(request.user_api)
+            return redirect(view_def.get_view_url(
+                next_view, router_key=router.key))
+    else:
+        form = NewRouterForm(request.user_api)
     return render(request, 'router/new.html', {
-        'router_form': router_form,
+        'router_form': form,
     })
