@@ -543,6 +543,35 @@ describe("go.apps.dialogue.states", function() {
       states = diagram.states.members.get('states');
     });
 
+    describe("when its states are reordered", function() {
+      beforeEach(function() {
+        diagram.render();
+      });
+
+      it("should change its diagram's model's start state accordingly",
+      function() {
+        assert.equal(
+          diagram.model.get('start_state'),
+          states.get('state1').model);
+
+        assert.deepEqual(
+          states.keys(),
+          ['state1','state2','state3','state4']);
+
+        $('[data-uuid="state3"] .titlebar')
+          .simulate('mousedown')
+          .simulate('drag', {dx: -700});
+
+        assert.deepEqual(
+          states.keys(),
+          ['state3','state1','state2','state4']);
+
+        assert.equal(
+          diagram.model.get('start_state'),
+          states.get('state3').model);
+      });
+    });
+
     describe(".reset", function() {
       it("should remove the old state", function(){
         assert(states.has('state3'));

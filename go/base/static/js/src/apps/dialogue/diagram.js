@@ -28,21 +28,16 @@
         this.model.set('start_state', state.model);
       }
 
-      this.dialogueStates = this.states.members.get('states');
       go.utils.bindEvents(this.bindings, this);
     },
 
     newState: function() {
-      return this.dialogueStates.add();
+      return this.states.add('states');
     },
 
     bindings: {
       'error:unsupported connections': function(source, target, plumbConnection) {
         jsPlumb.detach(plumbConnection, {fireEvent: false});
-      },
-
-      'sort dialogueStates': function() {
-        this.model.set('start_state', this.dialogueStates.at(0).model);
       }
     }
   });

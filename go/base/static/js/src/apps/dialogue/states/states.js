@@ -419,6 +419,8 @@
       // Change the default mode to edit once initialisation is done so new
       // states can be rendered in edit mode.
       this.defaultMode = 'edit';
+
+      go.utils.bindEvents(this.bindings, this);
     },
 
     // Removes a state and creates a new state of a different type in the same
@@ -443,6 +445,12 @@
 
       this.each(function(s) { s.render(); });
       return this;
+    },
+
+    bindings: {
+      'sort': function() {
+        this.view.model.set('start_state', this.at(0).model);
+      }
     }
   });
 
