@@ -26,7 +26,11 @@ function DialogueStateCreator() {
         event.im.fetch_config_value("poll", true,
             function (poll) {
                 self.poll = poll;
-                self.start_state = poll.start_state.uuid;
+
+                self.start_state = poll.start_state
+                  ? poll.start_state.uuid
+                  : null;
+
                 var states = poll.states || [];
                 self.state_creators = {};
                 states.forEach(function(state_description) {
