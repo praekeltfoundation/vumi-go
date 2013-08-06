@@ -162,13 +162,13 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.conversation.set_go_helper_metadata(msg1['helper_metadata'])
         yield self.store_outbound_msg(msg1, self.conversation)
         ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
-        yield self.dispatch_event(ack1)
+        yield self.dispatch_event_to_conv(ack1, self.conversation)
 
         msg2 = self.mkmsg_out(content='in 1', message_id='2')
         self.conversation.set_go_helper_metadata(msg2['helper_metadata'])
         yield self.store_outbound_msg(msg2, self.conversation)
         ack2 = self.mkmsg_ack(user_message_id=msg2['message_id'])
-        yield self.dispatch_event(ack2)
+        yield self.dispatch_event_to_conv(ack2, self.conversation)
 
         ra1 = yield events.get()
         ra2 = yield events.get()
@@ -424,7 +424,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.conversation.set_go_helper_metadata(msg1['helper_metadata'])
         yield self.store_outbound_msg(msg1, self.conversation)
         ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
-        event_d = self.dispatch_event(ack1)
+        event_d = self.dispatch_event_to_conv(ack1, self.conversation)
 
         req = yield self.push_calls.get()
         posted_json_data = req.content.read()
