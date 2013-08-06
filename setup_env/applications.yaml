@@ -66,6 +66,8 @@ dialogue:
     send_to:
       default:
         transport_name: "invalid broken transport"
+    middleware:
+      - logging_mw: vumi.middleware.logging.LoggingMiddleware
 
 survey:
   class: go.apps.surveys.vumi_app.SurveyApplication
