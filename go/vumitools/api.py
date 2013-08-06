@@ -380,6 +380,9 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def _update_tag_data_for_acquire(self, user_account, tag):
+        # The batch we create here gets added to the tag_info and we can fish
+        # it out later. When we replace this with proper channel objects we can
+        # stash it there like we do with conversations and routers.
         yield self.api.mdb.batch_start([tag], user_account=user_account.key)
         user_account.tags.append(tag)
         tag_info = yield self.api.mdb.get_tag_info(tag)
