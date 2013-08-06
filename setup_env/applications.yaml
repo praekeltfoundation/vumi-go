@@ -39,7 +39,7 @@ dialogue:
 
     sandbox:
       config:
-        cls: go.apps.jsbox.vumi_app.ConversationConfigResource
+        cls: go.apps.dialogue.vumi_app.PollConfigResource
       outbound:
         cls: go.apps.jsbox.outbound.GoOutboundResource
       metrics:
