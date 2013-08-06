@@ -91,7 +91,7 @@ describe("go.utils", function() {
       thing = new Eventable();
     });
 
-    it("should delegate events defined on the object itself", function(done) {
+    it("should bind events defined on the object itself", function(done) {
       bindEvents({'fire': function() { done(); }}, thing);
       thing.trigger('fire');
     });
