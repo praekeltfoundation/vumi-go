@@ -5,7 +5,7 @@
 from twisted.trial.unittest import SkipTest, TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.tests.utils import get_fake_amq_client, LogCatcher
+from vumi.tests.utils import get_fake_amq_client
 from vumi.errors import VumiError
 
 from go.vumitools.opt_out import OptOutStore
@@ -31,42 +31,6 @@ class TestTxVumiApi(AppWorkerTestCase):
                 self._persist_config, get_fake_amq_client(self._amqp))
         self._persist_riak_managers.append(self.vumi_api.manager)
         self._persist_redis_managers.append(self.vumi_api.redis)
-
-    @inlineCallbacks
-    def test_batch_outbound_keys(self):
-        raise SkipTest("Replace this with a different test.")
-        batch_id = yield self.vumi_api.batch_start([("poolA", "default10001")])
-        msgs = [self.mkmsg_out(content=msg, message_id=str(i)) for
-                i, msg in enumerate(("msg1", "msg2"))]
-        for msg in msgs:
-            yield self.vumi_api.mdb.add_outbound_message(
-                msg, batch_id=batch_id)
-        api_msgs = yield self.vumi_api.batch_outbound_keys(batch_id)
-        self.assertEqual(sorted(api_msgs), ['0', '1'])
-
-    @inlineCallbacks
-    def test_batch_inbound_keys(self):
-        raise SkipTest("Replace this with a different test.")
-        tag = ("ambient", "default10001")
-        to_addr = "+12310001"
-        batch_id = yield self.vumi_api.batch_start([tag])
-        msgs = [self.mkmsg_in(content=msg, to_addr=to_addr, message_id=str(i),
-                              transport_type="sms")
-                for i, msg in enumerate(("msg1", "msg2"))]
-        for msg in msgs:
-            yield self.vumi_api.mdb.add_inbound_message(msg, batch_id=batch_id)
-        api_msgs = yield self.vumi_api.batch_inbound_keys(batch_id)
-        self.assertEqual(sorted(api_msgs), ['0', '1'])
-
-    @inlineCallbacks
-    def test_batch_tags(self):
-        raise SkipTest("Replace this with a different test.")
-        tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
-        batch_id = yield self.vumi_api.batch_start([tag1])
-        self.assertEqual((yield self.vumi_api.batch_tags(batch_id)), [tag1])
-        batch_id = yield self.vumi_api.batch_start([tag1, tag2])
-        self.assertEqual(
-            (yield self.vumi_api.batch_tags(batch_id)), [tag1, tag2])
 
     @inlineCallbacks
     def test_declare_tags_from_different_pools(self):
@@ -226,6 +190,35 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag2)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), None)
         yield self.assert_account_tags([list(tag1), list(tag2)])
+
+    @inlineCallbacks
+    def test_tag_batch_outbound_keys(self):
+        [tag] = yield self.setup_tagpool(u"poolA", [u"tag1"])
+        yield self.user_api.acquire_specific_tag(tag)
+        tag_info = yield self.vumi_api.mdb.get_tag_info(tag)
+        batch_id = tag_info.current_batch.key
+        msgs = [self.mkmsg_out(content=msg, message_id=str(i)) for
+                i, msg in enumerate(("msg1", "msg2"))]
+        for msg in msgs:
+            yield self.vumi_api.mdb.add_outbound_message(
+                msg, batch_id=batch_id)
+        api_msgs = yield self.vumi_api.mdb.batch_outbound_keys(batch_id)
+        self.assertEqual(sorted(api_msgs), ['0', '1'])
+
+    @inlineCallbacks
+    def test_tag_batch_inbound_keys(self):
+        [tag] = yield self.setup_tagpool(u"poolA", [u"tag1"])
+        yield self.user_api.acquire_specific_tag(tag)
+        tag_info = yield self.vumi_api.mdb.get_tag_info(tag)
+        batch_id = tag_info.current_batch.key
+        to_addr = "+12310001"
+        msgs = [self.mkmsg_in(content=msg, to_addr=to_addr, message_id=str(i),
+                              transport_type="sms")
+                for i, msg in enumerate(("msg1", "msg2"))]
+        for msg in msgs:
+            yield self.vumi_api.mdb.add_inbound_message(msg, batch_id=batch_id)
+        api_msgs = yield self.vumi_api.mdb.batch_inbound_keys(batch_id)
+        self.assertEqual(sorted(api_msgs), ['0', '1'])
 
     def _set_routing_table(self, user, entries):
         # Each entry is a tuple of (src, dst) where src and dst are

@@ -373,6 +373,7 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def _update_tag_data_for_acquire(self, user_account, tag):
+        yield self.api.mdb.batch_start([tag], user_account=user_account.key)
         user_account.tags.append(tag)
         tag_info = yield self.api.mdb.get_tag_info(tag)
         tag_info.metadata['user_account'] = user_account.key.decode('utf-8')
@@ -448,6 +449,11 @@ class VumiUserApi(object):
             tag_info = yield self.api.mdb.get_tag_info(tag)
             del tag_info.metadata['user_account']
             yield tag_info.save()
+            # NOTE: This loads and saves the CurrentTag object a second time.
+            #       We should probably refactor the message store to make this
+            #       less clumsy.
+            if tag_info.current_batch.key:
+                yield self.api.mdb.batch_done(tag_info.current_batch.key)
 
             # Clean up routing table entries.
             routing_table = yield self.get_routing_table(user_account)
