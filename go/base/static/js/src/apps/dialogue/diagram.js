@@ -24,7 +24,7 @@
       DialogueDiagramView.__super__.initialize.call(this, options);
 
       if (!this.states.size()) {
-        var state = this.newState();
+        state = this.newState();
         this.model.set('start_state', state.model);
       }
 

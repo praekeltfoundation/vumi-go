@@ -572,6 +572,24 @@ describe("go.apps.dialogue.states", function() {
       });
     });
 
+    describe("when a state is removed", function() {
+      beforeEach(function() {
+        diagram.render();
+      });
+
+      it("should change its diagram's model's start state accordingly",
+      function() {
+        assert.equal(
+          diagram.model.get('start_state'),
+          states.get('state1').model);
+
+        states.remove('state1');
+        assert.equal(
+          diagram.model.get('start_state'),
+          states.get('state2').model);
+      });
+    });
+
     describe(".reset", function() {
       it("should remove the old state", function(){
         assert(states.has('state3'));

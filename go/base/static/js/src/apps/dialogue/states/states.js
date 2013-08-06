@@ -447,10 +447,22 @@
       return this;
     },
 
+    resetStartState: function() {
+      var model = this.size()
+        ? this.at(0).model
+        : null;
+
+      this.view.model.set('start_state', model);
+      return this;
+    },
+
     bindings: {
-      'sort': function() {
-        this.view.model.set('start_state', this.at(0).model);
-      }
+      // We need to reset the start state whenever a state is removed or
+      // whenever the ordering of the states changes. Adding states may affect
+      // the ordering, but we resort the states and trigger a 'sort' event when
+      // a state is added, so that case is covered by the 'sort' binding below
+      'sort': function() { this.resetStartState(); },
+      'remove': function() { this.resetStartState(); }
     }
   });
 
