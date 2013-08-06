@@ -2,7 +2,7 @@
 
 """Tests for go.vumitools.api."""
 
-from twisted.trial.unittest import SkipTest, TestCase
+from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.tests.utils import get_fake_amq_client
@@ -174,6 +174,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         yield self.assert_account_tags([])
         tag2_info = yield self.vumi_api.mdb.get_tag_info(tag2)
         self.assertEqual(tag2_info.metadata['user_account'], None)
+        self.assertEqual(tag2_info.current_batch.key, None)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag1)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag2)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), None)
@@ -182,11 +183,13 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         tag2_info = yield self.vumi_api.mdb.get_tag_info(tag2)
         self.assertEqual(tag2_info.metadata['user_account'],
                          self.user_api.user_account_key)
+        self.assertNotEqual(tag2_info.current_batch.key, None)
 
         yield self.user_api.release_tag(tag2)
         yield self.assert_account_tags([list(tag1)])
         tag2_info = yield self.vumi_api.mdb.get_tag_info(tag2)
         self.assertEqual(tag2_info.metadata['user_account'], None)
+        self.assertEqual(tag2_info.current_batch.key, None)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag2)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), None)
         yield self.assert_account_tags([list(tag1), list(tag2)])
