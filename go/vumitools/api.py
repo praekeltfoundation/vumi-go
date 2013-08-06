@@ -260,8 +260,15 @@ class VumiUserApi(object):
             conversation_type, name, description, config, batch_id, **fields)
         returnValue(conv)
 
-    def new_router(self, *args, **kw):
-        return self.router_store.new_router(*args, **kw)
+    @Manager.calls_manager
+    def new_router(self, router_type, name, description, config,
+                   batch_id=None, **fields):
+        if not batch_id:
+            batch_id = yield self.api.mdb.batch_start(
+                tags=[], user_account=self.user_account_key)
+        router = yield self.router_store.new_router(
+            router_type, name, description, config, batch_id, **fields)
+        returnValue(router)
 
     @Manager.calls_manager
     def list_conversation_endpoints(self):
