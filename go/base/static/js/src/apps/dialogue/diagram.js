@@ -22,17 +22,17 @@
 
     initialize: function(options) {
       DialogueDiagramView.__super__.initialize.call(this, options);
-      if (!this.states.size()) { this.newState(); }
-
-      this.connections.on('error:unsupported', this.onUnsupportedConnection);
+      go.utils.bindEvents(this.bindings, this);
     },
 
     newState: function() {
       return this.states.add('states');
     },
 
-    onUnsupportedConnection: function(source, target, plumbConnection) {
-      jsPlumb.detach(plumbConnection, {fireEvent: false});
+    bindings: {
+      'error:unsupported connections': function(source, target, plumbConnection) {
+        jsPlumb.detach(plumbConnection, {fireEvent: false});
+      }
     }
   });
 

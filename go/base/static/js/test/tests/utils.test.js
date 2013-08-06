@@ -80,4 +80,27 @@ describe("go.utils", function() {
         'sol-austan-mani-vestan');
     });
   });
+
+  describe(".bindEvents", function() {
+    var Eventable = go.components.structures.Eventable,
+        bindEvents = go.utils.bindEvents;
+
+    var thing;
+
+    beforeEach(function() {
+      thing = new Eventable();
+    });
+
+    it("should bind events defined on the object itself", function(done) {
+      bindEvents({'fire': function() { done(); }}, thing);
+      thing.trigger('fire');
+    });
+
+    it("should bind events defined on nested objects", function(done) {
+      thing.subthing = {subsubthing: new Eventable()};
+
+      bindEvents({'fire subthing.subsubthing': function() { done(); }}, thing);
+      thing.subthing.subsubthing.trigger('fire');
+    });
+  });
 });

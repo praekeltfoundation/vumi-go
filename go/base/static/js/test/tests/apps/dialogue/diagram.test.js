@@ -25,7 +25,7 @@ describe("go.apps.dialogue.diagram", function() {
   });
 
   describe(".DialogueDiagramView", function() {
-    describe("on 'error:unsupported' connection events", function() {
+    describe("when an unsupported connection was created", function() {
       beforeEach(function() {
         diagram.render();
       });

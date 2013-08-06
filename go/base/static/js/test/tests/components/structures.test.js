@@ -291,6 +291,12 @@ describe("go.components.structures", function() {
         lookup.sort();
         assert.deepEqual(lookup.values(), [2, 3, 5, 9]);
       });
+
+      it("should trigger a 'sort' event after sorting", function(done) {
+        lookup
+          .on('sort', function() { done(); })
+          .sort();
+      });
     });
 
     describe(".rearrange", function() {

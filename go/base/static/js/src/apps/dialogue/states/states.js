@@ -416,9 +416,16 @@
       DialogueStateCollection.__super__.constructor.call(this, options);
       this.grid = new DialogueStateGridView({states: this});
 
+      if (!this.size()) {
+        this.add();
+        this.resetStartState();
+      }
+
       // Change the default mode to edit once initialisation is done so new
       // states can be rendered in edit mode.
       this.defaultMode = 'edit';
+
+      go.utils.bindEvents(this.bindings, this);
     },
 
     // Removes a state and creates a new state of a different type in the same
@@ -443,6 +450,24 @@
 
       this.each(function(s) { s.render(); });
       return this;
+    },
+
+    resetStartState: function() {
+      var model = this.size()
+        ? this.at(0).model
+        : null;
+
+      this.view.model.set('start_state', model);
+      return this;
+    },
+
+    bindings: {
+      // We need to reset the start state whenever a state is removed or
+      // whenever the ordering of the states changes. Adding states may affect
+      // the ordering, but we resort the states and trigger a 'sort' event when
+      // a state is added, so that case is covered by the 'sort' binding below
+      'sort': function() { this.resetStartState(); },
+      'remove': function() { this.resetStartState(); }
     }
   });
 
