@@ -32,8 +32,32 @@ bulk_message:
 dialogue:
   class: go.apps.dialogue.vumi_app.DialogueApplication
   config:
-    batch_size: 2
     metrics_prefix: dialogue_application
+    env:
+      NODE_PATH: "/usr/lib/node_modules"
+    app_context: "{require: function(m) { if (m == 'jed' || m == 'vumigo_v01') return require(m); return null; }, Buffer: Buffer}"
+
+    sandbox:
+      config:
+        cls: go.apps.jsbox.vumi_app.ConversationConfigResource
+      outbound:
+        cls: go.apps.jsbox.outbound.GoOutboundResource
+      metrics:
+        cls: go.apps.jsbox.metrics.MetricsResource
+      http:
+        cls: vumi.application.sandbox.HttpClientResource
+      kv:
+        cls: vumi.application.sandbox.RedisResource
+        redis_manager:
+          key_prefix: "vumigo.dialogue.kv"
+          db: 1
+        keys_per_user: 10000
+
+    rlimits:
+      RLIMIT_DATA: [67108864, 67108864] # 64 MB
+      RLIMIT_STACK: [2097152, 2097152] # 2 MB
+      RLIMIT_AS: [268435456, 268435456] # 256 MB
+
     redis_manager:
       key_prefix: "vumigo"
       db: 1
@@ -42,10 +66,6 @@ dialogue:
     send_to:
       default:
         transport_name: "invalid broken transport"
-    vxpolls:
-      prefix: vxpolls
-    middleware:
-      - logging_mw: vumi.middleware.logging.LoggingMiddleware
 
 survey:
   class: go.apps.surveys.vumi_app.SurveyApplication
