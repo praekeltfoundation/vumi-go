@@ -416,6 +416,11 @@
       DialogueStateCollection.__super__.constructor.call(this, options);
       this.grid = new DialogueStateGridView({states: this});
 
+      if (!this.size()) {
+        this.add();
+        this.resetStartState();
+      }
+
       // Change the default mode to edit once initialisation is done so new
       // states can be rendered in edit mode.
       this.defaultMode = 'edit';

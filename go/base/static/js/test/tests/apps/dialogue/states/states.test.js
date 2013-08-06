@@ -584,6 +584,7 @@ describe("go.apps.dialogue.states", function() {
           states.get('state1').model);
 
         states.remove('state1');
+
         assert.equal(
           diagram.model.get('start_state'),
           states.get('state2').model);

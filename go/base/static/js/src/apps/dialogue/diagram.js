@@ -22,12 +22,6 @@
 
     initialize: function(options) {
       DialogueDiagramView.__super__.initialize.call(this, options);
-
-      if (!this.states.size()) {
-        state = this.newState();
-        this.model.set('start_state', state.model);
-      }
-
       go.utils.bindEvents(this.bindings, this);
     },
 
