@@ -32,7 +32,8 @@
     bindings: {
       'error:unsupported connections': function(source, target, plumbConnection) {
         jsPlumb.detach(plumbConnection, {fireEvent: false});
-      }
+      },
+      'remove states': function() { this.render(); }
     }
   });
 
