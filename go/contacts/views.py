@@ -344,7 +344,7 @@ def _people(request):
         elif '_export' in request.POST:
             tasks.export_contacts.delay(
                 request.user_api.user_account_key,
-                request.POST.getlist('contacts'))
+                request.POST.getlist('contact'))
 
             messages.info(request, 'The export is scheduled and should '
                                    'complete within a few minutes.')

@@ -120,7 +120,7 @@ class ContactsTestCase(VumiGoDjangoTestCase):
 
         self.client.post(reverse('contacts:people'), {
             '_export': True,
-            'contacts': [c1.key, c2.key],
+            'contact': [c1.key, c2.key],
         })
 
         self.assertEqual(len(mail.outbox), 1)
