@@ -43,7 +43,7 @@ class TestRouter(GoPersistenceMixin, TestCase):
     @inlineCallbacks
     def test_status_helpers(self):
         router = yield self.router_store.new_router(
-            u'keyword_router', u'name', u'desc', {})
+            u'keyword_router', u'name', u'desc', {}, u'batch1')
         # A new router is "stopped" and "active".
         self.assert_status(router, 'stopped')
         router.set_status_starting()
@@ -87,13 +87,14 @@ class TestRouterStore(GoPersistenceMixin, TestCase):
         self.assertEqual([], routers)
 
         router = yield self.router_store.new_router(
-            u'keyword_router', u'name', u'desc', {u'foo': u'bar'})
+            u'keyword_router', u'name', u'desc', {u'foo': u'bar'}, u'batch1')
         self.assertEqual(u'keyword_router', router.router_type)
         self.assertEqual(u'name', router.name)
         self.assertEqual(u'desc', router.description)
         self.assertEqual({u'foo': u'bar'}, router.config)
         self.assertEqual(u'active', router.archive_status)
         self.assertEqual(u'stopped', router.status)
+        self.assertEqual(u'batch1', router.batch.key)
 
         dbrouter = yield self.router_store.get_router_by_key(router.key)
         self.assert_models_equal(router, dbrouter)
@@ -105,13 +106,14 @@ class TestRouterStore(GoPersistenceMixin, TestCase):
 
         router = yield self.router_store.new_router(
             u'keyword_router', u'Zoë destroyer of Ascii', u'Return of Zoë!',
-            {u'foo': u'Zoë again.'})
+            {u'foo': u'Zoë again.'}, u'batch1')
         self.assertEqual(u'keyword_router', router.router_type)
         self.assertEqual(u'Zoë destroyer of Ascii', router.name)
         self.assertEqual(u'Return of Zoë!', router.description)
         self.assertEqual({u'foo': u'Zoë again.'}, router.config)
         self.assertEqual(u'active', router.archive_status)
         self.assertEqual(u'stopped', router.status)
+        self.assertEqual(u'batch1', router.batch.key)
 
         dbrouter = yield self.router_store.get_router_by_key(router.key)
         self.assert_models_equal(router, dbrouter)
