@@ -6,6 +6,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.middleware.tagger import TaggingMiddleware
 from vumi.middleware.base import TransportMiddleware, BaseMiddleware
+from vumi.middleware.message_storing import StoringMiddleware
 from vumi.utils import normalize_msisdn
 from vumi.components.tagpool import TagpoolManager
 from vumi.blinkenlights.metrics import MetricManager, Count, Metric
@@ -13,6 +14,7 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi.errors import ConfigError
 
 from go.vumitools.credit import CreditManager
+from go.vumitools.utils import MessageMetadataHelper
 
 
 class NormalizeMsisdnMiddleware(TransportMiddleware):
@@ -303,3 +305,42 @@ class MetricsMiddleware(BaseMiddleware):
         self.increment_counter(endpoint, 'failure.%s' % (
             failure['failure_code'] or 'unspecified',))
         return failure
+
+
+class GoStoringMiddleware(StoringMiddleware):
+    @inlineCallbacks
+    def setup_middleware(self):
+        yield super(GoStoringMiddleware, self).setup_middleware()
+        from go.vumitools.api import VumiApi
+        self.vumi_api = yield VumiApi.from_config_async(self.config)
+
+    def get_batch_id(self, msg):
+        raise NotImplementedError("Sub-classes should implement .get_batch.")
+
+    @inlineCallbacks
+    def handle_inbound(self, message, connector_name):
+        batch_id = yield self.get_batch_id(message)
+        yield self.store.add_inbound_message(message, batch_id=batch_id)
+        returnValue(message)
+
+    @inlineCallbacks
+    def handle_outbound(self, message, connector_name):
+        batch_id = yield self.get_batch_id(message)
+        yield self.store.add_outbound_message(message, batch_id=batch_id)
+        returnValue(message)
+
+
+class ConversationStoringMiddleware(GoStoringMiddleware):
+    @inlineCallbacks
+    def get_batch_id(self, msg):
+        mdh = MessageMetadataHelper(self.vumi_api, msg)
+        conversation = yield mdh.get_conversation()
+        returnValue(conversation.get_batch_key())
+
+
+class RouterStoringMiddleware(GoStoringMiddleware):
+    @inlineCallbacks
+    def get_batch_id(self, msg):
+        mdh = MessageMetadataHelper(self.vumi_api, msg)
+        router = yield mdh.get_router()
+        returnValue(router.batch.key)
