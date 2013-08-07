@@ -195,33 +195,11 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         yield self.assert_account_tags([list(tag1), list(tag2)])
 
     @inlineCallbacks
-    def test_batch_outbound_keys_for_specific_tag(self):
+    def test_batch_id_for_specific_tag(self):
         [tag] = yield self.setup_tagpool(u"poolA", [u"tag1"])
         yield self.user_api.acquire_specific_tag(tag)
         tag_info = yield self.vumi_api.mdb.get_tag_info(tag)
-        batch_id = tag_info.current_batch.key
-        msgs = [self.mkmsg_out(content=msg, message_id=str(i)) for
-                i, msg in enumerate(("msg1", "msg2"))]
-        for msg in msgs:
-            yield self.vumi_api.mdb.add_outbound_message(
-                msg, batch_id=batch_id)
-        api_msgs = yield self.vumi_api.mdb.batch_outbound_keys(batch_id)
-        self.assertEqual(sorted(api_msgs), ['0', '1'])
-
-    @inlineCallbacks
-    def test_batch_inbound_keys_for_specific_tag(self):
-        [tag] = yield self.setup_tagpool(u"poolA", [u"tag1"])
-        yield self.user_api.acquire_specific_tag(tag)
-        tag_info = yield self.vumi_api.mdb.get_tag_info(tag)
-        batch_id = tag_info.current_batch.key
-        to_addr = "+12310001"
-        msgs = [self.mkmsg_in(content=msg, to_addr=to_addr, message_id=str(i),
-                              transport_type="sms")
-                for i, msg in enumerate(("msg1", "msg2"))]
-        for msg in msgs:
-            yield self.vumi_api.mdb.add_inbound_message(msg, batch_id=batch_id)
-        api_msgs = yield self.vumi_api.mdb.batch_inbound_keys(batch_id)
-        self.assertEqual(sorted(api_msgs), ['0', '1'])
+        self.assertNotEqual(tag_info.current_batch.key, None)
 
     def _set_routing_table(self, user, entries):
         # Each entry is a tuple of (src, dst) where src and dst are
