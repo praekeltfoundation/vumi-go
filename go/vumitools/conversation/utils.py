@@ -134,10 +134,8 @@ class ConversationWrapper(object):
         for conn in go_connectors:
             if conn.ctype != conn.TRANSPORT_TAG:
                 continue
-            tag = [conn.tagpool, conn.tagname]
-            metadata = yield self.user_api.api.tpm.get_metadata(conn.tagpool)
-            channel = self.user_api.channel_store.get_channel_by_tag(
-                tag, metadata)
+            channel = yield self.user_api.get_channel(
+                (conn.tagpool, conn.tagname))
             channels.append(channel)
         channels.sort(key=lambda c: c.name)
         returnValue(channels)
