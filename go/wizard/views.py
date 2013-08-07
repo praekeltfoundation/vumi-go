@@ -93,7 +93,7 @@ class WizardCreateView(BaseWizardView):
                 'show', conversation_key=conv.key))
 
     def _handle_new_channel(self, request, chan_data, keyword, conv):
-        channel = tuple(chan_data['channel'].split(':'))
+        channel = tuple(chan_data['channel'].split(':', 1))
         if channel[1]:
             tag = request.user_api.acquire_specific_tag(channel)
         else:
