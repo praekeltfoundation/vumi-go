@@ -302,25 +302,6 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         self.assertEqual({}, routing_table)
 
     @inlineCallbacks
-    def _setup_routing_table_test_old_conv(self):
-        tag1, tag2, tag3 = yield self.setup_tagpool(
-            u"pool1", [u"1234", u"5678", u"9012"])
-        yield self.user_api.acquire_specific_tag(tag1)
-        conv = yield self.user_api.new_conversation(
-            u'bulk_message', u'name', u'desc', {},
-            delivery_tag_pool=tag2[0], delivery_tag=tag2[1])
-        conv = self.user_api.wrap_conversation(conv)
-        # We don't want to actually send commands here.
-        conv.dispatch_command = lambda *args, **kw: None
-        yield conv.old_start()
-
-        # Set the status manually, because it's in `starting', not `running'
-        conv.set_status_started()
-        yield conv.save()
-
-        returnValue(conv)
-
-    @inlineCallbacks
     def _setup_routing_table_test_new_conv(self, routing_table=None):
         tag1, tag2, tag3 = yield self.setup_tagpool(
             u"pool1", [u"1234", u"5678", u"9012"])
@@ -359,66 +340,6 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
         routing_table = yield self.user_api.get_routing_table()
         self.assertEqual(routing_table, {})
-
-    @inlineCallbacks
-    def test_get_routing_table_migration(self):
-        conv = yield self._setup_routing_table_test_old_conv()
-        # Pretend this is an old-style account that was migrated.
-        user = yield self.user_api.get_user_account()
-        user.routing_table = None
-        yield user.save()
-
-        with LogCatcher(message=r'No routing configured') as lc:
-            routing_table = yield self.user_api.get_routing_table()
-        self.assertEqual(lc.messages(), [])
-        self.assertEqual(routing_table, {
-            u':'.join(['CONVERSATION:bulk_message', conv.key]): {
-                'default': [u'TRANSPORT_TAG:pool1:5678', u'default']},
-            u'TRANSPORT_TAG:pool1:5678': {
-                u'default': [
-                    u':'.join(['CONVERSATION:bulk_message', conv.key]),
-                    'default'
-                ],
-            },
-        })
-
-    @inlineCallbacks
-    def test_get_routing_table_migration_missing_entry(self):
-        conv = yield self._setup_routing_table_test_old_conv()
-        conv2 = yield self.user_api.new_conversation(
-            u'bulk_message', u'name', u'desc', {},
-            delivery_tag_pool=u'pool1', delivery_tag=u'9012')
-        conv2 = self.user_api.wrap_conversation(conv2)
-        # We don't want to actually send commands here.
-        conv2.dispatch_command = lambda *args, **kw: None
-        yield conv2.old_start()
-
-        # Set the status manually, because it's in `starting', not `running'
-        conv2.set_status_started()
-        yield conv2.save()
-
-        # Release the tag, but keep the conv running.
-        yield self.user_api.release_tag((u'pool1', u'9012'))
-
-        # Pretend this is an old-style account that was migrated.
-        user = yield self.user_api.get_user_account()
-        user.routing_table = None
-        yield user.save()
-
-        with LogCatcher(message=r'No routing configured') as lc:
-            routing_table = yield self.user_api.get_routing_table()
-        self.assertEqual(len(lc.messages()), 1)
-        self.assertTrue(conv2.key in lc.messages()[0])
-        self.assertEqual(routing_table, {
-            u':'.join(['CONVERSATION:bulk_message', conv.key]): {
-                'default': [u'TRANSPORT_TAG:pool1:5678', u'default']},
-            u'TRANSPORT_TAG:pool1:5678': {
-                u'default': [
-                    u':'.join(['CONVERSATION:bulk_message', conv.key]),
-                    'default'
-                ],
-            },
-        })
 
     @inlineCallbacks
     def test_routing_table_validation_valid(self):
