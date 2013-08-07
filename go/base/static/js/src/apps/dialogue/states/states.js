@@ -246,7 +246,6 @@
     },
 
     events: {
-      'mousedown .titlebar': 'onTitlebarHold',
       'click .titlebar .remove': 'onRemove'
     },
 
@@ -263,11 +262,6 @@
       };
 
       this.switchMode(options.mode || 'preview', {render: false});
-    },
-
-    onTitlebarHold: function(e) {
-      if (this.isConnected()) { this.$el.addClass('locked'); }
-      else { this.$el.removeClass('locked'); }
     },
 
     onRemove: function(e) {
@@ -330,7 +324,6 @@
 
     sortableOptions: {
       items: '.item:not(.add-container)',
-      cancel: '.locked,input',
       handle: '.titlebar',
       placeholder: 'placeholder',
       sort: function() { jsPlumb.repaintEverything(); },
