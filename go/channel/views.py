@@ -83,7 +83,7 @@ def new_channel(request):
             messages.info(request, 'Acquired tag: %s.' % (channel_key,))
 
             view_def = get_channel_view_definition(
-                CheapPlasticChannel(pool, tag, None))
+                request.user_api.get_channel((pool, tag)))
             return redirect(
                 view_def.get_view_url('show', channel_key=channel_key))
         else:
@@ -102,8 +102,7 @@ def channel_or_404(user_api, channel_key):
     if (pool, tag) not in tags:
         raise Http404
 
-    tagpool_meta = user_api.api.tpm.get_metadata(pool)
-    return CheapPlasticChannel(pool, tag, tagpool_meta)
+    return user_api.get_channel((pool, tag))
 
 
 @login_required

@@ -205,9 +205,7 @@ class VumiUserApi(object):
         channels = []
         endpoints = yield self.list_endpoints()
         for tag in endpoints:
-            tagpool_meta = yield self.api.tpm.get_metadata(tag[0])
-            channel = yield self.channel_store.get_channel_by_tag(
-                tag, tagpool_meta)
+            channel = yield self.get_channel(tag)
             channels.append(channel)
         returnValue(channels)
 
