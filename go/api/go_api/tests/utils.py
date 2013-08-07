@@ -1,7 +1,3 @@
-import json
-
-from django.conf import settings
-
 from mock import Mock, patch
 
 

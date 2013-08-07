@@ -1,0 +1,662 @@
+body {
+  background: #2f3436;
+  color: #2f3436;
+}
+a:link,
+button {
+  -webkit-transition: color 0.1s, background 0.1s;
+  -moz-transition: color 0.1s, background 0.1s;
+  -o-transition: color 0.1s, background 0.1s;
+  -ms-transition: color 0.1s, background 0.1s;
+  transition: color 0.1s, background 0.1s;
+}
+.main-container {
+  min-width: 650px;
+  padding: 0 25px;
+}
+.footer {
+  color: #aaa;
+  margin: 1em;
+}
+.main-nav {
+  margin: 0;
+  font-size: 15px;
+}
+.main-nav .brand {
+  position: relative;
+  width: 60px;
+  border: 0 !important;
+}
+.main-nav .logo {
+  position: absolute;
+  top: 20px;
+  left: -5px;
+}
+.main-nav li {
+  height: 39px;
+  padding: 0 15px;
+  border-right: 1px #212527 solid;
+}
+.main-nav ul li:first-child {
+  padding: 0;
+}
+.main-nav ul:nth-child(2) li:first-child {
+  border-left: 1px #212527 solid;
+}
+.main-nav li.active a {
+  background: transparent !important;
+}
+.main-nav a {
+  color: #0bcac3 !important;
+  text-shadow: none !important;
+  outline: none;
+}
+.main-nav a:hover {
+  color: #fff !important;
+}
+.main-nav a:hover .caret {
+  border-top-color: #fff !important;
+  border-bottom-color: #fff !important;
+}
+.main-nav .caret {
+  border-top-color: #0bcac3 !important;
+  border-bottom-color: #0bcac3 !important;
+}
+.main-nav .dropdown.open > a {
+  background: transparent !important;
+  color: #fff !important;
+}
+.main-nav .dropdown-menu {
+  background: #2f3436;
+}
+.main-nav .dropdown-menu li {
+  padding: 0;
+  height: auto;
+  border: 0 !important;
+}
+.main-nav .dropdown-menu a:hover {
+  background: transparent;
+}
+.main-nav .dropdown-menu:after {
+  border-top-color: #212527 !important;
+  border-bottom-color: #212527 !important;
+}
+.content {
+  background: #f2f1ed;
+  border: #212527 solid 5px;
+  -webkit-border-radius: 5px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 5px;
+  -moz-background-clip: padding;
+  border-radius: 5px;
+  background-clip: padding-box;
+  min-height: 400px;
+}
+.content .header {
+  height: 54px;
+  line-height: 54px;
+}
+.content .header h1 {
+  font-size: 24px;
+  line-height: 54px;
+  font-weight: bold;
+  padding: 0 12px;
+  margin: 0;
+  color: #2F3436;
+}
+.content .header h1 a {
+  color: #2F3436;
+}
+.content .header h1 a:hover {
+  color: #000;
+  text-decoration: none;
+}
+.content .header .breadcrumbs {
+  text-align: right;
+  padding: 0 12px;
+}
+.content .header .breadcrumbs .navbar-search {
+  margin: 0;
+}
+.content .actions {
+  height: 50px;
+  line-height: 50px;
+  background: #d9d8d3;
+  margin: 0 0 5px 0;
+}
+.content .actions .sidebar {
+  background: #d2d0c7;
+  -webkit-box-sizing: content-box;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+  border-left: 5px #15191a solid;
+  margin-left: -5px !important;
+  height: 100%;
+}
+.content .actions .sidebar .btn {
+  margin-left: -5px;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+.content .actions .right {
+  padding: 0 20px;
+  overflow: hidden;
+}
+.content .actions .right .navbar-search {
+  margin-top: 0;
+}
+.content .indent {
+  margin: 2em 1em;
+}
+.content .actions .left,
+.content .sidebar {
+  max-width: 210px;
+}
+.content .sidebar .nav-list a {
+  color: #2f3436;
+}
+.content .sidebar .nav-list a:hover {
+  color: #000;
+  background: none;
+}
+.content .sidebar .nav-list .active {
+  color: #fff;
+  background: #b41c30;
+  border-left: 5px #6f0f1c solid;
+  text-shadow: none;
+  font-weight: bold;
+  margin-left: -20px;
+}
+.content .sidebar .nav-list a.active:hover {
+  color: #fff;
+  background: #b41c30;
+}
+.content .sidebar .nav-list .nav-list {
+  padding: 0;
+  margin: 0;
+}
+.content .sidebar .nav-list .nav-list li {
+  text-indent: 10px;
+}
+.content .sidebar .extra-actions {
+  margin-bottom: 1em;
+}
+.content .sidebar .extra-actions a,
+.content .sidebar .extra-actions a.active {
+  color: #0088cc;
+}
+.content .sidebar .extra-actions a.active {
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+.content .sidebar .extra-actions a:hover {
+  color: #54a6de !important;
+  background: transparent !important;
+  text-decoration: underline;
+}
+.nav-stacked a:hover {
+  background: none !important;
+}
+.help-inline .errorlist {
+  list-style: none;
+}
+.help-inline .errorlist li {
+  padding: 0;
+  margin: 0;
+}
+.alert {
+  margin: 1em 0;
+}
+.boxes {
+  text-align: center;
+}
+.boxes .box {
+  background: #d2d0c7;
+  color: #000;
+  font-size: 16px;
+  padding: 15px 0;
+  text-align: center;
+  -webkit-border-radius: 5px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 5px;
+  -moz-background-clip: padding;
+  border-radius: 5px;
+  background-clip: padding-box;
+  margin-bottom: 1em;
+  min-height: 70px;
+}
+.boxes .box label {
+  text-align: left;
+  text-indent: 10%;
+}
+.boxes .box input,
+.boxes .box select {
+  width: auto;
+  max-width: 100%;
+  min-width: 80%;
+}
+.modal label input {
+  margin: 0;
+}
+.popover {
+  z-index: 20 !important;
+  font-size: 11px;
+  width: 220px;
+}
+.popover input {
+  font-size: 11px;
+  width: 90%;
+}
+.dialogue .actions .sidebar {
+  background: #d9d8d3;
+}
+.dialogue #diagram ._jsPlumb_connector {
+  z-index: 1;
+  opacity: 0.5;
+}
+.dialogue #diagram ._jsPlumb_endpoint {
+  z-index: 5;
+  opacity: 0.5;
+}
+.dialogue #diagram ._jsPlumb_endpoint svg circle:hover {
+  cursor: move;
+}
+.dialogue #diagram ._jsPlumb_dragging {
+  z-index: 3;
+  opacity: 0.5;
+}
+.dialogue #diagram ._jsPlumb_hover {
+  z-index: 3;
+  opacity: 0.75;
+}
+.dialogue #diagram .grid {
+  text-align: center;
+  margin: 0 auto;
+}
+.dialogue #diagram .grid .placeholder {
+  background: #2f3436;
+  width: 8px;
+  height: 200px;
+  float: left;
+  -webkit-border-radius: 10px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 10px;
+  -moz-background-clip: padding;
+  border-radius: 10px;
+  background-clip: padding-box;
+}
+.dialogue #diagram .grid .row {
+  margin: 0;
+}
+.dialogue #diagram .grid .item {
+  margin: 40px 20px;
+  float: left;
+  z-index: 2;
+}
+.dialogue #diagram .add {
+  height: 65px;
+  font-size: 65px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+.dialogue #diagram .state {
+  width: 260px;
+  float: left;
+  text-align: left;
+}
+.dialogue #diagram .state {
+  position: relative;
+  color: #2f3436;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+.dialogue #diagram .state .titlebar,
+.dialogue #diagram .state label {
+  background: #b0b0b0;
+  height: 35px;
+  line-height: 35px;
+  font-size: 11px;
+  padding: 0 6px;
+  text-indent: 0;
+  font-weight: normal;
+  text-align: left;
+}
+.dialogue #diagram .state .titlebar {
+  margin-top: -14px;
+  margin-bottom: 10px;
+  -webkit-border-radius: 5px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 5px;
+  -moz-background-clip: padding;
+  border-radius: 5px;
+  background-clip: padding-box;
+}
+.dialogue #diagram .state .titlebar .remove {
+  float: right;
+  height: 22px;
+  width: 20px;
+  margin-top: 6px;
+  padding-bottom: 4px;
+  color: #eee;
+  background: #000;
+}
+.dialogue #diagram .state .titlebar:hover {
+  cursor: move;
+}
+.dialogue #diagram .state .edit.mode .actions {
+  background: inherit;
+  margin: 10px 5px 0 0;
+}
+.dialogue #diagram .state .edit.mode .actions a {
+  font-size: 12px;
+}
+.dialogue #diagram .state .preview.mode .edit-switch {
+  margin-left: 8px;
+}
+.dialogue #diagram .state .preview.mode .text {
+  margin-left: 8px;
+}
+.dialogue #diagram .state label,
+.dialogue #diagram .state p {
+  cursor: default;
+  color: #2f3436;
+}
+.dialogue #diagram .state textarea,
+.dialogue #diagram .state select,
+.dialogue #diagram .state input {
+  width: 80%;
+  margin-left: 3px;
+  font-size: 11px;
+}
+.dialogue #diagram .state textarea {
+  resize: none;
+  max-width: 80%;
+}
+.dialogue #diagram .state p {
+  text-align: left;
+}
+.dialogue #diagram .state .close {
+  font-size: 16px;
+}
+.dialogue #diagram .state .hint {
+  margin: 0;
+  text-align: center;
+  font-size: 10px;
+  font-weight: bold;
+}
+.dialogue #diagram .state .important {
+  color: #cc3333;
+}
+.dialogue #diagram .endpoint {
+  z-index: 4;
+  background: teal;
+  width: 15px;
+  height: 15px;
+  -webkit-border-radius: 15px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 15px;
+  -moz-background-clip: padding;
+  border-radius: 15px;
+  background-clip: padding-box;
+}
+.dialogue #diagram .endpoint:hover {
+  cursor: pointer;
+}
+.dialogue #diagram .search_enabled input {
+  margin: 0;
+  margin-left: 3px;
+  padding: 0;
+  width: auto;
+  min-width: 10px;
+  display: inline;
+}
+.dialogue #diagram .search_enabled label {
+  margin: 0;
+  text-indent: 0;
+  padding: 0;
+  display: inline;
+  background: transparent;
+  font-size: 10px;
+  color: #666;
+}
+.dialogue #diagram .choice.state .edit.mode .choices {
+  font-size: 11px;
+  margin-left: 20px;
+}
+.dialogue #diagram .choice.state .edit.mode .choices li {
+  padding: 0;
+  margin: 0 0 18px 0;
+}
+.dialogue #diagram .choice.state .edit.mode .choices input {
+  min-width: 130px;
+  width: 170px;
+  margin-bottom: 0;
+}
+.dialogue #diagram .choice.state .edit.mode .choices .close {
+  margin: 4px 10px 0 0;
+}
+.dialogue #diagram .choice.state .edit.mode .new-choice {
+  float: right;
+  font-size: 11px;
+  margin-right: 43px;
+}
+.dialogue #diagram .choice.state .preview.mode .choices {
+  text-align: left;
+}
+.channels.dashboard td:first-child {
+  width: 30px;
+}
+.channels.new .channel select {
+  display: none;
+}
+.campaigns.dashboard .status {
+  text-transform: capitalize;
+}
+.campaigns.dashboard .sidebar p .btn {
+  margin-left: -4px;
+}
+.campaigns.details ul,
+.campaigns.details li {
+  list-style-type: none;
+  padding: 0 0 0 5px;
+  margin: 0 0 10px 0;
+  width: auto;
+}
+.campaigns.details ul label,
+.campaigns.details li label {
+  font-weight: normal;
+  display: inline;
+}
+.campaigns.details .configuration {
+  margin: 18px 0 0 0;
+  display: none;
+}
+.campaigns.details .configuration ul,
+.campaigns.details .configuration li {
+  padding: 0;
+  margin: 0;
+  list-style-type: none;
+}
+.campaigns.summary .sub-details,
+.campaigns.summary .sub-messages,
+.campaigns.summary .sub-contacts {
+  border-bottom: 1px #c9c9c9 solid;
+  margin: 0 18px;
+  padding: 18px 0;
+}
+.campaigns.summary h6 {
+  font-weight: bold;
+  color: #878b8e;
+}
+.campaigns.summary h4 {
+  font-size: 20px;
+  margin: 0 0 18px 0;
+}
+.campaigns.summary ol,
+.campaigns.summary ul,
+.campaigns.summary li {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  width: auto;
+}
+.campaigns.summary .sub-actions {
+  background: #d9d8d3;
+  margin-top: -5px;
+  padding: 18px;
+}
+.campaigns .header a {
+  color: #878b8e;
+  font-weight: bold;
+  font-size: 16px;
+  margin-right: 10px;
+}
+.campaigns .header a.active {
+  color: #000;
+}
+.campaigns .actions .right {
+  text-align: right;
+}
+.campaigns .actions .right a:first-child {
+  margin-right: 20px;
+}
+.campaigns label {
+  color: #000;
+  font-weight: bold;
+}
+.campaigns label a:link,
+.campaigns label a:visited {
+  color: #000;
+}
+.campaigns label a:hover {
+  text-decoration: none;
+}
+.campaigns form .boxes {
+  text-align: center;
+}
+.campaigns form .title {
+  text-transform: uppercase;
+}
+.campaigns form .title .tooltip {
+  text-transform: none;
+}
+.campaigns #routing-diagram .column-container {
+  text-align: center;
+}
+.campaigns #routing-diagram .column-container .title {
+  font-size: 22px;
+  margin: 10px 0;
+  font-family: inherit;
+  font-weight: bold;
+  display: block;
+  color: inherit;
+  text-rendering: optimizelegibility;
+}
+.campaigns #routing-diagram .column-container .new {
+  font-size: 35px;
+  line-height: 50px;
+  width: 130px;
+  height: 50px;
+}
+.campaigns #routing-diagram .column-container .column {
+  margin-top: 15px;
+  display: inline-block;
+}
+.campaigns #routing-diagram .column-container .state {
+  background: #d2d0c7;
+  color: #333;
+  font-size: 16px;
+  text-align: center;
+  -webkit-border-radius: 5px;
+  -webkit-background-clip: padding-box;
+  -moz-border-radius: 5px;
+  -moz-background-clip: padding;
+  border-radius: 5px;
+  background-clip: padding-box;
+  width: 150px;
+  min-height: 100px;
+  margin: 15px auto;
+  padding-top: 10px;
+  z-index: 0;
+  -webkit-user-select: none;
+}
+.campaigns #routing-diagram .column-container .state .name {
+  margin: 10px;
+}
+.campaigns #routing-diagram .column-container .state:hover {
+  cursor: move;
+}
+.campaigns #routing-diagram .column-container .endpoint:hover {
+  cursor: pointer;
+}
+.campaigns #routing-diagram ._jsPlumb_endpoint,
+.campaigns #routing-diagram ._jsPlumb_connector {
+  z-index: 200;
+}
+.contacts .smart-group-search form {
+  display: inline;
+}
+.accounts {
+  color: #c1c1c1;
+}
+.accounts .logo-large {
+  margin: 1em 0 2em 0;
+}
+.accounts.details .actions {
+  visibility: hidden;
+}
+.accounts.details h4 {
+  color: #000;
+  border-bottom: 1px #c9c9c9 dotted;
+  padding-bottom: 1em;
+  margin: 0;
+}
+.accounts.details .span8 {
+  padding-left: 1em;
+}
+.accounts.details .span4 {
+  padding-right: 1em;
+}
+.accounts.details .sidebar .nav li {
+  text-indent: 0;
+  border-bottom: 1px #c9c9c9 dotted;
+}
+.accounts.details .sidebar .nav a {
+  padding: 1em 0;
+  margin: 0;
+  text-indent: 0;
+  line-height: 1.5em;
+  font-weight: bold;
+}
+.accounts.details .sidebar .nav a span {
+  color: #2f3436;
+  font-weight: normal;
+}
+.table-form-view {
+  margin-top: 1em;
+  overflow: hidden;
+}
+.table-form-view td,
+.table-form-view tr {
+  color: #2f3436;
+  vertical-align: middle;
+}
+.table-form-view td:first-child,
+.table-form-view th:first-child {
+  text-align: center;
+  cursor: pointer;
+}
+.table-form-view thead td,
+.table-form-view thead tr {
+  color: #a7aaac;
+  text-transform: uppercase;
+}
+.table-form-view tr[data-url] {
+  cursor: pointer;
+}
+.table-form-view-buttons {
+  margin: 0 1em 0 0;
+}

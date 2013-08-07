@@ -5,8 +5,6 @@ from go.base.management.commands import go_manage_metrics
 
 class GoManageApplicationCommandTestCase(VumiGoDjangoTestCase):
 
-    USE_RIAK = False
-
     def setUp(self):
         super(GoManageApplicationCommandTestCase, self).setUp()
         self.setup_api()

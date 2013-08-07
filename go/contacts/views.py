@@ -37,8 +37,9 @@ def index(request):
 
 
 @login_required
-def groups(request):
+def groups(request, type=None):
     contact_store = request.user_api.contact_store
+
     if request.POST:
         contact_group_form = ContactGroupForm(request.POST)
         smart_group_form = SmartGroupForm(request.POST)
@@ -57,6 +58,21 @@ def groups(request):
                 smart_group = contact_store.new_smart_group(
                     name, query)
                 return redirect(_group_url(smart_group.key))
+        elif '_delete' in request.POST:
+            groups = request.POST.getlist('group')
+            for group_key in groups:
+                group = contact_store.get_group(group_key)
+                tasks.delete_group.delay(request.user_api.user_account_key,
+                                         group.key)
+            messages.info(request, '%d groups will be deleted '
+                                   'shortly.' % len(groups))
+        elif '_export' in request.POST:
+            tasks.export_many_group_contacts.delay(
+                request.user_api.user_account_key,
+                request.POST.getlist('group'))
+
+            messages.info(request, 'The export is scheduled and should '
+                                   'complete within a few minutes.')
     else:
         contact_group_form = ContactGroupForm()
         smart_group_form = SmartGroupForm()
@@ -70,7 +86,12 @@ def groups(request):
         for group_bunch in contact_store.groups.load_all_bunches(keys):
             groups.extend(group_bunch)
     else:
-        groups = contact_store.list_groups()
+        if type == 'static':
+            groups = contact_store.list_static_groups()
+        elif type == 'smart':
+            groups = contact_store.list_smart_groups()
+        else:
+            groups = contact_store.list_groups()
 
     groups = sorted(groups, key=lambda group: group.created_at, reverse=True)
     paginator = Paginator(groups, 15)
@@ -83,7 +104,7 @@ def groups(request):
     pagination_params = urlencode({
         'query': query,
     })
-    return render(request, 'contacts/groups.html', {
+    return render(request, 'contacts/group_list.html', {
         'paginator': paginator,
         'pagination_params': pagination_params,
         'page': page,
@@ -126,9 +147,11 @@ def _static_group(request, contact_store, group):
                 group.save()
             messages.info(request, 'The group name has been updated')
             return redirect(_group_url(group.key))
-        elif '_export_group_contacts' in request.POST:
+        elif '_export' in request.POST:
             tasks.export_group_contacts.delay(
-                request.user_api.user_account_key, group.key, True)
+                request.user_api.user_account_key,
+                group.key)
+
             messages.info(request,
                           'The export is scheduled and should '
                           'complete within a few minutes.')
@@ -215,38 +238,32 @@ def _static_group(request, contact_store, group):
             utils.clear_file_hints_from_session(request)
             default_storage.delete(file_path)
 
-    selected_letter = request.GET.get('l', 'a')
     query = request.GET.get('q', '')
     if query:
-        if ':' in query:
-            query_kwargs = _query_to_kwargs(request.GET.get('q'))
-        else:
-            query_kwargs = _query_to_kwargs('name:%s' % query)
-
-        limit = int(request.GET.get('limit', 100))
-        keys = contact_store.contacts.search(**query_kwargs).get_keys()
-        if limit:
-            messages.info(
-                request,
-                'Showing up to %s random contacts matching your query' % (
-                    limit,))
-            keys = keys[:limit]
-
-        selected_contacts = []
-        for contact_bunch in contact_store.contacts.load_all_bunches(keys):
-            selected_contacts.extend(contact_bunch)
+        if not ':' in query:
+            query = 'name:%s' % (query,)
+            keys = contact_store.contacts.raw_search(query).get_keys()
     else:
-        selected_contacts = contact_store.filter_contacts_on_surname(
-            selected_letter, group=group)
+        keys = contact_store.list_contacts()
+
+    limit = int(request.GET.get('limit', 100))
+    if limit:
+        messages.info(request,
+            'Showing up to %s random contacts matching your query' % (
+                limit,))
+        keys = keys[:limit]
+
+    selected_contacts = []
+    for contact_bunch in contact_store.contacts.load_all_bunches(keys):
+        selected_contacts.extend(contact_bunch)
 
     context.update({
         'query': request.GET.get('q'),
-        'selected_letter': selected_letter,
         'selected_contacts': selected_contacts,
         'member_count': contact_store.count_contacts_for_group(group),
     })
 
-    return render(request, 'contacts/group.html', context)
+    return render(request, 'contacts/group_detail.html', context)
 
 
 @csrf_protect
@@ -259,7 +276,7 @@ def _smart_group(request, contact_store, group):
             group.query = smart_group_form.cleaned_data['query']
             group.save()
             return redirect(_group_url(group.key))
-    elif '_export_group_contacts' in request.POST:
+    elif '_export' in request.POST:
         tasks.export_group_contacts.delay(
             request.user_api.user_account_key, group.key, True)
         messages.info(request, 'The export is scheduled and should '
@@ -293,7 +310,7 @@ def _smart_group(request, contact_store, group):
     selected_contacts = []
     for contacts in contact_store.contacts.load_all_bunches(keys):
         selected_contacts.extend(contacts)
-    return render(request, 'contacts/smart_group.html', {
+    return render(request, 'contacts/group_detail.html', {
         'group': group,
         'selected_contacts': selected_contacts,
         'group_form': smart_group_form,
@@ -314,41 +331,56 @@ def people(request):
 @csrf_protect
 def _people(request):
     contact_store = request.user_api.contact_store
+    upload_contacts_form = None
     group = None
 
     if request.method == 'POST':
-        # first parse the CSV file and create Contact instances
-        # from them for attaching to a group later
-        upload_contacts_form = UploadContactsForm(request.POST, request.FILES)
-        if upload_contacts_form.is_valid():
-            # We could be creating a new contact group.
-            if request.POST.get('name'):
-                new_group_form = ContactGroupForm(request.POST)
-                if new_group_form.is_valid():
-                    group = contact_store.new_group(
-                        new_group_form.cleaned_data['name'])
+        if '_delete' in request.POST:
+            contacts = request.POST.getlist('contact')
+            for person_key in contacts:
+                contact = contact_store.get_contact_by_key(person_key)
+                contact.delete()
+            messages.info(request, '%d Contacts deleted' % len(contacts))
+        elif '_export' in request.POST:
+            tasks.export_contacts.delay(
+                request.user_api.user_account_key,
+                request.POST.getlist('contacts'))
 
-            # We could be using an existing contact group.
-            if request.POST.get('contact_group'):
-                select_group_form = SelectContactGroupForm(
-                    request.POST, groups=contact_store.list_groups())
-                if select_group_form.is_valid():
-                    group = contact_store.get_group(
-                        select_group_form.cleaned_data['contact_group'])
-
-            if group is None:
-                messages.error(request, 'Please select a group or provide '
-                                        'a new group name.')
-            else:
-                file_object = upload_contacts_form.cleaned_data['file']
-                file_name, file_path = utils.store_temporarily(file_object)
-                utils.store_file_hints_in_session(
-                    request, file_name, file_path)
-                return redirect(_group_url(group.key))
+            messages.info(request, 'The export is scheduled and should '
+                                   'complete within a few minutes.')
         else:
-            messages.error(request, 'Something went wrong with the upload.')
-    else:
-        upload_contacts_form = UploadContactsForm()
+            # first parse the CSV file and create Contact instances
+            # from them for attaching to a group later
+            upload_contacts_form = UploadContactsForm(
+                request.POST, request.FILES)
+            if upload_contacts_form.is_valid():
+                # We could be creating a new contact group.
+                if request.POST.get('name'):
+                    new_group_form = ContactGroupForm(request.POST)
+                    if new_group_form.is_valid():
+                        group = contact_store.new_group(
+                            new_group_form.cleaned_data['name'])
+
+                # We could be using an existing contact group.
+                if request.POST.get('contact_group'):
+                    select_group_form = SelectContactGroupForm(
+                        request.POST, groups=contact_store.list_groups())
+                    if select_group_form.is_valid():
+                        group = contact_store.get_group(
+                            select_group_form.cleaned_data['contact_group'])
+
+                if group is None:
+                    messages.error(request, 'Please select a group or provide '
+                                            'a new group name.')
+                else:
+                    file_object = upload_contacts_form.cleaned_data['file']
+                    file_name, file_path = utils.store_temporarily(file_object)
+                    utils.store_file_hints_in_session(
+                        request, file_name, file_path)
+                    return redirect(_group_url(group.key))
+            else:
+                messages.error(
+                    request, 'Something went wrong with the upload.')
 
     select_contact_group_form = SelectContactGroupForm(
         groups=contact_store.list_groups())
@@ -356,34 +388,31 @@ def _people(request):
     # TODO: A lot of this stuff is duplicated from the similar group search
     #       in the groups() view. We need a function that does that to avoid
     #       the duplication.
-    selected_letter = request.GET.get('l')
     query = request.GET.get('q', '')
     if query:
         if not ':' in query:
             query = 'name:%s' % (query,)
-        limit = int(request.GET.get('limit', 100))
+
         keys = contact_store.contacts.raw_search(query).get_keys()
-        if limit:
-            messages.info(
-                request,
-                'Showing up to %s random contacts matching your query' % (
-                    limit,))
-            keys = keys[:limit]
-        selected_contacts = []
-        for contact_bunch in contact_store.contacts.load_all_bunches(keys):
-            selected_contacts.extend(contact_bunch)
-    elif selected_letter:
-        selected_contacts = contact_store.filter_contacts_on_surname(
-            selected_letter)
     else:
-        selected_contacts = []
+        keys = contact_store.list_contacts()
+
+    limit = int(request.GET.get('limit', 100))
+    if limit:
+        messages.info(
+            request,
+            'Showing up to %s random contacts matching your query' % (limit,))
+        keys = keys[:limit]
+
+    selected_contacts = []
+    for contact_bunch in contact_store.contacts.load_all_bunches(keys):
+        selected_contacts.extend(contact_bunch)
 
     smart_group_form = SmartGroupForm(initial={'query': query})
-    return render(request, 'contacts/people.html', {
+    return render(request, 'contacts/contact_list.html', {
         'query': request.GET.get('q'),
-        'selected_letter': selected_letter,
         'selected_contacts': selected_contacts,
-        'upload_contacts_form': upload_contacts_form,
+        'upload_contacts_form': upload_contacts_form or UploadContactsForm(),
         'select_contact_group_form': select_contact_group_form,
         'smart_group_form': smart_group_form,
     })
@@ -435,7 +464,7 @@ def person(request, person_key):
     if contact_store.contact_has_opted_out(contact):
         messages.error(request, 'This contact has opted out.')
 
-    return render(request, 'contacts/person.html', {
+    return render(request, 'contacts/contact_detail.html', {
         'contact': contact,
         'contact_extra_items': contact.extra.items(),
         'form': form,
@@ -450,7 +479,7 @@ def new_person(request):
         form = ContactForm(request.POST, groups=groups)
         if form.is_valid():
             contact = contact_store.new_contact(**form.cleaned_data)
-            messages.add_message(request, messages.INFO, 'Profile Created')
+            messages.add_message(request, messages.INFO, 'Contact created')
             return redirect(reverse('contacts:person', kwargs={
                 'person_key': contact.key}))
         else:
@@ -459,6 +488,6 @@ def new_person(request):
                 'Please correct the problem below.')
     else:
         form = ContactForm(groups=groups)
-    return render(request, 'contacts/new_person.html', {
+    return render(request, 'contacts/contact_detail.html', {
         'form': form,
     })

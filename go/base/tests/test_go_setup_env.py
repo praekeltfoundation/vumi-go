@@ -7,7 +7,7 @@ from ConfigParser import ConfigParser
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 
-from go.apps.tests.base import DjangoGoApplicationTestCase
+from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_setup_env
 from go.base.utils import vumi_api_for_user
 
@@ -28,13 +28,12 @@ class FakeFile(StringIO):
         pass
 
 
-class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
-
-    USE_RIAK = True
+class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
+    use_riak = True
 
     def setUp(self):
         super(GoBootstrapEnvTestCase, self).setUp()
-        self.setup_riak_fixtures()
+        self.setup_api()
         self.config = self.mk_config({})
 
         self.command = go_setup_env.Command()
@@ -169,6 +168,18 @@ class GoBootstrapEnvTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(self.tagpool.get_metadata('pool1'), {
             'display_name': 'Pool 1'
         })
+
+    def test_tagpool_loading_clears_existing_pools(self):
+        self.tagpool.declare_tags([
+            ("pool1", "default0"), ("pool1", "default1")
+        ])
+        self.tagpool.acquire_specific_tag(("pool1", "default0"))
+        self.command.setup_tagpools(self.tagpool_file.name)
+        self.assertTrue('Tag pools created: pool1, pool2' in
+                            self.command.stdout.getvalue())
+        self.assertEqual(self.tagpool.inuse_tags("pool1"), [])
+        self.assertEqual(sorted(self.tagpool.free_tags("pool1")),
+                         [("pool1", "default%d" % i) for i in range(10)])
 
     def test_account_loading(self):
         self.command.setup_tagpools(self.tagpool_file.name)

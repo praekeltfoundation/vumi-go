@@ -1,0 +1,112 @@
+{% extends "conversation/conversation_base.html" %}
+{% load url from future %}
+{% load conversation_tags %}
+
+{% block content_extraclass %}campaigns summary{% endblock %}
+
+{% block content_title %}{{ conversation.name }}{% endblock %}
+
+{% block content_actions_right %}
+    {% include "conversation/includes/actions.html" with conversation=conversation %}
+{% endblock %}
+
+{% block content_main %}
+<div class="row-fluid">
+    <div class="span7">
+
+        <div class="sub-details">
+            <h4>
+                Details
+                <a href="{% conversation_screen conversation 'edit_detail' %}" class="btn btn-primary btn-mini">
+                    Edit
+                </a>
+            </h4>
+
+            <p>
+                <h6>NAME</h6>
+                {{ conversation.name }}<br>
+            </p>
+            <p>
+                <h6>DESCRIPTION</h6>
+                {{ conversation.description }}<br>
+            </p>
+            <p>
+                <h6>TYPE</h6>
+                {{ conversation.conversation_type }}<br>
+            </p>
+
+            <p>
+                <h6>CHANNELS</h6>
+                <ul>
+                {% for channel in conversation.get_channels %}
+                    <li>{{ channel.name }}</li>
+                {% empty %}
+                    <li>No channels.</li>
+                {% endfor %}
+                </ul>
+            </p>
+        </div>
+
+        {% if is_editable %}
+        <div class="sub-messages">
+            <h4>
+                Content
+                <a href="{% conversation_screen conversation 'edit' %}" class="btn btn-primary">Edit</a>
+            </h4>
+        </div>
+      {% endif %}
+
+
+        <div class="sub-contacts">
+            <h4 class="control-label">
+                Contact Groups
+                <a href="{% conversation_screen conversation 'edit_groups' %}" class="btn btn-primary btn-mini">Edit</a>
+            </h4>
+            <p class="contacts">
+                <ol>
+                {% for group in conversation.get_groups %}
+                    <li><a href="{% url 'contacts:group' group_key=group.key %}">{{group.name}}</a></li>
+                {% empty %}
+                    <li>You have not specified any contacts.</li>
+                {% endfor %}
+                </ol>
+            </p>
+        </div>
+    </div>
+
+    <div class="span5">
+        {% if actions %}
+        <div class="sub-actions pull-right">
+            <ul class="nav nav-pills nav-stacked">
+                {% for action in actions %}
+                    {% with is_disabled=action.is_disabled %}
+                        {% if is_disabled %}
+                            <li>
+                                <a href="#" class="btn disabled" title="This action is disabled" data-content="{{ is_disabled }}">{{ action.action_display_name }}</a>
+                            </li>
+                        {% else %}
+                            <li><a href="{% conversation_action conversation action.action_name %}" class="btn">{{ action.action_display_name }}</a></li>
+                        {% endif %}
+                    {% endwith %}
+                {% empty %}
+                    <li>This conversation has no actions.</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+
+{% block ondomready %}
+    var actions = new go.conversation.show.ConversationActionsView({
+        el: '.content .actions .right',
+        csrfToken: '{{ csrf_token|safe }}'
+    });
+
+    $('.content .sub-actions .disabled').popover({placement: 'left'});
+    $('.content .sub-actions .disabled').on('click', function() { return false; });
+
+{% endblock %}

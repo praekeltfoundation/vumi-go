@@ -1,12 +1,30 @@
 from django import forms
+from django.contrib.auth.models import User
+
 from registration.forms import RegistrationFormUniqueEmail
-
-from bootstrap.forms import BootstrapMixin, BootstrapForm, Fieldset
-
 from vumi.utils import normalize_msisdn
 
+from go.base.models import UserProfile
 
-class AccountForm(BootstrapForm):
+
+class UserAccountForm(forms.ModelForm):
+
+    def __init__(self, *args, **kwargs):
+        super(UserAccountForm, self).__init__(*args, **kwargs)
+        self.fields['email'].required = True
+
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name', 'email')
+
+
+class UserProfileForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ('is_admin',)
+
+
+class AccountForm(forms.Form):
 
     def __init__(self, user, *args, **kwargs):
         super(AccountForm, self).__init__(*args, **kwargs)
@@ -14,11 +32,13 @@ class AccountForm(BootstrapForm):
 
     name = forms.CharField(required=True)
     surname = forms.CharField(required=True)
-    email_address = forms.EmailField(required=True, widget=forms.TextInput(
-        attrs={'autocomplete': 'off'}))
-    msisdn = forms.CharField(label='Your mobile phone number', required=False)
+    email_address = forms.EmailField(label="Email", required=True,
+        widget=forms.TextInput(attrs={'autocomplete': 'off'}))
+    msisdn = forms.CharField(label='Mobile phone number', required=False)
+    organisation = forms.CharField(label='Organisation name', required=False)
+    country = forms.CharField(label='Country of residence', required=False)
     confirm_start_conversation = forms.BooleanField(
-        label='SMS to confirm starting of a conversation', required=False)
+        label='Receive SMS to confirm start of campaign', required=False)
     email_summary = forms.ChoiceField(
         label='How often do you want to receive an account summary via email?',
         required=False, choices=(
@@ -26,43 +46,6 @@ class AccountForm(BootstrapForm):
             ('daily', 'Once a day.'),
             ('weekly', 'Once a week.'),
         ))
-    existing_password = forms.CharField(
-        label='Your existing password',
-        widget=forms.PasswordInput(attrs={
-            'autocomplete': 'off',
-            }),
-        required=True)
-    new_password = forms.CharField(
-        label='Type in a password if you want a new one.',
-        widget=forms.PasswordInput(attrs={
-            'autocomplete': 'off',
-        }),
-        required=False)
-
-    class Meta:
-        layout = (
-            Fieldset('Account Information',
-                "name",
-                "surname",
-                "email_address",
-                "msisdn",
-                "confirm_start_conversation",
-                "email_summary",
-                "new_password",),
-            Fieldset('Verify your password',
-                'existing_password'))
-
-    def clean(self):
-        """
-        Checks whether the existing password matches the known password
-        for this user because we only want to update these details
-        if the user can actually supply their original password.
-        """
-        cleaned_data = self.cleaned_data
-        password = cleaned_data.get('existing_password')
-        if not self.user.check_password(password):
-            self._errors['existing_password'] = ['Invalid password provided']
-        return cleaned_data
 
     def clean_msisdn(self):
         """
@@ -87,7 +70,7 @@ class AccountForm(BootstrapForm):
         return confirm_start_conversation
 
 
-class RegistrationForm(BootstrapMixin, RegistrationFormUniqueEmail):
+class RegistrationForm(RegistrationFormUniqueEmail):
     def __init__(self, *args, **kwargs):
         super(RegistrationForm, self).__init__(*args, **kwargs)
         del self.fields['username']
@@ -98,6 +81,6 @@ class RegistrationForm(BootstrapMixin, RegistrationFormUniqueEmail):
         return self.cleaned_data
 
 
-class EmailForm(BootstrapForm):
+class EmailForm(forms.Form):
     subject = forms.CharField()
     message = forms.CharField(widget=forms.Textarea)

@@ -6,6 +6,17 @@ class SendSurveyAction(ConversationAction):
     action_name = 'send_survey'
     action_display_name = 'Send Survey'
 
+    needs_confirmation = True
+
+    needs_group = True
+    needs_running = True
+
+    def check_disabled(self):
+        if self._conv.has_channel_supporting(generic_sends=True):
+            return None
+        return ("This action needs channels capable of sending"
+                " messages attached to this conversation.")
+
     def perform_action(self, action_data):
         return self.send_command(
             'send_survey', batch_id=self._conv.get_latest_batch_key(),

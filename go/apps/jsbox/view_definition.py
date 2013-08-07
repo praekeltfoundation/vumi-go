@@ -2,15 +2,17 @@ import requests
 
 from django.http import HttpResponse
 
-from go.conversation.conversation_views import ConversationView
-from go.vumitools.conversation.definition import ConversationViewDefinitionBase
+from go.conversation.view_definition import (
+    ConversationViewDefinitionBase, ConversationTemplateView,
+    EditConversationView)
+
 from go.apps.jsbox.forms import JsboxForm, JsboxAppConfigFormset
 from go.apps.jsbox.log import LogManager
 
 from urlparse import urlparse, urlunparse
 
 
-class CrossDomainXHRView(ConversationView):
+class CrossDomainXHRView(ConversationTemplateView):
     view_name = 'cross_domain_xhr'
     path_suffix = 'cross_domain_xhr/'
     csrf_exempt = True
@@ -44,7 +46,7 @@ class CrossDomainXHRView(ConversationView):
         return HttpResponse(r.text, status=r.status_code)
 
 
-class JSBoxLogsView(ConversationView):
+class JSBoxLogsView(ConversationTemplateView):
     view_name = 'jsbox_logs'
     path_suffix = 'jsbox_logs/'
     template_base = 'jsbox'
@@ -60,11 +62,15 @@ class JSBoxLogsView(ConversationView):
         })
 
 
-class ConversationViewDefinition(ConversationViewDefinitionBase):
-    edit_conversation_forms = (
+class EditJSBoxView(EditConversationView):
+    edit_forms = (
         ('jsbox', JsboxForm),
         ('jsbox_app_config', JsboxAppConfigFormset),
     )
+
+
+class ConversationViewDefinition(ConversationViewDefinitionBase):
+    edit_view = EditJSBoxView
 
     extra_views = (
         CrossDomainXHRView,

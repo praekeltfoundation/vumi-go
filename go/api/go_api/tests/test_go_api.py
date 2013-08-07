@@ -1,5 +1,7 @@
 """Tests for go.api.go_api.go_api"""
 
+from xmlrpclib import METHOD_NOT_FOUND
+
 from txjsonrpc.web.jsonrpc import Proxy
 from txjsonrpc.jsonrpclib import Fault
 
@@ -8,12 +10,13 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.trial.unittest import TestCase
 from twisted.web.server import Site
 
-from vumi.tests.utils import VumiWorkerTestCase
+from vumi.tests.utils import VumiWorkerTestCase, LogCatcher
 from vumi.utils import http_request
 
 from go.vumitools.account.models import GoConnector, RoutingTableHelper
 from go.vumitools.api import VumiApi
 from go.vumitools.tests.utils import GoAppWorkerTestMixin
+from go.api.go_api.action_dispatcher import ActionError
 from go.api.go_api.api_types import RoutingEntryType
 from go.api.go_api.go_api import GoApiWorker, GoApiServer
 
@@ -414,6 +417,24 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         result = yield self.proxy.callRemote(
             "update_routing_table", self.campaign_key, routing_table)
         self.assertIdentical(result, None)
+
+    @inlineCallbacks
+    def test_conversation_action_error(self):
+        campaign_key, conv_key = u"campaign-1", u"conv-1"
+        d = self.proxy.callRemote(
+            "conversation.unknown.bar", campaign_key, conv_key,
+            {"param": 1})
+        yield self.assert_faults(d, METHOD_NOT_FOUND,
+                                 u"no such sub-handler unknown")
+
+    @inlineCallbacks
+    def test_router_action_error(self):
+        campaign_key, router_key = u"campaign-1", u"router-1"
+        d = self.proxy.callRemote(
+            "router.unknown.foo", campaign_key, router_key,
+            {"param": 1})
+        yield self.assert_faults(d, METHOD_NOT_FOUND,
+                                 u"no such sub-handler unknown")
 
 
 class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):
