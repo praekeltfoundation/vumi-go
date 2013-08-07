@@ -323,58 +323,12 @@ class VumiUserApi(object):
         returnValue(conversation)
 
     @Manager.calls_manager
-    def _populate_routing_table(self, user_account):
-        """Build a routing table by looking at conversations.
-
-        This is quite expensive. Let's try to not do it very often.
-
-        NOTE: This assumes all conversations have symmetric routing. It almost
-        certainly breaks some stuff. Some way to manually fix broken things
-        later would be nice.
-        """
-        if user_account.routing_table is not None:
-            return
-
-        routing_table = {}
-        rt_helper = RoutingTableHelper(routing_table)
-
-        # Start by walking forward from tags owned by this account.
-        account_tags = yield self.list_endpoints(user_account)
-        for tag in account_tags:
-            tag_info = yield self.api.mdb.get_tag_info(tag)
-            account_key = user_account.key.decode('utf-8')
-            tag_info.metadata['user_account'] = account_key
-            yield tag_info.save()
-            if tag_info.current_batch.key is None:
-                continue
-            batch = yield tag_info.current_batch.get()
-            conv = yield self._get_conversation_for_batch(batch)
-            if conv is None:
-                continue
-            # If we get here, we have a conversation to set up routing for.
-            rt_helper.add_oldstyle_conversation(conv, tag)
-
-        # XXX: Saving here could lead to a race condition if something else
-        # populates the routing table with some different data and saves before
-        # we do. This is unlikely enough that I'm happy ignoring it, given that
-        # we only build the routing table during account migration.
-        user_account.routing_table = routing_table
-        yield user_account.save()
-
-        # Check that we have routing set up for all our running conversations.
-        convs = yield self.running_conversations()
-        for conv in convs:
-            conv_conn = str(GoConnector.for_conversation(
-                conv.conversation_type, conv.key))
-            if conv_conn not in routing_table:
-                log.warning(
-                    "No routing configured for conversation: %r" % (conv,))
-
-    @Manager.calls_manager
     def get_routing_table(self, user_account=None):
         if user_account is None:
             user_account = yield self.get_user_account()
-        yield self._populate_routing_table(user_account)
+        if user_account.routing_table is None:
+            raise VumiError(
+                "Routing table missing for account: %s" % (user_account.key,))
         returnValue(user_account.routing_table)
 
     @Manager.calls_manager
