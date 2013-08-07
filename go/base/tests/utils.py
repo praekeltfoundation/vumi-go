@@ -150,12 +150,10 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         }
         params.update(kwargs)
         conv = self.user_api.wrap_conversation(
-            self.conv_store.new_conversation(**params))
+            self.user_api.new_conversation(**params))
 
         if started:
             conv.set_status_started()
-            batch_id = conv.start_batch()
-            conv.batches.add_key(batch_id)
             conv.save()
 
         return conv
@@ -168,7 +166,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
             'config': {},
         }
         params.update(kwargs)
-        return self.router_store.new_router(**params)
+        return self.user_api.new_router(**params)
 
     def add_messages_to_conv(self, message_count, conversation, reply=False,
                              ack=False, start_date=None, time_multiplier=10):
@@ -216,7 +214,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         rt.add_oldstyle_conversation(conv, tag)
         user_account.save()
 
-    def declare_tags(self, pool, num_tags, metadata=None):
+    def declare_tags(self, pool, num_tags, metadata=None, user_select=None):
         """Declare a set of long codes to the tag pool."""
         if metadata is None:
             metadata = {
@@ -226,6 +224,8 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
                 "server_initiated": True,
                 "transport_name": "sphex",
             }
+        if user_select is not None:
+            metadata["user_selects_tag"] = user_select
         self.api.tpm.declare_tags([(pool, u"default%s" % i) for i
                                    in range(10001, 10001 + num_tags)])
         self.api.tpm.set_metadata(pool, metadata)
