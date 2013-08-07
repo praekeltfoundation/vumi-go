@@ -1,4 +1,4 @@
-from go.vumitools.conversation.definition import ConversationViewDefinitionBase
+from go.conversation.view_definition import ConversationViewDefinitionBase
 
 
 class ConversationViewDefinition(ConversationViewDefinitionBase):

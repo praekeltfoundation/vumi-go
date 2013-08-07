@@ -254,6 +254,10 @@ VUMI_INSTALLED_APPS = {
         'namespace': 'dialogue',
         'display_name': 'Dialogue',
     },
+    'go.apps.multi_surveys': {
+        'namespace': 'multi_survey',
+        'display_name': 'Old Multi Surveys',
+    },
     'go.apps.surveys': {
         'namespace': 'survey',
         'display_name': 'Old Surveys',

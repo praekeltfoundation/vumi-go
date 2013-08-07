@@ -34,32 +34,15 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         Test showing the conversation
         """
         self.setup_conversation()
-        response = self.client.get(reverse('multi_survey:show', kwargs={
-            'conversation_key': self.conv_key}))
+        response = self.client.get(self.get_view_url('show'))
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, 'Test Conversation')
-
-    def test_aggregates(self):
-        self.setup_conversation(started=True)
-        self.add_messages_to_conv(
-            5, start_date=date(2012, 1, 1), time_multiplier=12)
-        response = self.client.get(reverse('multi_survey:aggregates', kwargs={
-            'conversation_key': self.conv_key
-            }), {'direction': 'inbound'})
-        self.assertEqual(response.content, '\r\n'.join([
-            '2011-12-30,1',
-            '2011-12-31,2',
-            '2012-01-01,2',
-            '',  # csv ends with a blank line
-            ]))
 
     def test_export_messages(self):
         self.setup_conversation(started=True)
         self.add_messages_to_conv(
             5, start_date=date(2012, 1, 1), time_multiplier=12, reply=True)
-        conv_url = reverse('multi_survey:show', kwargs={
-            'conversation_key': self.conv_key,
-            })
+        conv_url = self.get_view_url('show')
         response = self.client.post(conv_url, {
             '_export_conversation_messages': True,
             })
