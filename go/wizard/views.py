@@ -46,7 +46,6 @@ class WizardCreateView(BaseWizardView):
                             Wizard1ExistingRouterForm(request.user_api)),
         })
 
-
     def get(self, request):
         return self._render(request)
 
@@ -68,8 +67,6 @@ class WizardCreateView(BaseWizardView):
             # TODO: Better validation.
             logger.info("Validation failed: %s" % (
                 [frm.errors for frm in forms_to_validate],))
-            print "Validation failed: %s" % (
-                [frm.errors for frm in forms_to_validate],)
             return self._render(request, wizard_form=wiz_form,
                                 conversation_form=conv_form,
                                 channel_form=chan_form,
