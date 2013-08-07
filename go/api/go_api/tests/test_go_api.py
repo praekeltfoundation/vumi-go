@@ -67,7 +67,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     @inlineCallbacks
     def test_conversations(self):
-        conv = yield self.user_api.conversation_store.new_conversation(
+        conv = yield self.user_api.new_conversation(
             u'jsbox', u'My Conversation', u'A description', {})
         result = yield self.proxy.callRemote(
             "conversations", self.campaign_key)
@@ -88,7 +88,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     @inlineCallbacks
     def test_conversation_with_extra_endpoints(self):
-        conv = yield self.user_api.conversation_store.new_conversation(
+        conv = yield self.user_api.new_conversation(
             u'jsbox', u'My Conversation', u'A description', {},
             extra_endpoints=[u'foo', u'bar'])
         result = yield self.proxy.callRemote(
@@ -161,7 +161,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     @inlineCallbacks
     def test_routers(self):
-        router = yield self.user_api.router_store.new_router(
+        router = yield self.user_api.new_router(
             u'keyword', u'My Router', u'A description', {})
         result = yield self.proxy.callRemote("routers", self.campaign_key)
         self.assertEqual(result, [
@@ -181,7 +181,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     @inlineCallbacks
     def test_routers_with_extra_endpoints(self):
-        router = yield self.user_api.router_store.new_router(
+        router = yield self.user_api.new_router(
             u'keyword', u'My Router', u'A description', {},
             extra_inbound_endpoints=[u'foo'],
             extra_outbound_endpoints=[u'bar'])
@@ -224,9 +224,9 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     @inlineCallbacks
     def _setup_routing_table(self):
-        conv = yield self.user_api.conversation_store.new_conversation(
+        conv = yield self.user_api.new_conversation(
             u'jsbox', u'My Conversation', u'A description', {})
-        router = yield self.user_api.router_store.new_router(
+        router = yield self.user_api.new_router(
             u'keyword', u'My Router', u'A description', {})
         yield self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
         tag = yield self.user_api.acquire_tag(u"pool")  # acquires tag1

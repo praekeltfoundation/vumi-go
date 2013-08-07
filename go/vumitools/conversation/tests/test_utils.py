@@ -108,9 +108,10 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_get_latest_batch_key(self):
+        [init_batch] = self.conv.batches.keys()
         batch_key = yield self.conv.get_latest_batch_key()
-        self.assertEqual(batch_key, None)
-        self.assertEqual(self.conv.batches.keys(), [])
+        self.assertEqual(batch_key, init_batch)
+        self.assertEqual(self.conv.batches.keys(), [init_batch])
 
         self.conv.c.delivery_tag_pool = u"longcode"
         yield self.conv.save()
@@ -126,7 +127,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         conv = yield self.user_api.get_wrapped_conversation(self.conv.key)
         batch_key = yield conv.get_latest_batch_key()
         self.assertEqual(batch_key, batch2)
-        self.assertEqual(len(conv.batches.keys()), 2)
+        self.assertEqual(len(conv.batches.keys()), 3)
 
     @inlineCallbacks
     def test_count_replies(self):
