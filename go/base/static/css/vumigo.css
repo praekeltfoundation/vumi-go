@@ -271,6 +271,7 @@ button {
   opacity: 0.75;
 }
 .dialogue #diagram .grid {
+  width: 1024px;
   text-align: center;
   margin: 0 auto;
 }
@@ -290,7 +291,7 @@ button {
   margin: 0;
 }
 .dialogue #diagram .grid .item {
-  margin: 40px 20px;
+  margin: 40px 40px;
   float: left;
   z-index: 2;
 }
@@ -305,8 +306,6 @@ button {
   width: 260px;
   float: left;
   text-align: left;
-}
-.dialogue #diagram .state {
   position: relative;
   color: #2f3436;
   -webkit-user-select: none;
