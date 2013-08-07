@@ -144,6 +144,14 @@ class VumiUserApi(object):
         return self.router_store.get_router_by_key(router_key)
 
     @Manager.calls_manager
+    def get_channel(self, tag):
+        tagpool_meta = yield self.api.tpm.get_metadata(tag[0])
+        tag_info = yield self.api.mdb.get_tag_info(tag)
+        channel = yield self.channel_store.get_channel_by_tag(
+            tag, tagpool_meta, tag_info.current_batch.key)
+        returnValue(channel)
+
+    @Manager.calls_manager
     def finished_conversations(self):
         conv_store = self.conversation_store
         keys = yield conv_store.list_conversations()
