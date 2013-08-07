@@ -126,7 +126,6 @@ TEMPLATE_DIRS = (
     abspath("account", "templates"),
     abspath("apps", "dialogue", "templates"),
     abspath("apps", "surveys", "templates"),
-    abspath("apps", "multi_surveys", "templates"),
     abspath("apps", "jsbox", "templates"),
     abspath("conversation", "templates"),
     abspath("router", "templates"),
@@ -161,7 +160,6 @@ INSTALLED_APPS = (
     'go.wizard',
     'go.contacts',
     'go.account',
-    'go.apps.multi_surveys',
 
 
     'vxpolls.djdashboard',
@@ -259,10 +257,6 @@ VUMI_INSTALLED_APPS = {
     'go.apps.surveys': {
         'namespace': 'survey',
         'display_name': 'Old Surveys',
-    },
-    'go.apps.multi_surveys': {
-        'namespace': 'multi_survey',
-        'display_name': 'Multiple Old Surveys',
     },
     'go.apps.opt_out': {
         'namespace': 'opt_out',
