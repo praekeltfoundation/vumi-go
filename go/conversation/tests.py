@@ -101,21 +101,21 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         [contact] = contacts
         [batch] = conversation.get_batches()
         self.assertEqual(conversation.received_messages(), [])
-        [tag] = self.api.batch_tags(batch.key)
+        [tag] = batch.tags
         to_addr = "+123" + tag[1][-5:]
 
         # TODO: Decide what we want here.
         #       We get 'contact=None', but everything else is there
         # unknown contact
         # msg = self.mkmsg_in('hello', to_addr=to_addr)
-        # self.api.mdb.add_inbound_message(msg, tag=tag)
+        # self.api.mdb.add_inbound_message(msg, batch_id=batch.key)
         # self.assertEqual(conversation.replies(), [])
 
         # TODO: Actually put the contact in here.
         # known contact
         msg = self.mkmsg_in('hello', to_addr=to_addr,
                             from_addr=contact.msisdn.lstrip('+'))
-        self.api.mdb.add_inbound_message(msg, tag=tag)
+        self.api.mdb.add_inbound_message(msg, batch_id=batch.key)
         [reply_msg] = conversation.received_messages()
         self.assertTrue(reply_msg, msg)
 
@@ -137,14 +137,14 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         [message_batch] = conversation.get_batches()
         self.assertEqual(len(conversation.get_tags()), 1)
         conversation.end_conversation()
-        [msg_tag] = self.api.batch_tags(message_batch.key)
+        [msg_tag] = message_batch.tags
         tag_batch = lambda t: self.api.mdb.get_tag_info(t).current_batch.key
         self.assertEqual(tag_batch(msg_tag), None)
 
     def test_pagination(self):
         # Create 13, we already have 1 from setUp()
         for i in range(12):
-            self.conv_store.new_conversation(
+            self.user_api.new_conversation(
                 conversation_type=u'bulk_message',
                 name=self.TEST_CONVERSATION_NAME, description=u"", config={},
                 delivery_class=u"sms", delivery_tag_pool=u"longcode")
@@ -159,7 +159,7 @@ class ConversationTestCase(DjangoGoApplicationTestCase):
         self.add_app_permission(u'go.apps.bulk_message')
         # Create 13, we already have 1 from setUp()
         for i in range(12):
-            self.conv_store.new_conversation(
+            self.user_api.new_conversation(
                 conversation_type=u'bulk_message',
                 name=self.TEST_CONVERSATION_NAME, description=u"", config={},
                 delivery_class=u"sms", delivery_tag_pool=u"longcode")

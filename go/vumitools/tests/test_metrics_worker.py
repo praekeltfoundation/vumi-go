@@ -43,8 +43,7 @@ class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
         return self.mk_user(self.worker.vumi_api, username)
 
     def make_conv(self, user_api, conv_name, conv_type=u'my_conv'):
-        return user_api.conversation_store.new_conversation(
-            conv_type, conv_name, u'', {})
+        return user_api.new_conversation(conv_type, conv_name, u'', {})
 
     def start_conv(self, conv):
         conv.batches.add_key(u'batch-%s' % (conv.key,))

@@ -405,11 +405,12 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         # we're faking this here, this would normally have happened when
         # the confirmation SMS was sent out.
         tag = conversation.acquire_tag()
+        [batch] = conversation.get_batches()
+        batch.tags.append(tag)
+        batch.save()
         # store manually so that when we acquire_existing_tag() later we get
         # the one already used, not another random one from the same pool.
         conversation.c.delivery_tag = unicode(tag[1])
-        batch_key = conversation.start_batch(tag)
-        conversation.batches.add_key(batch_key)
         conversation.save()
 
         token = self.tm.generate('/foo/', user_id=self.user.pk, extra_params={
@@ -440,9 +441,9 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         # populated which at this point it isn't yet.
         batch_keys = conversation.get_batch_keys()
         self.assertEqual(len(batch_keys), 1)
-        self.assertEqual([batch_key], batch_keys)
+        self.assertEqual([batch.key], batch_keys)
 
-        batch = conversation.mdb.get_batch(batch_key)
+        batch = conversation.mdb.get_batch(batch.key)
         [tag] = list(batch.tags)
         [start_cmd, hack_cmd] = self.get_api_commands_sent()
 
