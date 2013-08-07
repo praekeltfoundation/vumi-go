@@ -659,3 +659,18 @@ button {
 .table-form-view-buttons {
   margin: 0 1em 0 0;
 }
+.error.main-container {
+  text-align: center;
+}
+.error.main-container .error-content {
+  margin: 30px;
+}
+.error.main-container .error-content .title {
+  font-size: 10em;
+  line-height: 2em;
+  color: #aaa;
+}
+.error.main-container .error-content .reason {
+  font-size: 2.5em;
+  color: #f2f1ed;
+}
