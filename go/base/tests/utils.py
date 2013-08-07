@@ -216,7 +216,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         rt.add_oldstyle_conversation(conv, tag)
         user_account.save()
 
-    def declare_tags(self, pool, num_tags, metadata=None):
+    def declare_tags(self, pool, num_tags, metadata=None, user_select=None):
         """Declare a set of long codes to the tag pool."""
         if metadata is None:
             metadata = {
@@ -226,6 +226,8 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
                 "server_initiated": True,
                 "transport_name": "sphex",
             }
+        if user_select is not None:
+            metadata["user_selects_tag"] = user_select
         self.api.tpm.declare_tags([(pool, u"default%s" % i) for i
                                    in range(10001, 10001 + num_tags)])
         self.api.tpm.set_metadata(pool, metadata)
