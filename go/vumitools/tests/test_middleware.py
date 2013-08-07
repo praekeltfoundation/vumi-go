@@ -328,8 +328,8 @@ class ConversationStoringMiddlewareTestCase(MiddlewareTestCase):
         msg = self.mkmsg_in()
         self.add_conversation_md_to_msg(msg, self.conv)
         yield self.mw.handle_inbound(msg, 'default')
-        msg_ids = yield self.vumi_api.mdb.batch_inbound_keys(
-            self.conv.get_batch_key())
+        batch_id = yield self.conv.get_latest_batch_key()
+        msg_ids = yield self.vumi_api.mdb.batch_inbound_keys(batch_id)
         self.assertEqual(msg_ids, [msg['message_id']])
 
     @inlineCallbacks
@@ -337,8 +337,8 @@ class ConversationStoringMiddlewareTestCase(MiddlewareTestCase):
         msg = self.mkmsg_out()
         self.add_conversation_md_to_msg(msg, self.conv)
         yield self.mw.handle_outbound(msg, 'default')
-        msg_ids = yield self.vumi_api.mdb.batch_outbound_keys(
-            self.conv.get_batch_key())
+        batch_id = yield self.conv.get_latest_batch_key()
+        msg_ids = yield self.vumi_api.mdb.batch_outbound_keys(batch_id)
         self.assertEqual(msg_ids, [msg['message_id']])
 
 

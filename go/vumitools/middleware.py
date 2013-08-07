@@ -335,7 +335,8 @@ class ConversationStoringMiddleware(GoStoringMiddleware):
         from go.vumitools.utils import MessageMetadataHelper
         mdh = MessageMetadataHelper(self.vumi_api, msg)
         conversation = yield mdh.get_conversation()
-        returnValue(conversation.get_batch_key())
+        batch_id = yield conversation.get_latest_batch_key()
+        returnValue(batch_id)
 
 
 class RouterStoringMiddleware(GoStoringMiddleware):

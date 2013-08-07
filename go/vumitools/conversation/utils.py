@@ -99,10 +99,6 @@ class ConversationWrapper(object):
     def get_batch_keys(self):
         return self.c.batches.keys()
 
-    def get_batch_key(self):
-        batch_keys = self.get_batch_keys()
-        return batch_keys[0] if batch_keys else None
-
     @Manager.calls_manager
     def get_tags(self):
         """
