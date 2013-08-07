@@ -195,7 +195,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         yield self.assert_account_tags([list(tag1), list(tag2)])
 
     @inlineCallbacks
-    def test_tag_batch_outbound_keys(self):
+    def test_batch_outbound_keys_for_specific_tag(self):
         [tag] = yield self.setup_tagpool(u"poolA", [u"tag1"])
         yield self.user_api.acquire_specific_tag(tag)
         tag_info = yield self.vumi_api.mdb.get_tag_info(tag)
@@ -209,7 +209,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         self.assertEqual(sorted(api_msgs), ['0', '1'])
 
     @inlineCallbacks
-    def test_tag_batch_inbound_keys(self):
+    def test_batch_inbound_keys_for_specific_tag(self):
         [tag] = yield self.setup_tagpool(u"poolA", [u"tag1"])
         yield self.user_api.acquire_specific_tag(tag)
         tag_info = yield self.vumi_api.mdb.get_tag_info(tag)
