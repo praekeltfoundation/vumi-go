@@ -100,7 +100,7 @@ class ConversationWrapper(object):
         return self.c.batches.keys()
 
     def get_batch_key(self):
-        batch_keys = self.get_batches()
+        batch_keys = self.get_batch_keys()
         return batch_keys[0] if batch_keys else None
 
     @Manager.calls_manager
