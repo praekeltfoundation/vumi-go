@@ -17,7 +17,6 @@ from go.vumitools.middleware import (NormalizeMsisdnMiddleware,
 class MiddlewareTestCase(AppWorkerTestCase):
 
     application_class = DummyApplicationWorker
-    middleware_class = None
 
     @inlineCallbacks
     def setUp(self):
@@ -344,9 +343,6 @@ class ConversationStoringMiddlewareTestCase(MiddlewareTestCase):
 
 class RouterStoringMiddlewareTestCase(MiddlewareTestCase,
                                       GoRouterWorkerTestMixin):
-
-    use_riak = True
-
     @inlineCallbacks
     def setUp(self):
         yield super(RouterStoringMiddlewareTestCase, self).setUp()
