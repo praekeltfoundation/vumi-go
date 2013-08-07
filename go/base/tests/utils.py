@@ -150,12 +150,10 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         }
         params.update(kwargs)
         conv = self.user_api.wrap_conversation(
-            self.conv_store.new_conversation(**params))
+            self.user_api.new_conversation(**params))
 
         if started:
             conv.set_status_started()
-            batch_id = conv.start_batch()
-            conv.batches.add_key(batch_id)
             conv.save()
 
         return conv
@@ -168,7 +166,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
             'config': {},
         }
         params.update(kwargs)
-        return self.router_store.new_router(**params)
+        return self.user_api.new_router(**params)
 
     def add_messages_to_conv(self, message_count, conversation, reply=False,
                              ack=False, start_date=None, time_multiplier=10):

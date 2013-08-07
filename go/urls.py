@@ -39,9 +39,6 @@ urlpatterns = patterns(
     # proxy API calls
     url(r'^api/', include('go.api.urls', namespace='api')),
 
-    # HACK: To keep this around temporarily.
-    url(r'^app/multi_survey/',
-        include('go.apps.multi_surveys.urls', namespace='multi_survey')),
 )
 
 urlpatterns += patterns('django.contrib.flatpages.views',
