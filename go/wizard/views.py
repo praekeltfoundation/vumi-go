@@ -68,6 +68,8 @@ class WizardCreateView(BaseWizardView):
             # TODO: Better validation.
             logger.info("Validation failed: %s" % (
                 [frm.errors for frm in forms_to_validate],))
+            print "Validation failed: %s" % (
+                [frm.errors for frm in forms_to_validate],)
             return self._render(request, wizard_form=wiz_form,
                                 conversation_form=conv_form,
                                 channel_form=chan_form,
@@ -94,7 +96,7 @@ class WizardCreateView(BaseWizardView):
                 'show', conversation_key=conv.key))
 
     def _handle_new_channel(self, request, chan_data, keyword, conv):
-        channel = chan_data['channel'].split(':')
+        channel = tuple(chan_data['channel'].split(':'))
         if channel[1]:
             tag = request.user_api.acquire_specific_tag(channel)
         else:

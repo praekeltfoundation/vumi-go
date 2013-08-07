@@ -110,6 +110,34 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
 
         self.assert_routing_table(tag_conv=[(tag, conv)])
 
+    def test_post_create_view_specific_tag(self):
+        self.add_app_permission(u'go.apps.bulk_message')
+        self.declare_tags(u'longcode', 4, user_select=True)
+        self.add_tagpool_permission(u'longcode')
+        self.assert_stored_models()
+        response = self.client.post(reverse('wizard:create'), {
+            'conversation_type': 'bulk_message',
+            'name': 'My Conversation',
+            'channel_kind': 'new',
+            'country': 'International',
+            'channel': 'longcode:default10001',
+        })
+
+        [conv] = self.user_api.active_conversations()
+        self.assertEqual('bulk_message', conv.conversation_type)
+        self.assertEqual('My Conversation', conv.name)
+        self.assertRedirects(
+            response, reverse('conversations:conversation', kwargs={
+                'conversation_key': conv.key, 'path_suffix': '',
+            }))
+
+        self.assertEqual([], self.user_api.active_routers())
+
+        [tag] = list(self.user_api.list_endpoints())
+        self.assertEqual((u'longcode', u'default10001'), tag)
+
+        self.assert_routing_table(tag_conv=[(tag, conv)])
+
     def test_post_create_view_editable_conversation(self):
         self.add_app_permission(u'go.apps.jsbox')
         self.declare_tags(u'longcode', 4)
