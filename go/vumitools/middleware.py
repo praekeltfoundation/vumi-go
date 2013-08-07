@@ -14,7 +14,6 @@ from vumi.persist.txredis_manager import TxRedisManager
 from vumi.errors import ConfigError
 
 from go.vumitools.credit import CreditManager
-from go.vumitools.utils import MessageMetadataHelper
 
 
 class NormalizeMsisdnMiddleware(TransportMiddleware):
@@ -333,6 +332,7 @@ class GoStoringMiddleware(StoringMiddleware):
 class ConversationStoringMiddleware(GoStoringMiddleware):
     @inlineCallbacks
     def get_batch_id(self, msg):
+        from go.vumitools.utils import MessageMetadataHelper
         mdh = MessageMetadataHelper(self.vumi_api, msg)
         conversation = yield mdh.get_conversation()
         returnValue(conversation.get_batch_key())
@@ -341,6 +341,7 @@ class ConversationStoringMiddleware(GoStoringMiddleware):
 class RouterStoringMiddleware(GoStoringMiddleware):
     @inlineCallbacks
     def get_batch_id(self, msg):
+        from go.vumitools.utils import MessageMetadataHelper
         mdh = MessageMetadataHelper(self.vumi_api, msg)
         router = yield mdh.get_router()
         returnValue(router.batch.key)
