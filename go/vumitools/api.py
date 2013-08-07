@@ -254,11 +254,25 @@ class VumiUserApi(object):
         returnValue(sorted((yield self.contact_store.list_groups()),
             key=lambda group: group.name))
 
-    def new_conversation(self, *args, **kw):
-        return self.conversation_store.new_conversation(*args, **kw)
+    @Manager.calls_manager
+    def new_conversation(self, conversation_type, name, description, config,
+                         batch_id=None, **fields):
+        if not batch_id:
+            batch_id = yield self.api.mdb.batch_start(
+                tags=[], user_account=self.user_account_key)
+        conv = yield self.conversation_store.new_conversation(
+            conversation_type, name, description, config, batch_id, **fields)
+        returnValue(conv)
 
-    def new_router(self, *args, **kw):
-        return self.router_store.new_router(*args, **kw)
+    @Manager.calls_manager
+    def new_router(self, router_type, name, description, config,
+                   batch_id=None, **fields):
+        if not batch_id:
+            batch_id = yield self.api.mdb.batch_start(
+                tags=[], user_account=self.user_account_key)
+        router = yield self.router_store.new_router(
+            router_type, name, description, config, batch_id, **fields)
+        returnValue(router)
 
     @Manager.calls_manager
     def list_conversation_endpoints(self):
@@ -370,6 +384,10 @@ class VumiUserApi(object):
 
     @Manager.calls_manager
     def _update_tag_data_for_acquire(self, user_account, tag):
+        # The batch we create here gets added to the tag_info and we can fish
+        # it out later. When we replace this with proper channel objects we can
+        # stash it there like we do with conversations and routers.
+        yield self.api.mdb.batch_start([tag], user_account=user_account.key)
         user_account.tags.append(tag)
         tag_info = yield self.api.mdb.get_tag_info(tag)
         tag_info.metadata['user_account'] = user_account.key.decode('utf-8')
@@ -445,6 +463,11 @@ class VumiUserApi(object):
             tag_info = yield self.api.mdb.get_tag_info(tag)
             del tag_info.metadata['user_account']
             yield tag_info.save()
+            # NOTE: This loads and saves the CurrentTag object a second time.
+            #       We should probably refactor the message store to make this
+            #       less clumsy.
+            if tag_info.current_batch.key:
+                yield self.api.mdb.batch_done(tag_info.current_batch.key)
 
             # Clean up routing table entries.
             routing_table = yield self.get_routing_table(user_account)
@@ -563,35 +586,6 @@ class VumiApi(object):
     def get_user_api(self, user_account_key):
         return VumiUserApi(self, user_account_key)
 
-    def batch_start(self, tags):
-        """Start a message batch.
-
-        :type tags: list of str
-        :param tags:
-            A list of identifiers for linking replies to this
-            batch. Conceptually a tag corresponds to a set of
-            from_addrs that a message goes out on. The from_addrs can
-            then be observed in incoming messages and used to link
-            replies to a specific batch.
-        :rtype:
-            Returns the batch_id of the new batch.
-        """
-        return self.mdb.batch_start(tags)
-
-    def batch_done(self, batch_id):
-        """Mark a batch as completed.
-
-        Once a batch is done, inbound messages will not be mapped
-        to it.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to mark as done.
-        :rtype:
-            None.
-        """
-        return self.mdb.batch_done(batch_id)
-
     def send_command(self, worker_name, command, *args, **kwargs):
         """Create a VumiApiCommand and send it.
 
@@ -604,52 +598,6 @@ class VumiApi(object):
             raise VumiError("No message sender on API object.")
         return self.mapi.send_command(
             VumiApiCommand.command(worker_name, command, *args, **kwargs))
-
-    def batch_status(self, batch_id):
-        """Check the status of a batch of messages.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to check the status of
-        :rtype:
-            dictionary of counts of messages in batch,
-            messages sent, messages acked and messages
-            with delivery reports.
-        """
-        return self.mdb.batch_status(batch_id)
-
-    def batch_outbound_keys(self, batch_id):
-        """Return a list of outbound message keys.
-
-        :param str batch_id:
-            batch to get outbound message keys for
-        :returns:
-            list of message keys.
-        """
-        return self.mdb.batch_outbound_keys(batch_id)
-
-    def batch_inbound_keys(self, batch_id):
-        """Return a list of inbound message keys.
-
-        :param str batch_id:
-            batch to get inbound message keys for
-        :returns:
-            list of message keys.
-        """
-        return self.mdb.batch_inbound_keys(batch_id)
-
-    @Manager.calls_manager
-    def batch_tags(self, batch_id):
-        """Return a list of tags associated with a given batch.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to get tags for
-        :rtype:
-            list of tags
-        """
-        batch = yield self.mdb.get_batch(batch_id)
-        returnValue(list(batch.tags))
 
 
 class SyncMessageSender(object):
