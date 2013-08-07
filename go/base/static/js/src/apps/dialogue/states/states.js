@@ -467,7 +467,11 @@
       // the ordering, but we resort the states and trigger a 'sort' event when
       // a state is added, so that case is covered by the 'sort' binding below
       'sort': function() { this.resetStartState(); },
-      'remove': function() { this.resetStartState(); }
+      'remove': function() {
+        this.resetStartState();
+        this.render();
+        jsPlumb.repaintEverything();
+      },
     }
   });
 
