@@ -155,17 +155,11 @@ def get_router_pkg(router_type, fromlist=()):
 
 def get_conversation_definition(conversation_type, conv=None):
     app_pkg = get_conversation_pkg(conversation_type, ['definition'])
-    if not hasattr(app_pkg, 'definition'):
-        # TODO: remove this case when multi_surveys is gone
-        return None
     return app_pkg.definition.ConversationDefinition(conv)
 
 
 def get_router_definition(router_type, router=None):
     router_pkg = get_router_pkg(router_type, ['definition'])
-    if not hasattr(router_pkg, 'definition'):
-        # TODO: remove this case when multi_surveys is gone
-        return None
     return router_pkg.definition.RouterDefinition(router)
 
 
