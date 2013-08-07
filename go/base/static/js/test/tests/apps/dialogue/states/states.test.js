@@ -481,7 +481,7 @@ describe("go.apps.dialogue.states", function() {
 
         $('[data-uuid="state3"] .titlebar')
           .simulate('mousedown')
-          .simulate('drag', {dx: -350});
+          .simulate('drag', {dx: -550});
 
         assert.deepEqual(
           states.keys(),
@@ -546,7 +546,7 @@ describe("go.apps.dialogue.states", function() {
 
         $('[data-uuid="state3"] .titlebar')
           .simulate('mousedown')
-          .simulate('drag', {dx: -700});
+          .simulate('drag', {dx: -750});
 
         assert.deepEqual(
           states.keys(),
