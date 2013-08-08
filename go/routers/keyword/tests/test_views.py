@@ -1,4 +1,5 @@
 from go.routers.tests.base import DjangoGoRouterTestCase
+from go.vumitools.tests.utils import VumiApiCommand
 
 
 class KeywordViewTests(DjangoGoRouterTestCase):
@@ -11,14 +12,49 @@ class KeywordViewTests(DjangoGoRouterTestCase):
         router = self.get_latest_router()
         self.assertRedirects(response, self.get_view_url('edit', router.key))
 
-    def test_show(self):
-        """
-        Test showing the router
-        """
+    def test_show_stopped(self):
+        self.setup_router(started=False)
+        response = self.client.get(self.get_view_url('show'))
+        router = response.context[0].get('router')
+        self.assertEqual(router.name, self.TEST_ROUTER_NAME)
+        self.assertContains(response, self.get_view_url('start'))
+        self.assertNotContains(response, self.get_view_url('stop'))
+
+    def test_show_running(self):
         self.setup_router()
         response = self.client.get(self.get_view_url('show'))
         router = response.context[0].get('router')
         self.assertEqual(router.name, self.TEST_ROUTER_NAME)
+        self.assertNotContains(response, self.get_view_url('start'))
+        self.assertContains(response, self.get_view_url('stop'))
+
+    def test_start(self):
+        self.setup_router(started=False)
+
+        response = self.client.post(self.get_view_url('start'))
+        self.assertRedirects(response, self.get_view_url('show'))
+        router = self.get_router()
+        self.assertTrue(router.starting())
+        [start_cmd] = self.get_api_commands_sent()
+        self.assertEqual(
+            start_cmd, VumiApiCommand.command(
+                '%s_router' % (router.router_type,), 'start',
+                user_account_key=router.user_account.key,
+                router_key=router.key))
+
+    def test_stop(self):
+        self.setup_router(started=True)
+
+        response = self.client.post(self.get_view_url('stop'))
+        self.assertRedirects(response, self.get_view_url('show'))
+        router = self.get_router()
+        self.assertTrue(router.stopping())
+        [start_cmd] = self.get_api_commands_sent()
+        self.assertEqual(
+            start_cmd, VumiApiCommand.command(
+                '%s_router' % (router.router_type,), 'stop',
+                user_account_key=router.user_account.key,
+                router_key=router.key))
 
     def test_get_edit_empty_config(self):
         self.setup_router()

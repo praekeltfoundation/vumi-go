@@ -25,7 +25,7 @@ class DjangoGoRouterTestCase(VumiGoDjangoTestCase):
         self.setup_user_api()
         self.setup_client()
 
-    def setup_router(self, config=None):
+    def setup_router(self, config=None, started=True):
         if config is None:
             config = {}
         params = {
@@ -34,6 +34,8 @@ class DjangoGoRouterTestCase(VumiGoDjangoTestCase):
             'description': u"Test router",
             'config': config,
         }
+        if started:
+            params['status'] = u'running'
         self.router = self.create_router(**params)
         self.router_key = self.router.key
 
