@@ -128,6 +128,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         conversation.set_go_helper_metadata(msg['helper_metadata'])
         yield self.store_outbound_msg(msg, conversation)
         event = self.mkmsg_ack(user_message_id=msg['message_id'])
+        conversation.set_go_helper_metadata(event['helper_metadata'])
         yield self.dispatch_event(event)
 
     @inlineCallbacks

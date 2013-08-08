@@ -11,12 +11,13 @@ from vumi.utils import http_request_full
 from vumi.message import TransportUserMessage, TransportEvent
 from vumi.tests.utils import MockHttpServer
 from vumi.transports.vumi_bridge.client import StreamingClient
+from vumi.config import ConfigContext
 
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApiCommand
 
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
-from go.apps.http_api.resource import StreamResource
+from go.apps.http_api.resource import StreamResource, ConversationResource
 
 
 class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
@@ -158,14 +159,16 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                                             Headers(self.auth_headers))
 
         msg1 = self.mkmsg_out(content='in 1', message_id='1')
+        self.conversation.set_go_helper_metadata(msg1['helper_metadata'])
         yield self.store_outbound_msg(msg1, self.conversation)
         ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
-        yield self.dispatch_event(ack1)
+        yield self.dispatch_event_to_conv(ack1, self.conversation)
 
         msg2 = self.mkmsg_out(content='in 1', message_id='2')
+        self.conversation.set_go_helper_metadata(msg2['helper_metadata'])
         yield self.store_outbound_msg(msg2, self.conversation)
         ack2 = self.mkmsg_ack(user_message_id=msg2['message_id'])
-        yield self.dispatch_event(ack2)
+        yield self.dispatch_event_to_conv(ack2, self.conversation)
 
         ra1 = yield events.get()
         ra2 = yield events.get()
@@ -252,6 +255,8 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_in_reply_to(self):
         inbound_msg = self.mkmsg_in(content='in 1', message_id='1')
+        self.conversation.set_go_helper_metadata(
+            inbound_msg['helper_metadata'])
         yield self.store_inbound_msg(inbound_msg, self.conversation)
 
         msg = {
@@ -330,6 +335,16 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         [r.disconnect() for r in max_receivers]
 
     @inlineCallbacks
+    def test_disabling_concurrency_limit(self):
+        conv_resource = ConversationResource(self.app, self.conversation.key)
+        # negative concurrency limit disables it
+        ctxt = ConfigContext(user_account=self.account.key,
+                             concurrency_limit=-1)
+        config = yield self.app.get_config(msg=None, ctxt=ctxt)
+        self.assertTrue(
+            (yield conv_resource.is_allowed(config, self.account.key)))
+
+    @inlineCallbacks
     def test_backlog_on_connect(self):
         for i in range(10):
             msg = self.mkmsg_in(content='in %s' % (i,), message_id=str(i))
@@ -406,9 +421,10 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         yield self.conversation.save()
 
         msg1 = self.mkmsg_out(content='in 1', message_id='1')
+        self.conversation.set_go_helper_metadata(msg1['helper_metadata'])
         yield self.store_outbound_msg(msg1, self.conversation)
         ack1 = self.mkmsg_ack(user_message_id=msg1['message_id'])
-        event_d = self.dispatch_event(ack1)
+        event_d = self.dispatch_event_to_conv(ack1, self.conversation)
 
         req = yield self.push_calls.get()
         posted_json_data = req.content.read()
@@ -473,6 +489,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
+        self.conversation.set_go_helper_metadata(msg['helper_metadata'])
         yield self.vumi_api.mdb.add_inbound_message(msg)
         command = VumiApiCommand.command(
             'worker', 'send_message',

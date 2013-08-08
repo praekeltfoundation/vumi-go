@@ -3,10 +3,11 @@
 from uuid import uuid4
 from datetime import datetime
 
+from twisted.internet.defer import returnValue
+
 from vumi.persist.model import Model, Manager
 from vumi.persist.fields import Unicode, ForeignKey, Timestamp, Json, ListOf
-
-from twisted.internet.defer import returnValue
+from vumi.components.message_store import Batch
 
 from go.vumitools.account import UserAccount, PerAccountStore
 
@@ -21,7 +22,7 @@ ROUTER_STOPPED = u'stopped'
 
 
 class Router(Model):
-    """A routing block for sending messages to interesting places."""
+    """A router for sending messages to interesting places."""
 
     VERSION = 1
     MIGRATOR = None
@@ -39,6 +40,8 @@ class Router(Model):
 
     archive_status = Unicode(default=ROUTER_ACTIVE, index=True)
     status = Unicode(default=ROUTER_STOPPED, index=True)
+
+    batch = ForeignKey(Batch)
 
     def active(self):
         return self.archive_status == ROUTER_ACTIVE
@@ -91,13 +94,13 @@ class RouterStore(PerAccountStore):
 
     @Manager.calls_manager
     def new_router(self, router_type, name, description, config,
-                   **fields):
+                   batch_id, **fields):
         router_id = uuid4().get_hex()
 
         router = self.routers(
             router_id, user_account=self.user_account_key,
-            router_type=router_type, name=name,
-            description=description, config=config, **fields)
+            router_type=router_type, name=name, description=description,
+            config=config, batch=batch_id, **fields)
 
         router = yield router.save()
         returnValue(router)
@@ -105,7 +108,6 @@ class RouterStore(PerAccountStore):
     def list_running_routers(self):
         return self.routers.index_keys('status', ROUTER_RUNNING)
 
-    @Manager.calls_manager
     def list_active_routers(self):
         return self.routers.index_keys('archive_status', ROUTER_ACTIVE)
 

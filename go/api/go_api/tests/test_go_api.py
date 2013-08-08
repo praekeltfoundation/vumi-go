@@ -64,7 +64,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     @inlineCallbacks
     def test_conversations(self):
-        conv = yield self.user_api.conversation_store.new_conversation(
+        conv = yield self.user_api.new_conversation(
             u'jsbox', u'My Conversation', u'A description', {})
         result = yield self.proxy.callRemote(
             "conversations", self.campaign_key)
@@ -78,6 +78,39 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
                     {
                         u'name': u'default',
                         u'uuid': u'CONVERSATION:jsbox:%s:default' % conv.key,
+                    },
+                ],
+            },
+        ])
+
+    @inlineCallbacks
+    def test_conversation_with_extra_endpoints(self):
+        conv = yield self.user_api.new_conversation(
+            u'jsbox', u'My Conversation', u'A description', {},
+            extra_endpoints=[u'foo', u'bar'])
+        result = yield self.proxy.callRemote(
+            "conversations", self.campaign_key)
+        self.assertEqual(result, [
+            {
+                'uuid': conv.key,
+                'type': conv.conversation_type,
+                'name': conv.name,
+                'description': conv.description,
+                'endpoints': [
+                    {
+                        u'name': u'default',
+                        u'uuid': u'CONVERSATION:%s:%s:default' % (
+                            conv.conversation_type, conv.key),
+                    },
+                    {
+                        u'name': u'foo',
+                        u'uuid': u'CONVERSATION:%s:%s:foo' % (
+                            conv.conversation_type, conv.key),
+                    },
+                    {
+                        u'name': u'bar',
+                        u'uuid': u'CONVERSATION:%s:%s:bar' % (
+                            conv.conversation_type, conv.key),
                     },
                 ],
             },
@@ -111,34 +144,96 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
         ])
 
     @inlineCallbacks
-    def test_routing_blocks_with_no_routing_blocks(self):
+    def test_routers_with_no_routers(self):
         result = yield self.proxy.callRemote(
-            "routing_blocks", self.campaign_key)
+            "routers", self.campaign_key)
         self.assertEqual(result, [])
 
+    def _router_endpoint(self, router, name_with_direction):
+        return {
+            u'name': name_with_direction.split(':', 1)[1],
+            u'uuid': u'ROUTER:%s:%s:%s' % (
+                router.router_type, router.key, name_with_direction),
+        }
+
     @inlineCallbacks
-    def _connect_conversation_to_tag(self, conv, tag):
+    def test_routers(self):
+        router = yield self.user_api.new_router(
+            u'keyword', u'My Router', u'A description', {})
+        result = yield self.proxy.callRemote("routers", self.campaign_key)
+        self.assertEqual(result, [
+            {
+                'uuid': router.key,
+                'type': router.router_type,
+                'name': router.name,
+                'description': router.description,
+                'channel_endpoints': [
+                    self._router_endpoint(router, 'INBOUND:default'),
+                ],
+                'conversation_endpoints': [
+                    self._router_endpoint(router, 'OUTBOUND:default'),
+                ],
+            },
+        ])
+
+    @inlineCallbacks
+    def test_routers_with_extra_endpoints(self):
+        router = yield self.user_api.new_router(
+            u'keyword', u'My Router', u'A description', {},
+            extra_inbound_endpoints=[u'foo'],
+            extra_outbound_endpoints=[u'bar'])
+        result = yield self.proxy.callRemote("routers", self.campaign_key)
+        self.assertEqual(result, [
+            {
+                'uuid': router.key,
+                'type': router.router_type,
+                'name': router.name,
+                'description': router.description,
+                'channel_endpoints': [
+                    self._router_endpoint(router, 'INBOUND:default'),
+                    self._router_endpoint(router, 'INBOUND:foo'),
+                ],
+                'conversation_endpoints': [
+                    self._router_endpoint(router, 'OUTBOUND:default'),
+                    self._router_endpoint(router, 'OUTBOUND:bar'),
+                ],
+            },
+        ])
+
+    @inlineCallbacks
+    def _connect_conversation_to_tag_through_router(self, conv, tag, router):
         conv_conn = str(GoConnector.for_conversation(
             conv.conversation_type, conv.key))
         channel_conn = str(GoConnector.for_transport_tag(*tag))
+        router_in_conn = str(GoConnector.for_router(
+            router.router_type, router.key, GoConnector.INBOUND))
+        router_out_conn = str(GoConnector.for_router(
+            router.router_type, router.key, GoConnector.OUTBOUND))
         user_account = yield self.user_api.get_user_account()
         rt_helper = RoutingTableHelper(user_account.routing_table)
-        rt_helper.add_entry(channel_conn, 'default', conv_conn, 'default')
-        rt_helper.add_entry(conv_conn, 'default', channel_conn, 'default')
+        rt_helper.add_entry(
+            channel_conn, 'default', router_in_conn, 'default')
+        rt_helper.add_entry(router_out_conn, 'default', conv_conn, 'default')
+        rt_helper.add_entry(conv_conn, 'default', router_out_conn, 'default')
+        rt_helper.add_entry(router_in_conn, 'default', channel_conn, 'default')
+        rt_helper.validate_all_entries()
         yield user_account.save()
 
     @inlineCallbacks
-    def _setup_simple_routing_table(self):
-        conv = yield self.user_api.conversation_store.new_conversation(
+    def _setup_routing_table(self):
+        conv = yield self.user_api.new_conversation(
             u'jsbox', u'My Conversation', u'A description', {})
+        router = yield self.user_api.new_router(
+            u'keyword', u'My Router', u'A description', {})
         yield self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
         tag = yield self.user_api.acquire_tag(u"pool")  # acquires tag1
-        yield self._connect_conversation_to_tag(conv, tag)
-        returnValue((conv, tag))
+        yield self._connect_conversation_to_tag_through_router(
+            conv, tag, router)
+        returnValue((conv, router, tag))
 
     @inlineCallbacks
     def test_routing_entries(self):
-        conv, tag = yield self._setup_simple_routing_table()
+        conv, router, tag = yield self._setup_routing_table()
         result = yield self.proxy.callRemote(
             "routing_entries", self.campaign_key)
         result.sort(key=lambda x: x['source']['uuid'])
@@ -146,18 +241,30 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
             {
                 u'source': {u'uuid': u'CONVERSATION:jsbox:%s:default'
                             % conv.key},
+                u'target': {u'uuid': u'ROUTER:keyword:%s:OUTBOUND:default'
+                            % router.key},
+            },
+            {
+                u'source': {u'uuid': u'ROUTER:keyword:%s:INBOUND:default'
+                            % router.key},
                 u'target': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'}
             },
             {
-                u'source': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'},
+                u'source': {u'uuid': u'ROUTER:keyword:%s:OUTBOUND:default'
+                            % router.key},
                 u'target': {u'uuid': u'CONVERSATION:jsbox:%s:default'
                             % conv.key},
+            },
+            {
+                u'source': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'},
+                u'target': {u'uuid': u'ROUTER:keyword:%s:INBOUND:default'
+                            % router.key},
             },
         ])
 
     @inlineCallbacks
     def test_routing_table(self):
-        conv, tag = yield self._setup_simple_routing_table()
+        conv, router, tag = yield self._setup_routing_table()
         result = yield self.proxy.callRemote(
             "routing_table", self.campaign_key)
         result['routing_entries'].sort(key=lambda x: x['source']['uuid'])
@@ -191,20 +298,44 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
                     ],
                 }
             ],
-            u'routing_blocks': [
+            u'routers': [
+                {
+                    'uuid': router.key,
+                    'type': router.router_type,
+                    'name': router.name,
+                    'description': router.description,
+                    'channel_endpoints': [
+                        self._router_endpoint(router, 'INBOUND:default'),
+                    ],
+                    'conversation_endpoints': [
+                        self._router_endpoint(router, 'OUTBOUND:default'),
+                    ],
+                },
             ],
             u'routing_entries': [
                 {
                     u'source': {u'uuid': u'CONVERSATION:jsbox:%s:default'
                                 % conv.key},
+                    u'target': {u'uuid': u'ROUTER:keyword:%s:OUTBOUND:default'
+                                % router.key},
+                },
+                {
+                    u'source': {u'uuid': u'ROUTER:keyword:%s:INBOUND:default'
+                                % router.key},
                     u'target': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'}
                 },
                 {
-                    u'source': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'},
+                    u'source': {u'uuid': u'ROUTER:keyword:%s:OUTBOUND:default'
+                                % router.key},
                     u'target': {u'uuid': u'CONVERSATION:jsbox:%s:default'
                                 % conv.key},
                 },
-            ]
+                {
+                    u'source': {u'uuid': u'TRANSPORT_TAG:pool:tag1:default'},
+                    u'target': {u'uuid': u'ROUTER:keyword:%s:INBOUND:default'
+                                % router.key},
+                },
+            ],
         })
 
     def mk_routing_entry(self, source_uuid, target_uuid):
@@ -212,13 +343,13 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     def mk_routing_table(self, entries):
         return {
-            'channels': [], 'conversations': [], 'routing_blocks': [],
+            'channels': [], 'conversations': [], 'routers': [],
             'routing_entries': [self.mk_routing_entry(*e) for e in entries],
         }
 
     @inlineCallbacks
     def test_update_routing_table_with_bad_source_endpoint(self):
-        conv, tag = yield self._setup_simple_routing_table()
+        conv, router, tag = yield self._setup_routing_table()
         routing_table = self.mk_routing_table([
             ('foo', 'TRANSPORT_TAG:pool:tag1:default'),
         ])
@@ -229,7 +360,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     @inlineCallbacks
     def test_update_routing_table_with_bad_target_endpoint(self):
-        conv, tag = yield self._setup_simple_routing_table()
+        conv, router, tag = yield self._setup_routing_table()
         routing_table = self.mk_routing_table([
             ('TRANSPORT_TAG:pool:tag1:default', 'bar'),
         ])
@@ -243,7 +374,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     @inlineCallbacks
     def test_update_routing_table_with_channel_linked_to_itself(self):
-        conv, tag = yield self._setup_simple_routing_table()
+        conv, router, tag = yield self._setup_routing_table()
         routing_table = self.mk_routing_table([
             ('TRANSPORT_TAG:pool:tag1:default',
              'TRANSPORT_TAG:pool:tag1:default'),
@@ -258,7 +389,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     @inlineCallbacks
     def test_update_routing_table_with_conversation_linked_to_itself(self):
-        conv, tag = yield self._setup_simple_routing_table()
+        conv, router, tag = yield self._setup_routing_table()
         endpoint_uuid = ('CONVERSATION:%s:%s:default'
                          % (conv.conversation_type, conv.key))
         routing_table = self.mk_routing_table([
@@ -274,7 +405,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
 
     @inlineCallbacks
     def test_update_routing_table(self):
-        conv, tag = yield self._setup_simple_routing_table()
+        conv, router, tag = yield self._setup_routing_table()
         routing_table = self.mk_routing_table([
             ('TRANSPORT_TAG:pool:tag1:default',
              'CONVERSATION:%s:%s:default'
@@ -298,7 +429,7 @@ class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):
         for worker in self._workers:
             if worker.running:
                 yield worker.stopService()
-        yield super(GoApiWorkerTestCase, self).tearDown()
+        yield self._persist_tearDown()
 
     @inlineCallbacks
     def get_api_worker(self, config=None, start=True, auth=True):

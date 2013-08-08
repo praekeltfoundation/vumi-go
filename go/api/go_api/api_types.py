@@ -79,7 +79,8 @@ class ConversationType(Dict):
             'endpoints': [
                 # TODO: add additional endpoints once we know how to list them
                 EndpointType.format_endpoint(
-                    uuid=u"%s:%s" % (conn, u'default'), name=u"default")
+                    uuid=u"%s:%s" % (conn, endpoint), name=endpoint)
+                for endpoint in [u'default'] + list(conv.extra_endpoints)
             ],
         }
 
@@ -123,16 +124,16 @@ class ChannelType(Dict):
         }
 
 
-class RoutingBlockType(Dict):
-    """Description of a routing block.
+class RouterType(Dict):
+    """Description of a router.
 
     The following keys are required:
 
-    * uuid: The routing block key.
-    * type: The routing block type, e.g. 'keyword'.
-    * name: The routing block name, e.g. 'My Keyword Routing Block'.
-    * description: The routing block description,
-                   e.g.'A description of this routing block'.
+    * uuid: The router key.
+    * type: The router type, e.g. 'keyword'.
+    * name: The router name, e.g. 'My Keyword Router'.
+    * description: The router description,
+                   e.g.'A description of this router'.
     * channel_endpoints: The endpoints that can be connected to channels
                          (i.e. the endpoints on the left).
                          A list of `EndpointType` dictionaries, e.g.
@@ -151,15 +152,31 @@ class RoutingBlockType(Dict):
             'channel_endpoints': List(item_type=EndpointType()),
             'conversation_endpoints': List(item_type=EndpointType()),
         }
-        super(RoutingBlockType, self).__init__(*args, **kw)
+        super(RouterType, self).__init__(*args, **kw)
 
     @classmethod
-    def format_routing_block(cls, uuid, rb_type, name, description,
-                             channel_endpoints, conversation_endpoints):
+    def format_router(cls, router):
+        in_conn = GoConnector.for_router(
+            router.router_type, router.key, GoConnector.INBOUND)
+        out_conn = GoConnector.for_router(
+            router.router_type, router.key, GoConnector.OUTBOUND)
+        channel_endpoints = router.extra_inbound_endpoints
+        conversation_endpoints = router.extra_outbound_endpoints
         return {
-            'uuid': uuid, 'type': rb_type, 'name': name,
-            'description': description, 'channel_endpoints': channel_endpoints,
-            'conversation_endpoints': conversation_endpoints,
+            'uuid': router.key,
+            'type': router.router_type,
+            'name': router.name,
+            'description': router.description,
+            'channel_endpoints': [
+                EndpointType.format_endpoint(
+                    uuid=u"%s:%s" % (in_conn, endpoint), name=endpoint)
+                for endpoint in [u'default'] + list(channel_endpoints)
+            ],
+            'conversation_endpoints': [
+                EndpointType.format_endpoint(
+                    uuid=u"%s:%s" % (out_conn, endpoint), name=endpoint)
+                for endpoint in [u'default'] + list(conversation_endpoints)
+            ],
         }
 
 
@@ -195,7 +212,7 @@ class RoutingType(Dict):
     The following keys are required:
 
     * channels: A list of `ChannelType` values.
-    * routing_blocks: A list of `RoutingBlockType` values.
+    * routers: A list of `RouterType` values.
     * conversations: A list of `ConversationType` values.
     * routing_entries: A list of `RoutingEntryType` values.
     """
@@ -203,18 +220,18 @@ class RoutingType(Dict):
     def __init__(self, *args, **kw):
         kw['required_fields'] = {
             'channels': List(item_type=ChannelType()),
-            'routing_blocks': List(item_type=RoutingBlockType()),
+            'routers': List(item_type=RouterType()),
             'conversations': List(item_type=ConversationType()),
             'routing_entries': List(item_type=RoutingEntryType()),
         }
         super(RoutingType, self).__init__(*args, **kw)
 
     @classmethod
-    def format_routing(cls, channels, routing_blocks, conversations,
+    def format_routing(cls, channels, routers, conversations,
                        routing_entries):
         return {
             'channels': channels,
-            'routing_blocks': routing_blocks,
+            'routers': routers,
             'conversations': conversations,
             'routing_entries': routing_entries,
         }

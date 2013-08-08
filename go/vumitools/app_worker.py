@@ -1,10 +1,11 @@
 from zope.interface import implements
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import (
+    inlineCallbacks, returnValue, maybeDeferred, gatherResults)
 
 from vumi import log
+from vumi.worker import BaseWorker
 from vumi.application import ApplicationWorker
 from vumi.blinkenlights.metrics import MetricManager, Metric, MAX
-from vumi.message import TransportEvent
 from vumi.config import IConfigData, ConfigText, ConfigDict
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
@@ -123,20 +124,6 @@ class GoWorkerMixin(object):
 
     def get_user_api(self, user_account_key):
         return self.vumi_api.get_user_api(user_account_key)
-
-    def get_config_for_conversation(self, conversation):
-        config_data = GoApplicationConfigData(self.config, conversation)
-        return self.CONFIG_CLASS(config_data)
-
-    @inlineCallbacks
-    def get_message_config(self, msg):
-        if isinstance(msg, TransportEvent):
-            msg = yield self.find_message_for_event(msg)
-
-        msg_mdh = self.get_metadata_helper(msg)
-        conversation = yield msg_mdh.get_conversation()
-
-        returnValue(self.get_config_for_conversation(conversation))
 
     def consume_control_command(self, command_message):
         """
@@ -378,8 +365,35 @@ class GoWorkerMixin(object):
 
 
 class GoApplicationMixin(GoWorkerMixin):
-    # TODO: Move some stuff to here.
-    pass
+    def get_config_for_conversation(self, conversation):
+        config_data = GoApplicationConfigData(self.config, conversation)
+        return self.CONFIG_CLASS(config_data)
+
+    @inlineCallbacks
+    def get_message_config(self, msg):
+        # By the time we get an event here, the metadata has already been
+        # populated for us from the original message by the routing table
+        # dispatcher.
+        msg_mdh = self.get_metadata_helper(msg)
+        conversation = yield msg_mdh.get_conversation()
+
+        returnValue(self.get_config_for_conversation(conversation))
+
+
+class GoRouterMixin(GoWorkerMixin):
+    def get_config_for_router(self, router):
+        config_data = GoApplicationConfigData(self.config, router)
+        return self.CONFIG_CLASS(config_data)
+
+    @inlineCallbacks
+    def get_message_config(self, msg):
+        # By the time we get an event here, the metadata has already been
+        # populated for us from the original message by the routing table
+        # dispatcher.
+        msg_mdh = self.get_metadata_helper(msg)
+        router = yield msg_mdh.get_router()
+
+        returnValue(self.get_config_for_router(router))
 
 
 class GoApplicationConfig(ApplicationWorker.CONFIG_CLASS, GoWorkerConfigMixin):
@@ -414,3 +428,99 @@ class GoApplicationWorker(GoApplicationMixin, ApplicationWorker):
                     type(self).__name__, message))
         return super(GoApplicationWorker, self)._publish_message(
             message, endpoint_name)
+
+
+class GoRouterConfig(BaseWorker.CONFIG_CLASS, GoWorkerConfigMixin):
+    ri_connector_name = ConfigText(
+        "The name of the receive_inbound connector.",
+        required=True, static=True)
+    ro_connector_name = ConfigText(
+        "The name of the receive_outbound connector.",
+        required=True, static=True)
+
+
+class GoRouterWorker(GoRouterMixin, BaseWorker):
+    """
+    A base class for Vumi Go router workers.
+    """
+    CONFIG_CLASS = GoRouterConfig
+
+    worker_name = None
+
+    def setup_router(self):
+        return self._go_setup_worker()
+
+    def teardown_router(self):
+        return self._go_teardown_worker()
+
+    def setup_worker(self):
+        d = maybeDeferred(self.setup_router)
+        d.addCallback(lambda r: self.unpause_connectors())
+        return d
+
+    def teardown_worker(self):
+        self.pause_connectors()
+        return self.teardown_router()
+
+    def get_config(self, msg):
+        return self.get_message_config(msg)
+
+    def handle_inbound(self, config, msg):
+        raise NotImplementedError()
+
+    def handle_outbound(self, config, msg):
+        raise NotImplementedError()
+
+    def handle_event(self, config, event, conn_name):
+        log.debug("Handling event: %s" % (event,))
+        # To avoid circular import.
+        from go.vumitools.routing import RoutingMetadata
+        endpoint = RoutingMetadata(event).next_router_endpoint()
+        self.publish_event(event, endpoint=endpoint)
+
+    def _mkhandler(self, handler_func, connector_name):
+        def handler(msg):
+            d = self.get_config(msg)
+            d.addCallback(handler_func, msg, connector_name)
+            return d
+        return handler
+
+    def setup_connectors(self):
+        config = self.get_static_config()
+        self._ri_conn_name = config.ri_connector_name
+        self._ro_conn_name = config.ro_connector_name
+
+        def add_ri_handlers(connector, connector_name):
+            connector.set_default_inbound_handler(
+                self._mkhandler(self.handle_inbound, connector_name))
+            connector.set_default_event_handler(
+                self._mkhandler(self.handle_event, connector_name))
+            return connector
+
+        def add_ro_handlers(connector, connector_name):
+            connector.set_default_outbound_handler(
+                self._mkhandler(self.handle_outbound, connector_name))
+            return connector
+
+        deferreds = []
+        d = self.setup_ri_connector(self._ri_conn_name)
+        d.addCallback(add_ri_handlers, self._ri_conn_name)
+        deferreds.append(d)
+
+        d = self.setup_ro_connector(self._ro_conn_name)
+        d.addCallback(add_ro_handlers, self._ro_conn_name)
+        deferreds.append(d)
+
+        return gatherResults(deferreds)
+
+    def publish_inbound(self, msg, endpoint):
+        return self.connectors[self._ro_conn_name].publish_inbound(
+            msg, endpoint)
+
+    def publish_outbound(self, msg, endpoint):
+        return self.connectors[self._ri_conn_name].publish_outbound(
+            msg, endpoint)
+
+    def publish_event(self, event, endpoint):
+        return self.connectors[self._ro_conn_name].publish_event(
+            event, endpoint)

@@ -11,7 +11,7 @@ from vumi.persist.model import Manager
 from go.vumitools.exceptions import ConversationSendError
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.utils import MessageMetadataHelper
-from go.vumitools.account import RoutingTableHelper
+from go.vumitools.account import RoutingTableHelper, GoConnector
 
 
 class ConversationWrapper(object):
@@ -46,7 +46,7 @@ class ConversationWrapper(object):
         yield self.stop_conversation()
         # Clean up all the things
         yield self._remove_from_routing_table()
-        yield self._release_batches()
+        yield self._release_batches(release_tags=True)
 
     @Manager.calls_manager
     def stop_conversation(self):
@@ -64,11 +64,13 @@ class ConversationWrapper(object):
         yield self._release_batches()
 
     @Manager.calls_manager
-    def _release_batches(self):
+    def _release_batches(self, release_tags=False):
         for batch in (yield self.get_batches()):
-            yield self.mdb.batch_done(batch.key)  # TODO: why key?
-            for tag in batch.tags:
-                yield self.user_api.release_tag(tag)
+            yield self.mdb.batch_done(batch.key)
+            if release_tags:
+                # TODO: Get rid of this when the old UI is dead.
+                for tag in batch.tags:
+                    yield self.user_api.release_tag(tag)
 
     def __getattr__(self, name):
         # Proxy anything we don't have back to the wrapped conversation.
@@ -109,6 +111,39 @@ class ConversationWrapper(object):
         for batch in (yield self.get_batches()):
             tags.extend((yield batch.tags))
         returnValue(tags)
+
+    @Manager.calls_manager
+    def get_channels(self):
+        """
+        Returns lists of channels that can either send messages to or receive
+        messages from this conversation.
+
+        :rtype:
+            List of channel models.
+        """
+        user_account = yield self.c.user_account.get(self.api.manager)
+        routing_table = yield self.user_api.get_routing_table(user_account)
+        rt_helper = RoutingTableHelper(routing_table)
+        conn = GoConnector.for_conversation(
+            self.conversation_type, self.key)
+        incoming = rt_helper.transitive_sources(str(conn))
+        outbound = rt_helper.transitive_targets(str(conn))
+        connectors = incoming | outbound
+        go_connectors = [GoConnector.parse(s) for s in connectors]
+        channels = []
+        for conn in go_connectors:
+            if conn.ctype != conn.TRANSPORT_TAG:
+                continue
+            channel = yield self.user_api.get_channel(
+                (conn.tagpool, conn.tagname))
+            channels.append(channel)
+        channels.sort(key=lambda c: c.name)
+        returnValue(channels)
+
+    @Manager.calls_manager
+    def has_channel_supporting(self, **kw):
+        channels = yield self.get_channels()
+        returnValue(any(channel.supports(**kw) for channel in channels))
 
     @Manager.calls_manager
     def get_progress_status(self):
@@ -202,8 +237,8 @@ class ConversationWrapper(object):
             Extra parameters to pass along with the VumiApiCommand to the
             application worker receiving the command.
         """
+        batches = yield self.get_batches()
         if batch_id:
-            batches = yield self.get_batches()
             for batch in batches:
                 if batch.key == batch_id:
                     # NOTE: In theory there could be multiple tags per batch,
@@ -225,8 +260,22 @@ class ConversationWrapper(object):
                 tag = yield self.acquire_tag()
             else:
                 tag = yield self.acquire_existing_tag()
+
             batch_tags = [] if no_batch_tag else [tag]
-            batch_id = yield self.start_batch(*batch_tags)
+            if batches:
+                # Pretend the first batch is the one we want. We can *probably*
+                # only have zero or one batches here, but there's no easy way
+                # to confirm that. All of this will go away soon anyway.
+                batch = batches[0]
+                if batch_tags and batch_tags[0] not in batch.tags:
+                    batch.tags.append(batch_tags[0])
+                    yield batch.save()
+                batch_id = batch.key
+            else:
+                # We may not have a batch here if the conversation was created
+                # before new conversations got batches.
+                batch_id = yield self.start_batch(*batch_tags)
+
             # FIXME: We only want to set up routing if we haven't done it
             #        already. We assume that being passed a batch id means it's
             #        already happened. This will go away once we have a better
@@ -320,12 +369,26 @@ class ConversationWrapper(object):
         # TODO: Get rid of tag silliness when we can.
         if acquire_tag:
             tag = yield self.acquire_tag()
-            batch_id = yield self.start_batch(tag)
+
+            batches = yield self.get_batches()
+            if batches:
+                # Pretend the first batch is the one we want. We can *probably*
+                # only have zero or one batches here, but there's no easy way
+                # to confirm that. All of this will go away soon anyway.
+                batch = batches[0]
+                batch.tags.append(tag)
+                yield batch.save()
+                batch_id = batch.key
+            else:
+                # We may not have a batch here if the conversation was created
+                # before new conversations got batches.
+                batch_id = yield self.start_batch(tag)
             # We need to have routing set up so that we can send the message
             # with the token in it.
             yield self._add_to_routing_table(tag)
         else:
             batch_id = yield self.get_latest_batch_key()
+
         # specify this message as being sensitive
         msg_options = {'helper_metadata': {'go': {'sensitive': True}}}
 
@@ -340,7 +403,8 @@ class ConversationWrapper(object):
                 "content": ("Please visit %s to start your conversation." %
                             (token_url,)),
                 })
-        self.c.batches.add_key(batch_id)
+        if batch_id not in self.c.batches.keys():
+            self.c.batches.add_key(batch_id)
         yield self.c.save()
 
     @Manager.calls_manager

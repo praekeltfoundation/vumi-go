@@ -20,6 +20,7 @@ from vumi.config import ConfigContext
 from vumi import log
 
 from go.apps.http_api.auth import ConversationRealm, ConversationAccessChecker
+from go.vumitools.utils import MessageMetadataHelper
 
 
 class BaseResource(resource.Resource):
@@ -150,19 +151,15 @@ class MessageStream(StreamResource):
         user_account = request.getUser()
         conversation = yield self.get_conversation(user_account)
 
-        # Using the proxy's load() directly instead of
-        # `mdb.get_inbound_message(msg_id)` because that gives us the
-        # actual message, not the OutboundMessage. We need the
-        # OutboundMessage to get the batch and verify the `user_account`
-        reply_to = yield self.vumi_api.mdb.inbound_messages.load(in_reply_to)
+        reply_to = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
         if reply_to is None:
             request.setResponseCode(http.BAD_REQUEST)
             request.write('Invalid in_reply_to value')
             request.finish()
             return
 
-        batch_id = reply_to.batch.key
-        if batch_id is None or batch_id not in conversation.get_batch_keys():
+        reply_to_mdh = MessageMetadataHelper(self.vumi_api, reply_to)
+        if reply_to_mdh.get_conversation_key() != conversation.key:
             request.setResponseCode(http.BAD_REQUEST)
             request.write('Invalid in_reply_to value')
             request.finish()
@@ -176,7 +173,7 @@ class MessageStream(StreamResource):
         helper_metadata = conversation.set_go_helper_metadata()
 
         msg = yield self.worker.reply_to(
-            reply_to.msg, content, continue_session,
+            reply_to, content, continue_session,
             helper_metadata=helper_metadata)
 
         request.setResponseCode(http.OK)
@@ -264,6 +261,8 @@ class ConversationResource(resource.Resource):
 
     @inlineCallbacks
     def is_allowed(self, config, user_id):
+        if config.concurrency_limit < 0:
+            returnValue(True)
         count = int((yield self.redis.get(self.key(user_id))) or 0)
         returnValue(count < config.concurrency_limit)
 

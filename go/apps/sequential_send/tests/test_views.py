@@ -21,8 +21,7 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
         self.client.login(username='username', password='password')
 
     def get_wrapped_conv(self):
-        conv = self.conv_store.get_conversation_by_key(self.conv_key)
-        return self.user_api.wrap_conversation(conv)
+        return self.user_api.get_wrapped_conversation(self.conv_key)
 
     def run_new_conversation(self, delivery_class, pool, tag):
         # render the form
@@ -47,7 +46,7 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
                     }))
 
     def test_new_conversation(self):
-        parent = self.conv_store.new_conversation(
+        parent = self.user_api.new_conversation(
             conversation_type=u'bulk_message',
             name=self.TEST_CONVERSATION_NAME, description=u"Test message",
             config={}, delivery_class=u"sms", delivery_tag_pool=u"longcode",
@@ -168,7 +167,7 @@ class SequentialSendTestCase(DjangoGoApplicationTestCase):
 
         assertEndpoint([conv])
 
-        new_conv = self.conv_store.new_conversation(
+        new_conv = self.user_api.new_conversation(
             conversation_type=u'bulk_message',
             name=self.TEST_CONVERSATION_NAME, description=u"Test message",
             config={}, delivery_class=u"sms", delivery_tag_pool=u"longcode",

@@ -1,4 +1,6 @@
 from datetime import date
+from zipfile import ZipFile
+from StringIO import StringIO
 
 from django.test.client import Client
 from django.core import mail
@@ -246,10 +248,14 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(email.recipients(), [self.user.email])
         self.assertTrue(self.conversation.name in email.subject)
         self.assertTrue(self.conversation.name in email.body)
-        [(file_name, content, mime_type)] = email.attachments
+        [(file_name, contents, mime_type)] = email.attachments
         self.assertEqual(file_name, 'messages-export.zip')
+
+        zipfile = ZipFile(StringIO(contents), 'r')
+        csv_contents = zipfile.open('messages-export.csv', 'r').read()
+
         # 1 header, 10 sent, 10 received, 1 trailing newline == 22
-        self.assertEqual(22, len(content.split('\n')))
+        self.assertEqual(22, len(csv_contents.split('\n')))
         self.assertEqual(mime_type, 'application/zip')
 
     def test_action_bulk_send_view(self):
@@ -411,11 +417,12 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         # we're faking this here, this would normally have happened when
         # the confirmation SMS was sent out.
         tag = conversation.acquire_tag()
+        [batch] = conversation.get_batches()
+        batch.tags.append(tag)
+        batch.save()
         # store manually so that when we acquire_existing_tag() later we get
         # the one already used, not another random one from the same pool.
         conversation.c.delivery_tag = unicode(tag[1])
-        batch_key = conversation.start_batch(tag)
-        conversation.batches.add_key(batch_key)
         conversation.save()
 
         token = self.tm.generate('/foo/', user_id=self.user.pk, extra_params={
@@ -444,9 +451,9 @@ class ConfirmBulkMessageTestCase(DjangoGoApplicationTestCase):
         # populated which at this point it isn't yet.
         batch_keys = conversation.get_batch_keys()
         self.assertEqual(len(batch_keys), 1)
-        self.assertEqual([batch_key], batch_keys)
+        self.assertEqual([batch.key], batch_keys)
 
-        batch = conversation.mdb.get_batch(batch_key)
+        batch = conversation.mdb.get_batch(batch.key)
         [tag] = list(batch.tags)
         [start_cmd] = self.get_api_commands_sent()
 

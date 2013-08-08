@@ -19,7 +19,7 @@ from vumi.utils import build_web_site
 from vumi.worker import BaseWorker
 
 from go.api.go_api.api_types import (
-    CampaignType, ConversationType, ChannelType, RoutingBlockType,
+    CampaignType, ConversationType, ChannelType, RouterType,
     RoutingEntryType, RoutingType)
 from go.api.go_api.auth import GoUserRealm, GoUserAuthSessionWrapper
 from go.vumitools.account import RoutingTableHelper
@@ -56,13 +56,13 @@ class GoApiServer(JSONRPC):
         d.addCallback(endpoints_to_channels)
         return d
 
-    def _routing_blocks(self, user_api):
-        def format_routing_blocks(routing_blocks):
-            return [RoutingBlockType.format_routing_block(rb)
-                    for rb in routing_blocks]
+    def _routers(self, user_api):
+        def format_routers(routers):
+            return [RouterType.format_router(rb)
+                    for rb in routers]
 
-        d = succeed([])  # TODO: complete once routing blocks exist
-        d.addCallback(format_routing_blocks)
+        d = user_api.active_routers()
+        d.addCallback(format_routers)
         return d
 
     def _routing_entries(self, user_api):
@@ -106,13 +106,13 @@ class GoApiServer(JSONRPC):
         return self._channels(user_api)
 
     @signature(campaign_key=Unicode("Campaign key."),
-               returns=List("List of routing blocks.",
-                            item_type=ChannelType()))
-    def jsonrpc_routing_blocks(self, campaign_key):
-        """List the active routing blocks under a particular campaign.
+               returns=List("List of routers.",
+                            item_type=RouterType()))
+    def jsonrpc_routers(self, campaign_key):
+        """List the active routers under a particular campaign.
            """
         user_api = self.vumi_api.get_user_api(campaign_key)
-        return self._routing_blocks(user_api)
+        return self._routers(user_api)
 
     @signature(campaign_key=Unicode("Campaign key."),
                returns=List("List of routing table entries.",
@@ -127,13 +127,13 @@ class GoApiServer(JSONRPC):
                returns=RoutingType(
                    "Complete description of the routing table."))
     def jsonrpc_routing_table(self, campaign_key):
-        """List the channels, conversations, routing blocks and routing table
+        """List the channels, conversations, routers and routing table
         entries that make up a campaign's routing.
         """
         user_api = self.vumi_api.get_user_api(campaign_key)
         deferreds = []
         deferreds.append(self._channels(user_api))
-        deferreds.append(self._routing_blocks(user_api))
+        deferreds.append(self._routers(user_api))
         deferreds.append(self._conversations(user_api))
         deferreds.append(self._routing_entries(user_api))
 
@@ -142,9 +142,9 @@ class GoApiServer(JSONRPC):
                 if not success:
                     result.raiseException()
             results = [r[1] for r in results]
-            channels, routing_blocks, conversations, routing_entries = results
+            channels, routers, conversations, routing_entries = results
             return RoutingType.format_routing(
-                channels, routing_blocks, conversations, routing_entries)
+                channels, routers, conversations, routing_entries)
 
         d = DeferredList(deferreds, consumeErrors=True)
         d.addCallback(construct_json)
@@ -156,7 +156,7 @@ class GoApiServer(JSONRPC):
         user_api = self.vumi_api.get_user_api(campaign_key)
         deferreds = []
         deferreds.append(self._channels(user_api))
-        deferreds.append(self._routing_blocks(user_api))
+        deferreds.append(self._routers(user_api))
         deferreds.append(self._conversations(user_api))
 
         def gather_endpoints(results):
@@ -164,19 +164,19 @@ class GoApiServer(JSONRPC):
                 if not success:
                     result.raiseException()
             results = [r[1] for r in results]
-            channels, routing_blocks, conversations = results
+            channels, routers, conversations = results
 
             recv_outbound_endpoints = set(
                 endpoint['uuid'] for endpoint in itertools.chain(
                     (e for c in channels for e in c['endpoints']),
-                    (e for r in routing_blocks
+                    (e for r in routers
                      for e in r['conversation_endpoints']),
                 )
             )
             recv_inbound_endpoints = set(
                 endpoint['uuid'] for endpoint in itertools.chain(
                     (e for c in conversations for e in c['endpoints']),
-                    (e for r in routing_blocks
+                    (e for r in routers
                      for e in r['channel_endpoints'])
                 )
             )
