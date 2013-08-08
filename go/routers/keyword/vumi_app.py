@@ -29,9 +29,17 @@ class KeywordRouter(GoRouterWorker):
         return 'default'
 
     def handle_inbound(self, config, msg, conn_name):
+        # TODO: Push this up a level or two.
+        if not config.get_conversation().running():
+            log.debug("Ignoring inbound for stopped router: %s" % (msg,))
+            return
         log.debug("Handling inbound: %s" % (msg,))
         return self.publish_inbound(msg, self.lookup_target(config, msg))
 
     def handle_outbound(self, config, msg, conn_name):
+        # TODO: Push this up a level or two.
+        if not config.get_conversation().running():
+            log.debug("Ignoring outbound for stopped router: %s" % (msg,))
+            return
         log.debug("Handling outbound: %s" % (msg,))
         return self.publish_outbound(msg, 'default')

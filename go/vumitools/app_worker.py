@@ -472,6 +472,9 @@ class GoRouterWorker(GoRouterMixin, BaseWorker):
         raise NotImplementedError()
 
     def handle_event(self, config, event, conn_name):
+        if not config.get_conversation().running():
+            log.debug("Ignoring event for stopped router: %s" % (event,))
+            return
         log.debug("Handling event: %s" % (event,))
         # To avoid circular import.
         from go.vumitools.routing import RoutingMetadata
