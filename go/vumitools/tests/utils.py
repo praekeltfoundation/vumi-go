@@ -131,6 +131,12 @@ class GoWorkerTestMixin(GoPersistenceMixin):
     def _command_rkey(self):
         return "%s.control" % (self._worker_name(),)
 
+    @inlineCallbacks
+    def setup_user_api(self, vumi_api, username=u'testuser'):
+        user_account = yield self.mk_user(self.vumi_api, u'testuser')
+        self.user_account_key = user_account.key
+        self.user_api = self.vumi_api.get_user_api(self.user_account_key)
+
     def setup_tagpools(self):
         return self.setup_tagpool(u"pool", [u"tag1", u"tag2"])
 
@@ -218,6 +224,14 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
             conv_type, name, description, config, **kw)
         returnValue(self.user_api.wrap_conversation(conversation))
 
+    def add_conversation_md_to_msg(self, msg, conv, endpoint=None):
+        msg.payload.setdefault('helper_metadata', {})
+        md = MessageMetadataHelper(self.vumi_api, msg)
+        md.set_conversation_info(conv.conversation_type, conv.key)
+        md.set_user_account(self.user_account_key)
+        if endpoint is not None:
+            msg.set_routing_endpoint(endpoint)
+
     @inlineCallbacks
     def start_conversation_old_style(self, conv, tagpool=u'pool', **kwargs):
         old_cmds = len(self.get_dispatcher_commands())
@@ -293,7 +307,7 @@ class GoRouterWorkerTestMixin(GoWorkerTestMixin):
         return self.user_api.new_router(
             router_type, name, description, config, **kw)
 
-    def add_router_md_to_msg(self, msg, router, endpoint):
+    def add_router_md_to_msg(self, msg, router, endpoint=None):
         msg.payload.setdefault('helper_metadata', {})
         md = MessageMetadataHelper(self.vumi_api, msg)
         md.set_router_info(router.router_type, router.key)
