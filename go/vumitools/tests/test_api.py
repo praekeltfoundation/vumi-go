@@ -360,10 +360,15 @@ class TestTxVumiRouterApi(AppWorkerTestCase):
     def setUp(self):
         yield super(TestTxVumiRouterApi, self).setUp()
         if self.sync_persistence:
-            self.vumi_api = VumiApi.from_config_sync(self._persist_config)
+            # Set up the vumi exchange, in case we don't have one.
+            self._amqp.exchange_declare('vumi', 'direct')
+            self.vumi_api = VumiApi.from_config_sync(
+                self._persist_config, FakeAmqpConnection(self._amqp))
         else:
             self.vumi_api = yield VumiApi.from_config_async(
-                self._persist_config)
+                self._persist_config, get_fake_amq_client(self._amqp))
+        self._persist_riak_managers.append(self.vumi_api.manager)
+        self._persist_redis_managers.append(self.vumi_api.redis)
         self.user_account = yield self.mk_user(self.vumi_api, u'Buster')
         self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
@@ -423,6 +428,44 @@ class TestTxVumiRouterApi(AppWorkerTestCase):
         router = yield router_api.get_router()
         self.assertEqual(router.archive_status, 'archived')
         self.assertEqual({}, (yield self.user_api.get_routing_table()))
+
+    @inlineCallbacks
+    def test_start_router(self):
+        router = yield self.create_router()
+        router_api = yield self.get_router_api(router)
+        self.assertTrue(router.stopped())
+        self.assertFalse(router.starting())
+        self.assertEqual([], self.get_dispatcher_commands())
+
+        yield router_api.start_router()
+        router = yield router_api.get_router()
+        self.assertFalse(router.stopped())
+        self.assertTrue(router.starting())
+        [cmd] = self.get_dispatcher_commands()
+        self.assertEqual(cmd['command'], 'start')
+        self.assertEqual(cmd['kwargs'], {
+            'user_account_key': router.user_account.key,
+            'router_key': router.key,
+        })
+
+    @inlineCallbacks
+    def test_stop_router(self):
+        router = yield self.create_router(status=u'running')
+        router_api = yield self.get_router_api(router)
+        self.assertTrue(router.running())
+        self.assertFalse(router.stopping())
+        self.assertEqual([], self.get_dispatcher_commands())
+
+        yield router_api.stop_router()
+        router = yield router_api.get_router()
+        self.assertFalse(router.running())
+        self.assertTrue(router.stopping())
+        [cmd] = self.get_dispatcher_commands()
+        self.assertEqual(cmd['command'], 'stop')
+        self.assertEqual(cmd['kwargs'], {
+            'user_account_key': router.user_account.key,
+            'router_key': router.key,
+        })
 
 
 class TestVumiRouterApi(TestTxVumiRouterApi):
