@@ -51,6 +51,34 @@ class TestKeywordRouter(RouterWorkerTestCase):
         for outbound_src, outbound_dst in rev_hops:
             rmeta.push_hop(outbound_dst, outbound_src)
 
+    def test_start_and_stop(self):
+        router = yield self.setup_router({})
+        router_api = self.user_api.get_router_api(
+            router.router_type, router.key)
+        self.assertTrue(router.stopped())
+        self.assertFalse(router.running())
+
+        yield router_api.start_router()
+        self.assertFalse(router.stopped())
+        self.assertTrue(router.running())
+
+        yield router_api.stop_router()
+        self.assertTrue(router.stopped())
+        self.assertFalse(router.running())
+
+    @inlineCallbacks
+    def test_no_messages_processed_while_stopped(self):
+        router = yield self.setup_router({}, started=False)
+
+        yield self.dispatch_inbound_to_router(self.mkmsg_in(), router)
+        self.assertEqual([], self.get_dispatched_inbound('ro_conn'))
+
+        yield self.dispatch_outbound_to_router(self.mkmsg_out(), router)
+        self.assertEqual([], self.get_dispatched_outbound('ri_conn'))
+
+        yield self.dispatch_event_to_router(self.mkmsg_ack(), router)
+        self.assertEqual([], self.get_dispatched_events('ro_conn'))
+
     @inlineCallbacks
     def test_inbound_no_config(self):
         router = yield self.setup_router({})
