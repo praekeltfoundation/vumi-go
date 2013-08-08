@@ -332,6 +332,7 @@ class GoStoringMiddleware(StoringMiddleware):
 class ConversationStoringMiddleware(GoStoringMiddleware):
     @inlineCallbacks
     def get_batch_id(self, msg):
+        # MessageMetadataHelper is imported here to avoid a circular import
         from go.vumitools.utils import MessageMetadataHelper
         mdh = MessageMetadataHelper(self.vumi_api, msg)
         conversation = yield mdh.get_conversation()
@@ -342,6 +343,7 @@ class ConversationStoringMiddleware(GoStoringMiddleware):
 class RouterStoringMiddleware(GoStoringMiddleware):
     @inlineCallbacks
     def get_batch_id(self, msg):
+        # MessageMetadataHelper is imported here to avoid a circular import
         from go.vumitools.utils import MessageMetadataHelper
         mdh = MessageMetadataHelper(self.vumi_api, msg)
         router = yield mdh.get_router()
