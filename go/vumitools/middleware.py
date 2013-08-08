@@ -314,7 +314,7 @@ class GoStoringMiddleware(StoringMiddleware):
         self.vumi_api = yield VumiApi.from_config_async(self.config)
 
     def get_batch_id(self, msg):
-        raise NotImplementedError("Sub-classes should implement .get_batch.")
+        raise NotImplementedError("Sub-classes should implement .get_batch_id")
 
     @inlineCallbacks
     def handle_inbound(self, message, connector_name):
