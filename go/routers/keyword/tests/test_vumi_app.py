@@ -73,11 +73,13 @@ class TestKeywordRouter(RouterWorkerTestCase):
         yield self.dispatch_inbound_to_router(self.mkmsg_in(), router)
         self.assertEqual([], self.get_dispatched_inbound('ro_conn'))
 
-        yield self.dispatch_outbound_to_router(self.mkmsg_out(), router)
-        self.assertEqual([], self.get_dispatched_outbound('ri_conn'))
-
         yield self.dispatch_event_to_router(self.mkmsg_ack(), router)
         self.assertEqual([], self.get_dispatched_events('ro_conn'))
+
+        yield self.dispatch_outbound_to_router(self.mkmsg_out(), router)
+        self.assertEqual([], self.get_dispatched_outbound('ri_conn'))
+        [nack] = self.get_dispatched_events('ro_conn')
+        self.assertEqual(nack['event_type'], 'nack')
 
     @inlineCallbacks
     def test_inbound_no_config(self):
