@@ -14,22 +14,17 @@ from vumi.transports.vumi_bridge.client import StreamingClient
 from vumi.config import ConfigContext
 
 from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.api import VumiApiCommand
-
 from go.apps.http_api.vumi_app import StreamingHTTPWorker
 from go.apps.http_api.resource import StreamResource, ConversationResource
 
 
 class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
-
-    use_riak = True
     application_class = StreamingHTTPWorker
 
     @inlineCallbacks
     def setUp(self):
         yield super(StreamingHTTPWorkerTestCase, self).setUp()
         self.config = self.mk_config({
-            'worker_name': 'worker_name',
             'health_path': '/health/',
             'web_path': '/foo',
             'web_port': 0,
@@ -40,8 +35,12 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         self.url = 'http://%s:%s%s' % (
             self.addr.host, self.addr.port, self.config['web_path'])
 
-        self.vumi_api = yield self.app.vumi_api
-        self.account = yield self.mk_user(self.vumi_api, u'user')
+        # Steal app's vumi_api
+        self.vumi_api = self.app.vumi_api  # YOINK!
+        self._persist_riak_managers.append(self.vumi_api.manager)
+
+        # Create a test user account
+        self.account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = self.vumi_api.get_user_api(self.account.key)
 
         yield self.setup_tagpools()
@@ -56,9 +55,11 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                 'metrics_store': 'metrics_store',
             }
         }
-        self.conversation = yield self.create_conversation(
+        conversation = yield self.create_conversation(
             delivery_tag_pool=u'pool', config=conv_config)
-        yield self.start_conversation(self.conversation)
+        yield self.start_conversation(conversation)
+        self.conversation = yield self.user_api.get_wrapped_conversation(
+            conversation.key)
 
         self.auth_headers = {
             'Authorization': ['Basic ' + base64.b64encode('%s:%s' % (
@@ -451,10 +452,10 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_send_message_command(self):
-        command = VumiApiCommand.command(
-            'worker', 'send_message',
-            self.account.key,
-            self.conversation.key,
+        yield self.dispatch_command(
+            'send_message',
+            user_account_key=self.account.key,
+            conversation_key=self.conversation.key,
             command_data={
                 u'batch_id': u'batch-id',
                 u'content': u'foo',
@@ -470,7 +471,6 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                     u'from_addr': u'default10080',
                 }
             })
-        yield self.app.consume_control_command(command)
 
         [msg] = yield self.get_dispatched_messages()
         self.assertEqual(msg.payload['to_addr'], "to_addr")
@@ -491,10 +491,10 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
         self.conversation.set_go_helper_metadata(msg['helper_metadata'])
         yield self.vumi_api.mdb.add_inbound_message(msg)
-        command = VumiApiCommand.command(
-            'worker', 'send_message',
-            self.account.key,
-            self.conversation.key,
+        yield self.dispatch_command(
+            'send_message',
+            user_account_key=self.account.key,
+            conversation_key=self.conversation.key,
             command_data={
                 u'batch_id': u'batch-id',
                 u'content': u'foo',
@@ -511,7 +511,6 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                     u'from_addr': u'default10080',
                 }
             })
-        yield self.app.consume_control_command(command)
         [sent_msg] = self.get_dispatched_messages()
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
