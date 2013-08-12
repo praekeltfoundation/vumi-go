@@ -119,6 +119,21 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         config = yield self.app.get_config(msg)
         self.assertEqual(config.sandbox_id, self.user_account.key)
 
+    def test_delivery_class_inference(self):
+        def check_inference_for(transport_type, expected_delivery_class):
+            msg = self.mkmsg_in()
+            msg['transport_type'] = transport_type
+            self.assertEqual(
+                self.app.infer_delivery_class(msg),
+                expected_delivery_class)
+
+        check_inference_for(None, 'sms')
+        check_inference_for('smpp', 'ussd')
+        check_inference_for('sms', 'sms')
+        check_inference_for('ussd', 'ussd')
+        check_inference_for('twitter', 'twitter')
+        check_inference_for('xmpp', 'gtalk')
+
     @inlineCallbacks
     def test_event(self):
         conversation = yield self.setup_conversation(
