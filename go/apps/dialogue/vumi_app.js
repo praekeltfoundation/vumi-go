@@ -22,7 +22,7 @@ function DialogueStateCreator() {
     self.poll = null;  // poll is set in on_config_read
 
     self.on_config_read = function(event) {
-        var p = new Promise;
+        var p = new Promise();
         event.im.fetch_config_value("poll", true,
             function (poll) {
                 self.poll = poll;
@@ -94,18 +94,37 @@ function DialogueStateCreator() {
         return creator(state_name, im, state_description);
     };
 
+    self.store_answer = function(answer, im, state_description) {
+        var msg = im.get_msg(),
+            fields = {};
+
+        fields[state_description.store_as] = answer;
+
+        api.request('contacts.get_or_create', {
+            addr: msg.from_addr,
+            delivery_class: msg.helper_metadata.delivery_class
+        }, function(reply) {
+            if (reply.success) {
+                api.request('contacts.update_extras', {
+                    key: reply.contact.key,
+                    fields: fields
+                }, function() {});
+            }
+        });
+    };
+
     self.choice_state_creator = function(state_name, im, state_description) {
         var choices = state_description.choice_endpoints.map(
             function (c) { return new Choice(c.value, c.label); });
         return new ChoiceState(
             state_name,
             function (choice) {
-                var endpoints = state_description.choice_endpoints.filter(
-                    function (c) { return (c.value == choice.value); });
-                if (endpoints.length !== 1) {
-                    return state_name;
-                }
-                return self.get_next_state(endpoints[0].uuid);
+                var endpoint = state_description.choice_endpoints.filter(
+                  function (c) { return (c.value == choice.value); })[0];
+
+                if (!endpoint) { return state_name; }
+                self.store_answer(endpoint.value, im, state_description);
+                return self.get_next_state(endpoint.uuid);
             },
             state_description.text,
             choices
@@ -116,6 +135,7 @@ function DialogueStateCreator() {
         return new FreeText(
             state_name,
             function (content) {
+                self.store_answer(content, im, state_description);
                 return self.get_next_state(state_description.exit_endpoint);
             },
             state_description.text

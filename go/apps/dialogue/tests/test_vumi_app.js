@@ -22,6 +22,7 @@ describe("choice states", function() {
     it("should display", function(done) {
         var p = tester.check_state({
             user: {current_state: "choice-1"},
+            helper_metadata: {delivery_class: 'ussd'},
             content: null,
             next_state: "choice-1",
             response: (
@@ -36,6 +37,7 @@ describe("choice states", function() {
     it("should respond to valid input", function(done) {
         var p = tester.check_state({
             user: {current_state: "choice-1"},
+            helper_metadata: {delivery_class: 'ussd'},
             content: "2",
             next_state: "end-1",
             response: (
@@ -49,6 +51,7 @@ describe("choice states", function() {
     it("should respond to invalid input", function(done) {
         var p = tester.check_state({
             user: {current_state: "choice-1"},
+            helper_metadata: {delivery_class: 'ussd'},
             content: "3",
             next_state: "choice-1",
             response: (
@@ -60,6 +63,22 @@ describe("choice states", function() {
         p.then(done, done);
     });
 
+    it("should store the user's answer", function(done) {
+        tester.check_state({
+            from_addr: '+2731234567',
+            user: {current_state: "choice-1"},
+            helper_metadata: {delivery_class: 'ussd'},
+            content: "2",
+            next_state: "end-1",
+            response: (
+                "^Thank you for taking our survey$"
+            ),
+            continue_session: false
+        }).then(function() {
+          var contact = app.api.find_contact('ussd', '+2731234567');
+          assert.equal(contact['extras-message-1'], 'value-2');
+        }).done(done, done);
+    });
 });
 
 describe("freetext states", function() {
@@ -72,6 +91,7 @@ describe("freetext states", function() {
     it("should display", function(done) {
         var p = tester.check_state({
             user: {current_state: "freetext-1"},
+            helper_metadata: {delivery_class: 'ussd'},
             content: null,
             next_state: "freetext-1",
             response: (
@@ -84,6 +104,7 @@ describe("freetext states", function() {
     it("should respond to input", function(done) {
         var p = tester.check_state({
             user: {current_state: "freetext-1"},
+            helper_metadata: {delivery_class: 'ussd'},
             content: "Foo",
             next_state: "end-1",
             response: (
@@ -94,6 +115,22 @@ describe("freetext states", function() {
         p.then(done, done);
     });
 
+    it("should store the user's answer", function(done) {
+        tester.check_state({
+            from_addr: '+2731234567',
+            user: {current_state: "freetext-1"},
+            helper_metadata: {delivery_class: 'ussd'},
+            content: "Foo",
+            next_state: "end-1",
+            response: (
+                "^Thank you for taking our survey$"
+            ),
+            continue_session: false
+        }).then(function() {
+          var contact = app.api.find_contact('ussd', '+2731234567');
+          assert.equal(contact['extras-message-2'], 'Foo');
+        }).done(done, done);
+    });
 });
 
 describe("end states", function() {
