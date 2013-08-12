@@ -71,7 +71,12 @@ class SeparateTagBatches(Migration):
         return tag_info.current_batch.key in conv_batches
 
     def _copy_msgs(self, mdb, old_batch, new_batch):
-        pass
+        for key in mdb.batch_outbound_keys(old_batch):
+            msg = mdb.get_outbound_message(key)
+            mdb.add_outbound_message(msg, batch_id=new_batch)
+        for key in mdb.batch_inbound_keys(old_batch):
+            msg = mdb.get_inbound_message(key)
+            mdb.add_inbound_message(msg, batch_id=new_batch)
 
     def migrate(self, user_api, conv):
         conv_batches = conv.batches.keys()

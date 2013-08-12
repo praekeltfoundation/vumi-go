@@ -103,18 +103,27 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
             self.assertEqual(conv.subject, loaded_conv.name)
 
     def setup_separate_tag_batches(self):
+        mdb = self.user_api.api.mdb
         tag = (u'pool', u'tag')
-        batch1 = self.user_api.api.mdb.batch_start(tags=[tag])
+        batch1 = mdb.batch_start(tags=[tag])
+
         conv1 = self.user_api.conversation_store.new_conversation(
             u'dummy_type', u'Dummy Conv 1', u'Dummy Description',
             {}, batch1, delivery_tag_pool=tag[0], delivery_tag=tag[1])
         conv2 = self.user_api.conversation_store.new_conversation(
             u'dummy_type', u'Dummy Conv 2', u'Dummy Description',
             {}, u'batch-2')
+
+        msg1 = self.mkmsg_in()
+        mdb.add_inbound_message(msg1, batch_id=batch1)
+        msg2 = self.mkmsg_out()
+        mdb.add_outbound_message(msg2, batch_id=batch1)
+
         return [conv1, conv2]
 
     def test_separate_tag_batches(self):
         conv1, conv2 = self.setup_separate_tag_batches()
+        [old_batch] = conv1.batches.keys()
         output = self.handle_command(migration_name='separate-tag-batches')
         self.assert_no_stderr()
         self.assertEqual(output, [
@@ -123,3 +132,12 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
             '    Migrating conversation: %s [Dummy Conv 1] ... done.'
             % conv1.key,
         ])
+        new_conv1 = self.user_api.conversation_store.get_conversation_by_key(
+            conv1.key)
+        [new_batch] = new_conv1.batches.keys()
+        self.assertNotEqual(new_batch, old_batch)
+        mdb = self.user_api.api.mdb
+        self.assertEqual(mdb.batch_outbound_keys(new_batch),
+                         mdb.batch_outbound_keys(old_batch))
+        self.assertEqual(mdb.batch_inbound_keys(new_batch),
+                         mdb.batch_inbound_keys(old_batch))
