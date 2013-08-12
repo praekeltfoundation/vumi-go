@@ -70,8 +70,17 @@ class SeparateTagBatches(Migration):
         tag_info = user_api.api.mdb.get_tag_info(tag)
         return tag_info.current_batch.key in conv_batches
 
+    def _copy_msgs(self, mdb, old_batch, new_batch):
+        pass
+
     def migrate(self, user_api, conv):
-        raise NotImplementedError("TODO: implement")
+        conv_batches = conv.batches.keys()
+        new_batch = user_api.api.mdb.batch_start()
+        for batch in conv_batches:
+            self._copy_msgs(user_api.api.mdb, batch, new_batch)
+        conv.batches.clear()
+        conv.batches.add_key(new_batch)
+        conv.save()
 
 
 class Command(BaseCommand):
