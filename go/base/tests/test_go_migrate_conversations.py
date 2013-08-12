@@ -16,14 +16,8 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         super(GoMigrateConversationsCommandTestCase, self).setUp()
         self.user = self.mk_django_user()
         self.setup_user_api(self.user)
-
         self.old_conv_model = self.user_api.conversation_store.manager.proxy(
             ConversationVNone)
-
-        self.conv1 = self.mkoldconv(subject=u'Old 1')
-        self.conv2 = self.mkoldconv(subject=u'Old 1')
-        self.conv3 = self.mkoldconv(subject=u'Zoë destroyer of Ascii')
-        self.convs = [self.conv1, self.conv2, self.conv3]
 
         self.command = go_migrate_conversations.Command()
         self.command.stdout = StringIO()
@@ -63,18 +57,26 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         ])
         self.assertEqual(output[7], '  separate-tag-batches:')
 
+    def setup_migrate_models(self):
+        conv1 = self.mkoldconv(subject=u'Old 1')
+        conv2 = self.mkoldconv(subject=u'Old 1')
+        conv3 = self.mkoldconv(subject=u'Zoë destroyer of Ascii')
+        return [conv1, conv2, conv3]
+
     def test_migrate_models_dry_run(self):
+        convs = self.setup_migrate_models()
         self.handle_command(migration_name='migrate-models', dry_run=True)
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 5)
         self.assertEqual(output[0], 'Test User <username> [test-0-user]')
         self.assertEqual(output[1], '  Migrating 3 of 3 conversations ...')
-        for conv in self.convs:
+        for conv in convs:
             # If we can load the old model, the data hasn't been migrated.
             loaded_conv = self.old_conv_model.load(conv.key)
             self.assertEqual(conv.subject, loaded_conv.subject)
 
     def test_migrate_models(self):
+        convs = self.setup_migrate_models()
         self.handle_command(migration_name='migrate-models')
         output = self.command.stdout.getvalue().strip().split('\n')
         self.assertEqual(len(output), 5)
@@ -82,8 +84,8 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(output[1], '  Migrating 3 of 3 conversations ...')
         extracted_keys = set(line.split()[2]
                              for line in output[2:])
-        self.assertEqual(extracted_keys, set(c.key for c in self.convs))
-        for conv in self.convs:
+        self.assertEqual(extracted_keys, set(c.key for c in convs))
+        for conv in convs:
             # If the data has been migrated, we can't load the old model.
             try:
                 self.old_conv_model.load(conv.key)
