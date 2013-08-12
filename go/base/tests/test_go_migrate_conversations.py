@@ -24,8 +24,13 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         self.command.stderr = StringIO()
 
     def handle_command(self, migration_name=None, list=False, dry_run=False):
-        return self.command.handle(migration_name=migration_name, list=list,
-                                   dry_run=dry_run)
+        self.command.handle(migration_name=migration_name, list=list,
+                            dry_run=dry_run)
+        output = self.command.stdout.getvalue().strip().split('\n')
+        return output
+
+    def assert_no_stderr(self):
+        self.assertEqual(self.command.stderr.getvalue(), '')
 
     def mkoldconv(self, **kwargs):
         conversation_id = uuid4().get_hex()
@@ -46,8 +51,8 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         return conversation.save()
 
     def test_list_migrators(self):
-        self.handle_command(list=True)
-        output = self.command.stdout.getvalue().strip().split('\n')
+        output = self.handle_command(list=True)
+        self.assert_no_stderr()
         self.assertEqual(output[0], 'Available migrations:')
         self.assertEqual(output[2], '  migrate-models:')
         self.assertEqual(output[4:6], [
@@ -65,8 +70,9 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
 
     def test_migrate_models_dry_run(self):
         convs = self.setup_migrate_models()
-        self.handle_command(migration_name='migrate-models', dry_run=True)
-        output = self.command.stdout.getvalue().strip().split('\n')
+        output = self.handle_command(
+            migration_name='migrate-models', dry_run=True)
+        self.assert_no_stderr()
         self.assertEqual(len(output), 5)
         self.assertEqual(output[0], 'Test User <username> [test-0-user]')
         self.assertEqual(output[1], '  Migrating 3 of 3 conversations ...')
@@ -77,8 +83,8 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
 
     def test_migrate_models(self):
         convs = self.setup_migrate_models()
-        self.handle_command(migration_name='migrate-models')
-        output = self.command.stdout.getvalue().strip().split('\n')
+        output = self.handle_command(migration_name='migrate-models')
+        self.assert_no_stderr()
         self.assertEqual(len(output), 5)
         self.assertEqual(output[0], 'Test User <username> [test-0-user]')
         self.assertEqual(output[1], '  Migrating 3 of 3 conversations ...')
@@ -95,3 +101,25 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
             # Check that the new model loads correctly.
             loaded_conv = self.user_api.get_wrapped_conversation(conv.key)
             self.assertEqual(conv.subject, loaded_conv.name)
+
+    def setup_separate_tag_batches(self):
+        tag = (u'pool', u'tag')
+        batch1 = self.user_api.api.mdb.batch_start(tags=[tag])
+        conv1 = self.user_api.conversation_store.new_conversation(
+            u'dummy_type', u'Dummy Conv 1', u'Dummy Description',
+            {}, batch1, delivery_tag_pool=tag[0], delivery_tag=tag[1])
+        conv2 = self.user_api.conversation_store.new_conversation(
+            u'dummy_type', u'Dummy Conv 2', u'Dummy Description',
+            {}, u'batch-2')
+        return [conv1, conv2]
+
+    def test_separate_tag_batches(self):
+        conv1, conv2 = self.setup_separate_tag_batches()
+        output = self.handle_command(migration_name='separate-tag-batches')
+        self.assert_no_stderr()
+        self.assertEqual(output, [
+            'Test User <username> [test-0-user]',
+            '  Migrating 1 of 2 conversations ...',
+            '    Migrating conversation: %s [Dummy Conv 1] ... done.'
+            % conv1.key,
+        ])

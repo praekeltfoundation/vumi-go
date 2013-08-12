@@ -26,11 +26,11 @@ class Migration(object):
                 return migrator_cls
         return None
 
-    def run(self, conv):
+    def run(self, user_api, conv):
         if not self._dry_run:
-            self.migrate(conv)
+            self.migrate(user_api, conv)
 
-    def applies_to(self, conv):
+    def applies_to(self, user_api, conv):
         """Whether this migration applies to the given conversation.
 
         Should return True if this conversation requires migrating, False
@@ -38,7 +38,7 @@ class Migration(object):
         """
         return True
 
-    def migrate(self, conv):
+    def migrate(self, user_api, conv):
         """Perform the migration."""
         raise NotImplementedError("Migration %s not implemented."
                                   % (self.name,))
@@ -50,7 +50,7 @@ class UpdateModels(Migration):
         "Load and re-save all conversations, triggering any pending model"
         " migrators in the process.")
 
-    def migrate(self, conv):
+    def migrate(self, user_api, conv):
         conv.save()
 
 
@@ -62,10 +62,15 @@ class SeparateTagBatches(Migration):
         " this batch to a new batch and assign the new batch to the"
         " conversation.")
 
-    def applies_to(self, conv):
-        raise NotImplementedError("TODO: implement")
+    def applies_to(self, user_api, conv):
+        tag = (conv.delivery_tag_pool, conv.delivery_tag)
+        if not conv.active() or None in tag:
+            return False
+        conv_batches = conv.batches.keys()
+        tag_info = user_api.api.mdb.get_tag_info(tag)
+        return tag_info.current_batch.key in conv_batches
 
-    def migrate(self, conv):
+    def migrate(self, user_api, conv):
         raise NotImplementedError("TODO: implement")
 
 
@@ -137,7 +142,8 @@ class Command(BaseCommand):
         all_keys = user_api.conversation_store.list_conversations()
         conversations = [user_api.get_wrapped_conversation(k)
                          for k in all_keys]
-        conversations = [c for c in conversations if migrator.applies_to(c)]
+        conversations = [c for c in conversations
+                         if migrator.applies_to(user_api, c)]
         self.outln(
             u'%s %s <%s> [%s]\n  Migrating %d of %d conversations ...' % (
             user.first_name, user.last_name, user.username,
@@ -145,7 +151,7 @@ class Command(BaseCommand):
         for conv in conversations:
             self.outln(u'    Migrating conversation: %s [%s] ...'
                        % (conv.key, conv.name), ending='')
-            migrator.run(conv)
+            migrator.run(user_api, conv)
             self.outln(u' done.')
 
     def handle(self, *usernames, **options):
