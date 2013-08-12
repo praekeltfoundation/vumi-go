@@ -27,7 +27,7 @@ class Migration(object):
         return None
 
     def run(self, conv):
-        if self._dry_run:
+        if not self._dry_run:
             self.migrate(conv)
 
     def applies_to(self, conv):
@@ -47,7 +47,7 @@ class Migration(object):
 class UpdateModels(Migration):
     name = "migrate-models"
     help_text = (
-        "Load and re-save all conversations, triggering an pending model"
+        "Load and re-save all conversations, triggering any pending model"
         " migrators in the process.")
 
     def migrate(self, conv):

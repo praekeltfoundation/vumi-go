@@ -29,6 +29,10 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         self.command.stdout = StringIO()
         self.command.stderr = StringIO()
 
+    def handle_command(self, migration_name=None, list=False, dry_run=False):
+        return self.command.handle(migration_name=migration_name, list=list,
+                                   dry_run=dry_run)
+
     def mkoldconv(self, **kwargs):
         conversation_id = uuid4().get_hex()
         groups = kwargs.pop('groups', [])
@@ -47,25 +51,37 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
 
         return conversation.save()
 
-    def test_no_migrate(self):
-        self.command.handle(migrate=False)
+    def test_list_migrators(self):
+        self.handle_command(list=True)
         output = self.command.stdout.getvalue().strip().split('\n')
-        self.assertEqual(len(output), 2)
-        self.assertTrue(self.user.username in output[0])
-        self.assertTrue('Conversations: 3' in output[1])
+        self.assertEqual(output[0], 'Available migrations:')
+        self.assertEqual(output[2], '  migrate-models:')
+        self.assertEqual(output[4:6], [
+            '    Load and re-save all conversations, triggering any pending'
+            ' model',
+            '    migrators in the process.',
+        ])
+        self.assertEqual(output[7], '  separate-tag-batches:')
+
+    def test_migrate_models_dry_run(self):
+        self.handle_command(migration_name='migrate-models', dry_run=True)
+        output = self.command.stdout.getvalue().strip().split('\n')
+        self.assertEqual(len(output), 5)
+        self.assertEqual(output[0], 'Test User <username> [test-0-user]')
+        self.assertEqual(output[1], '  Migrating 3 of 3 conversations ...')
         for conv in self.convs:
             # If we can load the old model, the data hasn't been migrated.
             loaded_conv = self.old_conv_model.load(conv.key)
             self.assertEqual(conv.subject, loaded_conv.subject)
 
-    def test_migrate(self):
-        self.command.handle(migrate=True)
+    def test_migrate_models(self):
+        self.handle_command(migration_name='migrate-models')
         output = self.command.stdout.getvalue().strip().split('\n')
-        self.assertEqual(len(output), 8)
-        self.assertTrue(self.user.username in output[0])
-        self.assertTrue('Conversations: 3' in output[1])
-        extracted_keys = set(line.split(': ')[1]
-                             for line in output[2:] if 'migrated' not in line)
+        self.assertEqual(len(output), 5)
+        self.assertEqual(output[0], 'Test User <username> [test-0-user]')
+        self.assertEqual(output[1], '  Migrating 3 of 3 conversations ...')
+        extracted_keys = set(line.split()[2]
+                             for line in output[2:])
         self.assertEqual(extracted_keys, set(c.key for c in self.convs))
         for conv in self.convs:
             # If the data has been migrated, we can't load the old model.
