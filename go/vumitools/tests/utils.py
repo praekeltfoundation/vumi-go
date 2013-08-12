@@ -293,7 +293,9 @@ class GoRouterWorkerTestMixin(GoWorkerTestMixin):
             self._persist_redis_managers.append(worker.vumi_api.redis)
         returnValue(worker)
 
-    def setup_router(self, config, **kw):
+    def setup_router(self, config, started=True, **kw):
+        if started:
+            kw['status'] = u'running'
         return self.create_router(config=config, **kw)
 
     def create_router(self, **kw):
