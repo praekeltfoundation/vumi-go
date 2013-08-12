@@ -7,6 +7,7 @@ from vumi.worker import BaseWorker
 from vumi.application import ApplicationWorker
 from vumi.blinkenlights.metrics import MetricManager, Metric, MAX
 from vumi.config import IConfigData, ConfigText, ConfigDict
+from vumi.connectors import IgnoreMessage
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.utils import MessageMetadataHelper
@@ -366,6 +367,11 @@ class GoWorkerMixin(object):
 
 class GoApplicationMixin(GoWorkerMixin):
     def get_config_for_conversation(self, conversation):
+        # If the conversation isn't running, we want to ignore the message
+        # instead of getting the config.
+        if not conversation.running():
+            raise IgnoreMessage(
+                "Conversation '%s' not running." % (conversation.key,))
         config_data = GoApplicationConfigData(self.config, conversation)
         return self.CONFIG_CLASS(config_data)
 
@@ -382,6 +388,10 @@ class GoApplicationMixin(GoWorkerMixin):
 
 class GoRouterMixin(GoWorkerMixin):
     def get_config_for_router(self, router):
+        # If the router isn't running, we want to ignore the message instead of
+        # getting the config.
+        if not router.running():
+            raise IgnoreMessage("Router '%s' not running." % (router.key,))
         config_data = GoApplicationConfigData(self.config, router)
         return self.CONFIG_CLASS(config_data)
 
@@ -472,9 +482,6 @@ class GoRouterWorker(GoRouterMixin, BaseWorker):
         raise NotImplementedError()
 
     def handle_event(self, config, event, conn_name):
-        if not config.get_conversation().running():
-            log.debug("Ignoring event for stopped router: %s" % (event,))
-            return
         log.debug("Handling event: %s" % (event,))
         # To avoid circular import.
         from go.vumitools.routing import RoutingMetadata

@@ -47,7 +47,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,
                            from_addr=u'+27831234567{0}',
-                           config={}):
+                           config={}, started=False):
         user_api = self.user_api
         group = yield user_api.contact_store.new_group(u'test group')
 
@@ -59,6 +59,8 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         conversation = yield self.create_conversation(
             delivery_tag_pool=u'pool', delivery_class=u'sms',
             delivery_tag=u'tag1', config=config)
+        if started:
+            conversation.set_status_started()
         conversation.add_group(group)
         yield conversation.save()
         returnValue(conversation)
@@ -133,14 +135,14 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_conversation_for_api(self):
-        conversation = yield self.setup_conversation()
+        conversation = yield self.setup_conversation(started=True)
         dummy_api = self.mk_dummy_api(conversation)
         self.assertEqual(self.app.conversation_for_api(dummy_api),
                          conversation)
 
     @inlineCallbacks
     def test_user_api_for_api(self):
-        conversation = yield self.setup_conversation()
+        conversation = yield self.setup_conversation(started=True)
         dummy_api = self.mk_dummy_api(conversation)
         user_api = self.app.user_api_for_api(dummy_api)
         self.assertEqual(user_api.user_account_key,
