@@ -19,7 +19,7 @@ from vumi.worker import BaseWorker
 
 from go.api.go_api.api_types import (
     CampaignType, ConversationType, ChannelType, RouterType,
-    RoutingEntryType, RoutingType)
+    RoutingEntryType, RoutingType, EndpointType)
 from go.api.go_api.action_dispatcher import (
     ConversationSubhandler, RouterSubhandler)
 from go.api.go_api.auth import GoUserRealm, GoUserAuthSessionWrapper
@@ -33,6 +33,7 @@ class InvalidRoutingTable(GoApiError):
 
 
 class GoApiServer(JSONRPC, GoApiSubHandler):
+
     def __init__(self, user_account_key, vumi_api):
         JSONRPC.__init__(self)
         GoApiSubHandler.__init__(self, user_account_key, vumi_api)
@@ -69,11 +70,12 @@ class GoApiServer(JSONRPC, GoApiSubHandler):
     def _routing_entries(self, user_api):
         def format_routing_entries(routing_table):
             routing_table = RoutingTableHelper(routing_table)
-            return [RoutingEntryType.format_entry(
-                source_uuid=u"%s:%s" % (src_conn, src_endp),
-                target_uuid=u"%s:%s" % (dst_conn, dst_endp))
+            return [
+                RoutingEntryType.format_entry((src_conn, src_endp),
+                                              (dst_conn, dst_endp))
                 for src_conn, src_endp, dst_conn, dst_endp
-                in routing_table.entries()]
+                in routing_table.entries()
+            ]
 
         d = user_api.get_routing_table()
         d.addCallback(format_routing_entries)
@@ -216,8 +218,10 @@ class GoApiServer(JSONRPC, GoApiSubHandler):
             rt_helper = RoutingTableHelper(routing_table)
             for entry in routing_entries:
                 source, target = entry['source'], entry['target']
-                src_conn, _, src_endp = source['uuid'].rpartition(":")
-                dst_conn, _, dst_endp = target['uuid'].rpartition(":")
+                src_conn, src_endp = EndpointType.parse_uuid(
+                    source['uuid'])
+                dst_conn, dst_endp = EndpointType.parse_uuid(
+                    target['uuid'])
                 rt_helper.add_entry(src_conn, src_endp, dst_conn, dst_endp)
 
             d = user_api.get_user_account()
