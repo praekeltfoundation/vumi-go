@@ -190,6 +190,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         old_conv = self.user_api.conversation_store.new_conversation(
             u'jsbox', u'Dummy Jsbox', u'Dummy Description',
             {"jsbox_app_config": app_config}, u"dummy-batch")
+        self.assertEqual(sorted(old_conv.extra_endpoints), [])
         output = self.handle_command(migration_name='fix-jsbox-endpoints')
         self.assertEqual(output, [
             'Test User <username> [test-0-user]',
