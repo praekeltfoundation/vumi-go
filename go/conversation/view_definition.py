@@ -246,8 +246,6 @@ class EditConversationDetailView(ConversationTemplateView):
         #       internal `c` object's attributes.
         conversation.c.name = form.cleaned_data['name']
         conversation.c.description = form.cleaned_data['description']
-        conversation.c.extra_endpoints = self.view_def.get_endpoints(
-            conversation.config)
 
         conversation.save()
 
@@ -332,6 +330,8 @@ class EditConversationView(ConversationTemplateView):
                 return self._render_forms(request, conversation, edit_forms)
             config[key] = self.process_form(edit_form)
         conversation.set_config(config)
+        conversation.c.extra_endpoints = self.view_def.get_endpoints(config)
+
         conversation.save()
 
 
