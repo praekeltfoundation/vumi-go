@@ -15,4 +15,15 @@ class ConversationDefinition(ConversationDefinitionBase):
     actions = (ViewLogsAction,)
 
     def configured_endpoints(self, config):
-        return []
+        # TODO: make jsbox apps define these explicitly and
+        #       update the outbound resource to check and
+        #       complain if a jsbox app sends on an endpoint
+        #       it hasn't defined.
+        app_config = config.get("jsbox_app_config", {})
+        sandbox_config = app_config.get("config", {})
+        sms_tag = sandbox_config.get("sms_tag")
+        try:
+            pool, tag = sms_tag
+        except Exception:
+            return []
+        return ["%s:%s" % (pool, tag)]
