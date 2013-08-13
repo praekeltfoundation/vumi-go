@@ -162,8 +162,8 @@ class Command(BaseCommand):
     def handle_user(self, user, migrator):
         user_api = vumi_api_for_user(user)
         all_keys = user_api.conversation_store.list_conversations()
-        conversations = [user_api.get_wrapped_conversation(k)
-                         for k in all_keys]
+        conversations = (user_api.get_wrapped_conversation(k)
+                         for k in all_keys)
         conversations = [c for c in conversations
                          if migrator.applies_to(user_api, c)]
         self.outln(
