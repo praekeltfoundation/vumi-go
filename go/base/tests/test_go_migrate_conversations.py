@@ -112,7 +112,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
             loaded_conv = self.user_api.get_wrapped_conversation(conv.key)
             self.assertEqual(conv.subject, loaded_conv.name)
 
-    def setup_separate_tag_batches(self):
+    def setup_fix_batches(self):
         mdb = self.user_api.api.mdb
         tag = (u'pool', u'tag')
         batch1 = mdb.batch_start(tags=[tag])
@@ -131,7 +131,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
 
         return [conv1, conv2]
 
-    def test_separate_tag_batches(self):
+    def test_fix_batches(self):
         conv1, conv2 = self.setup_separate_tag_batches()
         [old_batch] = conv1.batches.keys()
         output = self.handle_command(migration_name='fix-batches')
