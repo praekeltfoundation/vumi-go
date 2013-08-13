@@ -33,6 +33,9 @@ class EndpointType(Dict):
             `<connector-id>:<endpoint-name>`.
     * name: Name of the endpoint, e.g. 'default'.
     """
+
+    ENDPOINT_SEP = "::"
+
     def __init__(self, *args, **kw):
         kw['required_fields'] = {
             'uuid': Unicode(),
@@ -41,7 +44,17 @@ class EndpointType(Dict):
         super(EndpointType, self).__init__(*args, **kw)
 
     @classmethod
-    def format_endpoint(cls, uuid, name):
+    def format_uuid(cls, conn, endpoint):
+        return "%s%s%s" % (conn, cls.ENDPOINT_SEP, endpoint)
+
+    @classmethod
+    def parse_uuid(cls, uuid):
+        conn, _, endpoint = uuid.rpartition(cls.ENDPOINT_SEP)
+        return conn, endpoint
+
+    @classmethod
+    def format_endpoint(cls, conn, endpoint, name):
+        uuid = cls.format_uuid(conn, endpoint)
         return {'uuid': uuid, 'name': name}
 
 
@@ -78,7 +91,7 @@ class ConversationType(Dict):
             'description': conv.description,
             'endpoints': [
                 EndpointType.format_endpoint(
-                    uuid=u"%s:%s" % (conn, endpoint), name=endpoint)
+                    conn, endpoint, name=endpoint)
                 for endpoint in [u'default'] + list(conv.extra_endpoints)
             ],
         }
@@ -118,7 +131,7 @@ class ChannelType(Dict):
                 pool.replace('_', ' ').title(), tagname),
             'endpoints': [
                 EndpointType.format_endpoint(
-                    uuid=u"%s:%s" % (conn, u'default'), name=u"default")
+                    conn, u'default', name=u"default")
             ]
         }
 
@@ -168,12 +181,12 @@ class RouterType(Dict):
             'description': router.description,
             'channel_endpoints': [
                 EndpointType.format_endpoint(
-                    uuid=u"%s:%s" % (in_conn, endpoint), name=endpoint)
+                    in_conn, endpoint, name=endpoint)
                 for endpoint in [u'default'] + list(channel_endpoints)
             ],
             'conversation_endpoints': [
                 EndpointType.format_endpoint(
-                    uuid=u"%s:%s" % (out_conn, endpoint), name=endpoint)
+                    out_conn, endpoint, name=endpoint)
                 for endpoint in [u'default'] + list(conversation_endpoints)
             ],
         }
@@ -198,7 +211,11 @@ class RoutingEntryType(Dict):
         super(RoutingEntryType, self).__init__(*args, **kw)
 
     @classmethod
-    def format_entry(cls, source_uuid, target_uuid):
+    def format_entry(cls, source, target):
+        src_conn, src_endp = source
+        dst_conn, dst_endp = target
+        source_uuid = EndpointType.format_uuid(src_conn, src_endp)
+        target_uuid = EndpointType.format_uuid(dst_conn, dst_endp)
         return {
             'source': {'uuid': source_uuid},
             'target': {'uuid': target_uuid},
