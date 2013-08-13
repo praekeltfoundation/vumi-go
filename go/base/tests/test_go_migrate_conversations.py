@@ -63,7 +63,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
             ' model',
             '    migrators in the process.',
         ])
-        self.assertEqual(output[7], '  separate-tag-batches:')
+        self.assertEqual(output[7], '  fix-batches:')
 
     def test_unknown_migration(self):
         output = self.handle_command(migration_name='unknown-migration')
@@ -132,7 +132,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
     def test_separate_tag_batches(self):
         conv1, conv2 = self.setup_separate_tag_batches()
         [old_batch] = conv1.batches.keys()
-        output = self.handle_command(migration_name='separate-tag-batches')
+        output = self.handle_command(migration_name='fix-batches')
         self.assert_no_stderr()
         self.assertEqual(output, [
             'Test User <username> [test-0-user]',

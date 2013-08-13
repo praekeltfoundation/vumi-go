@@ -58,21 +58,24 @@ class UpdateModels(Migration):
         conv.save()
 
 
-class SeparateTagBatches(Migration):
-    name = "separate-tag-batches"
+class FixBatches(Migration):
+    name = "fix-batches"
     help_text = (
-        "Look for active conversations which have a tag and where that tag's"
-        " current batch is the same as the conversation's batch. Copy this"
-        " batch to a new batch and assign the new batch to the"
-        " conversation.")
+        "Look for conversations which have a batch with a tag or don't"
+        " have exactly one batch. Create a new batch for such conversations"
+        " and copy the messages from all conversation batches to the new"
+        " batch")
 
     def applies_to(self, user_api, conv):
-        tag = (conv.delivery_tag_pool, conv.delivery_tag)
-        if not conv.active() or None in tag:
-            return False
+        mdb = user_api.api.mdb
         conv_batches = conv.batches.keys()
-        tag_info = user_api.api.mdb.get_tag_info(tag)
-        return tag_info.current_batch.key in conv_batches
+        if len(conv_batches) != 1:
+            return True
+        for batch_id in conv_batches:
+            tag_keys = mdb.current_tags.index_keys('current_batch', batch_id)
+            if tag_keys:
+                return True
+        return False
 
     def _copy_msgs(self, mdb, old_batch, new_batch):
         for key in mdb.batch_outbound_keys(old_batch):
