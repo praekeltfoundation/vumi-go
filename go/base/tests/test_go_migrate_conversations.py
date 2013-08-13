@@ -37,6 +37,11 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
     def assert_no_stderr(self):
         self.assert_stderr_equals('')
 
+    def assert_conversations_migrated(self, conversations, output):
+        extracted_keys = set(line.split()[2] for line in output
+                             if 'Migrating conversation:' in line)
+        self.assertEqual(extracted_keys, set(c.key for c in conversations))
+
     def mkoldconv(self, **kwargs):
         conversation_id = uuid4().get_hex()
         groups = kwargs.pop('groups', [])
@@ -98,9 +103,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(len(output), 5)
         self.assertEqual(output[0], 'Test User <username> [test-0-user]')
         self.assertEqual(output[1], '  Migrating 3 of 3 conversations ...')
-        extracted_keys = set(line.split()[2]
-                             for line in output[2:])
-        self.assertEqual(extracted_keys, set(c.key for c in convs))
+        self.assert_conversations_migrated(convs, output)
         for conv in convs:
             # If the data has been migrated, we can't load the old model.
             try:
@@ -115,39 +118,63 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
     def setup_fix_batches(self):
         mdb = self.user_api.api.mdb
         tag = (u'pool', u'tag')
-        batch1 = mdb.batch_start(tags=[tag])
 
+        # conversation with single batch that has a tag
+        batch1 = mdb.batch_start(tags=[tag])
         conv1 = self.user_api.conversation_store.new_conversation(
             u'dummy_type', u'Dummy Conv 1', u'Dummy Description',
             {}, batch1)
+        # conversation with a single batch without a tag
+        batch2 = mdb.batch_start()
         conv2 = self.user_api.conversation_store.new_conversation(
             u'dummy_type', u'Dummy Conv 2', u'Dummy Description',
-            {}, u'batch-2')
+            {}, batch2)
+        # conversation with multiple batches
+        batch31 = mdb.batch_start()
+        batch32 = mdb.batch_start()
+        conv3 = self.user_api.conversation_store.new_conversation(
+            u'dummy_type', u'Dummy Conv 2', u'Dummy Description',
+            {}, batch31)
+        conv3.batches.add_key(batch32)
+        conv3.save()
 
-        msg1 = self.mkmsg_in()
-        mdb.add_inbound_message(msg1, batch_id=batch1)
-        msg2 = self.mkmsg_out()
-        mdb.add_outbound_message(msg2, batch_id=batch1)
+        for i, batch_id in enumerate([batch1, batch2, batch31, batch32]):
+            msg1 = self.mkmsg_in(message_id=u"msg-%d" % i)
+            mdb.add_inbound_message(msg1, batch_id=batch_id)
+            msg2 = self.mkmsg_out(message_id=u"msg-%d" % i)
+            mdb.add_outbound_message(msg2, batch_id=batch_id)
 
-        return [conv1, conv2]
+        return [conv1, conv2, conv3]
+
+    def assert_batches_fixed(self, old_conv):
+        old_batches = old_conv.batches.keys()
+        new_conv = self.user_api.conversation_store.get_conversation_by_key(
+            old_conv.key)
+        [new_batch] = new_conv.batches.keys()
+        self.assertTrue(new_batch not in old_batches)
+
+        mdb = self.user_api.api.mdb
+        old_outbound, old_inbound = set(), set()
+        for batch in old_batches:
+            old_outbound.update(mdb.batch_outbound_keys(batch))
+            old_inbound.update(mdb.batch_inbound_keys(batch))
+
+        self.assertEqual(set(mdb.batch_outbound_keys(new_batch)),
+                         old_outbound)
+        self.assertEqual(set(mdb.batch_inbound_keys(new_batch)),
+                         old_inbound)
 
     def test_fix_batches(self):
-        conv1, conv2 = self.setup_fix_batches()
-        [old_batch] = conv1.batches.keys()
+        conv1, conv2, conv3 = self.setup_fix_batches()
+        [old_batch_1] = conv1.batches.keys()
+        [old_batch_31, old_batch_32] = conv3.batches.keys()
         output = self.handle_command(migration_name='fix-batches')
         self.assert_no_stderr()
-        self.assertEqual(output, [
+        self.assertEqual(output[:2], [
             'Test User <username> [test-0-user]',
-            '  Migrating 1 of 2 conversations ...',
-            '    Migrating conversation: %s [Dummy Conv 1] ... done.'
-            % conv1.key,
+            '  Migrating 2 of 3 conversations ...',
         ])
-        new_conv1 = self.user_api.conversation_store.get_conversation_by_key(
-            conv1.key)
-        [new_batch] = new_conv1.batches.keys()
-        self.assertNotEqual(new_batch, old_batch)
-        mdb = self.user_api.api.mdb
-        self.assertEqual(mdb.batch_outbound_keys(new_batch),
-                         mdb.batch_outbound_keys(old_batch))
-        self.assertEqual(mdb.batch_inbound_keys(new_batch),
-                         mdb.batch_inbound_keys(old_batch))
+        self.assert_conversations_migrated([conv1, conv3], output)
+
+        self.assert_batches_fixed(conv1)
+        self.assert_batches_fixed(conv3)
