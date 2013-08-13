@@ -13,3 +13,6 @@ class ConversationDefinition(ConversationDefinitionBase):
     conversation_display_name = 'Javascript App'
 
     actions = (ViewLogsAction,)
+
+    def configured_endpoints(self, config):
+        return []
