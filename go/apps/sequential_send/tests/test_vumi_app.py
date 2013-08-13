@@ -128,6 +128,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         conv = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
         yield self.start_conversation(conv)
+        conv = yield self.user_api.get_wrapped_conversation(conv.key)
 
         yield self._stub_out_async(conv)
 
@@ -145,6 +146,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
         yield self.start_conversation(conv)
         yield conv.end_conversation()
+        conv = yield self.user_api.get_wrapped_conversation(conv.key)
 
         yield self._stub_out_async(conv)
 
@@ -162,6 +164,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         conv = yield self.create_conversation(config={'schedule': {
             'recurring': 'day_of_month', 'time': '12:00:00', 'days': '1, 5'}})
         yield self.start_conversation(conv)
+        conv = yield self.user_api.get_wrapped_conversation(conv.key)
 
         yield self._stub_out_async(conv)
 
@@ -186,10 +189,12 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         conv1 = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
         yield self.start_conversation(conv1)
+        conv1 = yield self.user_api.get_wrapped_conversation(conv1.key)
 
         conv2 = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
         yield self.start_conversation(conv2)
+        conv2 = yield self.user_api.get_wrapped_conversation(conv2.key)
 
         yield self._stub_out_async(conv1, conv2)
 
@@ -242,6 +247,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
                 })
         conv.add_group(group)
         yield self.start_conversation(conv)
+        conv = yield self.user_api.get_wrapped_conversation(conv.key)
 
         # Send to two contacts.
         yield self.app.send_scheduled_messages(conv)
