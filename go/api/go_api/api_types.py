@@ -34,7 +34,7 @@ class EndpointType(Dict):
     * name: Name of the endpoint, e.g. 'default'.
     """
 
-    ENDPOINT_SEP = "::"
+    ENDPOINT_SEP = u"::"
 
     def __init__(self, *args, **kw):
         kw['required_fields'] = {
