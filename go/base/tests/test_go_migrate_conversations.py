@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import json
 from uuid import uuid4
 from StringIO import StringIO
 from datetime import datetime
@@ -176,3 +177,38 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
 
     def test_fix_batches_on_conv_with_zero_batches(self):
         self.check_fix_batches(tags=(), num_batches=0, migrated=True)
+
+    def test_fix_jsbox_endpoints(self):
+        app_config = {
+            "config": {
+                "value": json.dumps({
+                    "sms_tag": ["foo", "bar"],
+                }),
+                "source_url": u"",
+            }
+        }
+        old_conv = self.user_api.conversation_store.new_conversation(
+            u'jsbox', u'Dummy Jsbox', u'Dummy Description',
+            {"jsbox_app_config": app_config}, u"dummy-batch")
+        self.assertEqual(sorted(old_conv.extra_endpoints), [])
+        output = self.handle_command(migration_name='fix-jsbox-endpoints')
+        self.assertEqual(output, [
+            'Test User <username> [test-0-user]',
+            '  Migrating 1 of 1 conversations ...',
+            '    Migrating conversation: %s [Dummy Jsbox] ... done.'
+            % (old_conv.key),
+        ])
+        new_conv = self.user_api.conversation_store.get_conversation_by_key(
+            old_conv.key)
+        self.assertEqual(sorted(new_conv.extra_endpoints),
+                         ["foo:bar"])
+
+    def test_fix_jsbox_endpoints_skips_non_jsbox(self):
+        self.user_api.conversation_store.new_conversation(
+            u'dummy_type', u'Dummy Conv 1', u'Dummy Description',
+            {}, u"dummy-batch")
+        output = self.handle_command(migration_name='fix-jsbox-endpoints')
+        self.assertEqual(output, [
+            'Test User <username> [test-0-user]',
+            '  Migrating 0 of 1 conversations ...',
+        ])
