@@ -112,15 +112,13 @@ function DialogueStateCreator() {
             delivery_class: msg.helper_metadata.delivery_class
         });
         
-        p.then(function(reply) {
+        return p.then(function(reply) {
             if (!reply.success) { return; }
 
             return self.api_request(
               'contacts.update_extras',
               {key: reply.contact.key, fields: fields});
         });
-
-        return p;
     };
 
     self.choice_state_creator = function(state_name, im, state_description) {
