@@ -133,10 +133,16 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         batch31 = mdb.batch_start()
         batch32 = mdb.batch_start()
         conv3 = self.user_api.conversation_store.new_conversation(
-            u'dummy_type', u'Dummy Conv 2', u'Dummy Description',
+            u'dummy_type', u'Dummy Conv 3', u'Dummy Description',
             {}, batch31)
         conv3.batches.add_key(batch32)
         conv3.save()
+        # conversation with no batches
+        conv4 = self.user_api.conversation_store.new_conversation(
+            u'dummy_type', u'Dummy Conv 4', u'Dummy Description',
+            {}, u"batch-to-be-removed")
+        conv4.batches.clear()
+        conv4.save()
 
         for i, batch_id in enumerate([batch1, batch2, batch31, batch32]):
             msg1 = self.mkmsg_in(message_id=u"msg-%d" % i)
@@ -144,7 +150,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
             msg2 = self.mkmsg_out(message_id=u"msg-%d" % i)
             mdb.add_outbound_message(msg2, batch_id=batch_id)
 
-        return [conv1, conv2, conv3]
+        return [conv1, conv2, conv3, conv4]
 
     def assert_batches_fixed(self, old_conv):
         old_batches = old_conv.batches.keys()
@@ -165,16 +171,17 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
                          old_inbound)
 
     def test_fix_batches(self):
-        conv1, conv2, conv3 = self.setup_fix_batches()
+        conv1, conv2, conv3, conv4 = self.setup_fix_batches()
         [old_batch_1] = conv1.batches.keys()
         [old_batch_31, old_batch_32] = conv3.batches.keys()
         output = self.handle_command(migration_name='fix-batches')
         self.assert_no_stderr()
         self.assertEqual(output[:2], [
             'Test User <username> [test-0-user]',
-            '  Migrating 2 of 3 conversations ...',
+            '  Migrating 3 of 4 conversations ...',
         ])
-        self.assert_conversations_migrated([conv1, conv3], output)
+        self.assert_conversations_migrated([conv1, conv3, conv4], output)
 
         self.assert_batches_fixed(conv1)
         self.assert_batches_fixed(conv3)
+        self.assert_batches_fixed(conv4)
