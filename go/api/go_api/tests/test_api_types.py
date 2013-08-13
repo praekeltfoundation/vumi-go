@@ -46,6 +46,14 @@ class EndpointTypeTestCase(BaseTypeTest):
     def test_basic_checks(self):
         self.basic_checks(EndpointType())
 
+    def test_format_uuid(self):
+        uuid = EndpointType.format_uuid('foo', 'bar')
+        self.assertEqual(uuid, u'foo::bar')
+
+    def test_parse_uuid(self):
+        self.assertEqual(EndpointType.parse_uuid('foo::bar::baz'),
+                         ('foo::bar', 'baz'))
+
 
 class ConversationTypeTestCase(BaseTypeTest):
     DEFAULTS = {
