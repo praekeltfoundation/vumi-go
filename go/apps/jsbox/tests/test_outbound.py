@@ -25,10 +25,8 @@ class StubbedAppWorker(DummyAppWorker):
 
     def __init__(self):
         super(StubbedAppWorker, self).__init__()
-        self.user_api = Mock()
-        self.user_api.list_endpoints = Mock(
-            return_value=set([('pool1', '1234'), ('pool2', '1234')]))
-        self.conversation = Mock()
+        self.conversation = Mock(
+            extra_endpoints=set(["pool1:1234", "pool2:1234"]))
         self.send_to = Mock(return_value=succeed(None))
         self.reply_to = Mock(return_value=succeed(None))
         self.reply_to_group = Mock(return_value=succeed(None))

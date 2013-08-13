@@ -77,7 +77,6 @@ class ConversationType(Dict):
             'name': conv.name,
             'description': conv.description,
             'endpoints': [
-                # TODO: add additional endpoints once we know how to list them
                 EndpointType.format_endpoint(
                     uuid=u"%s:%s" % (conn, endpoint), name=endpoint)
                 for endpoint in [u'default'] + list(conv.extra_endpoints)
