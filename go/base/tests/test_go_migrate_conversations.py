@@ -119,7 +119,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
 
         conv1 = self.user_api.conversation_store.new_conversation(
             u'dummy_type', u'Dummy Conv 1', u'Dummy Description',
-            {}, batch1, delivery_tag_pool=tag[0], delivery_tag=tag[1])
+            {}, batch1)
         conv2 = self.user_api.conversation_store.new_conversation(
             u'dummy_type', u'Dummy Conv 2', u'Dummy Description',
             {}, u'batch-2')
@@ -132,7 +132,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         return [conv1, conv2]
 
     def test_fix_batches(self):
-        conv1, conv2 = self.setup_separate_tag_batches()
+        conv1, conv2 = self.setup_fix_batches()
         [old_batch] = conv1.batches.keys()
         output = self.handle_command(migration_name='fix-batches')
         self.assert_no_stderr()
