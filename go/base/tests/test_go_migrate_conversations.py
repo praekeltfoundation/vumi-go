@@ -29,8 +29,11 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         output = self.command.stdout.getvalue().strip().split('\n')
         return output
 
+    def assert_stderr_equals(self, expected_value):
+        self.assertEqual(self.command.stderr.getvalue(), expected_value)
+
     def assert_no_stderr(self):
-        self.assertEqual(self.command.stderr.getvalue(), '')
+        self.assert_stderr_equals('')
 
     def mkoldconv(self, **kwargs):
         conversation_id = uuid4().get_hex()
@@ -61,6 +64,11 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
             '    migrators in the process.',
         ])
         self.assertEqual(output[7], '  separate-tag-batches:')
+
+    def test_unknown_migration(self):
+        output = self.handle_command(migration_name='unknown-migration')
+        self.assert_stderr_equals('Unknown migration unknown-migration.\n')
+        self.assertEqual(output, [''])
 
     def setup_migrate_models(self):
         conv1 = self.mkoldconv(subject=u'Old 1')
