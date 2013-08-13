@@ -115,42 +115,25 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
             loaded_conv = self.user_api.get_wrapped_conversation(conv.key)
             self.assertEqual(conv.subject, loaded_conv.name)
 
-    def setup_fix_batches(self):
+    def setup_fix_batches(self, tags=(), num_batches=1):
         mdb = self.user_api.api.mdb
-        tag = (u'pool', u'tag')
+        batches = [mdb.batch_start(tags=tags) for i in range(num_batches)]
 
-        # conversation with single batch that has a tag
-        batch1 = mdb.batch_start(tags=[tag])
-        conv1 = self.user_api.conversation_store.new_conversation(
+        conv = self.user_api.conversation_store.new_conversation(
             u'dummy_type', u'Dummy Conv 1', u'Dummy Description',
-            {}, batch1)
-        # conversation with a single batch without a tag
-        batch2 = mdb.batch_start()
-        conv2 = self.user_api.conversation_store.new_conversation(
-            u'dummy_type', u'Dummy Conv 2', u'Dummy Description',
-            {}, batch2)
-        # conversation with multiple batches
-        batch31 = mdb.batch_start()
-        batch32 = mdb.batch_start()
-        conv3 = self.user_api.conversation_store.new_conversation(
-            u'dummy_type', u'Dummy Conv 3', u'Dummy Description',
-            {}, batch31)
-        conv3.batches.add_key(batch32)
-        conv3.save()
-        # conversation with no batches
-        conv4 = self.user_api.conversation_store.new_conversation(
-            u'dummy_type', u'Dummy Conv 4', u'Dummy Description',
-            {}, u"batch-to-be-removed")
-        conv4.batches.clear()
-        conv4.save()
+            {}, u"dummy-batch")
+        conv.batches.clear()
 
-        for i, batch_id in enumerate([batch1, batch2, batch31, batch32]):
+        for i, batch_id in enumerate(batches):
+            conv.batches.add_key(batch_id)
             msg1 = self.mkmsg_in(message_id=u"msg-%d" % i)
             mdb.add_inbound_message(msg1, batch_id=batch_id)
             msg2 = self.mkmsg_out(message_id=u"msg-%d" % i)
             mdb.add_outbound_message(msg2, batch_id=batch_id)
 
-        return [conv1, conv2, conv3, conv4]
+        conv.save()
+
+        return conv
 
     def assert_batches_fixed(self, old_conv):
         old_batches = old_conv.batches.keys()
@@ -170,18 +153,28 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(set(mdb.batch_inbound_keys(new_batch)),
                          old_inbound)
 
-    def test_fix_batches(self):
-        conv1, conv2, conv3, conv4 = self.setup_fix_batches()
-        [old_batch_1] = conv1.batches.keys()
-        [old_batch_31, old_batch_32] = conv3.batches.keys()
+    def check_fix_batches(self, tags, num_batches, migrated):
+        conv = self.setup_fix_batches(tags, num_batches)
         output = self.handle_command(migration_name='fix-batches')
         self.assert_no_stderr()
         self.assertEqual(output[:2], [
             'Test User <username> [test-0-user]',
-            '  Migrating 3 of 4 conversations ...',
+            '  Migrating %d of 1 conversations ...'
+            % (1 if migrated else 0)
         ])
-        self.assert_conversations_migrated([conv1, conv3, conv4], output)
+        self.assert_conversations_migrated([conv] if migrated else [], output)
+        if migrated:
+            self.assert_batches_fixed(conv)
 
-        self.assert_batches_fixed(conv1)
-        self.assert_batches_fixed(conv3)
-        self.assert_batches_fixed(conv4)
+    def test_fix_batches_on_conv_with_batch_with_tag(self):
+        self.check_fix_batches(tags=[(u"pool", u"tag")],
+                               num_batches=1, migrated=True)
+
+    def test_fix_batches_on_conv_with_single_batch_with_no_tag(self):
+        self.check_fix_batches(tags=(), num_batches=1, migrated=False)
+
+    def test_fix_batches_on_conv_with_multiple_batches(self):
+        self.check_fix_batches(tags=(), num_batches=2, migrated=True)
+
+    def test_fix_batches_on_conv_with_zero_batches(self):
+        self.check_fix_batches(tags=(), num_batches=0, migrated=True)
