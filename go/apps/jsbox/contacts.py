@@ -172,9 +172,9 @@ class ContactsResource(SandboxResource):
         Example:
         .. code-block:: javascript
             api.request(
-                'contacts.update',
-                {key: '123abc',
-                 fields: {surname: 'Jones', extra: {location: 'CPT'}}},
+                'contacts.update', {
+                     key: 'f953710a2472447591bd59e906dc2c26',
+                     fields: {surname: 'Jones', extra: {location: 'CPT'}}},
                 function(reply) { api.log_info(reply.success); });
         """
         try:
@@ -256,8 +256,9 @@ class ContactsResource(SandboxResource):
         Example:
         .. code-block:: javascript
             api.request(
-                'contacts.update_extras',
-                {fields: {location: 'CPT', beer: 'Whale Tail Ale'}},
+                'contacts.update_extras', {
+                    key: f953710a2472447591bd59e906dc2c26',
+                    fields: {location: 'CPT', beer: 'Whale Tail Ale'}},
                 function(reply) { api.log_info(reply.success); });
         """
         return self._update_dynamic_fields('extra', api, command)
@@ -281,8 +282,9 @@ class ContactsResource(SandboxResource):
         Example:
         .. code-block:: javascript
             api.request(
-                'contacts.update_subscriptions',
-                {fields: {a: 'one', b: 'two'}},
+                'contacts.update_subscriptions', {
+                    key: f953710a2472447591bd59e906dc2c26',
+                    fields: {a: 'one', b: 'two'}},
                 function(reply) { api.log_info(reply.success); });
         """
         return self._update_dynamic_fields('subscription', api, command)
@@ -308,7 +310,7 @@ class ContactsResource(SandboxResource):
             api.request(
                 'contacts.new',
                 {contact: {surname: 'Jones', extra: {location: 'CPT'}}},
-                function(reply) { api.log_info(reply.key); });
+                function(reply) { api.log_info(reply.success); });
         """
         try:
             if not isinstance(command.get('contact'), dict):
@@ -360,7 +362,8 @@ class ContactsResource(SandboxResource):
                         'groups': ['group-a', 'group-b'],
                         'name': 'A Random'
                     }
-                }, function(reply) { api.log_info(reply.key); });
+                },
+                function(reply) { api.log_info(reply.success); });
         """
         try:
             if not isinstance(command.get('contact'), dict):

@@ -248,6 +248,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         self.assertEqual({
             'keyword_endpoint_mapping': {'foo': 'keyword_foo'},
         }, router.config)
+        self.assertTrue(router.running() or router.starting())
 
         [tag] = list(self.user_api.list_endpoints())
         self.assertEqual((u'longcode', u'default10001'), tag)
@@ -286,6 +287,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         self.assertEqual({
             'keyword_endpoint_mapping': {'default': 'keyword_default'},
         }, router.config)
+        self.assertTrue(router.running() or router.starting())
 
         [tag] = list(self.user_api.list_endpoints())
         self.assertEqual((u'longcode', u'default10001'), tag)

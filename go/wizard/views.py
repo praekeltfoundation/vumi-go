@@ -146,6 +146,9 @@ class WizardCreateView(BaseWizardView):
             config=config,
             extra_outbound_endpoints=view_def.get_outbound_endpoints(config),
         )
+        router_api = request.user_api.get_router_api(
+            router.router_type, router.key)
+        router_api.start_router()
         return endpoint, router
 
     def _setup_basic_routing(self, request, conv, tag):
