@@ -63,7 +63,7 @@ class SeparateTagBatches(Migration):
     help_text = (
         "Look for active conversations which have a tag and where that tag's"
         " current batch is the same as the conversation's batch. Copy this"
-        " this batch to a new batch and assign the new batch to the"
+        " batch to a new batch and assign the new batch to the"
         " conversation.")
 
     def applies_to(self, user_api, conv):
