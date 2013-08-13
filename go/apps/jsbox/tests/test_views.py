@@ -1,3 +1,4 @@
+import json
 import logging
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
@@ -33,22 +34,32 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
         conversation = response.context[0].get('conversation')
         self.assertEqual(conversation.name, self.TEST_CONVERSATION_NAME)
 
-    def test_edit_conversation(self):
+    def setup_and_save_conversation(self, app_config):
         self.setup_conversation()
         # render the form
         response = self.client.get(self.get_view_url('edit'))
         self.assertEqual(response.status_code, 200)
-        # post the form
-        response = self.client.post(self.get_view_url('edit'), {
+        # create the form data
+        form_data = {
             'jsbox-javascript': 'x = 1;',
             'jsbox-source_url': '',
             'jsbox-update_from_source': '0',
-            'jsbox_app_config-TOTAL_FORMS': '1',
+            'jsbox_app_config-TOTAL_FORMS': str(len(app_config)),
             'jsbox_app_config-INITIAL_FORMS': '0',
             'jsbox_app_config-MAX_NUM_FORMS': u''
-        })
+        }
+        for i, (key, cfg) in enumerate(app_config.items()):
+            form_data['jsbox_app_config-%d-key' % i] = key
+            form_data['jsbox_app_config-%d-value' % i] = cfg["value"]
+            form_data['jsbox_app_config-%d-source_url' % i] = cfg["source_url"]
+        # post the form
+        response = self.client.post(self.get_view_url('edit'), form_data)
         self.assertRedirects(response, self.get_view_url('show'))
         conversation = self.get_wrapped_conv()
+        return conversation
+
+    def test_edit_conversation(self):
+        conversation = self.setup_and_save_conversation({})
         self.assertEqual(conversation.config, {
             'jsbox': {
                     'javascript': 'x = 1;',
@@ -56,6 +67,26 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
             },
             'jsbox_app_config': {},
         })
+        self.assertEqual(list(conversation.extra_endpoints), [])
+
+    def test_edit_conversation_with_extra_endpoints(self):
+        app_config = {
+            "config": {
+                "value": json.dumps({
+                    "sms_tag": ["foo", "bar"],
+                }),
+                "source_url": u"",
+            }
+        }
+        conversation = self.setup_and_save_conversation(app_config)
+        self.assertEqual(conversation.config, {
+            'jsbox': {
+                    'javascript': 'x = 1;',
+                    'source_url': '',
+            },
+            'jsbox_app_config': app_config,
+        })
+        self.assertEqual(list(conversation.extra_endpoints), ['foo:bar'])
 
     @patch('requests.get')
     def test_cross_domain_xhr(self, mocked_get):

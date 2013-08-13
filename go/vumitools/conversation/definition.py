@@ -23,6 +23,9 @@ class ConversationDefinitionBase(object):
     def get_actions(self):
         return [action(self.conv) for action in self.actions]
 
+    def configured_endpoints(self, config):
+        return []
+
     def is_config_valid(self):
         raise NotImplementedError()
 
