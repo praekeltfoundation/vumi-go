@@ -95,6 +95,29 @@ class FixBatches(Migration):
         conv.save()
 
 
+class FixJsboxEndpoint(Migration):
+    name = "fix-jsbox-endpoints"
+    help_text = "Set extra endpoints for conversations of type jsbox."
+
+    def applies_to(self, user_api, conv):
+        return conv.conversation_type == u'jsbox'
+
+    def _extra_endpoints(self, conv):
+        # import definition locally so migrators don't rely on
+        # jsbox conversation
+        from go.apps.jsbox.definition import ConversationDefinition
+        conv_def = ConversationDefinition(conv)
+        endpoints = list(conv_def.extra_static_endpoints)
+        for endpoint in conv_def.configured_endpoints(conv.config):
+            if (endpoint != 'default') and (endpoint not in endpoints):
+                endpoints.append(endpoint)
+        return endpoints
+
+    def migrate(self, user_api, conv):
+        conv.c.extra_endpoints = self._extra_endpoints(conv)
+        conv.save()
+
+
 class Command(BaseCommand):
     help = """
     Find and migrate conversations for known accounts in Vumi Go.
