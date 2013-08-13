@@ -25,8 +25,7 @@ class ConversationDefinition(ConversationDefinitionBase):
         raw_js_config = app_config.get("config", {}).get("value", {})
         try:
             js_config = json.loads(raw_js_config)
-            sms_tag = js_config.get("sms_tag")
-            pool, tag = sms_tag
+            pool, tag = js_config.get("sms_tag")
         except Exception:
             return []
         return ["%s:%s" % (pool, tag)]
