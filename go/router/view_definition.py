@@ -48,7 +48,13 @@ class StartRouterView(RouterApiView):
     path_suffix = 'start/'
 
     def post(self, request, router):
-        raise NotImplementedError('TODO')
+        router_api = request.user_api.get_router_api(
+            router.router_type, router.key)
+        router_api.start_router()
+        messages.add_message(
+            request, messages.INFO, '%s started' % (
+                self.view_def.router_display_name,))
+        return self.redirect_to('show', router_key=router.key)
 
 
 class StopRouterView(RouterApiView):
@@ -56,7 +62,13 @@ class StopRouterView(RouterApiView):
     path_suffix = 'stop/'
 
     def post(self, request, router):
-        raise NotImplementedError('TODO')
+        router_api = request.user_api.get_router_api(
+            router.router_type, router.key)
+        router_api.stop_router()
+        messages.add_message(
+            request, messages.INFO, '%s stopped' % (
+                self.view_def.router_display_name,))
+        return self.redirect_to('show', router_key=router.key)
 
 
 class ArchiveRouterView(RouterApiView):
@@ -187,6 +199,8 @@ class RouterViewDefinitionBase(object):
 
     DEFAULT_ROUTER_VIEWS = (
         ShowRouterView,
+        StartRouterView,
+        StopRouterView,
         ArchiveRouterView,
     )
 
