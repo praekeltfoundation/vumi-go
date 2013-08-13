@@ -23,8 +23,10 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         self.command.stdout = StringIO()
         self.command.stderr = StringIO()
 
-    def handle_command(self, migration_name=None, list=False, dry_run=False):
-        self.command.handle(migration_name=migration_name, list=list,
+    def handle_command(self, migration_name=None, list_migrations=False,
+                       dry_run=False):
+        self.command.handle(migration_name=migration_name,
+                            list_migrations=list_migrations,
                             dry_run=dry_run)
         output = self.command.stdout.getvalue().strip().split('\n')
         return output
@@ -54,7 +56,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         return conversation.save()
 
     def test_list_migrators(self):
-        output = self.handle_command(list=True)
+        output = self.handle_command(list_migrations=True)
         self.assert_no_stderr()
         self.assertEqual(output[0], 'Available migrations:')
         self.assertEqual(output[2], '  migrate-models:')

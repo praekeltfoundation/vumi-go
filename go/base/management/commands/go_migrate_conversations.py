@@ -122,7 +122,8 @@ class Command(BaseCommand):
     args = "[optional username regex]"
     encoding = 'utf-8'
     option_list = BaseCommand.option_list + (
-        make_option('-l', '--list', action='store_true', dest='list',
+        make_option('-l', '--list', action='store_true',
+                    dest='list_migrations',
                     default=False, help='List available migrations.'),
         make_option('-m', '--migrate', dest='migration_name',
                     default=None, help='Actually perform migrations.'),
@@ -176,7 +177,7 @@ class Command(BaseCommand):
             self.outln(u' done.')
 
     def handle(self, *usernames, **options):
-        if options['list']:
+        if options['list_migrations']:
             self.handle_list()
             return
         migration_name = options['migration_name']
