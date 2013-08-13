@@ -64,7 +64,7 @@ class FixBatches(Migration):
         "Look for conversations which have a batch with a tag or don't"
         " have exactly one batch. Create a new batch for such conversations"
         " and copy the messages from all conversation batches to the new"
-        " batch")
+        " batch.")
 
     def applies_to(self, user_api, conv):
         mdb = user_api.api.mdb
