@@ -75,8 +75,8 @@ describe("choice states", function() {
             ),
             continue_session: false
         }).then(function() {
-          var contact = app.api.find_contact('ussd', '+2731234567');
-          assert.equal(contact['extras-message-1'], 'value-2');
+            var contact = app.api.find_contact('ussd', '+2731234567');
+            assert.equal(contact['extras-message-1'], 'value-2');
         }).done(done, done);
     });
 });
@@ -127,8 +127,8 @@ describe("freetext states", function() {
             ),
             continue_session: false
         }).then(function() {
-          var contact = app.api.find_contact('ussd', '+2731234567');
-          assert.equal(contact['extras-message-2'], 'Foo');
+            var contact = app.api.find_contact('ussd', '+2731234567');
+            assert.equal(contact['extras-message-2'], 'Foo');
         }).done(done, done);
     });
 });
