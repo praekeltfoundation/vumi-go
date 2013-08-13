@@ -85,7 +85,7 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
 
     def infer_delivery_class(self, msg):
         return {
-            'smpp': 'ussd',
+            'smpp': 'sms',
             'sms': 'sms',
             'ussd': 'ussd',
             'twitter': 'twitter',

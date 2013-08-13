@@ -128,7 +128,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
                 expected_delivery_class)
 
         check_inference_for(None, 'sms')
-        check_inference_for('smpp', 'ussd')
+        check_inference_for('smpp', 'sms')
         check_inference_for('sms', 'sms')
         check_inference_for('ussd', 'ussd')
         check_inference_for('twitter', 'twitter')
