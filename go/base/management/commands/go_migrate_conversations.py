@@ -36,7 +36,8 @@ class Migration(object):
         Should return True if this conversation requires migrating, False
         otherwise.
         """
-        return True
+        raise NotImplementedError("Migration %s is missing an implementation"
+                                  " of .applies_to()." % (self.name,))
 
     def migrate(self, user_api, conv):
         """Perform the migration."""
@@ -49,6 +50,9 @@ class UpdateModels(Migration):
     help_text = (
         "Load and re-save all conversations, triggering any pending model"
         " migrators in the process.")
+
+    def applies_to(self, user_api, conv):
+        return True
 
     def migrate(self, user_api, conv):
         conv.save()
