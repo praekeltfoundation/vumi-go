@@ -1,3 +1,5 @@
+import json
+
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 
@@ -20,9 +22,10 @@ class ConversationDefinition(ConversationDefinitionBase):
         #       complain if a jsbox app sends on an endpoint
         #       it hasn't defined.
         app_config = config.get("jsbox_app_config", {})
-        sandbox_config = app_config.get("config", {})
-        sms_tag = sandbox_config.get("sms_tag")
+        raw_js_config = app_config.get("config", {}).get("value", {})
         try:
+            js_config = json.loads(raw_js_config)
+            sms_tag = js_config.get("sms_tag")
             pool, tag = sms_tag
         except Exception:
             return []
