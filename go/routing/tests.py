@@ -47,15 +47,16 @@ class RoutingScreenTestCase(VumiGoDjangoTestCase):
         def mkconn(thing):
             if isinstance(thing, tuple):
                 # It's a tuple, so assume it's a tag.
-                return u'TRANSPORT_TAG:%s:%s:default' % thing
+                return u'TRANSPORT_TAG:%s:%s' % thing
             else:
                 # Assume it's a conversation.
-                return u'CONVERSATION:%s:%s:default' % (
+                return u'CONVERSATION:%s:%s' % (
                     thing.conversation_type, thing.key)
 
         for src, dst in routing:
             routing_table[u'routing_entries'].append(
-                RoutingEntryType.format_entry(mkconn(src), mkconn(dst)))
+                RoutingEntryType.format_entry(
+                    (mkconn(src), 'default'), (mkconn(dst), 'default')))
         return routing_table
 
     def check_model_data(self, response, routing_table):
