@@ -166,8 +166,18 @@ def get_router_definition(router_type, router=None):
 def get_conversation_view_definition(conversation_type, conv=None):
     # Scoped import to avoid circular deps.
     from go.conversation.view_definition import ConversationViewDefinitionBase
-    app_pkg = get_conversation_pkg(conversation_type,
-                                   ['definition', 'view_definition'])
+    try:
+        app_pkg = get_conversation_pkg(
+            conversation_type, ['definition', 'view_definition'])
+    except UnknownConversationType:
+        # To handle obsolete conversations that are still running.
+        if conversation_type not in settings.VUMI_OBSOLETE_APPS:
+            raise
+        from go.vumitools.conversation.definition import (
+            ConversationDefinitionBase)
+        conv_def = ConversationDefinitionBase(conv)
+        conv_def.conversation_type = conversation_type
+        return ConversationViewDefinitionBase(conv_def)
     conv_def = app_pkg.definition.ConversationDefinition(conv)
     if not hasattr(app_pkg, 'view_definition'):
         return ConversationViewDefinitionBase(conv_def)
