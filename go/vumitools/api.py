@@ -526,6 +526,45 @@ class VumiRouterApi(object):
         rt_helper.remove_router(router)
         yield user_account.save()
 
+    @Manager.calls_manager
+    def start_router(self, router=None):
+        """Send the start command to this router's worker.
+
+        The router is then responsible for processing this message as
+        appropriate and handling the state transition.
+        """
+        if router is None:
+            router = yield self.get_router()
+        router.set_status_starting()
+        yield router.save()
+        yield self.dispatch_router_command('start')
+
+    @Manager.calls_manager
+    def stop_router(self, router=None):
+        """Send the stop command to this router's worker.
+
+        The router is then responsible for processing this message as
+        appropriate and handling the state transition.
+        """
+        if router is None:
+            router = yield self.get_router()
+        router.set_status_stopping()
+        yield router.save()
+        yield self.dispatch_router_command('stop')
+
+    def dispatch_router_command(self, command, *args, **kwargs):
+        """Send a command to this router's worker.
+
+        :type command: str
+        :params command:
+            The name of the command to call
+        """
+        worker_name = '%s_router' % (self.router_type,)
+        kwargs.setdefault('user_account_key', self.user_api.user_account_key)
+        kwargs.setdefault('router_key', self.router_key)
+        return self.user_api.api.send_command(
+            worker_name, command, *args, **kwargs)
+
 
 class VumiApi(object):
     def __init__(self, manager, redis, sender=None):

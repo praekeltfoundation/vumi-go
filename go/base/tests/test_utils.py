@@ -40,6 +40,15 @@ class ConversationDefinitionHelpersTestCase(VumiGoDjangoTestCase):
         view_def = get_conversation_view_definition('bulk_message', dummy_conv)
         self.assertTrue(view_def._conv_def.conv is dummy_conv)
 
+    def test_get_conversation_view_definition_unknown_conv_type(self):
+        self.assertRaises(
+            UnknownConversationType,
+            get_conversation_view_definition, 'not_droids')
+
+    def test_get_conversation_view_definition_obsolete_conv_type(self):
+        view_def = get_conversation_view_definition('wikipedia_sms')
+        self.assertEqual(view_def._conv_def.conversation_type, 'wikipedia_sms')
+
 
 class RouterDefinitionHelpersTestCase(VumiGoDjangoTestCase):
     def test_get_router_pkg(self):

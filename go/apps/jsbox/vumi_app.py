@@ -83,6 +83,22 @@ class JsBoxApplication(GoApplicationMixin, JsSandbox):
     def get_config(self, msg):
         return self.get_message_config(msg)
 
+    def infer_delivery_class(self, msg):
+        return {
+            'smpp': 'sms',
+            'sms': 'sms',
+            'ussd': 'ussd',
+            'twitter': 'twitter',
+            'xmpp': 'gtalk',
+        }.get(msg['transport_type'], 'sms')
+
+    def process_message_in_sandbox(self, msg):
+        # TODO remove the delivery class inference and injection into the
+        # message once we have message address types
+        metadata = msg['helper_metadata']
+        metadata['delivery_class'] = self.infer_delivery_class(msg)
+        return super(JsBoxApplication, self).process_message_in_sandbox(msg)
+
     def process_command_start(self, user_account_key, conversation_key):
         log.info("Starting javascript sandbox conversation (key: %r)." %
                  (conversation_key,))

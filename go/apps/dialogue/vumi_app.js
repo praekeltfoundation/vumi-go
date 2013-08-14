@@ -1,5 +1,6 @@
 var vumigo = require("vumigo_v01");
 var jed = require("jed");
+var Q = require("q");
 
 if (typeof api === "undefined") {
     // testing hook (supplies api when it is not passed in by the real sandbox)
@@ -22,7 +23,7 @@ function DialogueStateCreator() {
     self.poll = null;  // poll is set in on_config_read
 
     self.on_config_read = function(event) {
-        var p = new Promise;
+        var p = new Promise();
         event.im.fetch_config_value("poll", true,
             function (poll) {
                 self.poll = poll;
@@ -94,18 +95,50 @@ function DialogueStateCreator() {
         return creator(state_name, im, state_description);
     };
 
+    self.api_request = function(cmd_name, cmd_data) {
+      var d = new Q.defer();
+      api.request(cmd_name, cmd_data, function(reply) { d.resolve(reply); });
+      return d.promise;
+    };
+
+    self.store_answer = function(store_as, answer, im) {
+        var msg = im.get_msg();
+
+        var fields = {};
+        fields[store_as] = answer;
+
+        var p = self.api_request('contacts.get_or_create', {
+            addr: msg.from_addr,
+            delivery_class: msg.helper_metadata.delivery_class
+        });
+        
+        return p.then(function(reply) {
+            if (!reply.success) { return; }
+
+            return self.api_request(
+              'contacts.update_extras',
+              {key: reply.contact.key, fields: fields});
+        });
+    };
+
     self.choice_state_creator = function(state_name, im, state_description) {
         var choices = state_description.choice_endpoints.map(
             function (c) { return new Choice(c.value, c.label); });
         return new ChoiceState(
             state_name,
-            function (choice) {
-                var endpoints = state_description.choice_endpoints.filter(
-                    function (c) { return (c.value == choice.value); });
-                if (endpoints.length !== 1) {
-                    return state_name;
-                }
-                return self.get_next_state(endpoints[0].uuid);
+            function (choice, done) {
+                var endpoint = state_description.choice_endpoints.filter(
+                  function (c) { return (c.value == choice.value); })[0];
+
+                if (!endpoint) { return state_name; }
+
+                self.store_answer(
+                    state_description.store_as,
+                    endpoint.value,
+                    im
+                ).done(function() {
+                    done(self.get_next_state(endpoint.uuid));
+                });
             },
             state_description.text,
             choices
@@ -115,8 +148,16 @@ function DialogueStateCreator() {
     self.freetext_state_creator = function(state_name, im, state_description) {
         return new FreeText(
             state_name,
-            function (content) {
-                return self.get_next_state(state_description.exit_endpoint);
+            function (content, done) {
+                var next = state_description.exit_endpoint;
+
+                self.store_answer(
+                    state_description.store_as,
+                    content,
+                    im
+                ).done(function() {
+                    done(self.get_next_state(next));
+                });
             },
             state_description.text
         );

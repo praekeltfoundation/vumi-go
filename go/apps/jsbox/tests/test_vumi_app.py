@@ -47,7 +47,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,
                            from_addr=u'+27831234567{0}',
-                           config={}):
+                           config={}, started=False):
         user_api = self.user_api
         group = yield user_api.contact_store.new_group(u'test group')
 
@@ -59,6 +59,8 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         conversation = yield self.create_conversation(
             delivery_tag_pool=u'pool', delivery_class=u'sms',
             delivery_tag=u'tag1', config=config)
+        if started:
+            conversation.set_status_started()
         conversation.add_group(group)
         yield conversation.save()
         returnValue(conversation)
@@ -119,6 +121,21 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         config = yield self.app.get_config(msg)
         self.assertEqual(config.sandbox_id, self.user_account.key)
 
+    def test_delivery_class_inference(self):
+        def check_inference_for(transport_type, expected_delivery_class):
+            msg = self.mkmsg_in()
+            msg['transport_type'] = transport_type
+            self.assertEqual(
+                self.app.infer_delivery_class(msg),
+                expected_delivery_class)
+
+        check_inference_for(None, 'sms')
+        check_inference_for('smpp', 'sms')
+        check_inference_for('sms', 'sms')
+        check_inference_for('ussd', 'ussd')
+        check_inference_for('twitter', 'twitter')
+        check_inference_for('xmpp', 'gtalk')
+
     @inlineCallbacks
     def test_event(self):
         conversation = yield self.setup_conversation(
@@ -133,14 +150,14 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_conversation_for_api(self):
-        conversation = yield self.setup_conversation()
+        conversation = yield self.setup_conversation(started=True)
         dummy_api = self.mk_dummy_api(conversation)
         self.assertEqual(self.app.conversation_for_api(dummy_api),
                          conversation)
 
     @inlineCallbacks
     def test_user_api_for_api(self):
-        conversation = yield self.setup_conversation()
+        conversation = yield self.setup_conversation(started=True)
         dummy_api = self.mk_dummy_api(conversation)
         user_api = self.app.user_api_for_api(dummy_api)
         self.assertEqual(user_api.user_account_key,

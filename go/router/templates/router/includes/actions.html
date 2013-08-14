@@ -1,0 +1,41 @@
+{% load router_tags %}
+
+{% if not router.archived %}
+    {% if router.stopped %}
+        <button
+         class="btn btn-primary action"
+         data-action='activate'
+         data-url="{% router_screen router 'start' %}">
+            Activate
+        </button>
+
+        <button
+         class="btn btn-primary action"
+         data-action='archive'
+         data-url="{% router_screen router 'archive' %}">
+            Archive
+        </button>
+    {% elif router.running %}
+        <button
+         class="btn btn-primary action"
+         data-action='stop'
+         data-url="{% router_screen router 'stop' %}">
+            Deactivate
+        </button>
+    {% elif router.stopping %}
+      <button
+       class="btn btn-primary action"
+       data-action='stop'
+       data-url="{% router_screen router 'stop' %}">
+          Deactivating: Attempt to stop
+      </button>
+    {% elif router.starting %}
+      <button
+       class="btn btn-primary action"
+       data-action='stop'
+       data-url="{% router_screen router 'stop' %}">
+          Activating: Attempt to stop
+      </button>
+    {% endif %}
+{% endif %}
+

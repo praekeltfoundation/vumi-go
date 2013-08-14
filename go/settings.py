@@ -288,6 +288,11 @@ VUMI_INSTALLED_APPS = {
     },
 }
 
+VUMI_OBSOLETE_APPS = [
+    'wikipedia_sms',
+    'wikipedia_ussd',
+]
+
 VUMI_INSTALLED_ROUTERS = {
     'go.routers.keyword': {
         'namespace': 'keyword',
