@@ -333,7 +333,11 @@ class Command(BaseCommand):
                 conv['conversation_type'], conv['key'])
         for tag in account_objects['channels']:
             connectors[tag] = GoConnector.for_transport_tag(*(tag.split(':')))
-        # TODO: routers
+        for router in account_objects['routers']:
+            connectors[router['key'] + ':INBOUND'] = GoConnector.for_router(
+                router['router_type'], router['key'], GoConnector.INBOUND)
+            connectors[router['key'] + ':OUTBOUND'] = GoConnector.for_router(
+                router['router_type'], router['key'], GoConnector.OUTBOUND)
 
         rt = RoutingTableHelper({})
         for src, src_ep, dst, dst_ep in account_objects['routing_entries']:

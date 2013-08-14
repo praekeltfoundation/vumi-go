@@ -133,6 +133,10 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
             'routing_entries:',
             '  - ["conv1", "default", "pool1:default0", "default"]',
             '  - ["pool1:default0", "default", "conv1", "default"]',
+            '  - ["router1:INBOUND", "default", "pool1:default1", "default"]',
+            '  - ["pool1:default1", "default", "router1:INBOUND", "default"]',
+            '  - ["conv2", "default", "router1:OUTBOUND", "default"]',
+            '  - ["router1:OUTBOUND", "default", "conv2", "default"]',
             '',
             'contact_groups:',
             '  - key: group1',
@@ -455,6 +459,20 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
             },
             u'CONVERSATION:survey:conv1': {
                 u'default': [u'TRANSPORT_TAG:pool1:default0', u'default'],
+            },
+
+            u'TRANSPORT_TAG:pool1:default1': {
+                u'default': [u'ROUTER:keyword:router1:INBOUND', u'default'],
+            },
+            u'ROUTER:keyword:router1:INBOUND': {
+                u'default': [u'TRANSPORT_TAG:pool1:default1', u'default'],
+            },
+
+            u'ROUTER:keyword:router1:OUTBOUND': {
+                u'default': [u'CONVERSATION:wikipedia:conv2', u'default'],
+            },
+            u'CONVERSATION:wikipedia:conv2': {
+                u'default': [u'ROUTER:keyword:router1:OUTBOUND', u'default'],
             },
         })
 
