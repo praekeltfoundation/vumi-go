@@ -51,7 +51,9 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
 
         self.command.contact_group_info = []
         self.command.conversation_info = []
+        self.command.router_info = []
         self.command.transport_names = []
+        self.command.router_names = []
         self.command.application_names = []
 
         self.tagpool_file = tmp_yaml_file([
@@ -77,7 +79,12 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
             '    config:',
             '      telnet_port: 8081',
             '',
-            'routers: {}',
+            'routers:',
+            '  keyword:',
+            '    class: go.routers.keyword.vumi_app.KeywordRouter',
+            '    config:',
+            '      redis_manager: {}',
+            '      riak_manager: {}',
             '',
             'applications:',
             '  bulk_message:',
@@ -114,6 +121,14 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
             '    conversation_type: wikipedia',
             '    name: Wikipedia',
             '    config: {}',
+            '',
+            'routers:',
+            '  - key: "router1"',
+            '    router_type: keyword',
+            '    name: foo',
+            '    config:',
+            '      keyword_endpoint_mapping:',
+            '        foo: keyword_foo',
             '',
             'routing_entries:',
             '  - ["conv1", "default", "pool1:default0", "default"]',
@@ -269,6 +284,25 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
             'go.apps.bulk_message.vumi_app.BulkMessageApplication',
             'setup_env/go_bulk_message_application.yaml')
 
+    def test_create_router_configs(self):
+        fake_files = [FakeFile() for i in range(2)]
+        router_yaml, router_conf = fake_files
+        self.command.open_file = Mock(side_effect=fake_files)
+        routers = self.read_yaml(self.workers_file)['routers']
+        self.command.create_router_configs(routers)
+        self.assertEqual(yaml.safe_load(router_yaml.getvalue()), {
+            'worker_name': 'keyword_router',
+            'ri_connector_name': 'keyword_router_ri',
+            'ro_connector_name': 'keyword_router_ro',
+            'redis_manager': {},
+            'riak_manager': {},
+        })
+
+        self.assert_supervisor_config(
+            router_conf.getvalue(), 'keyword_router',
+            'go.routers.keyword.vumi_app.KeywordRouter',
+            'setup_env/go_keyword_router.yaml')
+
     def test_create_routing_table_dispatcher_config(self):
         fake_file = FakeFile()
         self.command.open_file = Mock(side_effect=[fake_file])
@@ -356,6 +390,8 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
         self.assertEqual(conv1.conversation_type, 'survey')
         self.assertEqual(conv1.name, 'foo')
         self.assertEqual(conv1.config, {'foo': 'bar'})
+        self.assertEqual(len(conv1.batches.keys()), 1)
+        self.assertEqual(list(conv1.extra_endpoints), [])
         self.assertTrue(
             'Conversation conv1 created'
             in self.command.stdout.getvalue())
@@ -364,9 +400,32 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
         self.assertEqual(conv2.conversation_type, 'wikipedia')
         self.assertEqual(conv2.name, 'Wikipedia')
         self.assertEqual(conv2.config, {})
+        self.assertEqual(len(conv2.batches.keys()), 1)
         self.assertEqual(list(conv2.extra_endpoints), ['sms_content'])
         self.assertTrue(
             'Conversation conv2 created'
+            in self.command.stdout.getvalue())
+
+    def test_setup_routers(self):
+        self.command.setup_tagpools(self.tagpool_file.name)
+        account_info = self.read_yaml(self.account_1_file)
+        user = self.command.setup_account(account_info['account'])
+
+        self.command.setup_routers(user, account_info['routers'])
+
+        user_api = vumi_api_for_user(user)
+        [router1] = user_api.active_routers()
+        self.assertEqual(router1.key, 'router1')
+        self.assertEqual(router1.router_type, 'keyword')
+        self.assertEqual(router1.name, 'foo')
+        self.assertEqual(router1.config, {
+            'keyword_endpoint_mapping': {'foo': 'keyword_foo'},
+        })
+        self.assertEqual(list(router1.extra_inbound_endpoints), [])
+        self.assertEqual(
+            list(router1.extra_outbound_endpoints), ['keyword_foo'])
+        self.assertTrue(
+            'Router router1 created'
             in self.command.stdout.getvalue())
 
     def test_setup_contact_groups(self):

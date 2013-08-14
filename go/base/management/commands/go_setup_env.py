@@ -14,7 +14,9 @@ from vumi.persist.redis_manager import RedisManager
 from vumi.persist.riak_manager import RiakManager
 from vumi.components.tagpool import TagpoolManager
 
-from go.base.utils import vumi_api_for_user, get_conversation_view_definition
+from go.base.utils import (
+    vumi_api_for_user, get_conversation_view_definition,
+    get_router_view_definition)
 from go.vumitools.api import VumiApi
 from go.vumitools.account.models import RoutingTableHelper, GoConnector
 
@@ -104,6 +106,7 @@ class Command(BaseCommand):
 
         self.contact_group_info = []
         self.conversation_info = []
+        self.router_info = []
         self.transport_names = []
         self.router_names = []
         self.application_names = []
@@ -263,8 +266,35 @@ class Command(BaseCommand):
     def setup_routers(self, user, routers):
         user_api = vumi_api_for_user(user)
         for router_info in routers:
-            pass
-        # TODO: Implement this.
+            router_info = router_info.copy()  # So we can modify it.
+            self.router_info.append({
+                'account': user.email,
+                'key': router_info['key'],
+                'start': router_info.pop('start', True),
+            })
+            router_key = router_info.pop('key')
+            if user_api.get_router(router_key):
+                self.stderr.write(
+                    'Router %s already exists. Skipping.\n' % (
+                        router_key,))
+                continue
+
+            router_type = router_info.pop('router_type')
+            view_def = get_router_view_definition(router_type)
+            config = router_info.pop('config', {})
+            extra_inbound_endpoints = view_def.get_inbound_endpoints(config)
+            extra_outbound_endpoints = view_def.get_outbound_endpoints(config)
+            batch_id = user_api.api.mdb.batch_start()
+
+            # We bypass the usual mechanisms so we can set the key ourselves.
+            router = user_api.router_store.routers(
+                router_key, user_account=user_api.user_account_key,
+                router_type=router_type, name=router_info.pop('name'),
+                config=config, extra_inbound_endpoints=extra_inbound_endpoints,
+                extra_outbound_endpoints=extra_outbound_endpoints,
+                batch=batch_id, **router_info)
+            router.save()
+            self.stdout.write('Router %s created\n' % (router.key,))
 
     def setup_conversations(self, user, conversations):
         user_api = vumi_api_for_user(user)
@@ -284,13 +314,15 @@ class Command(BaseCommand):
 
             conversation_type = conv_info.pop('conversation_type')
             view_def = get_conversation_view_definition(conversation_type)
+            config = conv_info.pop('config', {})
+            batch_id = user_api.api.mdb.batch_start()
             # We bypass the usual mechanisms so we can set the key ourselves.
             conv = user_api.conversation_store.conversations(
                 conversation_key, user_account=user_api.user_account_key,
                 conversation_type=conversation_type,
-                name=conv_info.pop('name'), config=conv_info.pop('config', {}),
-                extra_endpoints=list(view_def.extra_static_endpoints),
-                **conv_info)
+                name=conv_info.pop('name'), config=config,
+                extra_endpoints=view_def.get_endpoints(config), **conv_info)
+            conv.batches.add_key(batch_id)
             conv.save()
             self.stdout.write('Conversation %s created\n' % (conv.key,))
 
@@ -343,8 +375,18 @@ class Command(BaseCommand):
     def create_router_configs(self, routers):
         for router_name, router_info in routers.iteritems():
             self.router_names.append(router_name)
+            worker_name = '%s_router' % (router_name,)
+            ri_connector_name = '%s_router_ri' % (router_name,)
+            ro_connector_name = '%s_router_ro' % (router_name,)
             config = router_info['config']
-            # TODO: Finish this.
+            config.update({
+                'ri_connector_name': ri_connector_name,
+                'ro_connector_name': ro_connector_name,
+                'worker_name': worker_name,
+            })
+            self.write_worker_config_file(worker_name, config)
+            self.write_supervisor_config_file(
+                worker_name, router_info['class'])
 
     def create_application_configs(self, applications):
         for application_name, application_info in applications.iteritems():
