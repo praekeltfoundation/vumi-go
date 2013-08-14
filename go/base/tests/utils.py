@@ -150,23 +150,21 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
             'description': u'hello world',
             'config': {},
         }
+        if started:
+            params['status'] = u'running'
         params.update(kwargs)
-        conv = self.user_api.wrap_conversation(
+        return self.user_api.wrap_conversation(
             self.user_api.new_conversation(**params))
 
-        if started:
-            conv.set_status_started()
-            conv.save()
-
-        return conv
-
-    def create_router(self, **kwargs):
+    def create_router(self, started=False, **kwargs):
         params = {
             'router_type': u'test_router_type',
             'name': u'router name',
             'description': u'hello world',
             'config': {},
         }
+        if started:
+            params['status'] = u'running'
         params.update(kwargs)
         return self.user_api.new_router(**params)
 

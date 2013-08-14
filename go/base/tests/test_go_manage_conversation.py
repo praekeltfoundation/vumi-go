@@ -1,4 +1,3 @@
-from django.core.management.base import CommandError
 from mock import patch
 
 from go.base.tests.utils import GoAccountCommandTestCase
