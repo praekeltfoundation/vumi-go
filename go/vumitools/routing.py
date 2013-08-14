@@ -282,8 +282,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             user_account_key = tag_info.metadata['user_account']
             if user_account_key is None:
                 raise UnroutableMessageError(
-                    "Message received for unowned tag: %s" % (msg_mdh.tag),
-                    extra=msg)
+                    "Message received for unowned tag.", msg)
         else:
             raise UnroutableMessageError(
                 "Could not determine user account key", msg)
@@ -354,7 +353,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         if conn.ctype not in allowed_types:
             raise UnroutableMessageError(
-                "Destination connector of invalid type: %s" % conn, extra=msg)
+                "Destination connector of invalid type: %s" % conn, msg)
 
         if conn.ctype == conn.CONVERSATION:
             msg_mdh.set_conversation_info(conn.conv_type, conn.conv_key)
@@ -373,7 +372,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             if transport_name is None:
                 raise UnroutableMessageError(
                     "No transport name found for tagpool %r"
-                    % conn.tagpool, extra=msg)
+                    % conn.tagpool, msg)
             if self.connector_type(transport_name) != self.TRANSPORT_TAG:
                 raise UnroutableMessageError(
                     "Transport name %r found in tagpool metadata for pool"
@@ -513,8 +512,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
-            log.debug("No target found for message from '%s'" % (
-                connector_name), extra=msg)
+            log.debug("No target found for message from '%s': %s" % (
+                connector_name, msg))
             return
 
         dst_connector_name, dst_endpoint = yield self.set_destination(
@@ -550,8 +549,8 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         target = self.find_target(config, msg, src_conn)
         if target is None:
-            log.debug("No target found for message from '%s'" % (
-                connector_name), extra=msg)
+            log.debug("No target found for message from '%s': %s" % (
+                connector_name, msg))
             return
 
         dst_connector_name, dst_endpoint = yield self.set_destination(
