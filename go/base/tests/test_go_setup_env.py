@@ -457,3 +457,50 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
                 u'default': [u'TRANSPORT_TAG:pool1:default0', u'default'],
             },
         })
+
+    def test_startup_script(self):
+        self.command.contact_group_info = [{
+            'account': 'user1@example.org',
+            'key': 'conv1',
+            'contacts_csv': 'contacts.csv',
+        }]
+        self.command.conversation_info = [{
+            'account': 'user1@example.org',
+            'key': 'conv1',
+            'start': True,
+        }, {
+            'account': 'user1@example.org',
+            'key': 'conv2',
+            'start': False,
+        }]
+        self.command.router_info = [{
+            'account': 'user1@example.org',
+            'key': 'router1',
+            'start': False,
+        }, {
+            'account': 'user1@example.org',
+            'key': 'router2',
+            'start': True,
+        }]
+        startup_tmpfile = NamedTemporaryFile()
+        self.command.mk_filename = lambda fn, s: startup_tmpfile.name
+
+        self.command.write_startup_script()
+
+        startup_tmpfile.flush()
+        lines = [l.strip('\n') for l in startup_tmpfile.readlines()[3:]
+                 if l.strip() != '']
+        self.assertEqual(lines, [
+            '#!/bin/bash',
+            './go-admin.sh go_import_contacts '  # cont.
+            '--email-address user1@example.org \\',
+            '    --contacts contacts.csv --group conv1',
+            'echo "Starting conversation: conv1"',
+            './go-admin.sh go_start_conversation '  # cont.
+            '--email-address user1@example.org \\',
+            '    --conversation-key conv1',
+            'echo "Starting router: router2"',
+            './go-admin.sh go_manage_router '  # cont.
+            '--email-address user1@example.org \\',
+            '    --router-key router2 --start',
+        ])

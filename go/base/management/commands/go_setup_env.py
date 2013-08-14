@@ -542,6 +542,7 @@ class Command(BaseCommand):
             data = self.render_template(templ, {
                 'contact_groups': self.contact_group_info,
                 'conversations': self.conversation_info,
+                'routers': self.router_info,
             })
             fp.write(self.auto_gen_warning)
             fp.write(data)

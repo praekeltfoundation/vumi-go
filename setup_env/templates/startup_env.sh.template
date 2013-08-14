@@ -10,3 +10,9 @@ echo "Starting conversation: {{conversation.key}}"
 ./go-admin.sh go_start_conversation --email-address {{conversation.account}} \
     --conversation-key {{conversation.key}}
 {% endif %}{% endfor %}
+
+{% for router in routers %}{% if router.start %}
+echo "Starting router: {{router.key}}"
+./go-admin.sh go_manage_router --email-address {{router.account}} \
+    --router-key {{router.key}} --start
+{% endif %}{% endfor %}
