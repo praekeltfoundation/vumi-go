@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from StringIO import StringIO
 import uuid
 
 from django.conf import settings, UserSettingsHolder
@@ -7,6 +8,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.test.client import Client
+from django.core.management.base import CommandError
 
 from vumi.tests.fake_amqp import FakeAMQPBroker
 from vumi.message import TransportUserMessage, TransportEvent
@@ -278,3 +280,28 @@ class FakeMatchResult(object):
     def is_in_progress(self):
         self._times_called += 1
         return self._tries > self._times_called
+
+
+class GoAccountCommandTestCase(VumiGoDjangoTestCase):
+    use_riak = True
+    command_class = None
+
+    def setUp(self):
+        super(GoAccountCommandTestCase, self).setUp()
+        self.setup_api()
+        self.setup_user_api()
+        self.command = self.command_class()
+        self.command.stdout = StringIO()
+        self.command.stderr = StringIO()
+
+    def call_command(self, *command, **options):
+        return self.command.handle(
+            email_address=self.django_user.email, command=command, **options)
+
+    def assert_command_error(self, regexp, *command, **options):
+        self.assertRaisesRegexp(
+            CommandError, regexp, self.call_command, *command, **options)
+
+    def assert_command_output(self, expected_output, *command, **options):
+        self.call_command(*command, **options)
+        self.assertEqual(expected_output, self.command.stdout.getvalue())
