@@ -9,7 +9,7 @@ from go.base.command_utils import BaseGoAccountCommand, make_command_option
 class Command(BaseGoAccountCommand):
     help = "Manage routers."
 
-    LOCAL_OPTIONS = [
+    option_list = BaseGoAccountCommand.option_list + (
         make_command_option(
             'list', help='List the active routers in this account.'),
         make_command_option(
@@ -21,7 +21,7 @@ class Command(BaseGoAccountCommand):
         make_option('--router-key',
                     dest='router_key',
                     help='The router key'),
-    ]
+    )
 
     def get_router(self, options):
         if 'router_key' not in options:

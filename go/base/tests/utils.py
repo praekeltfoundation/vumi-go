@@ -293,6 +293,18 @@ class GoAccountCommandTestCase(VumiGoDjangoTestCase):
         self.command.stderr = StringIO()
 
     def call_command(self, *command, **options):
+        # Make sure we have options for the command(s) specified
+        for cmd_name in command:
+            self.assertTrue(
+                cmd_name in self.command.list_commands(),
+                "Command '%s' has no command line option" % (cmd_name,))
+        # Make sure we have options for any option keys specified
+        opt_dests = set(opt.dest for opt in self.command.option_list)
+        for opt_dest in options:
+            self.assertTrue(
+                opt_dest in opt_dests,
+                "Option key '%s' has no command line option" % (opt_dest,))
+        # Call the command handler
         return self.command.handle(
             email_address=self.django_user.email, command=command, **options)
 

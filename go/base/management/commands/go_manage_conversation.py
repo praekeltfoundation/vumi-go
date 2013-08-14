@@ -9,7 +9,7 @@ from go.base.command_utils import BaseGoAccountCommand, make_command_option
 class Command(BaseGoAccountCommand):
     help = "Manage conversations."
 
-    LOCAL_OPTIONS = [
+    option_list = BaseGoAccountCommand.option_list + (
         make_command_option(
             'list', help='List the active conversations in this account.'),
         make_command_option(
@@ -21,7 +21,7 @@ class Command(BaseGoAccountCommand):
         make_option('--conversation-key',
                     dest='conversation_key',
                     help='The conversation key'),
-    ]
+    )
 
     def get_conversation(self, options):
         if 'conversation_key' not in options:

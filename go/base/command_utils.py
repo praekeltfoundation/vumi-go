@@ -18,17 +18,15 @@ def make_command_option(command_name, **kw):
 
 
 class BaseGoAccountCommand(BaseCommand):
-    ACCOUNT_OPTIONS = [
+    option_list = BaseCommand.option_list + (
         make_option('--email-address',
                     dest='email_address',
                     help='Email address for the Vumi Go user'),
-    ]
-    LOCAL_OPTIONS = []
-    option_list = (
-        BaseCommand.option_list
-        + tuple(ACCOUNT_OPTIONS)
-        + tuple(LOCAL_OPTIONS)
     )
+
+    def list_commands(self):
+        return [opt.const for opt in self.option_list
+                if opt.action == 'append_const' and opt.dest == 'command']
 
     def handle(self, *args, **options):
         if 'email_address' not in options:
@@ -49,5 +47,8 @@ class BaseGoAccountCommand(BaseCommand):
                     ' '.join(make_command_opt_str(cmd) for cmd in commands)))
         return getattr(self, 'handle_command_%s' % commands)(*args, **options)
 
-    def handle_no_command(*args, **options):
-        raise CommandError('Please specify an action')
+    def handle_no_command(self, *args, **options):
+        raise CommandError(
+            'Please specify one of the following actions: %s' % (
+                ' '.join(make_command_opt_str(cmd)
+                         for cmd in self.list_commands())))

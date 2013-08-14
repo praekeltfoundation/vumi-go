@@ -7,11 +7,11 @@ from go.base.tests.utils import GoAccountCommandTestCase
 
 
 class DummyGoDjangoAccountCommand(BaseGoAccountCommand):
-    LOCAL_OPTIONS = [
+    option_list = BaseGoAccountCommand.option_list + (
         make_command_option('foo'),
         make_command_option('bar'),
         make_option('--opt', action='store', dest='opt'),
-    ]
+    )
 
     def handle_command_foo(self, *args, **options):
         self.stdout.write('foo\n')
@@ -39,7 +39,8 @@ class TestBaseGoAccountCommand(GoAccountCommandTestCase):
             'foo', 'bar')
 
     def test_no_command_default(self):
-        self.assert_command_error('Please specify an action')
+        self.assert_command_error(
+            'Please specify one of the following actions: --foo --bar')
 
     def test_no_command_override(self):
         def handle_no_command(*args, **options):
