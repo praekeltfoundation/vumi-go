@@ -212,7 +212,7 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
         return self._worker_name().rpartition('_')[0].decode('utf-8')
 
     @inlineCallbacks
-    def create_conversation(self, **kw):
+    def create_conversation(self, started=False, **kw):
         conv_type = kw.pop('conversation_type', None)
         if conv_type is None:
             conv_type = self._conversation_type()
@@ -220,6 +220,8 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
         description = kw.pop('description', u'')
         config = kw.pop('config', {})
         self.assertTrue(isinstance(config, dict))
+        if started:
+            kw.setdefault('status', u'running')
         conversation = yield self.user_api.new_conversation(
             conv_type, name, description, config, **kw)
         returnValue(self.user_api.wrap_conversation(conversation))
