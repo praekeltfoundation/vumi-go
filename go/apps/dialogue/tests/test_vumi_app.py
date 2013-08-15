@@ -83,6 +83,7 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
             delivery_tag_pool=u'pool', delivery_class=u'sms',
             delivery_tag=u'tag1', config=config)
         conversation.add_group(group)
+        conversation.set_status_started()
         yield conversation.save()
         returnValue(conversation)
 
