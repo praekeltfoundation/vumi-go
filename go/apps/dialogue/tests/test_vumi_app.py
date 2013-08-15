@@ -69,7 +69,7 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
     def setup_conversation(self, contact_count=2,
                            from_addr=u'+27831234567{0}',
                            config={}):
-        config["poll"] = json.dumps(simple_poll)
+        config["poll"] = simple_poll
 
         user_api = self.user_api
         group = yield user_api.contact_store.new_group(u'test group')
