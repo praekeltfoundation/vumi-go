@@ -286,6 +286,10 @@ VUMI_INSTALLED_APPS = {
         'namespace': 'http_api',
         'display_name': 'HTTP API',
     },
+    'go.apps.static_reply': {
+        'namespace': 'static_reply',
+        'display_name': 'Static Reply',
+    },
 }
 
 VUMI_OBSOLETE_APPS = [
