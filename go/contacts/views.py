@@ -464,6 +464,17 @@ def person(request, person_key):
     if contact_store.contact_has_opted_out(contact):
         messages.error(request, 'This contact has opted out.')
 
+    contact.extra['sigh'] = u'lorem'
+    contact.extra['spam'] = u'ipsum'
+    contact.extra['sdfdf'] = u'289234'
+    contact.extra['ksxcsdf'] = u'sjdf'
+    contact.extra['2323'] = u'lksdf'
+    contact.extra['a'] = u'silver'
+    contact.extra['mt'] = u'zion'
+    contact.extra['he'] = u'has'
+    contact.extra['left'] = u'us'
+    contact.extra['alone'] = u'but'
+
     return render(request, 'contacts/contact_detail.html', {
         'contact': contact,
         'contact_extra_items': contact.extra.items(),
