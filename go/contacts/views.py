@@ -244,7 +244,7 @@ def _static_group(request, contact_store, group):
             query = 'name:%s' % (query,)
         keys = contact_store.contacts.raw_search(query).get_keys()
     else:
-        keys = contact_store.list_contacts()
+        keys = contact_store.get_contacts_for_group(group)
 
     limit = int(request.GET.get('limit', 100))
     if limit:
@@ -269,36 +269,37 @@ def _static_group(request, contact_store, group):
 @csrf_protect
 @login_required
 def _smart_group(request, contact_store, group):
-    if '_save_group' in request.POST:
-        smart_group_form = SmartGroupForm(request.POST)
-        if smart_group_form.is_valid():
-            group.name = smart_group_form.cleaned_data['name']
-            group.query = smart_group_form.cleaned_data['query']
-            group.save()
+    if request.method == 'POST':
+        if '_save_group' in request.POST:
+            smart_group_form = SmartGroupForm(request.POST)
+            if smart_group_form.is_valid():
+                group.name = smart_group_form.cleaned_data['name']
+                group.query = smart_group_form.cleaned_data['query']
+                group.save()
+                return redirect(_group_url(group.key))
+        elif '_export' in request.POST:
+            tasks.export_group_contacts.delay(
+                request.user_api.user_account_key, group.key, True)
+            messages.info(request, 'The export is scheduled and should '
+                                   'complete within a few minutes.')
             return redirect(_group_url(group.key))
-    elif '_export' in request.POST:
-        tasks.export_group_contacts.delay(
-            request.user_api.user_account_key, group.key, True)
-        messages.info(request, 'The export is scheduled and should '
-                               'complete within a few minutes.')
-        return redirect(_group_url(group.key))
-    elif '_delete_group_contacts' in request.POST:
-        tasks.delete_group_contacts.delay(request.user_api.user_account_key,
-                                          group.key)
-        messages.info(request, "The group's contacts will be deleted shortly.")
-        return redirect(_group_url(group.key))
-    elif '_delete_group' in request.POST:
-        tasks.delete_group.delay(request.user_api.user_account_key,
-                                 group.key)
-        messages.info(request, 'The group will be deleted shortly.')
-        return redirect(reverse('contacts:index'))
+        elif '_delete_group_contacts' in request.POST:
+            tasks.delete_group_contacts.delay(request.user_api.user_account_key,
+                                              group.key)
+            messages.info(request, "The group's contacts will be deleted shortly.")
+            return redirect(_group_url(group.key))
+        elif '_delete_group' in request.POST:
+            tasks.delete_group.delay(request.user_api.user_account_key,
+                                     group.key)
+            messages.info(request, 'The group will be deleted shortly.')
+            return redirect(reverse('contacts:index'))
     else:
         smart_group_form = SmartGroupForm({
             'name': group.name,
             'query': group.query,
         })
 
-    keys = contact_store.contacts.raw_search(group.query).get_keys()
+    keys = contact_store.get_contacts_for_group(group)
     member_count = len(keys)
     limit = int(request.GET.get('limit', 100))
     if limit:
