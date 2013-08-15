@@ -110,6 +110,7 @@ def groups(request, type=None):
         'page': page,
         'query': query,
         'contact_group_form': contact_group_form,
+        'contact_store': contact_store,
     })
 
 
