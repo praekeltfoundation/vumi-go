@@ -1,11 +1,13 @@
 {% load url from future %}
+{% load contact_tags %}
+
 <table class="table">
     <thead>
         <tr>
             <th><input type="checkbox"></th>
             <th>Name</th>
             <th>No. of contacts</th>
-            <th>Date created</th>
+            {# <th>Date created</th> #}
         </tr>
     </thead>
     <tbody>
@@ -19,13 +21,8 @@
                     {{ group.name }}
                 </a>
             </td>
-            <td>
-                {# TODO; length is bad #}
-                {{ group.backlinks.contacts|length }}
-            </td>
-            <td>
-                {# TODO: group date created #}
-            </td>
+            <td>{% size_of_group contact_store group %}</td>
+            {# <td> TODO: group date created</td> #}
         </tr>
     {% empty %}
         <tr>

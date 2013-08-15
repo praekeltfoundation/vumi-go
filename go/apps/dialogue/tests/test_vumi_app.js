@@ -7,7 +7,7 @@ function poll_tester(poll) {
     return new vumigo.test_utils.ImTester(app.api, {
         async: true,
         custom_setup: function (api) {
-            api.config_store.poll = JSON.stringify(poll);
+            api.config_store.poll = poll;
         }
     });
 }
