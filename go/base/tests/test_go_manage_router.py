@@ -1,3 +1,5 @@
+from pprint import pformat
+
 from mock import patch
 
 from go.base.tests.utils import GoAccountCommandTestCase
@@ -20,6 +22,12 @@ class TestGoManageRouter(GoAccountCommandTestCase):
         expected_output = "0. %s (type: %s, key: %s)\n" % (
             router.name, router.router_type, router.key)
         self.assert_command_output(expected_output, 'list')
+
+    def test_show(self):
+        router = self.create_router()
+        expected_output = "%s\n" % pformat(router.get_data())
+        self.assert_command_output(
+            expected_output, 'show', router_key=router.key)
 
     def test_show_config_no_router(self):
         self.assert_command_error(

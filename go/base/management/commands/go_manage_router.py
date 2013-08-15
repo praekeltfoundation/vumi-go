@@ -12,6 +12,7 @@ class Command(BaseGoAccountCommand):
     option_list = BaseGoAccountCommand.option_list + (
         make_command_option(
             'list', help='List the active routers in this account.'),
+        make_command_option('show', help='Display a router'),
         make_command_option(
             'show_config', help='Display the config for a router'),
         make_command_option('start', help='Start a router'),
@@ -37,6 +38,11 @@ class Command(BaseGoAccountCommand):
         for i, c in enumerate(routers):
             self.stdout.write("%d. %s (type: %s, key: %s)\n"
                               % (i, c.name, c.router_type, c.key))
+
+    def handle_command_show(self, *args, **options):
+        router = self.get_router(options)
+        self.stdout.write(pformat(router.get_data()))
+        self.stdout.write("\n")
 
     def handle_command_show_config(self, *args, **options):
         router = self.get_router(options)

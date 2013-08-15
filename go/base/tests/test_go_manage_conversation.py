@@ -26,7 +26,6 @@ class TestGoManageConversation(GoAccountCommandTestCase):
     def test_show(self):
         conv = self.create_conversation()
         expected_output = "%s\n" % pformat(conv.get_data())
-        print expected_output
         self.assert_command_output(
             expected_output, 'show', conversation_key=conv.key)
 
