@@ -28,7 +28,7 @@ var simple_poll = {
         store_on_contact: true,
         entry_endpoint: {uuid: "endpoint-3"},
         // freetext specific
-        exit_endpoint: "endpoint-4",
+        exit_endpoint: {uuid: "endpoint-4"},
         text: "What is your name?"
     },
     {

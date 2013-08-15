@@ -41,6 +41,9 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
                 'config': {
                     'cls': 'go.apps.dialogue.vumi_app.PollConfigResource',
                 },
+                'contacts': {
+                    'cls': 'go.apps.jsbox.contacts.ContactsResource',
+                },
                 'kv': {
                     'cls': 'vumi.application.sandbox.RedisResource',
                     'redis_manager': {'FAKE_REDIS': self.kv_redis},

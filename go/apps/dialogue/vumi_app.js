@@ -1,6 +1,5 @@
 var vumigo = require("vumigo_v01");
 var jed = require("jed");
-var Q = require("q");
 
 if (typeof api === "undefined") {
     // testing hook (supplies api when it is not passed in by the real sandbox)
@@ -98,30 +97,25 @@ function DialogueStateCreator() {
         return creator(state_name, im, state_description);
     };
 
-    self.api_request = function(cmd_name, cmd_data) {
-      var d = new Q.defer();
-      api.request(cmd_name, cmd_data, function(reply) { d.resolve(reply); });
-      return d.promise;
-    };
-
     self.store_answer = function(store_as, answer, im) {
         var msg = im.get_msg();
 
         var fields = {};
         fields[store_as] = answer;
 
-        var p = self.api_request('contacts.get_or_create', {
+        var p = im.api_request('contacts.get_or_create', {
             addr: msg.from_addr,
             delivery_class: msg.helper_metadata.delivery_class
         });
 
-        return p.then(function(reply) {
+        p.add_callback(function(reply) {
             if (!reply.success) { return; }
 
-            return self.api_request(
+            return im.api_request(
               'contacts.update_extras',
               {key: reply.contact.key, fields: fields});
         });
+        return p;
     };
 
     self.choice_state_creator = function(state_name, im, state_description) {
@@ -135,11 +129,12 @@ function DialogueStateCreator() {
 
                 if (!endpoint) { done(state_name); return; }
 
-                self.store_answer(
+                var p = self.store_answer(
                     state_description.store_as,
                     endpoint.value,
                     im
-                ).done(function() {
+                )
+                p.add_callback(function() {
                     done(self.get_next_state(endpoint.uuid));
                 });
             },
@@ -152,13 +147,13 @@ function DialogueStateCreator() {
         return new FreeText(
             state_name,
             function (content, done) {
-                var next = state_description.exit_endpoint;
-
-                self.store_answer(
+                var next = state_description.exit_endpoint.uuid;
+                var p = self.store_answer(
                     state_description.store_as,
                     content,
                     im
-                ).done(function() {
+                );
+                p.add_callback(function() {
                     done(self.get_next_state(next));
                 });
             },
