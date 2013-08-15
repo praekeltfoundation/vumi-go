@@ -195,26 +195,6 @@
   {% csrf_token %}
 	</form>
 </div><!--/delGroup-->
-
-<div class="modal hide fade" id="startCampaign">
-  <div class="modal-header">
-    <a class="close" data-dismiss="modal">×</a>
-    <h3>Start Campaign</h3>
-  </div>
-  {# TODO: What would the URL be? #}
-  <form class="form-horizontal" method="POST" action="{% url 'contacts:group' group_key=group.key %}">
-  <div class="modal-body">
-        <fieldset>
-          <p>Do you want to start a campaign with this group?</p>
-        </fieldset>
-  </div>
-  <div class="modal-footer">
-    <a href="#" class="btn" data-dismiss="modal">Cancel</a>
-    <button type="submit" name='_start_campaign' class="btn btn-primary" data-loading-text="starting campaign...">Start Campaign</button>
-  </div>
-  {% csrf_token %}
-  </form>
-</div><!--/startCampaign -->
 {% endif %}
 
 {% if smart_group_form %}
