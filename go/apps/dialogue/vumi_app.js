@@ -66,7 +66,10 @@ function DialogueStateCreator() {
 
     self.get_state_by_entry_endpoint = function(endpoint) {
         var states = self.poll.states.filter(
-            function (s) { return (s.entry_endpoint == endpoint); });
+            function (s) {
+                if (!s.entry_endpoint) return false;
+                return (s.entry_endpoint.uuid == endpoint);
+            });
         if (states.length !== 1) {
             return null;
         }
