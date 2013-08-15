@@ -24,4 +24,5 @@ class StaticReplyApplication(GoApplicationWorker):
     def consume_user_message(self, message):
         config = yield self.get_message_config(message)
         if config.reply_text:
-            yield self.reply_to(message, config.reply_text)
+            yield self.reply_to(
+                message, config.reply_text, continue_session=False)

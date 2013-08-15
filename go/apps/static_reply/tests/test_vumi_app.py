@@ -30,6 +30,7 @@ class TestStaticReplyApplication(AppWorkerTestCase):
         yield self.dispatch_to_conv(self.mkmsg_in(), conv)
         [reply] = yield self.get_dispatched_messages()
         self.assertEqual('Your message is important to us.', reply['content'])
+        self.assertEqual(u'close', reply['session_event'])
 
     @inlineCallbacks
     def test_receive_message_no_reply(self):
