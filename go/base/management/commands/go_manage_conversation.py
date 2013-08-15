@@ -12,6 +12,7 @@ class Command(BaseGoAccountCommand):
     option_list = BaseGoAccountCommand.option_list + (
         make_command_option(
             'list', help='List the active conversations in this account.'),
+        make_command_option('show', help='Display a conversation'),
         make_command_option(
             'show_config', help='Display the config for a conversation'),
         make_command_option('start', help='Start a conversation'),
@@ -38,6 +39,11 @@ class Command(BaseGoAccountCommand):
         for i, c in enumerate(conversations):
             self.stdout.write("%d. %s (type: %s, key: %s)\n"
                               % (i, c.name, c.conversation_type, c.key))
+
+    def handle_command_show(self, *args, **options):
+        conversation = self.get_conversation(options)
+        self.stdout.write(pformat(conversation.get_data()))
+        self.stdout.write("\n")
 
     def handle_command_show_config(self, *args, **options):
         conversation = self.get_conversation(options)

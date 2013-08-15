@@ -1,3 +1,5 @@
+from pprint import pformat
+
 from mock import patch
 
 from go.base.tests.utils import GoAccountCommandTestCase
@@ -20,6 +22,13 @@ class TestGoManageConversation(GoAccountCommandTestCase):
         expected_output = "0. %s (type: %s, key: %s)\n" % (
             conv.name, conv.conversation_type, conv.key)
         self.assert_command_output(expected_output, 'list')
+
+    def test_show(self):
+        conv = self.create_conversation()
+        expected_output = "%s\n" % pformat(conv.get_data())
+        print expected_output
+        self.assert_command_output(
+            expected_output, 'show', conversation_key=conv.key)
 
     def test_show_config_no_conv(self):
         self.assert_command_error(
