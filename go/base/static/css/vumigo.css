@@ -610,7 +610,7 @@ button {
   margin: 8px;
 }
 .contacts .details .extras {
-  width: 480px;
+  max-width: 480px;
 }
 .accounts {
   color: #c1c1c1;
