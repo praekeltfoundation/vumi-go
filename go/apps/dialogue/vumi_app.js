@@ -24,7 +24,7 @@ function DialogueStateCreator() {
 
     self.on_config_read = function(event) {
         var p = new Promise();
-        event.im.fetch_config_value("poll", true,
+        event.im.fetch_config_value("poll", false,
             function (poll) {
                 self.poll = poll;
 
