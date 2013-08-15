@@ -111,7 +111,7 @@ function DialogueStateCreator() {
             addr: msg.from_addr,
             delivery_class: msg.helper_metadata.delivery_class
         });
-        
+
         return p.then(function(reply) {
             if (!reply.success) { return; }
 
