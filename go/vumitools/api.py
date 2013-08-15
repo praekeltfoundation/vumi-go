@@ -212,11 +212,10 @@ class VumiUserApi(object):
     @Manager.calls_manager
     def tagpools(self):
         user_account = yield self.get_user_account()
-        active_conversations = yield self.active_conversations()
 
         tp_usage = defaultdict(int)
-        for conv in active_conversations:
-            tp_usage[conv.delivery_tag_pool] += 1
+        for tag in user_account.tags:
+            tp_usage[tag[0]] += 1
 
         allowed_set = set()
         for tp_bunch in user_account.tagpools.load_all_bunches():
