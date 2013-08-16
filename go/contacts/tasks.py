@@ -15,6 +15,7 @@ from go.vumitools.api import VumiUserApi
 from go.base.models import UserProfile
 from go.base.utils import UnicodeCSVWriter
 from go.contacts.parsers import ContactFileParser
+from go.contacts.utils import contacts_by_key
 
 
 @task(ignore_result=True)
@@ -103,14 +104,6 @@ def contacts_to_csv(contacts, include_extra=True):
         writer.writerow(row)
 
     return io.getvalue()
-
-
-def contacts_by_key(contact_store, *keys):
-    contacts = []
-    for bunch in contact_store.contacts.load_all_bunches(keys):
-        contacts.extend(bunch)
-
-    return contacts
 
 
 def get_group_contacts(contact_store, *groups):

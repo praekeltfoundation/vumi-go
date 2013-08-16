@@ -5,6 +5,7 @@ from zipfile import ZipFile
 
 from django.conf import settings
 from django.test import TestCase
+from django.utils.html import escape
 from django.core.urlresolvers import reverse
 from django.core import mail
 
@@ -505,26 +506,25 @@ class GroupsTestCase(BaseContactsTestCase):
 
     def test_group_contact_query_limits(self):
         group = self.contact_store.new_group(TEST_GROUP_NAME)
+
+        for i in range(10):
+            self.mkcontact(groups=[group])
+
         default_limit = self.client.get(group_url(group.key), {
             'q': TEST_CONTACT_NAME,
         })
+
+        self.assertContains(
+            default_limit,
+            escape("Showing 10 of the group's 10 contact(s)"))
+
         custom_limit = self.client.get(group_url(group.key), {
             'q': TEST_CONTACT_NAME,
-            'limit': 10,
+            'limit': 5,
         })
-        no_limit = self.client.get(group_url(group.key), {
-            'q': TEST_CONTACT_NAME,
-            'limit': 0,
-        })
-        self.assertContains(default_limit, 'alert-success')
-        self.assertContains(default_limit, 'Showing up to 100 random contacts')
-        self.assertContains(custom_limit, 'alert-success')
-        self.assertContains(custom_limit, 'Showing up to 10 random contacts')
-        # Testing for CSS class not existing (since that's used to display
-        # notification messages). We cannot check the context for messages
-        # since that uses Django's internal messages framework which cleared
-        # during rendering.
-        self.assertNotContains(no_limit, 'alert-success')
+        self.assertContains(
+            custom_limit,
+            escape("Showing 5 of the group's 10 contact(s)"))
 
     def test_multiple_group_deletion(self):
         group_1 = self.contact_store.new_group(TEST_GROUP_NAME)
@@ -823,34 +823,31 @@ class SmartGroupsTestCase(BaseContactsTestCase):
             set([contact1.key, contact2.key, contact3.key]))
 
     def test_smart_group_limit(self):
+        for i in range(10):
+            self.mkcontact(name=u'Ben')
+
         self.client.post(reverse('contacts:groups'), {
             'name': 'a smart group',
-            'query': 'name:foo OR surname:bar',
+            'query': 'name:Ben',
             '_new_smart_group': '1',
         })
         group = newest(self.contact_store.list_groups())
-        default_limit = self.client.get('%s?query=foo:bar' % (
-            reverse('contacts:group', kwargs={
-                'group_key': group.key,
-            }),))
-        custom_limit = self.client.get('%s?query=foo:bar&limit=10' % (
-            reverse('contacts:group', kwargs={
-                'group_key': group.key,
-            }),))
-        no_limit = self.client.get('%s?query=foo:bar&limit=0' % (
-            reverse('contacts:group', kwargs={
-                'group_key': group.key,
-            }),))
 
-        self.assertContains(default_limit, 'alert-success')
-        self.assertContains(default_limit, 'Showing up to 100 random contacts')
-        self.assertContains(custom_limit, 'alert-success')
-        self.assertContains(custom_limit, 'Showing up to 10 random contacts')
-        # Testing for CSS class not existing (since that's used to display
-        # notification messages). We cannot check the context for messages
-        # since that uses Django's internal messages framework which cleared
-        # during rendering.
-        self.assertNotContains(no_limit, 'alert-success')
+        default_limit = self.client.get('%s?query=Ben' % (
+            reverse('contacts:group', kwargs={
+                'group_key': group.key,
+            }),))
+        self.assertContains(
+            default_limit,
+            escape("Showing 10 of the group's 10 contact(s)"))
+
+        custom_limit = self.client.get('%s?query=Ben&limit=5' % (
+            reverse('contacts:group', kwargs={
+                'group_key': group.key,
+            }),))
+        self.assertContains(
+            custom_limit,
+            escape("Showing 5 of the group's 10 contact(s)"))
 
     def test_smartgroup_contact_export(self):
         self.client.post(reverse('contacts:groups'), {
