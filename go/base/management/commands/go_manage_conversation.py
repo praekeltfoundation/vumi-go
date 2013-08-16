@@ -1,64 +1,84 @@
 from optparse import make_option
 from pprint import pformat
 
-from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
+from django.core.management.base import CommandError
 
-from go.base.utils import vumi_api_for_user
+from go.base.command_utils import BaseGoAccountCommand, make_command_option
 
 
-class Command(BaseCommand):
+class Command(BaseGoAccountCommand):
     help = "Manage conversations."
 
-    LOCAL_OPTIONS = [
-        make_option('--email-address',
-                    dest='email_address',
-                    help='Email address for the Vumi Go user'),
+    option_list = BaseGoAccountCommand.option_list + (
+        make_command_option(
+            'list', help='List the active conversations in this account.'),
+        make_command_option('show', help='Display a conversation'),
+        make_command_option(
+            'show_config', help='Display the config for a conversation'),
+        make_command_option('start', help='Start a conversation'),
+        make_command_option('stop', help='Stop a conversation'),
+        make_command_option('archive', help='Archive a conversation'),
+
         make_option('--conversation-key',
                     dest='conversation_key',
                     help='The conversation key'),
-        make_option('--list',
-                    dest='list_conversations',
-                    action='store_true', default=False,
-                    help='List the active conversations in this account.'),
-        make_option('--show-config',
-                    dest='show_config',
-                    action='store_true', default=False,
-                    help='Display the config for a conversation'),
-    ]
-    option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
+    )
 
-    def handle(self, *args, **options):
-        try:
-            user = User.objects.get(email=options['email_address'])
-        except User.DoesNotExist, e:
-            raise CommandError(e)
-
-        user_api = vumi_api_for_user(user)
-
-        if options.get('list_conversations'):
-            self.list_conversations(user_api)
-            return
-
+    def get_conversation(self, options):
         if 'conversation_key' not in options:
             raise CommandError('Please specify a conversation key')
-        conversation = user_api.get_wrapped_conversation(
+        conversation = self.user_api.get_wrapped_conversation(
             options['conversation_key'])
         if conversation is None:
             raise CommandError('Conversation does not exist')
+        return conversation
 
-        if options.get('show_config'):
-            self.show_config(conversation)
-        else:
-            raise CommandError('Please specify an action')
-
-    def list_conversations(self, user_api):
-        conversations = user_api.active_conversations()
+    def handle_command_list(self, *args, **options):
+        conversations = self.user_api.active_conversations()
         conversations.sort(key=lambda c: c.created_at)
         for i, c in enumerate(conversations):
             self.stdout.write("%d. %s (type: %s, key: %s)\n"
                               % (i, c.name, c.conversation_type, c.key))
 
-    def show_config(self, conversation):
+    def handle_command_show(self, *args, **options):
+        conversation = self.get_conversation(options)
+        self.stdout.write(pformat(conversation.get_data()))
+        self.stdout.write("\n")
+
+    def handle_command_show_config(self, *args, **options):
+        conversation = self.get_conversation(options)
         self.stdout.write(pformat(conversation.config))
         self.stdout.write("\n")
+
+    def handle_command_start(self, *apps, **options):
+        conversation = self.get_conversation(options)
+        if conversation.archived():
+            raise CommandError('Archived conversations cannot be started')
+        if conversation.running() or conversation.stopping():
+            raise CommandError('Conversation already running')
+
+        self.stdout.write("Starting conversation...\n")
+        conversation.start()
+        self.stdout.write("Conversation started\n")
+
+    def handle_command_stop(self, *apps, **options):
+        conversation = self.get_conversation(options)
+        if conversation.archived():
+            raise CommandError('Archived conversations cannot be stopped')
+        if conversation.stopped():
+            raise CommandError('Conversation already stopped')
+
+        self.stdout.write("Stopping conversation...\n")
+        conversation.stop_conversation()
+        self.stdout.write("Conversation stopped\n")
+
+    def handle_command_archive(self, *apps, **options):
+        conversation = self.get_conversation(options)
+        if conversation.archived():
+            raise CommandError('Archived conversations cannot be archived')
+        if not conversation.stopped():
+            raise CommandError('Only stopped conversations can be archived')
+
+        self.stdout.write("Archiving conversation...\n")
+        conversation.archive_conversation()
+        self.stdout.write("Conversation archived\n")
