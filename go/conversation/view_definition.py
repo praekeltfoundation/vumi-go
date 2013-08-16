@@ -84,12 +84,16 @@ class ConfirmConversationView(ConversationTemplateView):
         token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = request.GET.get('token')
         token_data = token_manager.verify_get(token)
+        params = token_data['extra_params']
+
         if not token_data:
             raise Http404
+
         return self.render_to_response({
-            'form': ConfirmConversationForm(initial={'token': token}),
-            'conversation': conversation,
             'success': False,
+            'conversation': conversation,
+            'action_display_name': params.get('action_display_name'),
+            'form': ConfirmConversationForm(initial={'token': token}),
         })
 
     def post(self, request, conversation):
@@ -123,8 +127,8 @@ class ConfirmConversationView(ConversationTemplateView):
 
         return self.render_to_response({
             'form': confirmation_form,
-            'conversation': conversation,
             'success': success,
+            'conversation': conversation,
         })
 
 
@@ -420,13 +424,15 @@ class ConversationActionView(ConversationTemplateView):
         redirect_to = self.get_view_url('confirm', conversation_key=conv.key)
         # The token to be sent.
         params = {
-            'action_name': self.action.action_name,
             'action_data': action_data,
+            'action_name': self.action.action_name,
+            'action_display_name': self.action.action_display_name,
         }
 
         token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = token_manager.generate(redirect_to, user_id=request.user.id,
                                        extra_params=params)
+
         conv.send_token_url(
             token_manager.url_for_token(token), user_account.msisdn,
             acquire_tag=False)
