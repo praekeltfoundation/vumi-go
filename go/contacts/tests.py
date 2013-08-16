@@ -64,7 +64,7 @@ class ContactsTestCase(BaseContactsTestCase):
     def get_latest_contact(self):
         return max(self.get_all_contacts(), key=lambda c: c.created_at)
 
-    def test_contat_details(self):
+    def test_contact_details(self):
         group_1 = self.contact_store.new_group(u'lerp')
         group_2 = self.contact_store.new_group(u'larp')
 
