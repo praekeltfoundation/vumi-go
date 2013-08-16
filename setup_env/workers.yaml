@@ -57,13 +57,20 @@ transports:
           tagname_pattern: .*
           msg_template: {}
 
+
+routers:
+  keyword:
+    class: go.routers.keyword.vumi_app.KeywordRouter
+    config:
+      redis_manager: *REDIS-MANAGER
+      riak_manager: *RIAK-MANAGER
+
+
 applications:
   wikipedia:
     class: go.apps.wikipedia.vumi_app.WikipediaApplication
     config:
       metrics_prefix: wikipedia_application
-      sms_transport: wikipedia_transport
-      incoming_sms_transport: wikipedia_transport
       max_sms_content_length: 450
       max_sms_unicode_length: 190
       redis_manager: *REDIS-MANAGER

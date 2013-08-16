@@ -7,8 +7,8 @@
 
 {% for conversation in conversations %}{% if conversation.start %}
 echo "Starting conversation: {{conversation.key}}"
-./go-admin.sh go_start_conversation --email-address {{conversation.account}} \
-    --conversation-key {{conversation.key}}
+./go-admin.sh go_manage_conversation --email-address {{conversation.account}} \
+    --conversation-key {{conversation.key}} --start
 {% endif %}{% endfor %}
 
 {% for router in routers %}{% if router.start %}

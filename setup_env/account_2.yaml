@@ -24,6 +24,8 @@ channels:
   # conversation4
   - "ussd_tagpool:*120*10004#"
 
+routers: {}
+
 conversations:
   - key: conversation2
     start: false

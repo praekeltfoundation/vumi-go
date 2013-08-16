@@ -31,6 +31,8 @@ channels:
   # conversation10
   - "longcode_tagpool:longcode-10004"
 
+routers: {}
+
 conversations:
   - key: conversation1
     start: false
