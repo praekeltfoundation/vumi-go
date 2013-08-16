@@ -328,7 +328,10 @@ class EditConversationView(ConversationTemplateView):
             # Is this a good idea?
             if not edit_form.is_valid():
                 return self._render_forms(request, conversation, edit_forms)
-            config[key] = self.process_form(edit_form)
+            if key is None:
+                config = self.process_form(edit_form)
+            else:
+                config[key] = self.process_form(edit_form)
         conversation.set_config(config)
         conversation.c.extra_endpoints = self.view_def.get_endpoints(config)
 
