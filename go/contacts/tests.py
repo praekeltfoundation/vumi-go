@@ -64,6 +64,29 @@ class ContactsTestCase(BaseContactsTestCase):
     def get_latest_contact(self):
         return max(self.get_all_contacts(), key=lambda c: c.created_at)
 
+    def test_contat_details(self):
+        group_1 = self.contact_store.new_group(u'lerp')
+        group_2 = self.contact_store.new_group(u'larp')
+
+        contact = self.mkcontact(
+            name='Foo',
+            surname='Bar',
+            groups=[group_1, group_2],
+            extra={'black': 'moth', 'super': 'rainbow'})
+
+        response = self.client.get(person_url(contact.key))
+
+        self.assertContains(response, 'Foo')
+        self.assertContains(response, 'Bar')
+
+        self.assertContains(response, 'lerp')
+        self.assertContains(response, 'larp')
+
+        self.assertContains(response, 'black')
+        self.assertContains(response, 'moth')
+        self.assertContains(response, 'super')
+        self.assertContains(response, 'rainbow')
+
     def test_contact_creation(self):
         group = self.contact_store.new_group(TEST_GROUP_NAME)
         response = self.client.post(reverse('contacts:new_person'), {
