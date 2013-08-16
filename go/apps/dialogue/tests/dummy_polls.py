@@ -26,9 +26,9 @@ simple_poll = {
             "store_as": "message-2",
             "type": "freetext",
             "store_on_contact": True,
-            "entry_endpoint": "endpoint-3",
+            "entry_endpoint": {"uuid": "endpoint-3"},
             # freetext specific
-            "exit_endpoint": "endpoint-4",
+            "exit_endpoint": {"uuid": "endpoint-4"},
             "text": "What is your name?",
         },
         {
@@ -37,7 +37,7 @@ simple_poll = {
             "store_as": "ending-1",
             "type": "end",
             "store_on_contact": True,
-            "entry_endpoint": "endpoint-5",
+            "entry_endpoint": {"uuid": "endpoint-5"},
             # end specific
             "text": "Thank you for taking our survey",
         },
