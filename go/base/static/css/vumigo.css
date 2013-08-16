@@ -598,6 +598,20 @@ button {
 .contacts .smart-group-search form {
   display: inline;
 }
+.contacts .details hr {
+  border: 1px solid #d9d8d3;
+  border-top: none;
+}
+.contacts .details h4 {
+  padding: 8px;
+}
+.contacts .details section {
+  padding: 4px;
+  margin: 8px;
+}
+.contacts .details .extras {
+  max-width: 480px;
+}
 .accounts {
   color: #c1c1c1;
 }
