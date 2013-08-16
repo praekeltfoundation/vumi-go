@@ -45,7 +45,8 @@ class BaseGoAccountCommand(BaseCommand):
             raise CommandError(
                 "Multiple command options provided, only one allowed: %s" % (
                     ' '.join(make_command_opt_str(cmd) for cmd in commands)))
-        return getattr(self, 'handle_command_%s' % commands)(*args, **options)
+        [command] = commands
+        return getattr(self, 'handle_command_%s' % command)(*args, **options)
 
     def handle_no_command(self, *args, **options):
         raise CommandError(
