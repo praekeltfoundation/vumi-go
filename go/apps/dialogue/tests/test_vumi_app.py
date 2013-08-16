@@ -41,6 +41,9 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
                 'config': {
                     'cls': 'go.apps.dialogue.vumi_app.PollConfigResource',
                 },
+                'contacts': {
+                    'cls': 'go.apps.jsbox.contacts.ContactsResource',
+                },
                 'kv': {
                     'cls': 'vumi.application.sandbox.RedisResource',
                     'redis_manager': {'FAKE_REDIS': self.kv_redis},
@@ -66,7 +69,7 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
     def setup_conversation(self, contact_count=2,
                            from_addr=u'+27831234567{0}',
                            config={}):
-        config["poll"] = json.dumps(simple_poll)
+        config["poll"] = simple_poll
 
         user_api = self.user_api
         group = yield user_api.contact_store.new_group(u'test group')
@@ -80,6 +83,7 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
             delivery_tag_pool=u'pool', delivery_class=u'sms',
             delivery_tag=u'tag1', config=config)
         conversation.add_group(group)
+        conversation.set_status_started()
         yield conversation.save()
         returnValue(conversation)
 
