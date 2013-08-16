@@ -24,7 +24,7 @@ function DialogueStateCreator() {
 
     self.on_config_read = function(event) {
         var p = new Promise();
-        event.im.fetch_config_value("poll", true,
+        event.im.fetch_config_value("poll", false,
             function (poll) {
                 self.poll = poll;
 
@@ -111,7 +111,7 @@ function DialogueStateCreator() {
             addr: msg.from_addr,
             delivery_class: msg.helper_metadata.delivery_class
         });
-        
+
         return p.then(function(reply) {
             if (!reply.success) { return; }
 
@@ -130,7 +130,7 @@ function DialogueStateCreator() {
                 var endpoint = state_description.choice_endpoints.filter(
                   function (c) { return (c.value == choice.value); })[0];
 
-                if (!endpoint) { return state_name; }
+                if (!endpoint) { done(state_name); return; }
 
                 self.store_answer(
                     state_description.store_as,
