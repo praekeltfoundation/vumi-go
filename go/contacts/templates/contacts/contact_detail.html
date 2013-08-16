@@ -14,32 +14,59 @@
 {% endblock %}
 
 {% block content_main_list %}
-    <form class="form-horizontal" method="post" action="">
+    <form class="form-horizontal details" method="post" action="">
         {% csrf_token %}
-        <fieldset>
-            {% for field in form.visible_fields %}
-            <div class="control-group{% if field.errors %} error{% endif %}">
-                
-                <label class="control-label" for="id_{{ field.name }}">
-                    {{ field.label }}
-                </label>
-                <div class="controls">
-                    {{ field }}
-                    <span class="help-inline">
-                        {% if field.errors %}
-                            {{ field.errors|join:" " }}
-                        {% endif %}
-                        {% if field.help_text %}
-                            ({{ field.help_text }})
-                        {% endif %}
-                    </span>
-                </div>
-            </div>
-            {% endfor %}
+            <section class='profile'>
+                <h4>Profile details</h4>
+                <fieldset>
+                    {% for field in form.visible_fields %}
+                    <div class="control-group{% if field.errors %} error{% endif %}">
+                        <label class="control-label" for="id_{{ field.name }}">
+                            {{ field.label }}
+                        </label>
+                        <div class="controls">
+                            {{ field }}
+                            <span class="help-inline">
+                                {% if field.errors %}
+                                    {{ field.errors|join:" " }}
+                                {% endif %}
+                                {% if field.help_text %}
+                                    ({{ field.help_text }})
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </fieldset>
+            </section>
+
+            <hr>
+
+            {% if contact_extra_items %}
+              <section class="extras">
+                  <h4>Extra details</h4>
+                  <table class="table">
+                      <thead>
+                          <tr>
+                              <th>Name</td>
+                              <th>Value</td>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {% for field, value in contact_extra_items %}
+                          <tr>
+                              <td>{{ field }}</td>
+                              <td>{{ value }}</td>
+                          </tr>
+                          {% endfor %}
+                      </tbody>
+                </table>
+              </section>
+            {% endif %}
+
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save changes</button>
             </div>
-        </fieldset>
     </form>
 {% endblock %}
 
