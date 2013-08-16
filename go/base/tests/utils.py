@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from StringIO import StringIO
 import uuid
 
 from django.conf import settings, UserSettingsHolder
@@ -7,6 +8,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.test.client import Client
+from django.core.management.base import CommandError
 
 from vumi.tests.fake_amqp import FakeAMQPBroker
 from vumi.message import TransportUserMessage, TransportEvent
@@ -148,23 +150,21 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
             'description': u'hello world',
             'config': {},
         }
+        if started:
+            params['status'] = u'running'
         params.update(kwargs)
-        conv = self.user_api.wrap_conversation(
+        return self.user_api.wrap_conversation(
             self.user_api.new_conversation(**params))
 
-        if started:
-            conv.set_status_started()
-            conv.save()
-
-        return conv
-
-    def create_router(self, **kwargs):
+    def create_router(self, started=False, **kwargs):
         params = {
             'router_type': u'test_router_type',
             'name': u'router name',
             'description': u'hello world',
             'config': {},
         }
+        if started:
+            params['status'] = u'running'
         params.update(kwargs)
         return self.user_api.new_router(**params)
 
@@ -278,3 +278,40 @@ class FakeMatchResult(object):
     def is_in_progress(self):
         self._times_called += 1
         return self._tries > self._times_called
+
+
+class GoAccountCommandTestCase(VumiGoDjangoTestCase):
+    use_riak = True
+    command_class = None
+
+    def setUp(self):
+        super(GoAccountCommandTestCase, self).setUp()
+        self.setup_api()
+        self.setup_user_api()
+        self.command = self.command_class()
+        self.command.stdout = StringIO()
+        self.command.stderr = StringIO()
+
+    def call_command(self, *command, **options):
+        # Make sure we have options for the command(s) specified
+        for cmd_name in command:
+            self.assertTrue(
+                cmd_name in self.command.list_commands(),
+                "Command '%s' has no command line option" % (cmd_name,))
+        # Make sure we have options for any option keys specified
+        opt_dests = set(opt.dest for opt in self.command.option_list)
+        for opt_dest in options:
+            self.assertTrue(
+                opt_dest in opt_dests,
+                "Option key '%s' has no command line option" % (opt_dest,))
+        # Call the command handler
+        return self.command.handle(
+            email_address=self.django_user.email, command=command, **options)
+
+    def assert_command_error(self, regexp, *command, **options):
+        self.assertRaisesRegexp(
+            CommandError, regexp, self.call_command, *command, **options)
+
+    def assert_command_output(self, expected_output, *command, **options):
+        self.call_command(*command, **options)
+        self.assertEqual(expected_output, self.command.stdout.getvalue())
