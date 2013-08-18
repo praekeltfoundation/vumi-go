@@ -51,6 +51,7 @@ class TestKeywordRouter(RouterWorkerTestCase):
         for outbound_src, outbound_dst in rev_hops:
             rmeta.push_hop(outbound_dst, outbound_src)
 
+    @inlineCallbacks
     def test_start_and_stop(self):
         router = yield self.setup_router({})
         router_api = self.user_api.get_router_api(
