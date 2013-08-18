@@ -52,18 +52,24 @@ class TestKeywordRouter(RouterWorkerTestCase):
             rmeta.push_hop(outbound_dst, outbound_src)
 
     @inlineCallbacks
-    def test_start_and_stop(self):
-        router = yield self.setup_router({})
-        router_api = self.user_api.get_router_api(
-            router.router_type, router.key)
+    def test_start(self):
+        router = yield self.setup_router({}, started=False)
         self.assertTrue(router.stopped())
         self.assertFalse(router.running())
 
-        yield router_api.start_router()
+        yield self.start_router(router)
+        router = yield self.user_api.get_router(router.key)
         self.assertFalse(router.stopped())
         self.assertTrue(router.running())
 
-        yield router_api.stop_router()
+    @inlineCallbacks
+    def test_stop(self):
+        router = yield self.setup_router({}, started=True)
+        self.assertFalse(router.stopped())
+        self.assertTrue(router.running())
+
+        yield self.stop_router(router)
+        router = yield self.user_api.get_router(router.key)
         self.assertTrue(router.stopped())
         self.assertFalse(router.running())
 
