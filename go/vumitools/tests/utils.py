@@ -311,6 +311,26 @@ class GoRouterWorkerTestMixin(GoWorkerTestMixin):
         return self.user_api.new_router(
             router_type, name, description, config, **kw)
 
+    @inlineCallbacks
+    def start_router(self, router):
+        router_api = self.user_api.get_router_api(
+            router.router_type, router.key)
+        yield router_api.start_router(router)
+        for cmd in self.get_dispatcher_commands():
+            yield self.dispatch_command(
+                cmd.payload['command'], *cmd.payload['args'],
+                **cmd.payload['kwargs'])
+
+    @inlineCallbacks
+    def stop_router(self, router):
+        router_api = self.user_api.get_router_api(
+            router.router_type, router.key)
+        yield router_api.stop_router(router)
+        for cmd in self.get_dispatcher_commands():
+            yield self.dispatch_command(
+                cmd.payload['command'], *cmd.payload['args'],
+                **cmd.payload['kwargs'])
+
     def add_router_md_to_msg(self, msg, router, endpoint=None):
         msg.payload.setdefault('helper_metadata', {})
         md = MessageMetadataHelper(self.vumi_api, msg)
