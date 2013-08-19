@@ -203,10 +203,6 @@ LOGGING = {
         'mail_admins': {
             'level': 'ERROR',
             'class': 'django.utils.log.AdminEmailHandler'
-        },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
         }
     },
     'loggers': {
@@ -214,12 +210,7 @@ LOGGING = {
             'handlers': ['mail_admins'],
             'level': 'ERROR',
             'propagate': True,
-        },
-        'django': {
-            'handlers': ['console'],
-            'propagate': True,
-            'level': 'INFO',
-        },
+        }
     }
 }
 
