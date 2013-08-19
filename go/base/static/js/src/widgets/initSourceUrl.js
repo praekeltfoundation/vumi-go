@@ -16,13 +16,17 @@ function SourceUrl(el, dest_id) {
 
     $button.on('click', function() {
         var url = $input.val();
-        if (url.length == 0) {
+        if (url.length === 0) {
             SourceUrlAlert($alert, 'Source URL is required.');
         } else {
             // do the ajax, maybe show loading?
-            $.ajax('/app/jsbox/cross-domain-xhr/',  {
+            $.ajax({
+                url: '/cross-domain-xhr/',
                 type: 'POST',
-                data: {'url': url},
+                data: {
+                  url: url,
+                  csrfmiddlewaretoken: $.cookie('csrftoken')
+                },
                 success: function(r) {
                     dest.on_source_update(r);
                     SourceUrlAlert($alert, 'Update successful.', 'success');
