@@ -13,10 +13,3 @@
     </div>
     {% endif %}
 {% endblock %}
-
-{% block ondomready %}
-    var dashboard = new go.router.dashboard.RouterDashboardView({
-        el: '.table-form-view',
-        csrfToken: '{{ csrf_token|safe }}'
-    });
-{% endblock %}
