@@ -87,6 +87,10 @@ applications:
       send_to: *SEND-TO
       middleware:
         - logging_mw: vumi.middleware.logging.LoggingMiddleware
+        - storing_mw: go.vumitools.middleware.ConversationStoringMiddleware
+      storing_mw:
+        redis_manager: *REDIS-MANAGER
+        riak_manager: *RIAK-MANAGER
 
   dialogue:
     class: go.apps.dialogue.vumi_app.DialogueApplication
@@ -122,6 +126,10 @@ applications:
       send_to: *SEND-TO
       middleware:
         - logging_mw: vumi.middleware.logging.LoggingMiddleware
+        - storing_mw: go.vumitools.middleware.ConversationStoringMiddleware
+      storing_mw:
+        redis_manager: *REDIS-MANAGER
+        riak_manager: *RIAK-MANAGER
 
   survey:
     class: go.apps.surveys.vumi_app.SurveyApplication
@@ -135,6 +143,10 @@ applications:
         prefix: vxpolls
       middleware:
         - logging_mw: vumi.middleware.logging.LoggingMiddleware
+        - storing_mw: go.vumitools.middleware.ConversationStoringMiddleware
+      storing_mw:
+        redis_manager: *REDIS-MANAGER
+        riak_manager: *RIAK-MANAGER
 
   sequential_send:
     class: go.apps.sequential_send.vumi_app.SequentialSendApplication
@@ -143,6 +155,12 @@ applications:
       redis_manager: *REDIS-MANAGER
       riak_manager: *RIAK-MANAGER
       send_to: *SEND-TO
+      middleware:
+        - logging_mw: vumi.middleware.logging.LoggingMiddleware
+        - storing_mw: go.vumitools.middleware.ConversationStoringMiddleware
+      storing_mw:
+        redis_manager: *REDIS-MANAGER
+        riak_manager: *RIAK-MANAGER
 
   subscription:
     class: go.apps.subscription.vumi_app.SubscriptionApplication
@@ -151,6 +169,12 @@ applications:
       redis_manager: *REDIS-MANAGER
       riak_manager: *RIAK-MANAGER
       send_to: *SEND-TO
+      middleware:
+        - logging_mw: vumi.middleware.logging.LoggingMiddleware
+        - storing_mw: go.vumitools.middleware.ConversationStoringMiddleware
+      storing_mw:
+        redis_manager: *REDIS-MANAGER
+        riak_manager: *RIAK-MANAGER
 
   jsbox:
     class: go.apps.jsbox.vumi_app.JsBoxApplication
@@ -184,6 +208,12 @@ applications:
       redis_manager: *REDIS-MANAGER
       riak_manager: *RIAK-MANAGER
       send_to: *SEND-TO
+      middleware:
+        - logging_mw: vumi.middleware.logging.LoggingMiddleware
+        - storing_mw: go.vumitools.middleware.ConversationStoringMiddleware
+      storing_mw:
+        redis_manager: *REDIS-MANAGER
+        riak_manager: *RIAK-MANAGER
 
   opt_out:
     class: go.apps.opt_out.vumi_app.OptOutApplication
@@ -192,6 +222,12 @@ applications:
       redis_manager: *REDIS-MANAGER
       riak_manager: *RIAK-MANAGER
       send_to: *SEND-TO
+      middleware:
+        - logging_mw: vumi.middleware.logging.LoggingMiddleware
+        - storing_mw: go.vumitools.middleware.ConversationStoringMiddleware
+      storing_mw:
+        redis_manager: *REDIS-MANAGER
+        riak_manager: *RIAK-MANAGER
 
   http_api:
     class: go.apps.http_api.vumi_app.StreamingHTTPWorker
@@ -201,3 +237,9 @@ applications:
       metrics_prefix: http_api_application
       redis_manager: *REDIS-MANAGER
       riak_manager: *RIAK-MANAGER
+      middleware:
+        - logging_mw: vumi.middleware.logging.LoggingMiddleware
+        - storing_mw: go.vumitools.middleware.ConversationStoringMiddleware
+      storing_mw:
+        redis_manager: *REDIS-MANAGER
+        riak_manager: *RIAK-MANAGER

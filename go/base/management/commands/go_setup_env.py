@@ -207,6 +207,8 @@ class Command(BaseCommand):
             self.setup_routers(user, account_objects.get('routers', {}))
             self.setup_conversations(
                 user, account_objects.get('conversations', {}))
+            self.setup_contact_groups(
+                user, account_objects.get('contact_groups', {}))
             self.setup_routing(user, account_objects)
 
     def setup_account(self, user_info):
