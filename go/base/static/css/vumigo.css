@@ -659,6 +659,7 @@ button {
 }
 .table-form-view td:first-child,
 .table-form-view th:first-child {
+  width: 20px;
   text-align: center;
   cursor: pointer;
 }
