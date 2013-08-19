@@ -405,3 +405,157 @@ class ContactsResource(SandboxResource):
             command,
             success=True,
             contact=contact.get_data()))
+
+
+class GroupsResource(SandboxResource):
+    """
+    Sandbox resource for accessing, creating and modifying groups for
+    a Go application.
+
+    See :class:`go.vumitools.contact.ContactGroup` for a look at the Contact model
+    and its fields.
+    """
+
+    def _contact_store_for_api(self, api):
+        return self.app_worker.user_api_for_api(api).contact_store
+
+    @inlineCallbacks
+    def handle_search(self, api, command):
+        try:
+            contact_store = self._contact_store_for_api(api)
+            keys = yield contact_store.groups.raw_search(
+                command['query']).get_keys()
+            groups = []
+            for group_bunch in contact_store.groups.load_all_bunches(keys):
+                groups.extend((yield group_bunch))
+
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+        except (Exception,) as e:
+            # NOTE: Hello Riakasaurus, you raise horribly plain exceptions on
+            #       a MapReduce error.
+            if 'MapReduce' not in str(e):
+                raise
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        returnValue(self.reply(
+            command,
+            success=True,
+            groups=[group.get_data() for group in groups]))
+
+    @inlineCallbacks
+    def handle_get_by_key(self, api, command):
+        try:
+            contact_store = self._contact_store_for_api(api)
+            group = yield contact_store.get_group(command['key'])
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        if group is None:
+            returnValue(self.reply(
+                command, success=False, reason='Group not found'))
+
+        returnValue(self.reply(
+            command,
+            success=True,
+            group=group.get_data()))
+
+    @inlineCallbacks
+    def handle_get(self, api, command):
+        try:
+            contact_store = self._contact_store_for_api(api)
+            keys = yield contact_store.groups.search(
+                name=command['name']).get_keys()
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+        except (Exception,) as e:
+            # NOTE: Hello Riakasaurus, you raise horribly plain exceptions on
+            #       a MapReduce error.
+            if 'MapReduce' not in str(e):
+                raise
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        if not keys:
+            returnValue(self.reply(
+                command, success=False, reason='Group not found'))
+
+        if len(keys) != 1:
+            returnValue(self.reply(
+                command, success=False, reason='Multiple groups found'))
+
+        [key] = keys
+        group = yield contact_store.get_group(key)
+        returnValue(self.reply(
+            command, success=True, group=group.get_data()))
+
+    @inlineCallbacks
+    def handle_get_or_create(self, api, command):
+        try:
+            contact_store = self._contact_store_for_api(api)
+            keys = yield contact_store.groups.search(
+                name=command['name']).get_keys()
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+        except (Exception,) as e:
+            # NOTE: Hello Riakasaurus, you raise horribly plain exceptions on
+            #       a MapReduce error.
+            if 'MapReduce' not in str(e):
+                raise
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        if not keys:
+            group = yield contact_store.new_group(command['name'])
+            returnValue(self.reply(
+                command, success=True, created=True, group=group.get_data()))
+
+        if len(keys) != 1:
+            returnValue(self.reply(
+                command, success=False, reason='Multiple groups found'))
+
+        [key] = keys
+        group = yield contact_store.get_group(key)
+        returnValue(self.reply(
+            command, success=True, created=False, group=group.get_data()))
+
+    @inlineCallbacks
+    def handle_update(self, api, command):
+        try:
+            contact_store = self._contact_store_for_api(api)
+            group = yield contact_store.get_group(command['key'])
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        if group is None:
+            returnValue(self.reply(
+                command, success=False, reason='Group not found'))
+
+        group.name = command['name']
+        group.query = command.get('query', None)
+        yield group.save()
+
+        returnValue(self.reply(
+            command,
+            success=True,
+            group=group.get_data()))
+
+    @inlineCallbacks
+    def handle_count_members(self, api, command):
+        try:
+            contact_store = self._contact_store_for_api(api)
+            group = yield contact_store.get_group(command['key'])
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        member_count = yield contact_store.count_contacts_for_group(group)
+        returnValue(self.reply(
+            command, success=True, count=member_count, group=group.get_data()))
+
