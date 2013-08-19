@@ -1,9 +1,11 @@
 import csv
 import logging
 import functools
+import re
 from StringIO import StringIO
 from urllib import urlencode
 
+from django.conf import settings
 from django.views.generic import View, TemplateView
 from django import forms
 from django.shortcuts import redirect, Http404
@@ -13,11 +15,14 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
+from go.base import message_store_client as ms_client
+from go.base.utils import page_range_window
 from go.vumitools.exceptions import ConversationSendError
 from go.token.django_token_manager import DjangoTokenManager
 from go.conversation.forms import (ConfirmConversationForm, ReplyToMessageForm,
                                    ConversationDetailForm)
 from go.conversation.tasks import export_conversation_messages
+from go.conversation.utils import PagedMessageCache
 
 logger = logging.getLogger(__name__)
 
@@ -177,6 +182,98 @@ class ShowConversationView(ConversationTemplateView):
                 self.get_next_view(conversation),
                 conversation_key=conversation.key)
         return self.render_to_response(params)
+
+
+class IncomingListView(ConversationTemplateView):
+    view_name = 'incoming_list'
+    path_suffix = 'incoming_list/'
+
+    def get(self, request, conversation):
+        """
+        Render the messages sent & received for this conversation.
+
+        :param ConversationWrapper conversation:
+            The conversation to show messages for.
+        :param str direction:
+            Either 'inbound' or 'outbound', defaults to 'inbound'
+        :param int page:
+            The page to display for the pagination.
+        :param str batch_id:
+            The batch_id to show messages for.
+        :param str query:
+            The query string to search messages for in the batch's inbound
+            messages.
+        """
+        direction = request.GET.get('direction', 'inbound')
+        page = request.GET.get('p', 1)
+        batch_id = None
+        query = request.GET.get('q', None)
+        token = None
+
+        batch_id = batch_id or conversation.get_latest_batch_key()
+
+        # Paginator starts counting at 1 so 0 would also be invalid
+        inbound_message_paginator = Paginator(
+            PagedMessageCache(conversation.count_replies(),
+                lambda start, stop: conversation.received_messages(
+                    start, stop, batch_id)), 20)
+        outbound_message_paginator = Paginator(
+            PagedMessageCache(conversation.count_sent_messages(),
+                lambda start, stop: conversation.sent_messages(start, stop,
+                    batch_id)), 20)
+
+        tag_context = {
+            'batch_id': batch_id,
+            'conversation': conversation,
+            'inbound_message_paginator': inbound_message_paginator,
+            'outbound_message_paginator': outbound_message_paginator,
+            'inbound_uniques_count': conversation.count_inbound_uniques(),
+            'outbound_uniques_count': conversation.count_outbound_uniques(),
+            'message_direction': direction,
+        }
+
+        # If we're doing a query we can shortcut the results as we don't
+        # need all the message paginator stuff since we're loading the results
+        # asynchronously with JavaScript.
+        client = ms_client.Client(settings.MESSAGE_STORE_API_URL)
+        if query and not token:
+            token = client.match(batch_id, direction, [{
+                'key': 'msg.content',
+                'pattern': re.escape(query),
+                'flags': 'i',
+                }])
+            tag_context.update({
+                'query': query,
+                'token': token,
+            })
+            return tag_context
+        elif query and token:
+            match_result = ms_client.MatchResult(client, batch_id, direction,
+                                                    token, page=int(page),
+                                                    page_size=20)
+            message_paginator = match_result.paginator
+            tag_context.update({
+                'token': token,
+                'query': query,
+                })
+
+        elif direction == 'inbound':
+            message_paginator = inbound_message_paginator
+        else:
+            message_paginator = outbound_message_paginator
+
+        try:
+            message_page = message_paginator.page(page)
+        except PageNotAnInteger:
+            message_page = message_paginator.page(1)
+        except EmptyPage:
+            message_page = message_paginator.page(message_paginator.num_pages)
+
+        tag_context.update({
+            'message_page': message_page,
+            'message_page_range': page_range_window(message_page, 5),
+        })
+        return render(request, 'conversation/incoming_list.html', tag_context)
 
     @staticmethod
     def send_one_off_reply(user_api, conversation, in_reply_to, content):
