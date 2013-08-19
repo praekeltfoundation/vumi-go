@@ -158,7 +158,7 @@ applications:
       metrics_prefix: "go.accounts."
       env:
         NODE_PATH: "/usr/lib/node_modules"
-      app_context: "{require: function(m) { if (m == 'jed' || m == 'vumigo_v01') return require(m); return null; }, Buffer: Buffer}"
+      app_context: "{require: function(m) { if (['q', 'jed', 'vumigo_v01', 'libxmljs'].indexOf(m) >= 0) return require(m); return null; }, Buffer: Buffer}"
 
       sandbox:
         config:
