@@ -36,7 +36,7 @@
                     <!-- <td></td> -->
                     <td>{{ conversation.created_at|naturaltime }}</td>
                     <td>
-                        <a href="{% url 'conversations:incoming_list' conversation.key %}">Messages</a>
+                        <a href="{% conversation_screen conversation 'incoming_list' %}">Messages</a>
                         {# <a href="{% url 'todo' %}">Reports</a> #}
                     </td>
                     <td>

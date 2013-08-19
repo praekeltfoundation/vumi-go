@@ -614,6 +614,7 @@ class ConversationViewDefinitionBase(object):
     # This doesn't include ConversationActionView because that's special.
     DEFAULT_CONVERSATION_VIEWS = (
         ShowConversationView,
+        IncomingListView,
         EditConversationDetailView,
         EditConversationGroupsView,
         StartConversationView,
