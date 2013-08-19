@@ -1,9 +1,0 @@
-worker_name: "go_api_worker"
-
-redis_manager: &REDIS_MANAGER
-{{ redis_manager }}
-riak_manager: &RIAK_MANAGER
-{{ riak_manager }}
-
-twisted_endpoint: "{{ twisted_endpoint }}"
-web_path: "/api/v1/go/api"
