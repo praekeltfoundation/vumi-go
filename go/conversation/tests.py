@@ -72,8 +72,8 @@ class ConversationTestCase(VumiGoDjangoTestCase):
             'conversation_key': conv.key, 'path_suffix': ''})
 
         resp = self.client.get(show_url)
-        self.assertContains(resp, 'Contact Group 1')
-        self.assertNotContains(resp, 'Contact Group 2')
+        self.assertContains(resp, group1.name)
+        self.assertNotContains(resp, group2.name)
 
     def test_conversation_render_contact_group_edit_form(self):
         conv = self.create_conversation(conversation_type=u'bulk_message',

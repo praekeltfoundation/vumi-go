@@ -8,7 +8,6 @@ from twisted.internet.defer import returnValue
 
 from vumi.persist.model import Manager
 
-from go.vumitools.exceptions import ConversationSendError
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.utils import MessageMetadataHelper
 from go.vumitools.account import RoutingTableHelper, GoConnector

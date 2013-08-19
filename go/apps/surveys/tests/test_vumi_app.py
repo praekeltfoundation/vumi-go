@@ -5,10 +5,9 @@
 import uuid
 import json
 
-from twisted.internet.defer import inlineCallbacks, returnValue, Deferred
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import TransportUserMessage
-from vumi.tests.utils import LogCatcher
 
 from go.apps.surveys.vumi_app import SurveyApplication
 from go.vumitools.tests.utils import AppWorkerTestCase

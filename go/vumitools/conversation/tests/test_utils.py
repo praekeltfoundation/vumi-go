@@ -8,7 +8,6 @@ from vumi.application.tests.test_base import DummyApplicationWorker
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApi
 from go.vumitools.opt_out import OptOutStore
-from go.vumitools.exceptions import ConversationSendError
 
 
 class ConversationWrapperTestCase(AppWorkerTestCase):

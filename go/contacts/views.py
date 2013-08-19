@@ -285,9 +285,10 @@ def _smart_group(request, contact_store, group):
                                    'complete within a few minutes.')
             return redirect(_group_url(group.key))
         elif '_delete_group_contacts' in request.POST:
-            tasks.delete_group_contacts.delay(request.user_api.user_account_key,
-                                              group.key)
-            messages.info(request, "The group's contacts will be deleted shortly.")
+            tasks.delete_group_contacts.delay(
+                request.user_api.user_account_key, group.key)
+            messages.info(
+                request, "The group's contacts will be deleted shortly.")
             return redirect(_group_url(group.key))
         elif '_delete_group' in request.POST:
             tasks.delete_group.delay(request.user_api.user_account_key,

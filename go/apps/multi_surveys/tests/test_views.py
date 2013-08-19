@@ -2,10 +2,8 @@ from datetime import date
 from zipfile import ZipFile
 from StringIO import StringIO
 
-from django.core.urlresolvers import reverse
 from django.core import mail
 
-from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
 
 

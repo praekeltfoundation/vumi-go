@@ -2,7 +2,6 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib import messages
-from django.http import HttpResponse
 
 from go.router.forms import NewRouterForm
 from go.base.utils import get_router_view_definition, router_or_404

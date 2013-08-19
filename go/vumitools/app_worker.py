@@ -13,8 +13,6 @@ from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.utils import MessageMetadataHelper
 from go.vumitools.conversation.models import (
     CONVERSATION_STARTING, CONVERSATION_STOPPING)
-from go.vumitools.router.models import (
-    ROUTER_STARTING, ROUTER_STOPPING)
 
 
 class OneShotMetricManager(MetricManager):
