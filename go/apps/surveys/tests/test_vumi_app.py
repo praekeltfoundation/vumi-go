@@ -133,30 +133,6 @@ class TestSurveyApplication(AppWorkerTestCase):
         returnValue(msgs[-1 * nr_of_messages:])
 
     @inlineCallbacks
-    def test_start_old_style(self):
-        # We need to wait for process_command_send_survey() to finish
-        # completely. Since it runs in response to an async command, we need to
-        # wrap it in something that fires a deferred at the appropriate time.
-        pcss_d = Deferred()
-        pcss = self.app.process_command_send_survey
-        pcss_wrapper = lambda *a, **kw: pcss(*a, **kw).chainDeferred(pcss_d)
-        self.app.process_command_send_survey = pcss_wrapper
-
-        self.contact1 = yield self.create_contact(name=u'First',
-            surname=u'Contact', msisdn=u'+27831234567', groups=[self.group])
-        self.contact2 = yield self.create_contact(name=u'Second',
-            surname=u'Contact', msisdn=u'+27831234568', groups=[self.group])
-        yield self.create_survey(self.conversation)
-        with LogCatcher() as log:
-            yield self.start_conversation_old_style(self.conversation)
-            self.assertEqual(log.errors, [])
-
-        yield pcss_d
-        [msg1, msg2] = self.get_dispatched_messages()
-        self.assertEqual(msg1['content'], self.default_questions[0]['copy'])
-        self.assertEqual(msg2['content'], self.default_questions[0]['copy'])
-
-    @inlineCallbacks
     def send_send_survey_command(self, conversation):
         batch_id = yield self.conversation.get_latest_batch_key()
         yield self.dispatch_command(

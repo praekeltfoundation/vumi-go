@@ -428,8 +428,7 @@ class ConversationActionView(ConversationTemplateView):
         token = token_manager.generate(redirect_to, user_id=request.user.id,
                                        extra_params=params)
         conv.send_token_url(
-            token_manager.url_for_token(token), user_account.msisdn,
-            acquire_tag=False)
+            token_manager.url_for_token(token), user_account.msisdn)
         messages.info(request, 'Confirmation request sent.')
         return self.redirect_to('show', conversation_key=conv.key)
 
