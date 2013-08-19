@@ -368,6 +368,24 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
             set(user_api.applications().keys()),
             set(['go.apps.bulk_message', 'go.apps.surveys']))
 
+    def test_setup_account_objects(self):
+        self.command.setup_tagpools(self.tagpool_file.name)
+        self.command.setup_account_objects(self.account_1_file.name)
+
+        user = authenticate(username='user1@go.com', password='foo')
+        user_api = vumi_api_for_user(user)
+
+        def assert_keys(keys, objects):
+            self.assertEqual(set(keys), set(obj.key for obj in objects))
+
+        self.assertEqual(
+            set([('pool1', 'default0'), ('pool1', 'default1')]),
+            user_api.list_endpoints())
+        assert_keys(['router1'], user_api.active_routers())
+        assert_keys(['conv1', 'conv2'], user_api.active_conversations())
+        assert_keys(['group1'], user_api.list_groups())
+        self.assertNotEqual(user_api.get_routing_table(), {})
+
     def test_setup_channels(self):
         self.command.setup_tagpools(self.tagpool_file.name)
         account_info = self.read_yaml(self.account_1_file)
