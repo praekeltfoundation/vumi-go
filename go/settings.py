@@ -375,6 +375,7 @@ PIPELINE_JS = {
             'js/vendor/base64-2.12.js',
             'js/vendor/uuid-1.4.0.js',
             'js/vendor/jquery-1.9.1.js',
+            'js/vendor/jquery.cookie-1.3.1.js',
             'js/vendor/jquery.ui-1.10.3.js',
             'js/vendor/lodash.underscore-1.2.1.js',
             'js/vendor/backbone-1.0.0.js',
