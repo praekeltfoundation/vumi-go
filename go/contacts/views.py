@@ -77,7 +77,8 @@ def groups(request, type=None):
         contact_group_form = ContactGroupForm()
         smart_group_form = SmartGroupForm()
 
-    query = request.GET.get('query', '')
+    user_query = request.GET.get('q', '')
+    query = user_query
     if query:
         if ':' not in query:
             query = 'name:%s' % (query,)
@@ -108,7 +109,7 @@ def groups(request, type=None):
         'paginator': paginator,
         'pagination_params': pagination_params,
         'page': page,
-        'query': query,
+        'query': user_query,
         'contact_group_form': contact_group_form,
         'contact_store': contact_store,
     })
@@ -390,7 +391,8 @@ def _people(request):
     # TODO: A lot of this stuff is duplicated from the similar group search
     #       in the groups() view. We need a function that does that to avoid
     #       the duplication.
-    query = request.GET.get('q', '')
+    user_query = request.GET.get('q', '')
+    query = user_query
     if query:
         if not ':' in query:
             query = 'name:%s' % (query,)
@@ -412,7 +414,7 @@ def _people(request):
 
     smart_group_form = SmartGroupForm(initial={'query': query})
     return render(request, 'contacts/contact_list.html', {
-        'query': request.GET.get('q'),
+        'query': user_query,
         'selected_contacts': selected_contacts,
         'upload_contacts_form': upload_contacts_form or UploadContactsForm(),
         'select_contact_group_form': select_contact_group_form,
