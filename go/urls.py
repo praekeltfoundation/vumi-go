@@ -3,8 +3,6 @@ from django.contrib import admin
 from django.http import HttpResponse
 from django.views.generic import RedirectView
 
-from go.base.views import cross_domain_xhr
-
 
 admin.autodiscover()
 
@@ -23,9 +21,6 @@ urlpatterns = patterns(
 
     # confirmation tokens
     url(r'^t/', include('go.token.urls')),
-
-    # proxy for cross-domain xhrs
-    url(r'^cross-domain-xhr/', cross_domain_xhr),
 
     # vumi go!
     url(r'^$', RedirectView.as_view(url='/conversations/', permanent=False,
