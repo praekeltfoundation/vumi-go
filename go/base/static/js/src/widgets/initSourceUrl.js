@@ -23,7 +23,10 @@ function SourceUrl(el, dest_id) {
             $.ajax({
                 url: '/cross-domain-xhr/',
                 type: 'POST',
-                data: {'url': url},
+                data: {
+                  url: url,
+                  csrfmiddlewaretoken: $.cookie('csrftoken')
+                },
                 success: function(r) {
                     dest.on_source_update(r);
                     SourceUrlAlert($alert, 'Update successful.', 'success');
