@@ -514,9 +514,9 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
             '--email-address user1@example.org \\',
             '    --contacts contacts.csv --group conv1',
             'echo "Starting conversation: conv1"',
-            './go-admin.sh go_start_conversation '  # cont.
+            './go-admin.sh go_manage_conversation '  # cont.
             '--email-address user1@example.org \\',
-            '    --conversation-key conv1',
+            '    --conversation-key conv1 --start',
             'echo "Starting router: router2"',
             './go-admin.sh go_manage_router '  # cont.
             '--email-address user1@example.org \\',
