@@ -75,6 +75,21 @@ class ConversationTestCase(VumiGoDjangoTestCase):
         self.assertContains(resp, 'Contact Group 1')
         self.assertNotContains(resp, 'Contact Group 2')
 
+    def test_conversation_render_contact_group_edit_form(self):
+        conv = self.create_conversation(conversation_type=u'bulk_message',
+                                        name=u'test', description=u'test')
+        group1 = self.user_api.contact_store.new_group(u'Contact Group 1')
+        group2 = self.user_api.contact_store.new_group(u'Contact Group 2')
+
+        groups_url = reverse('conversations:conversation', kwargs={
+            'conversation_key': conv.key, 'path_suffix': 'edit_groups/'})
+
+        resp = self.client.get(groups_url)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, group1.name)
+        self.assertContains(resp, group2.name)
+
     def test_conversation_contact_group_assignment(self):
         conv = self.create_conversation(conversation_type=u'bulk_message',
                                         name=u'test', description=u'test')

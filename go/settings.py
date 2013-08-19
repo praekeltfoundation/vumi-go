@@ -438,6 +438,10 @@ PIPELINE_JS = {
             'js/src/conversation/views.js',
             'js/src/conversation/dashboard.js',
             'js/src/conversation/show.js',
+            'js/src/router/router.js',
+            'js/src/router/views.js',
+            'js/src/router/dashboard.js',
+            'js/src/router/show.js',
 
             # TODO This is here so we can access the test model data. This
             # gives us the data we need for a 'demo' of the routing screen.

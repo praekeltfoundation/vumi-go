@@ -483,6 +483,7 @@ class EditConversationGroupsView(ConversationTemplateView):
             'page': page,
             'pagination_params': pagination_params,
             'conversation': conversation,
+            'contact_store': request.user_api.contact_store,
         })
 
     def get(self, request, conversation):
