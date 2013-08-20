@@ -304,19 +304,11 @@ class VumiUserApi(object):
         returnValue(tags)
 
     @Manager.calls_manager
-    def _populate_tags(self, user_account):
-        if user_account.tags is None:
-            # We need to populate this from conversations
-            conv_tags = yield self.list_conversation_batch_tags()
-            user_account.tags = [list(tag) for tag in conv_tags]
-
-    @Manager.calls_manager
     def list_endpoints(self, user_account=None):
         """Returns a set of endpoints owned by an account.
         """
         if user_account is None:
             user_account = yield self.get_user_account()
-        yield self._populate_tags(user_account)
         returnValue(set(tuple(tag) for tag in user_account.tags))
 
     @Manager.calls_manager
@@ -412,7 +404,6 @@ class VumiUserApi(object):
             The tag acquired or None if no tag was available.
         """
         user_account = yield self.get_user_account()
-        yield self._populate_tags(user_account)
         if not (yield user_account.has_tagpool_permission(pool)):
             log.warning("Account '%s' trying to access forbidden pool '%s'" % (
                 user_account.key, pool))
@@ -435,7 +426,6 @@ class VumiUserApi(object):
             The tag acquired or None if the tag was not available.
         """
         user_account = yield self.get_user_account()
-        yield self._populate_tags(user_account)
         if not (yield user_account.has_tagpool_permission(tag[0])):
             log.warning("Account '%s' trying to access forbidden pool '%s'" % (
                 user_account.key, tag[0]))
@@ -459,7 +449,6 @@ class VumiUserApi(object):
             None.
         """
         user_account = yield self.get_user_account()
-        yield self._populate_tags(user_account)
         try:
             user_account.tags.remove(list(tag))
         except ValueError, e:

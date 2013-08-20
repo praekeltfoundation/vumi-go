@@ -235,17 +235,6 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
             msg.set_routing_endpoint(endpoint)
 
     @inlineCallbacks
-    def start_conversation_old_style(self, conv, tagpool=u'pool', **kwargs):
-        old_cmds = len(self.get_dispatcher_commands())
-        conv.c.delivery_tag_pool = tagpool
-        yield conv.save()
-        yield conv.old_start(**kwargs)
-        for cmd in self.get_dispatcher_commands()[old_cmds:]:
-            yield self.dispatch_command(
-                cmd.payload['command'], *cmd.payload['args'],
-                **cmd.payload['kwargs'])
-
-    @inlineCallbacks
     def add_channel_to_conversation(self, conv, tag):
         # TODO: This is a duplicate of the method in
         #       go.base.test.utils.VumiGoDjangoTestCase but
@@ -259,6 +248,15 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
     def start_conversation(self, conversation):
         old_cmds = len(self.get_dispatcher_commands())
         yield conversation.start()
+        for cmd in self.get_dispatcher_commands()[old_cmds:]:
+            yield self.dispatch_command(
+                cmd.payload['command'], *cmd.payload['args'],
+                **cmd.payload['kwargs'])
+
+    @inlineCallbacks
+    def stop_conversation(self, conversation):
+        old_cmds = len(self.get_dispatcher_commands())
+        yield conversation.stop_conversation()
         for cmd in self.get_dispatcher_commands()[old_cmds:]:
             yield self.dispatch_command(
                 cmd.payload['command'], *cmd.payload['args'],
