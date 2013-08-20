@@ -13,6 +13,7 @@
 
       this.template = new TemplateView({
         jst: 'JST.conversation_editGroups',
+        data: {model: this.model},
         el: this.$el
       });
     },
@@ -23,6 +24,12 @@
     },
 
     events: {
+      'change .marker': function() {
+        this.model.set(
+          'selected',
+          this.$('.marker').is(':checked'),
+          {silent: true});
+      }
     }
   });
 
@@ -36,6 +43,7 @@
   });
 
   _.extend(exports, {
+    GroupRowView: GroupRowView,
     GroupTableView: GroupTableView
   });
-});
+})(go.conversation.editGroups = {});

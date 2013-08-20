@@ -1,0 +1,12 @@
+<td>
+  <input
+   class="marker"
+   type="checkbox"
+   <% if (model.get('selected')) { %>checked<% } %>>
+</td>
+
+<td>
+  <a href="<%= model.getUrl('show') %>">
+    <%= model.get('name') %>
+  </a>
+</td>

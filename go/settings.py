@@ -398,6 +398,7 @@ PIPELINE_JS = {
             'templates/apps/dialogue/states/end/edit.jst',
             'templates/apps/dialogue/states/end/preview.jst',
             'templates/apps/dialogue/states/components/nameExtras.jst',
+            'templates/conversation/editGroups.jst',
             'templates/components/confirm.jst',
             'templates/dummy/dummy.jst',
 

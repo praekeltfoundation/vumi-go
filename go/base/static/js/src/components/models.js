@@ -13,6 +13,7 @@
   var Model = Backbone.RelationalModel.extend({
     idAttribute: 'uuid',
 
+    urls: {},
     url: '/api/v1/go/api',
 
     // override to specify rpc methods
@@ -20,6 +21,12 @@
 
     // override to specify the model relations
     relations: [],
+
+    getUrl: function(name) {
+      return !name
+        ? _(this).result('url')
+        : go.utils.functor(this.urls[name]).call(this);
+    },
 
     fetch: function(options) {
       options = options || {};
