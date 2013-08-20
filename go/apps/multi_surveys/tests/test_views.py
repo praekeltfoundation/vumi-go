@@ -42,7 +42,7 @@ class MultiSurveyTestCase(DjangoGoApplicationTestCase):
         self.setup_conversation(started=True)
         self.add_messages_to_conv(
             5, start_date=date(2012, 1, 1), time_multiplier=12, reply=True)
-        conv_url = self.get_view_url('incoming_list')
+        conv_url = self.get_view_url('message_list')
         response = self.client.post(conv_url, {
             '_export_conversation_messages': True,
             })

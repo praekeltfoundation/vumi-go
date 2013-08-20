@@ -39,7 +39,7 @@
 
             <ul class="nav nav-list">
                 <li>
-                    <a href="{% conversation_screen conversation 'incoming_list' %}" class="active">All messages</a>
+                    <a href="{% conversation_screen conversation 'message_list' %}" class="active">All messages</a>
                 </li>
             </ul>
 
@@ -73,9 +73,9 @@
                 </ul>
                 <div class="tab-content" id="message-page">
                     {% if message_page.paginator.num_pages %}
-                        {% include "conversation/incoming_list_table.html" %}
+                        {% include "conversation/message_list_table.html" %}
                     {% else %}
-                        {% include "conversation/incoming_list_table_load.html" %}
+                        {% include "conversation/message_list_table_load.html" %}
                     {% endif %}
                 </div>
             </form>

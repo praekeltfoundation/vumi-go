@@ -184,9 +184,9 @@ class ShowConversationView(ConversationTemplateView):
         return self.render_to_response(params)
 
 
-class IncomingListView(ConversationTemplateView):
-    view_name = 'incoming_list'
-    path_suffix = 'incoming_list/'
+class MessageListView(ConversationTemplateView):
+    view_name = 'message_list'
+    path_suffix = 'message_list/'
 
     def get(self, request, conversation):
         """
@@ -310,7 +310,7 @@ class IncomingListView(ConversationTemplateView):
             else:
                 messages.error(request,
                     'Something went wrong. Please try again.')
-        return self.redirect_to('incoming_list', conversation_key=conversation.key)
+        return self.redirect_to('message_list', conversation_key=conversation.key)
 
 
 class EditConversationDetailView(ConversationTemplateView):
@@ -614,7 +614,7 @@ class ConversationViewDefinitionBase(object):
     # This doesn't include ConversationActionView because that's special.
     DEFAULT_CONVERSATION_VIEWS = (
         ShowConversationView,
-        IncomingListView,
+        MessageListView,
         EditConversationDetailView,
         EditConversationGroupsView,
         StartConversationView,

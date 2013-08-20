@@ -263,10 +263,10 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.setup_conversation(started=True)
         self.add_messages_to_conv(
             5, start_date=date(2012, 1, 1), time_multiplier=12, reply=True)
-        response = self.client.post(self.get_view_url('incoming_list'), {
+        response = self.client.post(self.get_view_url('message_list'), {
             '_export_conversation_messages': True,
         })
-        self.assertRedirects(response, self.get_view_url('incoming_list'))
+        self.assertRedirects(response, self.get_view_url('message_list'))
         [email] = mail.outbox
         self.assertEqual(email.recipients(), [self.django_user.email])
         self.assertTrue(self.conversation.name in email.subject)
@@ -340,13 +340,13 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         self.add_messages_to_conv(1)
         conversation = self.get_wrapped_conv()
         [msg] = conversation.received_messages()
-        response = self.client.post(self.get_view_url('incoming_list'), {
+        response = self.client.post(self.get_view_url('message_list'), {
             'in_reply_to': msg['message_id'],
             'content': 'foo',
             'to_addr': 'should be ignored',
             '_send_one_off_reply': True,
         })
-        self.assertRedirects(response, self.get_view_url('incoming_list'))
+        self.assertRedirects(response, self.get_view_url('message_list'))
 
         [reply_to_cmd] = self.get_api_commands_sent()
         self.assertEqual(reply_to_cmd['worker_name'],
