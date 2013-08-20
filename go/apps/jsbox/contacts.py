@@ -705,3 +705,34 @@ class GroupsResource(SandboxResource):
         returnValue(self.reply(
             command, success=True, count=member_count, group=group.get_data()))
 
+    @inlineCallbacks
+    def handle_list(self, api, command):
+        """
+        List all known groups
+
+        Command fields: None
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``groups``: A list of dictionaries with group data
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'groups.list', {},
+                function(reply) { api.log_info(reply.groups); });
+        """
+        try:
+            contact_store = self._contact_store_for_api(api)
+            groups = yield contact_store.list_groups()
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        returnValue(self.reply(
+            command, success=True,
+            groups=[group.get_data() for group in groups]))
