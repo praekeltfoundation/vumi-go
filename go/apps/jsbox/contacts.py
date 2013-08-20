@@ -446,7 +446,7 @@ class GroupsResource(SandboxResource):
             groups=[group.get_data() for group in groups]))
 
     @inlineCallbacks
-    def handle_get_by_key(self, api, command):
+    def handle_get(self, api, command):
         try:
             contact_store = self._contact_store_for_api(api)
             group = yield contact_store.get_group(command['key'])
@@ -464,7 +464,7 @@ class GroupsResource(SandboxResource):
             group=group.get_data()))
 
     @inlineCallbacks
-    def handle_get(self, api, command):
+    def handle_get_by_name(self, api, command):
         try:
             contact_store = self._contact_store_for_api(api)
             keys = yield contact_store.groups.search(
@@ -494,7 +494,7 @@ class GroupsResource(SandboxResource):
             command, success=True, group=group.get_data()))
 
     @inlineCallbacks
-    def handle_get_or_create(self, api, command):
+    def handle_get_or_create_by_name(self, api, command):
         try:
             contact_store = self._contact_store_for_api(api)
             keys = yield contact_store.groups.search(

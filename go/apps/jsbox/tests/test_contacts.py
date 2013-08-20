@@ -577,41 +577,41 @@ class TestGroupsResource(ResourceTestCaseBase, GoPersistenceMixin):
         self.assertEqual(reply['groups'], [])
 
     @inlineCallbacks
-    def test_handle_get_by_key(self):
+    def test_handle_get(self):
         group = yield self.new_group(u'foo group')
-        reply = yield self.dispatch_command('get_by_key', key=group.key)
+        reply = yield self.dispatch_command('get', key=group.key)
         self.assertTrue(reply['success'])
         gr_data = reply['group']
         self.assertEqual(gr_data['key'], group.key)
 
     @inlineCallbacks
-    def test_handle_get(self):
+    def test_handle_get_by_name(self):
         group = yield self.new_group(u'foo group')
-        reply = yield self.dispatch_command('get', name=group.name)
+        reply = yield self.dispatch_command('get_by_name', name=group.name)
         self.assertTrue(reply['success'])
         gr_data = reply['group']
         self.assertEqual(gr_data['key'], group.key)
         self.assertEqual(gr_data['name'], group.name)
 
     @inlineCallbacks
-    def test_multiple_results_handle_get(self):
+    def test_multiple_results_handle_get_by_name(self):
         group_name = u'foo group'
         yield self.new_group(group_name)
         yield self.new_group(group_name)
-        reply = yield self.dispatch_command('get', name=group_name)
+        reply = yield self.dispatch_command('get_by_name', name=group_name)
         self.assertFalse(reply['success'])
         self.assertTrue('Multiple groups found' in reply['reason'])
 
     @inlineCallbacks
-    def test_handle_get_or_create(self):
+    def test_handle_get_or_create_by_name(self):
         group = yield self.new_group(u'foo group')
         get_reply = yield self.dispatch_command(
-            'get_or_create', name=group.name)
+            'get_or_create_by_name', name=group.name)
         self.assertTrue(get_reply['success'])
         self.assertFalse(get_reply['created'])
 
         create_reply = yield self.dispatch_command(
-            'get_or_create', name=u'some other name')
+            'get_or_create_by_name', name=u'some other name')
         self.assertTrue(create_reply['success'])
         self.assertTrue(create_reply['created'])
 
@@ -620,7 +620,8 @@ class TestGroupsResource(ResourceTestCaseBase, GoPersistenceMixin):
         group_name = u'foo group'
         yield self.new_group(group_name)
         yield self.new_group(group_name)
-        reply = yield self.dispatch_command('get_or_create', name=group_name)
+        reply = yield self.dispatch_command('get_or_create_by_name',
+            name=group_name)
         self.assertFalse(reply['success'])
         self.assertTrue('Multiple groups found' in reply['reason'])
 
