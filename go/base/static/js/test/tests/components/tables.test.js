@@ -173,4 +173,166 @@ describe("go.components.tables", function() {
       });
     });
   });
+
+  describe(".RowView", function() {
+    var RowView = go.components.tables.RowView;
+
+    var row;
+
+    beforeEach(function() {
+      row = new RowView({
+        model: new Backbone.Model({
+          a: 'foo',
+          b: 'bar',
+          c: 'baz'
+        })
+      });
+    });
+
+    afterEach(function() {
+      row.remove();
+    });
+
+    describe(".matches", function() {
+      it("should return whether the query matches the row's model's attributes",
+      function() {
+        assert(row.matches({
+          a: 'foo',
+          b: 'bar',
+          c: 'baz'
+        }));
+
+        assert(row.matches({
+          a: 'foo',
+          b: 'bar'
+        }));
+
+        assert(row.matches({
+          a: 'fo',
+          b: 'ba',
+          c: 'ba'
+        }));
+
+        assert(!row.matches({
+          a: 'foo',
+          b: 'baz'
+        }));
+      });
+
+      it("should handle space delimited patterns as multiple queries", function() {
+        assert(row.matches({a: 'foo lorem'}));
+      });
+
+      it("should support regexes", function() {
+        assert(row.matches({a: /fo/}));
+        assert(!row.matches({a: /fm/}));
+      });
+    });
+  });
+
+  describe(".TableView", function() {
+    var TableView = go.components.tables.TableView,
+        RowView = go.components.tables.RowView;
+
+    var ToyRowView = RowView.extend({
+      render: function() {
+        this.$el.empty();
+
+        _(this.model.attributes)
+          .keys()
+          .sort()
+          .forEach(function(a) {
+            this.$el.append($('<td>').text(this.model.get(a)));
+          }, this);
+      }
+    });
+
+    var table;
+
+    beforeEach(function() {
+      table = new TableView({
+        rowType: ToyRowView,
+        columnTitles: ['A', 'B', 'C'],
+        models: new Backbone.Collection([{
+          a: 'foo',
+          b: 'bar',
+          c: 'baz'
+        }, {
+          a: 'lerp',
+          b: 'larp',
+          c: 'lorem'
+        }, {
+          a: 'Hypothetical',
+          b: 'Basking',
+          c: 'Shark'
+        }])
+      });
+    });
+    
+    afterEach(function() {
+      table.remove();
+    });
+
+    it("should set up the table head", function() {
+      assert.equal(table.$('thead').html(), [
+        '<tr>',
+          '<th>A</th>',
+          '<th>B</th>',
+          '<th>C</th>',
+        '</tr>'
+      ].join(''));
+    });
+
+    describe(".render", function() {
+      describe("when no query is given", function() {
+        it("should render all its rows", function() {
+          assert(noElExists(table.$('tbody tr')));
+
+          table.render();
+
+          assert.equal(table.$('tbody').html(), [
+            '<tr>',
+              '<td>foo</td>',
+              '<td>bar</td>',
+              '<td>baz</td>',
+            '</tr>',
+
+            '<tr>',
+              '<td>lerp</td>',
+              '<td>larp</td>',
+              '<td>lorem</td>',
+            '</tr>',
+
+            '<tr>',
+              '<td>Hypothetical</td>',
+              '<td>Basking</td>',
+              '<td>Shark</td>',
+            '</tr>'
+          ].join(''));
+        });
+      });
+
+      describe("when a query is given", function() {
+        it("should render the matching rows", function() {
+          assert(noElExists(table.$('tbody tr')));
+
+          table.render({a: 'foo lerp'});
+
+          assert.equal(table.$('tbody').html(), [
+            '<tr>',
+              '<td>foo</td>',
+              '<td>bar</td>',
+              '<td>baz</td>',
+            '</tr>',
+
+            '<tr>',
+              '<td>lerp</td>',
+              '<td>larp</td>',
+              '<td>lorem</td>',
+            '</tr>'
+          ].join(''));
+        });
+      });
+    });
+  });
 });

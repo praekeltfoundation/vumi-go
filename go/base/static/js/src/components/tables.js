@@ -3,6 +3,10 @@
 // Tables that are used to manage swaths of data.
 
 (function(exports) {
+  var ViewCollection = go.components.structures.ViewCollection;
+
+  // TODO Replace with TableView once our communication with the server is more
+  // api-like
   var TableFormView = Backbone.View.extend({
     defaults: {
       rowLinkAttribute: 'data-url',
@@ -147,7 +151,91 @@
     }
   });
 
+  var RowView = Backbone.View.extend({
+    tagName: 'tr',
+
+    patternMatches: function(pattern, attrName) {
+      var attr = this.model.get(attrName);
+
+      var patterns;
+      if (_.isRegExp(pattern)) { patterns = [pattern]; }
+      else { patterns = pattern.split(' '); }
+
+      var i = patterns.length;
+      while (i--) {
+        if (attr.match(patterns[i])) { return true; }
+      }
+
+      return false;
+    },
+
+    matches: function(query) {
+      return _(query || {}).every(this.patternMatches, this);
+    }
+  });
+
+  var TableView = Backbone.View.extend({
+    tagName: 'table',
+
+    rowType: RowView,
+    rowCollectionType: ViewCollection,
+
+    columnTitles: [],
+
+    initialize: function(options) {
+      this.models = options.models;
+
+      if (options.columnTitles) {
+        this.columnTitles = options.columnTitles;
+      }
+
+      if (options.rowType) {
+        this.rowType = options.rowType;
+      }
+
+      if (options.rowCollectionType) {
+        this.rowCollectionType = options.rowCollectionType;
+      }
+
+      if (this.columnTitles.length) {
+        this.$head = $('<thead>').appendTo(this.$el);
+
+        var $tr = $('<tr>').appendTo(this.$head);
+        this.columnTitles.forEach(function(title) {
+          $tr.append($('<th>').text(title));
+        });
+      }
+
+      this.$body = $('<tbody>').appendTo(this.$el);
+
+      this.rows = new this.rowCollectionType({
+        models: this.models,
+        type: this.rowType
+      });
+    },
+
+    render: function(query) {
+      var rows;
+      if (query) {
+        rows = this.rows.where(function(row) { return row.matches(query); });
+      } else {
+        rows = this.rows.values();
+      }
+
+      this.$body.children().detach();
+
+      rows.forEach(function(row) {
+        row.render();
+        row.$el.appendTo(this.$body);
+      }, this);
+
+      return this;
+    }
+  });
+
   _.extend(exports, {
-    TableFormView: TableFormView
+    TableFormView: TableFormView,
+    RowView: RowView,
+    TableView: TableView
   });
 })(go.components.tables = {});
