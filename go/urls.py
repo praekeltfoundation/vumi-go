@@ -25,7 +25,7 @@ urlpatterns = patterns(
     url(r'^t/', include('go.token.urls')),
 
     # proxy for cross-domain xhrs
-    url(r'^cross-domain-xhr/', cross_domain_xhr),
+    url(r'^cross-domain-xhr/', cross_domain_xhr, name='cross_domain_xhr'),
 
     # vumi go!
     url(r'^$', RedirectView.as_view(url='/conversations/', permanent=False,

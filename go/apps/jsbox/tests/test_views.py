@@ -4,8 +4,6 @@ import logging
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.apps.jsbox.log import LogManager
 
-from mock import patch, Mock
-
 
 class JsBoxTestCase(DjangoGoApplicationTestCase):
     TEST_CONVERSATION_TYPE = u'jsbox'
@@ -87,51 +85,6 @@ class JsBoxTestCase(DjangoGoApplicationTestCase):
             'jsbox_app_config': app_config,
         })
         self.assertEqual(list(conversation.extra_endpoints), ['foo:bar'])
-
-    @patch('requests.get')
-    def test_cross_domain_xhr(self, mocked_get):
-        self.setup_conversation()
-        mocked_get.return_value = Mock(text='foo', status_code=200)
-        response = self.client.post(
-            self.get_view_url('cross_domain_xhr'),
-            {'url': 'http://domain.com'})
-        [call] = mocked_get.call_args_list
-        args, kwargs = call
-        self.assertEqual(args, ('http://domain.com',))
-        self.assertEqual(kwargs, {'auth': None})
-        self.assertTrue(mocked_get.called)
-        self.assertEqual(response.content, 'foo')
-        self.assertEqual(response.status_code, 200)
-
-    @patch('requests.get')
-    def test_basic_auth_cross_domain_xhr(self, mocked_get):
-        self.setup_conversation()
-        mocked_get.return_value = Mock(text='foo', status_code=200)
-        response = self.client.post(
-            self.get_view_url('cross_domain_xhr'),
-            {'url': 'http://username:password@domain.com'})
-        [call] = mocked_get.call_args_list
-        args, kwargs = call
-        self.assertEqual(args, ('http://domain.com',))
-        self.assertEqual(kwargs, {'auth': ('username', 'password')})
-        self.assertTrue(mocked_get.called)
-        self.assertEqual(response.content, 'foo')
-        self.assertEqual(response.status_code, 200)
-
-    @patch('requests.get')
-    def test_basic_auth_cross_domain_xhr_with_https_and_port(self, mocked_get):
-        self.setup_conversation()
-        mocked_get.return_value = Mock(text='foo', status_code=200)
-        response = self.client.post(
-            self.get_view_url('cross_domain_xhr'),
-            {'url': 'https://username:password@domain.com:443/foo'})
-        [call] = mocked_get.call_args_list
-        args, kwargs = call
-        self.assertEqual(args, ('https://domain.com:443/foo',))
-        self.assertEqual(kwargs, {'auth': ('username', 'password')})
-        self.assertTrue(mocked_get.called)
-        self.assertEqual(response.content, 'foo')
-        self.assertEqual(response.status_code, 200)
 
     def test_jsbox_logs(self):
         self.setup_conversation()
