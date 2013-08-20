@@ -1,5 +1,6 @@
 {% extends "app.html" %}
 {% load url from future %}
+{% load conversation_tags %}
 
 {% block content_extraclass %}conversations{% endblock %}
 
@@ -38,7 +39,7 @@
 
             <ul class="nav nav-list">
                 <li>
-                    <a href="{% url 'conversations:incoming_list' conversation.key %}" class="active">All messages</a>
+                    <a href="{% conversation_screen conversation 'incoming_list' %}" class="active">All messages</a>
                 </li>
             </ul>
 

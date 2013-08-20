@@ -192,8 +192,8 @@ class IncomingListView(ConversationTemplateView):
         """
         Render the messages sent & received for this conversation.
 
-        :param ConversationWrapper conversation:
-            The conversation to show messages for.
+        Takes the following query parameters:
+
         :param str direction:
             Either 'inbound' or 'outbound', defaults to 'inbound'
         :param int page:
@@ -273,7 +273,7 @@ class IncomingListView(ConversationTemplateView):
             'message_page': message_page,
             'message_page_range': page_range_window(message_page, 5),
         })
-        return render(request, 'conversation/incoming_list.html', tag_context)
+        return self.render_to_response(tag_context)
 
     @staticmethod
     def send_one_off_reply(user_api, conversation, in_reply_to, content):
@@ -310,7 +310,7 @@ class IncomingListView(ConversationTemplateView):
             else:
                 messages.error(request,
                     'Something went wrong. Please try again.')
-        return self.redirect_to('show', conversation_key=conversation.key)
+        return self.redirect_to('incoming_list', conversation_key=conversation.key)
 
 
 class EditConversationDetailView(ConversationTemplateView):
