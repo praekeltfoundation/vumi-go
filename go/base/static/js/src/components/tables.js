@@ -154,19 +154,17 @@
   var RowView = Backbone.View.extend({
     tagName: 'tr',
 
-    patternMatches: function(patterns, attrName) {
-      var attr = this.model.get(attrName),
-          i = patterns.length;
-
-      while (i--) {
-        if (attr.match(patterns[i])) { return true; }
-      }
-
-      return false;
-    },
-
     matches: function(query) {
-      return _(query || {}).every(this.patternMatches, this);
+      return _(query || {}).every(function(patterns, attrName) {
+        var attr = this.model.get(attrName),
+            i = patterns.length;
+
+        while (i--) {
+          if (attr.match(patterns[i])) { return true; }
+        }
+
+        return false;
+      }, this);
     }
   });
 
@@ -195,14 +193,10 @@
 
   var TableView = Backbone.View.extend({
     tagName: 'table',
-
     rowType: RowView,
     rowCollectionType: RowCollection,
-
     columnTitles: [],
-
     async: true,
-
     fadeDuration: 200,
 
     initialize: function(options) {
@@ -302,11 +296,11 @@
             d.resolve();
           }
 
-          // Re-append the body to the table once the rendering is done
-          return p.then(function() {
-            self.$el.append(self.$body);
-            return self.fadeIn();
-          });
+          return p;
+        })
+        .then(function() {
+          self.$el.append(self.$body);
+          return self.fadeIn();
         });
     }
   });
