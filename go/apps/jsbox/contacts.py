@@ -1,7 +1,7 @@
 # -*- test-case-name: go.apps.jsbox.tests.test_contacts -*-
 # -*- coding: utf-8 -*-
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks, returnValue, DeferredList
 
 from vumi import log
 from vumi.application.sandbox import SandboxResource, SandboxError
@@ -421,6 +421,30 @@ class GroupsResource(SandboxResource):
 
     @inlineCallbacks
     def handle_search(self, api, command):
+        """
+        Search for groups
+
+        Command fields:
+            - ``query``: The Lucene search query to perform.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``groups``: An list of dictionaries with group information.
+
+        Note:   If no matches are found ``groups`` will be an empty list.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'groups.search', {
+                     query: 'name:"My Group"',
+                },
+                function(reply) { api.log_info(reply.groups); });
+        """
         try:
             contact_store = self._contact_store_for_api(api)
             keys = yield contact_store.groups.raw_search(
@@ -447,6 +471,28 @@ class GroupsResource(SandboxResource):
 
     @inlineCallbacks
     def handle_get(self, api, command):
+        """
+        Get a group by its key
+
+        Command fields:
+            - ``key``: The key of the group to retrieve
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``group``: A dictionary with the group's data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'groups.get', {
+                     key: 'a-key',
+                },
+                function(reply) { api.log_info(reply.group); });
+        """
         try:
             contact_store = self._contact_store_for_api(api)
             group = yield contact_store.get_group(command['key'])
@@ -465,6 +511,31 @@ class GroupsResource(SandboxResource):
 
     @inlineCallbacks
     def handle_get_by_name(self, api, command):
+        """
+        Get a group by its name
+
+        Command fields:
+            - ``name``: The key of the group to retrieve
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``group``: A dictionary with the group's data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Note:   If more than 1 matching groups are found a Failure reply is
+                returned.
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'groups.get_by_name', {
+                     name: 'My Group',
+                },
+                function(reply) { api.log_info(reply.group); });
+        """
         try:
             contact_store = self._contact_store_for_api(api)
             keys = yield contact_store.groups.search(
@@ -495,6 +566,29 @@ class GroupsResource(SandboxResource):
 
     @inlineCallbacks
     def handle_get_or_create_by_name(self, api, command):
+        """
+        Get or create a group by its name
+
+        Command fields:
+            - ``name``: The name of the group to get or create
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``group``: A dictionary with the group's data.
+            - ``created``: A boolean, ``True`` if created, ``False`` if not.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'groups.get_or_create_by_name', {
+                     name: 'My Group',
+                },
+                function(reply) { api.log_info(reply.group); });
+        """
         try:
             contact_store = self._contact_store_for_api(api)
             keys = yield contact_store.groups.search(
@@ -526,6 +620,35 @@ class GroupsResource(SandboxResource):
 
     @inlineCallbacks
     def handle_update(self, api, command):
+        """
+        Update a group's name or query.
+
+        Command fields:
+            - ``key``: The key of the group to retrieve
+            - ``name``: The new name
+            - ``query``: The query to store, defaults to ``None``.
+
+        Note:   If a ``query`` is provided the group is treated as a
+                "smart" group.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``group``: A dictionary with the group's updated data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'groups.update', {
+                     key: 'a-key',
+                     name: 'My New Group',
+                     query: 'name:foo*'
+                },
+                function(reply) { api.log_info(reply.group); });
+        """
         try:
             contact_store = self._contact_store_for_api(api)
             group = yield contact_store.get_group(command['key'])
@@ -548,6 +671,29 @@ class GroupsResource(SandboxResource):
 
     @inlineCallbacks
     def handle_count_members(self, api, command):
+        """
+        Count the number of members in a group.
+
+        Command fields:
+            - ``key``: The key of the group to retrieve
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``group``: A dictionary with the group's data.
+            - ``count``: The number of members in this group.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'groups.count_members', {
+                     key: 'a-key'
+                },
+                function(reply) { api.log_info(reply.group); });
+        """
         try:
             contact_store = self._contact_store_for_api(api)
             group = yield contact_store.get_group(command['key'])
