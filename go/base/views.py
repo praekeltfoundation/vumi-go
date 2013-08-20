@@ -30,11 +30,9 @@ def cross_domain_xhr(request):
              parse_result.fragment))
     else:
         auth = None
-        url = url
 
     response = requests.get(url, auth=auth)
 
     return HttpResponse(
         response.content,
-        status=response.status_code,
-        content_type=response.headers['content-type'])
+        status=response.status_code)
