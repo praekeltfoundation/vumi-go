@@ -2,6 +2,7 @@ import requests
 
 from django.shortcuts import render
 from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
 
 from urlparse import urlparse, urlunparse
 
@@ -11,6 +12,7 @@ def todo(request):  # pragma: no cover
     })
 
 
+@login_required
 def cross_domain_xhr(request):
     url = request.POST.get('url', None)
 

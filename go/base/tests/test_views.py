@@ -7,6 +7,11 @@ from go.base.tests.utils import VumiGoDjangoTestCase
 
 
 class BaseViewsTestCase(VumiGoDjangoTestCase):
+    def setUp(self):
+        super(BaseViewsTestCase, self).setUp()
+        self.setup_user_api()
+        self.setup_client()
+
     def cross_domain_xhr(self, url):
         return self.client.post(reverse('cross_domain_xhr'), {'url': url})
 
