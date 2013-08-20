@@ -1,7 +1,7 @@
 # -*- test-case-name: go.apps.jsbox.tests.test_contacts -*-
 # -*- coding: utf-8 -*-
 
-from twisted.internet.defer import inlineCallbacks, returnValue, DeferredList
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi import log
 from vumi.application.sandbox import SandboxResource, SandboxError
