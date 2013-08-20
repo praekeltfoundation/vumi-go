@@ -8,7 +8,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from vumi.application.tests.test_sandbox import (
     ResourceTestCaseBase, DummyAppWorker)
 
-from go.apps.jsbox.contacts import ContactsResource
+from go.apps.jsbox.contacts import ContactsResource, GroupsResource
 from go.vumitools.tests.utils import GoPersistenceMixin
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import ContactStore
@@ -488,3 +488,162 @@ class TestContactsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
     def test_handle_save_for_nonexistent_contacts(self):
         return self.assert_bad_command('save', contact={'key': u'213123'})
+
+
+class TestGroupsResource(ResourceTestCaseBase, GoPersistenceMixin):
+    use_riak = True
+    app_worker_cls = StubbedAppWorker
+    resource_cls = GroupsResource
+
+    @inlineCallbacks
+    def setUp(self):
+        super(TestGroupsResource, self).setUp()
+        yield self._persist_setUp()
+
+        # We pass `self` in as the VumiApi object here, because mk_user() just
+        # grabs .account_store off it.
+        self.manager = self.get_riak_manager()
+        self.account_store = AccountStore(self.manager)
+        self.account = yield self.mk_user(self, u'user')
+        self.contact_store = ContactStore.from_user_account(self.account)
+        yield self.contact_store.groups.enable_search()
+        yield self.contact_store.contacts.enable_search()
+
+        self.app_worker.user_api.contact_store = self.contact_store
+        yield self.create_resource({})
+
+    def tearDown(self):
+        super(TestGroupsResource, self).tearDown()
+        return self._persist_tearDown()
+
+    def check_reply(self, reply, **kw):
+        kw.setdefault('success', True)
+
+        # get a dict of the reply fields that we can pop items off without
+        # worrying about modifying the actual reply
+        reply = json.loads(reply.to_json())
+
+        group_fields = reply.pop('group', {})
+        expected_group_fields = kw.pop('group', {})
+        for field_name, expected_value in expected_group_fields.iteritems():
+            self.assertEqual(group_fields[field_name], expected_value)
+
+        for field_name, expected_value in kw.iteritems():
+            self.assertEqual(reply[field_name], expected_value)
+
+    @inlineCallbacks
+    def new_contact(self, **fields):
+        groups = fields.pop('groups', [])
+        contact = yield self.contact_store.new_contact(**fields)
+        for group in groups:
+            contact.add_to_group(group)
+        yield contact.save()
+        returnValue(contact)
+
+    @inlineCallbacks
+    def new_group(self, name, query=None):
+        group = yield self.contact_store.new_group(name)
+        group.query = query
+        yield group.save()
+        returnValue(group)
+
+    @inlineCallbacks
+    def test_static_handle_search(self):
+        group = yield self.new_group(u'foo group')
+        reply = yield self.dispatch_command('search', query=u'name:foo*')
+        self.assertTrue(reply['success'])
+        [gr_data] = reply['groups']
+        self.assertEqual(gr_data['key'], group.key)
+
+    @inlineCallbacks
+    def test_smart_handle_search(self):
+        group = yield self.new_group(u'foo group', query=u'query')
+        reply = yield self.dispatch_command('search', query=u'name:foo*')
+        self.assertTrue(reply['success'])
+        [gr_data] = reply['groups']
+        self.assertEqual(gr_data['key'], group.key)
+        self.assertEqual(gr_data['query'], group.query)
+
+    @inlineCallbacks
+    def test_bad_query_handle_search(self):
+        reply = yield self.dispatch_command('search', query=u'name:[BAD_QUERY!]')
+        self.assertFalse(reply['success'])
+        self.assertTrue('Error running MapReduce' in reply['reason'])
+
+    @inlineCallbacks
+    def test_no_results_handle_search(self):
+        reply = yield self.dispatch_command('search', query=u'name:foo*')
+        self.assertTrue(reply['success'])
+        self.assertEqual(reply['groups'], [])
+
+    @inlineCallbacks
+    def test_handle_get(self):
+        group = yield self.new_group(u'foo group')
+        reply = yield self.dispatch_command('get', key=group.key)
+        self.assertTrue(reply['success'])
+        gr_data = reply['group']
+        self.assertEqual(gr_data['key'], group.key)
+
+    @inlineCallbacks
+    def test_handle_get_by_name(self):
+        group = yield self.new_group(u'foo group')
+        reply = yield self.dispatch_command('get_by_name', name=group.name)
+        self.assertTrue(reply['success'])
+        gr_data = reply['group']
+        self.assertEqual(gr_data['key'], group.key)
+        self.assertEqual(gr_data['name'], group.name)
+
+    @inlineCallbacks
+    def test_multiple_results_handle_get_by_name(self):
+        group_name = u'foo group'
+        yield self.new_group(group_name)
+        yield self.new_group(group_name)
+        reply = yield self.dispatch_command('get_by_name', name=group_name)
+        self.assertFalse(reply['success'])
+        self.assertTrue('Multiple groups found' in reply['reason'])
+
+    @inlineCallbacks
+    def test_handle_get_or_create_by_name(self):
+        group = yield self.new_group(u'foo group')
+        get_reply = yield self.dispatch_command(
+            'get_or_create_by_name', name=group.name)
+        self.assertTrue(get_reply['success'])
+        self.assertFalse(get_reply['created'])
+
+        create_reply = yield self.dispatch_command(
+            'get_or_create_by_name', name=u'some other name')
+        self.assertTrue(create_reply['success'])
+        self.assertTrue(create_reply['created'])
+
+    @inlineCallbacks
+    def test_multiple_results_handle_get_or_create(self):
+        group_name = u'foo group'
+        yield self.new_group(group_name)
+        yield self.new_group(group_name)
+        reply = yield self.dispatch_command('get_or_create_by_name',
+            name=group_name)
+        self.assertFalse(reply['success'])
+        self.assertTrue('Multiple groups found' in reply['reason'])
+
+    @inlineCallbacks
+    def test_handle_update(self):
+        group = yield self.new_group(u'foo group')
+        reply = yield self.dispatch_command(
+            'update', key=group.key, name=u'new name', query=u'some query')
+        self.assertTrue(reply['success'])
+        gr_data = reply['group']
+        self.assertEqual(gr_data['name'], 'new name')
+        self.assertEqual(gr_data['query'], 'some query')
+
+    def test_handle_count_members(self):
+        group = yield self.new_group(u'foo group')
+        contact = yield self.new_contact(
+            name=u'A Random',
+            surname=u'Person',
+            msisdn=u'+27831234567')
+        contact.add_to_group(group)
+        yield contact.save()
+        reply = yield self.dispatch_command(
+            'count_members', key=group.key)
+        self.assertTrue(reply['success'])
+        self.assertEqual(reply['count'], 1)

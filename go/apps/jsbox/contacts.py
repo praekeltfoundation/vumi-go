@@ -405,3 +405,303 @@ class ContactsResource(SandboxResource):
             command,
             success=True,
             contact=contact.get_data()))
+
+
+class GroupsResource(SandboxResource):
+    """
+    Sandbox resource for accessing, creating and modifying groups for
+    a Go application.
+
+    See :class:`go.vumitools.contact.ContactGroup` for a look at the Contact model
+    and its fields.
+    """
+
+    def _contact_store_for_api(self, api):
+        return self.app_worker.user_api_for_api(api).contact_store
+
+    @inlineCallbacks
+    def handle_search(self, api, command):
+        """
+        Search for groups
+
+        Command fields:
+            - ``query``: The Lucene search query to perform.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``groups``: An list of dictionaries with group information.
+
+        Note:   If no matches are found ``groups`` will be an empty list.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'groups.search', {
+                     query: 'name:"My Group"',
+                },
+                function(reply) { api.log_info(reply.groups); });
+        """
+        try:
+            contact_store = self._contact_store_for_api(api)
+            keys = yield contact_store.groups.raw_search(
+                command['query']).get_keys()
+            groups = []
+            for group_bunch in contact_store.groups.load_all_bunches(keys):
+                groups.extend((yield group_bunch))
+
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+        except (Exception,) as e:
+            # NOTE: Hello Riakasaurus, you raise horribly plain exceptions on
+            #       a MapReduce error.
+            if 'MapReduce' not in str(e):
+                raise
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        returnValue(self.reply(
+            command,
+            success=True,
+            groups=[group.get_data() for group in groups]))
+
+    @inlineCallbacks
+    def handle_get(self, api, command):
+        """
+        Get a group by its key
+
+        Command fields:
+            - ``key``: The key of the group to retrieve
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``group``: A dictionary with the group's data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'groups.get', {
+                     key: 'a-key',
+                },
+                function(reply) { api.log_info(reply.group); });
+        """
+        try:
+            contact_store = self._contact_store_for_api(api)
+            group = yield contact_store.get_group(command['key'])
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        if group is None:
+            returnValue(self.reply(
+                command, success=False, reason='Group not found'))
+
+        returnValue(self.reply(
+            command,
+            success=True,
+            group=group.get_data()))
+
+    @inlineCallbacks
+    def handle_get_by_name(self, api, command):
+        """
+        Get a group by its name
+
+        Command fields:
+            - ``name``: The key of the group to retrieve
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``group``: A dictionary with the group's data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Note:   If more than 1 matching groups are found a Failure reply is
+                returned.
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'groups.get_by_name', {
+                     name: 'My Group',
+                },
+                function(reply) { api.log_info(reply.group); });
+        """
+        try:
+            contact_store = self._contact_store_for_api(api)
+            keys = yield contact_store.groups.search(
+                name=command['name']).get_keys()
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+        except (Exception,) as e:
+            # NOTE: Hello Riakasaurus, you raise horribly plain exceptions on
+            #       a MapReduce error.
+            if 'MapReduce' not in str(e):
+                raise
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        if not keys:
+            returnValue(self.reply(
+                command, success=False, reason='Group not found'))
+
+        if len(keys) != 1:
+            returnValue(self.reply(
+                command, success=False, reason='Multiple groups found'))
+
+        [key] = keys
+        group = yield contact_store.get_group(key)
+        returnValue(self.reply(
+            command, success=True, group=group.get_data()))
+
+    @inlineCallbacks
+    def handle_get_or_create_by_name(self, api, command):
+        """
+        Get or create a group by its name
+
+        Command fields:
+            - ``name``: The name of the group to get or create
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``group``: A dictionary with the group's data.
+            - ``created``: A boolean, ``True`` if created, ``False`` if not.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'groups.get_or_create_by_name', {
+                     name: 'My Group',
+                },
+                function(reply) { api.log_info(reply.group); });
+        """
+        try:
+            contact_store = self._contact_store_for_api(api)
+            keys = yield contact_store.groups.search(
+                name=command['name']).get_keys()
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+        except (Exception,) as e:
+            # NOTE: Hello Riakasaurus, you raise horribly plain exceptions on
+            #       a MapReduce error.
+            if 'MapReduce' not in str(e):
+                raise
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        if not keys:
+            group = yield contact_store.new_group(command['name'])
+            returnValue(self.reply(
+                command, success=True, created=True, group=group.get_data()))
+
+        if len(keys) != 1:
+            returnValue(self.reply(
+                command, success=False, reason='Multiple groups found'))
+
+        [key] = keys
+        group = yield contact_store.get_group(key)
+        returnValue(self.reply(
+            command, success=True, created=False, group=group.get_data()))
+
+    @inlineCallbacks
+    def handle_update(self, api, command):
+        """
+        Update a group's name or query.
+
+        Command fields:
+            - ``key``: The key of the group to retrieve
+            - ``name``: The new name
+            - ``query``: The query to store, defaults to ``None``.
+
+        Note:   If a ``query`` is provided the group is treated as a
+                "smart" group.
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``group``: A dictionary with the group's updated data.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'groups.update', {
+                     key: 'a-key',
+                     name: 'My New Group',
+                     query: 'name:foo*'
+                },
+                function(reply) { api.log_info(reply.group); });
+        """
+        try:
+            contact_store = self._contact_store_for_api(api)
+            group = yield contact_store.get_group(command['key'])
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        if group is None:
+            returnValue(self.reply(
+                command, success=False, reason='Group not found'))
+
+        group.name = command['name']
+        group.query = command.get('query', None)
+        yield group.save()
+
+        returnValue(self.reply(
+            command,
+            success=True,
+            group=group.get_data()))
+
+    @inlineCallbacks
+    def handle_count_members(self, api, command):
+        """
+        Count the number of members in a group.
+
+        Command fields:
+            - ``key``: The key of the group to retrieve
+
+        Success reply fields:
+            - ``success``: set to ``true``
+            - ``group``: A dictionary with the group's data.
+            - ``count``: The number of members in this group.
+
+        Failure reply fields:
+            - ``success``: set to ``false``
+            - ``reason``: Reason for the failure
+
+        Example:
+        .. code-block:: javascript
+            api.request(
+                'groups.count_members', {
+                     key: 'a-key'
+                },
+                function(reply) { api.log_info(reply.group); });
+        """
+        try:
+            contact_store = self._contact_store_for_api(api)
+            group = yield contact_store.get_group(command['key'])
+        except (SandboxError,) as e:
+            log.warning(str(e))
+            returnValue(self.reply(command, success=False, reason=unicode(e)))
+
+        member_count = yield contact_store.count_contacts_for_group(group)
+        returnValue(self.reply(
+            command, success=True, count=member_count, group=group.get_data()))
+
