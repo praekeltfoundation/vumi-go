@@ -198,19 +198,16 @@ class MessageListView(ConversationTemplateView):
             Either 'inbound' or 'outbound', defaults to 'inbound'
         :param int page:
             The page to display for the pagination.
-        :param str batch_id:
-            The batch_id to show messages for.
         :param str query:
             The query string to search messages for in the batch's inbound
             messages.
         """
         direction = request.GET.get('direction', 'inbound')
         page = request.GET.get('p', 1)
-        batch_id = None
         query = request.GET.get('q', None)
         token = None
 
-        batch_id = batch_id or conversation.get_latest_batch_key()
+        batch_id = conversation.get_latest_batch_key()
 
         # Paginator starts counting at 1 so 0 would also be invalid
         inbound_message_paginator = Paginator(

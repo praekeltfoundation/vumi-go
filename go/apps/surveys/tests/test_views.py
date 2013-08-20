@@ -290,7 +290,7 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         Client.return_value = fake_client
         MatchResult.return_value = fake_result
 
-        response = self.client.get(self.get_view_url('show'), {
+        response = self.client.get(self.get_view_url('message_list'), {
             'q': 'hello world 1',
         })
 
