@@ -139,9 +139,6 @@ class ContactStore(PerAccountStore):
     @Manager.calls_manager
     def new_group(self, name):
         group_id = uuid4().get_hex()
-
-        # TODO: Do we want to check for name uniqueness?
-
         group = self.groups(
             group_id, name=name, user_account=self.user_account_key)
         yield group.save()
@@ -163,8 +160,8 @@ class ContactStore(PerAccountStore):
                 "Contact with key '%s' not found." % key)
         returnValue(contact)
 
-    def get_group(self, name):
-        return self.groups.load(name)
+    def get_group(self, key):
+        return self.groups.load(key)
 
     @Manager.calls_manager
     def get_contacts_for_group(self, group):
