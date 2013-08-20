@@ -230,7 +230,7 @@ describe("go.components.tables", function() {
     });
   });
 
-  describe(".TableView", function() {
+  describe.only(".TableView", function() {
     var TableView = go.components.tables.TableView,
         RowView = go.components.tables.RowView;
 
@@ -267,6 +267,9 @@ describe("go.components.tables", function() {
           c: 'Shark'
         }])
       });
+
+      table.fadeDuration = 0;
+      table.async = false;
     });
     
     afterEach(function() {
@@ -331,6 +334,46 @@ describe("go.components.tables", function() {
               '<td>lorem</td>',
             '</tr>'
           ].join(''));
+        });
+      });
+
+      describe("when the table is async", function() {
+        beforeEach(function() {
+          table.async = true;
+        });
+
+        it("should show a loading indicator if the rows aren't done rendering",
+        function() {
+          table.render();
+          assert(oneElExists(table.$loading));
+          assert(table.$('tbody').is(table.$loading));
+        });
+
+        it("should show the rows once they are done rendering",
+        function(done) {
+          table.render().then(function() {
+            assert.equal(table.$('tbody').html(), [
+              '<tr>',
+                '<td>foo</td>',
+                '<td>bar</td>',
+                '<td>baz</td>',
+              '</tr>',
+
+              '<tr>',
+                '<td>lerp</td>',
+                '<td>larp</td>',
+                '<td>lorem</td>',
+              '</tr>',
+
+              '<tr>',
+                '<td>Hypothetical</td>',
+                '<td>Basking</td>',
+                '<td>Shark</td>',
+              '</tr>'
+            ].join(''));
+
+            done();
+          });
         });
       });
     });

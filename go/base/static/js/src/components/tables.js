@@ -182,54 +182,114 @@
 
     columnTitles: [],
 
+    async: true,
+
+    fadeDuration: 200,
+
     initialize: function(options) {
-      this.models = options.models;
-
-      if (options.columnTitles) {
-        this.columnTitles = options.columnTitles;
-      }
-
-      if (options.rowType) {
-        this.rowType = options.rowType;
-      }
+      if (options.async) { this.async = options.async; }
+      if (options.rowType) { this.rowType = options.rowType; }
+      if (options.columnTitles) { this.columnTitles = options.columnTitles; }
 
       if (options.rowCollectionType) {
         this.rowCollectionType = options.rowCollectionType;
       }
 
-      if (this.columnTitles.length) {
-        this.$head = $('<thead>').appendTo(this.$el);
-
-        var $tr = $('<tr>').appendTo(this.$head);
-        this.columnTitles.forEach(function(title) {
-          $tr.append($('<th>').text(title));
-        });
-      }
-
-      this.$body = $('<tbody>').appendTo(this.$el);
-
+      this.models = options.models;
       this.rows = new this.rowCollectionType({
         models: this.models,
         type: this.rowType
       });
+
+      this.initHead();
+      this.initLoading();
+      this.$body = $('<tbody>').appendTo(this.$el);
+    },
+
+    initHead: function() {
+      if (!this.columnTitles.length) { return; }
+      this.$head = $('<thead>').appendTo(this.$el);
+
+      var $tr = $('<tr>').appendTo(this.$head);
+      this.columnTitles.forEach(function(title) {
+        $tr.append($('<th>').text(title));
+      });
+    },
+
+    initLoading: function() {
+      if (!this.async) { return; }
+
+      this.$loading = $('<tbody>')
+        .append($('<tr>')
+          .append($('<td>')
+            .attr('colspan', '0')
+            .append($('<img>')
+              .attr('src', go.urls.loading))));
+    },
+
+    fadeOut: function() {
+      var d = $.Deferred();
+      this.$el.fadeOut(this.fadeDuration, function() { d.resolve(); });
+      return d.promise();
+    },
+
+    fadeIn: function() {
+      var d = $.Deferred();
+      this.$el.fadeIn(this.fadeDuration, function() { d.resolve(); });
+      return d.promise();
+    },
+
+    rowsWhere: function(query) {
+      return query
+        ? this.rows.where(function(row) { return row.matches(query); })
+        : this.rows.values();
+    },
+
+    _renderBody: function(query) {
+      this
+        .rowsWhere(query)
+        .forEach(function(row) {
+          row.render();
+          this.$body.append(row.$el);
+        }, this);
+
+      return this;
     },
 
     render: function(query) {
-      var rows;
-      if (query) {
-        rows = this.rows.where(function(row) { return row.matches(query); });
-      } else {
-        rows = this.rows.values();
-      }
+      var self = this;
 
-      this.$body.children().detach();
+      return this
+        .fadeOut()
+        .then(function() {
+          var d = $.Deferred(),
+              p = d.promise();
 
-      rows.forEach(function(row) {
-        row.render();
-        row.$el.appendTo(this.$body);
-      }, this);
+          if (self.async) {
+            // if the table is async, defer the row rendering until the call
+            // stack has cleared, show a loading indicator and fade it out
+            // once the row rendering is resolved
+            _.defer(function() {
+              self._renderBody(query);
+              d.resolve();
+            });
 
-      return this;
+            self.$el.append(self.$loading);
+
+            p = p
+              .then(self.fadeOut.bind(self))
+              .then(function() { self.$loading.detach(); });
+          } else {
+            // if the table is not async, render and resolve the deferred
+            // immediately to prevent async behaviour
+            self._renderBody(query);
+            d.resolve();
+          }
+
+          // Re-append the body to the table once the rendering is done
+          return p.then(function() { self.$el.append(self.$body); });
+        })
+        .then(this.fadeIn.bind(this));
     }
   });
 
