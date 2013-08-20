@@ -647,3 +647,14 @@ class TestGroupsResource(ResourceTestCaseBase, GoPersistenceMixin):
             'count_members', key=group.key)
         self.assertTrue(reply['success'])
         self.assertEqual(reply['count'], 1)
+
+    @inlineCallbacks
+    def test_handle_list(self):
+        gr1 = yield self.new_group(u'group 1')
+        gr2 = yield self.new_group(u'group 2')
+        reply = yield self.dispatch_command('list')
+        self.assertTrue(reply['success'])
+        self.assertEqual(set(['group 1', 'group 2']),
+            set([gr['name'] for gr in reply['groups']]))
+        self.assertEqual(set([gr1.key, gr2.key]),
+            set([gr['key'] for gr in reply['groups']]))
