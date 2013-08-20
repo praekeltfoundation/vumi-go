@@ -77,14 +77,13 @@ def groups(request, type=None):
         contact_group_form = ContactGroupForm()
         smart_group_form = SmartGroupForm()
 
-    query = request.GET.get('query', '')
+    user_query = request.GET.get('q', '')
+    query = user_query
     if query:
         if ':' not in query:
             query = 'name:%s' % (query,)
         keys = contact_store.groups.raw_search(query).get_keys()
-        groups = []
-        for group_bunch in contact_store.groups.load_all_bunches(keys):
-            groups.extend(group_bunch)
+        groups = utils.groups_by_key(contact_store, *keys)
     else:
         if type == 'static':
             groups = contact_store.list_static_groups()
@@ -108,9 +107,8 @@ def groups(request, type=None):
         'paginator': paginator,
         'pagination_params': pagination_params,
         'page': page,
-        'query': query,
+        'query': user_query,
         'contact_group_form': contact_group_form,
-        'contact_store': contact_store,
     })
 
 
@@ -247,20 +245,16 @@ def _static_group(request, contact_store, group):
     else:
         keys = contact_store.get_contacts_for_group(group)
 
-    limit = int(request.GET.get('limit', 100))
-    if limit:
-        messages.info(request,
-            'Showing up to %s random contacts matching your query' % (
-                limit,))
-        keys = keys[:limit]
+    limit = min(int(request.GET.get('limit', 100)), len(keys))
+    if keys:
+        messages.info(
+            request,
+            "Showing %s of the group's %s contact(s)" % (limit, len(keys)))
 
-    selected_contacts = []
-    for contact_bunch in contact_store.contacts.load_all_bunches(keys):
-        selected_contacts.extend(contact_bunch)
-
+    contacts = utils.contacts_by_key(contact_store, *keys[:limit])
     context.update({
         'query': request.GET.get('q'),
-        'selected_contacts': selected_contacts,
+        'selected_contacts': contacts,
         'member_count': contact_store.count_contacts_for_group(group),
     })
 
@@ -285,9 +279,12 @@ def _smart_group(request, contact_store, group):
                                    'complete within a few minutes.')
             return redirect(_group_url(group.key))
         elif '_delete_group_contacts' in request.POST:
-            tasks.delete_group_contacts.delay(request.user_api.user_account_key,
-                                              group.key)
-            messages.info(request, "The group's contacts will be deleted shortly.")
+            tasks.delete_group_contacts.delay(
+                request.user_api.user_account_key,
+                group.key)
+            messages.info(
+                request,
+                "The group's contacts will be deleted shortly.")
             return redirect(_group_url(group.key))
         elif '_delete_group' in request.POST:
             tasks.delete_group.delay(request.user_api.user_account_key,
@@ -301,22 +298,18 @@ def _smart_group(request, contact_store, group):
         })
 
     keys = contact_store.get_contacts_for_group(group)
-    member_count = len(keys)
-    limit = int(request.GET.get('limit', 100))
-    if limit:
+    limit = min(int(request.GET.get('limit', 100)), len(keys))
+
+    if keys:
         messages.info(
             request,
-            'Showing up to %s random contacts matching your query' % (
-                limit,))
-        keys = keys[:limit]
-    selected_contacts = []
-    for contacts in contact_store.contacts.load_all_bunches(keys):
-        selected_contacts.extend(contacts)
+            "Showing %s of the group's %s contact(s)" % (limit, len(keys)))
+
+    contacts = utils.contacts_by_key(contact_store, *keys[:limit])
     return render(request, 'contacts/group_detail.html', {
         'group': group,
-        'selected_contacts': selected_contacts,
+        'selected_contacts': contacts,
         'group_form': smart_group_form,
-        'member_count': member_count,
     })
 
 
@@ -390,7 +383,8 @@ def _people(request):
     # TODO: A lot of this stuff is duplicated from the similar group search
     #       in the groups() view. We need a function that does that to avoid
     #       the duplication.
-    query = request.GET.get('q', '')
+    user_query = request.GET.get('q', '')
+    query = user_query
     if query:
         if not ':' in query:
             query = 'name:%s' % (query,)
@@ -399,24 +393,18 @@ def _people(request):
     else:
         keys = contact_store.list_contacts()
 
-    limit = int(request.GET.get('limit', 100))
-    if limit:
-        messages.info(
-            request,
-            'Showing up to %s random contacts matching your query' % (limit,))
-        keys = keys[:limit]
-
-    selected_contacts = []
-    for contact_bunch in contact_store.contacts.load_all_bunches(keys):
-        selected_contacts.extend(contact_bunch)
+    limit = min(int(request.GET.get('limit', 100)), len(keys))
+    messages.info(request, "Showing %s of %s contact(s)" % (limit, len(keys)))
 
     smart_group_form = SmartGroupForm(initial={'query': query})
+    contacts = utils.contacts_by_key(contact_store, *keys[:limit])
+
     return render(request, 'contacts/contact_list.html', {
-        'query': request.GET.get('q'),
-        'selected_contacts': selected_contacts,
+        'query': user_query,
+        'selected_contacts': contacts,
+        'smart_group_form': smart_group_form,
         'upload_contacts_form': upload_contacts_form or UploadContactsForm(),
         'select_contact_group_form': select_contact_group_form,
-        'smart_group_form': smart_group_form,
     })
 
 
