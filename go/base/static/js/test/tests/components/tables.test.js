@@ -1,4 +1,4 @@
-describe("go.components.tables", function() {
+describe.only("go.components.tables", function() {
   var testHelpers = go.testHelpers,
       noElExists = testHelpers.noElExists,
       oneElExists = testHelpers.oneElExists;
@@ -197,40 +197,98 @@ describe("go.components.tables", function() {
       it("should return whether the query matches the row's model's attributes",
       function() {
         assert(row.matches({
-          a: 'foo',
-          b: 'bar',
-          c: 'baz'
+          a: ['foo'],
+          b: ['bar'],
+          c: ['baz']
         }));
 
         assert(row.matches({
-          a: 'foo',
-          b: 'bar'
+          a: ['foo'],
+          b: ['bar']
         }));
 
         assert(row.matches({
-          a: 'fo',
-          b: 'ba',
-          c: 'ba'
+          a: ['fo'],
+          b: ['ba'],
+          c: ['ba']
+        }));
+
+        assert(row.matches({
+          a: ['foo', 'Shark'],
+          b: ['ba'],
+          c: ['ba']
         }));
 
         assert(!row.matches({
-          a: 'foo',
-          b: 'baz'
+          a: ['foo'],
+          b: ['baz']
         }));
       });
+    });
 
-      it("should handle space delimited patterns as multiple queries", function() {
-        assert(row.matches({a: 'foo lorem'}));
+    it("should support regexes", function() {
+      assert(row.matches({a: [/fo/]}));
+      assert(!row.matches({a: [/fm/]}));
+    });
+  });
+
+  describe(".RowCollection", function() {
+    var RowCollection = go.components.tables.RowCollection;
+
+    var rows;
+
+    beforeEach(function() {
+      rows = new RowCollection({
+        models: new Backbone.Collection([{
+          a: 'foo',
+          b: 'bar',
+          c: 'baz'
+        }, {
+          a: 'lerp',
+          b: 'larp',
+          c: 'lorem'
+        }, {
+          a: 'Hypothetical',
+          b: 'Basking',
+          c: 'Shark'
+        }])
+      });
+    });
+
+    describe(".matching", function() {
+      it("should return the rows matching the query", function() {
+        assert.deepEqual(
+          rows.matching({}),
+          rows.values());
+
+        assert.deepEqual(
+          rows.matching({a: 'foo'}),
+          [rows.at(0)]);
+
+        assert.deepEqual(
+          rows.matching({a: 'foo', b: 'baz'}),
+          []);
+      });
+
+      it("should support multiple patterns delimited with a space", function() {
+        assert.deepEqual(
+          rows.matching({a: 'foo lerp'}),
+          [rows.at(0), rows.at(1)]);
       });
 
       it("should support regexes", function() {
-        assert(row.matches({a: /fo/}));
-        assert(!row.matches({a: /fm/}));
+        assert.deepEqual(
+          rows.matching({a: /fo/}),
+          [rows.at(0)]);
+
+        assert.deepEqual(
+          rows.matching({a: /fm/}),
+          []);
       });
     });
   });
 
-  describe.only(".TableView", function() {
+  describe(".TableView", function() {
     var TableView = go.components.tables.TableView,
         RowView = go.components.tables.RowView;
 

@@ -154,14 +154,10 @@
   var RowView = Backbone.View.extend({
     tagName: 'tr',
 
-    patternMatches: function(pattern, attrName) {
-      var attr = this.model.get(attrName);
+    patternMatches: function(patterns, attrName) {
+      var attr = this.model.get(attrName),
+          i = patterns.length;
 
-      var patterns;
-      if (_.isRegExp(pattern)) { patterns = [pattern]; }
-      else { patterns = pattern.split(' '); }
-
-      var i = patterns.length;
       while (i--) {
         if (attr.match(patterns[i])) { return true; }
       }
@@ -174,11 +170,34 @@
     }
   });
 
+  var RowCollection = ViewCollection.extend({
+    type: RowView,
+
+    parseQuery: function(query) {
+      var parsed = {};
+
+      _(query || {}).each(function(pattern, attrName) {
+        if (_.isRegExp(pattern)) { parsed[attrName] = [pattern]; }
+        else { parsed[attrName] = pattern.split(' '); }
+      });
+
+      return parsed;
+    },
+
+    matching: function(query) {
+      query = this.parseQuery(query);
+
+      return _.isEmpty(query)
+        ? this.values()
+        : this.where(function(r) { return r.matches(query); });
+    }
+  });
+
   var TableView = Backbone.View.extend({
     tagName: 'table',
 
     rowType: RowView,
-    rowCollectionType: ViewCollection,
+    rowCollectionType: RowCollection,
 
     columnTitles: [],
 
@@ -239,15 +258,12 @@
       return d.promise();
     },
 
-    rowsWhere: function(query) {
-      return query
-        ? this.rows.where(function(row) { return row.matches(query); })
-        : this.rows.values();
-    },
+    renderBody: function(query) {
+      this.$body.children().detach();
+      this.$body.detach();
 
-    _renderBody: function(query) {
-      this
-        .rowsWhere(query)
+      this.rows
+        .matching(query)
         .forEach(function(row) {
           row.render();
           this.$body.append(row.$el);
@@ -270,7 +286,7 @@
             // stack has cleared, show a loading indicator and fade it out
             // once the row rendering is resolved
             _.defer(function() {
-              self._renderBody(query);
+              self.renderBody(query);
               d.resolve();
             });
 
@@ -282,20 +298,23 @@
           } else {
             // if the table is not async, render and resolve the deferred
             // immediately to prevent async behaviour
-            self._renderBody(query);
+            self.renderBody(query);
             d.resolve();
           }
 
           // Re-append the body to the table once the rendering is done
-          return p.then(function() { self.$el.append(self.$body); });
-        })
-        .then(this.fadeIn.bind(this));
+          return p.then(function() {
+            self.$el.append(self.$body);
+            return self.fadeIn();
+          });
+        });
     }
   });
 
   _.extend(exports, {
     TableFormView: TableFormView,
     RowView: RowView,
+    RowCollection: RowCollection,
     TableView: TableView
   });
 })(go.components.tables = {});
