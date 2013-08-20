@@ -113,20 +113,19 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertContains(response, 'Write and send bulk message')
         self.assertContains(response, self.get_action_view_url('bulk_send'))
 
-    @skip("The new views don't have this.")
     def test_show_cached_message_pagination(self):
+        self.setup_conversation()
         # Create 21 inbound & 21 outbound messages, since we have
         # 20 messages per page it should give us 2 pages
-        self.put_sample_messages_in_conversation(self.user_api,
-                                                 self.conv_key, 21)
-        response = self.client.get(self.get_view_url('show'))
+        self.add_messages_to_conv(21)
+        response = self.client.get(self.get_view_url('message_list'))
 
         # Check pagination
         # We should have 60 references to a contact, which by default display
         # the from_addr if a contact cannot be found. (each block as 3
         # references, one in the table listing, 2 in the reply-to modal div)
         self.assertContains(response, 'from-', 60)
-        # We should have 2 links to page to, one for the actual page link
+        # We should have 2 links to page two, one for the actual page link
         # and one for the 'Next' page link
         self.assertContains(response, '&amp;p=2', 2)
         # There should only be 1 link to the current page
@@ -150,12 +149,13 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
     @patch('go.base.message_store_client.MatchResult')
     @patch('go.base.message_store_client.Client')
     def test_message_search(self, Client, MatchResult):
+        self.setup_conversation()
         fake_client = FakeMessageStoreClient()
         fake_result = FakeMatchResult()
         Client.return_value = fake_client
         MatchResult.return_value = fake_result
 
-        response = self.client.get(self.get_view_url('show'), {
+        response = self.client.get(self.get_view_url('message_list'), {
             'q': 'hello world 1',
         })
 
@@ -168,6 +168,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
     @patch('go.base.message_store_client.MatchResult')
     @patch('go.base.message_store_client.Client')
     def test_message_results(self, Client, MatchResult):
+        self.setup_conversation()
         fake_client = FakeMessageStoreClient()
         fake_result = FakeMatchResult(tries=2,
             results=[self.mkmsg_out() for i in range(10)])
@@ -216,10 +217,10 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.setup_conversation(started=True)
         self.add_messages_to_conv(
             5, start_date=date(2012, 1, 1), time_multiplier=12, reply=True)
-        response = self.client.post(self.get_view_url('show'), {
+        response = self.client.post(self.get_view_url('message_list'), {
             '_export_conversation_messages': True,
         })
-        self.assertRedirects(response, self.get_view_url('show'))
+        self.assertRedirects(response, self.get_view_url('message_list'))
         [email] = mail.outbox
         self.assertEqual(email.recipients(), [self.django_user.email])
         self.assertTrue(self.conversation.name in email.subject)
@@ -382,20 +383,19 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             delivery_class=conversation.delivery_class,
             content='I am ham, not spam.', dedupe=True))
 
-    @skip("The new views don't have this.")
     def test_actions_on_inbound_only(self):
-        messages = self.put_sample_messages_in_conversation(self.user_api,
-                                                            self.conv_key, 1)
-        [msg_in, msg_out, ack, dr] = messages[0]
+        self.setup_conversation()
+        messages = self.add_messages_to_conv(1, reply=True)
+        [msg_in, msg_out] = messages[0]
 
-        response = self.client.get(self.get_view_url('show'),
-                                   {'direction': 'inbound'})
+        response = self.client.get(
+            self.get_view_url('message_list'), {'direction': 'inbound'})
         self.assertContains(response, 'Reply')
         self.assertContains(response, 'href="#reply-%s"' % (
             msg_in['message_id'],))
 
-        response = self.client.get(self.get_view_url('show'),
-                                   {'direction': 'outbound'})
+        response = self.client.get(
+            self.get_view_url('message_list'), {'direction': 'outbound'})
         self.assertNotContains(response, 'Reply')
 
     def test_send_one_off_reply(self):
@@ -403,13 +403,13 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.add_messages_to_conv(1)
         conversation = self.get_wrapped_conv()
         [msg] = conversation.received_messages()
-        response = self.client.post(self.get_view_url('show'), {
+        response = self.client.post(self.get_view_url('message_list'), {
             'in_reply_to': msg['message_id'],
             'content': 'foo',
             'to_addr': 'should be ignored',
             '_send_one_off_reply': True,
         })
-        self.assertRedirects(response, self.get_view_url('show'))
+        self.assertRedirects(response, self.get_view_url('message_list'))
 
         [reply_to_cmd] = self.get_api_commands_sent()
         self.assertEqual(reply_to_cmd['worker_name'],
