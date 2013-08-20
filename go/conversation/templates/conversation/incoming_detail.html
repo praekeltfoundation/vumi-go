@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content_actions_left %}
-    <a class="btn btn-primary" href="{% url 'conversations:incoming_list' conversation.key %}">Back to messages</a>
+    <a class="btn btn-primary" href="{% url 'conversations:message_list' conversation.key %}">Back to messages</a>
 {% endblock %}
 
 {% block content_actions_right %}
