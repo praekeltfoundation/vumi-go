@@ -11,8 +11,6 @@ from vumi.connectors import IgnoreMessage
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.utils import MessageMetadataHelper
-from go.vumitools.conversation.models import (
-    CONVERSATION_STARTING, CONVERSATION_STOPPING)
 
 
 class OneShotMetricManager(MetricManager):
@@ -356,8 +354,8 @@ class GoApplicationMixin(GoWorkerMixin):
                 "Trying to start missing conversation '%s' for user '%s'." % (
                     conversation_key, user_account_key))
             return
-        status = conv.get_status()
-        if status != CONVERSATION_STARTING:
+        if not conv.starting():
+            status = conv.get_status()
             log.warning(
                 "Trying to start conversation '%s' for user '%s' with invalid "
                 "status: %s" % (conversation_key, user_account_key, status))
@@ -373,8 +371,8 @@ class GoApplicationMixin(GoWorkerMixin):
                 "Trying to stop missing conversation '%s' for user '%s'." % (
                     conversation_key, user_account_key))
             return
-        status = conv.get_status()
-        if status != CONVERSATION_STOPPING:
+        if not conv.stopping():
+            status = conv.get_status()
             log.warning(
                 "Trying to stop conversation '%s' for user '%s' with invalid "
                 "status: %s" % (conversation_key, user_account_key, status))
