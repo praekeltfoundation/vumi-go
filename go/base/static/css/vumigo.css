@@ -445,6 +445,7 @@ button {
 .dialogue #diagram .choice.state .preview.mode .choices {
   text-align: left;
 }
+.groups-table th:first-child,
 .groups-table td:first-child {
   width: 20px;
 }
