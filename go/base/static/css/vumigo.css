@@ -445,6 +445,9 @@ button {
 .dialogue #diagram .choice.state .preview.mode .choices {
   text-align: left;
 }
+.groups-table td:first-child {
+  width: 20px;
+}
 .channels.dashboard td:first-child {
   width: 30px;
 }
@@ -672,6 +675,10 @@ button {
 }
 .table-form-view-buttons {
   margin: 0 1em 0 0;
+}
+table tbody.loading td {
+  padding: 48px;
+  text-align: center;
 }
 .error.main-container {
   text-align: center;

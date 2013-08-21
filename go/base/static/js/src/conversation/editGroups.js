@@ -12,9 +12,9 @@
       GroupRowView.__super__.initialize.call(this, options);
 
       this.template = new TemplateView({
+        el: this.$el,
         jst: 'JST.conversation_editGroups_row',
-        data: {model: this.model},
-        el: this.$el
+        data: {model: this.model}
       });
     },
 
@@ -34,7 +34,7 @@
   });
 
   var GroupTableView = TableView.extend({
-    rowType: GroupTableView,
+    rowType: GroupRowView,
 
     columnTitles: [
       '',
@@ -45,7 +45,7 @@
   var EditConversationGroupsView = Backbone.View.extend({
     initialize: function(options) {
       this.table = new GroupTableView({
-        el: this.$('.edit-table'),
+        el: this.$('.groups-table'),
         models: this.model.get('groups')
       });
     },

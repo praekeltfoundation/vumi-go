@@ -8,7 +8,7 @@
     idAttribute: 'key',
 
     urls: {
-      show: function() { return '/group/' + this.id + '/'; }
+      show: function() { return '/contacts/group/' + this.id + '/'; }
     }
   });
 

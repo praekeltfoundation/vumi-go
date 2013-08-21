@@ -233,22 +233,23 @@
       if (!this.async) { return; }
 
       this.$loading = $('<tbody>')
+        .attr('class', 'loading')
         .append($('<tr>')
           .append($('<td>')
+            .attr('colspan', this.columnTitles.length)
             .append($('<img>')
-              .attr('class', 'loading')
               .attr('src', go.urls.loading))));
     },
 
     fadeOut: function() {
       var d = $.Deferred();
-      this.$el.fadeOut(this.fadeDuration, function() { d.resolve(); });
+      this.$('tbody').fadeOut(this.fadeDuration, function() { d.resolve(); });
       return d.promise();
     },
 
     fadeIn: function() {
       var d = $.Deferred();
-      this.$el.fadeIn(this.fadeDuration, function() { d.resolve(); });
+      this.$('tbody').fadeIn(this.fadeDuration, function() { d.resolve(); });
       return d.promise();
     },
 
