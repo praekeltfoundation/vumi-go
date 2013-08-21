@@ -106,15 +106,11 @@ class SurveyApplication(PollApplication, GoApplicationMixin):
 
     @inlineCallbacks
     def process_command_send_survey(self, user_account_key, conversation_key,
-                                    batch_id, msg_options, is_client_initiated,
-                                    delivery_class, **extra_params):
-
-        if is_client_initiated:
-            log.debug('Conversation %r is client initiated, no need to notify '
-                      'the application worker' % (conversation_key,))
-            return
+                                    batch_id, msg_options, delivery_class,
+                                    **extra_params):
 
         conv = yield self.get_conversation(user_account_key, conversation_key)
+
         if conv is None:
             log.warning("Cannot find conversation '%s' for user '%s'." % (
                 conversation_key, user_account_key))

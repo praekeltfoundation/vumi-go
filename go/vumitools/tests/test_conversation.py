@@ -14,7 +14,7 @@ from go.vumitools.conversation import ConversationStore
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation.old_models import (
-    ConversationVNone, ConversationV1)
+    ConversationVNone, ConversationV1, ConversationV2)
 
 
 class TestConversationStore(GoPersistenceMixin, TestCase):
@@ -110,6 +110,27 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
             conversation_type=u'bulk_message', name=u'name',
             description=u'description', status=u'draft',
             start_timestamp=datetime.utcnow()).save()
+
+        dbconv = yield self.conv_store.get_conversation_by_key(conv.key)
+
+        self.assertEqual(u'bulk_message', dbconv.conversation_type)
+        self.assertEqual(u'name', dbconv.name)
+        self.assertEqual(u'description', dbconv.description)
+        self.assertEqual({}, dbconv.config)
+        self.assertEqual([], dbconv.batches.keys())
+        self.assertEqual(u'active', dbconv.archive_status)
+        self.assertEqual(u'stopped', dbconv.status)
+
+    @inlineCallbacks
+    def test_get_conversation_v2(self):
+        conversation_id = uuid4().get_hex()
+
+        conv = yield ConversationV2(
+            self.conv_store.manager,
+            conversation_id, user_account=self.conv_store.user_account_key,
+            conversation_type=u'bulk_message', name=u'name',
+            description=u'description', delivery_tag_pool=u'pool',
+            delivery_tag=u'tag').save()
 
         dbconv = yield self.conv_store.get_conversation_by_key(conv.key)
 

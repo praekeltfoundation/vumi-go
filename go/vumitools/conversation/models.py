@@ -27,7 +27,7 @@ CONVERSATION_STOPPED = u'stopped'
 class Conversation(Model):
     """A conversation with an audience"""
 
-    VERSION = 2
+    VERSION = 3
     MIGRATOR = ConversationMigrator
 
     user_account = ForeignKey(UserAccount)
@@ -47,8 +47,6 @@ class Conversation(Model):
     batches = ManyToMany(Batch)
 
     delivery_class = Unicode(null=True)
-    delivery_tag_pool = Unicode(null=True)
-    delivery_tag = Unicode(null=True)
 
     def active(self):
         return self.archive_status == CONVERSATION_ACTIVE

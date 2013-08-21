@@ -24,17 +24,7 @@ class ConversationWrapper(object):
         self.mdb = self.api.mdb
         self.manager = self.c.manager
         self.base_manager = self.api.manager
-        self._tagpool_metadata = None
-
-    @Manager.calls_manager
-    def get_tagpool_metadata(self, key, default=None):
-        if self.delivery_tag_pool is None:
-            returnValue({})
-
-        if self._tagpool_metadata is None:
-            self._tagpool_metadata = yield self.api.tpm.get_metadata(
-                self.delivery_tag_pool)
-        returnValue(self._tagpool_metadata.get(key, default))
+        self._channels = None
 
     @Manager.calls_manager
     def stop_conversation(self):
@@ -102,9 +92,14 @@ class ConversationWrapper(object):
         Returns lists of channels that can either send messages to or receive
         messages from this conversation.
 
+        NOTE: This channel list is cached and it is assumed that the reachable
+              channels will not change over the lifetime of this object.
+
         :rtype:
             List of channel models.
         """
+        if self._channels is not None:
+            returnValue(self._channels)
         user_account = yield self.c.user_account.get(self.api.manager)
         routing_table = yield self.user_api.get_routing_table(user_account)
         rt_helper = RoutingTableHelper(routing_table)
@@ -122,12 +117,16 @@ class ConversationWrapper(object):
                 (conn.tagpool, conn.tagname))
             channels.append(channel)
         channels.sort(key=lambda c: c.name)
+        self._channels = channels
         returnValue(channels)
 
     @Manager.calls_manager
     def has_channel_supporting(self, **kw):
         channels = yield self.get_channels()
         returnValue(any(channel.supports(**kw) for channel in channels))
+
+    def has_channel_supporting_generic_sends(self):
+        return self.has_channel_supporting(generic_sends=True)
 
     @Manager.calls_manager
     def get_progress_status(self):
@@ -614,23 +613,6 @@ class ConversationWrapper(object):
         """
         worker_name = '%s_application' % (self.conversation_type,)
         return self.api.send_command(worker_name, command, *args, **kwargs)
-
-    def delivery_class_description(self):
-        """
-        FIXME: This actually returns the tagpool display name.
-               The function itself is probably correct -- the
-               name of the function is probably wrong.
-        """
-        return self.get_tagpool_metadata('display_name',
-                                         self.delivery_tag_pool)
-
-    def is_client_initiated(self):
-        """
-        Check whether this conversation can only be initiated by a client.
-
-        :rtype: bool
-        """
-        return self.get_tagpool_metadata('client_initiated', False)
 
     def get_absolute_url(self):
         return u'/app/%s/%s/' % (self.conversation_type, self.key)

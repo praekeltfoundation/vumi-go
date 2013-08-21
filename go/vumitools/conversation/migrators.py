@@ -76,3 +76,19 @@ class ConversationMigrator(ModelMigrator):
                         index='archive_status_bin')
 
         return mdata
+
+    def migrate_from_2(self, mdata):
+        # Copy stuff that hasn't changed between versions
+        mdata.copy_values(
+            'user_account', 'name', 'description', 'conversation_type',
+            'config', 'created_at', 'groups', 'batches', 'delivery_class',
+            'extra_endpoints', 'archived_at', 'status', 'archive_status')
+        mdata.copy_indexes(
+            'user_account_bin', 'conversation_type_bin', 'created_at_bin',
+            'end_timestamp_bin', 'groups_bin', 'batches_bin', 'status_bin',
+            'archive_status_bin')
+
+        # Add stuff that's new in this version
+        mdata.set_value('$VERSION', 3)
+
+        return mdata

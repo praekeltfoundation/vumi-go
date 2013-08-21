@@ -119,7 +119,6 @@ class DialogueTestCase(DjangoGoApplicationTestCase):
         """Select an existing group and use that as the group for the
         conversation"""
         conversation = self.get_wrapped_conv()
-        self.assertFalse(conversation.is_client_initiated())
         response = self.client.post(self.get_view_url('people'), {
             'groups': [grp.key for grp in self.contact_store.list_groups()]})
         self.assertRedirects(response, self.get_view_url('start'))
