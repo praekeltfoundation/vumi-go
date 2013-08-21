@@ -4,8 +4,8 @@
 
 {% block content_actions_right %}
     <div class="pull-right">
-        <input type="text" placeholder="Find people..." class="input-large search-query search">
-        <button class="btn btn-primary save">Save</button>
+        <input type="text" placeholder="Find people..." class="input-large search-query groups-search">
+        <button class="btn btn-primary groups-save">Save</button>
     </div>
 {% endblock %}
 
@@ -30,7 +30,7 @@
 {% block ondomready %}
     {{ block.super }}
 
-    var view = new go.conversation.editGroups.EditConversationGroupsView({
+    var view = new go.conversation.groups.EditConversationGroupsView({
         el: $('body'),
         model: new go.conversation.models.ConversationGroupsModel({{ model_data|safe }})
     });

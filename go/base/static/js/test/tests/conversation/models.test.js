@@ -13,12 +13,15 @@ describe("go.conversation.models", function() {
         key: 'conversation1',
         groups: [{
           key: 'group1',
+          name: 'Group 1',
           inConversation: true
         }, {
           key: 'group2',
+          name: 'Group 2',
           inConversation: true
         }, {
           key: 'group3',
+          name: 'Group 3',
           inConversation: true
         }]
       });
