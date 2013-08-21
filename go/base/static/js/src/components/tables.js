@@ -245,7 +245,7 @@
       var d = $.Deferred();
       this.$('tbody')
         .stop(true)
-        .fadeOut(this.fadeDuration, function() { d.resolve(); });
+        .fadeTo(this.fadeDuration, 0, function() { d.resolve(); });
       return d.promise();
     },
 
@@ -253,60 +253,69 @@
       var d = $.Deferred();
       this.$('tbody')
         .stop(true)
-        .fadeIn(this.fadeDuration, function() { d.resolve(); });
+        .fadeTo(this.fadeDuration, 1, function() { d.resolve(); });
       return d.promise();
     },
 
-    renderBody: function(query) {
-      this.$body.children().detach();
-      this.$body.detach();
-
-      this.rows
-        .matching(query)
-        .forEach(function(row) {
-          row.render();
-          this.$body.append(row.$el);
-        }, this);
-
+    detachBody: function() {
+      var $body = this.$('tbody');
+      $body.children().detach();
+      $body.detach();
       return this;
     },
 
-    render: function(query) {
+    renderBody: function(query) {
       var self = this;
 
-      return this
-        .fadeOut()
-        .then(function() {
-          var d = $.Deferred(),
-              p = d.promise();
+      return this.fadeOut().then(function() {
+        self.detachBody();
 
-          if (self.async) {
-            // if the table is async, defer the row rendering until the call
-            // stack has cleared, show a loading indicator and fade it out
-            // once the row rendering is resolved
-            self.$el.append(self.$loading);
+        self.rows
+          .matching(query)
+          .forEach(function(row) {
+            row.render();
+            self.$body.append(row.$el);
+          });
 
-            p = p
-              .then(self.fadeOut.bind(self))
-              .then(function() { self.$loading.detach(); });
+        self.$el.append(self.$body);
+        return self.fadeIn();
+      });
+    },
 
-            _.defer(function() {
-              self.renderBody(query);
-              d.resolve();
-            });
-          } else {
-            // if the table is not async, render and resolve the deferred
-            // immediately to prevent async behaviour
-            self.renderBody(query);
-            d.resolve();
-          }
+    renderLoading: function(query) {
+      var self = this;
 
-          return p;
-        })
-        .then(function() {
-          self.$el.append(self.$body);
-          return self.fadeIn();
-        });
+      return this.fadeOut().then(function() {
+        self.detachBody();
+        self.$el.append(self.$loading);
+        return self.fadeIn();
+      });
+    },
+
+    renderSync: function(query) {
+      return this.renderBody(query);
+    },
+
+    renderAsync: function(query) {
+      var self = this,
+          d = $.Deferred();
+
+      // show a loading indicator
+      this.renderLoading();
+
+      //  defer the row rendering until the call stack has cleared
+      _.defer(function() {
+        self.renderBody(query);
+        d.resolve();
+      });
+
+      return d.promise();
+    },
+
+    render: function(query) {
+      return this.async
+        ? this.renderAsync(query)
+        : this.renderSync(query);
     }
   });
 
