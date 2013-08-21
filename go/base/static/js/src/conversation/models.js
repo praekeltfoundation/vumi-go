@@ -8,7 +8,7 @@
     idAttribute: 'key',
 
     url: function() {
-      return '/conversation/' + this.id + '/edit_groups/';
+      return '/conversations/' + this.id + '/edit_groups/';
     },
 
     relations: [{
@@ -18,7 +18,7 @@
       collectionType: 'go.contacts.models.GroupCollection'
     }],
 
-    save: function(options) {
+    save: function(attrs, options) {
       options = options || {};
 
       // Override the attributes sent to the server to only include the groups
@@ -31,14 +31,20 @@
           .map(function(g) { return {key: g.id}; })
       };
 
-      return ConversationGroupsModel.__super__.save.call(this, {}, options);
+      return ConversationGroupsModel.__super__.save.call(this, attrs, options);
     },
 
     // We need to bring back Backbone's RESTful sync that we override in `Model`
     // to use RPC instead of REST.
     // TODO remove once conversation actions are part of the go http api
-    sync: function() {
-      return Backbone.sync.apply(this, arguments);
+    sync: function(method, model, options) {
+      options = options || {};
+
+      options.beforeSend = function(xhr) {
+        xhr.setRequestHeader('X-CSRFToken', $.cookie('csrftoken'));
+      };
+
+      return Backbone.sync.call(this, method, model, options);
     },
   });
 

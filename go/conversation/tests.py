@@ -97,25 +97,25 @@ class ConversationTestCase(VumiGoDjangoTestCase):
             'groups': [{
                 'key': group2.key,
                 'name': u'Contact Group 2',
-                'selected': False,
+                'inConversation': False,
             }, {
                 'key': group1.key,
                 'name': u'Contact Group 1',
-                'selected': True,
+                'inConversation': True,
             }]
         })
 
     def test_conversation_contact_group_assignment(self):
         conv = self.create_conversation(conversation_type=u'bulk_message',
                                         name=u'test', description=u'test')
-        group1 = self.user_api.contact_store.new_group(u'Contact Group 1')
+        self.user_api.contact_store.new_group(u'Contact Group 1')
         group2 = self.user_api.contact_store.new_group(u'Contact Group 2')
         group3 = self.user_api.contact_store.new_group(u'Contact Group 3')
 
         groups_url = reverse('conversations:conversation', kwargs={
             'conversation_key': conv.key, 'path_suffix': 'edit_groups/'})
 
-        resp = self.client.post(
+        resp = self.client.put(
             groups_url,
             content_type='application/json',
             data=json.dumps({
@@ -125,12 +125,7 @@ class ConversationTestCase(VumiGoDjangoTestCase):
                     {'key': group3.key}]
             }))
 
-        self.assertEqual(resp.status_code, 302)
-
-        reloaded_conv = self.user_api.get_wrapped_conversation(conv.key)
-        self.assertFalse(group1.key in reloaded_conv.groups.keys())
-        self.assertTrue(group2.key in reloaded_conv.groups.keys())
-        self.assertTrue(group3.key in reloaded_conv.groups.keys())
+        self.assertEqual(resp.status_code, 200)
 
     def test_post_new_conversation_extra_endpoints(self):
         self.add_app_permission(u'go.apps.wikipedia')

@@ -7,6 +7,8 @@
 
   var TemplateView = go.components.views.TemplateView;
 
+  var SaveActionView = go.components.actions.SaveActionView;
+
   var GroupRowView = RowView.extend({
     uuid: function() { return this.model.id; },
 
@@ -47,6 +49,19 @@
       this.table = new GroupTableView({
         el: this.$('.groups-table'),
         models: this.model.get('groups')
+      });
+
+      this.save = new SaveActionView({
+        el: this.$('.groups-save'),
+        model: this.model
+      });
+
+      // !!!TODO!!! prettier notifications
+      this.listenTo(this.save, 'error', function() {
+        bootbox.alert("Something bad happened, changes couldn't be saved.");
+      });
+      this.listenTo(this.save, 'success', function() {
+        bootbox.alert("Groups saved successfully.");
       });
     },
 

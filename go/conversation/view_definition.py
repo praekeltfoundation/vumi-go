@@ -477,7 +477,7 @@ class EditConversationGroupsView(ConversationTemplateView):
     def get(self, request, conversation):
         return self._render_groups(request, conversation)
 
-    def post(self, request, conversation):
+    def put(self, request, conversation):
         data = json.loads(request.body)
         group_keys = [d['key'] for d in data['groups']]
 
@@ -486,8 +486,9 @@ class EditConversationGroupsView(ConversationTemplateView):
             conversation.add_group(group_key)
         conversation.save()
 
-        return self.redirect_to(self.get_next_view(conversation),
-                                conversation_key=conversation.key)
+        return HttpResponse(
+            json.dumps({'success': True}),
+            content_type="application/json")
 
 
 class ConversationViewDefinitionBase(object):

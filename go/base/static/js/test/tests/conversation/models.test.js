@@ -56,7 +56,7 @@ describe("go.conversation.models", function() {
 
       it("should send a request to the server", function(done) {
         server.respondWith(function(req) {
-          assert.equal(req.url, '/conversation/conversation1/edit_groups/');
+          assert.equal(req.url, '/conversations/conversation1/edit_groups/');
           assert.deepEqual(JSON.parse(req.requestBody), {
             key: 'conversation1',
             groups: [
