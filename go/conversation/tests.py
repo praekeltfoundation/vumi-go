@@ -1,3 +1,5 @@
+import json
+
 from django.core.urlresolvers import reverse
 from django.utils.unittest import skip
 
@@ -75,39 +77,60 @@ class ConversationTestCase(VumiGoDjangoTestCase):
         self.assertContains(resp, 'Contact Group 1')
         self.assertNotContains(resp, 'Contact Group 2')
 
-    def test_conversation_render_contact_group_edit_form(self):
+    def test_conversation_render_contact_group_edit(self):
         conv = self.create_conversation(conversation_type=u'bulk_message',
                                         name=u'test', description=u'test')
         group1 = self.user_api.contact_store.new_group(u'Contact Group 1')
         group2 = self.user_api.contact_store.new_group(u'Contact Group 2')
 
+        conv.add_group(group1)
+        conv.save()
+
         groups_url = reverse('conversations:conversation', kwargs={
             'conversation_key': conv.key, 'path_suffix': 'edit_groups/'})
 
-        resp = self.client.get(groups_url)
+        response = self.client.get(groups_url)
 
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, group1.name)
-        self.assertContains(resp, group2.name)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.context['model_data']), {
+            'key': conv.key,
+            'groups': [{
+                'key': group2.key,
+                'name': u'Contact Group 2',
+                'selected': False,
+            }, {
+                'key': group1.key,
+                'name': u'Contact Group 1',
+                'selected': True,
+            }]
+        })
 
     def test_conversation_contact_group_assignment(self):
         conv = self.create_conversation(conversation_type=u'bulk_message',
                                         name=u'test', description=u'test')
         group1 = self.user_api.contact_store.new_group(u'Contact Group 1')
         group2 = self.user_api.contact_store.new_group(u'Contact Group 2')
+        group3 = self.user_api.contact_store.new_group(u'Contact Group 3')
 
         groups_url = reverse('conversations:conversation', kwargs={
             'conversation_key': conv.key, 'path_suffix': 'edit_groups/'})
 
-        resp = self.client.post(groups_url, {
-            'group': [group2.key]
-        })
+        resp = self.client.post(
+            groups_url,
+            content_type='application/json',
+            data=json.dumps({
+                'key': conv.key,
+                'groups': [
+                    {'key': group2.key},
+                    {'key': group3.key}]
+            }))
 
         self.assertEqual(resp.status_code, 302)
 
         reloaded_conv = self.user_api.get_wrapped_conversation(conv.key)
         self.assertFalse(group1.key in reloaded_conv.groups.keys())
         self.assertTrue(group2.key in reloaded_conv.groups.keys())
+        self.assertTrue(group3.key in reloaded_conv.groups.keys())
 
     def test_post_new_conversation_extra_endpoints(self):
         self.add_app_permission(u'go.apps.wikipedia')

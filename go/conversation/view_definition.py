@@ -1,4 +1,5 @@
 import csv
+import json
 import logging
 import functools
 from StringIO import StringIO
@@ -456,33 +457,20 @@ class EditConversationGroupsView(ConversationTemplateView):
                         key=lambda group: group.created_at,
                         reverse=True)
 
-        selected_groups = list(group.key for group
-                               in conversation.get_groups())
+        selected_groups = set(group.key for group in conversation.get_groups())
 
-        for group in groups:
-            if group.key in selected_groups:
-                group.selected = True
-
-        query = request.GET.get('query', '')
-        p = request.GET.get('p', 1)
-
-        paginator = Paginator(groups, 15)
-        try:
-            page = paginator.page(p)
-        except PageNotAnInteger:
-            page = paginator.page(1)
-        except EmptyPage:
-            page = paginator.page(paginator.num_pages)
-
-        pagination_params = urlencode({
-            'query': query,
-        })
+        model_data = {
+            'key': conversation.key,
+            'groups': [{
+                'key': group.key,
+                'name': group.name,
+                'inConversation': group.key in selected_groups
+            } for group in groups]
+        }
 
         return self.render_to_response({
-            'paginator': paginator,
-            'page': page,
-            'pagination_params': pagination_params,
             'conversation': conversation,
+            'model_data': json.dumps(model_data),
             'contact_store': request.user_api.contact_store,
         })
 
@@ -490,7 +478,9 @@ class EditConversationGroupsView(ConversationTemplateView):
         return self._render_groups(request, conversation)
 
     def post(self, request, conversation):
-        group_keys = request.POST.getlist('group')
+        data = json.loads(request.body)
+        group_keys = [d['key'] for d in data['groups']]
+
         conversation.groups.clear()
         for group_key in group_keys:
             conversation.add_group(group_key)

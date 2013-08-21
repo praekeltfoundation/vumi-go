@@ -13,11 +13,8 @@
     <div class="span12">
         <div class="indent">
             <h3>Select contact groups</h3>
-            <form id="form-conversation" method="post" action="">
-                {% csrf_token %}
-                {% include "contacts/group_list_table.html" %}
-                {% include "base/includes/pagination.html" %}
-            </form>
+            <table class="edit-groups">
+            </table>
         </div>
     </div>
 </div>
@@ -31,11 +28,11 @@
 
 {% block ondomready %}
     {{ block.super }}
-    var tableFormView = new go.components.tables.TableFormView({
-        el: '#form-conversation'
+
+    var view = new go.conversation.editGroups.EditConversationGroupsView({
+        el: $('body'),
+        model: new go.conversation.models.ConversationGroupsModel({{ model_data|safe }})
     });
 
-    $('.content .actions .right button').click(function() {
-        $('#form-conversation').submit();
-    });
+    view.render();
 {% endblock %}

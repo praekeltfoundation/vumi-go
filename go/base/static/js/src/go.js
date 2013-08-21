@@ -4,7 +4,7 @@
 
 (function(exports) {
   var urls = {
-    loading: '/static/img/loading/'
+    loading: '/static/img/loading.gif'
   };
 
   _(exports).extend({

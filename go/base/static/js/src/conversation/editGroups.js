@@ -48,6 +48,11 @@
         el: this.$('.edit-table'),
         models: this.model.get('groups')
       });
+    },
+
+    render: function() {
+      this.table.render();
+      return this;
     }
   });
 
