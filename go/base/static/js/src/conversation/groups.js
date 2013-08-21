@@ -47,12 +47,12 @@
   var EditConversationGroupsView = Backbone.View.extend({
     initialize: function(options) {
       this.table = new GroupTableView({
-        el: this.$('.groups-table'),
+        el: this.$('.group-table'),
         models: this.model.get('groups')
       });
 
       this.save = new SaveActionView({
-        el: this.$('.groups-save'),
+        el: this.$('.save'),
         model: this.model
       });
 
@@ -71,7 +71,7 @@
     },
 
     events: {
-      'input .groups-search': function(e) {
+      'input .search': function(e) {
         this.table.render({name: $(e.target).val()});
       }
     }

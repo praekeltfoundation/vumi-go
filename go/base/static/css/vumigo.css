@@ -445,8 +445,8 @@ button {
 .dialogue #diagram .choice.state .preview.mode .choices {
   text-align: left;
 }
-.groups-table th:first-child,
-.groups-table td:first-child {
+.conversation.groups .group-table th:first-child,
+.conversation.groups .group-table td:first-child {
   width: 20px;
 }
 .channels.dashboard td:first-child {

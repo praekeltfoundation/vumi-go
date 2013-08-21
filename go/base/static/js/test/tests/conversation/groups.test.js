@@ -56,12 +56,12 @@ describe("go.conversation.groups", function() {
       view = new EditConversationGroupsView({
         el: $('<div>')
           .append($('<input>')
-            .attr('class', 'groups-search')
+            .attr('class', 'search')
             .attr('type', 'text'))
           .append($('<button>')
-            .attr('class', 'groups-save'))
+            .attr('class', 'save'))
           .append($('<table>')
-            .attr('class', 'groups-table')),
+            .attr('class', 'group-table')),
 
         model: new ConversationGroupsModel({
           key: 'conversation1',
@@ -89,7 +89,7 @@ describe("go.conversation.groups", function() {
       $('.bootbox').modal('hide').remove();
     });
 
-    describe("when the input in '.groups-search' changes", function() {
+    describe("when the input in '.search' changes", function() {
       beforeEach(function() {
         view.table.async = false;
         view.table.fadeDuration = 0;
@@ -102,7 +102,7 @@ describe("go.conversation.groups", function() {
         assert(oneElExists(view.$('[data-uuid=group3]')));
 
         view
-          .$('.groups-search')
+          .$('.search')
           .val('Spam')
           .trigger($.Event('input'));
 
@@ -112,7 +112,7 @@ describe("go.conversation.groups", function() {
       });
     });
 
-    describe("when '.groups-save' is clicked", function() {
+    describe("when '.save' is clicked", function() {
       it("should send the updated model to the server", function(done) {
         // make some updates to the model
         view.model
@@ -137,7 +137,7 @@ describe("go.conversation.groups", function() {
           done();
         });
 
-        view.$('.groups-save').click();
+        view.$('.save').click();
         server.respond();
       });
 
@@ -147,7 +147,7 @@ describe("go.conversation.groups", function() {
 
           assert(noElExists('.modal'));
 
-          view.$('.groups-save').click();
+          view.$('.save').click();
           server.respond();
 
           assert(oneElExists('.modal'));
@@ -163,7 +163,7 @@ describe("go.conversation.groups", function() {
 
           assert(noElExists('.modal'));
 
-          view.$('.groups-save').click();
+          view.$('.save').click();
           server.respond();
 
           assert(oneElExists('.modal'));
