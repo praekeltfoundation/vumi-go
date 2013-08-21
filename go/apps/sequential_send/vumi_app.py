@@ -181,6 +181,15 @@ class SequentialSendApplication(GoApplicationWorker):
                 [user_account_key, conversation_key]))
 
     @inlineCallbacks
+    def process_command_stop(self, user_account_key, conversation_key):
+        yield super(SequentialSendApplication, self).process_command_start(
+            user_account_key, conversation_key)
+
+        log.debug("Unscheduling conversation: %s" % (conversation_key,))
+        yield self.redis.srem('scheduled_conversations', json.dumps(
+                [user_account_key, conversation_key]))
+
+    @inlineCallbacks
     def collect_metrics(self, user_api, conversation_key):
         conv = yield user_api.get_wrapped_conversation(conversation_key)
         yield self.collect_message_metrics(conv)
