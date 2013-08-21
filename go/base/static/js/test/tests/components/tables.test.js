@@ -251,6 +251,10 @@ describe("go.components.tables", function() {
           a: 'Hypothetical',
           b: 'Basking',
           c: 'Shark'
+        }, {
+          a: 'Spoon Snake',
+          b: 'Wierd Fishes',
+          c: 'Mace Windu'
         }])
       });
     });
@@ -268,6 +272,10 @@ describe("go.components.tables", function() {
         assert.deepEqual(
           rows.matching({a: 'foo', b: 'baz'}),
           []);
+
+        assert.deepEqual(
+          rows.matching({a: 'Spoon Snake foo'}),
+          [rows.at(0), rows.at(3)]);
       });
 
       it("should support multiple patterns delimited with a space", function() {

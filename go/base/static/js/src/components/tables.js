@@ -243,13 +243,17 @@
 
     fadeOut: function() {
       var d = $.Deferred();
-      this.$('tbody').fadeOut(this.fadeDuration, function() { d.resolve(); });
+      this.$('tbody')
+        .stop(true)
+        .fadeOut(this.fadeDuration, function() { d.resolve(); });
       return d.promise();
     },
 
     fadeIn: function() {
       var d = $.Deferred();
-      this.$('tbody').fadeIn(this.fadeDuration, function() { d.resolve(); });
+      this.$('tbody')
+        .stop(true)
+        .fadeIn(this.fadeDuration, function() { d.resolve(); });
       return d.promise();
     },
 
@@ -280,16 +284,16 @@
             // if the table is async, defer the row rendering until the call
             // stack has cleared, show a loading indicator and fade it out
             // once the row rendering is resolved
-            _.defer(function() {
-              self.renderBody(query);
-              d.resolve();
-            });
-
             self.$el.append(self.$loading);
 
             p = p
               .then(self.fadeOut.bind(self))
               .then(function() { self.$loading.detach(); });
+
+            _.defer(function() {
+              self.renderBody(query);
+              d.resolve();
+            });
           } else {
             // if the table is not async, render and resolve the deferred
             // immediately to prevent async behaviour

@@ -1,4 +1,4 @@
-describe("go.conversation.editGroups", function() {
+describe.only("go.conversation.editGroups", function() {
   var testHelpers = go.testHelpers,
       noElExists = testHelpers.noElExists,
       oneElExists = testHelpers.oneElExists;
@@ -62,7 +62,7 @@ describe("go.conversation.editGroups", function() {
           key: 'conversation1',
           groups: [{
             key: 'group1',
-            name: 'Spam',
+            name: 'Group 1',
             inConversation: false
           }, {
             key: 'group2',
@@ -96,7 +96,7 @@ describe("go.conversation.editGroups", function() {
 
         view
           .$('.groups-search')
-          .val('Spam')
+          .val('Group 1')
           .trigger($.Event('input'));
 
         assert(oneElExists(view.$('[data-uuid=group1]')));
