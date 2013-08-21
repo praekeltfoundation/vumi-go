@@ -235,8 +235,8 @@
       this.$loading = $('<tbody>')
         .append($('<tr>')
           .append($('<td>')
-            .attr('colspan', '0')
             .append($('<img>')
+              .attr('class', 'loading')
               .attr('src', go.urls.loading))));
     },
 

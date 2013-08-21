@@ -12,7 +12,7 @@
       GroupRowView.__super__.initialize.call(this, options);
 
       this.template = new TemplateView({
-        jst: 'JST.conversation_editGroups',
+        jst: 'JST.conversation_editGroups_row',
         data: {model: this.model},
         el: this.$el
       });
@@ -26,7 +26,7 @@
     events: {
       'change .marker': function() {
         this.model.set(
-          'selected',
+          'inConversation',
           this.$('.marker').is(':checked'),
           {silent: true});
       }
@@ -42,8 +42,18 @@
     ]
   });
 
+  var EditConversationGroupsView = Backbone.View.extend({
+    initialize: function(options) {
+      this.table = new GroupTableView({
+        el: this.$('.edit-table'),
+        models: this.model.get('groups')
+      });
+    }
+  });
+
   _.extend(exports, {
     GroupRowView: GroupRowView,
-    GroupTableView: GroupTableView
+    GroupTableView: GroupTableView,
+    EditConversationGroupsView: EditConversationGroupsView
   });
 })(go.conversation.editGroups = {});

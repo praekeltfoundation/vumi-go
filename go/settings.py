@@ -398,7 +398,7 @@ PIPELINE_JS = {
             'templates/apps/dialogue/states/end/edit.jst',
             'templates/apps/dialogue/states/end/preview.jst',
             'templates/apps/dialogue/states/components/nameExtras.jst',
-            'templates/conversation/editGroups.jst',
+            'templates/conversation/editGroups/row.jst',
             'templates/components/confirm.jst',
             'templates/dummy/dummy.jst',
 
@@ -438,6 +438,7 @@ PIPELINE_JS = {
             'js/src/contacts/contacts.js',
             'js/src/contacts/models.js',
             'js/src/conversation/conversation.js',
+            'js/src/conversation/models.js',
             'js/src/conversation/views.js',
             'js/src/conversation/dashboard.js',
             'js/src/conversation/show.js',
