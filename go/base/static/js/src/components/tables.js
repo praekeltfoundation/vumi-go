@@ -5,6 +5,18 @@
 (function(exports) {
   var ViewCollection = go.components.structures.ViewCollection;
 
+  var parseQuery = function(query) {
+    var parsed = {};
+
+    _(query || {}).each(function(pattern, attrName) {
+      if (_.isArray(pattern)) { parsed[attrName] = pattern; }
+      else if (_.isRegExp(pattern)) { parsed[attrName] = [pattern]; }
+      else { parsed[attrName] = pattern.split(' '); }
+    });
+
+    return parsed;
+  };
+
   // TODO Replace with TableView once our communication with the server is more
   // api-like
   var TableFormView = Backbone.View.extend({
@@ -155,7 +167,7 @@
     tagName: 'tr',
 
     matches: function(query) {
-      return _(query || {}).every(function(patterns, attrName) {
+      return _(parseQuery(query)).every(function(patterns, attrName) {
         var attr = this.model.get(attrName),
             i = patterns.length;
 
@@ -171,19 +183,8 @@
   var RowCollection = ViewCollection.extend({
     type: RowView,
 
-    parseQuery: function(query) {
-      var parsed = {};
-
-      _(query || {}).each(function(pattern, attrName) {
-        if (_.isRegExp(pattern)) { parsed[attrName] = [pattern]; }
-        else { parsed[attrName] = pattern.split(' '); }
-      });
-
-      return parsed;
-    },
-
     matching: function(query) {
-      query = this.parseQuery(query);
+      query = parseQuery(query);
 
       return _.isEmpty(query)
         ? this.values()
@@ -303,7 +304,7 @@
       // show a loading indicator
       this.renderLoading();
 
-      //  defer the row rendering until the call stack has cleared
+      // defer the row rendering until the call stack has cleared
       _.defer(function() {
         self.renderBody(query);
         d.resolve();
@@ -323,6 +324,7 @@
     TableFormView: TableFormView,
     RowView: RowView,
     RowCollection: RowCollection,
-    TableView: TableView
+    TableView: TableView,
+    parseQuery: parseQuery
   });
 })(go.components.tables = {});

@@ -197,38 +197,42 @@ describe("go.components.tables", function() {
       it("should return whether the query matches the row's model's attributes",
       function() {
         assert(row.matches({
-          a: ['foo'],
-          b: ['bar'],
-          c: ['baz']
+          a: 'foo',
+          b: 'bar',
+          c: 'baz'
         }));
 
         assert(row.matches({
-          a: ['foo'],
-          b: ['bar']
+          a: 'foo',
+          b: 'bar'
         }));
 
         assert(row.matches({
-          a: ['fo'],
-          b: ['ba'],
-          c: ['ba']
+          a: 'fo',
+          b: 'ba',
+          c: 'ba'
         }));
 
         assert(row.matches({
-          a: ['foo', 'Shark'],
-          b: ['ba'],
-          c: ['ba']
+          a: 'foo Shark',
+          b: 'ba',
+          c: 'ba'
         }));
 
         assert(!row.matches({
-          a: ['foo'],
-          b: ['baz']
+          a: 'foo',
+          b: 'baz'
         }));
       });
-    });
 
-    it("should support regexes", function() {
-      assert(row.matches({a: [/fo/]}));
-      assert(!row.matches({a: [/fm/]}));
+      it("should support multiple patterns delimited with a space", function() {
+        assert(row.matches({a: 'foo lerp'}));
+      });
+
+      it("should support regexes", function() {
+        assert(row.matches({a: /fo/}));
+        assert(!row.matches({a: /fm/}));
+      });
     });
   });
 
