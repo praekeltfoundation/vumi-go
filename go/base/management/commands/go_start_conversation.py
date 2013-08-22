@@ -17,10 +17,6 @@ class Command(BaseCommand):
             dest='email_address',
             default=False,
             help='The account to start a conversation for.'),
-        make_option('--skip-initial-action-hack',
-                    dest='skip_initial_action_hack',
-                    action='store_true', default=False,
-                    help='Skip sending the initial action hack message'),
     ]
     option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
 
@@ -46,24 +42,14 @@ class Command(BaseCommand):
         conversation = user_api.get_wrapped_conversation(conversation_key)
         if conversation is None:
             raise CommandError('Conversation does not exist.')
-        elif not conversation.delivery_tag_pool:
-            raise CommandError('Conversation missing delivery_tag_pool')
 
         handler = getattr(self, 'start_%s' %
             (conversation.conversation_type,),
             self.default_start_conversation)
-        send_initial_action_hack = not options['skip_initial_action_hack']
-        handler(user_api, conversation, send_initial_action_hack)
+        handler(user_api, conversation)
 
-    def default_start_conversation(self, user_api, conversation, send_iah):
+    def default_start_conversation(self, user_api, conversation):
         if conversation.archived() or conversation.running():
             raise CommandError('Conversation already started.')
 
-        conversation.start(send_initial_action_hack=send_iah)
-
-    def start_sequential_send(self, user_api, conversation, send_iah):
-        if conversation.archived() or conversation.running():
-            raise CommandError('Conversation already started.')
-
-        conversation.start(no_batch_tag=True, acquire_tag=False,
-                           send_initial_action_hack=send_iah)
+        conversation.start()

@@ -9,17 +9,18 @@
     {% endfor %}
 {% endblock %}
 
-{% block extra_js %}
+{% block extrascript %}
+{{ block.super }}
 <script type="text/javascript">
     $(function() {
-        if(window.location.hash != "") {
+        if (window.location.hash != "") {
             $('#.nav a[href="'+window.location.hash+'"]').tab('show');
         }
     });
 </script>
 {% endblock %}
 
-{% block main %}
+{% block content_main %}
 
 <h2>Manage Profile</h2><br>
 

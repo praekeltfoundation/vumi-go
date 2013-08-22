@@ -39,8 +39,8 @@ class RoutingMetadata(object):
     The `go_outbound_hops` is a cache of the `go_hops` for the outbound
     message associated with an event. `go_outbound_hops` is only written
     to event messages. It allows dispatching events through multiple
-    routing blocks while only retrieving the outbound message from the
-    message store once.
+    routers while only retrieving the outbound message from the message
+    store once.
     """
 
     def __init__(self, msg, outbound=None):
@@ -118,6 +118,23 @@ class RoutingMetadata(object):
             return None
         return outbound_src
 
+    def next_router_endpoint(self):
+        """Computes the next endpoint to dispatch this message to from a router
+        assuming this message is following the inverse of the hops contained in
+        the cached outbound hops list.
+
+        Returns the appropriate endpoint or `None` if no appropriate endpoint
+        can be determined.
+        """
+        hops = self.get_hops()
+        outbound_hops = self.get_outbound_hops()
+        if hops is None or outbound_hops is None:
+            return None
+        if len(hops) > len(outbound_hops) - 1:
+            return None
+        [outbound_src, outbound_dst] = outbound_hops[-len(hops) - 1]
+        return outbound_dst[1]
+
 
 class AccountRoutingTableDispatcherConfig(RoutingTableDispatcher.CONFIG_CLASS,
                                           GoWorkerConfigMixin):
@@ -158,18 +175,18 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     Summary of message sources and destinations:
 
     * inbound messages:
-      * from: transports or routing blocks
-      * to: routing blocks, conversations or the opt-out worker
+      * from: transports or routers
+      * to: routers, conversations or the opt-out worker
 
     * outbound messages:
-      * from: conversations, routing blocks or the opt-out worker
-      * to: routing blocks or transports
+      * from: conversations, routers or the opt-out worker
+      * to: routers or transports
 
     * events:
-      * from: transports or routing blocks
-      * to: routing blocks, conversations or the opt-out worker
+      * from: transports or routers
+      * to: routers, conversations or the opt-out worker
 
-    Further complexities arise because routing blocks can be sources
+    Further complexities arise because routers can be sources
     and destinations of both inbound and outbound messages (and events)
     so care has to be taken to keep track of which direction a message
     is travelling in in order to select the correct routing table
@@ -180,14 +197,14 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     * for messages from transports:
       * tag is used to determine the user account id
 
-    * for routing blocks, conversations and the opt-out worker:
+    * for routers, conversations and the opt-out worker:
       * the user account id is read from the Vumi Go helper_metadata.
 
     When messages are published the following helper_metadata
     is included:
 
     * for transports: tag pool and tag name
-    * for routing blocks: user_account, router_type, router_key
+    * for routers: user_account, router_type, router_key
     * for conversations: user_account, conversation_type, conversation_key
     * for the opt-out worker: user_account
 
@@ -200,7 +217,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
     # connector types (references to GoConnector constants for convenience)
     CONVERSATION = GoConnector.CONVERSATION
-    ROUTING_BLOCK = GoConnector.ROUTING_BLOCK
+    ROUTER = GoConnector.ROUTER
     TRANSPORT_TAG = GoConnector.TRANSPORT_TAG
     OPT_OUT = GoConnector.OPT_OUT
 
@@ -216,7 +233,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         self.opt_out_connector = config.opt_out_connector
         self.router_inbound_connector_mapping = (
             config.router_inbound_connector_mapping)
-        self.router_outbound_connecor_mapping = (
+        self.router_outbound_connector_mapping = (
             config.router_outbound_connector_mapping)
         self.router_connectors = set()
         self.router_connectors.update(
@@ -263,6 +280,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         elif msg_mdh.tag is not None:
             tag_info = yield self.vumi_api.mdb.get_tag_info(tuple(msg_mdh.tag))
             user_account_key = tag_info.metadata['user_account']
+            if user_account_key is None:
+                raise UnroutableMessageError(
+                    "Message received for unowned tag.", msg)
         else:
             raise UnroutableMessageError(
                 "Could not determine user account key", msg)
@@ -280,7 +300,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         if connector_name in self.application_connectors:
             return self.CONVERSATION
         elif connector_name in self.router_connectors:
-            return self.ROUTING_BLOCK
+            return self.ROUTER
         elif connector_name in self.transport_connectors:
             return self.TRANSPORT_TAG
         elif connector_name == self.opt_out_connector:
@@ -297,11 +317,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         if direction == self.INBOUND:
             return self.router_inbound_connector_mapping.get(router_type)
         else:
-            return self.router_outbound_connecor_mapping.get(router_type)
+            return self.router_outbound_connector_mapping.get(router_type)
 
     def router_direction(self, direction):
         """Converts an connector direction (as seen from the perspective of
-        this app) into the direction as seen by a routing block (i.e. the
+        this app) into the direction as seen by a router (i.e. the
         reverse).
         """
         router_direction = {
@@ -326,10 +346,10 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
 
         if direction == self.INBOUND:
             allowed_types = (
-                self.CONVERSATION, self.ROUTING_BLOCK, self.OPT_OUT)
+                self.CONVERSATION, self.ROUTER, self.OPT_OUT)
         else:
             allowed_types = (
-                self.ROUTING_BLOCK, self.TRANSPORT_TAG)
+                self.ROUTER, self.TRANSPORT_TAG)
 
         if conn.ctype not in allowed_types:
             raise UnroutableMessageError(
@@ -339,10 +359,10 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             msg_mdh.set_conversation_info(conn.conv_type, conn.conv_key)
             dst_connector_name = self.get_application_connector(conn.conv_type)
 
-        elif conn.ctype == conn.ROUTING_BLOCK:
-            msg_mdh.set_router_info(conn.rblock_type, conn.rblock_key)
+        elif conn.ctype == conn.ROUTER:
+            msg_mdh.set_router_info(conn.router_type, conn.router_key)
             dst_connector_name = self.get_router_connector(
-                conn.rblock_type, self.router_direction(direction))
+                conn.router_type, self.router_direction(direction))
 
         elif conn.ctype == conn.TRANSPORT_TAG:
             msg_mdh.set_tag([conn.tagpool, conn.tagname])
@@ -358,6 +378,15 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
                     "Transport name %r found in tagpool metadata for pool"
                     " %r is invalid." % (transport_name, conn.tagpool), msg)
             dst_connector_name = transport_name
+            msg['transport_name'] = transport_name
+
+            transport_type = tagpool_metadata.get('transport_type')
+            if transport_type is not None:
+                msg['transport_type'] = transport_type
+            else:
+                log.error(
+                    "No transport type found for tagpool %r while routing %s"
+                    % (conn.tagpool, msg))
 
         elif conn.ctype == conn.OPT_OUT:
             dst_connector_name = self.opt_out_connector
@@ -385,9 +414,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         msg_mdh = self.get_metadata_helper(msg)
 
         if direction == self.INBOUND:
-            allowed_types = (self.TRANSPORT_TAG, self.ROUTING_BLOCK)
+            allowed_types = (self.TRANSPORT_TAG, self.ROUTER)
         else:
-            allowed_types = (self.CONVERSATION, self.ROUTING_BLOCK,
+            allowed_types = (self.CONVERSATION, self.ROUTER,
                              self.OPT_OUT)
 
         if connector_type not in allowed_types:
@@ -399,9 +428,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
             src_conn = str(GoConnector.for_conversation(
                 conv_info['conversation_type'], conv_info['conversation_key']))
 
-        elif connector_type == self.ROUTING_BLOCK:
+        elif connector_type == self.ROUTER:
             router_info = msg_mdh.get_router_info()
-            src_conn = str(GoConnector.for_routing_block(
+            src_conn = str(GoConnector.for_router(
                 router_info['router_type'], router_info['router_key'],
                 self.router_direction(direction)))
 
@@ -461,11 +490,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         Inbound messages can be from:
 
         * transports (these might be opt-out messages)
-        * routing blocks
+        * routers
 
         And may go to:
 
-        * routing blocks
+        * routers
         * conversations
         * the opt-out worker
         """
@@ -499,12 +528,12 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         Outbound messages can be from:
 
         * conversations
-        * routing blocks
+        * routers
         * the opt-out worker
 
         And may go to:
 
-        * routing blocks
+        * routers
         * transports
         """
         log.debug("Processing outbound: %s" % (msg,))
@@ -541,9 +570,9 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         event_rmeta = RoutingMetadata(event)
 
         if (event_rmeta.get_outbound_hops() is not None
-            and event_mdh.has_user_account()
-            and event_mdh.tag is not None):
-                return
+                and event_mdh.has_user_account()
+                and event_mdh.tag is not None):
+            return
 
         # some metadata is missing, grab the associated outbound message
         # and look for it there:
@@ -573,7 +602,7 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
     def process_event(self, config, event, connector_name):
         """Process an event message.
 
-        Events must trace back the path through the routing blocks
+        Events must trace back the path through the routers
         and conversations that was taken by the associated outbound
         message.
 
@@ -582,11 +611,11 @@ class AccountRoutingTableDispatcher(RoutingTableDispatcher, GoWorkerMixin):
         Events can be from:
 
         * transports
-        * routing blocks
+        * routers
 
         And may go to:
 
-        * routing blocks
+        * routers
         * conversations
         * the opt-out worker
         """

@@ -17,19 +17,21 @@ from vumi.persist.riak_manager import RiakManager
 from vumi.persist.txriak_manager import TxRiakManager
 from vumi.persist.redis_manager import RedisManager
 from vumi.persist.txredis_manager import TxRedisManager
-from vumi.middleware.tagger import TaggingMiddleware
 from vumi import log
 
 from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
+from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
+from go.vumitools.router import RouterStore
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
-from go.vumitools.middleware import DebitAccountMiddleware
 from go.vumitools.token_manager import TokenManager
 
 from django.conf import settings
 from django.utils.datastructures import SortedDict
+
+from vumi.message import TransportUserMessage
 
 
 class TagpoolSet(object):
@@ -69,6 +71,9 @@ class TagpoolSet(object):
     def display_name(self, pool):
         return self._pools[pool].get('display_name', pool)
 
+    def country_name(self, pool, default):
+        return self._pools[pool].get('country_name', default)
+
     def user_selects_tag(self, pool):
         return self._pools[pool].get('user_selects_tag', False)
 
@@ -95,6 +100,10 @@ class VumiUserApi(object):
         self.conversation_store = ConversationStore(self.api.manager,
                                                     self.user_account_key)
         self.contact_store = ContactStore(self.api.manager,
+                                          self.user_account_key)
+        self.router_store = RouterStore(self.api.manager,
+                                        self.user_account_key)
+        self.channel_store = ChannelStore(self.api.manager,
                                           self.user_account_key)
 
     def exists(self):
@@ -130,6 +139,21 @@ class VumiUserApi(object):
             conversation_key)
         if conversation:
             returnValue(self.wrap_conversation(conversation))
+
+    def get_conversation(self, conversation_key):
+        return self.conversation_store.get_conversation_by_key(
+            conversation_key)
+
+    def get_router(self, router_key):
+        return self.router_store.get_router_by_key(router_key)
+
+    @Manager.calls_manager
+    def get_channel(self, tag):
+        tagpool_meta = yield self.api.tpm.get_metadata(tag[0])
+        tag_info = yield self.api.mdb.get_tag_info(tag)
+        channel = yield self.channel_store.get_channel_by_tag(
+            tag, tagpool_meta, tag_info.current_batch.key)
+        returnValue(channel)
 
     @Manager.calls_manager
     def finished_conversations(self):
@@ -167,13 +191,31 @@ class VumiUserApi(object):
         returnValue([c for c in conversations if c.is_draft()])
 
     @Manager.calls_manager
+    def active_routers(self):
+        keys = yield self.router_store.list_active_routers()
+        # NOTE: This assumes that we don't have very large numbers of active
+        #       routers.
+        routers = []
+        for routers_bunch in self.router_store.load_all_bunches(keys):
+            routers.extend((yield routers_bunch))
+        returnValue(routers)
+
+    @Manager.calls_manager
+    def active_channels(self):
+        channels = []
+        endpoints = yield self.list_endpoints()
+        for tag in endpoints:
+            channel = yield self.get_channel(tag)
+            channels.append(channel)
+        returnValue(channels)
+
+    @Manager.calls_manager
     def tagpools(self):
         user_account = yield self.get_user_account()
-        active_conversations = yield self.active_conversations()
 
         tp_usage = defaultdict(int)
-        for conv in active_conversations:
-            tp_usage[conv.delivery_tag_pool] += 1
+        for tag in user_account.tags:
+            tp_usage[tag[0]] += 1
 
         allowed_set = set()
         for tp_bunch in user_account.tagpools.load_all_bunches():
@@ -205,12 +247,37 @@ class VumiUserApi(object):
                         if application in app_settings]))
 
     @Manager.calls_manager
+    def router_types(self):
+        # TODO: Permissions.
+        yield None
+        router_settings = settings.VUMI_INSTALLED_ROUTERS
+        returnValue(SortedDict([(router_type, router_settings[router_type])
+                                for router_type in sorted(router_settings)]))
+
+    @Manager.calls_manager
     def list_groups(self):
         returnValue(sorted((yield self.contact_store.list_groups()),
             key=lambda group: group.name))
 
-    def new_conversation(self, *args, **kw):
-        return self.conversation_store.new_conversation(*args, **kw)
+    @Manager.calls_manager
+    def new_conversation(self, conversation_type, name, description, config,
+                         batch_id=None, **fields):
+        if not batch_id:
+            batch_id = yield self.api.mdb.batch_start(
+                tags=[], user_account=self.user_account_key)
+        conv = yield self.conversation_store.new_conversation(
+            conversation_type, name, description, config, batch_id, **fields)
+        returnValue(conv)
+
+    @Manager.calls_manager
+    def new_router(self, router_type, name, description, config,
+                   batch_id=None, **fields):
+        if not batch_id:
+            batch_id = yield self.api.mdb.batch_start(
+                tags=[], user_account=self.user_account_key)
+        router = yield self.router_store.new_router(
+            router_type, name, description, config, batch_id, **fields)
+        returnValue(router)
 
     @Manager.calls_manager
     def list_conversation_endpoints(self):
@@ -237,19 +304,11 @@ class VumiUserApi(object):
         returnValue(tags)
 
     @Manager.calls_manager
-    def _populate_tags(self, user_account):
-        if user_account.tags is None:
-            # We need to populate this from conversations
-            conv_tags = yield self.list_conversation_batch_tags()
-            user_account.tags = [list(tag) for tag in conv_tags]
-
-    @Manager.calls_manager
     def list_endpoints(self, user_account=None):
         """Returns a set of endpoints owned by an account.
         """
         if user_account is None:
             user_account = yield self.get_user_account()
-        yield self._populate_tags(user_account)
         returnValue(set(tuple(tag) for tag in user_account.tags))
 
     @Manager.calls_manager
@@ -275,58 +334,12 @@ class VumiUserApi(object):
         returnValue(conversation)
 
     @Manager.calls_manager
-    def _populate_routing_table(self, user_account):
-        """Build a routing table by looking at conversations.
-
-        This is quite expensive. Let's try to not do it very often.
-
-        NOTE: This assumes all conversations have symmetric routing. It almost
-        certainly breaks some stuff. Some way to manually fix broken things
-        later would be nice.
-        """
-        if user_account.routing_table is not None:
-            return
-
-        routing_table = {}
-        rt_helper = RoutingTableHelper(routing_table)
-
-        # Start by walking forward from tags owned by this account.
-        account_tags = yield self.list_endpoints(user_account)
-        for tag in account_tags:
-            tag_info = yield self.api.mdb.get_tag_info(tag)
-            account_key = user_account.key.decode('utf-8')
-            tag_info.metadata['user_account'] = account_key
-            yield tag_info.save()
-            if tag_info.current_batch.key is None:
-                continue
-            batch = yield tag_info.current_batch.get()
-            conv = yield self._get_conversation_for_batch(batch)
-            if conv is None:
-                continue
-            # If we get here, we have a conversation to set up routing for.
-            rt_helper.add_oldstyle_conversation(conv, tag)
-
-        # XXX: Saving here could lead to a race condition if something else
-        # populates the routing table with some different data and saves before
-        # we do. This is unlikely enough that I'm happy ignoring it, given that
-        # we only build the routing table during account migration.
-        user_account.routing_table = routing_table
-        yield user_account.save()
-
-        # Check that we have routing set up for all our running conversations.
-        convs = yield self.running_conversations()
-        for conv in convs:
-            conv_conn = str(GoConnector.for_conversation(
-                conv.conversation_type, conv.key))
-            if conv_conn not in routing_table:
-                log.warning(
-                    "No routing configured for conversation: %r" % (conv,))
-
-    @Manager.calls_manager
     def get_routing_table(self, user_account=None):
         if user_account is None:
             user_account = yield self.get_user_account()
-        yield self._populate_routing_table(user_account)
+        if user_account.routing_table is None:
+            raise VumiError(
+                "Routing table missing for account: %s" % (user_account.key,))
         returnValue(user_account.routing_table)
 
     @Manager.calls_manager
@@ -367,28 +380,11 @@ class VumiUserApi(object):
                     routing_connectors,))
 
     @Manager.calls_manager
-    def msg_options(self, tag, tagpool_metadata=None):
-        """Return a dictionary of message options needed to send a message
-        from this user to the given tag.
-        """
-        if tagpool_metadata is None:
-            tagpool_metadata = yield self.api.tpm.get_metadata(tag[0])
-        msg_options = {}
-        # TODO: transport_type is probably irrelevant
-        msg_options['transport_type'] = tagpool_metadata.get('transport_type')
-        # TODO: not sure whether to declare that tag names must always be
-        #       valid from_addr values or whether to put in a mapping somewhere
-        msg_options['from_addr'] = tag[1]
-        if 'transport_name' in tagpool_metadata:
-            msg_options['transport_name'] = tagpool_metadata['transport_name']
-        msg_options.update(tagpool_metadata.get('msg_options', {}))
-        TaggingMiddleware.add_tag_to_payload(msg_options, tag)
-        DebitAccountMiddleware.add_user_to_payload(msg_options,
-                                                   self.user_account_key)
-        returnValue(msg_options)
-
-    @Manager.calls_manager
     def _update_tag_data_for_acquire(self, user_account, tag):
+        # The batch we create here gets added to the tag_info and we can fish
+        # it out later. When we replace this with proper channel objects we can
+        # stash it there like we do with conversations and routers.
+        yield self.api.mdb.batch_start([tag], user_account=user_account.key)
         user_account.tags.append(tag)
         tag_info = yield self.api.mdb.get_tag_info(tag)
         tag_info.metadata['user_account'] = user_account.key.decode('utf-8')
@@ -408,7 +404,6 @@ class VumiUserApi(object):
             The tag acquired or None if no tag was available.
         """
         user_account = yield self.get_user_account()
-        yield self._populate_tags(user_account)
         if not (yield user_account.has_tagpool_permission(pool)):
             log.warning("Account '%s' trying to access forbidden pool '%s'" % (
                 user_account.key, pool))
@@ -431,7 +426,6 @@ class VumiUserApi(object):
             The tag acquired or None if the tag was not available.
         """
         user_account = yield self.get_user_account()
-        yield self._populate_tags(user_account)
         if not (yield user_account.has_tagpool_permission(tag[0])):
             log.warning("Account '%s' trying to access forbidden pool '%s'" % (
                 user_account.key, tag[0]))
@@ -455,7 +449,6 @@ class VumiUserApi(object):
             None.
         """
         user_account = yield self.get_user_account()
-        yield self._populate_tags(user_account)
         try:
             user_account.tags.remove(list(tag))
         except ValueError, e:
@@ -464,8 +457,101 @@ class VumiUserApi(object):
             tag_info = yield self.api.mdb.get_tag_info(tag)
             del tag_info.metadata['user_account']
             yield tag_info.save()
+            # NOTE: This loads and saves the CurrentTag object a second time.
+            #       We should probably refactor the message store to make this
+            #       less clumsy.
+            if tag_info.current_batch.key:
+                yield self.api.mdb.batch_done(tag_info.current_batch.key)
+
+            # Clean up routing table entries.
+            routing_table = yield self.get_routing_table(user_account)
+            rt_helper = RoutingTableHelper(routing_table)
+            rt_helper.remove_transport_tag(tag)
+
             yield user_account.save()
         yield self.api.tpm.release_tag(tag)
+
+    def delivery_class_for_msg(self, msg):
+        # Sometimes we need a `delivery_class` but we don't always have (or
+        # want) one. This builds one from `msg['transport_type']`.
+        return {
+            TransportUserMessage.TT_SMS: 'sms',
+            TransportUserMessage.TT_USSD: 'ussd',
+            TransportUserMessage.TT_XMPP: 'gtalk',
+            TransportUserMessage.TT_TWITTER: 'twitter',
+        }.get(msg['transport_type'],
+              msg['transport_type'])
+
+    def get_router_api(self, router_type, router_key):
+        return VumiRouterApi(self, router_type, router_key)
+
+
+class VumiRouterApi(object):
+    def __init__(self, user_api, router_type, router_key):
+        self.user_api = user_api
+        self.manager = user_api.manager
+        self.router_type = router_type
+        self.router_key = router_key
+
+    def get_router(self):
+        return self.user_api.get_router(self.router_key)
+
+    @Manager.calls_manager
+    def archive_router(self, router=None):
+        if router is None:
+            router = yield self.get_router()
+        router.set_status_finished()
+        yield router.save()
+        yield self._remove_from_routing_table(router)
+
+    @Manager.calls_manager
+    def _remove_from_routing_table(self, router):
+        """Remove routing entries for this router.
+        """
+        user_account = yield self.user_api.get_user_account()
+        routing_table = yield self.user_api.get_routing_table(user_account)
+        rt_helper = RoutingTableHelper(routing_table)
+        rt_helper.remove_router(router)
+        yield user_account.save()
+
+    @Manager.calls_manager
+    def start_router(self, router=None):
+        """Send the start command to this router's worker.
+
+        The router is then responsible for processing this message as
+        appropriate and handling the state transition.
+        """
+        if router is None:
+            router = yield self.get_router()
+        router.set_status_starting()
+        yield router.save()
+        yield self.dispatch_router_command('start')
+
+    @Manager.calls_manager
+    def stop_router(self, router=None):
+        """Send the stop command to this router's worker.
+
+        The router is then responsible for processing this message as
+        appropriate and handling the state transition.
+        """
+        if router is None:
+            router = yield self.get_router()
+        router.set_status_stopping()
+        yield router.save()
+        yield self.dispatch_router_command('stop')
+
+    def dispatch_router_command(self, command, *args, **kwargs):
+        """Send a command to this router's worker.
+
+        :type command: str
+        :params command:
+            The name of the command to call
+        """
+        worker_name = '%s_router' % (self.router_type,)
+        kwargs.setdefault('user_account_key', self.user_api.user_account_key)
+        kwargs.setdefault('router_key', self.router_key)
+        return self.user_api.api.send_command(
+            worker_name, command, *args, **kwargs)
 
 
 class VumiApi(object):
@@ -533,35 +619,6 @@ class VumiApi(object):
     def get_user_api(self, user_account_key):
         return VumiUserApi(self, user_account_key)
 
-    def batch_start(self, tags):
-        """Start a message batch.
-
-        :type tags: list of str
-        :param tags:
-            A list of identifiers for linking replies to this
-            batch. Conceptually a tag corresponds to a set of
-            from_addrs that a message goes out on. The from_addrs can
-            then be observed in incoming messages and used to link
-            replies to a specific batch.
-        :rtype:
-            Returns the batch_id of the new batch.
-        """
-        return self.mdb.batch_start(tags)
-
-    def batch_done(self, batch_id):
-        """Mark a batch as completed.
-
-        Once a batch is done, inbound messages will not be mapped
-        to it.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to mark as done.
-        :rtype:
-            None.
-        """
-        return self.mdb.batch_done(batch_id)
-
     def send_command(self, worker_name, command, *args, **kwargs):
         """Create a VumiApiCommand and send it.
 
@@ -574,52 +631,6 @@ class VumiApi(object):
             raise VumiError("No message sender on API object.")
         return self.mapi.send_command(
             VumiApiCommand.command(worker_name, command, *args, **kwargs))
-
-    def batch_status(self, batch_id):
-        """Check the status of a batch of messages.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to check the status of
-        :rtype:
-            dictionary of counts of messages in batch,
-            messages sent, messages acked and messages
-            with delivery reports.
-        """
-        return self.mdb.batch_status(batch_id)
-
-    def batch_outbound_keys(self, batch_id):
-        """Return a list of outbound message keys.
-
-        :param str batch_id:
-            batch to get outbound message keys for
-        :returns:
-            list of message keys.
-        """
-        return self.mdb.batch_outbound_keys(batch_id)
-
-    def batch_inbound_keys(self, batch_id):
-        """Return a list of inbound message keys.
-
-        :param str batch_id:
-            batch to get inbound message keys for
-        :returns:
-            list of message keys.
-        """
-        return self.mdb.batch_inbound_keys(batch_id)
-
-    @Manager.calls_manager
-    def batch_tags(self, batch_id):
-        """Return a list of tags associated with a given batch.
-
-        :type batch_id: str
-        :param batch_id:
-            batch to get tags for
-        :rtype:
-            list of tags
-        """
-        batch = yield self.mdb.get_batch(batch_id)
-        returnValue(list(batch.tags))
 
 
 class SyncMessageSender(object):

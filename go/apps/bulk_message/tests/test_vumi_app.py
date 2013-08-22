@@ -51,8 +51,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
                 msisdn=from_addr.format(i), groups=[group])
 
         conversation = yield self.create_conversation(
-            description=u'message',
-            delivery_tag_pool=u'pool', delivery_class=u'sms')
+            description=u'message')
         conversation.add_group(group)
         yield conversation.save()
         returnValue(conversation)
@@ -60,7 +59,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     @inlineCallbacks
     def get_opted_in_contacts(self, conversation):
         contacts = []
-        for bunch in (yield conversation.get_opted_in_contact_bunches()):
+        for bunch in (yield conversation.get_opted_in_contact_bunches(None)):
             contacts.extend((yield bunch))
         returnValue(sorted(contacts, key=lambda c: c.msisdn))
 
@@ -76,49 +75,27 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         # being worked through for delivery
         self.clock.advance(self.app.monitor_interval + 1)
 
-        # assert that we've sent the message to the two contacts
-        msgs = yield self.wait_for_dispatched_messages(2)
-        msgs.sort(key=lambda msg: msg['to_addr'])
-        [msg1, msg2] = msgs
-
-        # check that the right to_addr & from_addr are set and that the content
-        # of the message equals conversation.message
-        [contact1, contact2] = yield self.get_opted_in_contacts(conversation)
-        self.assertEqual(msg1['to_addr'], contact1.msisdn)
-        self.assertEqual(msg2['to_addr'], contact2.msisdn)
-
-    @inlineCallbacks
-    def test_start_with_deduplication(self):
-        # Create two contacts with the same to_addr, they should be deduped
-        conversation = yield self.setup_conversation(from_addr=u'27831234567',
-            contact_count=2)
-
-        # Provide the dedupe option to the conversation
-        yield self.start_conversation(conversation, dedupe=True)
-
+        # Force processing of messages again
         yield self._amqp.kick_delivery()
 
-        # Go past the monitoring interval to ensure the window is
-        # being worked through for delivery
-        self.clock.advance(self.app.monitor_interval + 1)
-
-        yield self._amqp.kick_delivery()
-
-        # Make sure only 1 message is sent, the rest were duplicates to the
-        # same to_addr and were filtered out as a result.
-        [msg] = self.get_dispatched_messages()
-
-        # check that the right to_addr & from_addr are set and that the content
-        # of the message equals conversation.message
-        [contact1, contact2] = yield self.get_opted_in_contacts(conversation)
-        self.assertEqual(msg['to_addr'], contact1.msisdn)
-        self.assertEqual(msg['to_addr'], contact2.msisdn)
+        # Assert that we've sent no messages
+        self.assertEqual([], (yield self.get_dispatched_messages()))
 
     @inlineCallbacks
     def test_consume_events(self):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
         batch_id = yield conversation.get_latest_batch_key()
+        yield self.dispatch_command(
+            "bulk_send",
+            user_account_key=conversation.user_account.key,
+            conversation_key=conversation.key,
+            batch_id=batch_id,
+            dedupe=False,
+            content="hello world",
+            delivery_class="sms",
+            msg_options={},
+        )
         window_id = self.app.get_window_id(conversation.key, batch_id)
         yield self._amqp.kick_delivery()
         self.clock.advance(self.app.monitor_interval + 1)
@@ -243,8 +220,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_collect_metrics(self):
-        conv = yield self.create_conversation(
-            delivery_tag_pool=u'pool', delivery_class=u'sms')
+        conv = yield self.create_conversation()
         yield self.start_conversation(conv)
 
         mkid = TransportUserMessage.generate_id
@@ -267,8 +243,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_reconcile_cache(self):
-        conv = yield self.create_conversation(
-            delivery_tag_pool=u'pool', delivery_class=u'sms')
+        conv = yield self.create_conversation()
 
         with LogCatcher() as logger:
             yield self.dispatch_command(

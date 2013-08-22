@@ -115,9 +115,6 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
         self.contact = yield self.contact_store.new_contact(
                                                         msisdn=u'+27761234567')
         yield self.conversation.start()
-        [self.tag] = yield self.conversation.get_tags()
-        self.msg_options = yield self.conversation.make_message_options(
-            self.tag)
         self.track_event(self.account.key, self.conversation.key,
             'survey_completed', 'sisi_ni_amani', handler_config={
                 'sms_copy': {
@@ -138,17 +135,16 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
     @inlineCallbacks
     def test_handle_event_default(self):
         yield self.send_event(self.contact.msisdn)
-        [start_cmd, hack_cmd, send_msg_cmd] = self.get_dispatcher_commands()
+        [start_cmd, send_msg_cmd] = self.get_dispatcher_commands()
 
         self.assertEqual(start_cmd['command'], 'start')
-        self.assertEqual(hack_cmd['command'], 'initial_action_hack')
         self.assertEqual(send_msg_cmd['command'], 'send_message')
         self.assertEqual(send_msg_cmd['kwargs'], {
             'command_data': {
                 'batch_id': (yield self.conversation.get_latest_batch_key()),
                 'content': 'english sms',
                 'to_addr': self.contact.msisdn,
-                'msg_options': self.msg_options,
+                'msg_options': {},
             }
         })
 
@@ -157,7 +153,7 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
         self.contact.extra['language'] = u'1'
         yield self.contact.save()
         yield self.send_event(self.contact.msisdn)
-        [command] = self.get_dispatcher_commands()[2:]
+        [command] = self.get_dispatcher_commands()[1:]
 
         self.assertEqual(command['args'],
                          [self.conversation.user_account.key,
@@ -170,7 +166,7 @@ class USSDMenuCompletionHandlerTestCase(EventHandlerTestCase):
         self.contact.extra['language'] = u'2'
         yield self.contact.save()
         yield self.send_event(self.contact.msisdn)
-        [command] = self.get_dispatcher_commands()[2:]
+        [command] = self.get_dispatcher_commands()[1:]
 
         self.assertEqual(command['args'],
                          [self.conversation.user_account.key,

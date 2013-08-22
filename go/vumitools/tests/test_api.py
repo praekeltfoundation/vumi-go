@@ -5,7 +5,7 @@
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from vumi.tests.utils import get_fake_amq_client, LogCatcher
+from vumi.tests.utils import get_fake_amq_client
 from vumi.errors import VumiError
 
 from go.vumitools.opt_out import OptOutStore
@@ -14,6 +14,7 @@ from go.vumitools.api import (
     VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent)
 from go.vumitools.tests.utils import AppWorkerTestCase, FakeAmqpConnection
 from go.vumitools.account.old_models import AccountStoreVNone, AccountStoreV1
+from go.vumitools.account.models import GoConnector, RoutingTableHelper
 
 
 class TestTxVumiApi(AppWorkerTestCase):
@@ -32,77 +33,11 @@ class TestTxVumiApi(AppWorkerTestCase):
         self._persist_redis_managers.append(self.vumi_api.redis)
 
     @inlineCallbacks
-    def test_batch_start(self):
-        tag = ("pool", "tag")
-        batch_id = yield self.vumi_api.batch_start([tag])
-        self.assertEqual(len(batch_id), 32)
-
-    @inlineCallbacks
-    def test_batch_status(self):
-        tag = ("pool", "tag")
-        batch_id = yield self.vumi_api.mdb.batch_start([tag])
-        batch_status = yield self.vumi_api.batch_status(batch_id)
-        self.assertEqual(batch_status['sent'], 0)
-
-    @inlineCallbacks
-    def test_batch_outbound_keys(self):
-        batch_id = yield self.vumi_api.batch_start([("poolA", "default10001")])
-        msgs = [self.mkmsg_out(content=msg, message_id=str(i)) for
-                i, msg in enumerate(("msg1", "msg2"))]
-        for msg in msgs:
-            yield self.vumi_api.mdb.add_outbound_message(
-                msg, batch_id=batch_id)
-        api_msgs = yield self.vumi_api.batch_outbound_keys(batch_id)
-        self.assertEqual(sorted(api_msgs), ['0', '1'])
-
-    @inlineCallbacks
-    def test_batch_inbound_keys(self):
-        tag = ("ambient", "default10001")
-        to_addr = "+12310001"
-        batch_id = yield self.vumi_api.batch_start([tag])
-        msgs = [self.mkmsg_in(content=msg, to_addr=to_addr, message_id=str(i),
-                              transport_type="sms")
-                for i, msg in enumerate(("msg1", "msg2"))]
-        for msg in msgs:
-            yield self.vumi_api.mdb.add_inbound_message(msg, batch_id=batch_id)
-        api_msgs = yield self.vumi_api.batch_inbound_keys(batch_id)
-        self.assertEqual(sorted(api_msgs), ['0', '1'])
-
-    @inlineCallbacks
-    def test_batch_tags(self):
-        tag1, tag2 = ("poolA", "tag1"), ("poolA", "tag2")
-        batch_id = yield self.vumi_api.batch_start([tag1])
-        self.assertEqual((yield self.vumi_api.batch_tags(batch_id)), [tag1])
-        batch_id = yield self.vumi_api.batch_start([tag1, tag2])
-        self.assertEqual(
-            (yield self.vumi_api.batch_tags(batch_id)), [tag1, tag2])
-
-    @inlineCallbacks
     def test_declare_tags_from_different_pools(self):
         tag1, tag2 = ("poolA", "tag1"), ("poolB", "tag2")
         yield self.vumi_api.tpm.declare_tags([tag1, tag2])
         self.assertEqual((yield self.vumi_api.tpm.acquire_tag("poolA")), tag1)
         self.assertEqual((yield self.vumi_api.tpm.acquire_tag("poolB")), tag2)
-
-    @inlineCallbacks
-    def test_start_batch_and_batch_done(self):
-        tag = ("pool", "tag")
-        yield self.vumi_api.tpm.declare_tags([tag])
-
-        @inlineCallbacks
-        def tag_batch(t):
-            tb = yield self.vumi_api.mdb.get_tag_info(t)
-            if tb is None:
-                returnValue(None)
-            returnValue(tb.current_batch.key)
-
-        self.assertEqual((yield tag_batch(tag)), None)
-
-        batch_id = yield self.vumi_api.batch_start([tag])
-        self.assertEqual((yield tag_batch(tag)), batch_id)
-
-        yield self.vumi_api.batch_done(batch_id)
-        self.assertEqual((yield tag_batch(tag)), None)
 
     @inlineCallbacks
     def test_send_command(self):
@@ -165,7 +100,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
                 all_addrs.append(contact.addr_for(conv.delivery_class))
         self.assertEqual(set(all_addrs), set(['+27760000000', '+27761234567']))
         optedin_addrs = []
-        for contacts in (yield conv.get_opted_in_contact_bunches()):
+        for contacts in (yield conv.get_opted_in_contact_bunches(
+                conv.delivery_class)):
             for contact in (yield contacts):
                 optedin_addrs.append(contact.addr_for(conv.delivery_class))
         self.assertEqual(optedin_addrs, ['+27760000000'])
@@ -185,7 +121,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
             u"pool1", [u"1234", u"5678", u"9012"])
         yield self.user_api.acquire_specific_tag(tag2)
         yield self.user_api.new_conversation(
-            u'bulk_message', u'name', u'desc', {}, delivery_class=u'sms',
+            u'bulk_message', u'name', u'desc', {},
             delivery_tag_pool=tag1[0], delivery_tag=tag1[1])
         endpoints = yield self.user_api.list_conversation_endpoints()
         self.assertEqual(endpoints, set([tag1]))
@@ -197,68 +133,6 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         yield self.user_api.acquire_specific_tag(tag1)
         endpoints = yield self.user_api.list_endpoints()
         self.assertEqual(endpoints, set([tag1]))
-
-    @inlineCallbacks
-    def test_list_endpoints_migration(self):
-        tag1, tag2, tag3 = yield self.setup_tagpool(
-            u"pool1", [u"1234", u"5678", u"9012"])
-        yield self.user_api.acquire_specific_tag(tag1)
-        conv = yield self.user_api.new_conversation(
-            u'bulk_message', u'name', u'desc', {}, delivery_class=u'sms',
-            delivery_tag_pool=tag1[0], delivery_tag=tag1[1])
-        conv = self.user_api.wrap_conversation(conv)
-        # We don't want to actually send commands here.
-        conv.dispatch_command = lambda *args, **kw: None
-        yield conv.start(acquire_tag=False)
-
-        self.assertEqual(tag1, (conv.delivery_tag_pool, conv.delivery_tag))
-        conv_endpoints = yield self.user_api.list_conversation_endpoints()
-        self.assertEqual(conv_endpoints, set([tag1]))
-
-        # Pretend this is an old-style account that was migrated.
-        user = yield self.user_api.get_user_account()
-        user.tags = None
-        yield user.save()
-
-        endpoints = yield self.user_api.list_endpoints()
-        self.assertEqual(endpoints, set([tag1]))
-
-    @inlineCallbacks
-    def test_msg_options(self):
-        tag1, tag2, tag3 = yield self.setup_tagpool(
-            u"pool1", [u"1234", u"5678", u"9012"])
-        yield self.vumi_api.tpm.set_metadata(u"pool1", {
-            'transport_type': 'dummy_transport',
-            'msg_options': {'opt1': 'bar'},
-        })
-        msg_options = yield self.user_api.msg_options(tag1)
-        self.assertEqual(msg_options, {
-            'from_addr': '1234',
-            'helper_metadata': {
-                'go': {'user_account': 'test-0-user'},
-                'tag': {'tag': ['pool1', '1234']},
-            },
-            'transport_type': 'dummy_transport',
-            'opt1': 'bar',
-        })
-
-    @inlineCallbacks
-    def test_msg_options_with_tagpool_metadata(self):
-        tag = ('pool1', '1234')
-        tagpool_metadata = {
-            'transport_type': 'dummy_transport',
-            'msg_options': {'opt1': 'bar'},
-        }
-        msg_options = yield self.user_api.msg_options(tag, tagpool_metadata)
-        self.assertEqual(msg_options, {
-            'from_addr': '1234',
-            'helper_metadata': {
-                'go': {'user_account': 'test-0-user'},
-                'tag': {'tag': ['pool1', '1234']},
-            },
-            'transport_type': 'dummy_transport',
-            'opt1': 'bar',
-        })
 
     @inlineCallbacks
     def assert_account_tags(self, expected):
@@ -275,6 +149,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         yield self.assert_account_tags([])
         tag2_info = yield self.vumi_api.mdb.get_tag_info(tag2)
         self.assertEqual(tag2_info.metadata['user_account'], None)
+        self.assertEqual(tag2_info.current_batch.key, None)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag1)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag2)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), None)
@@ -283,14 +158,62 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         tag2_info = yield self.vumi_api.mdb.get_tag_info(tag2)
         self.assertEqual(tag2_info.metadata['user_account'],
                          self.user_api.user_account_key)
+        self.assertNotEqual(tag2_info.current_batch.key, None)
 
         yield self.user_api.release_tag(tag2)
         yield self.assert_account_tags([list(tag1)])
         tag2_info = yield self.vumi_api.mdb.get_tag_info(tag2)
         self.assertEqual(tag2_info.metadata['user_account'], None)
+        self.assertEqual(tag2_info.current_batch.key, None)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), tag2)
         self.assertEqual((yield self.user_api.acquire_tag(u"poolA")), None)
         yield self.assert_account_tags([list(tag1), list(tag2)])
+
+    @inlineCallbacks
+    def test_batch_id_for_specific_tag(self):
+        [tag] = yield self.setup_tagpool(u"poolA", [u"tag1"])
+        yield self.user_api.acquire_specific_tag(tag)
+        tag_info = yield self.vumi_api.mdb.get_tag_info(tag)
+        self.assertNotEqual(tag_info.current_batch.key, None)
+
+    def _set_routing_table(self, user, entries):
+        # Each entry is a tuple of (src, dst) where src and dst are
+        # conversations, tags or connector strings.
+        user.routing_table = {}
+        rt_helper = RoutingTableHelper(user.routing_table)
+
+        def mkconn(thing):
+            if isinstance(thing, basestring):
+                # Use it as-is.
+                return thing
+            elif isinstance(thing, tuple):
+                # It's a tag.
+                return str(GoConnector.for_transport_tag(thing[0], thing[1]))
+            else:
+                # Assume it's a conversation.
+                return str(GoConnector.for_conversation(
+                    thing.conversation_type, thing.key))
+
+        for src, dst in entries:
+            rt_helper.add_entry(mkconn(src), "default", mkconn(dst), "default")
+
+    @inlineCallbacks
+    def test_release_tag_with_routing_entries(self):
+        [tag1] = yield self.setup_tagpool(u"pool1", [u"1234"])
+        yield self.assert_account_tags([])
+        yield self.user_api.acquire_specific_tag(tag1)
+        yield self.assert_account_tags([list(tag1)])
+
+        conv = yield self.user_api.new_conversation(
+            u'bulk_message', u'name', u'desc', {})
+        user = yield self.user_api.get_user_account()
+        self._set_routing_table(user, [(conv, tag1), (tag1, conv)])
+        yield user.save()
+
+        self.assertNotEqual({}, (yield self.user_api.get_routing_table()))
+        yield self.user_api.release_tag(tag1)
+        yield self.assert_account_tags([])
+        self.assertEqual({}, (yield self.user_api.get_routing_table()))
 
     @inlineCallbacks
     def test_get_empty_routing_table(self):
@@ -298,13 +221,12 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         self.assertEqual({}, routing_table)
 
     @inlineCallbacks
-    def _setup_routing_table_test_conv(self):
+    def _setup_routing_table_test_new_conv(self, routing_table=None):
         tag1, tag2, tag3 = yield self.setup_tagpool(
             u"pool1", [u"1234", u"5678", u"9012"])
         yield self.user_api.acquire_specific_tag(tag1)
         conv = yield self.user_api.new_conversation(
-            u'bulk_message', u'name', u'desc', {}, delivery_class=u'sms',
-            delivery_tag_pool=tag2[0], delivery_tag=tag2[1])
+            u'bulk_message', u'name', u'desc', {})
         conv = self.user_api.wrap_conversation(conv)
         # We don't want to actually send commands here.
         conv.dispatch_command = lambda *args, **kw: None
@@ -318,102 +240,43 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_get_routing_table(self):
-        conv = yield self._setup_routing_table_test_conv()
+        conv = yield self._setup_routing_table_test_new_conv()
+        tag = (u'pool1', u'1234')
+        user = yield self.user_api.get_user_account()
+        self._set_routing_table(user, [(conv, tag), (tag, conv)])
+        yield user.save()
         routing_table = yield self.user_api.get_routing_table()
         self.assertEqual(routing_table, {
             u':'.join([u'CONVERSATION:bulk_message', conv.key]): {
-                u'default': [u'TRANSPORT_TAG:pool1:5678', u'default']},
-            u'TRANSPORT_TAG:pool1:5678': {
+                u'default': [u'TRANSPORT_TAG:pool1:1234', u'default']},
+            u'TRANSPORT_TAG:pool1:1234': {
                 u'default': [
                     u'CONVERSATION:bulk_message:%s' % conv.key, u'default']},
         })
 
         # TODO: This belongs in a different test.
-        yield conv.end_conversation()
+        yield conv.archive_conversation()
 
         routing_table = yield self.user_api.get_routing_table()
         self.assertEqual(routing_table, {})
 
     @inlineCallbacks
-    def test_get_routing_table_migration(self):
-        conv = yield self._setup_routing_table_test_conv()
-        # Pretend this is an old-style account that was migrated.
-        user = yield self.user_api.get_user_account()
-        user.routing_table = None
-        yield user.save()
-
-        with LogCatcher(message=r'No routing configured') as lc:
-            routing_table = yield self.user_api.get_routing_table()
-        self.assertEqual(lc.messages(), [])
-        self.assertEqual(routing_table, {
-            u':'.join(['CONVERSATION:bulk_message', conv.key]): {
-                'default': [u'TRANSPORT_TAG:pool1:5678', u'default']},
-            u'TRANSPORT_TAG:pool1:5678': {
-                u'default': [
-                    u':'.join(['CONVERSATION:bulk_message', conv.key]),
-                    'default'
-                ],
-            },
-        })
-
-    @inlineCallbacks
-    def test_get_routing_table_migration_missing_entry(self):
-        conv = yield self._setup_routing_table_test_conv()
-        conv2 = yield self.user_api.new_conversation(
-            u'bulk_message', u'name', u'desc', {}, delivery_class=u'sms',
-            delivery_tag_pool=u'pool1', delivery_tag=u'9012')
-        conv2 = self.user_api.wrap_conversation(conv2)
-        # We don't want to actually send commands here.
-        conv2.dispatch_command = lambda *args, **kw: None
-        yield conv2.start()
-
-        # Set the status manually, because it's in `starting', not `running'
-        conv2.set_status_started()
-        yield conv2.save()
-
-        # Release the tag, but keep the conv running.
-        yield self.user_api.release_tag((u'pool1', u'9012'))
-
-        # Pretend this is an old-style account that was migrated.
-        user = yield self.user_api.get_user_account()
-        user.routing_table = None
-        yield user.save()
-
-        with LogCatcher(message=r'No routing configured') as lc:
-            routing_table = yield self.user_api.get_routing_table()
-        self.assertEqual(len(lc.messages()), 1)
-        self.assertTrue(conv2.key in lc.messages()[0])
-        self.assertEqual(routing_table, {
-            u':'.join(['CONVERSATION:bulk_message', conv.key]): {
-                'default': [u'TRANSPORT_TAG:pool1:5678', u'default']},
-            u'TRANSPORT_TAG:pool1:5678': {
-                u'default': [
-                    u':'.join(['CONVERSATION:bulk_message', conv.key]),
-                    'default'
-                ],
-            },
-        })
-
-    @inlineCallbacks
     def test_routing_table_validation_valid(self):
-        yield self._setup_routing_table_test_conv()
+        conv = yield self._setup_routing_table_test_new_conv()
+        tag = (u'pool1', u'1234')
         user = yield self.user_api.get_user_account()
+        self._set_routing_table(user, [(conv, tag), (tag, conv)])
+        yield user.save()
         yield self.user_api.validate_routing_table(user)
 
     @inlineCallbacks
     def test_routing_table_invalid_src_conn_tag(self):
-        conv = yield self._setup_routing_table_test_conv()
+        conv = yield self._setup_routing_table_test_new_conv()
+        tag = (u'pool1', u'1234')
+        badtag = (u'badpool', u'bad')
         user = yield self.user_api.get_user_account()
-        user.routing_table = {
-            u':'.join(['CONVERSATION:bulk_message', conv.key]): {
-                'default': [u'TRANSPORT_TAG:pool1:5678', u'default']},
-            u'TRANSPORT_TAG:badpool:bad': {
-                u'default': [
-                    u':'.join(['CONVERSATION:bulk_message', conv.key]),
-                    'default'
-                ],
-            },
-        }
+        self._set_routing_table(user, [(conv, tag), (badtag, conv)])
+        yield user.save()
         try:
             yield self.user_api.validate_routing_table(user)
             self.fail("Expected VumiError, got no exception.")
@@ -422,18 +285,12 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_routing_table_invalid_dst_conn_tag(self):
-        conv = yield self._setup_routing_table_test_conv()
+        conv = yield self._setup_routing_table_test_new_conv()
+        tag = (u'pool1', u'1234')
+        badtag = (u'badpool', u'bad')
         user = yield self.user_api.get_user_account()
-        user.routing_table = {
-            u':'.join(['CONVERSATION:bulk_message', conv.key]): {
-                'default': [u'TRANSPORT_TAG:badpool:bad', u'default']},
-            u'TRANSPORT_TAG:pool1:5678': {
-                u'default': [
-                    u':'.join(['CONVERSATION:bulk_message', conv.key]),
-                    'default'
-                ],
-            },
-        }
+        self._set_routing_table(user, [(conv, badtag), (tag, conv)])
+        yield user.save()
         try:
             yield self.user_api.validate_routing_table(user)
             self.fail("Expected VumiError, got no exception.")
@@ -442,18 +299,12 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_routing_table_invalid_src_conn_conv(self):
-        conv = yield self._setup_routing_table_test_conv()
+        conv = yield self._setup_routing_table_test_new_conv()
+        tag = (u'pool1', u'1234')
+        badconv = 'CONVERSATION:bulk_message:badkey'
         user = yield self.user_api.get_user_account()
-        user.routing_table = {
-            u'CONVERSATION:bulk_message:badkey': {
-                'default': [u'TRANSPORT_TAG:pool1:5678', u'default']},
-            u'TRANSPORT_TAG:pool1:5678': {
-                u'default': [
-                    u':'.join(['CONVERSATION:bulk_message', conv.key]),
-                    'default'
-                ],
-            },
-        }
+        self._set_routing_table(user, [(badconv, tag), (tag, conv)])
+        yield user.save()
         try:
             yield self.user_api.validate_routing_table(user)
             self.fail("Expected VumiError, got no exception.")
@@ -462,15 +313,12 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_routing_table_invalid_dst_conn_conv(self):
-        conv = yield self._setup_routing_table_test_conv()
+        conv = yield self._setup_routing_table_test_new_conv()
+        tag = (u'pool1', u'1234')
+        badconv = 'CONVERSATION:bulk_message:badkey'
         user = yield self.user_api.get_user_account()
-        user.routing_table = {
-            u':'.join(['CONVERSATION:bulk_message', conv.key]): {
-                'default': [u'TRANSPORT_TAG:pool1:5678', u'default']},
-            u'TRANSPORT_TAG:pool1:5678': {
-                u'default': [u'CONVERSATION:bulk_message:badkey', 'default'],
-            },
-        }
+        self._set_routing_table(user, [(conv, tag), (tag, badconv)])
+        yield user.save()
         try:
             yield self.user_api.validate_routing_table(user)
             self.fail("Expected VumiError, got no exception.")
@@ -479,6 +327,123 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
 
 class TestVumiUserApi(TestTxVumiUserApi):
+    sync_persistence = True
+
+
+class TestTxVumiRouterApi(AppWorkerTestCase):
+    @inlineCallbacks
+    def setUp(self):
+        yield super(TestTxVumiRouterApi, self).setUp()
+        if self.sync_persistence:
+            # Set up the vumi exchange, in case we don't have one.
+            self._amqp.exchange_declare('vumi', 'direct')
+            self.vumi_api = VumiApi.from_config_sync(
+                self._persist_config, FakeAmqpConnection(self._amqp))
+        else:
+            self.vumi_api = yield VumiApi.from_config_async(
+                self._persist_config, get_fake_amq_client(self._amqp))
+        self._persist_riak_managers.append(self.vumi_api.manager)
+        self._persist_redis_managers.append(self.vumi_api.redis)
+        self.user_account = yield self.mk_user(self.vumi_api, u'Buster')
+        self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
+
+    def create_router(self, **kw):
+        # TODO: Fix test infrastructe to avoid duplicating this stuff.
+        router_type = kw.pop('router_type', u'keyword')
+        name = kw.pop('name', u'routername')
+        description = kw.pop('description', u'')
+        config = kw.pop('config', {})
+        self.assertTrue(isinstance(config, dict))
+        return self.user_api.new_router(
+            router_type, name, description, config, **kw)
+
+    @inlineCallbacks
+    def get_router_api(self, router=None):
+        if router is None:
+            router = yield self.create_router()
+        returnValue(
+            self.user_api.get_router_api(router.router_type, router.key))
+
+    def test_get_router(self):
+        router = yield self.create_router()
+        router_api = yield self.get_router_api(router)
+        got_router = yield router_api.get_router()
+        self.assertEqual(router.router_type, got_router.router_type)
+        self.assertEqual(router.key, got_router.key)
+        self.assertEqual(router.name, got_router.name)
+        self.assertEqual(router.description, got_router.description)
+        self.assertEqual(router.config, got_router.config)
+
+    @inlineCallbacks
+    def _add_routing_entries(self, rapi):
+        conv_conn = 'CONVERSATION:type:key'
+        tag_conn = 'TRANSPORT_TAG:pool:tag'
+        rin_conn = str(GoConnector.for_router(
+            rapi.router_type, rapi.router_key, GoConnector.INBOUND))
+        rout_conn = str(GoConnector.for_router(
+            rapi.router_type, rapi.router_key, GoConnector.OUTBOUND))
+
+        user_account = yield self.user_api.get_user_account()
+        rt_helper = RoutingTableHelper(user_account.routing_table)
+        rt_helper.add_entry(tag_conn, 'default', rin_conn, 'default')
+        rt_helper.add_entry(rin_conn, 'default', tag_conn, 'default')
+        rt_helper.add_entry(conv_conn, 'default', rout_conn, 'default')
+        rt_helper.add_entry(rout_conn, 'default', conv_conn, 'default')
+        yield user_account.save()
+
+    @inlineCallbacks
+    def test_archive_router(self):
+        router = yield self.create_router()
+        router_api = yield self.get_router_api(router)
+        yield self._add_routing_entries(router_api)
+        self.assertEqual(router.archive_status, 'active')
+        self.assertNotEqual({}, (yield self.user_api.get_routing_table()))
+
+        yield router_api.archive_router()
+        router = yield router_api.get_router()
+        self.assertEqual(router.archive_status, 'archived')
+        self.assertEqual({}, (yield self.user_api.get_routing_table()))
+
+    @inlineCallbacks
+    def test_start_router(self):
+        router = yield self.create_router()
+        router_api = yield self.get_router_api(router)
+        self.assertTrue(router.stopped())
+        self.assertFalse(router.starting())
+        self.assertEqual([], self.get_dispatcher_commands())
+
+        yield router_api.start_router()
+        router = yield router_api.get_router()
+        self.assertFalse(router.stopped())
+        self.assertTrue(router.starting())
+        [cmd] = self.get_dispatcher_commands()
+        self.assertEqual(cmd['command'], 'start')
+        self.assertEqual(cmd['kwargs'], {
+            'user_account_key': router.user_account.key,
+            'router_key': router.key,
+        })
+
+    @inlineCallbacks
+    def test_stop_router(self):
+        router = yield self.create_router(status=u'running')
+        router_api = yield self.get_router_api(router)
+        self.assertTrue(router.running())
+        self.assertFalse(router.stopping())
+        self.assertEqual([], self.get_dispatcher_commands())
+
+        yield router_api.stop_router()
+        router = yield router_api.get_router()
+        self.assertFalse(router.running())
+        self.assertTrue(router.stopping())
+        [cmd] = self.get_dispatcher_commands()
+        self.assertEqual(cmd['command'], 'stop')
+        self.assertEqual(cmd['kwargs'], {
+            'user_account_key': router.user_account.key,
+            'router_key': router.key,
+        })
+
+
+class TestVumiRouterApi(TestTxVumiRouterApi):
     sync_persistence = True
 
 

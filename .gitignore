@@ -1,4 +1,5 @@
 *.pyc
+*.swp
 .DS_Store
 /ve/
 /*.egg-info/
@@ -11,6 +12,7 @@
 /pep8.log
 /htmlcov/
 /_trial_temp/
+/config/*
 /logs/*
 /tmp/*
 requirements.pip.md5

@@ -60,8 +60,17 @@ class Conversation(Model):
         # TODO: Get rid of this once the old UI finally goes away.
         return self.archived()
 
+    def starting(self):
+        return self.status == CONVERSATION_STARTING
+
     def running(self):
         return self.status == CONVERSATION_RUNNING
+
+    def stopping(self):
+        return self.status == CONVERSATION_STOPPING
+
+    def stopped(self):
+        return self.status == CONVERSATION_STOPPED
 
     def is_draft(self):
         # TODO: Get rid of this once the old UI finally goes away.
@@ -129,7 +138,7 @@ class ConversationStore(PerAccountStore):
 
     @Manager.calls_manager
     def new_conversation(self, conversation_type, name, description, config,
-                         **fields):
+                         batch_id, **fields):
         conversation_id = uuid4().get_hex()
 
         # These are foreign keys.
@@ -139,6 +148,8 @@ class ConversationStore(PerAccountStore):
             conversation_id, user_account=self.user_account_key,
             conversation_type=conversation_type, name=name,
             description=description, config=config, **fields)
+
+        conversation.batches.add_key(batch_id)
 
         for group in groups:
             conversation.add_group(group)

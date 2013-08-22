@@ -36,3 +36,19 @@ def clear_file_hints_from_session(request):
 
 def has_uncompleted_contact_import(request):
     return 'uploaded_contacts_file_path' in request.session
+
+
+def contacts_by_key(contact_store, *keys):
+    contacts = []
+    for bunch in contact_store.contacts.load_all_bunches(keys):
+        contacts.extend(bunch)
+
+    return contacts
+
+
+def groups_by_key(contact_store, *keys):
+    groups = []
+    for bunch in contact_store.groups.load_all_bunches(keys):
+        groups.extend(bunch)
+
+    return groups

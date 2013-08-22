@@ -1,5 +1,4 @@
-{% extends "base.html" %}
+{% extends "error.html" %}
 
-{% block content %}
-    500: Something went wrong
-{% endblock %}
+{% block error_title %}500{% endblock %}
+{% block error_reason %}Something went wrong{% endblock %}

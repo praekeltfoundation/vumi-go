@@ -1,14 +1,215 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.trial.unittest import TestCase
 
 from go.vumitools.routing import (
-    AccountRoutingTableDispatcher, RoutingMetadata)
+    AccountRoutingTableDispatcher, RoutingMetadata, RoutingError)
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.utils import MessageMetadataHelper
 
 
-class TestRoutingTableDispatcher(AppWorkerTestCase):
-    timeout = 1
+class TestRoutingMetadata(TestCase):
+    def mk_msg_rmeta(self, **routing_metadata):
+        # We don't need a real message, just a container for routing_metadata.
+        msg = {'routing_metadata': routing_metadata}
+        return msg, RoutingMetadata(msg)
 
+    def set_hops(self, msg, hops):
+        msg['routing_metadata']['go_hops'] = hops
+
+    def set_outbound_hops(self, msg, hops):
+        msg['routing_metadata']['go_outbound_hops'] = hops
+
+    def assert_hops(self, msg, hops):
+        self.assertEqual(hops, msg['routing_metadata'].get('go_hops'))
+
+    def assert_outbound_hops(self, msg, hops):
+        self.assertEqual(hops, msg['routing_metadata'].get('go_outbound_hops'))
+
+    def test_get_hops(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        self.assert_hops(msg, None)
+        self.assertEqual([], rmeta.get_hops())
+        self.assert_hops(msg, [])
+        self.assertEqual([], rmeta.get_hops())
+        self.set_hops(msg, [
+            [['sc1', 'se1'], ['dc1', 'de1']],
+        ])
+        self.assert_hops(msg, [[['sc1', 'se1'], ['dc1', 'de1']]])
+        self.assertEqual([
+            [['sc1', 'se1'], ['dc1', 'de1']],
+        ], rmeta.get_hops())
+
+    def test_get_outbound_hops(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        self.assert_outbound_hops(msg, None)
+        self.assertEqual(None, rmeta.get_outbound_hops())
+        self.set_outbound_hops(msg, [
+            [['sc1', 'se1'], ['dc1', 'de1']],
+        ])
+        self.assert_outbound_hops(msg, [
+            [['sc1', 'se1'], ['dc1', 'de1']],
+        ])
+        self.assertEqual([
+            [['sc1', 'se1'], ['dc1', 'de1']],
+        ], rmeta.get_outbound_hops())
+
+    def test_set_outbound_hops(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        self.assert_outbound_hops(msg, None)
+        rmeta.set_outbound_hops([
+            [['sc1', 'se1'], ['dc1', 'de1']],
+        ])
+        self.assert_outbound_hops(msg, [
+            [['sc1', 'se1'], ['dc1', 'de1']],
+        ])
+
+    def test_push_hop(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        self.assert_hops(msg, None)
+        rmeta.push_hop(['sc1', 'se1'], ['dc1', 'de1'])
+        self.assert_hops(msg, [
+            [['sc1', 'se1'], ['dc1', 'de1']],
+        ])
+        rmeta.push_hop(['sc2', 'se2'], ['dc2', 'de2'])
+        self.assert_hops(msg, [
+            [['sc1', 'se1'], ['dc1', 'de1']],
+            [['sc2', 'se2'], ['dc2', 'de2']],
+        ])
+        rmeta.push_hop(['sc2', 'se2'], ['dc2', 'de2'])
+        self.assert_hops(msg, [
+            [['sc1', 'se1'], ['dc1', 'de1']],
+            [['sc2', 'se2'], ['dc2', 'de2']],
+            [['sc2', 'se2'], ['dc2', 'de2']],
+        ])
+
+    def test_push_source_no_hops(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        self.assert_hops(msg, None)
+        rmeta.push_source('sconn', 'sep')
+        self.assert_hops(msg, [
+            [['sconn', 'sep'], None],
+        ])
+
+    def test_push_source_with_hops(self):
+        msg, rmeta = self.mk_msg_rmeta(go_hops=[
+            [['sc1', 'se1'], ['dc1', 'de1']],
+        ])
+        self.assert_hops(msg, [
+            [['sc1', 'se1'], ['dc1', 'de1']],
+        ])
+        rmeta.push_source('sconn', 'sep')
+        self.assert_hops(msg, [
+            [['sc1', 'se1'], ['dc1', 'de1']],
+            [['sconn', 'sep'], None],
+        ])
+
+    def test_push_source_twice(self):
+        msg, rmeta = self.mk_msg_rmeta()
+        rmeta.push_source('sc1', 'se1')
+        self.assert_hops(msg, [
+            [['sc1', 'se1'], None],
+        ])
+        self.assertRaises(RoutingError, rmeta.push_source, 'sc1', 'se1')
+        self.assert_hops(msg, [
+            [['sc1', 'se1'], None],
+        ])
+        self.assertRaises(RoutingError, rmeta.push_source, 'sc2', 'se2')
+
+    def test_push_destination_no_hops(self):
+        msg, rmeta = self.mk_msg_rmeta(go_hops=[[['sconn', 'sep'], None]])
+        self.assert_hops(msg, [[['sconn', 'sep'], None]])
+        rmeta.push_destination('dconn', 'dep')
+        self.assert_hops(msg, [
+            [['sconn', 'sep'], ['dconn', 'dep']],
+        ])
+
+    def test_push_destination_with_hops(self):
+        msg, rmeta = self.mk_msg_rmeta(go_hops=[
+            [['sc1', 'se1'], ['dc1', 'de1']],
+            [['sconn', 'sep'], None],
+        ])
+        self.assert_hops(msg, [
+            [['sc1', 'se1'], ['dc1', 'de1']],
+            [['sconn', 'sep'], None],
+        ])
+        rmeta.push_destination('dconn', 'dep')
+        self.assert_hops(msg, [
+            [['sc1', 'se1'], ['dc1', 'de1']],
+            [['sconn', 'sep'], ['dconn', 'dep']],
+        ])
+
+    def test_push_destination_twice(self):
+        msg, rmeta = self.mk_msg_rmeta(go_hops=[[['sc1', 'se1'], None]])
+        rmeta.push_destination('dc1', 'de1')
+        self.assert_hops(msg, [
+            [['sc1', 'se1'], ['dc1', 'de1']],
+        ])
+        self.assertRaises(RoutingError, rmeta.push_destination, 'dc1', 'de1')
+        self.assert_hops(msg, [
+            [['sc1', 'se1'], ['dc1', 'de1']],
+        ])
+        self.assertRaises(RoutingError, rmeta.push_destination, 'dc2', 'de2')
+
+    def assert_next_hop(self, hops, outbound, expected):
+        msg, rmeta = self.mk_msg_rmeta(go_hops=hops, go_outbound_hops=outbound)
+        self.assertEqual(expected, rmeta.next_hop())
+
+    def test_next_hop_without_hops(self):
+        self.assert_next_hop(None, None, None)
+        self.assert_next_hop([], [], None)
+        self.assert_next_hop([1, 2, 3], [], None)
+        self.assert_next_hop([1, 2, 3], [1, 2], None)
+
+    def test_next_hop_dest_set(self):
+        self.assert_next_hop([
+            [['sc1', 'se1'], ['dc1', 'de1']],
+        ], [
+            [['dc1', 'de1'], ['sc1', 'se1']],
+        ], None)
+
+    def test_next_hop_first(self):
+        self.assert_next_hop([
+            [['sc1', 'se1'], None],
+        ], [
+            [['dc1', 'de1'], ['sc1', 'se1']],
+        ], ['dc1', 'de1'])
+
+    def test_next_hop_second(self):
+        self.assert_next_hop([
+            [['sc1', 'se1'], ['sc1', 'de1']],
+            [['sc2', 'se2'], None],
+        ], [
+            [['dc3', 'de3'], ['sc3', 'se3']],
+            [['dc2', 'de2'], ['sc2', 'se2']],
+            [['dc1', 'de1'], ['sc1', 'se1']],
+        ], ['dc2', 'de2'])
+
+    def assert_next_router_endpoint(self, hops, outbound, expected):
+        msg, rmeta = self.mk_msg_rmeta(go_hops=hops, go_outbound_hops=outbound)
+        self.assertEqual(expected, rmeta.next_router_endpoint())
+
+    def test_next_router_endpoint_without_hops(self):
+        self.assert_next_router_endpoint(None, None, None)
+        self.assert_next_router_endpoint([], [], None)
+        self.assert_next_router_endpoint([1, 2, 3], [], None)
+        self.assert_next_router_endpoint([1, 2, 3], [1, 2], None)
+
+    def test_next_router_endpoint_first(self):
+        self.assert_next_router_endpoint([], [
+            [['dc1', 'de1'], ['sc1', 'se1']],
+        ], 'se1')
+
+    def test_next_router_endpoint_second(self):
+        self.assert_next_router_endpoint([
+            [['sc1', 'se1'], ['sc1', 'de1']],
+        ], [
+            [['dc3', 'de3'], ['sc3', 'se3']],
+            [['dc2', 'de2'], ['sc2', 'se2']],
+            [['dc1', 'de1'], ['sc1', 'se1']],
+        ], 'se2')
+
+
+class TestRoutingTableDispatcher(AppWorkerTestCase):
     @inlineCallbacks
     def setUp(self):
         yield super(TestRoutingTableDispatcher, self).setUp()
@@ -33,12 +234,12 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                 "default": ["TRANSPORT_TAG:pool1:9012", "default"],
             },
             # Router outbound
-            "ROUTING_BLOCK:router:router1:INBOUND": {
+            "ROUTER:router:router1:INBOUND": {
                 "default": ["TRANSPORT_TAG:pool1:1234", "default"],
                 "other": ["TRANSPORT_TAG:pool1:5678", "default"],
             },
             # Router inbound
-            "ROUTING_BLOCK:router:router1:OUTBOUND": {
+            "ROUTER:router:router1:OUTBOUND": {
                 "default": ["CONVERSATION:app1:conv1", "default"],
                 "other": ["CONVERSATION:app2:conv2", "yet-another"],
             },
@@ -136,8 +337,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('sphex.inbound', 'app1.inbound')
         self.with_md(msg, conv=('app1', 'conv1'),
                      hops=[
-                        ['TRANSPORT_TAG:pool1:1234', 'default'],
-                        ['CONVERSATION:app1:conv1', 'default'],
+                         ['TRANSPORT_TAG:pool1:1234', 'default'],
+                         ['CONVERSATION:app1:conv1', 'default'],
                      ])
         self.assertEqual([msg], self.get_dispatched_inbound('app1'))
 
@@ -149,8 +350,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('sphex.inbound', 'app2.inbound')
         self.with_md(msg, conv=('app2', 'conv2'),
                      hops=[
-                        ['TRANSPORT_TAG:pool1:9012', 'default'],
-                        ['CONVERSATION:app2:conv2', 'default'],
+                         ['TRANSPORT_TAG:pool1:9012', 'default'],
+                         ['CONVERSATION:app2:conv2', 'default'],
                      ])
         self.assertEqual([msg], self.get_dispatched_inbound('app2'))
 
@@ -162,8 +363,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('sphex.inbound', 'app1.inbound')
         self.with_md(msg, conv=('app1', 'conv1'), endpoint='other',
                      hops=[
-                        ['TRANSPORT_TAG:pool1:5678', 'default'],
-                        ['CONVERSATION:app1:conv1', 'other'],
+                         ['TRANSPORT_TAG:pool1:5678', 'default'],
+                         ['CONVERSATION:app1:conv1', 'other'],
                      ])
         self.assertEqual([msg], self.get_dispatched_inbound('app1'))
 
@@ -177,8 +378,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('sphex.inbound', 'optout.inbound')
         self.with_md(msg, user_account=self.user_account_key,
                      hops=[
-                        ['TRANSPORT_TAG:pool1:1234', 'default'],
-                        ['OPT_OUT', 'default'],
+                         ['TRANSPORT_TAG:pool1:1234', 'default'],
+                         ['OPT_OUT', 'default'],
                      ])
         self.assertEqual([msg], self.get_dispatched_inbound('optout'))
 
@@ -190,8 +391,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('router_ro.inbound', 'app1.inbound')
         self.with_md(msg, conv=("app1", "conv1"),
                      hops=[
-                        ['ROUTING_BLOCK:router:router1:OUTBOUND', 'default'],
-                        ['CONVERSATION:app1:conv1', 'default'],
+                         ['ROUTER:router:router1:OUTBOUND', 'default'],
+                         ['CONVERSATION:app1:conv1', 'default'],
                      ])
         self.assertEqual([msg], self.get_dispatched_inbound('app1'))
 
@@ -204,8 +405,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('router_ro.inbound', 'app2.inbound')
         self.with_md(msg, conv=("app2", "conv2"), endpoint='yet-another',
                      hops=[
-                        ['ROUTING_BLOCK:router:router1:OUTBOUND', 'other'],
-                        ['CONVERSATION:app2:conv2', 'yet-another'],
+                         ['ROUTER:router:router1:OUTBOUND', 'other'],
+                         ['CONVERSATION:app2:conv2', 'yet-another'],
                      ])
         self.assertEqual([msg], self.get_dispatched_inbound('app2'))
 
@@ -218,8 +419,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('optout.outbound', 'sphex.outbound')
         self.with_md(reply, tag=tag, user_account=self.user_account_key,
                      hops=[
-                        ['OPT_OUT', 'default'],
-                        ['TRANSPORT_TAG:pool1:1234', 'default'],
+                         ['OPT_OUT', 'default'],
+                         ['TRANSPORT_TAG:pool1:1234', 'default'],
                      ])
         self.assertEqual([reply], self.get_dispatched_outbound('sphex'))
 
@@ -231,8 +432,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "1234"),
                      hops=[
-                        ['CONVERSATION:app1:conv1', 'default'],
-                        ['TRANSPORT_TAG:pool1:1234', 'default'],
+                         ['CONVERSATION:app1:conv1', 'default'],
+                         ['TRANSPORT_TAG:pool1:1234', 'default'],
                      ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
@@ -244,8 +445,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('app2.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "9012"),
                      hops=[
-                        ['CONVERSATION:app2:conv2', 'default'],
-                        ['TRANSPORT_TAG:pool1:9012', 'default'],
+                         ['CONVERSATION:app2:conv2', 'default'],
+                         ['TRANSPORT_TAG:pool1:9012', 'default'],
                      ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
@@ -258,8 +459,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "5678"), endpoint='default',
                      hops=[
-                        ['CONVERSATION:app1:conv1', 'other'],
-                        ['TRANSPORT_TAG:pool1:5678', 'default'],
+                         ['CONVERSATION:app1:conv1', 'other'],
+                         ['TRANSPORT_TAG:pool1:5678', 'default'],
                      ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
@@ -271,8 +472,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('router_ri.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "1234"),
                      hops=[
-                        ['ROUTING_BLOCK:router:router1:INBOUND', 'default'],
-                        ['TRANSPORT_TAG:pool1:1234', 'default'],
+                         ['ROUTER:router:router1:INBOUND', 'default'],
+                         ['TRANSPORT_TAG:pool1:1234', 'default'],
                      ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
@@ -285,8 +486,8 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
         self.assert_rkeys_used('router_ri.outbound', 'sphex.outbound')
         self.with_md(msg, tag=("pool1", "5678"), endpoint='default',
                      hops=[
-                        ['ROUTING_BLOCK:router:router1:INBOUND', 'other'],
-                        ['TRANSPORT_TAG:pool1:5678', 'default'],
+                         ['ROUTER:router:router1:INBOUND', 'other'],
+                         ['TRANSPORT_TAG:pool1:5678', 'default'],
                      ])
         self.assertEqual([msg], self.get_dispatched_outbound('sphex'))
 
@@ -344,3 +545,23 @@ class TestRoutingTableDispatcher(AppWorkerTestCase):
                          ['CONVERSATION:app1:conv1', 'other']
                      ], outbound_hops_from=msg)
         self.assertEqual([ack], self.get_dispatched_events('app1'))
+
+    @inlineCallbacks
+    def test_outbound_message_gets_transport_fields(self):
+        yield self.get_dispatcher()
+        yield self.vumi_api.tpm.set_metadata("pool1", {
+            'transport_name': 'sphex',
+            'transport_type': 'sms',
+        })
+        msg = self.with_md(self.mkmsg_out(), conv=('app1', 'conv1'))
+        msg['transport_name'] = None
+        msg['transport_type'] = None
+        yield self.dispatch_outbound(msg, 'app1')
+        self.assert_rkeys_used('app1.outbound', 'sphex.outbound')
+        msg['transport_name'] = 'sphex'
+        msg['transport_type'] = 'sms'
+        self.with_md(msg, tag=("pool1", "1234"), hops=[
+            ['CONVERSATION:app1:conv1', 'default'],
+            ['TRANSPORT_TAG:pool1:1234', 'default'],
+        ])
+        self.assertEqual([msg], self.get_dispatched_outbound('sphex'))

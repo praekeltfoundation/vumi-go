@@ -1,0 +1,18 @@
+.channels.dashboard {
+
+    // this table doesn't have a lot of content
+    // so we set the width of the first child to 30px
+    td:first-child {
+        width:30px;
+    }
+}
+
+.channels.new {
+
+    // channel selection is based on country selection,
+    // so they're hidden initially and made visible by jQuery.
+    // when `destination` is changed.
+    .channel select {
+        display:none;
+    }   
+}

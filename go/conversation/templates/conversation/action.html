@@ -1,0 +1,43 @@
+{% extends "app.html" %}
+
+{% block content_title %}{{ action_display_name }}{% endblock %}
+
+{% block content_actions_right %}
+<div class="pull-right">
+    <button type="submit" name="submit" class="btn btn-primary" value="Save">Save</button>
+</div>
+{% endblock %}
+
+{% block content_main %}
+
+{% if message %}
+<div class="row-fluid">
+    <div class="span12">
+        {% include "base/includes/messages.html" %}
+    </div>
+</div>
+{% endif %}
+
+<form name="conversation_action" class="indent" id="conversation_action" method="post" action="">
+    {% csrf_token %}
+    <div class="row-fluid">
+        <div class="span12">
+            <div class="box shadow survey-box survey-questions">
+                {{ form }}
+            </div>
+        </div>
+    </div>
+</form>
+
+
+{% endblock %}
+
+{% block extramedia %}
+    {{ form.media }}
+{% endblock %}
+
+{% block ondomready %}
+    $('.actions .right button').on('click', function(e) {
+        $('#conversation_action').submit();
+    });    
+{% endblock %}

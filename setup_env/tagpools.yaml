@@ -17,8 +17,9 @@ pools:
       transport_type: sms
       server_initiated: true
       transport_name: sms_transport
-      msg_options:
-        transport_name: sms_transport
+      country_name: "South Africa"
+      supports:
+        generic_sends: true
 
   # The name of a pool
   longcode_tagpool_2:
@@ -36,8 +37,9 @@ pools:
       transport_type: sms
       client_initiated: true
       transport_name: sms_transport_2
-      msg_options:
-        transport_name: sms_transport_2
+      country_name: "Star Kingdom of Manticore"
+      supports:
+        generic_sends: true
 
   # The name of a pool
   ussd_tagpool:
@@ -55,5 +57,4 @@ pools:
       transport_type: ussd
       client_initiated: true
       transport_name: ussd_transport
-      msg_options:
-        transport_name: ussd_transport
+      country_name: "South Africa"

@@ -67,6 +67,10 @@ class Contact(Model):
             self.groups.add_key(group)
 
     def addr_for(self, delivery_class):
+        if delivery_class is None:
+            # FIXME: Find a better way to do get delivery_class and get rid of
+            #        this hack.
+            return self.msisdn
         # TODO: delivery classes need to be defined somewhere
         if delivery_class in ('sms', 'ussd'):
             return self.msisdn
@@ -135,9 +139,6 @@ class ContactStore(PerAccountStore):
     @Manager.calls_manager
     def new_group(self, name):
         group_id = uuid4().get_hex()
-
-        # TODO: Do we want to check for name uniqueness?
-
         group = self.groups(
             group_id, name=name, user_account=self.user_account_key)
         yield group.save()
@@ -159,8 +160,8 @@ class ContactStore(PerAccountStore):
                 "Contact with key '%s' not found." % key)
         returnValue(contact)
 
-    def get_group(self, name):
-        return self.groups.load(name)
+    def get_group(self, key):
+        return self.groups.load(key)
 
     @Manager.calls_manager
     def get_contacts_for_group(self, group):
@@ -248,12 +249,26 @@ class ContactStore(PerAccountStore):
 
     @Manager.calls_manager
     def list_groups(self):
+        # FIXME: Loading and returning all groups is a potential performance
+        #        issue, especially if the caller doesn't need them all.
         group_keys = yield self.list_keys(self.groups)
         # NOTE: This assumes that we don't have very large numbers of groups.
         groups = []
         for groups_bunch in self.groups.load_all_bunches(group_keys):
             groups.extend((yield groups_bunch))
         returnValue(sorted(groups, key=lambda group: group.name))
+
+    @Manager.calls_manager
+    def list_smart_groups(self):
+        # FIXME: When used with list_static_groups() we load each group twice.
+        groups = yield self.list_groups()
+        returnValue([group for group in groups if group.is_smart_group()])
+
+    @Manager.calls_manager
+    def list_static_groups(self):
+        # FIXME: When used with list_smart_groups() we load each group twice.
+        groups = yield self.list_groups()
+        returnValue([group for group in groups if not group.is_smart_group()])
 
     @Manager.calls_manager
     def contact_has_opted_out(self, contact):

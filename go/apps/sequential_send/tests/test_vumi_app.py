@@ -128,6 +128,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         conv = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
         yield self.start_conversation(conv)
+        conv = yield self.user_api.get_wrapped_conversation(conv.key)
 
         yield self._stub_out_async(conv)
 
@@ -140,13 +141,15 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         self.assertEqual(self.message_convs, [conv, conv])
 
     @inlineCallbacks
-    def test_schedule_daily_with_ended_conv(self):
+    def test_schedule_daily_with_stopped_conv(self):
         conv = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
         yield self.start_conversation(conv)
-        yield conv.end_conversation()
+        conv = yield self.user_api.get_wrapped_conversation(conv.key)
+        yield self.stop_conversation(conv)
+        conv = yield self.user_api.get_wrapped_conversation(conv.key)
 
-        yield self._stub_out_async(conv)
+        yield self._stub_out_async()
 
         yield self.check_message_convs_and_advance([], 70)
         yield self.check_message_convs_and_advance([], 70)
@@ -162,6 +165,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         conv = yield self.create_conversation(config={'schedule': {
             'recurring': 'day_of_month', 'time': '12:00:00', 'days': '1, 5'}})
         yield self.start_conversation(conv)
+        conv = yield self.user_api.get_wrapped_conversation(conv.key)
 
         yield self._stub_out_async(conv)
 
@@ -186,10 +190,12 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         conv1 = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
         yield self.start_conversation(conv1)
+        conv1 = yield self.user_api.get_wrapped_conversation(conv1.key)
 
         conv2 = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
         yield self.start_conversation(conv2)
+        conv2 = yield self.user_api.get_wrapped_conversation(conv2.key)
 
         yield self._stub_out_async(conv1, conv2)
 
@@ -242,6 +248,7 @@ class TestSequentialSendApplication(AppWorkerTestCase):
                 })
         conv.add_group(group)
         yield self.start_conversation(conv)
+        conv = yield self.user_api.get_wrapped_conversation(conv.key)
 
         # Send to two contacts.
         yield self.app.send_scheduled_messages(conv)
@@ -298,14 +305,3 @@ class TestSequentialSendApplication(AppWorkerTestCase):
                 u'messages_sent': [0],
                 u'messages_received': [0],
                 }, metrics)
-
-    @inlineCallbacks
-    def test_routing_table_setup(self):
-        conv = yield self.create_conversation(delivery_tag=u'tag1')
-        rt = yield self.user_api.get_routing_table()
-        self.assertEqual(len(rt), 0)
-        yield self.user_api.acquire_specific_tag((u'pool', u'tag1'))
-        yield self.start_conversation(
-            conv, no_batch_tag=True, acquire_tag=False)
-        rt = yield self.user_api.get_routing_table()
-        self.assertEqual(len(rt), 1)

@@ -8,7 +8,6 @@ from vumi.application.tests.test_base import DummyApplicationWorker
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApi
 from go.vumitools.opt_out import OptOutStore
-from go.vumitools.exceptions import ConversationSendError
 
 
 class ConversationWrapperTestCase(AppWorkerTestCase):
@@ -24,21 +23,20 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         # Get a dummy worker so we have an amqp_client which we need
         # to set-up the MessageSender in the `VumiApi`
         self.worker = yield self.get_application({})
-        self.api = yield VumiApi.from_config_async(
+        self.vumi_api = yield VumiApi.from_config_async(
             self.mk_config({}), amqp_client=self.worker._amqp_client)
-        self.mdb = self.api.mdb
-        self.user = yield self.mk_user(self.api, u'username')
-        self.user_api = self.api.get_user_api(self.user.key)
+        self.mdb = self.vumi_api.mdb
+        self.user = yield self.mk_user(self.vumi_api, u'username')
+        self.user_api = self.vumi_api.get_user_api(self.user.key)
         yield self.setup_tags()
 
         self.conv = yield self.create_conversation(
-            conversation_type=u'dummy',
-            delivery_tag_pool=u'longcode', delivery_class=u'sms')
+            conversation_type=u'dummy')
 
     @inlineCallbacks
     def setup_tags(self, name=u'longcode', count=4, metadata=None):
         """Declare a set of long codes to the tag pool."""
-        yield self.api.tpm.declare_tags(
+        yield self.vumi_api.tpm.declare_tags(
             [(name, "%s%s" % (name, i)) for i in range(10001, 10001 + count)])
         defaults = {
             "display_name": name,
@@ -48,7 +46,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             "transport_name": self.transport_name,
         }
         defaults.update(metadata or {})
-        yield self.api.tpm.set_metadata(name, defaults)
+        yield self.vumi_api.tpm.set_metadata(name, defaults)
         yield self.add_tagpool_permission(name)
 
     @inlineCallbacks
@@ -109,22 +107,24 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_get_latest_batch_key(self):
+        [init_batch] = self.conv.batches.keys()
         batch_key = yield self.conv.get_latest_batch_key()
-        self.assertEqual(batch_key, None)
-        self.assertEqual(self.conv.batches.keys(), [])
+        self.assertEqual(batch_key, init_batch)
+        self.assertEqual(self.conv.batches.keys(), [init_batch])
 
-        tag = yield self.conv.acquire_tag()
-        batch1 = yield self.get_batch_id(self.conv, tag)
-        batch2 = yield self.get_batch_id(self.conv, tag)
+        second_batch = yield self.user_api.api.mdb.batch_start(
+            tags=[], user_account=self.user_api.user_account_key)
+        self.conv.batches.add_key(second_batch)
+        yield self.conv.save()
 
         now = datetime.now()
-        yield self.store_outbound(batch1,
-                                  start_timestamp=now - timedelta(days=1))
-        yield self.store_outbound(batch2, start_timestamp=now)
+        yield self.store_outbound(
+            init_batch, start_timestamp=now - timedelta(days=1))
+        yield self.store_outbound(second_batch, start_timestamp=now)
 
         conv = yield self.user_api.get_wrapped_conversation(self.conv.key)
         batch_key = yield conv.get_latest_batch_key()
-        self.assertEqual(batch_key, batch2)
+        self.assertEqual(batch_key, second_batch)
         self.assertEqual(len(conv.batches.keys()), 2)
 
     @inlineCallbacks
@@ -266,8 +266,46 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def test_get_tags(self):
         yield self.conv.start()
-        [tag] = yield self.conv.get_tags()
-        self.assertEqual(tag, ('longcode', 'longcode10001'))
+        self.assertEqual([], (yield self.conv.get_tags()))
+
+    @inlineCallbacks
+    def test_get_channels(self):
+        yield self.conv.start()
+        tags = [["pool", "tag1"], ["pool", "tag2"]]
+        for tag in tags:
+            yield self.add_channel_to_conversation(self.conv, tag)
+        [chan1, chan2] = yield self.conv.get_channels()
+        self.assertEqual(chan1.tag, "tag1")
+        self.assertEqual(chan2.tag, "tag2")
+
+    @inlineCallbacks
+    def test_get_channels_with_no_channels(self):
+        yield self.conv.start()
+        self.assertEqual([], (yield self.conv.get_channels()))
+
+    @inlineCallbacks
+    def test_has_channel_supporting(self):
+        yield self.conv.start()
+        yield self.setup_tagpool(u"pool1", [u"tag1"], metadata={
+            "supports": {"foo": True, "bar": True}})
+        yield self.setup_tagpool(u"pool2", [u"tag1"], metadata={
+            "supports": {"foo": True, "bar": False}})
+        yield self.add_channel_to_conversation(self.conv, ["pool1", "tag1"])
+        yield self.add_channel_to_conversation(self.conv, ["pool2", "tag1"])
+        self.assertTrue(
+            (yield self.conv.has_channel_supporting(foo=True, bar=True)))
+        self.assertTrue(
+            (yield self.conv.has_channel_supporting(foo=True)))
+        self.assertFalse(
+            (yield self.conv.has_channel_supporting(foo=False)))
+        self.assertTrue(
+            (yield self.conv.has_channel_supporting(bar=True)))
+        self.assertTrue(
+            (yield self.conv.has_channel_supporting(bar=False)))
+        self.assertFalse(
+            (yield self.conv.has_channel_supporting(zoo=True)))
+        self.assertTrue(
+            (yield self.conv.has_channel_supporting(zoo=False)))
 
     @inlineCallbacks
     def test_get_progress_status(self):
@@ -311,34 +349,14 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.assertEqual((yield self.conv.get_progress_percentage()), 80)
 
     @inlineCallbacks
-    def test_acquire_tag(self):
-        tag = yield self.conv.acquire_tag()
-        self.assertEqual(tag, ('longcode', 'longcode10001'))
-
-    @inlineCallbacks
-    def test_acquire_tag_if_none_available(self):
-        yield self.setup_tags(u"shortcode", count=0)
-        self.conv.c.delivery_tag_pool = u"shortcode"
-        yield self.conv.save()
-        yield self.assertFailure(self.conv.acquire_tag(),
-                                 ConversationSendError)
-
-    @inlineCallbacks
-    def test_acquire_tag_if_tag_unavailable(self):
-        self.conv.c.delivery_tag_pool = u"longcode"
-        self.conv.c.delivery_tag = u'this-does-not-exist'
-        yield self.conv.save()
-        yield self.assertFailure(self.conv.acquire_tag(),
-                                 ConversationSendError)
-
-    @inlineCallbacks
     def test_get_opted_in_contact_bunches(self):
         contact_store = self.user_api.contact_store
         opt_out_store = OptOutStore.from_user_account(self.user)
 
         @inlineCallbacks
         def get_contacts():
-            bunches = yield self.conv.get_opted_in_contact_bunches()
+            bunches = yield self.conv.get_opted_in_contact_bunches(
+                self.conv.delivery_class)
             contacts = []
             for bunch in bunches:
                 contacts.extend((yield bunch))

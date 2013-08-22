@@ -23,7 +23,7 @@ class MessageMetadataHelperTestCase(GoPersistenceMixin, TestCase):
 
     def create_conversation(self, conversation_type=u'bulk_message',
                             name=u'name', description=u'desc', config={}):
-        return self.user_api.conversation_store.new_conversation(
+        return self.user_api.new_conversation(
             conversation_type, name, description, config)
 
     def mk_msg(self, go_metadata=None, optout_metadata=None):

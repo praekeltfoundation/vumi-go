@@ -55,6 +55,16 @@ It allows you to create, delete and update contact information.
    :members:
    :show-inheritance:
 
+**groups**
+
+This resource provides access to the groups stored in Vumi Go.
+It allows you to find, create and update group information and retrieve
+their member counts.
+
+.. autoclass:: go.apps.jsbox.contacts.GroupsResource
+   :members:
+   :show-inheritance:
+
 **log**
 
 Provides logging facilities for your application. These logs are available

@@ -5,6 +5,7 @@ import random
 from twisted.internet.defer import inlineCallbacks, maybeDeferred
 from twisted.web import http
 
+from vumi.config import ConfigInt, ConfigText
 from vumi.utils import http_request_full
 from vumi.transports.httprpc import httprpc
 from vumi import log
@@ -59,29 +60,38 @@ class StreamingClientManager(object):
         yield self.redis.ltrim(backlog_key, 0, self.MAX_BACKLOG_SIZE - 1)
 
 
+class StreamingHTTPWorkerConfig(GoApplicationWorker.CONFIG_CLASS):
+    """Configuration options for StreamingHTTPWorker."""
+
+    web_path = ConfigText(
+        "The path the HTTP worker should expose the API on.",
+        required=True, static=True)
+    web_port = ConfigInt(
+        "The port the HTTP worker should open for the API.",
+        required=True, static=True)
+    health_path = ConfigText(
+        "The path the resource should receive health checks on.",
+        default='/health/', static=True)
+    concurrency_limit = ConfigInt(
+        "Maximum number of clients per account. A value less than "
+        "zero disables the limit",
+        default=10)
+
+
 class StreamingHTTPWorker(GoApplicationWorker):
-    """
 
-    :param str web_path:
-        The path the HTTP worker should expose the API on
-    :param int web_port:
-        The port the HTTP worker should open for the API
-    :param str health_path:
-        The path the resource should receive health checks on.
-        Defaults to '/health/'
-    """
     worker_name = 'http_api_worker'
-
-    def validate_config(self):
-        super(StreamingHTTPWorker, self).validate_config()
-        self.web_path = self.config['web_path']
-        self.web_port = int(self.config['web_port'])
-        self.health_path = self.config.get('health_path', '/health/')
-        self.metrics_prefix = self.config['metrics_prefix']
+    CONFIG_CLASS = StreamingHTTPWorkerConfig
 
     @inlineCallbacks
     def setup_application(self):
         yield super(StreamingHTTPWorker, self).setup_application()
+        config = self.get_static_config()
+        self.web_path = config.web_path
+        self.web_port = config.web_port
+        self.health_path = config.health_path
+        self.metrics_prefix = config.metrics_prefix
+
         # Set these to empty dictionaries because we're not interested
         # in using any of the helper functions at this point.
         self._event_handlers = {}
@@ -173,22 +183,8 @@ class StreamingHTTPWorker(GoApplicationWorker):
             log.warning('Unable to find message %s for event %s.' % (
                 event['user_message_id'], event['event_id']))
 
-        msg_md = outbound_message.msg['helper_metadata']
-        # First, try look up the things we need in the message metadata.
-        account_key = msg_md.get('go', {}).get('user_account')
-        if account_key is not None:
-            user_api = self.get_user_api(account_key)
-            conv_key = msg_md['go'].get('conversation_key')
-        else:
-            # Fall back to looking up by batch. (Ugh.)
-            # TODO: This can probably just be removed.
-            batch = yield outbound_message.batch.get()
-            account_key = batch.metadata['user_account']
-            user_api = self.get_user_api(account_key)
-            conversations = user_api.conversation_store.conversations
-            mr = conversations.index_lookup('batches', batch.key)
-            [conv_key] = yield mr.get_keys()
-        conversation = yield user_api.get_wrapped_conversation(conv_key)
+        config = yield self.get_message_config(event)
+        conversation = config.get_conversation()
         push_event_url = self.get_api_config(conversation, 'push_event_url')
         if push_event_url:
             resp = yield self.push(push_event_url, event)

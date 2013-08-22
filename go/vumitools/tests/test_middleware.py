@@ -8,9 +8,10 @@ from vumi.application.tests.test_base import DummyApplicationWorker
 from vumi.transports.failures import FailureMessage
 from vumi.middleware.tagger import TaggingMiddleware
 
-from go.vumitools.tests.utils import AppWorkerTestCase
+from go.vumitools.tests.utils import AppWorkerTestCase, GoRouterWorkerTestMixin
 from go.vumitools.middleware import (NormalizeMsisdnMiddleware,
-    OptOutMiddleware, MetricsMiddleware)
+    OptOutMiddleware, MetricsMiddleware, ConversationStoringMiddleware,
+    RouterStoringMiddleware)
 
 
 class MiddlewareTestCase(AppWorkerTestCase):
@@ -310,3 +311,60 @@ class MetricsMiddlewareTestCase(MiddlewareTestCase):
         self.assertEqual(permanent[1], 1)
         self.assertEqual(temporary[1], 1)
         self.assertEqual(unspecified[1], 1)
+
+
+class ConversationStoringMiddlewareTestCase(MiddlewareTestCase):
+    @inlineCallbacks
+    def setUp(self):
+        yield super(ConversationStoringMiddlewareTestCase, self).setUp()
+        self.mw = yield self.create_middleware(ConversationStoringMiddleware)
+        self.vumi_api = self.mw.vumi_api  # yoink!
+        yield self.setup_user_api(self.vumi_api)
+        self.conv = yield self.create_conversation()
+
+    @inlineCallbacks
+    def test_inbound_message(self):
+        msg = self.mkmsg_in()
+        self.add_conversation_md_to_msg(msg, self.conv)
+        yield self.mw.handle_inbound(msg, 'default')
+        batch_id = yield self.conv.get_latest_batch_key()
+        msg_ids = yield self.vumi_api.mdb.batch_inbound_keys(batch_id)
+        self.assertEqual(msg_ids, [msg['message_id']])
+
+    @inlineCallbacks
+    def test_outbound_message(self):
+        msg = self.mkmsg_out()
+        self.add_conversation_md_to_msg(msg, self.conv)
+        yield self.mw.handle_outbound(msg, 'default')
+        batch_id = yield self.conv.get_latest_batch_key()
+        msg_ids = yield self.vumi_api.mdb.batch_outbound_keys(batch_id)
+        self.assertEqual(msg_ids, [msg['message_id']])
+
+
+class RouterStoringMiddlewareTestCase(MiddlewareTestCase,
+                                      GoRouterWorkerTestMixin):
+    @inlineCallbacks
+    def setUp(self):
+        yield super(RouterStoringMiddlewareTestCase, self).setUp()
+        self.mw = yield self.create_middleware(RouterStoringMiddleware)
+        self.vumi_api = self.mw.vumi_api  # yoink!
+        yield self.setup_user_api(self.vumi_api)
+        self.router = yield self.create_router()
+
+    @inlineCallbacks
+    def test_inbound_message(self):
+        msg = self.mkmsg_in()
+        self.add_router_md_to_msg(msg, self.router)
+        yield self.mw.handle_inbound(msg, 'dummy_endpoint')
+        msg_ids = yield self.vumi_api.mdb.batch_inbound_keys(
+            self.router.batch.key)
+        self.assertEqual(msg_ids, [msg['message_id']])
+
+    @inlineCallbacks
+    def test_outbound_message(self):
+        msg = self.mkmsg_out()
+        self.add_router_md_to_msg(msg, self.router)
+        yield self.mw.handle_outbound(msg, 'dummy_endpoint')
+        msg_ids = yield self.vumi_api.mdb.batch_outbound_keys(
+            self.router.batch.key)
+        self.assertEqual(msg_ids, [msg['message_id']])

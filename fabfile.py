@@ -6,6 +6,7 @@ env.path = '/var/praekelt/vumi-go'
 def deploy_go():
     with cd(env.path):
         sudo('git pull', user='vumi')
+        sudo("find go -name '*.pyc' -delete")
         _venv_command('./ve/bin/django-admin.py collectstatic --pythonpath=. '
                       '--settings=go.settings --noinput')
 
@@ -13,6 +14,7 @@ def deploy_go():
 def deploy_vumi():
     with cd('%s/ve/src/vumi/' % (env.path,)):
         sudo('git pull', user='vumi')
+        sudo("find vumi -name '*.pyc' -delete")
 
 
 def restart_celery():
@@ -47,6 +49,17 @@ def restart_all(group=None):
         supervisorctl("restart %s" % p_name)
 
 
+def deploy_world(restart=True):
+    """
+    Update Vumi, Vumi Go and the node.js modules and then run restart_all.
+    """
+    deploy_vumi()
+    deploy_go()
+    update_nodejs_modules()
+    if restart:
+        restart_all()
+
+
 def update_nodejs_modules():
     """
     Update the Node.js modules that the JS sandbox depends on.
@@ -71,7 +84,11 @@ def _supervisorctl_status():
     processes = []
     for line in status:
         parts = line.split()
-        group, name = parts[0].split(':')
+        group, _, name = parts[0].partition(':')
+        if not name:
+            # single processes are in a group with the same
+            # name as themselves
+            name = group
         processes.append({
             'name': name,
             'group': group,

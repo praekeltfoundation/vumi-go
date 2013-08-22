@@ -1,5 +1,3 @@
-"""A widget for displaying code in a CodeMirror editor"""
-
 import json
 
 from django import forms
@@ -49,6 +47,7 @@ class CodeMirrorTextarea(forms.Textarea):
 
         self.js_files = (
             "%s/lib/codemirror-compressed.js" % (codemirror_path,),
+            'js/src/widgets/initCodemirror.js',
         )
         self.css_files = {
             'all': (
@@ -65,17 +64,14 @@ class CodeMirrorTextarea(forms.Textarea):
     def id_for_name(name):
         return "id_%s" % (name,)
 
-    def render(self, name, value, attrs=None):
+    def render(self, name, value, attrs={}):
+
+        attrs.update({'data-widget': 'codemirror'})
+
         code_textarea_id = self.id_for_name(name)
         output = [super(CodeMirrorTextarea, self).render(name, value, attrs),
                   '<script type="text/javascript">'
-                  '$(function () {'
-                  '  var elem = document.getElementById("%s");'
-                  '  var cm = CodeMirror.fromTextArea(elem, %s);'
-                  '  elem.on_source_update = function (src) {'
-                  '    cm.setValue(src);'
-                  '  };'
-                  '});'
+                  '    go.configs["%s"] = %s;'
                   '</script>' %
                   (code_textarea_id, self.option_json)]
         return mark_safe("\n".join(output))
@@ -94,7 +90,8 @@ class SourceUrlTextInput(forms.TextInput):
 
     @property
     def media(self):
-        js = ('js/source_url.js',)
+        js = ('js/src/widgets/initSourceUrl.js',)
+
         return forms.Media(js=js)
 
     def code_field_name(self, name):
@@ -103,7 +100,8 @@ class SourceUrlTextInput(forms.TextInput):
             raise ValueError("Couldn't understand field name %r" % name)
         return "%s-%s" % (parts[0], self.code_field)
 
-    def render(self, name, value, attrs=None):
+    def render(self, name, value, attrs={}):
+        attrs.update({'data-widget': 'sourceurl'})
         source_input_id = 'id_%s' % (name,)
         # constructing the correct code field name like this isn't
         # great but I don't have a better idea
@@ -111,7 +109,7 @@ class SourceUrlTextInput(forms.TextInput):
         code_field_id = CodeMirrorTextarea.id_for_name(code_field_name)
         output = [super(SourceUrlTextInput, self).render(name, value, attrs),
                   '<script type="text/javascript">'
-                  'SourceUrl("%s", "%s");'
+                  '    go.configs["%s"] = "%s";'
                   '</script>' %
                   (source_input_id, code_field_id)]
         return mark_safe("\n".join(output))
@@ -121,3 +119,14 @@ class SourceUrlField(forms.URLField):
     def __init__(self, code_field, **kwargs):
         widget = SourceUrlTextInput(code_field=code_field)
         super(SourceUrlField, self).__init__(widget=widget, **kwargs)
+
+
+class BulkMessageWidget(forms.Textarea):
+    @property
+    def media(self):
+        js = ('js/src/widgets/initBulkMessage.js',)
+        return forms.Media(js=js)
+
+    def render(self, name, value, attrs={}):
+        attrs.update({'data-widget': 'bulkmessage'})
+        return super(BulkMessageWidget, self).render(name, value, attrs)

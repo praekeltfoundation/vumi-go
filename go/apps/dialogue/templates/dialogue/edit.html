@@ -1,0 +1,46 @@
+{% extends "conversation/edit.html" %}
+{% load url from future %}
+
+{% block content_extraclass %}campaigns dialogue{% endblock %}
+
+{% block content_actions_left %}
+    <button class="btn btn-primary" data-action='new-state'>
+        Create new message
+    </button>
+{% endblock %}
+
+{% block content_actions_right %}
+  <div class="pull-left">
+
+    <input type="checkbox" name="multiple_surveys" id="multiple_surveys">
+    Enable users to submit multiple surveys
+  </div>
+
+  <div class="pull-right">
+    <a href="{% url 'conversations:index' %}">Cancel</a>
+    <button class="btn btn-primary" data-action="save">Save</button>
+  </div>
+{% endblock %}
+
+{% block content_main %}
+<div id="diagram"></div>
+{% endblock %}
+
+{% block ondomready %}
+  {{ block.super }}
+  var dialogue = go.apps.dialogue;
+
+  var diagram = new dialogue.diagram.DialogueDiagramView({
+    el: '.dialogue #diagram',
+    model: new dialogue.models.DialogueModel({{ model_data|safe }})
+  });
+
+  var actions = new dialogue.actions.DialogueActionsView({
+    el: '.actions',
+    diagram: diagram,
+    sessionId: "{{ session_id|safe }}"
+  });
+
+  dialogue.style.initialize();
+  diagram.render();
+{% endblock %}
