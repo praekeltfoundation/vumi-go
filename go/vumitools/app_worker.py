@@ -382,8 +382,7 @@ class GoApplicationMixin(GoWorkerMixin):
 
     @inlineCallbacks
     def process_command_send_message(self, user_account_key, conversation_key,
-                                     **kwargs):
-        command_data = kwargs.pop('command_data')
+                                     command_data, **kwargs):
         if kwargs:
             log.info("Received unexpected command args: %s" % (kwargs,))
         conv = yield self.get_conversation(user_account_key, conversation_key)
