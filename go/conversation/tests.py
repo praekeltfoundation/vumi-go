@@ -74,8 +74,8 @@ class ConversationTestCase(VumiGoDjangoTestCase):
             'conversation_key': conv.key, 'path_suffix': ''})
 
         resp = self.client.get(show_url)
-        self.assertContains(resp, 'Contact Group 1')
-        self.assertNotContains(resp, 'Contact Group 2')
+        self.assertContains(resp, group1.name)
+        self.assertNotContains(resp, group2.name)
 
     def test_conversation_render_contact_group_edit(self):
         conv = self.create_conversation(conversation_type=u'bulk_message',
@@ -192,9 +192,7 @@ class ConversationTestCase(VumiGoDjangoTestCase):
         self.assertNotContains(search('running'), conv.key)
         self.assertNotContains(search('finished'), conv.key)
 
-        # now it should be running
-        conv.start()
-        # Set the status manually, because it's in `starting', not `running'
+        # Set the status to `running'
         conv = self.user_api.get_wrapped_conversation(conv.key)
         conv.set_status_started()
         conv.save()
@@ -202,8 +200,17 @@ class ConversationTestCase(VumiGoDjangoTestCase):
         self.assertContains(search('running'), conv.key)
         self.assertNotContains(search('finished'), conv.key)
 
-        # now it shouldn't be
-        conv.end_conversation()
+        # Set the status to `stopped' again
+        conv = self.user_api.get_wrapped_conversation(conv.key)
+        conv.set_status_stopped()
+        conv.save()
+        self.assertContains(search('draft'), conv.key)
+        self.assertNotContains(search('running'), conv.key)
+        self.assertNotContains(search('finished'), conv.key)
+
+        # Archive it
+        conv.archive_conversation()
+
         self.assertNotContains(search('draft'), conv.key)
         self.assertNotContains(search('running'), conv.key)
         self.assertContains(search('finished'), conv.key)
@@ -214,7 +221,7 @@ class ConversationTestCase(VumiGoDjangoTestCase):
         Test received_messages helper function
         """
         conversation = self.get_wrapped_conv()
-        conversation.old_start()
+        conversation.start()
         contacts = []
         for bunch in conversation.get_opted_in_contact_bunches(
                 conversation.delivery_class):
@@ -239,29 +246,6 @@ class ConversationTestCase(VumiGoDjangoTestCase):
         self.api.mdb.add_inbound_message(msg, batch_id=batch.key)
         [reply_msg] = conversation.received_messages()
         self.assertTrue(reply_msg, msg)
-
-    def test_end_conversation(self):
-        """
-        Test the end_conversation helper function
-        """
-        conv = self.create_conversation(conversation_type=u'bulk_message')
-        self.assertFalse(conv.ended())
-        conv.end_conversation()
-        self.assertTrue(conv.ended())
-
-    @skip("Update this for new lifecycle.")
-    def test_tag_releasing(self):
-        """
-        Test that tags are released when a conversation is ended.
-        """
-        conversation = self.get_wrapped_conv()
-        conversation.old_start()
-        [message_batch] = conversation.get_batches()
-        self.assertEqual(len(conversation.get_tags()), 1)
-        conversation.end_conversation()
-        [msg_tag] = message_batch.tags
-        tag_batch = lambda t: self.api.mdb.get_tag_info(t).current_batch.key
-        self.assertEqual(tag_batch(msg_tag), None)
 
     def test_pagination(self):
         for i in range(13):

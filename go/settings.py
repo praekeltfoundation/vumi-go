@@ -434,7 +434,7 @@ PIPELINE_JS = {
             'js/src/apps/dialogue/states/freetext.js',
             'js/src/apps/dialogue/states/end.js',
             'js/src/apps/dialogue/diagram.js',
-            'js/src/apps/dialogue/actions.js',
+            'js/src/apps/dialogue/views.js',
             'js/src/apps/dialogue/style.js',
             'js/src/contacts/contacts.js',
             'js/src/contacts/models.js',

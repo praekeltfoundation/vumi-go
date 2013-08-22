@@ -93,6 +93,7 @@
 
     defaults: function() {
       return _({
+        text: '',
         entry_endpoint: {}
       }).defaults(ChoiceStateModel.__super__.defaults.call(this));
     }
@@ -111,6 +112,7 @@
 
     defaults: function() {
       return _({
+        text: '',
         entry_endpoint: {},
         exit_endpoint: {}
       }).defaults(FreeTextStateModel.__super__.defaults.call(this));
@@ -128,6 +130,7 @@
 
     defaults: function() {
       return _({
+        text: '',
         entry_endpoint: {}
       }).defaults(EndStateModel.__super__.defaults.call(this));
     }
@@ -145,6 +148,10 @@
       includeInJSON: ['uuid'],
       relatedModel: DialogueEndpointModel
     }]
+  });
+
+  var DialogueMetadataModel = Model.extend({
+    defaults: {repeatable: false}
   });
 
   var DialogueModel = Model.extend({
@@ -168,6 +175,10 @@
     idAttribute: 'conversation_key',
 
     relations: [{
+      type: Backbone.HasOne,
+      key: 'poll_metadata',
+      relatedModel: DialogueMetadataModel
+    }, {
       type: Backbone.HasMany,
       key: 'states',
       relatedModel: DialogueStateModel,
@@ -186,7 +197,8 @@
 
     defaults: {
       states: [],
-      connections: []
+      connections: [],
+      poll_metadata: {}
     }
   });
 
