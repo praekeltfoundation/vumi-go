@@ -37,12 +37,22 @@
 
     render: function() {
       this.diagram.render();
+
+      this.$('#repeatable').prop(
+        'checked',
+        this.model.get('poll_metadata').get('repeatable'));
     },
 
     events: {
       'click #new-state': function() {
         this.diagram.newState();
-      }
+      },
+
+      'change #repeatable': function(e) {
+        this.model
+          .get('poll_metadata')
+          .set('repeatable', $(e.target).prop('checked'));
+      },
     }
   });
 

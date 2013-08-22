@@ -9,6 +9,7 @@
   var modelData = {
     campaign_id: 'campaign-1',
     conversation_key: 'conversation-1',
+    poll_metadata: {repeatable: false},
     start_state: {uuid: 'state1'},
     states: [{
       uuid: 'state1',
@@ -80,9 +81,12 @@
     $('body')
       .append($('<div>')
         .attr('class', 'dialogue')
-        .append($('<div>').attr('id', 'diagram'))
+        .append($('<input>')
+          .attr('type', 'checkbox')
+          .attr('id', 'repeatable'))
         .append($('<button>').attr('id', 'new-state'))
-        .append($('<button>').attr('id', 'save')));
+        .append($('<button>').attr('id', 'save'))
+        .append($('<div>').attr('id', 'diagram')));
   };
 
   var tearDown = function() {

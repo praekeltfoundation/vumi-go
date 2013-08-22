@@ -115,5 +115,17 @@ describe("go.apps.dialogue.views", function() {
         assert(oneElExists('[data-uuid=new-state]'));
       });
     });
+
+    describe("when '#repeatable' is changed", function() {
+      it("should change the model metadata's 'repeatable' attribute",
+      function() {
+        assert(!view.model.get('poll_metadata').get('repeatable'));
+        view.$('#repeatable').prop('checked', true).change();
+        assert(view.model.get('poll_metadata').get('repeatable'));
+
+        view.$('#repeatable').prop('checked', false).change();
+        assert(!view.model.get('poll_metadata').get('repeatable'));
+      });
+    });
   });
 });
