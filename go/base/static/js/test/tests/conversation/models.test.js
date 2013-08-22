@@ -14,15 +14,18 @@ describe("go.conversation.models", function() {
         groups: [{
           key: 'group1',
           name: 'Group 1',
-          inConversation: true
+          inConversation: true,
+          urls: {show: 'contacts:group:group1'}
         }, {
           key: 'group2',
           name: 'Group 2',
-          inConversation: true
+          inConversation: true,
+          urls: {show: 'contacts:group:group2'}
         }, {
           key: 'group3',
           name: 'Group 3',
-          inConversation: true
+          inConversation: true,
+          urls: {show: 'contacts:group:group3'}
         }]
       });
     });

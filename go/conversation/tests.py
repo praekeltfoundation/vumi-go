@@ -98,10 +98,20 @@ class ConversationTestCase(VumiGoDjangoTestCase):
                 'key': group2.key,
                 'name': u'Contact Group 2',
                 'inConversation': False,
+                'urls': {
+                    'show': reverse(
+                        'contacts:group',
+                        kwargs={'group_key': group2.key})
+                },
             }, {
                 'key': group1.key,
                 'name': u'Contact Group 1',
                 'inConversation': True,
+                'urls': {
+                    'show': reverse(
+                        'contacts:group',
+                        kwargs={'group_key': group1.key})
+                },
             }]
         })
 

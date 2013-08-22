@@ -5,11 +5,12 @@
   var Model = go.components.models.Model;
 
   var GroupModel = Model.extend({
-    idAttribute: 'key',
-
-    urls: {
-      show: function() { return '/contacts/group/' + this.id + '/'; }
-    }
+    relations: [{
+      type: Backbone.HasMany,
+      key: 'urls',
+      relatedModel: Model
+    }],
+    idAttribute: 'key'
   });
 
   var GroupCollection = Backbone.Collection.extend({

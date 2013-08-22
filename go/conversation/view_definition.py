@@ -557,7 +557,12 @@ class EditConversationGroupsView(ConversationTemplateView):
             'groups': [{
                 'key': group.key,
                 'name': group.name,
-                'inConversation': group.key in selected_groups
+                'urls': {
+                    'show': reverse(
+                        'contacts:group',
+                        kwargs={'group_key': group.key})
+                },
+                'inConversation': group.key in selected_groups,
             } for group in groups]
         }
 
