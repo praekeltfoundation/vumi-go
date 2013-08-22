@@ -93,6 +93,7 @@
 
     defaults: function() {
       return _({
+        text: '',
         entry_endpoint: {}
       }).defaults(ChoiceStateModel.__super__.defaults.call(this));
     }
@@ -111,6 +112,7 @@
 
     defaults: function() {
       return _({
+        text: '',
         entry_endpoint: {},
         exit_endpoint: {}
       }).defaults(FreeTextStateModel.__super__.defaults.call(this));
@@ -128,6 +130,7 @@
 
     defaults: function() {
       return _({
+        text: '',
         entry_endpoint: {}
       }).defaults(EndStateModel.__super__.defaults.call(this));
     }
