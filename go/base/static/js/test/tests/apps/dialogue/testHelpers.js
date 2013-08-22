@@ -77,11 +77,12 @@
   // --------------
 
   var setUp = function() {
-    $('body').append([
-      "<div class='dialogue'>",
-        "<div id='diagram'></div>",
-      "</div>"
-    ].join(''));
+    $('body')
+      .append($('<div>')
+        .attr('class', 'dialogue')
+        .append($('<div>').attr('id', 'diagram'))
+        .append($('<button>').attr('id', 'new-state'))
+        .append($('<button>').attr('id', 'save')));
   };
 
   var tearDown = function() {
@@ -89,7 +90,7 @@
     jsPlumb.unbind();
     jsPlumb.detachEveryConnection();
     jsPlumb.deleteEveryEndpoint();
-    $('.dialogue #diagram').remove();
+    $('.dialogue').remove();
   };
 
   _.extend(exports, {

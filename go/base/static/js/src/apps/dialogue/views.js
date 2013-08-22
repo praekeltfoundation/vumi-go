@@ -2,18 +2,23 @@
 // ======================
 
 (function(exports) {
-  var actions = go.components.actions,
-      SaveActionView = actions.SaveActionView;
+  var SaveActionView = go.components.actions.SaveActionView;
 
-  var DialogueActionsView = Backbone.View.extend({
+  var DialogueDiagramView = go.apps.dialogue.diagram.DialogueDiagramView;
+
+  var DialogueView = Backbone.View.extend({
     initialize: function(options) {
-      this.diagram = options.diagram;
-      this.model = this.diagram.model;
+      this.sessionId = options.sessionId;
+
+      this.diagram = new DialogueDiagramView({
+        el: this.$('#diagram'),
+        model: this.model
+      });
 
       this.save = new SaveActionView({
-        el: this.$('[data-action=save]'),
-        sessionId: options.sessionId,
-        model: this.model
+        el: this.$('#save'),
+        model: this.model,
+        sessionId: this.sessionId
       });
 
       this.listenTo(this.save, 'error', function() {
@@ -26,14 +31,22 @@
           + this.model.get('conversation_key')
           + '/');
       });
+
+      go.apps.dialogue.style.initialize();
+    },
+
+    render: function() {
+      this.diagram.render();
     },
 
     events: {
-      'click [data-action=new-state]': function() { this.diagram.newState(); }
+      'click #new-state': function() {
+        this.diagram.newState();
+      }
     }
   });
 
   _(exports).extend({
-    DialogueActionsView: DialogueActionsView
+    DialogueView: DialogueView
   });
 })(go.apps.dialogue.views = {});

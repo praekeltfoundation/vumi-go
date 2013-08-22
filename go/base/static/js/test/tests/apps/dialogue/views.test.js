@@ -1,10 +1,7 @@
 describe("go.apps.dialogue.views", function() {
-  var dialogue = go.apps.dialogue;
-
-  var setUp = dialogue.testHelpers.setUp,
-      tearDown = dialogue.testHelpers.tearDown,
-      newDialogueDiagram = dialogue.testHelpers.newDialogueDiagram,
-      modelData = dialogue.testHelpers.modelData;
+  var setUp = go.apps.dialogue.testHelpers.setUp,
+      tearDown = go.apps.dialogue.testHelpers.tearDown,
+      modelData = go.apps.dialogue.testHelpers.modelData;
 
   var testHelpers = go.testHelpers,
       oneElExists = testHelpers.oneElExists,
@@ -13,50 +10,39 @@ describe("go.apps.dialogue.views", function() {
       errorResponse = testHelpers.rpc.errorResponse,
       assertRequest = testHelpers.rpc.assertRequest;
 
-  var diagram;
+  describe(".DialogueView", function() {
+    var DialogueView = go.apps.dialogue.views.DialogueView,
+        DialogueModel = go.apps.dialogue.models.DialogueModel;
 
-  beforeEach(function() {
-    setUp();
-    diagram = newDialogueDiagram();
-  });
-
-  afterEach(function() {
-    tearDown();
-  });
-
-  describe(".DialogueActionsView", function() {
-    var DialogueActionsView = dialogue.actions.DialogueActionsView;
-
-    var actions,
+    var view,
         server;
 
     beforeEach(function() {
+      setUp();
+
       server = sinon.fakeServer.create();
 
-      var $el = $('<div>')
-        .append($('<button>').attr('data-action', 'new-state'))
-        .append($('<button>').attr('data-action', 'save'));
-
-      actions = new DialogueActionsView({
-        el: $el,
-        diagram: diagram,
+      view = new DialogueView({
+        el: $('.dialogue'),
+        model: new DialogueModel(modelData),
         sessionId: '123'
       });
 
-      diagram.render();
+      view.render();
       bootbox.animate(false);
     });
 
     afterEach(function() {
-      actions.remove();
+      tearDown();
+      view.remove();
       server.restore();
 
       $('.bootbox')
-      .modal('hide')
-      .remove();
+        .modal('hide')
+        .remove();
     });
 
-    describe("when the save button is clicked", function() {
+    describe("when the '#save' is clicked", function() {
       it("should issue a save api call with the dialogue changes",
       function(done) {
         server.respondWith(function(req) {
@@ -64,16 +50,16 @@ describe("go.apps.dialogue.views", function() {
             req,
             '/api/v1/go/api',
             'conversation.dialogue.save_poll',
-            ['campaign-1', 'conversation-1', {poll: diagram.model.toJSON()}]);
+            ['campaign-1', 'conversation-1', {poll: view.model.toJSON()}]);
 
           done();
         });
 
         // modify the diagram
-        diagram.connections.remove('endpoint1-endpoint3');
-        assert.notDeepEqual(diagram.model.toJSON(), modelData);
+        view.diagram.connections.remove('endpoint1-endpoint3');
+        assert.notDeepEqual(view.model.toJSON(), modelData);
 
-        actions.$('[data-action=save]').click();
+        view.$('#save').click();
         server.respond();
       });
 
@@ -81,10 +67,9 @@ describe("go.apps.dialogue.views", function() {
         it("should notify the user", function() {
           server.respondWith(errorResponse('Aaah!'));
 
-          // modify the diagram
           assert(noElExists('.modal'));
 
-          actions.$('[data-action=save]').click();
+          view.$('#save').click();
           server.respond();
 
           assert(oneElExists('.modal'));
@@ -108,7 +93,7 @@ describe("go.apps.dialogue.views", function() {
         it("should send the user to the conversation show page", function() {
           server.respondWith(response());
 
-          actions.$('[data-action=save]').click();
+          view.$('#save').click();
           server.respond();
 
           assert.equal(location, '/conversations/conversation-1/');
@@ -116,18 +101,17 @@ describe("go.apps.dialogue.views", function() {
       });
     });
 
-    describe("when the 'new state' button is clicked", function() {
+    describe("when '#new-state' is clicked", function() {
       var i;
 
       beforeEach(function() {
         i = 0;
-        diagram.render();
         sinon.stub(uuid, 'v4', function() { return i++ || 'new-state'; });
       });
 
       it("should add a new state to the diagram", function() {
         assert(noElExists('[data-uuid=new-state]'));
-        actions.$('[data-action=new-state]').click();
+        view.$('#new-state').click();
         assert(oneElExists('[data-uuid=new-state]'));
       });
     });
