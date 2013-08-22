@@ -150,6 +150,10 @@
     }]
   });
 
+  var DialogueMetadataModel = Model.extend({
+    defaults: {repeatable: false}
+  });
+
   var DialogueModel = Model.extend({
     methods: {
       read: {
@@ -171,6 +175,10 @@
     idAttribute: 'conversation_key',
 
     relations: [{
+      type: Backbone.HasOne,
+      key: 'poll_metadata',
+      relatedModel: DialogueMetadataModel
+    }, {
       type: Backbone.HasMany,
       key: 'states',
       relatedModel: DialogueStateModel,
@@ -189,7 +197,8 @@
 
     defaults: {
       states: [],
-      connections: []
+      connections: [],
+      poll_metadata: {}
     }
   });
 
