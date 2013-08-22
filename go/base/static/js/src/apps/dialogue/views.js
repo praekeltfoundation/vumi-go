@@ -1,5 +1,5 @@
-// go.apps.dialogue.actions
-// ========================
+// go.apps.dialogue.views
+// ======================
 
 (function(exports) {
   var actions = go.components.actions,
@@ -36,4 +36,4 @@
   _(exports).extend({
     DialogueActionsView: DialogueActionsView
   });
-})(go.apps.dialogue.actions = {});
+})(go.apps.dialogue.views = {});

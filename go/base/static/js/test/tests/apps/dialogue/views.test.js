@@ -1,4 +1,4 @@
-describe("go.apps.dialogue.actions", function() {
+describe("go.apps.dialogue.views", function() {
   var dialogue = go.apps.dialogue;
 
   var setUp = dialogue.testHelpers.setUp,
