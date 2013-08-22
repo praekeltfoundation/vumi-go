@@ -11,16 +11,26 @@
     popoverOptions: {trigger: 'manual'},
     target: function() { return this.action.$el; },
 
-    successMsg: function() { return this.action.name + ' successful!'; },
-    errorMsg: function() { return this.action.name + ' failed :/'; },
+    messages: {
+      success: function() { return this.action.name + ' successful!'; },
+      error: function() { return this.action.name + ' failed :/'; },
+    },
 
     initialize: function(options) {
       PopoverNotifier.__super__.initialize.call(this, options);
-
       this.action = options.action;
-      if (options.successMsg) { this.successMsg = options.successMsg; }
-      if (options.errorMsg) { this.errorMsg = options.errorMsg; }
+
+      if (options.messages) {
+        this.messages = _({}).defaults(
+          options.messages,
+          this.messages);
+      }
+
       go.utils.bindEvents(this.bindings, this);
+    },
+
+    messageFor: function(eventName) {
+      return go.utils.functor(this.messages[eventName]).call(this);
     },
 
     bindings: {
@@ -30,11 +40,11 @@
       },
 
       'success action': function() {
-        this.$el.text(_(this).result('successMsg'));
+        this.$el.text(this.messageFor('success'));
       },
 
       'error action': function() {
-        this.$el.text(_(this).result('errorMsg'));
+        this.$el.text(this.messageFor('error'));
       },
     }
   });
