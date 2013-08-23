@@ -9,10 +9,9 @@
   // and make api requests accordingly.
   var ConversationActionView = CallActionView.extend({
     name: function() { return this.$el.attr('data-action'); },
-    data: function() { return {csrfmiddlewaretoken: this.csrfToken}; },
+    data: function() { return {csrfmiddlewaretoken: $.cookie('csrftoken')}; },
 
     initialize: function(options) {
-      this.csrfToken = options.csrfToken;
       this.on('success', function() { location.reload(); });
     },
 
