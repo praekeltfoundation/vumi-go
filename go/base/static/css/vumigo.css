@@ -248,6 +248,12 @@ button {
   font-size: 11px;
   width: 90%;
 }
+.confirm .details {
+  margin-left: 24px;
+}
+.confirm .details table th:first-child {
+  width: 100px;
+}
 .dialogue .actions .sidebar {
   background: #d9d8d3;
 }
@@ -444,6 +450,10 @@ button {
 }
 .dialogue #diagram .choice.state .preview.mode .choices {
   text-align: left;
+}
+.conversation.groups .group-table th:first-child,
+.conversation.groups .group-table td:first-child {
+  width: 20px;
 }
 .channels.dashboard td:first-child {
   width: 30px;
@@ -673,6 +683,10 @@ button {
 }
 .table-form-view-buttons {
   margin: 0 1em 0 0;
+}
+table tbody.loading td {
+  padding: 48px;
+  text-align: center;
 }
 .error.main-container {
   text-align: center;
