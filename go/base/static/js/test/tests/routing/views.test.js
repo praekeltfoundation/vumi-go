@@ -268,17 +268,15 @@ describe("go.routing (views)", function() {
         sessionId: '123'
       });
 
+      actions.save.notifier.animate = false;
+      actions.reset.notifier.animate = false;
+
       diagram.render();
-      bootbox.animate(false);
     });
 
     afterEach(function() {
       actions.remove();
       server.restore();
-
-      $('.bootbox')
-        .modal('hide')
-        .remove();
     });
 
     describe("when the save button is clicked", function() {
@@ -302,19 +300,22 @@ describe("go.routing (views)", function() {
         server.respond();
       });
 
-      it("should notify the user if an error occured", function() {
-        server.respondWith(errorResponse('Aaah!'));
-
-        // modify the diagram
-        assert(noElExists('.modal'));
+      it("should notify the user if the save was successful", function() {
+        server.respondWith(response());
 
         actions.$('[data-action=save]').click();
         server.respond();
 
-        assert(oneElExists('.modal'));
-        assert.include(
-          $('.modal').text(),
-          "Something bad happened, changes couldn't be save");
+        assert.include(actions.save.notifier.$el.text(), "Save successful!");
+      });
+
+      it("should notify the user if an error occured", function() {
+        server.respondWith(errorResponse('Aaah!'));
+
+        actions.$('[data-action=save]').click();
+        server.respond();
+
+        assert.include(actions.save.notifier.$el.text(), "Save failed :/");
       });
     });
 
@@ -330,6 +331,13 @@ describe("go.routing (views)", function() {
         actions.reset.once('success', function() {
           assert.deepEqual(diagram.model.toJSON(), modelData);
           done();
+        });
+      });
+
+      it("should notify the user", function() {
+        actions.$('[data-action=reset]').click();
+        actions.reset.once('success', function() {
+          assert.include(actions.reset.notifier.$el.text(), "Reset successful!");
         });
       });
     });

@@ -186,18 +186,25 @@
   // View for resetting a model to its initial state
   var ResetActionView = ActionView.extend({
     name: 'Reset',
+    async: true,
 
-    initialize: function() {
+    initialize: function(options) {
       this.backup = this.model.toJSON();
+      if ('async' in options) { this.async = options.async; }
+    },
+
+    _deferredCall: function(fn) {
+      if (this.async) { _.defer(fn.bind(this)); }
+      else fn.call(this);
+      return this;
     },
 
     invoke: function() {
-      var self = this;
       this.trigger('invoke');
 
-      _.defer(function() {
-        self.model.set(self.backup);
-        self.trigger('success');
+      this._deferredCall(function() {
+        this.model.set(this.backup);
+        this.trigger('success');
       });
 
       return this;
