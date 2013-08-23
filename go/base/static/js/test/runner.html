@@ -49,7 +49,8 @@
         'apps/dialogue/states/freetext/preview.jst',
         'apps/dialogue/states/end/edit.jst',
         'apps/dialogue/states/end/preview.jst',
-        'apps/dialogue/states/components/nameExtras.jst'
+        'apps/dialogue/states/components/nameExtras.jst',
+        'conversation/groups/row.jst'
       ];
 
       window.templates.forEach(helpers.loadTemplate);
@@ -106,10 +107,14 @@
     <script src="../src/apps/dialogue/diagram.js"></script>
     <script src="../src/apps/dialogue/style.js"></script>
     <script src="../src/apps/dialogue/views.js"></script>
+    <script src="../src/contacts/contacts.js"></script>
+    <script src="../src/contacts/models.js"></script>
     <script src="../src/conversation/conversation.js"></script>
+    <script src="../src/conversation/models.js"></script>
     <script src="../src/conversation/views.js"></script>
     <script src="../src/conversation/dashboard.js"></script>
     <script src="../src/conversation/show.js"></script>
+    <script src="../src/conversation/groups.js"></script>
     <script src="../src/router/router.js"></script>
     <script src="../src/router/views.js"></script>
     <script src="../src/router/dashboard.js"></script>
@@ -146,9 +151,11 @@
     <script src="tests/apps/dialogue/states/end.test.js"></script>
     <script src="tests/apps/dialogue/diagram.test.js"></script>
     <script src="tests/apps/dialogue/views.test.js"></script>
+    <script src="tests/conversation/models.test.js"></script>
     <script src="tests/conversation/views.test.js"></script>
     <script src="tests/conversation/dashboard.test.js"></script>
     <script src="tests/conversation/show.test.js"></script>
+    <script src="tests/conversation/groups.test.js"></script>
     <script src="tests/router/views.test.js"></script>
     <script src="tests/router/dashboard.test.js"></script>
     <script src="tests/router/show.test.js"></script>
