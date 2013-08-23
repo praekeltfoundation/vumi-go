@@ -181,7 +181,7 @@ describe("go.components.views", function() {
     beforeEach(function() {
       popover = new ToyPopoverView({
         target: $('#dummy'),
-        popover: {animation: false}
+        bootstrap: {animation: false}
       });
     });
 
@@ -197,7 +197,7 @@ describe("go.components.views", function() {
       });
 
       it("render the view as the contents of the popover", function() {
-        assert(noElExists('.popover-content'));
+        assert.equal($('.popover-content').text(), '');
 
         popover.show();
 

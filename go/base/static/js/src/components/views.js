@@ -135,14 +135,17 @@
   var PopoverView = Backbone.View.extend({
     target: null,
 
-    popoverOptions: {},
+    bootstrapOptions: {},
 
-    initialize: function(options) {
+    constructor: function(options) {
+      PopoverView.__super__.constructor.call(this, options);
+
       if (options.target) { this.target = options.target; }
-      if (options.popover) { this.popoverOptions = options.popover; }
+      if (options.bootstrap) { this.bootstrapOptions = options.bootstrap; }
 
-      this.popover = null;
       this.hidden = true;
+      this.resetPopover();
+      this.on('show', function() { this.delegateEvents(); });
     },
 
     remove: function() {
@@ -150,17 +153,21 @@
       if (this.popover) { this.popover.destroy(); }
     },
 
+    resetPopover: function() {
+      this.popover = _(this)
+        .result('target')
+        .popover(
+          _({content: this.$el, html: true}).defaults(
+          _(this).result('bootstrapOptions')))
+        .data('popover');
+
+      return this;
+    },
+
     show: function() {
       if (this.hidden) {
         this.render();
-
-        this.popover = _(this)
-          .result('target')
-          .popover(
-            _({content: this.$el, html: true}).defaults(
-            _(this).result('popoverOptions')))
-          .data('popover');
-
+        this.resetPopover();
         this.popover.show();
         this.hidden = false;
         this.trigger('show');
@@ -171,7 +178,7 @@
 
     hide: function() {
       if (!this.hidden) {
-        if (this.popover) { this.popover.hide(); }
+        this.popover.hide();
         this.hidden = true;
         this.trigger('hide');
       }
