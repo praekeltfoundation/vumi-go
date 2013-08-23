@@ -1,6 +1,6 @@
 describe("go.components.views", function() {
   var testHelpers = go.testHelpers,
-      noElExists = testHelpers.noElExists;
+      noElExists = testHelpers.noElExists,
       oneElExists = testHelpers.oneElExists;
 
   var views = go.components.views;

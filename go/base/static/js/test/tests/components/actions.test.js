@@ -5,7 +5,134 @@ describe("go.components.actions", function() {
 
   var testHelpers = go.testHelpers,
       assertRequest = testHelpers.rpc.assertRequest,
-      response = testHelpers.rpc.response;
+      response = testHelpers.rpc.response,
+      noElExists = testHelpers.noElExists,
+      oneElExists = testHelpers.oneElExists;
+
+  describe("PopoverNotifierView", function() {
+    var ActionView = actions.ActionView,
+        PopoverNotifierView = actions.PopoverNotifierView;
+
+    var action,
+        notifier;
+
+    beforeEach(function() {
+      action = new ActionView({name: 'Crimp'});
+      notifier = new PopoverNotifierView({
+        delay: 0,
+        action: action,
+        bootstrap: {
+          container: 'body',
+          animation: false
+        }
+      });
+
+      sinon.stub(
+        JST,
+        'components_notifiers_popover_busy',
+        function() { return 'busy'; });
+    });
+
+    afterEach(function() {
+      JST.components_notifiers_popover_busy.restore();
+      action.remove();
+      notifier.remove();
+    });
+
+    describe("when the action is invoked", function() {
+      it("should show a notification", function() {
+        assert(noElExists('.popover'));
+        assert.equal(notifier.$el.text(), '');
+
+        action.trigger('invoke');
+
+        assert(oneElExists('.popover'));
+        assert.equal(notifier.$el.text(), 'busy');
+      });
+
+      it("set the appropriate class name on the popover element", function() {
+        var $popover = notifier.popover.tip();
+
+        assert(!$popover.hasClass('notifier'));
+        assert(!$popover.hasClass('success'));
+        assert(!$popover.hasClass('error'));
+        assert(!$popover.hasClass('info'));
+
+        action.trigger('invoke');
+
+        assert(!$popover.hasClass('success'));
+        assert(!$popover.hasClass('error'));
+        assert($popover.hasClass('notifier'));
+        assert($popover.hasClass('info'));
+      });
+    });
+
+    describe("when the action is successful", function() {
+      beforeEach(function() {
+        action.trigger('invoke');
+      });
+
+      it("should show a notification", function() {
+        action.trigger('success');
+        assert.include(notifier.$el.text(), 'Crimp successful!');
+      });
+
+      it("set the appropriate class name on the popover element", function() {
+        var $popover = notifier.popover.tip();
+
+        assert(!$popover.hasClass('success'));
+        assert(!$popover.hasClass('error'));
+        assert($popover.hasClass('notifier'));
+        assert($popover.hasClass('info'));
+
+        action.trigger('success');
+
+        assert(!$popover.hasClass('error'));
+        assert(!$popover.hasClass('info'));
+        assert($popover.hasClass('notifier'));
+        assert($popover.hasClass('success'));
+      });
+    });
+
+    describe("when the action is unsuccessful", function() {
+      beforeEach(function() {
+        action.trigger('invoke');
+      });
+
+      it("should show a notification", function() {
+        action.trigger('error');
+        assert.include(notifier.$el.text(), 'Crimp failed :/');
+      });
+
+      it("set the appropriate class name on the popover element", function() {
+        var $popover = notifier.popover.tip();
+
+        assert(!$popover.hasClass('success'));
+        assert(!$popover.hasClass('error'));
+        assert($popover.hasClass('notifier'));
+        assert($popover.hasClass('info'));
+
+        action.trigger('error');
+
+        assert(!$popover.hasClass('success'));
+        assert(!$popover.hasClass('info'));
+        assert($popover.hasClass('notifier'));
+        assert($popover.hasClass('error'));
+      });
+    });
+
+    describe("when '.close' is clicked", function() {
+      beforeEach(function() {
+        action.trigger('success');
+      });
+
+      it("should close the popover", function() {
+        assert(oneElExists('.popover'));
+        notifier.$('.close').click();
+        assert(noElExists('.popover'));
+      });
+    });
+  });
 
   describe("ActionView", function() {
     var ActionView = actions.ActionView;

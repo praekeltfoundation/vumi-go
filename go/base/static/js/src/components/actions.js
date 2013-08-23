@@ -7,9 +7,17 @@
 
   var PopoverView = go.components.views.PopoverView;
 
-  var PopoverNotifier = PopoverView.extend({
-    popoverOptions: {trigger: 'manual'},
+  var PopoverNotifierView = PopoverView.extend({
+    templates: {
+      busy: 'JST.components_notifiers_popover_busy',
+      message: 'JST.components_notifiers_popover_message'
+    },
+
+    bootstrapOptions: {trigger: 'manual'},
+
     target: function() { return this.action.$el; },
+
+    delay: 400,
 
     messages: {
       success: function() { return this.action.name + ' successful!'; },
@@ -17,8 +25,10 @@
     },
 
     initialize: function(options) {
-      PopoverNotifier.__super__.initialize.call(this, options);
+      PopoverNotifierView.__super__.initialize.call(this, options);
+
       this.action = options.action;
+      if ('delay' in options) { this.delay = options.delay; }
 
       if (options.messages) {
         this.messages = _({}).defaults(
@@ -33,19 +43,76 @@
       return go.utils.functor(this.messages[eventName]).call(this);
     },
 
+    _delayedCall: function(fn) {
+      if (this.delay > 0) { _.delay(fn.bind(this), this.delay); }
+      else { fn.call(this); }
+      return this;
+    },
+
+    blink: function(fn) {
+      if (this.hidden) {
+        fn.call(this);
+        this.show();
+      } else {
+        this.hide();
+        this._delayedCall(function() {
+          fn.call(this);
+          this.show();
+        });
+      }
+
+      return this;
+    },
+
+    resetClassName: function(className) {
+      this.popover
+        .tip()
+        .removeClass('error')
+        .removeClass('success')
+        .removeClass('info')
+        .addClass('notifier')
+        .addClass(className);
+
+      return this;
+    },
+
+    renderMessage: function(type) {
+      this.blink(function() {
+        var jst = go.utils.maybeByName(this.templates.message);
+        this.$el.html(jst({message: this.messageFor(type)}));
+        this.resetClassName(type);
+      });
+
+      return this;
+    },
+
+    renderBusy: function() {
+      this.blink(function() {
+        var jst = go.utils.maybeByName(this.templates.busy);
+        this.$el.html(jst());
+        this.resetClassName('info');
+      });
+    },
+
     bindings: {
       'invoke action': function() {
-        this.$el.text('loading...');
-        this.show();
+        this.renderBusy();
       },
 
       'success action': function() {
-        this.$el.text(this.messageFor('success'));
+        this.renderMessage('success');
       },
 
       'error action': function() {
-        this.$el.text(this.messageFor('error'));
+        this.renderMessage('error');
       },
+    },
+
+    events: {
+      'click .close': function(e) {
+        e.preventDefault();
+        this.hide();
+      }
     }
   });
 
@@ -53,7 +120,7 @@
     name: 'Unnamed',
 
     useNotifier: false,
-    notifierOptions: {type: PopoverNotifier},
+    notifierOptions: {type: PopoverNotifierView},
 
     constructor: function(options) {
       options = options || {};
@@ -175,6 +242,6 @@
     ResetActionView: ResetActionView,
     CallActionView: CallActionView,
 
-    PopoverNotifier: PopoverNotifier
+    PopoverNotifierView: PopoverNotifierView
   });
 })(go.components.actions = {});

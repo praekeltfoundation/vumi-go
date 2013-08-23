@@ -4,7 +4,12 @@
 
 (function(exports) {
   var urls = {
-    loading: '/static/img/loading.gif'
+    loaders: {
+      dots: '/static/img/loaders/dots.gif',
+      circles: {
+        info: '/static/img/loaders/circles/info.gif'
+      }
+    }
   };
 
   _(exports).extend({

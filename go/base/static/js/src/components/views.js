@@ -141,7 +141,12 @@
       PopoverView.__super__.constructor.call(this, options);
 
       if (options.target) { this.target = options.target; }
-      if (options.bootstrap) { this.bootstrapOptions = options.bootstrap; }
+
+      if (options.bootstrap) {
+        this.bootstrapOptions = _({}).defaults(
+          options.bootstrap,
+          this.bootstrapOptions);
+      }
 
       this.hidden = true;
       this.resetPopover();
