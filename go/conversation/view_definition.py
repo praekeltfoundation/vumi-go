@@ -90,12 +90,20 @@ class ConfirmConversationView(ConversationTemplateView):
         token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = request.GET.get('token')
         token_data = token_manager.verify_get(token)
+
         if not token_data:
             raise Http404
+
+        params = token_data['extra_params']
+        action_name = params.get('action_display_name')
+        action_details = params.get('action_data').get('display', {})
+
         return self.render_to_response({
-            'form': ConfirmConversationForm(initial={'token': token}),
-            'conversation': conversation,
             'success': False,
+            'conversation': conversation,
+            'action_name': action_name,
+            'action_details': action_details,
+            'form': ConfirmConversationForm(initial={'token': token}),
         })
 
     def post(self, request, conversation):
@@ -129,8 +137,8 @@ class ConfirmConversationView(ConversationTemplateView):
 
         return self.render_to_response({
             'form': confirmation_form,
-            'conversation': conversation,
             'success': success,
+            'conversation': conversation,
         })
 
 
@@ -480,13 +488,16 @@ class ConversationActionView(ConversationTemplateView):
 
     @check_action_is_enabled
     def post(self, request, conversation):
-        action_data = {}
+        action_data = {'display': {}}
         form_cls = self.view_def.get_action_form(self.action.action_name)
         if form_cls is not None:
             form = form_cls(request.POST)
             if not form.is_valid():
                 return self._render_form(request, conversation, form)
             action_data = form.cleaned_data
+            action_data['display'] = dict(
+                (form[k].label, v)
+                for k, v in action_data.iteritems())
 
         if self.action.needs_confirmation:
             user_account = request.user_api.get_user_account()
@@ -515,13 +526,15 @@ class ConversationActionView(ConversationTemplateView):
         redirect_to = self.get_view_url('confirm', conversation_key=conv.key)
         # The token to be sent.
         params = {
-            'action_name': self.action.action_name,
             'action_data': action_data,
+            'action_name': self.action.action_name,
+            'action_display_name': self.action.action_display_name,
         }
 
         token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = token_manager.generate(redirect_to, user_id=request.user.id,
                                        extra_params=params)
+
         conv.send_token_url(
             token_manager.url_for_token(token), user_account.msisdn)
         messages.info(request, 'Confirmation request sent.')
