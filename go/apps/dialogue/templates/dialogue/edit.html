@@ -4,7 +4,7 @@
 {% block content_extraclass %}campaigns dialogue{% endblock %}
 
 {% block content_actions_left %}
-    <button class="btn btn-primary" data-action='new-state'>
+    <button class="btn btn-primary" id='new-state'>
         Create new message
     </button>
 {% endblock %}
@@ -12,13 +12,13 @@
 {% block content_actions_right %}
   <div class="pull-left">
 
-    <input type="checkbox" name="multiple_surveys" id="multiple_surveys">
+    <input type="checkbox" id="repeatable">
     Enable users to submit multiple surveys
   </div>
 
   <div class="pull-right">
     <a href="{% url 'conversations:index' %}">Cancel</a>
-    <button class="btn btn-primary" data-action="save">Save</button>
+    <button id="save" class="btn btn-primary">Save</button>
   </div>
 {% endblock %}
 
@@ -28,19 +28,11 @@
 
 {% block ondomready %}
   {{ block.super }}
-  var dialogue = go.apps.dialogue;
-
-  var diagram = new dialogue.diagram.DialogueDiagramView({
-    el: '.dialogue #diagram',
-    model: new dialogue.models.DialogueModel({{ model_data|safe }})
-  });
-
-  var actions = new dialogue.actions.DialogueActionsView({
-    el: '.actions',
-    diagram: diagram,
+  var view = new go.apps.dialogue.views.DialogueView({
+    el: 'body',
+    model: new go.apps.dialogue.models.DialogueModel({{ model_data|safe }}),
     sessionId: "{{ session_id|safe }}"
   });
 
-  dialogue.style.initialize();
-  diagram.render();
+  view.render();
 {% endblock %}

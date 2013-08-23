@@ -8,13 +8,6 @@
 
 {% block content_title %}All routers{% endblock %}
 
-
-{% block content_actions_right %}
-    <div class="table-form-view-buttons pull-left">
-        <button class="btn" data-action="archive" disabled="disabled">Archive</button>
-    </div>
-{% endblock %}
-
 {% block content_dashboard %}
 <form class="table-form-view" method="post" action="">
     {% csrf_token %}
@@ -23,6 +16,9 @@
             <tr>
                 <th><input type="checkbox"></th>
                 <th>Routers</th>
+                <th>Status</th>
+                <th>Created At</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -34,6 +30,11 @@
                         <a href="{% router_screen router %}">
                             {{ router.name }}
                         </a>
+                    </td>
+                    <td class="status {{ router.status }}">{{ router.status }}</td>
+                    <td>{{ router.created_at|naturaltime }}</td>
+                    <td>
+                      {% include "router/includes/actions.html" with router=router %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -48,4 +49,11 @@
     </table>
     {% include "base/includes/pagination.html" %}
 </form>
+{% endblock %}
+
+{% block ondomready %}
+    var dashboard = new go.router.dashboard.RouterDashboardView({
+        el: '.table-form-view',
+        csrfToken: '{{ csrf_token|safe }}'
+    });
 {% endblock %}

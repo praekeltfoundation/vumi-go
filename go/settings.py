@@ -210,7 +210,7 @@ LOGGING = {
             'handlers': ['mail_admins'],
             'level': 'ERROR',
             'propagate': True,
-        },
+        }
     }
 }
 
@@ -375,6 +375,7 @@ PIPELINE_JS = {
             'js/vendor/base64-2.12.js',
             'js/vendor/uuid-1.4.0.js',
             'js/vendor/jquery-1.9.1.js',
+            'js/vendor/jquery.cookie-1.3.1.js',
             'js/vendor/jquery.ui-1.10.3.js',
             'js/vendor/lodash.underscore-1.2.1.js',
             'js/vendor/backbone-1.0.0.js',
@@ -398,6 +399,7 @@ PIPELINE_JS = {
             'templates/apps/dialogue/states/end/edit.jst',
             'templates/apps/dialogue/states/end/preview.jst',
             'templates/apps/dialogue/states/components/nameExtras.jst',
+            'templates/conversation/groups/row.jst',
             'templates/components/confirm.jst',
             'templates/dummy/dummy.jst',
 
@@ -432,12 +434,20 @@ PIPELINE_JS = {
             'js/src/apps/dialogue/states/freetext.js',
             'js/src/apps/dialogue/states/end.js',
             'js/src/apps/dialogue/diagram.js',
-            'js/src/apps/dialogue/actions.js',
+            'js/src/apps/dialogue/views.js',
             'js/src/apps/dialogue/style.js',
+            'js/src/contacts/contacts.js',
+            'js/src/contacts/models.js',
             'js/src/conversation/conversation.js',
+            'js/src/conversation/models.js',
             'js/src/conversation/views.js',
             'js/src/conversation/dashboard.js',
             'js/src/conversation/show.js',
+            'js/src/conversation/groups.js',
+            'js/src/router/router.js',
+            'js/src/router/views.js',
+            'js/src/router/dashboard.js',
+            'js/src/router/show.js',
 
             # TODO This is here so we can access the test model data. This
             # gives us the data we need for a 'demo' of the routing screen.

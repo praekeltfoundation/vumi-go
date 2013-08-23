@@ -8,7 +8,6 @@ from vumi.application.tests.test_base import DummyApplicationWorker
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.vumitools.api import VumiApi
 from go.vumitools.opt_out import OptOutStore
-from go.vumitools.exceptions import ConversationSendError
 
 
 class ConversationWrapperTestCase(AppWorkerTestCase):
@@ -113,21 +112,20 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         self.assertEqual(batch_key, init_batch)
         self.assertEqual(self.conv.batches.keys(), [init_batch])
 
-        self.conv.c.delivery_tag_pool = u"longcode"
+        second_batch = yield self.user_api.api.mdb.batch_start(
+            tags=[], user_account=self.user_api.user_account_key)
+        self.conv.batches.add_key(second_batch)
         yield self.conv.save()
-        tag = yield self.conv.acquire_tag()
-        batch1 = yield self.get_batch_id(self.conv, tag)
-        batch2 = yield self.get_batch_id(self.conv, tag)
 
         now = datetime.now()
-        yield self.store_outbound(batch1,
-                                  start_timestamp=now - timedelta(days=1))
-        yield self.store_outbound(batch2, start_timestamp=now)
+        yield self.store_outbound(
+            init_batch, start_timestamp=now - timedelta(days=1))
+        yield self.store_outbound(second_batch, start_timestamp=now)
 
         conv = yield self.user_api.get_wrapped_conversation(self.conv.key)
         batch_key = yield conv.get_latest_batch_key()
-        self.assertEqual(batch_key, batch2)
-        self.assertEqual(len(conv.batches.keys()), 3)
+        self.assertEqual(batch_key, second_batch)
+        self.assertEqual(len(conv.batches.keys()), 2)
 
     @inlineCallbacks
     def test_count_replies(self):
@@ -310,14 +308,6 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
             (yield self.conv.has_channel_supporting(zoo=False)))
 
     @inlineCallbacks
-    def test_get_tags_old_style(self):
-        self.conv.c.delivery_tag_pool = u'longcode'
-        yield self.conv.save()
-        yield self.conv.old_start()
-        [tag] = yield self.conv.get_tags()
-        self.assertEqual(tag, ('longcode', 'longcode10001'))
-
-    @inlineCallbacks
     def test_get_progress_status(self):
         yield self.conv.start()
         batch_key = yield self.conv.get_latest_batch_key()
@@ -357,29 +347,6 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         outbound = yield self.store_outbound(batch_key, count=10)
         yield self.store_event(outbound, 'nack', count=8)
         self.assertEqual((yield self.conv.get_progress_percentage()), 80)
-
-    @inlineCallbacks
-    def test_acquire_tag(self):
-        self.conv.c.delivery_tag_pool = u"longcode"
-        yield self.conv.save()
-        tag = yield self.conv.acquire_tag()
-        self.assertEqual(tag, ('longcode', 'longcode10001'))
-
-    @inlineCallbacks
-    def test_acquire_tag_if_none_available(self):
-        yield self.setup_tags(u"shortcode", count=0)
-        self.conv.c.delivery_tag_pool = u"shortcode"
-        yield self.conv.save()
-        yield self.assertFailure(self.conv.acquire_tag(),
-                                 ConversationSendError)
-
-    @inlineCallbacks
-    def test_acquire_tag_if_tag_unavailable(self):
-        self.conv.c.delivery_tag_pool = u"longcode"
-        self.conv.c.delivery_tag = u'this-does-not-exist'
-        yield self.conv.save()
-        yield self.assertFailure(self.conv.acquire_tag(),
-                                 ConversationSendError)
 
     @inlineCallbacks
     def test_get_opted_in_contact_bunches(self):

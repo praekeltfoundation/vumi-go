@@ -11,8 +11,6 @@ from vumi.connectors import IgnoreMessage
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.utils import MessageMetadataHelper
-from go.vumitools.conversation.models import (
-    CONVERSATION_STARTING, CONVERSATION_STOPPING)
 
 
 class OneShotMetricManager(MetricManager):
@@ -144,49 +142,6 @@ class GoWorkerMixin(object):
             return self.process_unknown_cmd(cmd_method_name, *args, **kwargs)
 
     @inlineCallbacks
-    def process_command_start(self, user_account_key, conversation_key):
-        log.info("Starting conversation '%s' for user '%s'." % (
-            conversation_key, user_account_key))
-        conv = yield self.get_conversation(user_account_key, conversation_key)
-        if conv is None:
-            log.warning(
-                "Trying to start missing conversation '%s' for user '%s'." % (
-                    conversation_key, user_account_key))
-            return
-        status = conv.get_status()
-        if status != CONVERSATION_STARTING:
-            log.warning(
-                "Trying to start conversation '%s' for user '%s' with invalid "
-                "status: %s" % (conversation_key, user_account_key, status))
-            return
-        conv.set_status_started()
-        yield conv.save()
-
-    @inlineCallbacks
-    def process_command_stop(self, user_account_key, conversation_key):
-        conv = yield self.get_conversation(user_account_key, conversation_key)
-        if conv is None:
-            log.warning(
-                "Trying to stop missing conversation '%s' for user '%s'." % (
-                    conversation_key, user_account_key))
-            return
-        status = conv.get_status()
-        if status != CONVERSATION_STOPPING:
-            log.warning(
-                "Trying to stop conversation '%s' for user '%s' with invalid "
-                "status: %s" % (conversation_key, user_account_key, status))
-            return
-        conv.set_status_stopped()
-        yield conv.save()
-
-    def process_command_initial_action_hack(self, *args, **kwargs):
-        # HACK: This lets us do whatever we used to do when we got a `start'
-        # message without having horrible app-specific view logic.
-        # TODO: Remove this when we've decoupled the various conversation
-        # actions from the lifecycle.
-        pass
-
-    @inlineCallbacks
     def process_command_collect_metrics(self, conversation_key,
                                         user_account_key):
         key_tuple = (conversation_key, user_account_key)
@@ -266,6 +221,10 @@ class GoWorkerMixin(object):
     def get_conversation(self, user_account_key, conversation_key):
         user_api = self.get_user_api(user_account_key)
         return user_api.get_wrapped_conversation(conversation_key)
+
+    def get_router(self, user_account_key, router_key):
+        user_api = self.get_user_api(user_account_key)
+        return user_api.get_router(router_key)
 
     def get_metadata_helper(self, msg):
         return MessageMetadataHelper(self.vumi_api, msg)
@@ -385,6 +344,49 @@ class GoApplicationMixin(GoWorkerMixin):
 
         returnValue(self.get_config_for_conversation(conversation))
 
+    @inlineCallbacks
+    def process_command_start(self, user_account_key, conversation_key):
+        log.info("Starting conversation '%s' for user '%s'." % (
+            conversation_key, user_account_key))
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        if conv is None:
+            log.warning(
+                "Trying to start missing conversation '%s' for user '%s'." % (
+                    conversation_key, user_account_key))
+            return
+        if not conv.starting():
+            status = conv.get_status()
+            log.warning(
+                "Trying to start conversation '%s' for user '%s' with invalid "
+                "status: %s" % (conversation_key, user_account_key, status))
+            return
+        conv.set_status_started()
+        yield conv.save()
+
+    @inlineCallbacks
+    def process_command_stop(self, user_account_key, conversation_key):
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        if conv is None:
+            log.warning(
+                "Trying to stop missing conversation '%s' for user '%s'." % (
+                    conversation_key, user_account_key))
+            return
+        if not conv.stopping():
+            status = conv.get_status()
+            log.warning(
+                "Trying to stop conversation '%s' for user '%s' with invalid "
+                "status: %s" % (conversation_key, user_account_key, status))
+            return
+        conv.set_status_stopped()
+        yield conv.save()
+
+    def process_command_initial_action_hack(self, *args, **kwargs):
+        # HACK: This lets us do whatever we used to do when we got a `start'
+        # message without having horrible app-specific view logic.
+        # TODO: Remove this when we've decoupled the various conversation
+        # actions from the lifecycle.
+        pass
+
 
 class GoRouterMixin(GoWorkerMixin):
     def get_config_for_router(self, router):
@@ -404,6 +406,40 @@ class GoRouterMixin(GoWorkerMixin):
         router = yield msg_mdh.get_router()
 
         returnValue(self.get_config_for_router(router))
+
+    @inlineCallbacks
+    def process_command_start(self, user_account_key, router_key):
+        log.info("Starting router '%s' for user '%s'." % (
+            router_key, user_account_key))
+        router = yield self.get_router(user_account_key, router_key)
+        if router is None:
+            log.warning(
+                "Trying to start missing router '%s' for user '%s'." % (
+                    router_key, user_account_key))
+            return
+        if not router.starting():
+            log.warning(
+                "Trying to start router '%s' for user '%s' with invalid "
+                "status: %s" % (router_key, user_account_key, router.status))
+            return
+        router.set_status_started()
+        yield router.save()
+
+    @inlineCallbacks
+    def process_command_stop(self, user_account_key, router_key):
+        router = yield self.get_router(user_account_key, router_key)
+        if router is None:
+            log.warning(
+                "Trying to stop missing router '%s' for user '%s'." % (
+                    router_key, user_account_key))
+            return
+        if not router.stopping():
+            log.warning(
+                "Trying to stop router '%s' for user '%s' with invalid "
+                "status: %s" % (router_key, user_account_key, router.status))
+            return
+        router.set_status_stopped()
+        yield router.save()
 
 
 class GoApplicationConfig(ApplicationWorker.CONFIG_CLASS, GoWorkerConfigMixin):

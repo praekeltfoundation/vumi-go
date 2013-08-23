@@ -2,12 +2,14 @@
 {
     margin-top: 1em;
     overflow: hidden;
+
     td, tr {
         color: #2f3436;
         vertical-align: middle;
     }
 
     td:first-child, th:first-child {
+        width: 20px;
         text-align: center;
         cursor: pointer;
     }
@@ -30,4 +32,13 @@
 
 .table-form-view-buttons {
     margin: 0 1em 0 0;
+}
+
+table {
+    tbody.loading {
+        td {
+            padding: 48px;
+            text-align: center;
+        }
+    }
 }

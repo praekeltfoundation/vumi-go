@@ -50,17 +50,7 @@ class ConversationApiTestCase(AppWorkerTestCase):
 
         yield self.setup_tagpools()
 
-        self.conversation = yield self.create_conversation()
-        self.conversation.c.conversation_type = u'jsbox'
-        yield self.conversation.save()
-
-        self.conversation.c.delivery_tag_pool = u'pool'
-        self.tag = yield self.conversation.acquire_tag()
-
-        self.batch_id = yield self.vumi_api.mdb.batch_start(
-            [self.tag], user_account=unicode(self.account.key))
-        self.conversation.batches.add_key(self.batch_id)
-        self.conversation.set_config({
+        config = {
             'jsbox_app_config': {
                 'config': {
                     'source_url': 'http://configsourcecode/',
@@ -77,8 +67,10 @@ class ConversationApiTestCase(AppWorkerTestCase):
                 ],
                 'metrics_store': 'metrics_store'
             }
-        })
-        yield self.conversation.save()
+        }
+
+        self.conversation = yield self.create_conversation(
+            conversation_type=u'jsbox', config=config)
 
         self.auth_headers = {
             'Authorization': [

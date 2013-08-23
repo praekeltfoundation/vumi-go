@@ -37,3 +37,13 @@
 </div>
 {% endblock %}
 
+{% block ondomready %}
+    var actions = new go.router.show.RouterActionsView({
+        el: '.content .actions .right',
+        csrfToken: '{{ csrf_token|safe }}'
+    });
+
+    $('.content .sub-actions .disabled').popover({placement: 'left'});
+    $('.content .sub-actions .disabled').on('click', function() { return false; });
+
+{% endblock %}

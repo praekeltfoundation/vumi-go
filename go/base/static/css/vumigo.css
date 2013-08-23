@@ -451,6 +451,10 @@ button {
 .dialogue #diagram .choice.state .preview.mode .choices {
   text-align: left;
 }
+.conversation.groups .group-table th:first-child,
+.conversation.groups .group-table td:first-child {
+  width: 20px;
+}
 .channels.dashboard td:first-child {
   width: 30px;
 }
@@ -665,6 +669,7 @@ button {
 }
 .table-form-view td:first-child,
 .table-form-view th:first-child {
+  width: 20px;
   text-align: center;
   cursor: pointer;
 }
@@ -678,6 +683,10 @@ button {
 }
 .table-form-view-buttons {
   margin: 0 1em 0 0;
+}
+table tbody.loading td {
+  padding: 48px;
+  text-align: center;
 }
 .error.main-container {
   text-align: center;
