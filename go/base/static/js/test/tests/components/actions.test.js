@@ -239,12 +239,16 @@ describe("go.components.actions", function() {
         action.invoke();
       });
 
-      it("should reset its model to its initial state", function() {
+      it("should reset its model to its initial state", function(done) {
         action.model.set('a', 'larp');
         assert.deepEqual(action.model.toJSON(), {a: 'larp', b: 'bar'});
 
         action.invoke();
-        assert.deepEqual(action.model.toJSON(), {a: 'foo', b: 'bar'});
+
+        action.once('success', function() {
+          assert.deepEqual(action.model.toJSON(), {a: 'foo', b: 'bar'});
+          done();
+        });
       });
     });
   });

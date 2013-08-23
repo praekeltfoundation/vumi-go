@@ -277,8 +277,8 @@ describe("go.routing (views)", function() {
       server.restore();
 
       $('.bootbox')
-      .modal('hide')
-      .remove();
+        .modal('hide')
+        .remove();
     });
 
     describe("when the save button is clicked", function() {
@@ -319,7 +319,7 @@ describe("go.routing (views)", function() {
     });
 
     describe("when the reset button is clicked", function() {
-      it("should reset the routing table changes", function() {
+      it("should reset the routing table changes", function(done) {
         assert.deepEqual(diagram.model.toJSON(), modelData);
 
         // modify the diagram
@@ -327,7 +327,10 @@ describe("go.routing (views)", function() {
         assert.notDeepEqual(diagram.model.toJSON(), modelData);
 
         actions.$('[data-action=reset]').click();
-        assert.deepEqual(diagram.model.toJSON(), modelData);
+        actions.reset.once('success', function() {
+          assert.deepEqual(diagram.model.toJSON(), modelData);
+          done();
+        });
       });
     });
   });

@@ -154,6 +154,8 @@
 
   // View for saving a model to the server side
   var SaveActionView = ActionView.extend({
+    name: 'Save',
+
     initialize: function(options) {
       if (options.sessionId) { this.sessionId = options.sessionId; }
     },
@@ -174,13 +176,21 @@
 
   // View for resetting a model to its initial state
   var ResetActionView = ActionView.extend({
+    name: 'Reset',
+
     initialize: function() {
       this.backup = this.model.toJSON();
     },
 
     invoke: function() {
-      this.model.set(this.backup);
+      var self = this;
       this.trigger('invoke');
+
+      _.defer(function() {
+        self.model.set(self.backup);
+        self.trigger('success');
+      });
+
       return this;
     }
   });
