@@ -5,10 +5,9 @@
 import uuid
 import json
 
-from twisted.internet.defer import inlineCallbacks, returnValue, Deferred
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import TransportUserMessage
-from vumi.tests.utils import LogCatcher
 
 from go.apps.surveys.vumi_app import SurveyApplication
 from go.vumitools.tests.utils import AppWorkerTestCase
@@ -131,30 +130,6 @@ class TestSurveyApplication(AppWorkerTestCase):
     def wait_for_messages(self, nr_of_messages, total_length):
         msgs = yield self.wait_for_dispatched_messages(total_length)
         returnValue(msgs[-1 * nr_of_messages:])
-
-    @inlineCallbacks
-    def test_start_old_style(self):
-        # We need to wait for process_command_send_survey() to finish
-        # completely. Since it runs in response to an async command, we need to
-        # wrap it in something that fires a deferred at the appropriate time.
-        pcss_d = Deferred()
-        pcss = self.app.process_command_send_survey
-        pcss_wrapper = lambda *a, **kw: pcss(*a, **kw).chainDeferred(pcss_d)
-        self.app.process_command_send_survey = pcss_wrapper
-
-        self.contact1 = yield self.create_contact(name=u'First',
-            surname=u'Contact', msisdn=u'+27831234567', groups=[self.group])
-        self.contact2 = yield self.create_contact(name=u'Second',
-            surname=u'Contact', msisdn=u'+27831234568', groups=[self.group])
-        yield self.create_survey(self.conversation)
-        with LogCatcher() as log:
-            yield self.start_conversation_old_style(self.conversation)
-            self.assertEqual(log.errors, [])
-
-        yield pcss_d
-        [msg1, msg2] = self.get_dispatched_messages()
-        self.assertEqual(msg1['content'], self.default_questions[0]['copy'])
-        self.assertEqual(msg2['content'], self.default_questions[0]['copy'])
 
     @inlineCallbacks
     def send_send_survey_command(self, conversation):
@@ -349,34 +324,6 @@ class TestSurveyApplication(AppWorkerTestCase):
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
-
-    @inlineCallbacks
-    def test_process_command_send_message_in_reply_to_bad_transport_name(self):
-        yield self.start_conversation(self.conversation)
-        batch_id = yield self.conversation.get_latest_batch_key()
-        msg = self.mkmsg_in(message_id=uuid.uuid4().hex, transport_name="bad")
-        yield self.store_inbound_msg(msg)
-        command = VumiApiCommand.command(
-            'worker', 'send_message',
-            user_account_key=self.user_account.key,
-            conversation_key=self.conversation.key,
-            command_data={
-                u'batch_id': batch_id,
-                u'content': u'foo',
-                u'to_addr': u'to_addr',
-                u'msg_options': {
-                    u'transport_name': u'smpp_transport',
-                    u'in_reply_to': msg['message_id'],
-                    u'transport_type': u'sms',
-                    u'from_addr': u'default10080',
-                }
-            })
-        yield self.app.consume_control_command(command)
-        [sent_msg] = self.get_dispatched_messages()
-        self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
-        self.assertEqual(sent_msg['content'], 'foo')
-        self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
-        self.assertEqual(sent_msg['transport_name'], 'smpp_transport')
 
     @inlineCallbacks
     def test_closing_menu_if_unavailable(self):

@@ -166,9 +166,7 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
 
         conversation = yield self.create_conversation(
             conversation_type=u'bulk_message', description=u'message',
-            config={}, delivery_tag_pool=u'pool', delivery_class=u'sms')
-
-        yield conversation.old_start()
+            config={}, delivery_class=u'sms', started=True)
 
         user_account.event_handler_config = [
             [[conversation.key, 'my_event'], [('handler1', {
@@ -184,21 +182,15 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
                 conv_key=conversation.key)
         yield self.publish_event(event)
 
-        [start_cmd, hack_cmd, api_cmd] = self._amqp.get_messages('vumi',
-                                                                 'vumi.api')
-        self.assertEqual(start_cmd['command'], 'start')
-        self.assertEqual(hack_cmd['command'], 'initial_action_hack')
+        [api_cmd] = self._amqp.get_messages('vumi', 'vumi.api')
+        # self.assertEqual(start_cmd['command'], 'start')
         self.assertEqual(api_cmd['worker_name'], 'other_worker')
         self.assertEqual(api_cmd['kwargs']['command_data'], {
-                'content': 'hello',
-                'batch_id': conversation.batches.keys()[0],
-                'to_addr': '12345',
-                'msg_options': {
-                    'transport_name': 'other_transport',
-                    'helper_metadata': {
-                        'go': {'user_account': user_account.key},
-                        'tag': {'tag': ['pool', 'tag1']},
-                        },
-                    'transport_type': 'other',
-                    'from_addr': 'tag1',
-                    }})
+            'content': 'hello',
+            'batch_id': conversation.batches.keys()[0],
+            'to_addr': '12345',
+            'msg_options': {
+                'helper_metadata': {
+                    'go': {'user_account': user_account.key},
+                },
+            }})

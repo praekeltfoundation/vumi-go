@@ -3,6 +3,22 @@
 // Tables that are used to manage swaths of data.
 
 (function(exports) {
+  var ViewCollection = go.components.structures.ViewCollection;
+
+  var parseQuery = function(query) {
+    var parsed = {};
+
+    _(query || {}).each(function(pattern, attrName) {
+      if (_.isArray(pattern)) { parsed[attrName] = pattern; }
+      else if (_.isRegExp(pattern)) { parsed[attrName] = [pattern]; }
+      else { parsed[attrName] = pattern.split(' '); }
+    });
+
+    return parsed;
+  };
+
+  // TODO Replace with TableView once our communication with the server is more
+  // api-like
   var TableFormView = Backbone.View.extend({
     defaults: {
       rowLinkAttribute: 'data-url',
@@ -147,7 +163,168 @@
     }
   });
 
+  var RowView = Backbone.View.extend({
+    tagName: 'tr',
+
+    matches: function(query) {
+      return _(parseQuery(query)).every(function(patterns, attrName) {
+        var attr = this.model.get(attrName),
+            i = patterns.length;
+
+        while (i--) {
+          if (attr.match(patterns[i])) { return true; }
+        }
+
+        return false;
+      }, this);
+    }
+  });
+
+  var RowCollection = ViewCollection.extend({
+    type: RowView,
+
+    matching: function(query) {
+      query = parseQuery(query);
+
+      return _.isEmpty(query)
+        ? this.values()
+        : this.where(function(r) { return r.matches(query); });
+    }
+  });
+
+  var TableView = Backbone.View.extend({
+    tagName: 'table',
+    rowType: RowView,
+    rowCollectionType: RowCollection,
+    columnTitles: [],
+    async: true,
+    fadeDuration: 200,
+
+    initialize: function(options) {
+      if (options.async) { this.async = options.async; }
+      if (options.rowType) { this.rowType = options.rowType; }
+      if (options.columnTitles) { this.columnTitles = options.columnTitles; }
+
+      if (options.rowCollectionType) {
+        this.rowCollectionType = options.rowCollectionType;
+      }
+
+      this.models = options.models;
+      this.rows = new this.rowCollectionType({
+        models: this.models,
+        type: this.rowType
+      });
+
+      this.initHead();
+      this.initLoading();
+      this.$body = $('<tbody>').appendTo(this.$el);
+    },
+
+    initHead: function() {
+      if (!this.columnTitles.length) { return; }
+      this.$head = $('<thead>').appendTo(this.$el);
+
+      var $tr = $('<tr>').appendTo(this.$head);
+      this.columnTitles.forEach(function(title) {
+        $tr.append($('<th>').text(title));
+      });
+    },
+
+    initLoading: function() {
+      if (!this.async) { return; }
+
+      this.$loading = $('<tbody>')
+        .attr('class', 'loading')
+        .append($('<tr>')
+          .append($('<td>')
+            .attr('colspan', this.columnTitles.length)
+            .append($('<img>')
+              .attr('src', go.urls.loading))));
+    },
+
+    fadeOut: function() {
+      var d = $.Deferred();
+      this.$('tbody')
+        .stop(true)
+        .fadeTo(this.fadeDuration, 0, function() { d.resolve(); });
+      return d.promise();
+    },
+
+    fadeIn: function() {
+      var d = $.Deferred();
+      this.$('tbody')
+        .stop(true)
+        .fadeTo(this.fadeDuration, 1, function() { d.resolve(); });
+      return d.promise();
+    },
+
+    detachBody: function() {
+      var $body = this.$('tbody');
+      $body.children().detach();
+      $body.detach();
+      return this;
+    },
+
+    renderBody: function(query) {
+      var self = this;
+
+      return this.fadeOut().then(function() {
+        self.detachBody();
+
+        self.rows
+          .matching(query)
+          .forEach(function(row) {
+            row.render();
+            self.$body.append(row.$el);
+          });
+
+        self.$el.append(self.$body);
+        return self.fadeIn();
+      });
+    },
+
+    renderLoading: function(query) {
+      var self = this;
+
+      return this.fadeOut().then(function() {
+        self.detachBody();
+        self.$el.append(self.$loading);
+        return self.fadeIn();
+      });
+    },
+
+    renderSync: function(query) {
+      return this.renderBody(query);
+    },
+
+    renderAsync: function(query) {
+      var self = this,
+          d = $.Deferred();
+
+      // show a loading indicator
+      this.renderLoading();
+
+      // defer the row rendering until the call stack has cleared
+      _.defer(function() {
+        self.renderBody(query);
+        d.resolve();
+      });
+
+      return d.promise();
+    },
+
+    render: function(query) {
+      return this.async
+        ? this.renderAsync(query)
+        : this.renderSync(query);
+    }
+  });
+
   _.extend(exports, {
-    TableFormView: TableFormView
+    TableFormView: TableFormView,
+    RowView: RowView,
+    RowCollection: RowCollection,
+    TableView: TableView,
+    parseQuery: parseQuery
   });
 })(go.components.tables = {});
