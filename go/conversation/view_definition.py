@@ -1,4 +1,5 @@
 import csv
+import json
 import logging
 import functools
 import re
@@ -89,12 +90,20 @@ class ConfirmConversationView(ConversationTemplateView):
         token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = request.GET.get('token')
         token_data = token_manager.verify_get(token)
+
         if not token_data:
             raise Http404
+
+        params = token_data['extra_params']
+        action_name = params.get('action_display_name')
+        action_details = params.get('action_data').get('display', {})
+
         return self.render_to_response({
-            'form': ConfirmConversationForm(initial={'token': token}),
-            'conversation': conversation,
             'success': False,
+            'conversation': conversation,
+            'action_name': action_name,
+            'action_details': action_details,
+            'form': ConfirmConversationForm(initial={'token': token}),
         })
 
     def post(self, request, conversation):
@@ -128,8 +137,8 @@ class ConfirmConversationView(ConversationTemplateView):
 
         return self.render_to_response({
             'form': confirmation_form,
-            'conversation': conversation,
             'success': success,
+            'conversation': conversation,
         })
 
 
@@ -479,13 +488,16 @@ class ConversationActionView(ConversationTemplateView):
 
     @check_action_is_enabled
     def post(self, request, conversation):
-        action_data = {}
+        action_data = {'display': {}}
         form_cls = self.view_def.get_action_form(self.action.action_name)
         if form_cls is not None:
             form = form_cls(request.POST)
             if not form.is_valid():
                 return self._render_form(request, conversation, form)
             action_data = form.cleaned_data
+            action_data['display'] = dict(
+                (form[k].label, v)
+                for k, v in action_data.iteritems())
 
         if self.action.needs_confirmation:
             user_account = request.user_api.get_user_account()
@@ -514,13 +526,15 @@ class ConversationActionView(ConversationTemplateView):
         redirect_to = self.get_view_url('confirm', conversation_key=conv.key)
         # The token to be sent.
         params = {
-            'action_name': self.action.action_name,
             'action_data': action_data,
+            'action_name': self.action.action_name,
+            'action_display_name': self.action.action_display_name,
         }
 
         token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = token_manager.generate(redirect_to, user_id=request.user.id,
                                        extra_params=params)
+
         conv.send_token_url(
             token_manager.url_for_token(token), user_account.msisdn)
         messages.info(request, 'Confirmation request sent.')
@@ -549,48 +563,43 @@ class EditConversationGroupsView(ConversationTemplateView):
                         key=lambda group: group.created_at,
                         reverse=True)
 
-        selected_groups = list(group.key for group
-                               in conversation.get_groups())
+        selected_groups = set(group.key for group in conversation.get_groups())
 
-        for group in groups:
-            if group.key in selected_groups:
-                group.selected = True
-
-        query = request.GET.get('query', '')
-        p = request.GET.get('p', 1)
-
-        paginator = Paginator(groups, 15)
-        try:
-            page = paginator.page(p)
-        except PageNotAnInteger:
-            page = paginator.page(1)
-        except EmptyPage:
-            page = paginator.page(paginator.num_pages)
-
-        pagination_params = urlencode({
-            'query': query,
-        })
+        model_data = {
+            'key': conversation.key,
+            'groups': [{
+                'key': group.key,
+                'name': group.name,
+                'urls': {
+                    'show': reverse(
+                        'contacts:group',
+                        kwargs={'group_key': group.key})
+                },
+                'inConversation': group.key in selected_groups,
+            } for group in groups]
+        }
 
         return self.render_to_response({
-            'paginator': paginator,
-            'page': page,
-            'pagination_params': pagination_params,
             'conversation': conversation,
+            'model_data': json.dumps(model_data),
             'contact_store': request.user_api.contact_store,
         })
 
     def get(self, request, conversation):
         return self._render_groups(request, conversation)
 
-    def post(self, request, conversation):
-        group_keys = request.POST.getlist('group')
+    def put(self, request, conversation):
+        data = json.loads(request.body)
+        group_keys = [d['key'] for d in data['groups']]
+
         conversation.groups.clear()
         for group_key in group_keys:
             conversation.add_group(group_key)
         conversation.save()
 
-        return self.redirect_to(self.get_next_view(conversation),
-                                conversation_key=conversation.key)
+        return HttpResponse(
+            json.dumps({'success': True}),
+            content_type="application/json")
 
 
 class ConversationViewDefinitionBase(object):
