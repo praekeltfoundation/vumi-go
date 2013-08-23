@@ -7,10 +7,7 @@
   var RouterActionsView = Backbone.View.extend({
     initialize: function(options) {
       this.actions = this.$('.action').map(function() {
-        return new RouterActionView({
-          el: $(this),
-          csrfToken: options.csrfToken
-        });
+        return new RouterActionView({el: $(this)});
       }).get();
     }
   });
