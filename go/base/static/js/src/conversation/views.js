@@ -10,6 +10,7 @@
   var ConversationActionView = CallActionView.extend({
     name: function() { return this.$el.attr('data-action'); },
     data: function() { return {csrfmiddlewaretoken: this.csrfToken}; },
+    useNotifier: true,
 
     initialize: function(options) {
       this.csrfToken = options.csrfToken;
