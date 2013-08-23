@@ -13,10 +13,15 @@
       message: 'JST.components_notifiers_popover_message'
     },
 
-    bootstrapOptions: {trigger: 'manual'},
+    bootstrapOptions: function() {
+      var options = {trigger: 'manual'};
+      if (this.animate) { options.animation = true; }
+      return options;
+    },
 
     target: function() { return this.action.$el; },
 
+    animate: true,
     delay: 400,
 
     messages: {
@@ -29,6 +34,7 @@
 
       this.action = options.action;
       if ('delay' in options) { this.delay = options.delay; }
+      if ('animate' in options) { this.animate = options.animate; }
 
       if (options.messages) {
         this.messages = _({}).defaults(
@@ -44,8 +50,11 @@
     },
 
     _delayedCall: function(fn) {
-      if (this.delay > 0) { _.delay(fn.bind(this), this.delay); }
-      else { fn.call(this); }
+      if (this.delay > 0 && this.animate) {
+        _.delay(fn.bind(this), this.delay);
+      } else {
+        fn.call(this);
+      }
       return this;
     },
 
@@ -128,7 +137,7 @@
 
       this.name = options.name || this.name;
 
-      if (options.notifier) { this.useNotifier = true; }
+      if (options.notifier || options.useNotifier) { this.useNotifier = true; }
       this.initNotifier(options.notifier);
     },
 
