@@ -139,7 +139,7 @@ button {
   padding-right: 20px;
 }
 .content .actions .right {
-  padding: 0 20px;
+  padding: 0 30px;
   overflow: hidden;
 }
 .content .actions .right .navbar-search {
@@ -240,11 +240,11 @@ button {
   margin: 0;
 }
 .popover {
-  z-index: 20000 !important;
+  z-index: 20 !important;
 }
 .popover.notifier .close {
-  margin-left: 10px;
-  line-height: 16px;
+  margin-left: 5px;
+  line-height: 18px;
 }
 .popover.notifier.success {
   color: #468847;
@@ -307,7 +307,6 @@ button {
   background: #d9d8d3;
 }
 .dialogue .popover {
-  z-index: 20 !important;
   font-size: 11px;
   width: 220px;
 }

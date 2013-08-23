@@ -7,6 +7,12 @@
 
   var PopoverView = go.components.views.PopoverView;
 
+  var capitalise = go.utils.capitalise,
+      delayed = go.utils.delayed,
+      functor = go.utils.functor,
+      bindEvents = go.utils.bindEvents,
+      maybeByName = go.utils.maybeByName;
+
   var PopoverNotifierView = PopoverView.extend({
     templates: {
       busy: 'JST.components_notifiers_popover_busy',
@@ -16,7 +22,7 @@
     bootstrapOptions: function() {
       var options = {
         trigger: 'manual',
-        placement: 'bottom',
+        placement: 'top',
         container: 'body'
       };
 
@@ -31,8 +37,12 @@
     delay: 400,
 
     messages: {
-      success: function() { return this.action.name + ' successful!'; },
-      error: function() { return this.action.name + ' failed :/'; },
+      success: function() {
+        return capitalise(_(this.action).result('name')) + ' successful!';
+      },
+      error: function() {
+        return capitalise(_(this.action).result('name')) + ' failed :/';
+      },
     },
 
     initialize: function(options) {
@@ -49,11 +59,11 @@
           this.messages);
       }
 
-      go.utils.bindEvents(this.bindings, this);
+      bindEvents(this.bindings, this);
     },
 
     messageFor: function(eventName) {
-      return go.utils.functor(this.messages[eventName]).call(this);
+      return functor(this.messages[eventName]).call(this);
     },
 
     blink: function(fn) {
@@ -62,7 +72,7 @@
         this.show();
       } else {
         this.hide();
-        go.utils.delayed(function() {
+        delayed(function() {
           fn.call(this);
           this.show();
         }, this.delay, this);
@@ -85,7 +95,7 @@
 
     renderMessage: function(type) {
       this.blink(function() {
-        var jst = go.utils.maybeByName(this.templates.message);
+        var jst = maybeByName(this.templates.message);
         this.$el.html(jst({message: this.messageFor(type)}));
         this.resetClassName(type);
       });
@@ -101,11 +111,11 @@
       this.listenToOnce(this.action, 'error', function() { done = true; });
 
       // Only show the 'busy' notification if we are waiting long enough
-      go.utils.delayed(function() {
+      delayed(function() {
         if (done) { return; }
 
         self.blink(function() {
-          var jst = go.utils.maybeByName(self.templates.busy);
+          var jst = maybeByName(self.templates.busy);
           self.$el.html(jst());
           self.resetClassName('info');
         });

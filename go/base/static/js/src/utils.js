@@ -114,6 +114,10 @@
     else { fn.call(that); }
   };
 
+  var capitalise = function(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+
   _.extend(exports, {
     merge: merge,
     functor: functor,
@@ -126,6 +130,7 @@
     redirect: redirect,
     bindEvents: bindEvents,
     delayed: delayed,
+    capitalise: capitalise,
     highlightActiveLinks: highlightActiveLinks
   });
 })(go.utils = {});
