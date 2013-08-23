@@ -251,7 +251,7 @@ button {
 .confirm .details {
   margin-left: 24px;
 }
-.confirm .details .conversation th:first-child {
+.confirm .details table th:first-child {
   width: 100px;
 }
 .dialogue .actions .sidebar {

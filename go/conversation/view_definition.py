@@ -84,15 +84,19 @@ class ConfirmConversationView(ConversationTemplateView):
         token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = request.GET.get('token')
         token_data = token_manager.verify_get(token)
-        params = token_data['extra_params']
 
         if not token_data:
             raise Http404
 
+        params = token_data['extra_params']
+        action_name = params.get('action_display_name')
+        action_details = params.get('action_data').get('display', {})
+
         return self.render_to_response({
             'success': False,
             'conversation': conversation,
-            'action_display_name': params.get('action_display_name'),
+            'action_name': action_name,
+            'action_details': action_details,
             'form': ConfirmConversationForm(initial={'token': token}),
         })
 
@@ -389,13 +393,16 @@ class ConversationActionView(ConversationTemplateView):
 
     @check_action_is_enabled
     def post(self, request, conversation):
-        action_data = {}
+        action_data = {'display': {}}
         form_cls = self.view_def.get_action_form(self.action.action_name)
         if form_cls is not None:
             form = form_cls(request.POST)
             if not form.is_valid():
                 return self._render_form(request, conversation, form)
             action_data = form.cleaned_data
+            action_data['display'] = dict(
+                (form[k].label, v)
+                for k, v in action_data.iteritems())
 
         if self.action.needs_confirmation:
             user_account = request.user_api.get_user_account()
