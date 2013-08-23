@@ -401,6 +401,8 @@ PIPELINE_JS = {
             'templates/apps/dialogue/states/components/nameExtras.jst',
             'templates/conversation/groups/row.jst',
             'templates/components/confirm.jst',
+            'templates/components/notifiers/popover/busy.jst',
+            'templates/components/notifiers/popover/message.jst',
             'templates/dummy/dummy.jst',
 
             'js/src/go.js',

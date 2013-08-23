@@ -109,6 +109,11 @@
     });
   };
 
+  var delayed = function(fn, delay, that) {
+    if (delay > 0) { _.delay(fn.bind(that), delay); }
+    else { fn.call(that); }
+  };
+
   _.extend(exports, {
     merge: merge,
     functor: functor,
@@ -120,6 +125,7 @@
     unaccentify: unaccentify,
     redirect: redirect,
     bindEvents: bindEvents,
+    delayed: delayed,
     highlightActiveLinks: highlightActiveLinks
   });
 })(go.utils = {});

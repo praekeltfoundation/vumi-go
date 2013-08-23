@@ -20,6 +20,7 @@ describe("go.components.actions", function() {
       action = new ActionView({name: 'Crimp'});
       notifier = new PopoverNotifierView({
         delay: 0,
+        busyWait: 0,
         action: action,
         bootstrap: {
           container: 'body',

@@ -14,7 +14,12 @@
     },
 
     bootstrapOptions: function() {
-      var options = {trigger: 'manual'};
+      var options = {
+        trigger: 'manual',
+        placement: 'bottom',
+        container: 'body'
+      };
+
       if (this.animate) { options.animation = true; }
       return options;
     },
@@ -22,6 +27,7 @@
     target: function() { return this.action.$el; },
 
     animate: true,
+    busyWait: 400,
     delay: 400,
 
     messages: {
@@ -35,6 +41,7 @@
       this.action = options.action;
       if ('delay' in options) { this.delay = options.delay; }
       if ('animate' in options) { this.animate = options.animate; }
+      if ('busyWait' in options) { this.busyWait = options.busyWait; }
 
       if (options.messages) {
         this.messages = _({}).defaults(
@@ -49,25 +56,16 @@
       return go.utils.functor(this.messages[eventName]).call(this);
     },
 
-    _delayedCall: function(fn) {
-      if (this.delay > 0 && this.animate) {
-        _.delay(fn.bind(this), this.delay);
-      } else {
-        fn.call(this);
-      }
-      return this;
-    },
-
     blink: function(fn) {
       if (this.hidden) {
         fn.call(this);
         this.show();
       } else {
         this.hide();
-        this._delayedCall(function() {
+        go.utils.delayed(function() {
           fn.call(this);
           this.show();
-        });
+        }, this.delay, this);
       }
 
       return this;
@@ -96,11 +94,24 @@
     },
 
     renderBusy: function() {
-      this.blink(function() {
-        var jst = go.utils.maybeByName(this.templates.busy);
-        this.$el.html(jst());
-        this.resetClassName('info');
-      });
+      var done = false,
+          self = this;
+
+      this.listenToOnce(this.action, 'success', function() { done = true; });
+      this.listenToOnce(this.action, 'error', function() { done = true; });
+
+      // Only show the 'busy' notification if we are waiting long enough
+      go.utils.delayed(function() {
+        if (done) { return; }
+
+        self.blink(function() {
+          var jst = go.utils.maybeByName(self.templates.busy);
+          self.$el.html(jst());
+          self.resetClassName('info');
+        });
+      }, this.busyWait);
+
+      return this;
     },
 
     bindings: {
