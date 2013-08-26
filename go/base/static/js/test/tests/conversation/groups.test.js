@@ -67,15 +67,15 @@ describe("go.conversation.groups", function() {
           key: 'conversation1',
           groups: [{
             key: 'group1',
-            name: 'Spam',
+            name: 'Group1',
             inConversation: false
           }, {
             key: 'group2',
-            name: 'Group 2',
+            name: 'Group2',
             inConversation: true
           }, {
             key: 'group3',
-            name: 'Group 3',
+            name: 'Group3',
             inConversation: true
           }]
         })
@@ -103,7 +103,7 @@ describe("go.conversation.groups", function() {
 
         view
           .$('.search')
-          .val('Spam')
+          .val('Group1')
           .trigger($.Event('input'));
 
         assert(oneElExists(view.$('[data-uuid=group1]')));

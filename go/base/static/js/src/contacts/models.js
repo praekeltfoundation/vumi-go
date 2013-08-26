@@ -14,7 +14,8 @@
   });
 
   var GroupCollection = Backbone.Collection.extend({
-    model: GroupModel
+    model: GroupModel,
+    comparator: 'name'
   });
 
   _.extend(exports, {
