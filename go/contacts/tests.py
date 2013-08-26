@@ -192,12 +192,17 @@ class ContactsTestCase(BaseContactsTestCase):
         return self.client.post(group_url, defaults)
 
     def test_contact_upload_into_new_group(self):
+        # Add an existing group to ensure we don't by mistake choose it instead
+        # of the new group when redirecting to complete the upload
+        existing_group = self.contact_store.new_group(TEST_GROUP_NAME)
+
         csv_file = open(path.join(settings.PROJECT_ROOT, 'base',
                         'fixtures', 'sample-contacts.csv'))
 
         response = self.client.post(reverse('contacts:people'), {
             'file': csv_file,
             'name': 'a new group',
+            'contact_group': existing_group.key
         })
 
         group = newest(self.contact_store.list_groups())
