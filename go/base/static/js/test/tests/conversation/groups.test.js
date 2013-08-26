@@ -11,7 +11,10 @@ describe("go.conversation.groups", function() {
 
     beforeEach(function() {
       group = new GroupRowView({
-        model: new GroupModel({key: 'group1'})
+        model: new GroupModel({
+          key: 'group1',
+          urls: {show: 'contacts:group:group1'}
+        })
       });
     });
 
@@ -68,16 +71,20 @@ describe("go.conversation.groups", function() {
           groups: [{
             key: 'group1',
             name: 'Group1',
-            inConversation: false
+            inConversation: false,
+            urls: {show: 'contacts:group:group1'}
           }, {
             key: 'group2',
             name: 'Group2',
-            inConversation: true
+            inConversation: true,
+            urls: {show: 'contacts:group:group2'}
           }, {
             key: 'group3',
             name: 'Group3',
-            inConversation: true
-          }]
+            inConversation: true,
+            urls: {show: 'contacts:group:group3'}
+          }],
+          urls: {show: 'conversations:conversation1:show'}
         })
       });
     });
@@ -142,9 +149,19 @@ describe("go.conversation.groups", function() {
       });
 
       describe("if the save action was successful", function() {
+        var location;
+
+        beforeEach(function() {
+          location = null;
+          sinon.stub(go.utils, 'redirect', function(url) { location = url; });
+        });
+
+        afterEach(function() {
+          go.utils.redirect.restore();
+        });
+
         it("should notify the user", function() {
           server.respondWith('{}');
-
           assert(noElExists('.modal'));
 
           view.$('.save').click();
@@ -154,6 +171,17 @@ describe("go.conversation.groups", function() {
           assert.include(
             $('.modal').text(),
             "Groups saved successfully");
+        });
+
+        it("should redirect the user to the conversation show page",
+        function() {
+          server.respondWith('{}');
+          assert(noElExists('.modal'));
+
+          view.$('.save').click();
+          server.respond();
+
+          assert.equal(location, 'conversations:conversation1:show');
         });
       });
 

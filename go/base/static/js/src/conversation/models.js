@@ -12,6 +12,10 @@
     },
 
     relations: [{
+      type: Backbone.HasOne,
+      key: 'urls',
+      relatedModel: Model
+    }, {
       type: Backbone.HasMany,
       key: 'groups',
       relatedModel: 'go.contacts.models.GroupModel',

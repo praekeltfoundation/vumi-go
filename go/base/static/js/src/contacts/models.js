@@ -6,7 +6,7 @@
 
   var GroupModel = Model.extend({
     relations: [{
-      type: Backbone.HasMany,
+      type: Backbone.HasOne,
       key: 'urls',
       relatedModel: Model
     }],
