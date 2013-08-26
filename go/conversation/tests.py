@@ -87,13 +87,22 @@ class ConversationTestCase(VumiGoDjangoTestCase):
         conv.save()
 
         groups_url = reverse('conversations:conversation', kwargs={
-            'conversation_key': conv.key, 'path_suffix': 'edit_groups/'})
+            'conversation_key': conv.key,
+            'path_suffix': 'edit_groups/'
+        })
 
         response = self.client.get(groups_url)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json.loads(response.context['model_data']), {
             'key': conv.key,
+            'urls': {
+                'show': reverse(
+                    'conversations:conversation', kwargs={
+                        'conversation_key': conv.key,
+                        'path_suffix': ''
+                    })
+            },
             'groups': [{
                 'key': group2.key,
                 'name': u'Contact Group 2',
@@ -101,7 +110,7 @@ class ConversationTestCase(VumiGoDjangoTestCase):
                 'urls': {
                     'show': reverse(
                         'contacts:group',
-                        kwargs={'group_key': group2.key})
+                        kwargs={'group_key': group2.key}),
                 },
             }, {
                 'key': group1.key,
@@ -110,7 +119,7 @@ class ConversationTestCase(VumiGoDjangoTestCase):
                 'urls': {
                     'show': reverse(
                         'contacts:group',
-                        kwargs={'group_key': group1.key})
+                        kwargs={'group_key': group1.key}),
                 },
             }]
         })
