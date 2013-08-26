@@ -7,6 +7,7 @@ from vumi.components.message_store import Batch
 
 from go.vumitools.account import UserAccount
 from go.vumitools.contact import ContactGroup
+from go.vumitools.conversation.migrators import ConversationMigrator
 
 
 CONVERSATION_ACTIVE = u'active'
@@ -23,6 +24,8 @@ CONVERSATION_FINISHED = 'finished'
 
 class ConversationVNone(Model):
     """A conversation with an audience"""
+
+    MIGRATOR = ConversationMigrator
 
     bucket = 'conversation'
 
@@ -89,6 +92,7 @@ class ConversationV1(Model):
     """A conversation with an audience"""
 
     VERSION = 1
+    MIGRATOR = ConversationMigrator
 
     bucket = 'conversation'
 
@@ -161,6 +165,7 @@ class ConversationV1(Model):
 class ConversationV2(Model):
     """A conversation with an audience"""
 
+    MIGRATOR = ConversationMigrator
     VERSION = 2
 
     bucket = 'conversation'

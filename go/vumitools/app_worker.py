@@ -307,11 +307,9 @@ class GoWorkerMixin(object):
         This is a utility method for collecting common metrics. It has to be
         called explicitly from :meth:`collect_metrics`
         """
-        sent = 0
-        received = 0
-        for batch_id in conversation.batches.keys():
-            sent += yield self.vumi_api.mdb.batch_outbound_count(batch_id)
-            received += yield self.vumi_api.mdb.batch_inbound_count(batch_id)
+        batch_id = conversation.batch.key
+        sent = yield self.vumi_api.mdb.batch_outbound_count(batch_id)
+        received = yield self.vumi_api.mdb.batch_inbound_count(batch_id)
 
         self.publish_conversation_metric(
             conversation, 'messages_sent', sent)

@@ -412,7 +412,6 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
         self.assertEqual(conv1.conversation_type, 'survey')
         self.assertEqual(conv1.name, 'foo')
         self.assertEqual(conv1.config, {'foo': 'bar'})
-        self.assertEqual(len(conv1.batches.keys()), 1)
         self.assertEqual(list(conv1.extra_endpoints), [])
         self.assertTrue(
             'Conversation conv1 created'
@@ -422,7 +421,6 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
         self.assertEqual(conv2.conversation_type, 'wikipedia')
         self.assertEqual(conv2.name, 'Wikipedia')
         self.assertEqual(conv2.config, {})
-        self.assertEqual(len(conv2.batches.keys()), 1)
         self.assertEqual(list(conv2.extra_endpoints), ['sms_content'])
         self.assertTrue(
             'Conversation conv2 created'

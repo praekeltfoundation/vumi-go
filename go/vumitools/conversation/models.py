@@ -44,7 +44,7 @@ class Conversation(Model):
     status = Unicode(default=CONVERSATION_STOPPED, index=True)
 
     groups = ManyToMany(ContactGroup)
-    batches = ManyToMany(Batch)
+    batch = ForeignKey(Batch)
 
     delivery_class = Unicode(null=True)
 
@@ -145,9 +145,7 @@ class ConversationStore(PerAccountStore):
         conversation = self.conversations(
             conversation_id, user_account=self.user_account_key,
             conversation_type=conversation_type, name=name,
-            description=description, config=config, **fields)
-
-        conversation.batches.add_key(batch_id)
+            description=description, batch=batch_id, config=config, **fields)
 
         for group in groups:
             conversation.add_group(group)

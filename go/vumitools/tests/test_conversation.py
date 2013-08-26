@@ -8,6 +8,8 @@ from datetime import datetime
 from twisted.internet.defer import inlineCallbacks
 from twisted.trial.unittest import TestCase
 
+from vumi.persist.model import ModelMigrationError
+
 from go.vumitools.tests.utils import model_eq, GoPersistenceMixin
 from go.vumitools.account import AccountStore
 from go.vumitools.conversation import ConversationStore
@@ -53,7 +55,7 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
         self.assertEqual(u'name', conv.name)
         self.assertEqual(u'desc', conv.description)
         self.assertEqual({u'foo': u'bar'}, conv.config)
-        self.assertEqual([u'batch1'], conv.batches.keys())
+        self.assertEqual(u'batch1', conv.batch.key)
         self.assertEqual(u'active', conv.archive_status)
         self.assertEqual(u'stopped', conv.status)
 
@@ -72,7 +74,7 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
         self.assertEqual(u'Zoë destroyer of Ascii', conv.name)
         self.assertEqual(u'Return of Zoë!', conv.description)
         self.assertEqual({u'foo': u'Zoë again.'}, conv.config)
-        self.assertEqual([u'batch1'], conv.batches.keys())
+        self.assertEqual(u'batch1', conv.batch.key)
         self.assertEqual(u'active', conv.archive_status)
         self.assertEqual(u'stopped', conv.status)
 
@@ -89,6 +91,8 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
             conversation_type=u'bulk_message',
             subject=u'subject', message=u'message',
             start_timestamp=datetime.utcnow()).save()
+        conv.batches.add_key('batch_key_1')
+        yield conv.save()
 
         dbconv = yield self.conv_store.get_conversation_by_key(conv.key)
 
@@ -96,9 +100,9 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
         self.assertEqual(u'subject', dbconv.name)
         self.assertEqual(u'message', dbconv.description)
         self.assertEqual({}, dbconv.config)
-        self.assertEqual([], dbconv.batches.keys())
+        self.assertEqual('batch_key_1', dbconv.batch.key)
         self.assertEqual(u'active', dbconv.archive_status)
-        self.assertEqual(u'stopped', dbconv.status)
+        self.assertEqual(u'running', dbconv.status)
 
     @inlineCallbacks
     def test_get_conversation_v1(self):
@@ -110,6 +114,8 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
             conversation_type=u'bulk_message', name=u'name',
             description=u'description', status=u'draft',
             start_timestamp=datetime.utcnow()).save()
+        conv.batches.add_key('batch_key_1')
+        yield conv.save()
 
         dbconv = yield self.conv_store.get_conversation_by_key(conv.key)
 
@@ -117,7 +123,7 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
         self.assertEqual(u'name', dbconv.name)
         self.assertEqual(u'description', dbconv.description)
         self.assertEqual({}, dbconv.config)
-        self.assertEqual([], dbconv.batches.keys())
+        self.assertEqual('batch_key_1', dbconv.batch.key)
         self.assertEqual(u'active', dbconv.archive_status)
         self.assertEqual(u'stopped', dbconv.status)
 
@@ -130,7 +136,9 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
             conversation_id, user_account=self.conv_store.user_account_key,
             conversation_type=u'bulk_message', name=u'name',
             description=u'description', delivery_tag_pool=u'pool',
-            delivery_tag=u'tag').save()
+            delivery_tag=u'tag')
+        conv.batches.add_key('batch_key_1')
+        yield conv.save()
 
         dbconv = yield self.conv_store.get_conversation_by_key(conv.key)
 
@@ -138,9 +146,50 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
         self.assertEqual(u'name', dbconv.name)
         self.assertEqual(u'description', dbconv.description)
         self.assertEqual({}, dbconv.config)
-        self.assertEqual([], dbconv.batches.keys())
+        self.assertEqual('batch_key_1', dbconv.batch.key)
         self.assertEqual(u'active', dbconv.archive_status)
         self.assertEqual(u'stopped', dbconv.status)
+
+    @inlineCallbacks
+    def test_get_conversation_v2_no_batch_keys(self):
+        conversation_id = uuid4().get_hex()
+
+        conv = yield ConversationV2(
+            self.conv_store.manager,
+            conversation_id, user_account=self.conv_store.user_account_key,
+            conversation_type=u'bulk_message', name=u'name',
+            description=u'description', delivery_tag_pool=u'pool',
+            delivery_tag=u'tag').save()
+
+        try:
+            yield self.conv_store.get_conversation_by_key(conv.key)
+            self.fail('Expected ModelMigrationError to be raised.')
+        except ModelMigrationError as e:
+            self.assertEqual(e.message, (
+                "Conversation %s cannot be migrated: Exactly one batch key"
+                " required, 0 found.") % (conv.key,))
+
+    @inlineCallbacks
+    def test_get_conversation_v2_multiple_batch_keys(self):
+        conversation_id = uuid4().get_hex()
+
+        conv = yield ConversationV2(
+            self.conv_store.manager,
+            conversation_id, user_account=self.conv_store.user_account_key,
+            conversation_type=u'bulk_message', name=u'name',
+            description=u'description', delivery_tag_pool=u'pool',
+            delivery_tag=u'tag')
+        conv.batches.add_key('batch_key_1')
+        conv.batches.add_key('batch_key_2')
+        yield conv.save()
+
+        try:
+            yield self.conv_store.get_conversation_by_key(conv.key)
+            self.fail('Expected ModelMigrationError to be raised.')
+        except ModelMigrationError as e:
+            self.assertEqual(e.message, (
+                "Conversation %s cannot be migrated: Exactly one batch key"
+                " required, 2 found.") % (conv.key,))
 
 
 class TestConversationStoreSync(TestConversationStore):

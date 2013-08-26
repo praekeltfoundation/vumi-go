@@ -41,10 +41,8 @@ class ConversationWrapper(object):
         yield self._remove_from_routing_table()
         yield self._release_batches()
 
-    @Manager.calls_manager
     def _release_batches(self):
-        for batch in (yield self.get_batches()):
-            yield self.mdb.batch_done(batch.key)
+        return self.mdb.batch_done(self.batch.key)
 
     def __getattr__(self, name):
         # Proxy anything we don't have back to the wrapped conversation.
@@ -64,27 +62,11 @@ class ConversationWrapper(object):
 
     @Manager.calls_manager
     def get_batches(self):
-        # NOTE: This assumes that we don't have very large numbers of batches.
-        batches = []
-        for bunch in self.c.batches.load_all_bunches(self.base_manager):
-            batches.extend((yield bunch))
-        returnValue(batches)
+        batch = yield self.c.batch.get()
+        returnValue([batch])
 
     def get_batch_keys(self):
-        return self.c.batches.keys()
-
-    @Manager.calls_manager
-    def get_tags(self):
-        """
-        Return any tags associated with this conversation.
-
-        :rtype:
-            Returns a list of tags `[(tagpool, tag), ... ]`
-        """
-        tags = []
-        for batch in (yield self.get_batches()):
-            tags.extend((yield batch.tags))
-        returnValue(tags)
+        return [self.c.batch.key]
 
     @Manager.calls_manager
     def get_channels(self):
@@ -198,11 +180,6 @@ class ConversationWrapper(object):
     def start(self):
         """Send the start command to this conversation's application worker.
         """
-        batches = yield self.get_batches()
-        if not batches:
-            batch_id = yield self.start_batch()
-            self.c.batches.add_key(batch_id)
-
         self.c.set_status_starting()
         yield self.c.save()
 
@@ -242,65 +219,14 @@ class ConversationWrapper(object):
                 "content": ("Please visit %s to start your conversation." %
                             (token_url,)),
                 })
-        if batch_id not in self.c.batches.keys():
-            self.c.batches.add_key(batch_id)
         yield self.c.save()
 
-    @Manager.calls_manager
     def get_latest_batch_key(self):
         """
-        Here be dragons.
-
-        FIXME:  The existince of `get_latest_batch_key()` is a symptom of other
-                things being wrong. We need to revisit how batches are stored
-                on a conversation and whether we even need multiple batches
-                per conversation.
-
-                We're not storing timestamps on our batches and so we have no
-                accurate way of telling which batch was most recenty acquired
-                for this conversation. On top of this, our existing migration
-                tools aren't mature enough to be able to describe the migration
-                needed.
-
-                Our current work around is looking at the cache to find out
-                which batch_key had the last outbound message sent and return
-                that batch_key
+        TODO: Track down everything that uses this and replace it with
+              `.batch.key` instead.
         """
-        batch_keys = self.get_batch_keys()
-
-        if not batch_keys:
-            returnValue(None)
-
-        # If there's only one then it's easy.
-        if len(batch_keys) == 1:
-            returnValue(batch_keys[0])
-
-        # Cache this for however long this conversation object lives
-        if hasattr(self, '_latest_batch_key'):
-            returnValue(self._latest_batch_key)
-
-        # Loop over the batch_keys and find out which one was most recently
-        # used to send out a message.
-        batch_key_timestamps = []
-        for batch_key in batch_keys:
-            if (yield self.mdb.cache.count_outbound_message_keys(batch_key)):
-                [(_, timestamp)] = (yield self.mdb.get_outbound_message_keys(
-                                        batch_key, 0, 0, with_timestamp=True))
-                batch_key_timestamps.append((batch_key, timestamp))
-
-        # We might not have anything to work with here since we might only have
-        # batch_keys that haven't seen any outbound traffic
-        if batch_key_timestamps:
-            sorted_keys = sorted(batch_key_timestamps,
-                                    key=lambda (key, ts): ts, reverse=True)
-            latest = sorted_keys[0]
-            self._latest_batch_key = latest[0]  # return only the key
-            returnValue(self._latest_batch_key)
-
-        # If there hasn't been any outbound traffic then just return the first
-        # that Riak returned and hope for the best.
-        self._latest_batch_key = batch_keys[0]
-        returnValue(self._latest_batch_key)
+        return self.batch.key
 
     @Manager.calls_manager
     def count_replies(self, batch_key=None):

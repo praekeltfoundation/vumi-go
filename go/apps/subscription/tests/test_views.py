@@ -32,8 +32,6 @@ class SubscriptionTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, self.get_view_url('show'))
 
         conversation = self.get_wrapped_conv()
-        [batch] = conversation.get_batches()
-        self.assertEqual([], list(batch.tags))
 
         [start_cmd] = self.get_api_commands_sent()
         self.assertEqual(start_cmd, VumiApiCommand.command(

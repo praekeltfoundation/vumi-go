@@ -183,11 +183,10 @@ class SendingEventDispatcherTestCase(AppWorkerTestCase):
         yield self.publish_event(event)
 
         [api_cmd] = self._amqp.get_messages('vumi', 'vumi.api')
-        # self.assertEqual(start_cmd['command'], 'start')
         self.assertEqual(api_cmd['worker_name'], 'other_worker')
         self.assertEqual(api_cmd['kwargs']['command_data'], {
             'content': 'hello',
-            'batch_id': conversation.batches.keys()[0],
+            'batch_id': conversation.batch.key,
             'to_addr': '12345',
             'msg_options': {
                 'helper_metadata': {
