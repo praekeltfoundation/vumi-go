@@ -180,6 +180,16 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
     def test_fix_batches_on_conv_with_single_batch_with_no_tag(self):
         self.check_fix_batches(tags=(), num_batches=1, migrated=False)
 
+    def test_fix_batches_ignores_newer_conv(self):
+        self.user_api.new_conversation(u'dummy_conv', u'Dummy conv', u'', {})
+        output = self.handle_command(migration_name='fix-batches')
+        self.assert_no_stderr()
+        self.assertEqual(output[:2], [
+            'Test User <username> [test-0-user]',
+            '  Migrating 0 of 1 conversations ...',
+        ])
+        self.assert_conversations_migrated([], output)
+
     def test_fix_batches_on_conv_with_multiple_batches(self):
         self.check_fix_batches(tags=(), num_batches=2, migrated=True)
 

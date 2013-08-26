@@ -34,6 +34,10 @@ class Migration(object):
         By default, this uses `user_api.get_wrapped_conversation()`, but some
         migrations may want to return something different. For example, an
         older model version.
+
+        This may return something other than a conversation object (to signal
+        that the object couldn't be loaded and we want to ignore it), but
+        `applies_to()` should always return `False` for these.
         """
         return user_api.get_wrapped_conversation(conv_key)
 
@@ -84,9 +88,18 @@ class FixBatches(Migration):
         """
         from go.vumitools.conversation.old_models import ConversationV2
         v2_model = user_api.conversation_store.manager.proxy(ConversationV2)
-        return v2_model.load(conv_key)
+        try:
+            return v2_model.load(conv_key)
+        except ModelMigrationError as e:
+            if e.message.startswith(
+                    'No migrators defined for ConversationV2 version '):
+                return None
+            raise
 
     def applies_to(self, user_api, conv):
+        if conv is None:
+            # We couldn't load the conversation, so we can't migrate it.
+            return False
         return len(conv.batches.keys()) != 1
 
     def _copy_msgs(self, mdb, old_batch, new_batch):
