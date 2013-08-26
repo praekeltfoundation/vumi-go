@@ -26,7 +26,8 @@ describe("go.conversation.models", function() {
           name: 'Group 3',
           inConversation: true,
           urls: {show: 'contacts:group:group3'}
-        }]
+        }],
+        urls: {show: 'conversations:conversation1:show'}
       });
     });
 

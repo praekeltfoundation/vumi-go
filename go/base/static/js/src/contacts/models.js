@@ -6,7 +6,7 @@
 
   var GroupModel = Model.extend({
     relations: [{
-      type: Backbone.HasMany,
+      type: Backbone.HasOne,
       key: 'urls',
       relatedModel: Model
     }],
@@ -14,7 +14,8 @@
   });
 
   var GroupCollection = Backbone.Collection.extend({
-    model: GroupModel
+    model: GroupModel,
+    comparator: 'name'
   });
 
   _.extend(exports, {

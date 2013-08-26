@@ -62,6 +62,7 @@
       });
       this.listenTo(this.save, 'success', function() {
         bootbox.alert("Groups saved successfully.");
+        go.utils.redirect(this.model.get('urls').get('show'));
       });
     },
 
