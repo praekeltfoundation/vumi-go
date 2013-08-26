@@ -85,12 +85,12 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
     def test_get_conversation_vnone(self):
         conversation_id = uuid4().get_hex()
 
-        conv = yield ConversationVNone(
+        conv = ConversationVNone(
             self.conv_store.manager,
             conversation_id, user_account=self.conv_store.user_account_key,
             conversation_type=u'bulk_message',
             subject=u'subject', message=u'message',
-            start_timestamp=datetime.utcnow()).save()
+            start_timestamp=datetime.utcnow())
         conv.batches.add_key('batch_key_1')
         yield conv.save()
 
@@ -108,12 +108,12 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
     def test_get_conversation_v1(self):
         conversation_id = uuid4().get_hex()
 
-        conv = yield ConversationV1(
+        conv = ConversationV1(
             self.conv_store.manager,
             conversation_id, user_account=self.conv_store.user_account_key,
             conversation_type=u'bulk_message', name=u'name',
             description=u'description', status=u'draft',
-            start_timestamp=datetime.utcnow()).save()
+            start_timestamp=datetime.utcnow())
         conv.batches.add_key('batch_key_1')
         yield conv.save()
 
@@ -131,7 +131,7 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
     def test_get_conversation_v2(self):
         conversation_id = uuid4().get_hex()
 
-        conv = yield ConversationV2(
+        conv = ConversationV2(
             self.conv_store.manager,
             conversation_id, user_account=self.conv_store.user_account_key,
             conversation_type=u'bulk_message', name=u'name',
@@ -150,30 +150,35 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
         self.assertEqual(u'active', dbconv.archive_status)
         self.assertEqual(u'stopped', dbconv.status)
 
+    def assert_batch_key_migration_error(self, e, count, conv_key):
+        self.assertEqual(e.message, (
+            "Conversation %s cannot be migrated: Exactly one batch key"
+            " required, %s found. Please run a manual 'fix-batches'"
+            " conversation migration.") % (conv_key, count))
+
     @inlineCallbacks
     def test_get_conversation_v2_no_batch_keys(self):
         conversation_id = uuid4().get_hex()
 
-        conv = yield ConversationV2(
+        conv = ConversationV2(
             self.conv_store.manager,
             conversation_id, user_account=self.conv_store.user_account_key,
             conversation_type=u'bulk_message', name=u'name',
             description=u'description', delivery_tag_pool=u'pool',
-            delivery_tag=u'tag').save()
+            delivery_tag=u'tag')
+        yield conv.save()
 
         try:
             yield self.conv_store.get_conversation_by_key(conv.key)
             self.fail('Expected ModelMigrationError to be raised.')
         except ModelMigrationError as e:
-            self.assertEqual(e.message, (
-                "Conversation %s cannot be migrated: Exactly one batch key"
-                " required, 0 found.") % (conv.key,))
+            self.assert_batch_key_migration_error(e, 0, conv.key)
 
     @inlineCallbacks
     def test_get_conversation_v2_multiple_batch_keys(self):
         conversation_id = uuid4().get_hex()
 
-        conv = yield ConversationV2(
+        conv = ConversationV2(
             self.conv_store.manager,
             conversation_id, user_account=self.conv_store.user_account_key,
             conversation_type=u'bulk_message', name=u'name',
@@ -187,9 +192,7 @@ class TestConversationStore(GoPersistenceMixin, TestCase):
             yield self.conv_store.get_conversation_by_key(conv.key)
             self.fail('Expected ModelMigrationError to be raised.')
         except ModelMigrationError as e:
-            self.assertEqual(e.message, (
-                "Conversation %s cannot be migrated: Exactly one batch key"
-                " required, 2 found.") % (conv.key,))
+            self.assert_batch_key_migration_error(e, 2, conv.key)
 
 
 class TestConversationStoreSync(TestConversationStore):

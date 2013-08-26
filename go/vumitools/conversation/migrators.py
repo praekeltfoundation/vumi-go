@@ -101,8 +101,9 @@ class ConversationMigrator(ModelMigrator):
             # We require exactly one batch, so explode if we have none or lots.
             raise ModelMigrationError((
                 "Conversation %s cannot be migrated: Exactly one batch key"
-                " required, %s found.") % (mdata.riak_object.get_key(),
-                                           len(mdata.old_data['batches'])))
+                " required, %s found. Please run a manual 'fix-batches'"
+                " conversation migration.") % (mdata.riak_object.get_key(),
+                                               len(mdata.old_data['batches'])))
 
         # By now we have exactly one batch and all is right with the world.
         mdata.set_value('batch', mdata.old_data['batches'][0])
