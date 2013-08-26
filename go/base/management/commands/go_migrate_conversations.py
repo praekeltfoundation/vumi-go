@@ -77,11 +77,10 @@ class FixBatches(Migration):
         " messages from all conversation batches (if any) to the new batch.")
 
     def get_conversation(self, user_api, conv_key):
-        """Loads the conversation model object for this key.
+        """Load v2 conversations.
 
-        By default, this uses `user_api.get_wrapped_conversation()`, but some
-        migrations may want to return something different. For example, an
-        older model version.
+        This migration fixes a problem that prevents us from upgrading a v2
+        conversation to v3.
         """
         from go.vumitools.conversation.old_models import ConversationV2
         v2_model = user_api.conversation_store.manager.proxy(ConversationV2)
