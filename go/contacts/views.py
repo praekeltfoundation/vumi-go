@@ -355,7 +355,7 @@ def _people(request):
                             new_group_form.cleaned_data['name'])
 
                 # We could be using an existing contact group.
-                if request.POST.get('contact_group'):
+                elif request.POST.get('contact_group'):
                     select_group_form = SelectContactGroupForm(
                         request.POST, groups=contact_store.list_groups())
                     if select_group_form.is_valid():
