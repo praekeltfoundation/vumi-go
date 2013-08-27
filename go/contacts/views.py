@@ -155,6 +155,15 @@ def _static_group(request, contact_store, group):
                           'The export is scheduled and should '
                           'complete within a few minutes.')
             return redirect(_group_url(group.key))
+        if '_remove' in request.POST:
+            contacts = request.POST.getlist('contact')
+            for person_key in contacts:
+                contact = contact_store.get_contact_by_key(person_key)
+                contact.groups.remove(group)
+                contact.save()
+            messages.info(
+                request,
+                '%d Contacts removed from group' % len(contacts))
         elif '_delete_group_contacts' in request.POST:
             tasks.delete_group_contacts.delay(
                 request.user_api.user_account_key, group.key)
