@@ -140,7 +140,6 @@ class TestSurveyApplication(AppWorkerTestCase):
             conversation_key=conversation.key,
             batch_id=batch_id,
             msg_options={},
-            is_client_initiated=False,
             delivery_class=conversation.delivery_class,
         )
 

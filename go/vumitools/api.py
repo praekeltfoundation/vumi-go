@@ -280,30 +280,6 @@ class VumiUserApi(object):
         returnValue(router)
 
     @Manager.calls_manager
-    def list_conversation_endpoints(self):
-        """Returns a set of endpoints owned by conversations in an account.
-        """
-        # XXX: Do we need both this method and the following method?
-        tags = set()
-        convs = yield self.active_conversations()
-        for conv in convs:
-            tag = (conv.delivery_tag_pool, conv.delivery_tag)
-            tags.add(tag)
-        returnValue(tags)
-
-    @Manager.calls_manager
-    def list_conversation_batch_tags(self):
-        """Returns a set of tags owned by conversation batches in an account.
-        """
-        # XXX: Do we need both this method and the previous method?
-        tags = set()
-        convs = yield self.active_conversations()
-        for conv in convs:
-            conv_tags = yield self.wrap_conversation(conv).get_tags()
-            tags.update(conv_tags)
-        returnValue(tags)
-
-    @Manager.calls_manager
     def list_endpoints(self, user_account=None):
         """Returns a set of endpoints owned by an account.
         """

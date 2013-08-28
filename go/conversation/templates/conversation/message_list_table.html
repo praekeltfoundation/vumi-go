@@ -5,7 +5,7 @@
         <tr>
             <th width="32">Type</th>
             <th>Response</th>
-            {% if message_direction == 'inbound' and not conversation.is_client_initiated %}<th width="70">Actions</th>{% endif %}
+            {% if message_direction == 'inbound' and conversation.has_channel_supporting_generic_sends  %}<th width="70">Actions</th>{% endif %}
         </tr>
     </thead>
     <tbody>
@@ -17,7 +17,7 @@
                 <h6><a href="{% url 'contacts:person' person_key=contact.key %}">{{contact}}</a> via {{message.transport_type}} - {{message.timestamp}}</h6>
                 <p>{{message.content}}</p>
             </td>
-            {% if message_direction == 'inbound' and not conversation.is_client_initiated %}
+            {% if message_direction == 'inbound' and conversation.has_channel_supporting_generic_sends %}
             <td>
                 <a href="#reply-{{message.message_id}}" class="btn" title="Reply" data-toggle='modal'><i class="icon-repeat"></i> Reply</a>
                 <div id="reply-{{message.message_id}}" class="modal hide fade" role="dialog">

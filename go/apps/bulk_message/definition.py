@@ -12,7 +12,7 @@ class BulkSendAction(ConversationAction):
     needs_running = True
 
     def check_disabled(self):
-        if self._conv.has_channel_supporting(generic_sends=True):
+        if self._conv.has_channel_supporting_generic_sends():
             return None
         return ("This action needs channels capable of sending"
                 " messages attached to this conversation.")

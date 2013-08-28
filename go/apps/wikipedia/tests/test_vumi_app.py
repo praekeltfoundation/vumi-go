@@ -36,8 +36,7 @@ class TestWikipediaApplication(AppWorkerTestCase, FakeHTTPTestCaseMixin):
     def setup_conv(self, config={}):
         config.setdefault('api_url', self.url)
         self.conv = yield self.create_conversation(
-            delivery_tag_pool=u'pool', delivery_class=self.transport_type,
-            config=config)
+            delivery_class=self.transport_type, config=config)
         yield self.start_conversation(self.conv)
 
     def get_outbound_msgs(self, endpoint):
