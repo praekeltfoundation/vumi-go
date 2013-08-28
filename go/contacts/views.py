@@ -267,7 +267,7 @@ def _static_group(request, contact_store, group):
         'member_count': contact_store.count_contacts_for_group(group),
     })
 
-    return render(request, 'contacts/group_detail.html', context)
+    return render(request, 'contacts/static_group_detail.html', context)
 
 
 @csrf_protect
@@ -313,7 +313,7 @@ def _smart_group(request, contact_store, group):
             "Showing %s of the group's %s contact(s)" % (limit, len(keys)))
 
     contacts = utils.contacts_by_key(contact_store, *keys[:limit])
-    return render(request, 'contacts/group_detail.html', {
+    return render(request, 'contacts/smart_group_detail.html', {
         'group': group,
         'selected_contacts': contacts,
         'group_form': smart_group_form,
