@@ -46,11 +46,11 @@ class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
         return user_api.new_conversation(conv_type, conv_name, u'', {})
 
     def start_conv(self, conv):
-        conv.batches.add_key(u'batch-%s' % (conv.key,))
         conv.set_status_started()
         return conv.save()
 
-    def end_conv(self, conv):
+    def archive_conv(self, conv):
+        conv.set_status_stopped()
         conv.set_status_finished()
         return conv.save()
 
@@ -90,7 +90,7 @@ class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
         user_api = self.worker.vumi_api.get_user_api(akey)
 
         conv1 = yield self.make_conv(user_api, u'conv1')
-        yield self.end_conv(conv1)
+        yield self.archive_conv(conv1)
         conv2 = yield self.make_conv(user_api, u'conv2')
         yield self.start_conv(conv2)
         yield self.make_conv(user_api, u'conv3')

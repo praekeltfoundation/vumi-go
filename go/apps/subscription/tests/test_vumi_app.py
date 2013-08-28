@@ -40,7 +40,7 @@ class TestSubscriptionApplication(AppWorkerTestCase):
             'reply_copy': reply_copy,
             }
         self.conv = yield self.create_conversation(
-            delivery_tag_pool=u'pool', config={
+            config={
                 'handlers': [
                     mkhandler('foo', 'foo', 'subscribe', 'Subscribed to foo.'),
                     mkhandler('bar', 'bar', 'subscribe', 'Subscribed to bar.'),

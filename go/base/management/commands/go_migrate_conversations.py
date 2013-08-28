@@ -5,6 +5,8 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 from django.contrib.auth.models import User
 
+from vumi.persist.model import ModelMigrationError
+
 from go.base.utils import vumi_api_for_user
 
 
@@ -25,6 +27,19 @@ class Migration(object):
             if migrator_cls.name == name:
                 return migrator_cls
         return None
+
+    def get_conversation(self, user_api, conv_key):
+        """Loads the conversation model object for this key.
+
+        By default, this uses `user_api.get_wrapped_conversation()`, but some
+        migrations may want to return something different. For example, an
+        older model version.
+
+        This may return something other than a conversation object (to signal
+        that the object couldn't be loaded and we want to ignore it), but
+        `applies_to()` should always return `False` for these.
+        """
+        return user_api.get_wrapped_conversation(conv_key)
 
     def run(self, user_api, conv):
         if not self._dry_run:
@@ -61,21 +76,31 @@ class UpdateModels(Migration):
 class FixBatches(Migration):
     name = "fix-batches"
     help_text = (
-        "Look for conversations which have a batch with a tag or don't"
-        " have exactly one batch. Create a new batch for such conversations"
-        " and copy the messages from all conversation batches to the new"
-        " batch.")
+        "Look for version 2 (or older) conversations which don't have exactly"
+        " one batch. Create a new batch for such conversations and copy the"
+        " messages from all conversation batches (if any) to the new batch.")
+
+    def get_conversation(self, user_api, conv_key):
+        """Load v2 conversations.
+
+        This migration fixes a problem that prevents us from upgrading a v2
+        conversation to v3.
+        """
+        from go.vumitools.conversation.old_models import ConversationV2
+        v2_model = user_api.conversation_store.manager.proxy(ConversationV2)
+        try:
+            return v2_model.load(conv_key)
+        except ModelMigrationError as e:
+            if e.message.startswith(
+                    'No migrators defined for ConversationV2 version '):
+                return None
+            raise
 
     def applies_to(self, user_api, conv):
-        mdb = user_api.api.mdb
-        conv_batches = conv.batches.keys()
-        if len(conv_batches) != 1:
-            return True
-        for batch_id in conv_batches:
-            tag_keys = mdb.current_tags.index_keys('current_batch', batch_id)
-            if tag_keys:
-                return True
-        return False
+        if conv is None:
+            # We couldn't load the conversation, so we can't migrate it.
+            return False
+        return len(conv.batches.keys()) != 1
 
     def _copy_msgs(self, mdb, old_batch, new_batch):
         for key in mdb.batch_outbound_keys(old_batch):
@@ -92,6 +117,36 @@ class FixBatches(Migration):
             self._copy_msgs(user_api.api.mdb, batch, new_batch)
         conv.batches.clear()
         conv.batches.add_key(new_batch)
+        conv.save()
+
+
+class SplitBatches(Migration):
+    name = "split-batches"
+    help_text = (
+        "Look for conversations which have a batch with a tag. Create a new"
+        " batch for such conversations and copy the messages from all"
+        " conversation batches to the new batch.")
+
+    def applies_to(self, user_api, conv):
+        mdb = user_api.api.mdb
+        tag_keys = mdb.current_tags.index_keys('current_batch', conv.batch.key)
+        if tag_keys:
+            return True
+        return False
+
+    def _copy_msgs(self, mdb, old_batch, new_batch):
+        for key in mdb.batch_outbound_keys(old_batch):
+            msg = mdb.get_outbound_message(key)
+            mdb.add_outbound_message(msg, batch_id=new_batch)
+        for key in mdb.batch_inbound_keys(old_batch):
+            msg = mdb.get_inbound_message(key)
+            mdb.add_inbound_message(msg, batch_id=new_batch)
+
+    def migrate(self, user_api, conv):
+        old_batch = conv.batch.key
+        new_batch = user_api.api.mdb.batch_start()
+        self._copy_msgs(user_api.api.mdb, old_batch, new_batch)
+        conv.batch.key = new_batch
         conv.save()
 
 
@@ -185,10 +240,16 @@ class Command(BaseCommand):
     def handle_user(self, user, migrator):
         user_api = vumi_api_for_user(user)
         all_keys = user_api.conversation_store.list_conversations()
-        conversations = (user_api.get_wrapped_conversation(k)
-                         for k in all_keys)
-        conversations = [c for c in conversations
-                         if migrator.applies_to(user_api, c)]
+        conversations = []
+        for conv_key in all_keys:
+            try:
+                conv = migrator.get_conversation(user_api, conv_key)
+            except ModelMigrationError as e:
+                self.stderr.write("Error migrating conversation %s: %s" % (
+                    conv_key, e.message))
+                continue
+            if migrator.applies_to(user_api, conv):
+                conversations.append(conv)
         self.outln(
             u'%s %s <%s> [%s]\n  Migrating %d of %d conversations ...' % (
             user.first_name, user.last_name, user.username,

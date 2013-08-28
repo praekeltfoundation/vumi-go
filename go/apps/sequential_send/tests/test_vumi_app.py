@@ -61,11 +61,6 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         yield contact.save()
         returnValue(contact)
 
-    def create_conversation(self, **kw):
-        return super(TestSequentialSendApplication, self).create_conversation(
-            delivery_tag_pool=u'pool', delivery_class=self.transport_type,
-            **kw)
-
     @inlineCallbacks
     def reply_to(self, msg, content, continue_session=True, **kw):
         session_event = (None if continue_session

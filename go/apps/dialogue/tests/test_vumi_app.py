@@ -80,8 +80,7 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
                 msisdn=from_addr.format(i), groups=[group])
 
         conversation = yield self.create_conversation(
-            delivery_tag_pool=u'pool', delivery_class=u'sms',
-            delivery_tag=u'tag1', config=config)
+            delivery_class=u'sms', config=config)
         conversation.add_group(group)
         conversation.set_status_started()
         yield conversation.save()

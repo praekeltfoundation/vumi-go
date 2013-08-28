@@ -60,8 +60,6 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, self.get_view_url('show'))
 
         conversation = self.get_wrapped_conv()
-        [batch] = conversation.get_batches()
-        self.assertEqual([], list(batch.tags))
 
         [start_cmd] = self.get_api_commands_sent()
         self.assertEqual(start_cmd, VumiApiCommand.command(
@@ -80,8 +78,6 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         self.assertRedirects(response, self.get_view_url('show'))
 
         conversation = self.get_wrapped_conv()
-        [batch] = conversation.get_batches()
-        self.assertEqual([], list(batch.tags))
         [contact] = self.get_contacts_for_conversation(conversation)
 
         [start_cmd] = self.get_api_commands_sent()
@@ -121,10 +117,12 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
         response = self.client.get(self.get_view_url('message_list'))
 
         # Check pagination
-        # We should have 60 references to a contact, which by default display
-        # the from_addr if a contact cannot be found. (each block as 3
-        # references, one in the table listing, 2 in the reply-to modal div)
-        self.assertContains(response, 'from-', 60)
+        # Ordinarily we'd have 60 references to a contact, which by default
+        # display the from_addr if a contact cannot be found. (Each block has 3
+        # references, one in the table listing, 2 in the reply-to modal div.)
+        # We have no channels connected to this conversation, however, so we
+        # only have 20 in this test.
+        self.assertContains(response, 'from-', 20)
         # We should have 2 links to page two, one for the actual page link
         # and one for the 'Next' page link
         self.assertContains(response, '&amp;p=2', 2)
@@ -383,7 +381,10 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             delivery_class=conversation.delivery_class,
             content='I am ham, not spam.', dedupe=True))
 
-    def test_actions_on_inbound_only(self):
+    @patch('go.vumitools.conversation.utils.ConversationWrapper.'
+           'has_channel_supporting_generic_sends')
+    def test_actions_on_inbound_only(self, hcsgs):
+        hcsgs.return_value = True
         self.setup_conversation()
         messages = self.add_messages_to_conv(1, reply=True)
         [msg_in, msg_out] = messages[0]
@@ -396,6 +397,17 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
 
         response = self.client.get(
             self.get_view_url('message_list'), {'direction': 'outbound'})
+        self.assertNotContains(response, 'Reply')
+
+    def test_no_actions_on_inbound_with_no_generic_send_channels(self):
+        # We have no routing hooked up and hence no channels supporting generic
+        # sends.
+        self.setup_conversation()
+        messages = self.add_messages_to_conv(1, reply=True)
+        [msg_in, msg_out] = messages[0]
+
+        response = self.client.get(
+            self.get_view_url('message_list'), {'direction': 'inbound'})
         self.assertNotContains(response, 'Reply')
 
     def test_send_one_off_reply(self):
