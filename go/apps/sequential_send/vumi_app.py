@@ -137,7 +137,6 @@ class SequentialSendApplication(GoApplicationWorker):
     def send_scheduled_messages(self, conv):
         config = self.get_config_for_conversation(conv)
         messages = config.messages
-        batch_id = conv.get_batch_keys()[0]
         message_options = {}
         conv.set_go_helper_metadata(
             message_options.setdefault('helper_metadata', {}))
@@ -158,7 +157,7 @@ class SequentialSendApplication(GoApplicationWorker):
                     continue
 
                 yield self.send_message(
-                    batch_id, to_addr, messages[message_index],
+                    conv.batch.key, to_addr, messages[message_index],
                     message_options)
 
                 contact.extra[index_key] = u'%s' % (message_index + 1)

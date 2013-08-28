@@ -85,7 +85,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     def test_consume_events(self):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
-        batch_id = yield conversation.get_latest_batch_key()
+        batch_id = conversation.batch.key
         yield self.dispatch_command(
             "bulk_send",
             user_account_key=conversation.user_account.key,
@@ -134,7 +134,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         }
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
-        batch_id = yield conversation.get_latest_batch_key()
+        batch_id = conversation.batch.key
         yield self.dispatch_command(
             "send_message",
             user_account_key=conversation.user_account.key,
@@ -165,7 +165,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     def test_process_command_send_message_in_reply_to(self):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
-        batch_id = yield conversation.get_latest_batch_key()
+        batch_id = conversation.batch.key
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
         yield self.store_inbound_msg(msg)
         command = VumiApiCommand.command(

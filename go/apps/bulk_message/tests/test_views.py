@@ -294,7 +294,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             'bulk_send',
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
-            batch_id=conversation.get_latest_batch_key(), msg_options={},
+            batch_id=conversation.batch.key, msg_options={},
             delivery_class=conversation.delivery_class,
             content='I am ham, not spam.', dedupe=True))
 
@@ -312,7 +312,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             'bulk_send',
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
-            batch_id=conversation.get_latest_batch_key(), msg_options={},
+            batch_id=conversation.batch.key, msg_options={},
             delivery_class=conversation.delivery_class,
             content='I am ham, not spam.', dedupe=False))
 
@@ -349,7 +349,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
                 user_account_key=conversation.user_account.key,
                 conversation_key=conversation.key,
                 command_data=dict(
-                    batch_id=conversation.get_latest_batch_key(),
+                    batch_id=conversation.batch.key,
                     to_addr=u'+27761234567', msg_options={
                         'helper_metadata': {'go': {'sensitive': True}},
                     },
@@ -377,7 +377,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
             'bulk_send',
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
-            batch_id=conversation.get_latest_batch_key(), msg_options={},
+            batch_id=conversation.batch.key, msg_options={},
             delivery_class=conversation.delivery_class,
             content='I am ham, not spam.', dedupe=True))
 
@@ -431,7 +431,7 @@ class BulkMessageTestCase(DjangoGoApplicationTestCase):
                          [self.conversation.user_account.key,
                           self.conversation.key])
         self.assertEqual(reply_to_cmd['kwargs']['command_data'], {
-            'batch_id': conversation.get_latest_batch_key(),
+            'batch_id': conversation.batch.key,
             'conversation_key': conversation.key,
             'content': 'foo',
             'to_addr': msg['from_addr'],

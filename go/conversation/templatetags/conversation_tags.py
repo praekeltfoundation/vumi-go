@@ -56,7 +56,7 @@ def show_conversation_messages(context, conversation, direction=None,
         messages.
     """
 
-    batch_id = batch_id or conversation.get_latest_batch_key()
+    batch_id = batch_id or conversation.batch.key
     direction = 'outbound' if direction == 'outbound' else 'inbound'
 
     # Paginator starts counting at 1 so 0 would also be invalid
