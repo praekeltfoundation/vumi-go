@@ -376,7 +376,6 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def do_search(self, conv, direction, *args, **kwargs):
-        batch_key = kwargs.get('batch_key', self.conv.batch.key)
         search_callback = {
             'inbound': conv.find_inbound_messages_matching,
             'outbound': conv.find_outbound_messages_matching,
@@ -389,7 +388,7 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
         kwargs.update({'wait': True})
         token = yield search_callback(*args, **kwargs)
-        messages = yield results_callback(token, batch_key=batch_key)
+        messages = yield results_callback(token)
         returnValue(messages)
 
     @inlineCallbacks
