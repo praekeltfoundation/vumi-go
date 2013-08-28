@@ -71,9 +71,8 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
             'send_survey',
             user_account_key=conversation.user_account.key,
             conversation_key=conversation.key,
-            batch_id=conversation.get_batches()[0].key, msg_options={},
-            delivery_class=conversation.delivery_class,
-            is_client_initiated=False))
+            batch_id=conversation.batch.key, msg_options={},
+            delivery_class=conversation.delivery_class))
 
     def test_action_send_survey_no_group(self):
         self.setup_conversation(started=True)
@@ -112,8 +111,6 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
     def test_group_selection(self):
         """Select an existing group and use that as the group for the
         conversation"""
-        conversation = self.get_wrapped_conv()
-        self.assertFalse(conversation.is_client_initiated())
         response = self.client.post(self.get_view_url('people'), {
             'groups': [grp.key for grp in self.contact_store.list_groups()]})
         self.assertRedirects(response, self.get_view_url('start'))
@@ -128,8 +125,6 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
 
         conversation = self.get_wrapped_conv()
         [start_cmd] = self.get_api_commands_sent()
-        [batch] = conversation.get_batches()
-        self.assertEqual([], list(batch.tags))
 
         self.assertEqual(start_cmd, VumiApiCommand.command(
             '%s_application' % (conversation.conversation_type,), 'start',
@@ -146,8 +141,6 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
 
         conversation = self.get_wrapped_conv()
         [start_cmd] = self.get_api_commands_sent()
-        [batch] = conversation.get_batches()
-        self.assertEqual([], list(batch.tags))
         [contact] = self.get_contacts_for_conversation(conversation)
 
         self.assertEqual(start_cmd, VumiApiCommand.command(

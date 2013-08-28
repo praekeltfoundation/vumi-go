@@ -72,15 +72,8 @@ class SendMessageCommandHandler(EventHandler):
             event.payload['conversation_key'])
         conv = user_api.wrap_conversation(conv)
 
-        batch_keys = conv.batches.keys()
-        if len(batch_keys) > 0:
-            batch_id = batch_keys[0]
-        else:
-            log.info("No batches found")
-            return
-
         command_data = event.payload['content']
-        command_data['batch_id'] = batch_id
+        command_data['batch_id'] = conv.batch.key
         command_data['msg_options'] = {
             'helper_metadata': {
                 'go': {'user_account': event.payload['account_key']},

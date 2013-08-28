@@ -107,25 +107,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def test_get_latest_batch_key(self):
-        [init_batch] = self.conv.batches.keys()
         batch_key = yield self.conv.get_latest_batch_key()
-        self.assertEqual(batch_key, init_batch)
-        self.assertEqual(self.conv.batches.keys(), [init_batch])
-
-        second_batch = yield self.user_api.api.mdb.batch_start(
-            tags=[], user_account=self.user_api.user_account_key)
-        self.conv.batches.add_key(second_batch)
-        yield self.conv.save()
-
-        now = datetime.now()
-        yield self.store_outbound(
-            init_batch, start_timestamp=now - timedelta(days=1))
-        yield self.store_outbound(second_batch, start_timestamp=now)
-
-        conv = yield self.user_api.get_wrapped_conversation(self.conv.key)
-        batch_key = yield conv.get_latest_batch_key()
-        self.assertEqual(batch_key, second_batch)
-        self.assertEqual(len(conv.batches.keys()), 2)
+        self.assertEqual(batch_key, self.conv.batch.key)
 
     @inlineCallbacks
     def test_count_replies(self):
@@ -262,11 +245,6 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         [msg] = yield self.store_outbound(batch_key, count=1)
         [sent_message] = yield self.conv.sent_messages()
         self.assertEqual(msg['message_id'], sent_message['message_id'])
-
-    @inlineCallbacks
-    def test_get_tags(self):
-        yield self.conv.start()
-        self.assertEqual([], (yield self.conv.get_tags()))
 
     @inlineCallbacks
     def test_get_channels(self):
