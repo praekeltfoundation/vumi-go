@@ -1,4 +1,9 @@
-from vumi.persist.model import ModelMigrator
+from vumi.persist.model import ModelMigrator, ModelMigrationError
+
+
+# NOTE: This module must not import anything from Vumi Go at the top level.
+#       If individual migrators need such modules, they can import them in
+#       their own scope.
 
 
 class ConversationMigrator(ModelMigrator):
@@ -74,5 +79,33 @@ class ConversationMigrator(ModelMigrator):
         mdata.set_value('status', status, index='status_bin')
         mdata.set_value('archive_status', archive_status,
                         index='archive_status_bin')
+
+        return mdata
+
+    def migrate_from_2(self, mdata):
+        # Copy stuff that hasn't changed between versions
+        mdata.copy_values(
+            'user_account', 'name', 'description', 'conversation_type',
+            'config', 'created_at', 'groups', 'delivery_class',
+            'extra_endpoints', 'archived_at', 'status', 'archive_status')
+        mdata.copy_indexes(
+            'user_account_bin', 'conversation_type_bin', 'created_at_bin',
+            'end_timestamp_bin', 'groups_bin', 'status_bin',
+            'archive_status_bin')
+
+        # Add stuff that's new in this version
+        mdata.set_value('$VERSION', 3)
+
+        # Handle batches
+        if len(mdata.old_data['batches']) != 1:
+            # We require exactly one batch, so explode if we have none or lots.
+            raise ModelMigrationError((
+                "Conversation %s cannot be migrated: Exactly one batch key"
+                " required, %s found. Please run a manual 'fix-batches'"
+                " conversation migration.") % (mdata.riak_object.get_key(),
+                                               len(mdata.old_data['batches'])))
+
+        # By now we have exactly one batch and all is right with the world.
+        mdata.set_value('batch', mdata.old_data['batches'][0])
 
         return mdata

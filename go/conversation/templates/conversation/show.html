@@ -102,8 +102,7 @@
 
 {% block ondomready %}
     var actions = new go.conversation.show.ConversationActionsView({
-        el: '.content .actions .right',
-        csrfToken: '{{ csrf_token|safe }}'
+        el: '.content .actions .right'
     });
 
     $('.content .sub-actions .disabled').popover({placement: 'left'});

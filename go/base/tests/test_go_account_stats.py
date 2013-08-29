@@ -60,11 +60,10 @@ class GoAccountStatsCommandTestCase(VumiGoDjangoTestCase):
 
         self.command.handle(self.django_user.username, 'stats', conv.key)
         output = self.command.stdout.getvalue().strip().split('\n')
-        [batch_key] = conv.batches.keys()
         self.assertEqual(output, [
             u'Conversation: active',
-            u'Total Received in batch %s: 5' % (batch_key,),
-            u'Total Sent in batch %s: 5' % (batch_key,),
+            u'Total Received in batch %s: 5' % (conv.batch.key,),
+            u'Total Sent in batch %s: 5' % (conv.batch.key,),
             u'Total Uniques: 5',
             u'Received per date:',
             u'%s: 5' % (datetime.now().date(),),

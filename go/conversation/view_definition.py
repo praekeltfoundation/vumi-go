@@ -573,10 +573,15 @@ class EditConversationGroupsView(ConversationTemplateView):
                 'urls': {
                     'show': reverse(
                         'contacts:group',
-                        kwargs={'group_key': group.key})
+                        kwargs={'group_key': group.key}),
                 },
                 'inConversation': group.key in selected_groups,
-            } for group in groups]
+            } for group in groups],
+            'urls': {
+                'show': self.get_view_url(
+                    'show',
+                    conversation_key=conversation.key)
+            },
         }
 
         return self.render_to_response({

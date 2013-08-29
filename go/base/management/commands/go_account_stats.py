@@ -123,9 +123,9 @@ class Command(BaseCommand):
         message_store = api.api.mdb
         self.out(u'Conversation: %s\n' % (conversation.name,))
 
-        for batch_key in conversation.batches.keys():
-            self.do_batch_key(message_store, batch_key)
-            self.do_batch_key_breakdown(message_store, batch_key)
+        batch_key = conversation.batch.key
+        self.do_batch_key(message_store, batch_key)
+        self.do_batch_key_breakdown(message_store, batch_key)
 
     def do_batch_key(self, message_store, batch_key):
         self.out(u'Total Received in batch %s: %s\n' % (

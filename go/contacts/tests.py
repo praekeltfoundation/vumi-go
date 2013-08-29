@@ -538,6 +538,21 @@ class GroupsTestCase(BaseContactsTestCase):
         })
         self.assertEqual(self.contact_store.list_groups(), [])
 
+    def test_removing_contacts_from_group(self):
+        group = self.contact_store.new_group(TEST_GROUP_NAME)
+        c1 = self.mkcontact(groups=[group])
+        c2 = self.mkcontact(groups=[group])
+
+        group_url = reverse('contacts:group', kwargs={'group_key': group.key})
+        self.client.post(group_url, {
+            '_remove': True,
+            'contact': [c1.key]
+        })
+
+        self.assertEqual(
+            [c2.key],
+            self.contact_store.get_contacts_for_group(group))
+
     def test_group_deletion(self):
         group = self.contact_store.new_group(TEST_GROUP_NAME)
 

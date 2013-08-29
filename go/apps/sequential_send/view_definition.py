@@ -13,7 +13,7 @@ class ScheduleForm(forms.Form):
 
 
 class MessageForm(forms.Form):
-    message = forms.CharField()
+    message = forms.CharField(widget=forms.Textarea)
 
 
 class BaseMessageFormSet(forms.formsets.BaseFormSet):

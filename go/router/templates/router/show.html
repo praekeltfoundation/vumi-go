@@ -39,8 +39,7 @@
 
 {% block ondomready %}
     var actions = new go.router.show.RouterActionsView({
-        el: '.content .actions .right',
-        csrfToken: '{{ csrf_token|safe }}'
+        el: '.content .actions .right'
     });
 
     $('.content .sub-actions .disabled').popover({placement: 'left'});

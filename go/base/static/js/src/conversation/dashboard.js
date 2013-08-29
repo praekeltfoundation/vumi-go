@@ -10,10 +10,7 @@
       ConversationDashboardView.__super__.initialize.call(this, options);
 
       this.actions = this.$('.action').map(function() {
-        return new ConversationActionView({
-          el: $(this),
-          csrfToken: options.csrfToken
-        });
+        return new ConversationActionView({el: $(this)});
       }).get();
     }
   });

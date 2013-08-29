@@ -7,10 +7,7 @@
   var ConversationActionsView = Backbone.View.extend({
     initialize: function(options) {
       this.actions = this.$('.action').map(function() {
-        return new ConversationActionView({
-          el: $(this),
-          csrfToken: options.csrfToken
-        });
+        return new ConversationActionView({el: $(this)});
       }).get();
     }
   });

@@ -53,15 +53,12 @@
 
       this.save = new SaveActionView({
         el: this.$('.save'),
-        model: this.model
+        model: this.model,
+        useNotifier: true
       });
 
-      // !!!TODO!!! prettier notifications
-      this.listenTo(this.save, 'error', function() {
-        bootbox.alert("Something bad happened, changes couldn't be saved.");
-      });
       this.listenTo(this.save, 'success', function() {
-        bootbox.alert("Groups saved successfully.");
+        go.utils.redirect(this.model.get('urls').get('show'));
       });
     },
 

@@ -155,6 +155,15 @@ def _static_group(request, contact_store, group):
                           'The export is scheduled and should '
                           'complete within a few minutes.')
             return redirect(_group_url(group.key))
+        if '_remove' in request.POST:
+            contacts = request.POST.getlist('contact')
+            for person_key in contacts:
+                contact = contact_store.get_contact_by_key(person_key)
+                contact.groups.remove(group)
+                contact.save()
+            messages.info(
+                request,
+                '%d Contacts removed from group' % len(contacts))
         elif '_delete_group_contacts' in request.POST:
             tasks.delete_group_contacts.delay(
                 request.user_api.user_account_key, group.key)
@@ -258,7 +267,7 @@ def _static_group(request, contact_store, group):
         'member_count': contact_store.count_contacts_for_group(group),
     })
 
-    return render(request, 'contacts/group_detail.html', context)
+    return render(request, 'contacts/static_group_detail.html', context)
 
 
 @csrf_protect
@@ -304,7 +313,7 @@ def _smart_group(request, contact_store, group):
             "Showing %s of the group's %s contact(s)" % (limit, len(keys)))
 
     contacts = utils.contacts_by_key(contact_store, *keys[:limit])
-    return render(request, 'contacts/group_detail.html', {
+    return render(request, 'contacts/smart_group_detail.html', {
         'group': group,
         'selected_contacts': contacts,
         'group_form': smart_group_form,
@@ -355,7 +364,7 @@ def _people(request):
                             new_group_form.cleaned_data['name'])
 
                 # We could be using an existing contact group.
-                if request.POST.get('contact_group'):
+                elif request.POST.get('contact_group'):
                     select_group_form = SelectContactGroupForm(
                         request.POST, groups=contact_store.list_groups())
                     if select_group_form.is_valid():

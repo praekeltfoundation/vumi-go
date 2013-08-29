@@ -55,8 +55,7 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
                 'metrics_store': 'metrics_store',
             }
         }
-        conversation = yield self.create_conversation(
-            delivery_tag_pool=u'pool', config=conv_config)
+        conversation = yield self.create_conversation(config=conv_config)
         yield self.start_conversation(conversation)
         self.conversation = yield self.user_api.get_wrapped_conversation(
             conversation.key)
