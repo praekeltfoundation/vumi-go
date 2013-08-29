@@ -36,7 +36,7 @@
   });
 
   var ChoiceEditExtrasView = PopoverView.extend({
-    popoverOptions: {container: 'body'},
+    bootstrapOptions: {container: 'body'},
 
     target: function() { return this.choice.$('.extras'); },
 
@@ -58,13 +58,7 @@
       });
 
       this.valueBackup = null;
-      this.on('show', function() {
-        this.valueBackup = this.choice.model.get('value');
-        this.delegateEvents();
-        this.$('.info').tooltip();
-      }, this);
-
-      this.on('hide', function() { this.$('.info').tooltip('destroy'); }, this);
+      go.utils.bindEvents(this.bindings, this);
     },
 
     onValueChange: function(e) {
@@ -85,6 +79,17 @@
     render: function() {
       this.template.render();
       return this;
+    },
+
+    bindings: {
+      'show': function() {
+        this.valueBackup = this.model.get('value');
+        this.$('.info').tooltip();
+      },
+
+      'hide': function() {
+        this.$('.info').tooltip('destroy');
+      }
     }
   });
 

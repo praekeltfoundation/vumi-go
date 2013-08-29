@@ -18,21 +18,16 @@
       this.save = new SaveActionView({
         el: this.$('#save'),
         model: this.model,
-        sessionId: this.sessionId
-      });
-
-      this.listenTo(this.save, 'error', function() {
-        bootbox.alert("Something bad happened, changes couldn't be saved.");
-      });
-
-      this.listenTo(this.save, 'success', function() {
-        // send user to conversation show page
-        go.utils.redirect('/conversations/'
-          + this.model.get('conversation_key')
-          + '/');
+        sessionId: this.sessionId,
+        useNotifier: true
       });
 
       go.apps.dialogue.style.initialize();
+    },
+
+    remove: function() {
+      DialogueView.__super__.remove.call(this);
+      this.save.remove();
     },
 
     render: function() {

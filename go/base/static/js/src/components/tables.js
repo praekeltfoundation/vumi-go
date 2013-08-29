@@ -239,7 +239,7 @@
           .append($('<td>')
             .attr('colspan', this.columnTitles.length)
             .append($('<img>')
-              .attr('src', go.urls.loading))));
+              .attr('src', go.urls.loaders.dots))));
     },
 
     fadeOut: function() {

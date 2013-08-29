@@ -10,6 +10,7 @@
   var ConversationActionView = CallActionView.extend({
     name: function() { return this.$el.attr('data-action'); },
     data: function() { return {csrfmiddlewaretoken: $.cookie('csrftoken')}; },
+    useNotifier: true,
 
     initialize: function(options) {
       this.on('success', function() { location.reload(); });

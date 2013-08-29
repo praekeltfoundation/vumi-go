@@ -139,7 +139,7 @@ button {
   padding-right: 20px;
 }
 .content .actions .right {
-  padding: 0 20px;
+  padding: 0 30px;
   overflow: hidden;
 }
 .content .actions .right .navbar-search {
@@ -241,12 +241,61 @@ button {
 }
 .popover {
   z-index: 20 !important;
-  font-size: 11px;
-  width: 220px;
 }
-.popover input {
-  font-size: 11px;
-  width: 90%;
+.popover.notifier .close {
+  margin-left: 5px;
+  line-height: 18px;
+}
+.popover.notifier.success {
+  color: #468847;
+  background: #dff0d8;
+}
+.popover.notifier.success.left .arrow:after {
+  border-left-color: #dff0d8;
+}
+.popover.notifier.success.right .arrow:after {
+  border-right-color: #dff0d8;
+}
+.popover.notifier.success.top .arrow:after {
+  border-top-color: #dff0d8;
+}
+.popover.notifier.success.bottom .arrow:after {
+  border-bottom-color: #dff0d8;
+}
+.popover.notifier.error {
+  color: #b94a48;
+  background: #f2dede;
+}
+.popover.notifier.error.left .arrow:after {
+  border-left-color: #f2dede;
+}
+.popover.notifier.error.right .arrow:after {
+  border-right-color: #f2dede;
+}
+.popover.notifier.error.top .arrow:after {
+  border-top-color: #f2dede;
+}
+.popover.notifier.error.bottom .arrow:after {
+  border-bottom-color: #f2dede;
+}
+.popover.notifier.info {
+  color: #3a87ad;
+  background: #d9edf7;
+}
+.popover.notifier.info .close {
+  line-height: 22px;
+}
+.popover.notifier.info.left .arrow:after {
+  border-left-color: #d9edf7;
+}
+.popover.notifier.info.right .arrow:after {
+  border-right-color: #d9edf7;
+}
+.popover.notifier.info.top .arrow:after {
+  border-top-color: #d9edf7;
+}
+.popover.notifier.info.bottom .arrow:after {
+  border-bottom-color: #d9edf7;
 }
 .confirm .details {
   margin-left: 24px;
@@ -256,6 +305,14 @@ button {
 }
 .dialogue .actions .sidebar {
   background: #d9d8d3;
+}
+.dialogue .popover {
+  font-size: 11px;
+  width: 220px;
+}
+.dialogue .popover input {
+  font-size: 11px;
+  width: 90%;
 }
 .dialogue #diagram ._jsPlumb_connector {
   z-index: 1;

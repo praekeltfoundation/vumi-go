@@ -232,18 +232,21 @@
       this.save = new SaveActionView({
         el: this.$('[data-action=save]'),
         sessionId: options.sessionId,
-        model: this.diagram.model
+        model: this.diagram.model,
+        useNotifier: true
       });
 
       this.reset = new ResetActionView({
         el: this.$('[data-action=reset]'),
-        model: this.diagram.model
+        model: this.diagram.model,
+        useNotifier: true
       });
+    },
 
-      this.save.on('error', function() {
-        bootbox.alert("Something bad happened, changes couldn't be saved.");
-      });
-    }
+    remove: function() {
+      RoutingActionsView.__super__.remove.call(this);
+      this.save.remove();
+    },
   });
 
   _(exports).extend({
