@@ -381,3 +381,41 @@ class TestConversationTemplateTags(BaseConversationViewTestCase):
         self.assertEqual(conversation_tags.scrub_tokens(content), expected)
         self.assertEqual(
             conversation_tags.scrub_tokens(content * 2), expected * 2)
+
+    def _assert_cs_url(self, suffix, conv, view_name=None):
+        expected = '/conversations/%s/%s' % (conv.key, suffix)
+        if view_name is None:
+            result = conversation_tags.conversation_screen(conv)
+        else:
+            result = conversation_tags.conversation_screen(conv, view_name)
+        self.assertEqual(expected, result)
+
+    def test_conversation_screen_tag(self):
+        conv = self.create_conversation(conversation_type=u'dummy')
+        self._assert_cs_url('', conv)
+        self._assert_cs_url('', conv, 'show')
+        self._assert_cs_url('edit_detail/', conv, 'edit_detail')
+        self._assert_cs_url('start/', conv, 'start')
+        # The dummy conversation isn't editable.
+        self.assertRaises(Exception, self._assert_cs_url, '', conv, 'edit')
+
+    def _assert_ca_url(self, suffix, conv, action_name):
+        expected = '/conversations/%s/action/%s' % (conv.key, suffix)
+        result = conversation_tags.conversation_action(conv, action_name)
+        self.assertEqual(expected, result)
+
+    def test_conversation_action_tag(self):
+        conv = self.create_conversation(conversation_type=u'with_actions')
+        self._assert_ca_url('enabled', conv, 'enabled')
+        self._assert_ca_url('disabled', conv, 'disabled')
+        # The conversation_action tag currently just builds a URL without
+        # regard to the existence of the action.
+        self._assert_ca_url('foo', conv, 'foo')
+
+    @skip("TODO")
+    def test_get_contact_for_message(self):
+        raise NotImplementedError("TODO")
+
+    @skip("TODO")
+    def test_get_reply_form_for_message(self):
+        raise NotImplementedError("TODO")
