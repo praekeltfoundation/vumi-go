@@ -4,7 +4,6 @@ import logging
 import functools
 import re
 from StringIO import StringIO
-from urllib import urlencode
 
 from django.conf import settings
 from django.views.generic import View, TemplateView
@@ -216,7 +215,7 @@ class MessageListView(ConversationTemplateView):
         query = request.GET.get('q', None)
         token = None
 
-        batch_id = conversation.get_latest_batch_key()
+        batch_id = conversation.batch.key
 
         # Paginator starts counting at 1 so 0 would also be invalid
         inbound_message_paginator = Paginator(
@@ -290,7 +289,7 @@ class MessageListView(ConversationTemplateView):
         conversation.dispatch_command(
             'send_message', user_api.user_account_key, conversation.key,
             command_data={
-                "batch_id": conversation.get_latest_batch_key(),
+                "batch_id": conversation.batch.key,
                 "conversation_key": conversation.key,
                 "to_addr": inbound_message['from_addr'],
                 "content": content,
@@ -316,7 +315,8 @@ class MessageListView(ConversationTemplateView):
             else:
                 messages.error(request,
                     'Something went wrong. Please try again.')
-        return self.redirect_to('message_list', conversation_key=conversation.key)
+        return self.redirect_to(
+            'message_list', conversation_key=conversation.key)
 
 
 class EditConversationDetailView(ConversationTemplateView):

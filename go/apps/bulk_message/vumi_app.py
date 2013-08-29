@@ -107,10 +107,8 @@ class BulkMessageApplication(GoApplicationWorker):
 
         msg_mdh = self.get_metadata_helper(message)
         conv = yield msg_mdh.get_conversation()
-        # XXX: This is a really horrible idea.
-        batch_key = yield conv.get_latest_batch_key()
-        if conv and batch_key:
-            window_id = self.get_window_id(conv.key, batch_key)
+        if conv:
+            window_id = self.get_window_id(conv.key, conv.batch.key)
             flight_key = yield self.window_manager.get_internal_id(window_id,
                                 message['message_id'])
             yield self.window_manager.remove_key(window_id, flight_key)
