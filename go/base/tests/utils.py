@@ -10,6 +10,8 @@ from django.core.paginator import Paginator
 from django.test.client import Client
 from django.core.management.base import CommandError
 
+from twisted.python.monkey import MonkeyPatcher
+
 from vumi.tests.fake_amqp import FakeAMQPBroker
 from vumi.message import TransportUserMessage, TransportEvent
 
@@ -59,6 +61,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
 
     def setUp(self):
         self._persist_setUp()
+        self._monkey_patches = []
         self._settings_patches = []
 
         # Need some hackery to make things fit together here.
@@ -94,6 +97,14 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         self._persist_tearDown()
         for patch in reversed(self._settings_patches):
             patch.disable()
+        for patch in reversed(self._monkey_patches):
+            patch.restore()
+
+    def monkey_patch(self, obj, attribute, value):
+        monkey_patch = MonkeyPatcher((obj, attribute, value))
+        self._monkey_patches.append(monkey_patch)
+        monkey_patch.patch()
+        return monkey_patch
 
     def setup_client(self):
         self.client = Client()

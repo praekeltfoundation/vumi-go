@@ -314,6 +314,11 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         except VumiError as e:
             self.assertTrue('CONVERSATION:bulk_message:badkey' in str(e))
 
+    @inlineCallbacks
+    def test_applications(self):
+        raise NotImplementedError("TODO")
+        self.add_app_permission(u'go.apps.bulk_message')
+
 
 class TestVumiUserApi(TestTxVumiUserApi):
     sync_persistence = True
