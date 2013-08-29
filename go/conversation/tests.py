@@ -6,7 +6,7 @@ from django.utils.unittest import skip
 import go.base.utils
 import go.vumitools.api
 from go.base.tests.utils import VumiGoDjangoTestCase
-from go.conversation.templatetags.conversation_tags import scrub_tokens
+from go.conversation.templatetags import conversation_tags
 from go.conversation.view_definition import ConversationViewDefinitionBase
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
@@ -69,6 +69,8 @@ DUMMY_CONVERSATION_SETTINGS = dict([
 
 
 class FakeConversationPackage(object):
+    """Pretends to be a package containing modules and classes for an app.
+    """
     def __init__(self, conversation_type):
         self.definition = self
         self.view_definition = self
@@ -77,11 +79,11 @@ class FakeConversationPackage(object):
         self.ConversationViewDefinition = vdef_cls
 
 
-class TestConversationViews(VumiGoDjangoTestCase):
+class BaseConversationViewTestCase(VumiGoDjangoTestCase):
     use_riak = True
 
     def setUp(self):
-        super(TestConversationViews, self).setUp()
+        super(BaseConversationViewTestCase, self).setUp()
         self.monkey_patch(
             go.base.utils, 'get_conversation_pkg', self._get_conversation_pkg)
         self.patch_settings(VUMI_INSTALLED_APPS=DUMMY_CONVERSATION_SETTINGS)
@@ -90,9 +92,109 @@ class TestConversationViews(VumiGoDjangoTestCase):
         self.setup_client()
 
     def _get_conversation_pkg(self, conversation_type, from_list=()):
-        """Test stub for go.base.utils.get_conversation_pkg()"""
+        """Test stub for `go.base.utils.get_conversation_pkg()`
+        """
         return FakeConversationPackage(conversation_type)
 
+
+class TestConversationDashboardView(BaseConversationViewTestCase):
+    def test_index(self):
+        """Display all conversations"""
+        response = self.client.get(reverse('conversations:index'))
+        self.assertNotContains(response, u'My Conversation')
+
+        self.create_conversation(
+            name=u'My Conversation', conversation_type=u'dummy')
+        response = self.client.get(reverse('conversations:index'))
+        self.assertContains(response, u'My Conversation')
+
+    def test_index_search(self):
+        """Filter conversations based on query string"""
+        conv = self.create_conversation(conversation_type=u'dummy')
+
+        response = self.client.get(reverse('conversations:index'))
+        self.assertContains(response, conv.name)
+
+        response = self.client.get(reverse('conversations:index'), {
+            'query': 'something that does not exist in the fixtures'})
+        self.assertNotContains(response, conv.name)
+
+    def test_index_search_on_type(self):
+        conv = self.create_conversation(conversation_type=u'dummy')
+        self.add_app_permission(u'gotest.dummy')
+        self.add_app_permission(u'gotest.with_actions')
+
+        def search(conversation_type):
+            return self.client.get(reverse('conversations:index'), {
+                'query': conv.name,
+                'conversation_type': conversation_type,
+            })
+
+        self.assertContains(search('dummy'), conv.key)
+        self.assertNotContains(search('with_actions'), conv.key)
+
+    def test_index_search_on_status(self):
+        conv = self.create_conversation(conversation_type=u'dummy')
+
+        def search(conversation_status):
+            return self.client.get(reverse('conversations:index'), {
+                'query': conv.name,
+                'conversation_status': conversation_status,
+            })
+
+        # it should be draft
+        self.assertContains(search('draft'), conv.key)
+        self.assertNotContains(search('running'), conv.key)
+        self.assertNotContains(search('finished'), conv.key)
+
+        # Set the status to `running'
+        conv = self.user_api.get_wrapped_conversation(conv.key)
+        conv.set_status_started()
+        conv.save()
+        self.assertNotContains(search('draft'), conv.key)
+        self.assertContains(search('running'), conv.key)
+        self.assertNotContains(search('finished'), conv.key)
+
+        # Set the status to `stopped' again
+        conv = self.user_api.get_wrapped_conversation(conv.key)
+        conv.set_status_stopped()
+        conv.save()
+        self.assertContains(search('draft'), conv.key)
+        self.assertNotContains(search('running'), conv.key)
+        self.assertNotContains(search('finished'), conv.key)
+
+        # Archive it
+        conv.archive_conversation()
+
+        self.assertNotContains(search('draft'), conv.key)
+        self.assertNotContains(search('running'), conv.key)
+        self.assertContains(search('finished'), conv.key)
+
+    def test_pagination(self):
+        for i in range(13):
+            conv = self.create_conversation(conversation_type=u'dummy')
+        response = self.client.get(reverse('conversations:index'))
+        # CONVERSATIONS_PER_PAGE = 12
+        self.assertContains(response, conv.name, count=12)
+        response = self.client.get(reverse('conversations:index'), {'p': 2})
+        self.assertContains(response, conv.name, count=1)
+
+    def test_pagination_with_query_and_type(self):
+        self.add_app_permission(u'gotest.dummy')
+        self.add_app_permission(u'gotest.with_actions')
+        for i in range(13):
+            conv = self.create_conversation(conversation_type=u'dummy')
+        response = self.client.get(reverse('conversations:index'), {
+            'query': conv.name,
+            'p': 2,
+            'conversation_type': 'dummy',
+            'conversation_status': 'draft',
+        })
+
+        self.assertNotContains(response, '?p=2')
+
+
+class TestNewConversationView(BaseConversationViewTestCase):
     def test_get_new_conversation(self):
         self.add_app_permission(u'gotest.dummy')
         response = self.client.get(reverse('conversations:new_conversation'))
@@ -116,6 +218,24 @@ class TestConversationViews(VumiGoDjangoTestCase):
         self.assertEqual(conv.name, 'new conv')
         self.assertEqual(conv.conversation_type, 'dummy')
 
+    def test_post_new_conversation_extra_endpoints(self):
+        self.add_app_permission(u'gotest.extra_endpoints')
+        conv_data = {
+            'name': 'new conv',
+            'conversation_type': 'extra_endpoints',
+        }
+        response = self.client.post(reverse('conversations:new_conversation'),
+                                    conv_data)
+        [conv] = self.user_api.active_conversations()
+        show_url = reverse('conversations:conversation', kwargs={
+            'conversation_key': conv.key, 'path_suffix': ''})
+        self.assertRedirects(response, show_url)
+        self.assertEqual(conv.name, 'new conv')
+        self.assertEqual(conv.conversation_type, 'extra_endpoints')
+        self.assertEqual(list(conv.extra_endpoints), [u'extra'])
+
+
+class TestConversationViews(BaseConversationViewTestCase):
     def test_edit_conversation_details(self):
         conv = self.create_conversation(
             conversation_type=u'dummy', name=u'test', description=u'test')
@@ -219,94 +339,6 @@ class TestConversationViews(VumiGoDjangoTestCase):
 
         self.assertEqual(resp.status_code, 200)
 
-    def test_post_new_conversation_extra_endpoints(self):
-        self.add_app_permission(u'gotest.extra_endpoints')
-        conv_data = {
-            'name': 'new conv',
-            'conversation_type': 'extra_endpoints',
-        }
-        response = self.client.post(reverse('conversations:new_conversation'),
-                                    conv_data)
-        [conv] = self.user_api.active_conversations()
-        show_url = reverse('conversations:conversation', kwargs={
-            'conversation_key': conv.key, 'path_suffix': ''})
-        self.assertRedirects(response, show_url)
-        self.assertEqual(conv.name, 'new conv')
-        self.assertEqual(conv.conversation_type, 'extra_endpoints')
-        self.assertEqual(list(conv.extra_endpoints), [u'extra'])
-
-    def test_index(self):
-        """Display all conversations"""
-        response = self.client.get(reverse('conversations:index'))
-        self.assertNotContains(response, u'My Conversation')
-
-        self.create_conversation(
-            name=u'My Conversation', conversation_type=u'dummy')
-        response = self.client.get(reverse('conversations:index'))
-        self.assertContains(response, u'My Conversation')
-
-    def test_index_search(self):
-        """Filter conversations based on query string"""
-        conv = self.create_conversation(conversation_type=u'dummy')
-
-        response = self.client.get(reverse('conversations:index'))
-        self.assertContains(response, conv.name)
-
-        response = self.client.get(reverse('conversations:index'), {
-            'query': 'something that does not exist in the fixtures'})
-        self.assertNotContains(response, conv.name)
-
-    def test_index_search_on_type(self):
-        conv = self.create_conversation(conversation_type=u'dummy')
-        self.add_app_permission(u'gotest.dummy')
-        self.add_app_permission(u'gotest.with_actions')
-
-        def search(conversation_type):
-            return self.client.get(reverse('conversations:index'), {
-                'query': conv.name,
-                'conversation_type': conversation_type,
-            })
-
-        self.assertContains(search('dummy'), conv.key)
-        self.assertNotContains(search('with_actions'), conv.key)
-
-    def test_index_search_on_status(self):
-        conv = self.create_conversation(conversation_type=u'dummy')
-
-        def search(conversation_status):
-            return self.client.get(reverse('conversations:index'), {
-                'query': conv.name,
-                'conversation_status': conversation_status,
-            })
-
-        # it should be draft
-        self.assertContains(search('draft'), conv.key)
-        self.assertNotContains(search('running'), conv.key)
-        self.assertNotContains(search('finished'), conv.key)
-
-        # Set the status to `running'
-        conv = self.user_api.get_wrapped_conversation(conv.key)
-        conv.set_status_started()
-        conv.save()
-        self.assertNotContains(search('draft'), conv.key)
-        self.assertContains(search('running'), conv.key)
-        self.assertNotContains(search('finished'), conv.key)
-
-        # Set the status to `stopped' again
-        conv = self.user_api.get_wrapped_conversation(conv.key)
-        conv.set_status_stopped()
-        conv.save()
-        self.assertContains(search('draft'), conv.key)
-        self.assertNotContains(search('running'), conv.key)
-        self.assertNotContains(search('finished'), conv.key)
-
-        # Archive it
-        conv.archive_conversation()
-
-        self.assertNotContains(search('draft'), conv.key)
-        self.assertNotContains(search('running'), conv.key)
-        self.assertContains(search('finished'), conv.key)
-
     @skip("Update this for new lifecycle.")
     def test_received_messages(self):
         """
@@ -339,33 +371,13 @@ class TestConversationViews(VumiGoDjangoTestCase):
         [reply_msg] = conversation.received_messages()
         self.assertTrue(reply_msg, msg)
 
-    def test_pagination(self):
-        for i in range(13):
-            conv = self.create_conversation(conversation_type=u'dummy')
-        response = self.client.get(reverse('conversations:index'))
-        # CONVERSATIONS_PER_PAGE = 12
-        self.assertContains(response, conv.name, count=12)
-        response = self.client.get(reverse('conversations:index'), {'p': 2})
-        self.assertContains(response, conv.name, count=1)
 
-    def test_pagination_with_query_and_type(self):
-        self.add_app_permission(u'gotest.dummy')
-        self.add_app_permission(u'gotest.with_actions')
-        for i in range(13):
-            conv = self.create_conversation(conversation_type=u'dummy')
-        response = self.client.get(reverse('conversations:index'), {
-            'query': conv.name,
-            'p': 2,
-            'conversation_type': 'dummy',
-            'conversation_status': 'draft',
-        })
-
-        self.assertNotContains(response, '?p=2')
-
+class TestConversationTemplateTags(BaseConversationViewTestCase):
     def test_scrub_tokens(self):
-        content = 'Please visit http://example.com/t/6be226/ ' \
-                  'to start your conversation.'
-        expected = 'Please visit http://example.com/t/******/ ' \
-                   'to start your conversation.'
-        self.assertEqual(scrub_tokens(content), expected)
-        self.assertEqual(scrub_tokens(content * 2), expected * 2)
+        content = ('Please visit http://example.com/t/6be226/'
+                   ' to start your conversation.')
+        expected = ('Please visit http://example.com/t/******/'
+                    ' to start your conversation.')
+        self.assertEqual(conversation_tags.scrub_tokens(content), expected)
+        self.assertEqual(
+            conversation_tags.scrub_tokens(content * 2), expected * 2)
