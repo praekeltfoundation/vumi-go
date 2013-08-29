@@ -5,13 +5,13 @@ from django.core.urlresolvers import reverse
 from django.utils.unittest import skip
 
 import go.base.utils
-import go.vumitools.api
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.conversation.templatetags import conversation_tags
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, EditConversationView)
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
+from go.vumitools.api import VumiApiCommand
 
 
 class EnabledAction(ConversationAction):
@@ -148,6 +148,9 @@ class BaseConversationViewTestCase(VumiGoDjangoTestCase):
     def get_action_view_url(self, conv, action_name):
         return reverse('conversations:conversation_action', kwargs={
             'conversation_key': conv.key, 'action_name': action_name})
+
+    def get_api_commands_sent(self):
+        return go.base.utils.connection.get_commands()
 
 
 class TestConversationDashboardView(BaseConversationViewTestCase):
@@ -456,6 +459,35 @@ class TestConversationViews(BaseConversationViewTestCase):
             }))
 
         self.assertEqual(resp.status_code, 200)
+
+    def test_start(self):
+        conv = self.create_conversation(conversation_type=u'dummy')
+
+        response = self.client.post(
+            self.get_view_url(conv, 'start'), follow=True)
+        self.assertRedirects(response, self.get_view_url(conv, 'show'))
+        [msg] = response.context['messages']
+        self.assertEqual(str(msg), "Dummy Conversation started")
+
+        conv = self.user_api.get_wrapped_conversation(conv.key)
+        self.assertTrue(conv.starting())
+        [start_cmd] = self.get_api_commands_sent()
+        self.assertEqual(start_cmd, VumiApiCommand.command(
+            '%s_application' % (conv.conversation_type,), 'start',
+            user_account_key=conv.user_account.key, conversation_key=conv.key))
+
+    def test_stop(self):
+        conv = self.create_conversation(
+            conversation_type=u'dummy', started=True)
+
+        response = self.client.post(
+            self.get_view_url(conv, 'stop'), follow=True)
+        self.assertRedirects(response, self.get_view_url(conv, 'show'))
+        [msg] = response.context['messages']
+        self.assertEqual(str(msg), "Dummy Conversation stopped")
+
+        conv = self.user_api.get_wrapped_conversation(conv.key)
+        self.assertTrue(conv.stopping())
 
     @skip("Update this for new lifecycle.")
     def test_received_messages(self):
