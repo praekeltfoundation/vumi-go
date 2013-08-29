@@ -1,17 +1,25 @@
 import json
+from datetime import date
+from StringIO import StringIO
+from zipfile import ZipFile
 
 from django import forms
+from django.core import mail
 from django.core.urlresolvers import reverse
 from django.utils.unittest import skip
 
+from mock import patch
+
 import go.base.utils
 from go.base.tests.utils import VumiGoDjangoTestCase
+from go.base.tests.utils import FakeMessageStoreClient, FakeMatchResult
 from go.conversation.templatetags import conversation_tags
 from go.conversation.view_definition import (
     ConversationViewDefinitionBase, EditConversationView)
+from go.vumitools.api import VumiApiCommand
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
-from go.vumitools.api import VumiApiCommand
+from go.vumitools.conversation.utils import ConversationWrapper
 
 
 class EnabledAction(ConversationAction):
@@ -488,6 +496,206 @@ class TestConversationViews(BaseConversationViewTestCase):
 
         conv = self.user_api.get_wrapped_conversation(conv.key)
         self.assertTrue(conv.stopping())
+
+    def test_aggregates(self):
+        conv = self.create_conversation(
+            conversation_type=u'dummy', started=True)
+        # Inbound only
+        self.add_messages_to_conv(
+            5, conv, start_date=date(2012, 1, 1), time_multiplier=12)
+        # Inbound and outbound
+        self.add_messages_to_conv(
+            5, conv, start_date=date(2013, 1, 1), time_multiplier=12,
+            reply=True)
+        response = self.client.get(
+            self.get_view_url(conv, 'aggregates'), {'direction': 'inbound'})
+        self.assertEqual(response.content, '\r\n'.join([
+            '2011-12-30,1',
+            '2011-12-31,2',
+            '2012-01-01,2',
+            '2012-12-30,1',
+            '2012-12-31,2',
+            '2013-01-01,2',
+            '',  # csv ends with a blank line
+            ]))
+
+        response = self.client.get(
+            self.get_view_url(conv, 'aggregates'), {'direction': 'outbound'})
+        self.assertEqual(response.content, '\r\n'.join([
+            '2012-12-30,1',
+            '2012-12-31,2',
+            '2013-01-01,2',
+            '',  # csv ends with a blank line
+            ]))
+
+    def test_export_messages(self):
+        conv = self.create_conversation(
+            conversation_type=u'dummy', started=True)
+        self.add_messages_to_conv(
+            5, conv, start_date=date(2012, 1, 1), time_multiplier=12,
+            reply=True)
+        response = self.client.post(self.get_view_url(conv, 'message_list'), {
+            '_export_conversation_messages': True,
+        })
+        self.assertRedirects(response, self.get_view_url(conv, 'message_list'))
+        [email] = mail.outbox
+        self.assertEqual(email.recipients(), [self.django_user.email])
+        self.assertTrue(conv.name in email.subject)
+        self.assertTrue(conv.name in email.body)
+        [(file_name, zipcontent, mime_type)] = email.attachments
+        self.assertEqual(file_name, 'messages-export.zip')
+        zipfile = ZipFile(StringIO(zipcontent), 'r')
+        content = zipfile.open('messages-export.csv', 'r').read()
+        # 1 header, 5 sent, 5 received, 1 trailing newline == 12
+        self.assertEqual(12, len(content.split('\n')))
+        self.assertEqual(mime_type, 'application/zip')
+
+    def test_message_list_pagination(self):
+        conv = self.create_conversation(
+            conversation_type=u'dummy', started=True)
+        # Create 21 inbound & 21 outbound messages, since we have
+        # 20 messages per page it should give us 2 pages
+        self.add_messages_to_conv(21, conv)
+        response = self.client.get(self.get_view_url(conv, 'message_list'))
+
+        # Check pagination
+        # Ordinarily we'd have 60 references to a contact, which by default
+        # display the from_addr if a contact cannot be found. (Each block has 3
+        # references, one in the table listing, 2 in the reply-to modal div.)
+        # We have no channels connected to this conversation, however, so we
+        # only have 20 in this test.
+        self.assertContains(response, 'from-', 20)
+        # We should have 2 links to page two, one for the actual page link
+        # and one for the 'Next' page link
+        self.assertContains(response, '&amp;p=2', 2)
+        # There should only be 1 link to the current page
+        self.assertContains(response, '&amp;p=1', 1)
+        # There should not be a link to the previous page since we are not
+        # the first page.
+        self.assertContains(response, '&amp;p=0', 0)
+
+    def test_reply_on_inbound_messages_only(self):
+        # Fake the routing setup.
+        self.monkey_patch(
+            ConversationWrapper, 'has_channel_supporting_generic_sends',
+            lambda s: True)
+        conv = self.create_conversation(
+            conversation_type=u'dummy', started=True)
+        messages = self.add_messages_to_conv(1, conv, reply=True)
+        [msg_in, msg_out] = messages[0]
+
+        response = self.client.get(
+            self.get_view_url(conv, 'message_list'), {'direction': 'inbound'})
+        self.assertContains(response, 'Reply')
+        self.assertContains(response, 'href="#reply-%s"' % (
+            msg_in['message_id'],))
+
+        response = self.client.get(
+            self.get_view_url(conv, 'message_list'), {'direction': 'outbound'})
+        self.assertNotContains(response, 'Reply')
+
+    def test_no_reply_with_no_generic_send_channels(self):
+        # We have no routing hooked up and hence no channels supporting generic
+        # sends.
+        conv = self.create_conversation(
+            conversation_type=u'dummy', started=True)
+        self.add_messages_to_conv(1, conv)
+
+        response = self.client.get(
+            self.get_view_url(conv, 'message_list'), {'direction': 'inbound'})
+        self.assertNotContains(response, 'Reply')
+
+    def test_send_one_off_reply(self):
+        conv = self.create_conversation(
+            conversation_type=u'dummy', started=True)
+        self.add_messages_to_conv(1, conv)
+        [msg] = conv.received_messages()
+        response = self.client.post(self.get_view_url(conv, 'message_list'), {
+            'in_reply_to': msg['message_id'],
+            'content': 'foo',
+            'to_addr': 'should be ignored',
+            '_send_one_off_reply': True,
+        })
+        self.assertRedirects(response, self.get_view_url(conv, 'message_list'))
+
+        [reply_to_cmd] = self.get_api_commands_sent()
+        self.assertEqual(reply_to_cmd['worker_name'], 'dummy_application')
+        self.assertEqual(reply_to_cmd['command'], 'send_message')
+        self.assertEqual(
+            reply_to_cmd['args'], [conv.user_account.key, conv.key])
+        self.assertEqual(reply_to_cmd['kwargs']['command_data'], {
+            'batch_id': conv.batch.key,
+            'conversation_key': conv.key,
+            'content': 'foo',
+            'to_addr': msg['from_addr'],
+            'msg_options': {'in_reply_to': msg['message_id']},
+        })
+
+    @skip("The new views don't have this.")
+    def test_show_cached_message_overview(self):
+        self.put_sample_messages_in_conversation(self.user_api,
+                                                 self.conv_key, 10)
+        response = self.client.get(self.get_view_url('show'))
+        self.assertContains(response,
+            '10 sent for delivery to the networks.')
+        self.assertContains(response,
+            '10 accepted for delivery by the networks.')
+        self.assertContains(response, '10 delivered.')
+
+    @skip("The new views don't have this.")
+    @patch('go.base.message_store_client.MatchResult')
+    @patch('go.base.message_store_client.Client')
+    def test_message_search(self, Client, MatchResult):
+        self.setup_conversation()
+        fake_client = FakeMessageStoreClient()
+        fake_result = FakeMatchResult()
+        Client.return_value = fake_client
+        MatchResult.return_value = fake_result
+
+        response = self.client.get(self.get_view_url('message_list'), {
+            'q': 'hello world 1',
+        })
+
+        template_names = [t.name for t in response.templates]
+        self.assertTrue(
+            'generic/includes/message-load-results.html' in template_names)
+        self.assertEqual(response.context['token'], fake_client.token)
+
+    @skip("The new views don't have this.")
+    @patch('go.base.message_store_client.MatchResult')
+    @patch('go.base.message_store_client.Client')
+    def test_message_results(self, Client, MatchResult):
+        self.setup_conversation()
+        fake_client = FakeMessageStoreClient()
+        fake_result = FakeMatchResult(tries=2,
+            results=[self.mkmsg_out() for i in range(10)])
+        Client.return_value = fake_client
+        MatchResult.return_value = fake_result
+
+        fetch_results_url = self.get_view_url('message_search_result')
+        fetch_results_params = {
+            'q': 'hello world 1',
+            'batch_id': 'batch-id',
+            'direction': 'inbound',
+            'token': fake_client.token,
+            'delay': 100,
+        }
+
+        response1 = self.client.get(fetch_results_url, fetch_results_params)
+        response2 = self.client.get(fetch_results_url, fetch_results_params)
+
+        # First time it should still show the loading page
+        self.assertTrue('generic/includes/message-load-results.html' in
+                        [t.name for t in response1.templates])
+        self.assertEqual(response1.context['delay'], 1.1 * 100)
+        # Second time it should still render the messages
+        self.assertTrue('generic/includes/message-list.html' in
+                        [t.name for t in response2.templates])
+        self.assertEqual(response1.context['token'], fake_client.token)
+        # Second time we should list the matching messages
+        self.assertEqual(response2.context['token'], fake_client.token)
+        self.assertEqual(
+            len(response2.context['message_page'].object_list), 10)
 
     @skip("Update this for new lifecycle.")
     def test_received_messages(self):
