@@ -371,8 +371,8 @@ class EditConversationView(ConversationTemplateView):
     Subclass this and set :attr:`edit_forms` to a list of tuples
     of the form `('key', FormClass)`.
 
-    The `key` should be a key into the conversation's metadata field. If `key`
-    is `None`, the whole of the metadata field will be used.
+    The `key` should be a key into the conversation's config field. If `key`
+    is `None`, the whole of the config field will be used.
 
     If the default behaviour is insufficient or problematic, implement
     :meth:`make_forms` and :meth:`process_forms`. These are the only two
@@ -404,10 +404,13 @@ class EditConversationView(ConversationTemplateView):
         return self.redirect_to(self.get_next_view(conversation),
                                 conversation_key=conversation.key)
 
-    def make_form(self, key, form, metadata):
-        data = metadata.get(key, {})
-        if hasattr(form, 'initial_from_metadata'):
-            data = form.initial_from_metadata(data)
+    def make_form(self, key, form, config):
+        if key is None:
+            data = config
+        else:
+            data = config.get(key, {})
+        if hasattr(form, 'initial_from_config'):
+            data = form.initial_from_config(data)
         return form(prefix=key, initial=data)
 
     def make_forms(self, conversation):
@@ -416,8 +419,8 @@ class EditConversationView(ConversationTemplateView):
                 for key, edit_form in self.edit_forms]
 
     def process_form(self, form):
-        if hasattr(form, 'to_metadata'):
-            return form.to_metadata()
+        if hasattr(form, 'to_config'):
+            return form.to_config()
         return form.cleaned_data
 
     def process_forms(self, request, conversation):

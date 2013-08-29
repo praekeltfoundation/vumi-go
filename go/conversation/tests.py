@@ -1,5 +1,6 @@
 import json
 
+from django import forms
 from django.core.urlresolvers import reverse
 from django.utils.unittest import skip
 
@@ -7,7 +8,8 @@ import go.base.utils
 import go.vumitools.api
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.conversation.templatetags import conversation_tags
-from go.conversation.view_definition import ConversationViewDefinitionBase
+from go.conversation.view_definition import (
+    ConversationViewDefinitionBase, EditConversationView)
 from go.vumitools.conversation.definition import (
     ConversationDefinitionBase, ConversationAction)
 
@@ -51,6 +53,41 @@ class EndpointConversationDefinition(ConversationDefinitionBase):
     extra_static_endpoints = (u'extra',)
 
 
+class SimpleEditForm(forms.Form):
+    simple_field = forms.CharField()
+
+
+class SimpleEditView(EditConversationView):
+    edit_forms = (
+        (None, SimpleEditForm),
+    )
+
+
+class SimpleEditConversationDefinition(ConversationDefinitionBase):
+    conversation_type = 'simple_edit'
+    conversation_display_name = 'Simple Editable Conversation'
+
+
+class SimpleEditViewDefinition(ConversationViewDefinitionBase):
+    edit_view = SimpleEditView
+
+
+class ComplexEditView(EditConversationView):
+    edit_forms = (
+        ('foo', SimpleEditForm),
+        ('bar', SimpleEditForm),
+    )
+
+
+class ComplexEditConversationDefinition(ConversationDefinitionBase):
+    conversation_type = 'complex_edit'
+    conversation_display_name = 'Complex Editable Conversation'
+
+
+class ComplexEditViewDefinition(ConversationViewDefinitionBase):
+    edit_view = ComplexEditView
+
+
 DUMMY_CONVERSATION_DEFS = {
     'dummy': (
         DummyConversationDefinition, ConversationViewDefinitionBase),
@@ -58,6 +95,10 @@ DUMMY_CONVERSATION_DEFS = {
         ActionConversationDefinition, ConversationViewDefinitionBase),
     'extra_endpoints': (
         EndpointConversationDefinition, ConversationViewDefinitionBase),
+    'simple_edit': (
+        SimpleEditConversationDefinition, SimpleEditViewDefinition),
+    'complex_edit': (
+        ComplexEditConversationDefinition, ComplexEditViewDefinition),
 }
 
 
@@ -95,6 +136,18 @@ class BaseConversationViewTestCase(VumiGoDjangoTestCase):
         """Test stub for `go.base.utils.get_conversation_pkg()`
         """
         return FakeConversationPackage(conversation_type)
+
+    def get_view_url(self, conv, view):
+        view_def = go.base.utils.get_conversation_view_definition(
+            conv.conversation_type)
+        return view_def.get_view_url(view, conversation_key=conv.key)
+
+    def get_new_view_url(self):
+        return reverse('conversations:new_conversation')
+
+    def get_action_view_url(self, conv, action_name):
+        return reverse('conversations:conversation_action', kwargs={
+            'conversation_key': conv.key, 'action_name': action_name})
 
 
 class TestConversationDashboardView(BaseConversationViewTestCase):
@@ -236,6 +289,71 @@ class TestNewConversationView(BaseConversationViewTestCase):
 
 
 class TestConversationViews(BaseConversationViewTestCase):
+    def test_show_no_content_block(self):
+        conv = self.create_conversation(conversation_type=u'dummy')
+        show_url = self.get_view_url(conv, 'show')
+        response = self.client.get(show_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Content')
+        self.assertNotContains(response, show_url + 'edit/')
+
+    def test_show_editable(self):
+        conv = self.create_conversation(conversation_type=u'simple_edit')
+        response = self.client.get(self.get_view_url(conv, 'show'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Content')
+        self.assertContains(response, self.get_view_url(conv, 'edit'))
+
+    def test_edit_simple(self):
+        conv = self.create_conversation(conversation_type=u'simple_edit')
+        self.assertEqual(conv.config, {})
+
+        response = self.client.get(self.get_view_url(conv, 'edit'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'simple_field')
+        self.assertNotContains(response, 'field value')
+
+        response = self.client.post(self.get_view_url(conv, 'edit'), {
+            'simple_field': ['field value'],
+        })
+        self.assertRedirects(response, self.get_view_url(conv, 'show'))
+        conv = self.user_api.get_wrapped_conversation(conv.key)
+        self.assertEqual(conv.config, {'simple_field': 'field value'})
+
+        response = self.client.get(self.get_view_url(conv, 'edit'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'simple_field')
+        self.assertContains(response, 'field value')
+
+    def test_edit_complex(self):
+        conv = self.create_conversation(conversation_type=u'complex_edit')
+        self.assertEqual(conv.config, {})
+
+        response = self.client.get(self.get_view_url(conv, 'edit'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'foo-simple_field')
+        self.assertContains(response, 'bar-simple_field')
+        self.assertNotContains(response, 'field value 1')
+        self.assertNotContains(response, 'field value 2')
+
+        response = self.client.post(self.get_view_url(conv, 'edit'), {
+            'foo-simple_field': ['field value 1'],
+            'bar-simple_field': ['field value 2'],
+        })
+        self.assertRedirects(response, self.get_view_url(conv, 'show'))
+        conv = self.user_api.get_wrapped_conversation(conv.key)
+        self.assertEqual(conv.config, {
+            'foo': {'simple_field': 'field value 1'},
+            'bar': {'simple_field': 'field value 2'},
+        })
+
+        response = self.client.get(self.get_view_url(conv, 'edit'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'foo-simple_field')
+        self.assertContains(response, 'bar-simple_field')
+        self.assertContains(response, 'field value 1')
+        self.assertContains(response, 'field value 2')
+
     def test_edit_conversation_details(self):
         conv = self.create_conversation(
             conversation_type=u'dummy', name=u'test', description=u'test')
