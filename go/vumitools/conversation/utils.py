@@ -39,7 +39,6 @@ class ConversationWrapper(object):
         self.c.set_status_finished()
         yield self.c.save()
         yield self._remove_from_routing_table()
-        yield self.mdb.batch_done(self.batch.key)
 
     def __getattr__(self, name):
         # Proxy anything we don't have back to the wrapped conversation.
