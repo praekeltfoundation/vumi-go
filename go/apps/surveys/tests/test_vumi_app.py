@@ -133,7 +133,7 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def send_send_survey_command(self, conversation):
-        batch_id = yield self.conversation.get_latest_batch_key()
+        batch_id = self.conversation.batch.key
         yield self.dispatch_command(
             "send_survey",
             user_account_key=self.user_account.key,
@@ -270,7 +270,7 @@ class TestSurveyApplication(AppWorkerTestCase):
             'helper_metadata': {'foo': {'bar': 'baz'}},
         }
         yield self.start_conversation(self.conversation)
-        batch_id = yield self.conversation.get_latest_batch_key()
+        batch_id = self.conversation.batch.key
         yield self.dispatch_command(
             "send_message",
             user_account_key=self.user_account.key,
@@ -300,7 +300,7 @@ class TestSurveyApplication(AppWorkerTestCase):
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
         yield self.start_conversation(self.conversation)
-        batch_id = yield self.conversation.get_latest_batch_key()
+        batch_id = self.conversation.batch.key
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
         yield self.store_inbound_msg(msg)
         command = VumiApiCommand.command(
