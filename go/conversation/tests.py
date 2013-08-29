@@ -373,15 +373,6 @@ class TestConversationViews(BaseConversationViewTestCase):
 
 
 class TestConversationTemplateTags(BaseConversationViewTestCase):
-    def test_scrub_tokens(self):
-        content = ('Please visit http://example.com/t/6be226/'
-                   ' to start your conversation.')
-        expected = ('Please visit http://example.com/t/******/'
-                    ' to start your conversation.')
-        self.assertEqual(conversation_tags.scrub_tokens(content), expected)
-        self.assertEqual(
-            conversation_tags.scrub_tokens(content * 2), expected * 2)
-
     def _assert_cs_url(self, suffix, conv, view_name=None):
         expected = '/conversations/%s/%s' % (conv.key, suffix)
         if view_name is None:
