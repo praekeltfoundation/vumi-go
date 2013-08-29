@@ -1,17 +1,8 @@
-from go.vumitools.tests.utils import VumiApiCommand
 from go.apps.tests.base import DjangoGoApplicationTestCase
 
 
 class SequentialSendTestCase(DjangoGoApplicationTestCase):
     TEST_CONVERSATION_TYPE = u'sequential_send'
-
-    def test_new_conversation(self):
-        self.add_app_permission(u'go.apps.sequential_send')
-        self.assertEqual(len(self.conv_store.list_conversations()), 0)
-        response = self.post_new_conversation()
-        self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        conv = self.get_latest_conversation()
-        self.assertRedirects(response, self.get_view_url('edit', conv.key))
 
     def test_show_stopped(self):
         """

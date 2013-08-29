@@ -33,14 +33,6 @@ class SurveyTestCase(DjangoGoApplicationTestCase):
         config.update(kwargs)
         return pm, pm.register(poll_id, config)
 
-    def test_new_conversation(self):
-        self.add_app_permission(u'go.apps.surveys')
-        self.assertEqual(len(self.conv_store.list_conversations()), 0)
-        response = self.post_new_conversation()
-        self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        conv = self.get_latest_conversation()
-        self.assertRedirects(response, self.get_view_url('edit', conv.key))
-
     def test_action_send_survey_get(self):
         self.setup_conversation(started=True, with_group=True,
                                 with_channel=True)

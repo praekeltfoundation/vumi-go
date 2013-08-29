@@ -4,14 +4,6 @@ from go.apps.tests.base import DjangoGoApplicationTestCase
 class StaticReplyTestCase(DjangoGoApplicationTestCase):
     TEST_CONVERSATION_TYPE = u'static_reply'
 
-    def test_new_conversation(self):
-        self.add_app_permission(u'go.apps.static_reply')
-        self.assertEqual(len(self.conv_store.list_conversations()), 0)
-        response = self.post_new_conversation()
-        self.assertEqual(len(self.conv_store.list_conversations()), 1)
-        conv = self.get_latest_conversation()
-        self.assertRedirects(response, self.get_view_url('edit', conv.key))
-
     def test_show_stopped(self):
         """
         Test showing the conversation
