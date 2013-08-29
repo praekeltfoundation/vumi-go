@@ -28,18 +28,14 @@ describe("go.apps.dialogue.views", function() {
         sessionId: '123'
       });
 
+      view.save.notifier.animate = false;
       view.render();
-      bootbox.animate(false);
     });
 
     afterEach(function() {
       tearDown();
       view.remove();
       server.restore();
-
-      $('.bootbox')
-        .modal('hide')
-        .remove();
     });
 
     describe("when the '#save' is clicked", function() {
@@ -67,15 +63,10 @@ describe("go.apps.dialogue.views", function() {
         it("should notify the user", function() {
           server.respondWith(errorResponse('Aaah!'));
 
-          assert(noElExists('.modal'));
-
           view.$('#save').click();
           server.respond();
 
-          assert(oneElExists('.modal'));
-          assert.include(
-            $('.modal').text(),
-            "Something bad happened, changes couldn't be save");
+          assert.include(view.save.notifier.$el.text(), "Save failed :/");
         });
       });
 
@@ -90,13 +81,13 @@ describe("go.apps.dialogue.views", function() {
           go.utils.redirect.restore();
         });
 
-        it("should send the user to the conversation show page", function() {
+        it("should notify the user", function() {
           server.respondWith(response());
 
           view.$('#save').click();
           server.respond();
 
-          assert.equal(location, '/conversations/conversation-1/');
+          assert.include(view.save.notifier.$el.text(), "Save successful!");
         });
       });
     });

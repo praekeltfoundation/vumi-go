@@ -109,6 +109,15 @@
     });
   };
 
+  var delayed = function(fn, delay, that) {
+    if (delay > 0) { _.delay(fn.bind(that), delay); }
+    else { fn.call(that); }
+  };
+
+  var capitalise = function(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+
   _.extend(exports, {
     merge: merge,
     functor: functor,
@@ -120,6 +129,8 @@
     unaccentify: unaccentify,
     redirect: redirect,
     bindEvents: bindEvents,
+    delayed: delayed,
+    capitalise: capitalise,
     highlightActiveLinks: highlightActiveLinks
   });
 })(go.utils = {});

@@ -87,13 +87,14 @@ describe("go.conversation.groups", function() {
           urls: {show: 'conversations:conversation1:show'}
         })
       });
+
+      view.save.notifier.animate = false;
     });
 
     afterEach(function() {
       view.remove();
       server.restore();
       go.testHelpers.unregisterModels();
-      $('.bootbox').modal('hide').remove();
     });
 
     describe("when the input in '.search' changes", function() {
@@ -162,15 +163,11 @@ describe("go.conversation.groups", function() {
 
         it("should notify the user", function() {
           server.respondWith('{}');
-          assert(noElExists('.modal'));
 
           view.$('.save').click();
           server.respond();
 
-          assert(oneElExists('.modal'));
-          assert.include(
-            $('.modal').text(),
-            "Groups saved successfully");
+          assert.include(view.save.notifier.$el.text(), "Save successful!");
         });
 
         it("should redirect the user to the conversation show page",
@@ -189,15 +186,10 @@ describe("go.conversation.groups", function() {
         it("should notify the user", function() {
           server.respondWith([404, {}, ""]);
 
-          assert(noElExists('.modal'));
-
           view.$('.save').click();
           server.respond();
 
-          assert(oneElExists('.modal'));
-          assert.include(
-            $('.modal').text(),
-            "Something bad happened, changes couldn't be save");
+          assert.include(view.save.notifier.$el.text(), "Save failed :/");
         });
       });
     });
