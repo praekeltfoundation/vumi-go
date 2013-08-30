@@ -105,11 +105,11 @@ class ContactsTestCase(BaseContactsTestCase):
             'person_key': contact.key,
         })
         response = self.client.post(person_url, {
-            '_delete_contact': True,
+            '_delete': True,
         })
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response['Location'].endswith(
-            reverse('contacts:index')))
+            reverse('contacts:people')))
 
         # After deleting the person should return a 404 page
         response = self.client.get(person_url)
