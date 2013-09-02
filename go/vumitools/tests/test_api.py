@@ -2,6 +2,8 @@
 
 """Tests for go.vumitools.api."""
 
+import uuid
+
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -313,6 +315,28 @@ class TestTxVumiUserApi(AppWorkerTestCase):
             self.fail("Expected VumiError, got no exception.")
         except VumiError as e:
             self.assertTrue('CONVERSATION:bulk_message:badkey' in str(e))
+
+    @inlineCallbacks
+    def add_app_permission(self, application):
+        permission = self.user_api.api.account_store.application_permissions(
+            uuid.uuid4().hex, application=application)
+        yield permission.save()
+
+        account = yield self.user_api.get_user_account()
+        account.applications.add(permission)
+        yield account.save()
+
+    @inlineCallbacks
+    def test_applications(self):
+        applications = yield self.user_api.applications()
+        self.assertEqual(applications, {})
+        yield self.add_app_permission(u'go.apps.bulk_message')
+        applications = yield self.user_api.applications()
+        self.assertEqual(applications, {
+            u'go.apps.bulk_message': {
+                'display_name': 'Group Message',
+                'namespace': 'bulk_message',
+            }})
 
 
 class TestVumiUserApi(TestTxVumiUserApi):
