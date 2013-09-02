@@ -633,9 +633,10 @@ class TestConversationViews(BaseConversationViewTestCase):
 
     @skip("The new views don't have this.")
     def test_show_cached_message_overview(self):
-        self.put_sample_messages_in_conversation(self.user_api,
-                                                 self.conv_key, 10)
-        response = self.client.get(self.get_view_url('show'))
+        conv = self.create_conversation(
+            conversation_type=u'dummy', started=True)
+        self.add_messages_to_conv(10, conv)
+        response = self.client.get(self.get_view_url(conv, 'show'))
         self.assertContains(response,
             '10 sent for delivery to the networks.')
         self.assertContains(response,
@@ -646,13 +647,14 @@ class TestConversationViews(BaseConversationViewTestCase):
     @patch('go.base.message_store_client.MatchResult')
     @patch('go.base.message_store_client.Client')
     def test_message_search(self, Client, MatchResult):
-        self.setup_conversation()
+        conv = self.create_conversation(
+            conversation_type=u'dummy', started=True)
         fake_client = FakeMessageStoreClient()
         fake_result = FakeMatchResult()
         Client.return_value = fake_client
         MatchResult.return_value = fake_result
 
-        response = self.client.get(self.get_view_url('message_list'), {
+        response = self.client.get(self.get_view_url(conv, 'message_list'), {
             'q': 'hello world 1',
         })
 
@@ -665,14 +667,15 @@ class TestConversationViews(BaseConversationViewTestCase):
     @patch('go.base.message_store_client.MatchResult')
     @patch('go.base.message_store_client.Client')
     def test_message_results(self, Client, MatchResult):
-        self.setup_conversation()
+        conv = self.create_conversation(
+            conversation_type=u'dummy', started=True)
         fake_client = FakeMessageStoreClient()
         fake_result = FakeMatchResult(tries=2,
             results=[self.mkmsg_out() for i in range(10)])
         Client.return_value = fake_client
         MatchResult.return_value = fake_result
 
-        fetch_results_url = self.get_view_url('message_search_result')
+        fetch_results_url = self.get_view_url(conv, 'message_search_result')
         fetch_results_params = {
             'q': 'hello world 1',
             'batch_id': 'batch-id',
@@ -696,38 +699,6 @@ class TestConversationViews(BaseConversationViewTestCase):
         self.assertEqual(response2.context['token'], fake_client.token)
         self.assertEqual(
             len(response2.context['message_page'].object_list), 10)
-
-    @skip("Update this for new lifecycle.")
-    def test_received_messages(self):
-        """
-        Test received_messages helper function
-        """
-        conversation = self.get_wrapped_conv()
-        conversation.start()
-        contacts = []
-        for bunch in conversation.get_opted_in_contact_bunches(
-                conversation.delivery_class):
-            contacts.extend(bunch)
-        [contact] = contacts
-        [batch] = conversation.get_batches()
-        self.assertEqual(conversation.received_messages(), [])
-        [tag] = batch.tags
-        to_addr = "+123" + tag[1][-5:]
-
-        # TODO: Decide what we want here.
-        #       We get 'contact=None', but everything else is there
-        # unknown contact
-        # msg = self.mkmsg_in('hello', to_addr=to_addr)
-        # self.api.mdb.add_inbound_message(msg, batch_id=batch.key)
-        # self.assertEqual(conversation.replies(), [])
-
-        # TODO: Actually put the contact in here.
-        # known contact
-        msg = self.mkmsg_in('hello', to_addr=to_addr,
-                            from_addr=contact.msisdn.lstrip('+'))
-        self.api.mdb.add_inbound_message(msg, batch_id=batch.key)
-        [reply_msg] = conversation.received_messages()
-        self.assertTrue(reply_msg, msg)
 
 
 class TestConversationTemplateTags(BaseConversationViewTestCase):
