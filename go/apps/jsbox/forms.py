@@ -20,10 +20,10 @@ class JsboxForm(BootstrapForm):
                                 required=False)
 
     @staticmethod
-    def initial_from_metadata(metadata):
+    def initial_from_config(metadata):
         return metadata
 
-    def to_metadata(self):
+    def to_config(self):
         return {
             'javascript': self.cleaned_data['javascript'],
             'source_url': self.cleaned_data['source_url'],
@@ -38,10 +38,10 @@ class JsboxAppConfigForm(BootstrapForm):
                                 required=False)
 
     @staticmethod
-    def initial_from_metadata(metadata):
+    def initial_from_config(metadata):
         return metadata
 
-    def to_metadata(self):
+    def to_config(self):
         return {
             'key': self.cleaned_data['key'],
             'value': self.cleaned_data['value'],
@@ -56,23 +56,23 @@ class JsboxAppConfigFormset(BaseFormSet):
     can_delete = True
     max_num = None
 
-    def to_metadata(self):
+    def to_config(self):
         metadata = {}
         for form in self.forms:
             if not form.cleaned_data or form in self.deleted_forms:
                 continue
-            submeta = form.to_metadata()
+            submeta = form.to_config()
             metadata[submeta['key']] = submeta
             del submeta['key']
         return metadata
 
     @classmethod
-    def initial_from_metadata(cls, metadata):
+    def initial_from_config(cls, metadata):
         initials = []
         for key in sorted(metadata):
             submeta = metadata[key].copy()
             submeta['key'] = key
-            if hasattr(cls.form, 'initial_from_metadata'):
-                submeta = getattr(cls.form, 'initial_from_metadata')(submeta)
+            if hasattr(cls.form, 'initial_from_config'):
+                submeta = getattr(cls.form, 'initial_from_config')(submeta)
             initials.append(submeta)
         return initials
