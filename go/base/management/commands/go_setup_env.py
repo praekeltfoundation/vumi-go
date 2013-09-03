@@ -322,9 +322,8 @@ class Command(BaseCommand):
             conv = user_api.conversation_store.conversations(
                 conversation_key, user_account=user_api.user_account_key,
                 conversation_type=conversation_type,
-                name=conv_info.pop('name'), config=config,
+                name=conv_info.pop('name'), config=config, batch=batch_id,
                 extra_endpoints=view_def.get_endpoints(config), **conv_info)
-            conv.batches.add_key(batch_id)
             conv.save()
             self.stdout.write('Conversation %s created\n' % (conv.key,))
 

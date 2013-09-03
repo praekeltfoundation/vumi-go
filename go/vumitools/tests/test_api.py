@@ -2,6 +2,8 @@
 
 """Tests for go.vumitools.api."""
 
+import uuid
+
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -114,17 +116,6 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
         self.assertFalse((yield self.vumi_api.user_exists('foo')))
         self.assertFalse((yield VumiUserApi(self.vumi_api, 'foo').exists()))
-
-    @inlineCallbacks
-    def test_list_conversation_endpoints(self):
-        tag1, tag2, tag3 = yield self.setup_tagpool(
-            u"pool1", [u"1234", u"5678", u"9012"])
-        yield self.user_api.acquire_specific_tag(tag2)
-        yield self.user_api.new_conversation(
-            u'bulk_message', u'name', u'desc', {},
-            delivery_tag_pool=tag1[0], delivery_tag=tag1[1])
-        endpoints = yield self.user_api.list_conversation_endpoints()
-        self.assertEqual(endpoints, set([tag1]))
 
     @inlineCallbacks
     def test_list_endpoints(self):
@@ -324,6 +315,28 @@ class TestTxVumiUserApi(AppWorkerTestCase):
             self.fail("Expected VumiError, got no exception.")
         except VumiError as e:
             self.assertTrue('CONVERSATION:bulk_message:badkey' in str(e))
+
+    @inlineCallbacks
+    def add_app_permission(self, application):
+        permission = self.user_api.api.account_store.application_permissions(
+            uuid.uuid4().hex, application=application)
+        yield permission.save()
+
+        account = yield self.user_api.get_user_account()
+        account.applications.add(permission)
+        yield account.save()
+
+    @inlineCallbacks
+    def test_applications(self):
+        applications = yield self.user_api.applications()
+        self.assertEqual(applications, {})
+        yield self.add_app_permission(u'go.apps.bulk_message')
+        applications = yield self.user_api.applications()
+        self.assertEqual(applications, {
+            u'go.apps.bulk_message': {
+                'display_name': 'Group Message',
+                'namespace': 'bulk_message',
+            }})
 
 
 class TestVumiUserApi(TestTxVumiUserApi):

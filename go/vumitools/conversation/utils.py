@@ -24,17 +24,7 @@ class ConversationWrapper(object):
         self.mdb = self.api.mdb
         self.manager = self.c.manager
         self.base_manager = self.api.manager
-        self._tagpool_metadata = None
-
-    @Manager.calls_manager
-    def get_tagpool_metadata(self, key, default=None):
-        if self.delivery_tag_pool is None:
-            returnValue({})
-
-        if self._tagpool_metadata is None:
-            self._tagpool_metadata = yield self.api.tpm.get_metadata(
-                self.delivery_tag_pool)
-        returnValue(self._tagpool_metadata.get(key, default))
+        self._channels = None
 
     @Manager.calls_manager
     def stop_conversation(self):
@@ -49,12 +39,6 @@ class ConversationWrapper(object):
         self.c.set_status_finished()
         yield self.c.save()
         yield self._remove_from_routing_table()
-        yield self._release_batches()
-
-    @Manager.calls_manager
-    def _release_batches(self):
-        for batch in (yield self.get_batches()):
-            yield self.mdb.batch_done(batch.key)
 
     def __getattr__(self, name):
         # Proxy anything we don't have back to the wrapped conversation.
@@ -68,43 +52,20 @@ class ConversationWrapper(object):
     def set_config(self, config):
         self.c.config = config
 
-    def start_batch(self, *tags):
-        user_account = unicode(self.c.user_account.key)
-        return self.mdb.batch_start(tags, user_account=user_account)
-
-    @Manager.calls_manager
-    def get_batches(self):
-        # NOTE: This assumes that we don't have very large numbers of batches.
-        batches = []
-        for bunch in self.c.batches.load_all_bunches(self.base_manager):
-            batches.extend((yield bunch))
-        returnValue(batches)
-
-    def get_batch_keys(self):
-        return self.c.batches.keys()
-
-    @Manager.calls_manager
-    def get_tags(self):
-        """
-        Return any tags associated with this conversation.
-
-        :rtype:
-            Returns a list of tags `[(tagpool, tag), ... ]`
-        """
-        tags = []
-        for batch in (yield self.get_batches()):
-            tags.extend((yield batch.tags))
-        returnValue(tags)
-
     @Manager.calls_manager
     def get_channels(self):
         """
         Returns lists of channels that can either send messages to or receive
         messages from this conversation.
 
+        NOTE: This channel list is cached and it is assumed that the reachable
+              channels will not change over the lifetime of this object.
+
         :rtype:
             List of channel models.
         """
+        if self._channels is not None:
+            returnValue(self._channels)
         user_account = yield self.c.user_account.get(self.api.manager)
         routing_table = yield self.user_api.get_routing_table(user_account)
         rt_helper = RoutingTableHelper(routing_table)
@@ -122,12 +83,16 @@ class ConversationWrapper(object):
                 (conn.tagpool, conn.tagname))
             channels.append(channel)
         channels.sort(key=lambda c: c.name)
+        self._channels = channels
         returnValue(channels)
 
     @Manager.calls_manager
     def has_channel_supporting(self, **kw):
         channels = yield self.get_channels()
         returnValue(any(channel.supports(**kw) for channel in channels))
+
+    def has_channel_supporting_generic_sends(self):
+        return self.has_channel_supporting(generic_sends=True)
 
     @Manager.calls_manager
     def get_progress_status(self):
@@ -154,11 +119,10 @@ class ConversationWrapper(object):
                          'delivery_report_delivered', 'delivery_report_failed',
                          'delivery_report_pending'))
 
-        for batch_id in self.get_batch_keys():
-            batch_status = yield self.mdb.batch_status(batch_id)
-            for k, v in batch_status.items():
-                k = k.replace('.', '_')
-                statuses[k] += v
+        batch_status = yield self.mdb.batch_status(self.batch.key)
+        for k, v in batch_status.items():
+            k = k.replace('.', '_')
+            statuses[k] += v
 
         returnValue(statuses)
 
@@ -199,11 +163,6 @@ class ConversationWrapper(object):
     def start(self):
         """Send the start command to this conversation's application worker.
         """
-        batches = yield self.get_batches()
-        if not batches:
-            batch_id = yield self.start_batch()
-            self.c.batches.add_key(batch_id)
-
         self.c.set_status_starting()
         yield self.c.save()
 
@@ -227,8 +186,6 @@ class ConversationWrapper(object):
     def send_token_url(self, token_url, msisdn):
         """Send a confirmation/token link.
         """
-        batch_id = yield self.get_latest_batch_key()
-
         # specify this message as being sensitive
         msg_options = {'helper_metadata': {'go': {'sensitive': True}}}
 
@@ -237,123 +194,41 @@ class ConversationWrapper(object):
             user_account_key=self.c.user_account.key,
             conversation_key=self.c.key,
             command_data={
-                "batch_id": batch_id,
+                "batch_id": self.batch.key,
                 "to_addr": msisdn,
                 "msg_options": msg_options,
                 "content": ("Please visit %s to start your conversation." %
                             (token_url,)),
                 })
-        if batch_id not in self.c.batches.keys():
-            self.c.batches.add_key(batch_id)
         yield self.c.save()
 
-    @Manager.calls_manager
-    def get_latest_batch_key(self):
-        """
-        Here be dragons.
-
-        FIXME:  The existince of `get_latest_batch_key()` is a symptom of other
-                things being wrong. We need to revisit how batches are stored
-                on a conversation and whether we even need multiple batches
-                per conversation.
-
-                We're not storing timestamps on our batches and so we have no
-                accurate way of telling which batch was most recenty acquired
-                for this conversation. On top of this, our existing migration
-                tools aren't mature enough to be able to describe the migration
-                needed.
-
-                Our current work around is looking at the cache to find out
-                which batch_key had the last outbound message sent and return
-                that batch_key
-        """
-        batch_keys = self.get_batch_keys()
-
-        if not batch_keys:
-            returnValue(None)
-
-        # If there's only one then it's easy.
-        if len(batch_keys) == 1:
-            returnValue(batch_keys[0])
-
-        # Cache this for however long this conversation object lives
-        if hasattr(self, '_latest_batch_key'):
-            returnValue(self._latest_batch_key)
-
-        # Loop over the batch_keys and find out which one was most recently
-        # used to send out a message.
-        batch_key_timestamps = []
-        for batch_key in batch_keys:
-            if (yield self.mdb.cache.count_outbound_message_keys(batch_key)):
-                [(_, timestamp)] = (yield self.mdb.get_outbound_message_keys(
-                                        batch_key, 0, 0, with_timestamp=True))
-                batch_key_timestamps.append((batch_key, timestamp))
-
-        # We might not have anything to work with here since we might only have
-        # batch_keys that haven't seen any outbound traffic
-        if batch_key_timestamps:
-            sorted_keys = sorted(batch_key_timestamps,
-                                    key=lambda (key, ts): ts, reverse=True)
-            latest = sorted_keys[0]
-            self._latest_batch_key = latest[0]  # return only the key
-            returnValue(self._latest_batch_key)
-
-        # If there hasn't been any outbound traffic then just return the first
-        # that Riak returned and hope for the best.
-        self._latest_batch_key = batch_keys[0]
-        returnValue(self._latest_batch_key)
-
-    @Manager.calls_manager
-    def count_replies(self, batch_key=None):
+    def count_replies(self):
         """
         Count the total number of replies received.
         This is pulled from the cache.
-
-        :param str batch_key:
-            The batch to count, defaults to `get_latest_batch_key()`
         """
-        batch_key = batch_key or (yield self.get_latest_batch_key())
-        count = yield self.mdb.cache.count_inbound_message_keys(batch_key)
-        returnValue(count)
+        return self.mdb.cache.count_inbound_message_keys(self.batch.key)
 
-    @Manager.calls_manager
-    def count_sent_messages(self, batch_key=None):
+    def count_sent_messages(self):
         """
         Count the total number of messages sent.
         This is pulled from the cache.
-
-        :param str batch_key:
-            The batch to count, defaults to `get_latest_batch_key()`
         """
-        batch_key = batch_key or (yield self.get_latest_batch_key())
-        count = yield self.mdb.cache.count_outbound_message_keys(batch_key)
-        returnValue(count)
+        return self.mdb.cache.count_outbound_message_keys(self.batch.key)
 
-    @Manager.calls_manager
-    def count_inbound_uniques(self, batch_key=None):
+    def count_inbound_uniques(self):
         """
         Count the total unique `from_addr` values seen for the batch_key.
         Pulled from the cache.
-
-        :param str batch_key:
-            The batch to count, defaults to `get_latest_batch_key()`
         """
-        batch_key = batch_key or (yield self.get_latest_batch_key())
-        count = yield self.mdb.cache.count_from_addrs(batch_key)
-        returnValue(count)
+        return self.mdb.cache.count_from_addrs(self.batch.key)
 
-    @Manager.calls_manager
-    def count_outbound_uniques(self, batch_key=None):
+    def count_outbound_uniques(self):
         """
         Count the total unique `to_addr` values seen for the batch_key.
         Pulled from the cache.
-
-        :param str batch_key:
-            The batch to count, defaults to `get_latest_batch_key()`
         """
-        batch_key = batch_key or (yield self.get_latest_batch_key())
-        count = yield self.mdb.cache.count_to_addrs(batch_key)
-        returnValue(count)
+        return self.mdb.cache.count_to_addrs(self.batch.key)
 
     @Manager.calls_manager
     def collect_messages(self, keys, proxy, include_sensitive, scrubber):
@@ -389,8 +264,8 @@ class ConversationWrapper(object):
         returnValue(collection)
 
     @Manager.calls_manager
-    def received_messages(self, start=0, limit=100, batch_key=None,
-                            include_sensitive=False, scrubber=None):
+    def received_messages(self, start=0, limit=100, include_sensitive=False,
+                          scrubber=None):
         """
         Get a list of replies from the message store. The keys come from
         the message store's cache.
@@ -399,9 +274,6 @@ class ConversationWrapper(object):
             Where to start in the result set.
         :param int limit:
             How many replies to get.
-        :param str batch_key:
-            The batch to get replies for. Defaults to whatever
-            `get_latest_batch_key()` returns.
         :param bool include_sensitive:
             Whether or not to include hidden messages. Defaults to False.
             Hidden messages are messages with potentially sensitive information
@@ -412,14 +284,11 @@ class ConversationWrapper(object):
             content of the message to be scrubbed. By default it is a noop
             which leaves the content unchanged.
         """
-        batch_key = batch_key or (yield self.get_latest_batch_key())
-        if batch_key is None:
-            returnValue([])
         scrubber = scrubber or (lambda msg: msg)
 
         # Redis counts from zero, so we - 1 on the limit.
-        keys = yield self.mdb.cache.get_inbound_message_keys(batch_key, start,
-                                                                limit - 1)
+        keys = yield self.mdb.cache.get_inbound_message_keys(
+            self.batch.key, start, limit - 1)
 
         replies = yield self.collect_messages(keys,
             self.mdb.inbound_messages, include_sensitive, scrubber)
@@ -427,8 +296,8 @@ class ConversationWrapper(object):
         returnValue(replies)
 
     @Manager.calls_manager
-    def sent_messages(self, start=0, limit=100, batch_key=None,
-                        include_sensitive=False, scrubber=None):
+    def sent_messages(self, start=0, limit=100, include_sensitive=False,
+                      scrubber=None):
         """
         Get a list of sent_messages from the message store. The keys come from
         the message store's cache.
@@ -437,9 +306,6 @@ class ConversationWrapper(object):
             Where to start
         :param int limit:
             How many sent messages to fetch starting from start
-        :param str batch_key:
-            The batch to get sent messages for. Defaults to whatever
-            `get_latest_batch_key()` returns.
         :param bool include_sensitive:
             Whether or not to include hidden messages. Defaults to False.
             Hidden messages are messages with potentially sensitive information
@@ -450,23 +316,19 @@ class ConversationWrapper(object):
             content of the message to be scrubbed. By default it is a noop
             which leaves the content unchanged.
         """
-        batch_key = batch_key or (yield self.get_latest_batch_key())
-        if batch_key is None:
-            returnValue([])
         scrubber = scrubber or (lambda msg: msg)
 
-        keys = yield self.mdb.cache.get_outbound_message_keys(batch_key, start,
-                                                                limit - 1)
+        keys = yield self.mdb.cache.get_outbound_message_keys(
+            self.batch.key, start, limit - 1)
 
         sent_messages = yield self.collect_messages(keys,
             self.mdb.outbound_messages, include_sensitive, scrubber)
 
         returnValue(sent_messages)
 
-    @Manager.calls_manager
     def find_inbound_messages_matching(self, pattern, flags="i",
-                                        batch_key=None, key="msg.content",
-                                        ttl=None, wait=False):
+                                       key="msg.content", ttl=None,
+                                       wait=False):
         """
         Does a regex OR search over the inbound messages and returns
         matching messages.
@@ -475,8 +337,6 @@ class ConversationWrapper(object):
             The pattern to search on
         :param str flags:
             The flags to set for the RegExp object.
-        :param str batch_key:
-            The batch to search over.
         :param str key:
             The key on the message to match. Defaults to `msg.content`.
         :param int start:
@@ -493,42 +353,35 @@ class ConversationWrapper(object):
                 MessageStore.find_inbound_keys_matching() relies
                 on Deferreds being fired.
         """
-        batch_key = batch_key or (yield self.get_latest_batch_key())
         query = [{
             "key": key,
             "pattern": pattern,
             "flags": flags,
             }]
-        resp = yield self.mdb.find_inbound_keys_matching(batch_key, query,
-                                                            ttl=ttl, wait=wait)
-        returnValue(resp)
+        return self.mdb.find_inbound_keys_matching(
+            self.batch.key, query, ttl=ttl, wait=wait)
 
     @Manager.calls_manager
-    def get_inbound_messages_for_token(self, token, start=0, stop=-1,
-                                        batch_key=None):
+    def get_inbound_messages_for_token(self, token, start=0, stop=-1):
         """
         Fetch the results for a search token
         """
-        batch_key = batch_key or (yield self.get_latest_batch_key())
-        keys = yield self.mdb.get_keys_for_token(batch_key, token, start, stop)
+        keys = yield self.mdb.get_keys_for_token(
+            self.batch.key, token, start, stop)
         messages = []
         for bunch in self.mdb.inbound_messages.load_all_bunches(keys):
             messages.extend((yield bunch))
         returnValue(messages)
 
-    @Manager.calls_manager
-    def count_inbound_messages_for_token(self, token, batch_key=None):
+    def count_inbound_messages_for_token(self, token):
         """
         Return the total number of keys in the results for the token.
         """
-        batch_key = batch_key or (yield self.get_latest_batch_key())
-        count = yield self.mdb.count_keys_for_token(batch_key, token)
-        returnValue(count)
+        return self.mdb.count_keys_for_token(self.batch.key, token)
 
-    @Manager.calls_manager
     def find_outbound_messages_matching(self, pattern, flags="i",
-                                        batch_key=None, key="msg.content",
-                                        ttl=None, wait=False):
+                                        key="msg.content", ttl=None,
+                                        wait=False):
         """
         Does a regex OR search over the outbound messages and returns
         matching messages.
@@ -537,8 +390,6 @@ class ConversationWrapper(object):
             The pattern to search on
         :param str flags:
             The flags to set for the RegExp object.
-        :param str batch_key:
-            The batch to search over.
         :param str key:
             The key on the message to match. Defaults to `msg.content`.
         :param int ttl:
@@ -547,42 +398,36 @@ class ConversationWrapper(object):
         :param bool wait:
             Wait with returning keys until the results are actually available.
         """
-        batch_key = batch_key or (yield self.get_latest_batch_key())
         query = [{
             "key": key,
             "pattern": pattern,
             "flags": flags,
             }]
-        resp = yield self.mdb.find_outbound_keys_matching(batch_key, query,
-                                                            ttl=ttl, wait=wait)
-        returnValue(resp)
+        return self.mdb.find_outbound_keys_matching(
+            self.batch.key, query, ttl=ttl, wait=wait)
 
     @Manager.calls_manager
-    def get_outbound_messages_for_token(self, token, start=0, stop=-1,
-                                        batch_key=None):
+    def get_outbound_messages_for_token(self, token, start=0, stop=-1):
         """
         Fetch the results for a search token
         """
-        batch_key = batch_key or (yield self.get_latest_batch_key())
-        keys = yield self.mdb.get_keys_for_token(batch_key, token, start, stop)
+        keys = yield self.mdb.get_keys_for_token(
+            self.batch.key, token, start, stop)
         messages = []
         for bunch in self.mdb.outbound_messages.load_all_bunches(keys):
             messages.extend((yield bunch))
         returnValue(messages)
 
     @Manager.calls_manager
-    def get_aggregate_count(self, direction, batch_key=None, bucket_func=None):
-        aggregate_keys = yield self.get_aggregate_keys(direction,
-                                                        batch_key, bucket_func)
+    def get_aggregate_count(self, direction, bucket_func=None):
+        aggregate_keys = yield self.get_aggregate_keys(direction, bucket_func)
         returnValue([(bucket, len(keys)) for bucket, keys in aggregate_keys])
 
     @Manager.calls_manager
-    def get_aggregate_keys(self, direction, batch_key=None, bucket_func=None):
+    def get_aggregate_keys(self, direction, bucket_func=None):
         """
         Get aggregated total count of messages handled bucketed per day.
-        :param str batch_key:
-            The batch to get aggregates for. Defaults to whatever
-            `get_latest_batch_key()` returns.
+
         :param callable bucket_func:
             A function that when given a timestamp returns an appropriate
             value that will be used as the bucket key.
@@ -592,9 +437,8 @@ class ConversationWrapper(object):
             'outbound': self.mdb.get_outbound_message_keys,
         }.get(direction, self.mdb.get_inbound_message_keys)
 
-        batch_key = batch_key or (yield self.get_latest_batch_key())
         bucket_func = bucket_func or (lambda dt: dt.date())
-        results = yield message_callback(batch_key, with_timestamp=True)
+        results = yield message_callback(self.batch.key, with_timestamp=True)
         aggregates = defaultdict(list)
         for key, timestamp in results:
             bucket = bucket_func(datetime.fromtimestamp(timestamp))
@@ -615,23 +459,6 @@ class ConversationWrapper(object):
         worker_name = '%s_application' % (self.conversation_type,)
         return self.api.send_command(worker_name, command, *args, **kwargs)
 
-    def delivery_class_description(self):
-        """
-        FIXME: This actually returns the tagpool display name.
-               The function itself is probably correct -- the
-               name of the function is probably wrong.
-        """
-        return self.get_tagpool_metadata('display_name',
-                                         self.delivery_tag_pool)
-
-    def is_client_initiated(self):
-        """
-        Check whether this conversation can only be initiated by a client.
-
-        :rtype: bool
-        """
-        return self.get_tagpool_metadata('client_initiated', False)
-
     def get_absolute_url(self):
         return u'/app/%s/%s/' % (self.conversation_type, self.key)
 
@@ -643,25 +470,23 @@ class ConversationWrapper(object):
         return contact_store.get_contacts_for_conversation(self.c)
 
     @Manager.calls_manager
-    def get_inbound_throughput(self, batch_key=None, sample_time=300):
+    def get_inbound_throughput(self, sample_time=300):
         """
         Calculate how many inbound messages per minute we've been
         doing on average.
         """
-        batch_key = batch_key or (yield self.get_latest_batch_key())
-        count = yield self.mdb.cache.count_inbound_throughput(batch_key,
-            sample_time)
+        count = yield self.mdb.cache.count_inbound_throughput(
+            self.batch.key, sample_time)
         returnValue(count / (sample_time / 60.0))
 
     @Manager.calls_manager
-    def get_outbound_throughput(self, batch_key=None, sample_time=300):
+    def get_outbound_throughput(self, sample_time=300):
         """
         Calculate how many outbound messages per minute we've been
         doing on average.
         """
-        batch_key = batch_key or (yield self.get_latest_batch_key())
-        count = yield self.mdb.cache.count_outbound_throughput(batch_key,
-            sample_time)
+        count = yield self.mdb.cache.count_outbound_throughput(
+            self.batch.key, sample_time)
         returnValue(count / (sample_time / 60.0))
 
     @Manager.calls_manager

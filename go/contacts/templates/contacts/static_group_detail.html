@@ -7,7 +7,7 @@
 
 {% block content_actions_right %}
     <div class="table-form-view-buttons pull-left">
-        <button class="btn" data-action="delete" disabled="disabled">Delete</button>
+        <button class="btn" data-action="remove" disabled="disabled">Remove Contact(s)</button>
     </div>
     <div class="pull-left ">
         With group:
@@ -22,6 +22,7 @@
 
 {% block content_main_list %}
 <form class="table-form-view" method="post" action="">
+    {% csrf_token %}
     {% include "contacts/contact_list_table.html" %}
 </form>
 {% endblock %}

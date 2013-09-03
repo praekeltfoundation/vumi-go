@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import pkg_resources
+import uuid
 
 import mock
 
@@ -57,8 +58,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
                 msisdn=from_addr.format(i), groups=[group])
 
         conversation = yield self.create_conversation(
-            delivery_tag_pool=u'pool', delivery_class=u'sms',
-            delivery_tag=u'tag1', config=config)
+            delivery_class=u'sms', config=config)
         if started:
             conversation.set_status_started()
         conversation.add_group(group)
@@ -162,6 +162,68 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
         user_api = self.app.user_api_for_api(dummy_api)
         self.assertEqual(user_api.user_account_key,
                          conversation.user_account.key)
+
+    @inlineCallbacks
+    def test_send_message_command(self):
+        conversation = yield self.setup_conversation()
+        yield self.start_conversation(conversation)
+        msg_options = {
+            'transport_name': 'sphex_transport',
+            'from_addr': '666666',
+            'transport_type': 'sphex',
+            'helper_metadata': {'foo': {'bar': 'baz'}},
+        }
+        yield self.dispatch_command(
+            "send_message",
+            user_account_key=self.user_account.key,
+            conversation_key=conversation.key,
+            command_data={
+                "batch_id": conversation.batch.key,
+                "to_addr": "123456",
+                "content": "hello world",
+                "msg_options": msg_options,
+            })
+
+        [msg] = yield self.get_dispatched_messages()
+        self.assertEqual(msg.payload['to_addr'], "123456")
+        self.assertEqual(msg.payload['from_addr'], "666666")
+        self.assertEqual(msg.payload['content'], "hello world")
+        self.assertEqual(msg.payload['transport_name'], "sphex_transport")
+        self.assertEqual(msg.payload['transport_type'], "sphex")
+        self.assertEqual(msg.payload['message_type'], "user_message")
+        self.assertEqual(msg.payload['helper_metadata']['go'], {
+            'user_account': self.user_account.key,
+            'conversation_type': conversation.conversation_type,
+            'conversation_key': conversation.key,
+        })
+        self.assertEqual(msg.payload['helper_metadata']['foo'],
+                         {'bar': 'baz'})
+
+    @inlineCallbacks
+    def test_process_command_send_message_in_reply_to(self):
+        conversation = yield self.setup_conversation()
+        yield self.start_conversation(conversation)
+        msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
+        yield self.store_inbound_msg(msg)
+        yield self.dispatch_command(
+            "send_message",
+            user_account_key=self.user_account.key,
+            conversation_key=conversation.key,
+            command_data={
+                "batch_id": conversation.batch.key,
+                "to_addr": "to_addr",
+                "content": "foo",
+                u'msg_options': {
+                    u'transport_name': u'smpp_transport',
+                    u'in_reply_to': msg['message_id'],
+                    u'transport_type': u'sms',
+                    u'from_addr': u'default10080',
+                },
+            })
+        [sent_msg] = self.get_dispatched_messages()
+        self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
+        self.assertEqual(sent_msg['content'], 'foo')
+        self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
 
 
 class TestConversationConfigResource(TestCase):

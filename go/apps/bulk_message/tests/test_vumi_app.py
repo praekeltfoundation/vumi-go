@@ -85,7 +85,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     def test_consume_events(self):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
-        batch_id = yield conversation.get_latest_batch_key()
+        batch_id = conversation.batch.key
         yield self.dispatch_command(
             "bulk_send",
             user_account_key=conversation.user_account.key,
@@ -134,7 +134,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         }
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
-        batch_id = yield conversation.get_latest_batch_key()
+        batch_id = conversation.batch.key
         yield self.dispatch_command(
             "send_message",
             user_account_key=conversation.user_account.key,
@@ -165,7 +165,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
     def test_process_command_send_message_in_reply_to(self):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
-        batch_id = yield conversation.get_latest_batch_key()
+        batch_id = conversation.batch.key
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
         yield self.store_inbound_msg(msg)
         command = VumiApiCommand.command(
@@ -188,35 +188,6 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
-
-    @inlineCallbacks
-    def test_process_command_send_message_in_reply_to_bad_transport_name(self):
-        conversation = yield self.setup_conversation()
-        yield self.start_conversation(conversation)
-        batch_id = yield conversation.get_latest_batch_key()
-        msg = self.mkmsg_in(message_id=uuid.uuid4().hex, transport_name="bad")
-        yield self.store_inbound_msg(msg)
-        command = VumiApiCommand.command(
-            'worker', 'send_message',
-            user_account_key=conversation.user_account.key,
-            conversation_key=conversation.key,
-            command_data={
-                u'batch_id': batch_id,
-                u'content': u'foo',
-                u'to_addr': u'to_addr',
-                u'msg_options': {
-                    u'transport_name': u'smpp_transport',
-                    u'in_reply_to': msg['message_id'],
-                    u'transport_type': u'sms',
-                    u'from_addr': u'default10080',
-                }
-            })
-        yield self.app.consume_control_command(command)
-        [sent_msg] = self.get_dispatched_messages()
-        self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
-        self.assertEqual(sent_msg['content'], 'foo')
-        self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
-        self.assertEqual(sent_msg['transport_name'], 'smpp_transport')
 
     @inlineCallbacks
     def test_collect_metrics(self):

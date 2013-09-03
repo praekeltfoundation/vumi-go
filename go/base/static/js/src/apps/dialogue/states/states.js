@@ -32,7 +32,7 @@
   });
 
   var NameEditExtrasView = PopoverView.extend({
-    popoverOptions: {container: 'body'},
+    bootstrapOptions: {container: 'body'},
 
     target: function() { return this.mode.$('.name-extras'); },
 
@@ -54,13 +54,7 @@
       });
 
       this.storeAsBackup = null;
-      this.on('show', function() {
-        this.storeAsBackup = this.mode.state.model.get('store_as');
-        this.delegateEvents();
-        this.$('.info').tooltip();
-      }, this);
-      
-      this.on('hide', function() { this.$('.info').tooltip('destroy'); }, this);
+      go.utils.bindEvents(this.bindings, this);
     },
 
     onStoreAsChange: function(e) {
@@ -82,6 +76,17 @@
     render: function() {
       this.template.render();
       return this;
+    },
+
+    bindings: {
+      'show': function() {
+        this.storeAsBackup = this.model.get('store_as');
+        this.$('.info').tooltip();
+      },
+
+      'hide': function() {
+        this.$('.info').tooltip('destroy');
+      }
     }
   });
 

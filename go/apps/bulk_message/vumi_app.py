@@ -107,48 +107,11 @@ class BulkMessageApplication(GoApplicationWorker):
 
         msg_mdh = self.get_metadata_helper(message)
         conv = yield msg_mdh.get_conversation()
-        # XXX: This is a really horrible idea.
-        batch_key = yield conv.get_latest_batch_key()
-        if conv and batch_key:
-            window_id = self.get_window_id(conv.key, batch_key)
+        if conv:
+            window_id = self.get_window_id(conv.key, conv.batch.key)
             flight_key = yield self.window_manager.get_internal_id(window_id,
                                 message['message_id'])
             yield self.window_manager.remove_key(window_id, flight_key)
-
-    @inlineCallbacks
-    def process_command_send_message(self, user_account_key, conversation_key,
-                                     **kwargs):
-        command_data = kwargs.pop('command_data')
-        if kwargs:
-            log.info("Received unexpected command args: %s" % (kwargs,))
-        conv = yield self.get_conversation(user_account_key, conversation_key)
-        if conv is None:
-            log.warning("Cannot find conversation '%s' for user '%s'." % (
-                conversation_key, user_account_key))
-            return
-
-        log.info('Processing send_message: %s' % kwargs)
-        to_addr = command_data['to_addr']
-        content = command_data['content']
-        msg_options = command_data['msg_options']
-        in_reply_to = msg_options.pop('in_reply_to', None)
-        self.add_conv_to_msg_options(conv, msg_options)
-        if in_reply_to:
-            msg = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
-            if msg:
-                # TODO: This should no longer be necessary.
-                # We can't override transport_name in reply_to(), so we set it
-                # on the message we're replying to.
-                msg['transport_name'] = msg_options['transport_name']
-                yield self.reply_to(
-                    msg, content,
-                    helper_metadata=msg_options['helper_metadata'])
-            else:
-                log.warning('Unable to reply, message %s does not exist.' % (
-                    in_reply_to))
-        else:
-            yield self.send_to(
-                to_addr, content, endpoint='default', **msg_options)
 
     @inlineCallbacks
     def collect_metrics(self, user_api, conversation_key):

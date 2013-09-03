@@ -121,6 +121,20 @@ class MessageStream(StreamResource):
         d.callback(request)
         return NOT_DONE_YET
 
+    def get_load_balancer_metadata(self, payload):
+        """
+        Probe for load_balancer config in the helper metadata
+        and return it.
+
+        TODO: Replace with a more generic mechanism for filtering
+        helper_metadata. See Go issue #659.
+        """
+        helper_metadata = payload.get('helper_metadata', {})
+        load_balancer = helper_metadata.get('load_balancer')
+        if load_balancer is not None:
+            return {'load_balancer': copy.deepcopy(load_balancer)}
+        return {}
+
     def get_msg_options(self, payload, white_list=[]):
         raw_payload = copy.deepcopy(payload.copy())
         msg_options = dict((key, value)
@@ -171,6 +185,7 @@ class MessageStream(StreamResource):
         continue_session = (msg_options.pop('session_event', None)
                             != TransportUserMessage.SESSION_CLOSE)
         helper_metadata = conversation.set_go_helper_metadata()
+        helper_metadata.update(self.get_load_balancer_metadata(payload))
 
         msg = yield self.worker.reply_to(
             reply_to, content, continue_session,

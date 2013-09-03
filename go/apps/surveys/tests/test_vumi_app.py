@@ -133,14 +133,13 @@ class TestSurveyApplication(AppWorkerTestCase):
 
     @inlineCallbacks
     def send_send_survey_command(self, conversation):
-        batch_id = yield self.conversation.get_latest_batch_key()
+        batch_id = self.conversation.batch.key
         yield self.dispatch_command(
             "send_survey",
             user_account_key=self.user_account.key,
             conversation_key=conversation.key,
             batch_id=batch_id,
             msg_options={},
-            is_client_initiated=False,
             delivery_class=conversation.delivery_class,
         )
 
@@ -271,7 +270,7 @@ class TestSurveyApplication(AppWorkerTestCase):
             'helper_metadata': {'foo': {'bar': 'baz'}},
         }
         yield self.start_conversation(self.conversation)
-        batch_id = yield self.conversation.get_latest_batch_key()
+        batch_id = self.conversation.batch.key
         yield self.dispatch_command(
             "send_message",
             user_account_key=self.user_account.key,
@@ -301,7 +300,7 @@ class TestSurveyApplication(AppWorkerTestCase):
     @inlineCallbacks
     def test_process_command_send_message_in_reply_to(self):
         yield self.start_conversation(self.conversation)
-        batch_id = yield self.conversation.get_latest_batch_key()
+        batch_id = self.conversation.batch.key
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
         yield self.store_inbound_msg(msg)
         command = VumiApiCommand.command(
@@ -324,34 +323,6 @@ class TestSurveyApplication(AppWorkerTestCase):
         self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
         self.assertEqual(sent_msg['content'], 'foo')
         self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
-
-    @inlineCallbacks
-    def test_process_command_send_message_in_reply_to_bad_transport_name(self):
-        yield self.start_conversation(self.conversation)
-        batch_id = yield self.conversation.get_latest_batch_key()
-        msg = self.mkmsg_in(message_id=uuid.uuid4().hex, transport_name="bad")
-        yield self.store_inbound_msg(msg)
-        command = VumiApiCommand.command(
-            'worker', 'send_message',
-            user_account_key=self.user_account.key,
-            conversation_key=self.conversation.key,
-            command_data={
-                u'batch_id': batch_id,
-                u'content': u'foo',
-                u'to_addr': u'to_addr',
-                u'msg_options': {
-                    u'transport_name': u'smpp_transport',
-                    u'in_reply_to': msg['message_id'],
-                    u'transport_type': u'sms',
-                    u'from_addr': u'default10080',
-                }
-            })
-        yield self.app.consume_control_command(command)
-        [sent_msg] = self.get_dispatched_messages()
-        self.assertEqual(sent_msg['to_addr'], msg['from_addr'])
-        self.assertEqual(sent_msg['content'], 'foo')
-        self.assertEqual(sent_msg['in_reply_to'], msg['message_id'])
-        self.assertEqual(sent_msg['transport_name'], 'smpp_transport')
 
     @inlineCallbacks
     def test_closing_menu_if_unavailable(self):
