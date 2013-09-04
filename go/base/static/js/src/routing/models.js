@@ -57,7 +57,7 @@ var stateMachine = go.components.stateMachine,
     }]
   });
 
-  var CampaignRoutingModel = StateMachineModel.extend({
+  var RoutingModel = StateMachineModel.extend({
     methods: {
       read: {
         method: 'routing_table',
@@ -94,7 +94,7 @@ var stateMachine = go.components.stateMachine,
   });
 
   _.extend(exports, {
-    CampaignRoutingModel: CampaignRoutingModel,
+    RoutingModel: RoutingModel,
 
     ChannelModel: ChannelModel,
     RouterModel: RouterModel,
@@ -103,4 +103,4 @@ var stateMachine = go.components.stateMachine,
     RoutingEntryModel: RoutingEntryModel,
     RoutingEndpointModel: RoutingEndpointModel
   });
-})(go.routing);
+})(go.routing.models = {});
