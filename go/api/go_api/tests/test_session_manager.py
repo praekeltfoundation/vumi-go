@@ -3,22 +3,17 @@
 import json
 
 from twisted.internet.defer import inlineCallbacks
-from twisted.trial.unittest import TestCase
 
 from go.api.go_api.session_manager import SessionManager, GO_USER_ACCOUNT_KEY
-from go.vumitools.tests.utils import GoPersistenceMixin
+from go.vumitools.tests.utils import GoTestCase
 
 
-class SessionManagerTestCase(TestCase, GoPersistenceMixin):
+class SessionManagerTestCase(GoTestCase):
     @inlineCallbacks
     def setUp(self):
-        self._persist_setUp()
+        super(SessionManagerTestCase, self).setUp()
         self.redis = yield self.get_redis_manager()
         self.sm = SessionManager(self.redis)
-
-    @inlineCallbacks
-    def tearDown(self):
-        yield self._persist_tearDown()
 
     @inlineCallbacks
     def mk_session(self, session_id, session):

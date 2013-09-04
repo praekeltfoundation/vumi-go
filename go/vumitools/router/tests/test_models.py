@@ -3,27 +3,22 @@
 """Tests for go.vumitools.router.models."""
 
 from twisted.internet.defer import inlineCallbacks
-from twisted.trial.unittest import TestCase
 
-from go.vumitools.tests.utils import model_eq, GoPersistenceMixin
+from go.vumitools.tests.utils import model_eq, GoTestCase
 from go.vumitools.account import AccountStore
 from go.vumitools.router.models import RouterStore
 
 
-class TestRouter(GoPersistenceMixin, TestCase):
+class TestRouter(GoTestCase):
     use_riak = True
-    timeout = 5
 
     @inlineCallbacks
     def setUp(self):
-        yield self._persist_setUp()
+        super(TestRouter, self).setUp()
         self.manager = self.get_riak_manager()
         self.account_store = AccountStore(self.manager)
         self.account = yield self.mk_user(self, u'user')
         self.router_store = RouterStore.from_user_account(self.account)
-
-    def tearDown(self):
-        return self._persist_tearDown()
 
     def assert_status(self, router, expected_status_name, archived=False):
         for status_name in ['starting', 'running', 'stopping', 'stopped']:
@@ -58,20 +53,16 @@ class TestRouter(GoPersistenceMixin, TestCase):
         self.assert_status(router, 'stopped', archived=True)
 
 
-class TestRouterStore(GoPersistenceMixin, TestCase):
+class TestRouterStore(GoTestCase):
     use_riak = True
-    timeout = 5
 
     @inlineCallbacks
     def setUp(self):
-        yield self._persist_setUp()
+        super(TestRouterStore, self).setUp()
         self.manager = self.get_riak_manager()
         self.account_store = AccountStore(self.manager)
         self.account = yield self.mk_user(self, u'user')
         self.router_store = RouterStore.from_user_account(self.account)
-
-    def tearDown(self):
-        return self._persist_tearDown()
 
     def assert_models_equal(self, m1, m2):
         self.assertTrue(model_eq(m1, m2),

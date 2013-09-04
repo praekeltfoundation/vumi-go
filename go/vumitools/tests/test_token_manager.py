@@ -1,26 +1,20 @@
-from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks
 
-from go.vumitools.tests.utils import GoPersistenceMixin
+from go.vumitools.tests.utils import GoTestCase
 from go.vumitools.token_manager import (TokenManager, InvalidToken,
                                         MalformedToken, TokenManagerException)
 
 from mock import patch
 
 
-class TokenManagerTestCase(GoPersistenceMixin, TestCase):
-
-    use_riak = False
+class TokenManagerTestCase(GoTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self._persist_setUp()
+        super(TokenManagerTestCase, self).setUp()
         self.redis = yield self.get_redis_manager()
         self.tm = TokenManager(
                         self.redis.sub_manager('token_manager'))
-
-    def tearDown(self):
-        return self._persist_tearDown()
 
     @inlineCallbacks
     def test_token_generation(self):
