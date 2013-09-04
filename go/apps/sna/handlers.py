@@ -99,12 +99,11 @@ class USSDMenuCompletionHandler(SNAEventHandler):
 
         conversation = yield user_api.get_wrapped_conversation(
                                                 conversation_key)
-        batch_id = yield conversation.get_latest_batch_key()
 
         yield conversation.dispatch_command(
             'send_message', account_key, conversation.key,
             command_data={
-                'batch_id': batch_id,
+                'batch_id': conversation.batch.key,
                 'to_addr': from_addr,
                 'content': content,
                 'msg_options': {},

@@ -173,17 +173,16 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
             'transport_type': 'sphex',
             'helper_metadata': {'foo': {'bar': 'baz'}},
         }
-        batch_id = yield conversation.get_latest_batch_key()
         yield self.dispatch_command(
             "send_message",
             user_account_key=self.user_account.key,
             conversation_key=conversation.key,
             command_data={
-            "batch_id": batch_id,
-            "to_addr": "123456",
-            "content": "hello world",
-            "msg_options": msg_options,
-        })
+                "batch_id": conversation.batch.key,
+                "to_addr": "123456",
+                "content": "hello world",
+                "msg_options": msg_options,
+            })
 
         [msg] = yield self.get_dispatched_messages()
         self.assertEqual(msg.payload['to_addr'], "123456")
@@ -204,7 +203,6 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
     def test_process_command_send_message_in_reply_to(self):
         conversation = yield self.setup_conversation()
         yield self.start_conversation(conversation)
-        batch_id = yield conversation.get_latest_batch_key()
         msg = self.mkmsg_in(message_id=uuid.uuid4().hex)
         yield self.store_inbound_msg(msg)
         yield self.dispatch_command(
@@ -212,7 +210,7 @@ class JsBoxApplicationTestCase(AppWorkerTestCase):
             user_account_key=self.user_account.key,
             conversation_key=conversation.key,
             command_data={
-            "batch_id": batch_id,
+                "batch_id": conversation.batch.key,
                 "to_addr": "to_addr",
                 "content": "foo",
                 u'msg_options': {

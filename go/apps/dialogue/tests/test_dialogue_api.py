@@ -1,20 +1,17 @@
 """Tests for go.apps.dialogue.dialogue_api."""
 
 from twisted.internet.defer import inlineCallbacks
-from twisted.trial.unittest import TestCase
 
 from go.apps.dialogue.dialogue_api import DialogueActionDispatcher
 from go.vumitools.api import VumiApi
-from go.vumitools.tests.utils import GoAppWorkerTestMixin
+from go.vumitools.tests.utils import AppWorkerTestCase
 
 
-class DialogueActionDispatcherTestCase(TestCase, GoAppWorkerTestMixin):
-
-    use_riak = True
+class DialogueActionDispatcherTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self._persist_setUp()
+        super(DialogueActionDispatcherTestCase, self).setUp()
         self.config = self.mk_config({})
         self.vumi_api = yield VumiApi.from_config_async(self.config)
         self.account = yield self.mk_user(self.vumi_api, u'user')

@@ -199,9 +199,8 @@ class GoWorkerMixin(object):
 
         log.msg('Reconciling cache for %s' % (conversation_key,))
         message_store = user_api.api.mdb
-        for batch_key in conv.get_batch_keys():
-            if (yield message_store.needs_reconciliation(batch_key, delta)):
-                yield message_store.reconcile_cache(batch_key)
+        if (yield message_store.needs_reconciliation(conv.batch.key, delta)):
+            yield message_store.reconcile_cache(conv.batch.key)
         log.msg('Cache reconciled for %s' % (conversation_key,))
 
     @inlineCallbacks

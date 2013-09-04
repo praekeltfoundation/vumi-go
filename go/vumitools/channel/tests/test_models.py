@@ -3,14 +3,13 @@
 """Tests for go.vumitools.channel.models."""
 
 from twisted.internet.defer import inlineCallbacks
-from twisted.trial.unittest import TestCase
 
-from go.vumitools.tests.utils import GoPersistenceMixin
+from go.vumitools.tests.utils import GoTestCase
 from go.vumitools.account import AccountStore
 from go.vumitools.channel.models import ChannelStore, CheapPlasticChannel
 
 
-class TestChannel(TestCase):
+class TestChannel(GoTestCase):
 
     def make_channel(self, tagpool_metadata={}):
         return CheapPlasticChannel("pool", "tag", tagpool_metadata, "batch1")
@@ -36,20 +35,16 @@ class TestChannel(TestCase):
         self.assertFalse(channel.supports_replies())
 
 
-class TestChannelStore(GoPersistenceMixin, TestCase):
+class TestChannelStore(GoTestCase):
     use_riak = True
-    timeout = 5
 
     @inlineCallbacks
     def setUp(self):
-        yield self._persist_setUp()
+        super(TestChannelStore, self).setUp()
         self.manager = self.get_riak_manager()
         self.account_store = AccountStore(self.manager)
         self.account = yield self.mk_user(self, u'user')
         self.channel_store = ChannelStore.from_user_account(self.account)
-
-    def tearDown(self):
-        return self._persist_tearDown()
 
     @inlineCallbacks
     def test_get_channel_by_tag(self):

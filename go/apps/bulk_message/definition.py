@@ -19,7 +19,7 @@ class BulkSendAction(ConversationAction):
 
     def perform_action(self, action_data):
         return self.send_command(
-            'bulk_send', batch_id=self._conv.get_latest_batch_key(),
+            'bulk_send', batch_id=self._conv.batch.key,
             msg_options={}, content=action_data['message'],
             delivery_class=self._conv.delivery_class,
             dedupe=action_data['dedupe'])

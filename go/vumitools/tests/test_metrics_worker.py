@@ -3,33 +3,24 @@
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import Clock, LoopingCall
 
-from vumi.tests.utils import VumiWorkerTestCase
-
-from go.vumitools.tests.utils import GoPersistenceMixin
+from go.vumitools.tests.utils import GoWorkerTestCase
 from go.vumitools import metrics_worker
 
 
-class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
-    use_riak = True
+class GoMetricsWorkerTestCase(GoWorkerTestCase):
+    worker_class = metrics_worker.GoMetricsWorker
 
     @inlineCallbacks
     def setUp(self):
-        self._persist_setUp()
         super(GoMetricsWorkerTestCase, self).setUp()
         self.clock = Clock()
         self.patch(metrics_worker, 'LoopingCall', self.looping_call)
         self.worker = yield self.get_metrics_worker()
 
-    @inlineCallbacks
-    def tearDown(self):
-        yield super(GoMetricsWorkerTestCase, self).tearDown()
-        yield self._persist_tearDown()
-
     def get_metrics_worker(self, config=None, start=True):
         if config is None:
             config = {}
-        return self.get_worker(
-            self.mk_config(config), metrics_worker.GoMetricsWorker, start)
+        return self.get_worker(self.mk_config(config), start)
 
     def rkey(self, name):
         return name

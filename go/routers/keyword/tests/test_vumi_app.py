@@ -7,7 +7,7 @@ from go.routers.keyword.vumi_app import KeywordRouter
 
 class TestKeywordRouter(RouterWorkerTestCase):
 
-    application_class = KeywordRouter
+    router_class = KeywordRouter
 
     @inlineCallbacks
     def setUp(self):

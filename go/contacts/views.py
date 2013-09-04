@@ -424,10 +424,10 @@ def person(request, person_key):
         raise Http404
     groups = contact_store.list_groups()
     if request.method == 'POST':
-        if '_delete_contact' in request.POST:
+        if '_delete' in request.POST:
             contact.delete()
             messages.info(request, 'Contact deleted')
-            return redirect(reverse('contacts:index'))
+            return redirect(reverse('contacts:people'))
         else:
             form = ContactForm(request.POST, groups=groups)
             if form.is_valid():
