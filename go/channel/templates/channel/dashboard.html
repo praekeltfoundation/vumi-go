@@ -16,6 +16,7 @@
             <tr>
                 <th>{# Action markers go here, dashboard does not use them #}</th>
                 <th>Channels</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -27,6 +28,9 @@
                         <a href="{% channel_screen channel %}">
                             {{ channel.name }}
                         </a>
+                    </td>
+                    <td>
+                      {% include "channel/includes/actions.html" with channel=channel %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -41,4 +45,10 @@
     </table>
     {% include "base/includes/pagination.html" %}
 </form>
+{% endblock %}
+
+{% block ondomready %}
+    var dashboard = new go.channel.dashboard.ChannelDashboardView({
+        el: '.table-form-view'
+    });
 {% endblock %}
