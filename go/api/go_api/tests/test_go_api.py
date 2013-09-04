@@ -7,22 +7,19 @@ from txjsonrpc.jsonrpclib import Fault
 
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.trial.unittest import TestCase
 from twisted.web.server import Site
 
-from vumi.tests.utils import VumiWorkerTestCase
 from vumi.utils import http_request
 
 from go.vumitools.account.models import GoConnector, RoutingTableHelper
 from go.vumitools.api import VumiApi
-from go.vumitools.tests.utils import GoAppWorkerTestMixin
+from go.vumitools.tests.utils import AppWorkerTestCase
 from go.api.go_api.api_types import RoutingEntryType, EndpointType
 from go.api.go_api.go_api import GoApiWorker, GoApiServer
 
 
-class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
+class GoApiServerTestCase(AppWorkerTestCase):
 
-    use_riak = True
     worker_name = 'GoApiServer'
     transport_name = 'sphex'
     transport_type = 'sphex_type'
@@ -439,20 +436,7 @@ class GoApiServerTestCase(TestCase, GoAppWorkerTestMixin):
                                  u"no such sub-handler unknown")
 
 
-class GoApiWorkerTestCase(VumiWorkerTestCase, GoAppWorkerTestMixin):
-
-    use_riak = True
-
-    def setUp(self):
-        self._persist_setUp()
-        super(GoApiWorkerTestCase, self).setUp()
-
-    @inlineCallbacks
-    def tearDown(self):
-        for worker in self._workers:
-            if worker.running:
-                yield worker.stopService()
-        yield self._persist_tearDown()
+class GoApiWorkerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def get_api_worker(self, config=None, start=True, auth=True):

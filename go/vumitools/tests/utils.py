@@ -5,6 +5,7 @@
 import uuid
 
 from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.trial.unittest import TestCase
 
 from vumi.persist.fields import (
     ForeignKeyProxy, ManyToManyProxy, DynamicProxy, ListProxy)
@@ -125,8 +126,7 @@ class GoPersistenceMixin(PersistenceMixin):
 class GoWorkerTestMixin(GoPersistenceMixin):
 
     def _worker_name(self):
-        # DummyApplicationWorker has no worker_name attr.
-        return getattr(self.application_class, 'worker_name', 'unnamed')
+        return getattr(self.worker_class, 'worker_name', 'unnamed')
 
     def _command_rkey(self):
         return "%s.control" % (self._worker_name(),)
@@ -206,6 +206,10 @@ class GoWorkerTestMixin(GoPersistenceMixin):
 
 class GoAppWorkerTestMixin(GoWorkerTestMixin):
 
+    def _worker_name(self):
+        # DummyApplicationWorker has no worker_name attr.
+        return getattr(self.application_class, 'worker_name', 'unnamed')
+
     def _conversation_type(self):
         # This is a guess based on worker_name.
         # We need a better way to do this.
@@ -273,6 +277,10 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
 
 class GoRouterWorkerTestMixin(GoWorkerTestMixin):
 
+    def _worker_name(self):
+        # DummyApplicationWorker has no worker_name attr.
+        return getattr(self.router_class, 'worker_name', 'unnamed')
+
     def _router_type(self):
         # This is a guess based on worker_name.
         # We need a better way to do this.
@@ -287,7 +295,7 @@ class GoRouterWorkerTestMixin(GoWorkerTestMixin):
         if 'ro_connector_name' not in config:
             config['ro_connector_name'] = 'ro_conn'
         worker = yield self.get_worker(
-            config, self.application_class, start=start)
+            config, self.router_class, start=start)
         if hasattr(worker, 'vumi_api'):
             self._persist_riak_managers.append(worker.vumi_api.manager)
             self._persist_redis_managers.append(worker.vumi_api.redis)
@@ -384,3 +392,40 @@ class RouterWorkerTestCase(GoRouterWorkerTestMixin, VumiWorkerTestCase):
     def tearDown(self):
         yield super(RouterWorkerTestCase, self).tearDown()
         yield self._persist_tearDown()
+
+
+class GoWorkerTestCase(GoWorkerTestMixin, VumiWorkerTestCase):
+
+    use_riak = True
+
+    def setUp(self):
+        self._persist_setUp()
+        super(GoWorkerTestCase, self).setUp()
+
+    @inlineCallbacks
+    def tearDown(self):
+        yield super(GoWorkerTestCase, self).tearDown()
+        yield self._persist_tearDown()
+
+    @inlineCallbacks
+    def get_worker(self, config, *args, **kw):
+        if 'worker_name' not in config:
+            config['worker_name'] = self._worker_name()
+        worker = yield super(GoWorkerTestCase, self).get_worker(
+            config, self.worker_class, *args, **kw)
+        if hasattr(worker, 'vumi_api'):
+            self._persist_riak_managers.append(worker.vumi_api.manager)
+            self._persist_redis_managers.append(worker.vumi_api.redis)
+        returnValue(worker)
+
+
+class GoTestCase(GoPersistenceMixin, TestCase):
+    timeout = 5
+
+    use_riak = False
+
+    def setUp(self):
+        self._persist_setUp()
+
+    def tearDown(self):
+        return self._persist_tearDown()

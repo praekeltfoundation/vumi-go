@@ -1,14 +1,15 @@
 """Tests for go.api.go_api.session."""
 
-from unittest import TestCase
-
 from go.api.go_api.session import SessionStore, CreateError
-from go.vumitools.tests.utils import GoPersistenceMixin
+from go.vumitools.tests.utils import GoTestCase
 
 
-class SessionStoreTestCase(TestCase, GoPersistenceMixin):
+class SessionStoreTestCase(GoTestCase):
     def mk_session_store(self, session_key=None):
         ss = SessionStore(session_key)
+        # We don't grab the Riak manager here because we don't use Riak in
+        # these tests.
+        self._persist_redis_managers.append(ss.vumi_api.redis)
         return (ss, ss.session_manager)
 
     def test_init(self):
