@@ -41,7 +41,7 @@ class LogManager(object):
         full_msg = "[%s, %s] %s" % (ts, logging.getLevelName(level), msg)
         conv_key = self._conv_key(campaign_key, conversation_key)
         yield self.redis.lpush(conv_key, full_msg)
-        yield self.redis.ltrim(conv_key, 0, self.max_logs_per_conversation)
+        yield self.redis.ltrim(conv_key, 0, self.max_logs_per_conversation - 1)
 
     @Manager.calls_manager
     def get_logs(self, campaign_key, conversation_key):
