@@ -4,7 +4,7 @@
 
 (function(exports) {
   var colors = {
-    normal: '#0bcac3',
+    normal: '#2f3436',
     hover: '#b41e31'
   };
 
