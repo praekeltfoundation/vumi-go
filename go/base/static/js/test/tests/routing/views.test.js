@@ -16,25 +16,18 @@ describe("go.routing (views)", function() {
       errorResponse = testHelpers.rpc.errorResponse,
       assertRequest = testHelpers.rpc.assertRequest;
 
-  var diagram;
-
-  beforeEach(function() {
-    setUp();
-    diagram = newRoutingDiagram();
-  });
-
-  afterEach(function() {
-    tearDown();
-  });
-
   describe(".RoutingEndpointView", function() {
-    var RoutingEndpointModel = routing.RoutingEndpointModel,
-        RoutingEndpointView = routing.RoutingEndpointView;
+    var RoutingEndpointModel = routing.models.RoutingEndpointModel,
+        RoutingEndpointView = routing.views.RoutingEndpointView;
 
-    var state,
+    var diagram,
+        state,
         endpoint;
 
     beforeEach(function() {
+      setUp();
+      diagram = newRoutingDiagram();
+
       state = diagram.states.get('channel1');
 
       var model = new RoutingEndpointModel({
@@ -46,6 +39,10 @@ describe("go.routing (views)", function() {
         'endpoints',
         {model: model},
         {render: false, silent: true});
+    });
+
+    afterEach(function() {
+      tearDown();
     });
 
     describe(".render", function() {
@@ -60,15 +57,23 @@ describe("go.routing (views)", function() {
   });
 
   describe(".RoutingEntryCollection", function() {
-    var RoutingEntryCollection = routing.RoutingEntryCollection;
+    var RoutingEntryCollection = routing.views.RoutingEntryCollection;
 
-    var collection;
+    var diagram,
+        collection;
 
     beforeEach(function() {
+      setUp();
+      diagram = newRoutingDiagram();
+
       collection = new RoutingEntryCollection({
         view: diagram,
         attr: 'routing_entries'
       });
+    });
+
+    afterEach(function() {
+      tearDown();
     });
 
     describe(".accepts", function() {
@@ -102,13 +107,17 @@ describe("go.routing (views)", function() {
   });
 
   describe(".RoutingStateView", function() {
-    var ChannelModel = routing.ChannelModel,
-        RoutingStateView = routing.RoutingStateView;
+    var ChannelModel = routing.models.ChannelModel,
+        RoutingStateView = routing.views.RoutingStateView;
 
-    var state,
+    var diagram,
+        state,
         $column;
 
     beforeEach(function() {
+      setUp();
+      diagram = newRoutingDiagram();
+
       var model = new ChannelModel({
         uuid: 'channel4',
         tag: ['invisible_sms', '*181#'],
@@ -126,9 +135,13 @@ describe("go.routing (views)", function() {
       }), {render: false, silent: true});
     });
 
+    afterEach(function() {
+      tearDown();
+    });
+
     describe(".render", function() {
       beforeEach(function() {
-        $column = $('#routing-diagram #channels');
+        $column = $('#diagram #channels');
       });
 
       it("should append the state to its column", function() {
@@ -157,7 +170,7 @@ describe("go.routing (views)", function() {
   });
 
   describe(".RoutingColumnView", function() {
-    var RoutingColumnView = routing.RoutingColumnView;
+    var RoutingColumnView = routing.views.RoutingColumnView;
 
     var ToyRoutingColumnView = RoutingColumnView.extend({
       // choose one of the state collections to test with
@@ -165,10 +178,17 @@ describe("go.routing (views)", function() {
       collectionName: 'channels'
     });
 
-    var column;
+    var diagram,
+        column;
 
     beforeEach(function() {
+      setUp();
+      diagram = newRoutingDiagram();
       column = new ToyRoutingColumnView({diagram: diagram});
+    });
+
+    afterEach(function() {
+      tearDown();
     });
 
     describe(".render", function() {
@@ -184,6 +204,17 @@ describe("go.routing (views)", function() {
   });
 
   describe(".RoutingDiagramView", function() {
+    var diagram;
+
+    beforeEach(function() {
+      setUp();
+      diagram = newRoutingDiagram();
+    });
+
+    afterEach(function() {
+      tearDown();
+    });
+
     describe("on 'error:unsupported' connection events", function() {
       beforeEach(function() {
         diagram.render();
@@ -204,7 +235,7 @@ describe("go.routing (views)", function() {
 
     describe(".render", function() {
       it("should render the states in its channels column", function() {
-        var $channels = $('#routing-diagram #channels');
+        var $channels = $('#diagram #channels');
 
         assert(noElExists($channels.find('.state')));
         diagram.render();
@@ -215,7 +246,7 @@ describe("go.routing (views)", function() {
       });
 
       it("should render the states in its routers column", function() {
-        var $blocks = $('#routing-diagram #routers');
+        var $blocks = $('#diagram #routers');
 
         assert(noElExists($blocks.find('.state')));
         diagram.render();
@@ -225,7 +256,7 @@ describe("go.routing (views)", function() {
       });
 
       it("should render the states in its conversations column", function() {
-        var $conversations = $('#routing-diagram #conversations');
+        var $conversations = $('#diagram #conversations');
 
         assert(noElExists($conversations.find('.state')));
         diagram.render();
@@ -249,34 +280,33 @@ describe("go.routing (views)", function() {
     });
   });
 
-  describe(".RoutingActionsView", function() {
-    var RoutingActionsView = routing.RoutingActionsView;
+  describe(".RoutingView", function() {
+    var RoutingView = routing.views.RoutingView,
+        RoutingModel = routing.models.RoutingModel;
 
-    var actions,
+    var view,
         server;
 
     beforeEach(function() {
+      setUp();
       server = sinon.fakeServer.create();
 
-      var $el = $('<div>')
-        .append($('<button>').attr('data-action', 'save'))
-        .append($('<button>').attr('data-action', 'reset'));
-
-      actions = new RoutingActionsView({
-        el: $el,
-        diagram: diagram,
+      view = new RoutingView({
+        el: '#routing',
+        model: new RoutingModel(modelData),
         sessionId: '123'
       });
 
-      actions.save.notifier.animate = false;
-      actions.reset.notifier.animate = false;
+      view.save.notifier.animate = false;
+      view.reset.notifier.animate = false;
 
-      diagram.render();
+      view.diagram.render();
     });
 
     afterEach(function() {
-      actions.remove();
+      view.remove();
       server.restore();
+      tearDown();
     });
 
     describe("when the save button is clicked", function() {
@@ -287,57 +317,57 @@ describe("go.routing (views)", function() {
             req,
             '/api/v1/go/api',
             'update_routing_table',
-            ['campaign1', diagram.model.toJSON()]);
+            ['campaign1', view.model.toJSON()]);
 
           done();
         });
 
         // modify the diagram
-        diagram.connections.remove('endpoint1-endpoint4');
-        assert.notDeepEqual(diagram.model.toJSON(), modelData);
+        view.diagram.connections.remove('endpoint1-endpoint4');
+        assert.notDeepEqual(view.model.toJSON(), modelData);
 
-        actions.$('[data-action=save]').click();
+        view.$('#save').click();
         server.respond();
       });
 
       it("should notify the user if the save was successful", function() {
         server.respondWith(response());
 
-        actions.$('[data-action=save]').click();
+        view.$('#save').click();
         server.respond();
 
-        assert.include(actions.save.notifier.$el.text(), "Save successful!");
+        assert.include(view.save.notifier.$el.text(), "Save successful!");
       });
 
       it("should notify the user if an error occured", function() {
         server.respondWith(errorResponse('Aaah!'));
 
-        actions.$('[data-action=save]').click();
+        view.$('#save').click();
         server.respond();
 
-        assert.include(actions.save.notifier.$el.text(), "Save failed :/");
+        assert.include(view.save.notifier.$el.text(), "Save failed :/");
       });
     });
 
     describe("when the reset button is clicked", function() {
       it("should reset the routing table changes", function(done) {
-        assert.deepEqual(diagram.model.toJSON(), modelData);
+        assert.deepEqual(view.model.toJSON(), modelData);
 
         // modify the diagram
-        diagram.connections.remove('endpoint1-endpoint4');
-        assert.notDeepEqual(diagram.model.toJSON(), modelData);
+        view.diagram.connections.remove('endpoint1-endpoint4');
+        assert.notDeepEqual(view.model.toJSON(), modelData);
 
-        actions.$('[data-action=reset]').click();
-        actions.reset.once('success', function() {
-          assert.deepEqual(diagram.model.toJSON(), modelData);
+        view.$('#reset').click();
+        view.reset.once('success', function() {
+          assert.deepEqual(view.model.toJSON(), modelData);
           done();
         });
       });
 
       it("should notify the user", function() {
-        actions.$('[data-action=reset]').click();
-        actions.reset.once('success', function() {
-          assert.include(actions.reset.notifier.$el.text(), "Reset successful!");
+        view.$('#reset').click();
+        view.reset.once('success', function() {
+          assert.include(view.reset.notifier.$el.text(), "Reset successful!");
         });
       });
     });

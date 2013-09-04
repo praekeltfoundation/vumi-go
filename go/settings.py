@@ -423,6 +423,7 @@ PIPELINE_JS = {
             'js/src/components/plumbing/diagrams.js',
             'js/src/components/tables.js',
             'js/src/routing/routing.js',
+            'js/src/routing/style.js',
             'js/src/routing/models.js',
             'js/src/routing/views.js',
             'js/src/apps/apps.js',
