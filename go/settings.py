@@ -382,7 +382,7 @@ PIPELINE_JS = {
             'js/vendor/backbone-relational-0.8.5.js',
             'bootstrap/js/bootstrap.min.js',
             'js/vendor/bootbox.js',
-            'js/vendor/jquery.jsPlumb-1.4.1.js',
+            'js/vendor/jquery.jsPlumb-1.5.2.praekelt.js',
         ),
         'output_filename': 'export/lib.js'
     },
