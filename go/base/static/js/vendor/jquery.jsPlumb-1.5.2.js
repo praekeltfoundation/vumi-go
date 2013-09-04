@@ -2116,8 +2116,8 @@
 				if (tep) {			
 					// if target not enabled, return.
 					if (!_targetsEnabled[tid]) return;
-
 					tep.isTarget = true;
+
 					// check for max connections??						
 					newEndpoint = existingUniqueEndpoint != null ? existingUniqueEndpoint : _currentInstance.addEndpoint(_p.target, tep);
 					if (_targetEndpointsUnique[tid]) _targetEndpoints[tid] = newEndpoint;
@@ -2137,6 +2137,7 @@
 				if (tep) {
 					// if source not enabled, return.					
 					if (!_sourcesEnabled[tid]) return;
+          tep.isSource = true;
 				
 					newEndpoint = existingUniqueEndpoint != null ? existingUniqueEndpoint : _currentInstance.addEndpoint(_p.source, tep);
 					if (_sourceEndpointsUnique[tid]) _sourceEndpoints[tid] = newEndpoint;
@@ -2606,7 +2607,12 @@
 			var _is = _currentInstance.setSuspendDrawing(true);
 			var endpoint = (typeof object == "string") ? endpointsByUUID[object] : object;			
 			if (endpoint) {		
-				_currentInstance.deleteObject({endpoint:endpoint});
+        // Make the delete silent if this is a floating endpoint so detach
+        // events are only fired when established connections are detached
+				_currentInstance.deleteObject({
+          endpoint:endpoint,
+          fireEvent: !endpoint.isFloating()
+        });
 			}
 			if(!_is) _currentInstance.setSuspendDrawing(false, doNotRepaintAfterwards);
 			return _currentInstance;									
@@ -3263,6 +3269,7 @@
 			// put jsplumb ref into params without altering the params passed in
 			var p = jsPlumb.extend({_jsPlumb:_currentInstance}, referenceParams);
 			jsPlumb.extend(p, params);
+      p.isTarget = true;
 
 			// calculate appropriate paint styles and anchor from the params given			
 			_setEndpointPaintStylesAndAnchor(p, 1);                               
@@ -3494,9 +3501,6 @@
 						if (existingStop) existingStop.apply(this, arguments);								
 	                    _currentInstance.currentlyDragging = false;						
 						if (ep._jsPlumb != null) { // if not cleaned up...
-
-							jpcl.unbind(ep.canvas, "mousedown"); 
-									
 							// reset the anchor to the anchor that was initially provided. the one we were using to drag
 							// the connection was just a placeholder that was located at the place the user pressed the
 							// mouse button to initiate the drag.
