@@ -22,6 +22,11 @@
         useNotifier: true
       });
 
+      this.listenTo(this.save, 'success', function() {
+        // TODO better way of specifying urls than 'hardcoding' them
+        go.utils.redirect('/conversations/' + this.model.id + '/');
+      });
+
       go.apps.dialogue.style.initialize();
     },
 
