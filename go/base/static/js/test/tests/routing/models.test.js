@@ -11,8 +11,8 @@ describe("go.routing (models)", function() {
     go.testHelpers.unregisterModels();
   });
 
-  describe(".CampaignRoutingModel", function() {
-    var CampaignRoutingModel = routing.CampaignRoutingModel;
+  describe(".RoutingModel", function() {
+    var RoutingModel = routing.models.RoutingModel;
 
     var server;
 
@@ -26,7 +26,7 @@ describe("go.routing (models)", function() {
 
     describe(".fetch", function() {
       it("should issue the correct api request", function(done) {
-        var model = new CampaignRoutingModel({campaign_id: 'campaign1'});
+        var model = new RoutingModel({campaign_id: 'campaign1'});
 
         server.respondWith(function(req) {
           assertRequest(req, '/api/v1/go/api', 'routing_table', ['campaign1']);
@@ -38,7 +38,7 @@ describe("go.routing (models)", function() {
       });
 
       it("should ensure duplicate routing entries aren't made", function() {
-        var model = new CampaignRoutingModel({campaign_id: 'campaign1'});
+        var model = new RoutingModel({campaign_id: 'campaign1'});
         server.respondWith(response(modelData));
 
         var assertEntries = function() {
@@ -59,7 +59,7 @@ describe("go.routing (models)", function() {
       });
 
       it("should update the model on the client side", function() {
-        var model = new CampaignRoutingModel();
+        var model = new RoutingModel();
         server.respondWith(response(modelData));
 
         model.fetch();
@@ -133,7 +133,7 @@ describe("go.routing (models)", function() {
 
     describe(".save", function() {
       it("should issue the correct api request", function(done) {
-        var model = new CampaignRoutingModel(modelData);
+        var model = new RoutingModel(modelData);
 
         server.respondWith(function(req) {
           assertRequest(

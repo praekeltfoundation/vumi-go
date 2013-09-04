@@ -3,8 +3,8 @@
 
 (function(exports) {
   var routing = go.routing,
-      CampaignRoutingModel = routing.CampaignRoutingModel,
-      RoutingDiagramView = routing.RoutingDiagramView;
+      RoutingModel = routing.models.RoutingModel,
+      RoutingDiagramView = routing.views.RoutingDiagramView;
 
   var modelData = {
     campaign_id: 'campaign1',
@@ -71,8 +71,8 @@
 
   var newRoutingDiagram = function() {
     return new RoutingDiagramView({
-      el: '#routing-diagram',
-      model: new CampaignRoutingModel(modelData)
+      el: '#routing #diagram',
+      model: new RoutingModel(modelData)
     });
   };
 
@@ -80,13 +80,15 @@
   // --------------
 
   var setUp = function() {
-    $('body').append([
-      "<div id='routing-diagram'>",
-        "<div class='column' id='channels'></div>",
-        "<div class='column' id='routers'></div>",
-        "<div class='column' id='conversations'></div>",
-      "</div>"
-    ].join(''));
+    $('body')
+      .append($('<div>')
+        .attr('id', 'routing')
+        .append($('<button>').attr('id', 'reset'))
+        .append($('<button>').attr('id', 'save'))
+        .append($('<div>').attr('id', 'diagram')
+          .append($('<div>').attr('id', 'channels'))
+          .append($('<div>').attr('id', 'routers'))
+          .append($('<div>').attr('id', 'conversations'))));
   };
 
   var tearDown = function() {
@@ -94,7 +96,7 @@
     jsPlumb.unbind();
     jsPlumb.detachEveryConnection();
     jsPlumb.deleteEveryEndpoint();
-    $('#routing-diagram').remove();
+    $('#routing').remove();
   };
 
   _.extend(exports, {
