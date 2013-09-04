@@ -3,29 +3,25 @@ import copy
 import mock
 
 from twisted.internet.defer import inlineCallbacks
-from twisted.trial.unittest import TestCase
 from vumi.tests.utils import UTCNearNow, LogCatcher
 
-from go.vumitools.tests.utils import GoPersistenceMixin
+from go.vumitools.tests.utils import GoTestCase
 from go.vumitools.account.models import (
     AccountStore, RoutingTableHelper, GoConnector, GoConnectorError)
 from go.vumitools.account.old_models import AccountStoreVNone, AccountStoreV1
 
 
-class UserAccountTestCase(GoPersistenceMixin, TestCase):
+class UserAccountTestCase(GoTestCase):
     use_riak = True
 
     def setUp(self):
-        self._persist_setUp()
+        super(UserAccountTestCase, self).setUp()
         self.manager = self.get_riak_manager()
         self.store = AccountStore(self.manager)
 
         # Some old stores for testing migrations.
         self.store_v1 = AccountStoreV1(self.manager)
         self.store_vnone = AccountStoreVNone(self.manager)
-
-    def tearDown(self):
-        return self._persist_tearDown()
 
     def assert_user(self, user, **fields):
         def assert_field(value, name, default):
@@ -89,7 +85,7 @@ class UserAccountTestCase(GoPersistenceMixin, TestCase):
         self.assert_user(user, tags=None, routing_table=None)
 
 
-class RoutingTableHelperTestCase(TestCase):
+class RoutingTableHelperTestCase(GoTestCase):
 
     CONV_1 = "CONVERSATION:dummy:1"
     CONV_2 = "CONVERSATION:dummy:2"
@@ -401,7 +397,7 @@ class RoutingTableHelperTestCase(TestCase):
         self.assertRaises(ValueError, rt.validate_all_entries)
 
 
-class GoConnectorTestCase(TestCase):
+class GoConnectorTestCase(GoTestCase):
     def test_create_conversation_connector(self):
         c = GoConnector.for_conversation("conv_type_1", "12345")
         self.assertEqual(c.ctype, GoConnector.CONVERSATION)

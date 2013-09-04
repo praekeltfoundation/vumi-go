@@ -3,21 +3,20 @@
 """Tests for go.vumitools.contact."""
 
 from twisted.internet.defer import inlineCallbacks
-from twisted.trial.unittest import TestCase
 
-from go.vumitools.tests.utils import model_eq, GoPersistenceMixin
+from go.vumitools.tests.utils import model_eq, GoTestCase
 from go.vumitools.account import AccountStore
 from go.vumitools.contact import (
     ContactStore, ContactError, ContactNotFoundError)
 from go.vumitools.opt_out import OptOutStore
 
 
-class TestContactStore(GoPersistenceMixin, TestCase):
+class TestContactStore(GoTestCase):
     use_riak = True
 
     @inlineCallbacks
     def setUp(self):
-        self._persist_setUp()
+        super(TestContactStore, self).setUp()
         self.manager = self.get_riak_manager()
         self.account_store = AccountStore(self.manager)
         # We pass `self` in as the VumiApi object here, because mk_user() just
@@ -28,9 +27,6 @@ class TestContactStore(GoPersistenceMixin, TestCase):
         self.store_alt = ContactStore.from_user_account(self.account_alt)
         yield self.store.contacts.enable_search()
         yield self.store_alt.contacts.enable_search()
-
-    def tearDown(self):
-        return self._persist_tearDown()
 
     def assert_models_equal(self, m1, m2):
         self.assertTrue(model_eq(m1, m2),
