@@ -3,18 +3,31 @@
 // Styling for the routing screen that cannot be done through css
 
 (function(exports) {
+  var colors = {
+    normal: '#2f3436',
+    hover: '#b41e31'
+  };
+
   var initialize = function() {
     jsPlumb.Defaults.Connector = ['StateMachine'];
 
     _(jsPlumb.Defaults.EndpointStyle).extend({
-      radius: 3,
-      fillStyle: '#2f3436'
+      radius: 4,
+      fillStyle: colors.normal
     });
 
     _(jsPlumb.Defaults.PaintStyle).extend({
       lineWidth: 2,
-      strokeStyle: '#2f3436'
+      strokeStyle: colors.normal
     });
+
+    jsPlumb.Defaults.HoverPaintStyle = {
+      strokeStyle: colors.hover
+    };
+
+    jsPlumb.Defaults.EndpointHoverStyle = {
+      fillStyle: colors.hover
+    };
   };
 
   _(exports).extend({
