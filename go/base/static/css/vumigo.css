@@ -609,10 +609,10 @@ button {
 .campaigns form .title .tooltip {
   text-transform: none;
 }
-.campaigns #routing-diagram .column-container {
+.routing #diagram .column-container {
   text-align: center;
 }
-.campaigns #routing-diagram .column-container .title {
+.routing #diagram .column-container .title {
   font-size: 22px;
   margin: 10px 0;
   font-family: inherit;
@@ -621,17 +621,17 @@ button {
   color: inherit;
   text-rendering: optimizelegibility;
 }
-.campaigns #routing-diagram .column-container .new {
+.routing #diagram .column-container .new {
   font-size: 35px;
   line-height: 50px;
   width: 130px;
   height: 50px;
 }
-.campaigns #routing-diagram .column-container .column {
+.routing #diagram .column-container .column {
   margin-top: 15px;
   display: inline-block;
 }
-.campaigns #routing-diagram .column-container .state {
+.routing #diagram .column-container .state {
   background: #d2d0c7;
   color: #333;
   font-size: 16px;
@@ -649,17 +649,17 @@ button {
   z-index: 0;
   -webkit-user-select: none;
 }
-.campaigns #routing-diagram .column-container .state .name {
+.routing #diagram .column-container .state .name {
   margin: 10px;
 }
-.campaigns #routing-diagram .column-container .state:hover {
+.routing #diagram .column-container .state:hover {
   cursor: move;
 }
-.campaigns #routing-diagram .column-container .endpoint:hover {
+.routing #diagram .column-container .endpoint:hover {
   cursor: pointer;
 }
-.campaigns #routing-diagram ._jsPlumb_endpoint,
-.campaigns #routing-diagram ._jsPlumb_connector {
+.routing #diagram ._jsPlumb_endpoint,
+.routing #diagram ._jsPlumb_connector {
   z-index: 200;
 }
 .contacts .smart-group-search form {
