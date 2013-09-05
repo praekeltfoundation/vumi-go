@@ -225,30 +225,44 @@
     }
   });
 
-  var RoutingActionsView = Backbone.View.extend({
+  var RoutingView = Backbone.View.extend({
     initialize: function(options) {
-      this.diagram = options.diagram;
+      this.diagram = new RoutingDiagramView({
+        el: '#diagram',
+        model: this.model
+      });
 
       this.save = new SaveActionView({
-        el: this.$('[data-action=save]'),
+        el: this.$('#save'),
         sessionId: options.sessionId,
-        model: this.diagram.model
+        model: this.model,
+        useNotifier: true
       });
 
       this.reset = new ResetActionView({
-        el: this.$('[data-action=reset]'),
-        model: this.diagram.model
+        el: this.$('#reset'),
+        model: this.model,
+        useNotifier: true
       });
 
-      this.save.on('error', function() {
-        bootbox.alert("Something bad happened, changes couldn't be saved.");
-      });
+      go.routing.style.initialize();
+    },
+
+    remove: function() {
+      this.save.remove();
+      this.reset.remove();
+      this.diagram.remove();
+      RoutingView.__super__.remove.call(this);
+    },
+
+    render: function() {
+      this.diagram.render();
     }
   });
 
   _(exports).extend({
     RoutingDiagramView: RoutingDiagramView,
-    RoutingActionsView: RoutingActionsView,
+    RoutingView: RoutingView,
 
     RoutingColumnView: RoutingColumnView,
     ChannelColumnView: ChannelColumnView,
@@ -264,4 +278,4 @@
     RoutingEndpointView: RoutingEndpointView,
     RoutingEntryCollection: RoutingEntryCollection
   });
-})(go.routing);
+})(go.routing.views = {});

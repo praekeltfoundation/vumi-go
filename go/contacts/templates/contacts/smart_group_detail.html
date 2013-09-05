@@ -1,0 +1,36 @@
+{% extends "contacts/base.html" %}
+{% load url from future %}
+
+{% block content_actions_left %}
+    <button class="btn btn-primary" data-toggle="modal" data-target="#uplContactFrm">Import contacts</button>
+{% endblock %}
+
+{% block content_actions_right %}
+    <div class="pull-left ">
+        With group:
+        <button class="btn" data-toggle="modal" data-target="#delGroup">Delete</button>
+        <button class="btn" data-toggle="modal" data-target="#editGroup">Rename</button>
+        <button class="btn" data-toggle="modal" data-target="#expContactFrm">Export</button>
+    </div>
+{% endblock %}
+
+
+{% block content_main_list %}
+<form class="table-form-view" method="post" action="">
+    {% csrf_token %}
+    {% include "contacts/contact_list_table.html" %}
+</form>
+{% endblock %}
+
+{% block ondomready %}
+    {{ block.super }}
+    var tableFormView = new go.components.tables.TableFormView({
+        el: '.table-form-view',
+        actions: '.table-form-view-buttons button'
+    });
+    $('#recMatchFrm').modal('show');
+{% endblock %}
+
+{% block modals %}
+    {% include "contacts/includes/tools.html" with group=group %}
+{% endblock %}

@@ -13,7 +13,7 @@ from go.api.go_api.auth import (
     GoUserRealm, GoUserSessionAccessChecker, GoUserAuthSessionWrapper)
 from go.api.go_api.session_manager import SessionManager
 from go.vumitools.api import VumiApi
-from go.vumitools.tests.utils import GoPersistenceMixin
+from go.vumitools.tests.utils import GoTestCase
 
 import mock
 
@@ -41,16 +41,12 @@ class GoUserRealmTestCase(TestCase):
                           realm.requestAvatar, u"user", mind)
 
 
-class GoUserSessionAccessCheckerTestCase(TestCase, GoPersistenceMixin):
+class GoUserSessionAccessCheckerTestCase(GoTestCase):
     @inlineCallbacks
     def setUp(self):
-        self._persist_setUp()
+        super(GoUserSessionAccessCheckerTestCase, self).setUp()
         self.redis = yield self.get_redis_manager()
         self.sm = SessionManager(self.redis)
-
-    @inlineCallbacks
-    def tearDown(self):
-        yield self._persist_tearDown()
 
     @inlineCallbacks
     def test_request_avatar_id(self):
@@ -87,19 +83,15 @@ class GoUserSessionAccessCheckerTestCase(TestCase, GoPersistenceMixin):
         self.assertTrue(errored)
 
 
-class GoUserAuthSessionWrapperTestCase(TestCase, GoPersistenceMixin):
+class GoUserAuthSessionWrapperTestCase(GoTestCase):
 
     use_riak = True
 
     @inlineCallbacks
     def setUp(self):
-        self._persist_setUp()
+        super(GoUserAuthSessionWrapperTestCase, self).setUp()
         self.config = self.mk_config({})
         self.vumi_api = yield VumiApi.from_config_async(self.config)
-
-    @inlineCallbacks
-    def tearDown(self):
-        yield self._persist_tearDown()
 
     def mk_request(self, user=None, password=None):
         request = DummyRequest([''])

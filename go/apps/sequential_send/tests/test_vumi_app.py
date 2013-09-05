@@ -61,11 +61,6 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         yield contact.save()
         returnValue(contact)
 
-    def create_conversation(self, **kw):
-        return super(TestSequentialSendApplication, self).create_conversation(
-            delivery_tag_pool=u'pool', delivery_class=self.transport_type,
-            **kw)
-
     @inlineCallbacks
     def reply_to(self, msg, content, continue_session=True, **kw):
         session_event = (None if continue_session
@@ -141,14 +136,15 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         self.assertEqual(self.message_convs, [conv, conv])
 
     @inlineCallbacks
-    def test_schedule_daily_with_ended_conv(self):
+    def test_schedule_daily_with_stopped_conv(self):
         conv = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
         yield self.start_conversation(conv)
-        yield conv.end_conversation()
+        conv = yield self.user_api.get_wrapped_conversation(conv.key)
+        yield self.stop_conversation(conv)
         conv = yield self.user_api.get_wrapped_conversation(conv.key)
 
-        yield self._stub_out_async(conv)
+        yield self._stub_out_async()
 
         yield self.check_message_convs_and_advance([], 70)
         yield self.check_message_convs_and_advance([], 70)
@@ -214,18 +210,16 @@ class TestSequentialSendApplication(AppWorkerTestCase):
         conv1 = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:01:40'}})
         yield self.start_conversation(conv1)
-        batch_id1 = conv1.get_batch_keys()[0]
 
         conv2 = yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
         yield self.start_conversation(conv2)
-        batch_id2 = conv2.get_batch_keys()[0]
 
         yield self.create_conversation(config={
                 'schedule': {'recurring': 'daily', 'time': '00:02:30'}})
 
         [c1, c2] = yield self.app.get_conversations(
-            [[batch_id1, conv1.key], [batch_id2, conv2.key]])
+            [[conv1.batch.key, conv1.key], [conv2.batch.key, conv2.key]])
 
         self.assertEqual(sorted([c1.key, c2.key]),
                          sorted([conv1.key, conv2.key]))
@@ -304,14 +298,3 @@ class TestSequentialSendApplication(AppWorkerTestCase):
                 u'messages_sent': [0],
                 u'messages_received': [0],
                 }, metrics)
-
-    @inlineCallbacks
-    def test_routing_table_setup(self):
-        conv = yield self.create_conversation(delivery_tag=u'tag1')
-        rt = yield self.user_api.get_routing_table()
-        self.assertEqual(len(rt), 0)
-        yield self.user_api.acquire_specific_tag((u'pool', u'tag1'))
-        yield self.start_conversation_old_style(
-            conv, no_batch_tag=True, acquire_tag=False)
-        rt = yield self.user_api.get_routing_table()
-        self.assertEqual(len(rt), 1)

@@ -10,10 +10,7 @@
       RouterDashboardView.__super__.initialize.call(this, options);
 
       this.actions = this.$('.action').map(function() {
-        return new RouterActionView({
-          el: $(this),
-          csrfToken: options.csrfToken
-        });
+        return new RouterActionView({el: $(this)});
       }).get();
     }
   });

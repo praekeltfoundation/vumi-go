@@ -4,8 +4,6 @@
 
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.tests.utils import LogCatcher
-
 from go.vumitools.app_worker import GoApplicationWorker
 from go.vumitools.tests.utils import AppWorkerTestCase
 
@@ -25,12 +23,14 @@ class DummyApplication(GoApplicationWorker):
 
     @inlineCallbacks
     def consume_user_message(self, message):
-        config = yield self.get_message_config(message)
+        # Grab the message config so it can raise an exception if necessary.
+        yield self.get_message_config(message)
         self.msgs.append(message)
 
     @inlineCallbacks
     def consume_unknown_event(self, event):
-        config = yield self.get_message_config(event)
+        # Grab the message config so it can raise an exception if necessary.
+        yield self.get_message_config(event)
         self.events.append(event)
 
 

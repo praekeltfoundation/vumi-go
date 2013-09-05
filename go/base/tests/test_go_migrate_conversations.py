@@ -8,7 +8,7 @@ from vumi.persist.model import ModelMigrationError
 
 from go.apps.tests.base import DjangoGoApplicationTestCase
 from go.base.management.commands import go_migrate_conversations
-from go.vumitools.conversation.old_models import ConversationVNone
+from go.vumitools.conversation.old_models import ConversationV1
 
 
 class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
@@ -16,7 +16,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
     def setUp(self):
         super(GoMigrateConversationsCommandTestCase, self).setUp()
         self.old_conv_model = self.user_api.conversation_store.manager.proxy(
-            ConversationVNone)
+            ConversationV1)
 
         self.command = go_migrate_conversations.Command()
         self.command.stdout = StringIO()
@@ -41,18 +41,22 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
                              if 'Migrating conversation:' in line)
         self.assertEqual(extracted_keys, set(c.key for c in conversations))
 
-    def mkoldconv(self, **kwargs):
+    def mkoldconv(self, create_batch=True, **kwargs):
         conversation_id = uuid4().get_hex()
         groups = kwargs.pop('groups', [])
         conv_fields = {
             'user_account': self.user_api.user_account_key,
             'conversation_type': u'dummy_conv',
-            'subject': u'Conversation',
-            'message': u'foo',
+            'name': u'foo',
+            'description': u'Conversation',
             'start_timestamp': datetime.utcnow(),
+            'status': u'draft',
             }
         conv_fields.update(kwargs)
         conversation = self.old_conv_model(conversation_id, **conv_fields)
+
+        if create_batch:
+            conversation.batches.add_key(self.user_api.api.mdb.batch_start())
 
         for group in groups:
             conversation.add_group(group)
@@ -77,9 +81,9 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(output, [''])
 
     def setup_migrate_models(self):
-        conv1 = self.mkoldconv(subject=u'Old 1')
-        conv2 = self.mkoldconv(subject=u'Old 1')
-        conv3 = self.mkoldconv(subject=u'Zoë destroyer of Ascii')
+        conv1 = self.mkoldconv(name=u'Old 1')
+        conv2 = self.mkoldconv(name=u'Old 1')
+        conv3 = self.mkoldconv(name=u'Zoë destroyer of Ascii')
         return [conv1, conv2, conv3]
 
     def test_migrate_models_dry_run(self):
@@ -93,7 +97,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         for conv in convs:
             # If we can load the old model, the data hasn't been migrated.
             loaded_conv = self.old_conv_model.load(conv.key)
-            self.assertEqual(conv.subject, loaded_conv.subject)
+            self.assertEqual(conv.name, loaded_conv.name)
 
     def test_migrate_models(self):
         convs = self.setup_migrate_models()
@@ -112,16 +116,16 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
                 pass
             # Check that the new model loads correctly.
             loaded_conv = self.user_api.get_wrapped_conversation(conv.key)
-            self.assertEqual(conv.subject, loaded_conv.name)
+            self.assertEqual(conv.name, loaded_conv.name)
 
     def setup_fix_batches(self, tags=(), num_batches=1):
         mdb = self.user_api.api.mdb
         batches = [mdb.batch_start(tags=tags) for i in range(num_batches)]
 
-        conv = self.user_api.conversation_store.new_conversation(
-            u'dummy_type', u'Dummy Conv 1', u'Dummy Description',
-            {}, u"dummy-batch")
-        conv.batches.clear()
+        conv = self.mkoldconv(
+            create_batch=False, conversation_type=u'dummy_type',
+            name=u'Dummy Conv 1', description=u'Dummy Description',
+            config={})
 
         for i, batch_id in enumerate(batches):
             conv.batches.add_key(batch_id)
@@ -138,7 +142,7 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         old_batches = old_conv.batches.keys()
         new_conv = self.user_api.conversation_store.get_conversation_by_key(
             old_conv.key)
-        [new_batch] = new_conv.batches.keys()
+        new_batch = new_conv.batch.key
         self.assertTrue(new_batch not in old_batches)
 
         mdb = self.user_api.api.mdb
@@ -152,9 +156,9 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         self.assertEqual(set(mdb.batch_inbound_keys(new_batch)),
                          old_inbound)
 
-    def check_fix_batches(self, tags, num_batches, migrated):
+    def _check_fix_batches(self, migration_name, tags, num_batches, migrated):
         conv = self.setup_fix_batches(tags, num_batches)
-        output = self.handle_command(migration_name='fix-batches')
+        output = self.handle_command(migration_name=migration_name)
         self.assert_no_stderr()
         self.assertEqual(output[:2], [
             'Test User <username> [test-0-user]',
@@ -165,18 +169,39 @@ class GoMigrateConversationsCommandTestCase(DjangoGoApplicationTestCase):
         if migrated:
             self.assert_batches_fixed(conv)
 
-    def test_fix_batches_on_conv_with_batch_with_tag(self):
-        self.check_fix_batches(tags=[(u"pool", u"tag")],
-                               num_batches=1, migrated=True)
+    def check_fix_batches(self, tags, num_batches, migrated):
+        return self._check_fix_batches(
+            'fix-batches', tags, num_batches, migrated)
+
+    def check_split_batches(self, tags, num_batches, migrated):
+        return self._check_fix_batches(
+            'split-batches', tags, num_batches, migrated)
 
     def test_fix_batches_on_conv_with_single_batch_with_no_tag(self):
         self.check_fix_batches(tags=(), num_batches=1, migrated=False)
+
+    def test_fix_batches_ignores_newer_conv(self):
+        self.user_api.new_conversation(u'dummy_conv', u'Dummy conv', u'', {})
+        output = self.handle_command(migration_name='fix-batches')
+        self.assert_no_stderr()
+        self.assertEqual(output[:2], [
+            'Test User <username> [test-0-user]',
+            '  Migrating 0 of 1 conversations ...',
+        ])
+        self.assert_conversations_migrated([], output)
 
     def test_fix_batches_on_conv_with_multiple_batches(self):
         self.check_fix_batches(tags=(), num_batches=2, migrated=True)
 
     def test_fix_batches_on_conv_with_zero_batches(self):
         self.check_fix_batches(tags=(), num_batches=0, migrated=True)
+
+    def test_split_batches_on_conv_with_single_batch_with_no_tag(self):
+        self.check_split_batches(tags=(), num_batches=1, migrated=False)
+
+    def test_split_batches_on_conv_with_batch_with_tag(self):
+        self.check_split_batches(tags=[(u"pool", u"tag")],
+                               num_batches=1, migrated=True)
 
     def test_fix_jsbox_endpoints(self):
         app_config = {

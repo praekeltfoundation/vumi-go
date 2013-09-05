@@ -1,14 +1,14 @@
-.popover {
-  z-index: 20 !important;
-  font-size: 11px;
-  width: 220px;
+.confirm {
+  .details {
+    margin-left: 24px;
 
-  input {
-    font-size:11px;
-    width:90%;
+    table {
+      th:first-child {
+        width: 100px;
+      }
+    }
   }
 }
-
 
 .dialogue {
   .actions {
@@ -17,7 +17,15 @@
     }
   }
 
+  .popover {
+    font-size: 11px;
+    width: 220px;
 
+    input {
+      font-size:11px;
+      width:90%;
+    }
+  }
 
   #diagram {
 
@@ -251,6 +259,15 @@
           text-align: left;
         }
       }
+    }
+  }
+}
+
+
+.conversation.groups {
+  .group-table {
+    th:first-child, td:first-child {
+      width: 20px;
     }
   }
 }

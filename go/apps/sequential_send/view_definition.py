@@ -13,15 +13,15 @@ class ScheduleForm(forms.Form):
 
 
 class MessageForm(forms.Form):
-    message = forms.CharField()
+    message = forms.CharField(widget=forms.Textarea)
 
 
 class BaseMessageFormSet(forms.formsets.BaseFormSet):
     @staticmethod
-    def initial_from_metadata(data):
+    def initial_from_config(data):
         return [{'message': message} for message in data]
 
-    def to_metadata(self):
+    def to_config(self):
         return [form.cleaned_data['message'] for form in self
                 if form.cleaned_data and not form.cleaned_data['DELETE']]
 

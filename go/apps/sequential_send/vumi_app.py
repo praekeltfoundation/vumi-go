@@ -137,7 +137,6 @@ class SequentialSendApplication(GoApplicationWorker):
     def send_scheduled_messages(self, conv):
         config = self.get_config_for_conversation(conv)
         messages = config.messages
-        batch_id = conv.get_batch_keys()[0]
         message_options = {}
         conv.set_go_helper_metadata(
             message_options.setdefault('helper_metadata', {}))
@@ -158,7 +157,7 @@ class SequentialSendApplication(GoApplicationWorker):
                     continue
 
                 yield self.send_message(
-                    batch_id, to_addr, messages[message_index],
+                    conv.batch.key, to_addr, messages[message_index],
                     message_options)
 
                 contact.extra[index_key] = u'%s' % (message_index + 1)
@@ -178,6 +177,15 @@ class SequentialSendApplication(GoApplicationWorker):
 
         log.debug("Scheduling conversation: %s" % (conversation_key,))
         yield self.redis.sadd('scheduled_conversations', json.dumps(
+                [user_account_key, conversation_key]))
+
+    @inlineCallbacks
+    def process_command_stop(self, user_account_key, conversation_key):
+        yield super(SequentialSendApplication, self).process_command_start(
+            user_account_key, conversation_key)
+
+        log.debug("Unscheduling conversation: %s" % (conversation_key,))
+        yield self.redis.srem('scheduled_conversations', json.dumps(
                 [user_account_key, conversation_key]))
 
     @inlineCallbacks

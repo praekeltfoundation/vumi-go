@@ -14,7 +14,7 @@
     <table class="table">
         <thead>
             <tr>
-                <th><input type="checkbox"></th>
+                <th>{# Action markers go here, dashboard does not use them #}</th>
                 <th>Routers</th>
                 <th>Status</th>
                 <th>Created At</th>
@@ -25,7 +25,7 @@
             {% if routers %}
                 {% for router in page.object_list %}
                 <tr data-url="{% router_screen router %}">
-                    <td><input type="checkbox" name="router_key" value="{{ router.key }}"></td>
+                    <td>{# Action markers go here, dashboard does not use them #}</td>
                     <td>
                         <a href="{% router_screen router %}">
                             {{ router.name }}
@@ -53,7 +53,6 @@
 
 {% block ondomready %}
     var dashboard = new go.router.dashboard.RouterDashboardView({
-        el: '.table-form-view',
-        csrfToken: '{{ csrf_token|safe }}'
+        el: '.table-form-view'
     });
 {% endblock %}

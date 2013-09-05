@@ -1,9 +1,9 @@
 import csv
+import json
 import logging
 import functools
 import re
 from StringIO import StringIO
-from urllib import urlencode
 
 from django.conf import settings
 from django.views.generic import View, TemplateView
@@ -89,12 +89,20 @@ class ConfirmConversationView(ConversationTemplateView):
         token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = request.GET.get('token')
         token_data = token_manager.verify_get(token)
+
         if not token_data:
             raise Http404
+
+        params = token_data['extra_params']
+        action_name = params.get('action_display_name')
+        action_details = params.get('action_data').get('display', {})
+
         return self.render_to_response({
-            'form': ConfirmConversationForm(initial={'token': token}),
-            'conversation': conversation,
             'success': False,
+            'conversation': conversation,
+            'action_name': action_name,
+            'action_details': action_details,
+            'form': ConfirmConversationForm(initial={'token': token}),
         })
 
     def post(self, request, conversation):
@@ -128,8 +136,8 @@ class ConfirmConversationView(ConversationTemplateView):
 
         return self.render_to_response({
             'form': confirmation_form,
-            'conversation': conversation,
             'success': success,
+            'conversation': conversation,
         })
 
 
@@ -207,7 +215,7 @@ class MessageListView(ConversationTemplateView):
         query = request.GET.get('q', None)
         token = None
 
-        batch_id = conversation.get_latest_batch_key()
+        batch_id = conversation.batch.key
 
         # Paginator starts counting at 1 so 0 would also be invalid
         inbound_message_paginator = Paginator(
@@ -281,7 +289,7 @@ class MessageListView(ConversationTemplateView):
         conversation.dispatch_command(
             'send_message', user_api.user_account_key, conversation.key,
             command_data={
-                "batch_id": conversation.get_latest_batch_key(),
+                "batch_id": conversation.batch.key,
                 "conversation_key": conversation.key,
                 "to_addr": inbound_message['from_addr'],
                 "content": content,
@@ -307,7 +315,8 @@ class MessageListView(ConversationTemplateView):
             else:
                 messages.error(request,
                     'Something went wrong. Please try again.')
-        return self.redirect_to('message_list', conversation_key=conversation.key)
+        return self.redirect_to(
+            'message_list', conversation_key=conversation.key)
 
 
 class EditConversationDetailView(ConversationTemplateView):
@@ -362,8 +371,8 @@ class EditConversationView(ConversationTemplateView):
     Subclass this and set :attr:`edit_forms` to a list of tuples
     of the form `('key', FormClass)`.
 
-    The `key` should be a key into the conversation's metadata field. If `key`
-    is `None`, the whole of the metadata field will be used.
+    The `key` should be a key into the conversation's config field. If `key`
+    is `None`, the whole of the config field will be used.
 
     If the default behaviour is insufficient or problematic, implement
     :meth:`make_forms` and :meth:`process_forms`. These are the only two
@@ -395,10 +404,13 @@ class EditConversationView(ConversationTemplateView):
         return self.redirect_to(self.get_next_view(conversation),
                                 conversation_key=conversation.key)
 
-    def make_form(self, key, form, metadata):
-        data = metadata.get(key, {})
-        if hasattr(form, 'initial_from_metadata'):
-            data = form.initial_from_metadata(data)
+    def make_form(self, key, form, config):
+        if key is None:
+            data = config
+        else:
+            data = config.get(key, {})
+        if hasattr(form, 'initial_from_config'):
+            data = form.initial_from_config(data)
         return form(prefix=key, initial=data)
 
     def make_forms(self, conversation):
@@ -407,8 +419,8 @@ class EditConversationView(ConversationTemplateView):
                 for key, edit_form in self.edit_forms]
 
     def process_form(self, form):
-        if hasattr(form, 'to_metadata'):
-            return form.to_metadata()
+        if hasattr(form, 'to_config'):
+            return form.to_config()
         return form.cleaned_data
 
     def process_forms(self, request, conversation):
@@ -479,13 +491,16 @@ class ConversationActionView(ConversationTemplateView):
 
     @check_action_is_enabled
     def post(self, request, conversation):
-        action_data = {}
+        action_data = {'display': {}}
         form_cls = self.view_def.get_action_form(self.action.action_name)
         if form_cls is not None:
             form = form_cls(request.POST)
             if not form.is_valid():
                 return self._render_form(request, conversation, form)
             action_data = form.cleaned_data
+            action_data['display'] = dict(
+                (form[k].label, v)
+                for k, v in action_data.iteritems())
 
         if self.action.needs_confirmation:
             user_account = request.user_api.get_user_account()
@@ -514,16 +529,17 @@ class ConversationActionView(ConversationTemplateView):
         redirect_to = self.get_view_url('confirm', conversation_key=conv.key)
         # The token to be sent.
         params = {
-            'action_name': self.action.action_name,
             'action_data': action_data,
+            'action_name': self.action.action_name,
+            'action_display_name': self.action.action_display_name,
         }
 
         token_manager = DjangoTokenManager(request.user_api.api.token_manager)
         token = token_manager.generate(redirect_to, user_id=request.user.id,
                                        extra_params=params)
+
         conv.send_token_url(
-            token_manager.url_for_token(token), user_account.msisdn,
-            acquire_tag=False)
+            token_manager.url_for_token(token), user_account.msisdn)
         messages.info(request, 'Confirmation request sent.')
         return self.redirect_to('show', conversation_key=conv.key)
 
@@ -550,48 +566,48 @@ class EditConversationGroupsView(ConversationTemplateView):
                         key=lambda group: group.created_at,
                         reverse=True)
 
-        selected_groups = list(group.key for group
-                               in conversation.get_groups())
+        selected_groups = set(group.key for group in conversation.get_groups())
 
-        for group in groups:
-            if group.key in selected_groups:
-                group.selected = True
-
-        query = request.GET.get('query', '')
-        p = request.GET.get('p', 1)
-
-        paginator = Paginator(groups, 15)
-        try:
-            page = paginator.page(p)
-        except PageNotAnInteger:
-            page = paginator.page(1)
-        except EmptyPage:
-            page = paginator.page(paginator.num_pages)
-
-        pagination_params = urlencode({
-            'query': query,
-        })
+        model_data = {
+            'key': conversation.key,
+            'groups': [{
+                'key': group.key,
+                'name': group.name,
+                'urls': {
+                    'show': reverse(
+                        'contacts:group',
+                        kwargs={'group_key': group.key}),
+                },
+                'inConversation': group.key in selected_groups,
+            } for group in groups],
+            'urls': {
+                'show': self.get_view_url(
+                    'show',
+                    conversation_key=conversation.key)
+            },
+        }
 
         return self.render_to_response({
-            'paginator': paginator,
-            'page': page,
-            'pagination_params': pagination_params,
             'conversation': conversation,
+            'model_data': json.dumps(model_data),
             'contact_store': request.user_api.contact_store,
         })
 
     def get(self, request, conversation):
         return self._render_groups(request, conversation)
 
-    def post(self, request, conversation):
-        group_keys = request.POST.getlist('group')
+    def put(self, request, conversation):
+        data = json.loads(request.body)
+        group_keys = [d['key'] for d in data['groups']]
+
         conversation.groups.clear()
         for group_key in group_keys:
             conversation.add_group(group_key)
         conversation.save()
 
-        return self.redirect_to(self.get_next_view(conversation),
-                                conversation_key=conversation.key)
+        return HttpResponse(
+            json.dumps({'success': True}),
+            content_type="application/json")
 
 
 class ConversationViewDefinitionBase(object):

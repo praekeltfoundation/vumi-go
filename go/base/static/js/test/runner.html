@@ -14,7 +14,7 @@
     <script src="../vendor/jquery-1.9.1.js"></script>
     <script src="../vendor/jquery.cookie-1.3.1.js"></script>
     <script src="../vendor/jquery.ui-1.10.3.js"></script>
-    <script src="../vendor/jquery.jsPlumb-1.4.1.leakfix.js"></script>
+    <script src="../vendor/jquery.jsPlumb-1.5.2.praekelt.js"></script>
     <script src="../vendor/lodash.underscore-1.2.1.js"></script>
     <script src="../vendor/backbone-1.0.0.js"></script>
     <script src="../vendor/backbone-relational-0.8.5.js"></script>
@@ -39,6 +39,8 @@
 
       window.templates = [
         'components/confirm.jst',
+        'components/notifiers/popover/busy.jst',
+        'components/notifiers/popover/message.jst',
         'apps/dialogue/states/modes/preview.jst',
         'apps/dialogue/states/modes/edit.jst',
         'apps/dialogue/states/choice/edit.jst',
@@ -49,7 +51,8 @@
         'apps/dialogue/states/freetext/preview.jst',
         'apps/dialogue/states/end/edit.jst',
         'apps/dialogue/states/end/preview.jst',
-        'apps/dialogue/states/components/nameExtras.jst'
+        'apps/dialogue/states/components/nameExtras.jst',
+        'conversation/groups/row.jst'
       ];
 
       window.templates.forEach(helpers.loadTemplate);
@@ -74,25 +77,11 @@
     <script src="../src/components/plumbing/diagrams.js"></script>
     <script src="../src/components/tables.js"></script>
 
-    <script src="../src/campaign/campaign.js"></script>
-    <script src="../src/campaign/interactive.js"></script>
-    <script src="../src/campaign/routing/routing.js"></script>
-    <script src="../src/campaign/routing/models.js"></script>
-    <script src="../src/campaign/routing/views.js"></script>
-    <script src="../src/campaign/dialogue/dialogue.js"></script>
-    <script src="../src/campaign/dialogue/models.js"></script>
-    <script src="../src/campaign/dialogue/connections.js"></script>
-    <script src="../src/campaign/dialogue/states/states.js"></script>
-    <script src="../src/campaign/dialogue/states/partials.js"></script>
-    <script src="../src/campaign/dialogue/states/dummy.js"></script>
-    <script src="../src/campaign/dialogue/states/choice.js"></script>
-    <script src="../src/campaign/dialogue/states/freetext.js"></script>
-    <script src="../src/campaign/dialogue/states/end.js"></script>
-    <script src="../src/campaign/dialogue/diagram.js"></script>
     <script src="../src/apps/apps.js"></script>
     <script src="../src/apps/interactive.js"></script>
     <script src="../src/routing/routing.js"></script>
     <script src="../src/routing/models.js"></script>
+    <script src="../src/routing/style.js"></script>
     <script src="../src/routing/views.js"></script>
     <script src="../src/apps/dialogue/dialogue.js"></script>
     <script src="../src/apps/dialogue/models.js"></script>
@@ -104,15 +93,24 @@
     <script src="../src/apps/dialogue/states/freetext.js"></script>
     <script src="../src/apps/dialogue/states/end.js"></script>
     <script src="../src/apps/dialogue/diagram.js"></script>
-    <script src="../src/apps/dialogue/actions.js"></script>
+    <script src="../src/apps/dialogue/style.js"></script>
+    <script src="../src/apps/dialogue/views.js"></script>
+    <script src="../src/contacts/contacts.js"></script>
+    <script src="../src/contacts/models.js"></script>
     <script src="../src/conversation/conversation.js"></script>
+    <script src="../src/conversation/models.js"></script>
     <script src="../src/conversation/views.js"></script>
     <script src="../src/conversation/dashboard.js"></script>
     <script src="../src/conversation/show.js"></script>
+    <script src="../src/conversation/groups.js"></script>
     <script src="../src/router/router.js"></script>
     <script src="../src/router/views.js"></script>
     <script src="../src/router/dashboard.js"></script>
     <script src="../src/router/show.js"></script>
+    <script src="../src/channel/channel.js"></script>
+    <script src="../src/channel/views.js"></script>
+    <script src="../src/channel/dashboard.js"></script>
+    <script src="../src/channel/show.js"></script>
 
     <script src="tests/testHelpers/testHelpers.js"></script>
     <script src="tests/testHelpers/testHelpers.test.js"></script>
@@ -144,13 +142,18 @@
     <script src="tests/apps/dialogue/states/freetext.test.js"></script>
     <script src="tests/apps/dialogue/states/end.test.js"></script>
     <script src="tests/apps/dialogue/diagram.test.js"></script>
-    <script src="tests/apps/dialogue/actions.test.js"></script>
+    <script src="tests/apps/dialogue/views.test.js"></script>
+    <script src="tests/conversation/models.test.js"></script>
     <script src="tests/conversation/views.test.js"></script>
     <script src="tests/conversation/dashboard.test.js"></script>
     <script src="tests/conversation/show.test.js"></script>
+    <script src="tests/conversation/groups.test.js"></script>
     <script src="tests/router/views.test.js"></script>
     <script src="tests/router/dashboard.test.js"></script>
     <script src="tests/router/show.test.js"></script>
+    <script src="tests/channel/views.test.js"></script>
+    <script src="tests/channel/dashboard.test.js"></script>
+    <script src="tests/channel/show.test.js"></script>
     <script>
       if (window.mochaPhantomJS) { mochaPhantomJS.run(); }
       else { mocha.run(); }

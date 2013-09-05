@@ -12,14 +12,14 @@ class BulkSendAction(ConversationAction):
     needs_running = True
 
     def check_disabled(self):
-        if self._conv.has_channel_supporting(generic_sends=True):
+        if self._conv.has_channel_supporting_generic_sends():
             return None
         return ("This action needs channels capable of sending"
                 " messages attached to this conversation.")
 
     def perform_action(self, action_data):
         return self.send_command(
-            'bulk_send', batch_id=self._conv.get_latest_batch_key(),
+            'bulk_send', batch_id=self._conv.batch.key,
             msg_options={}, content=action_data['message'],
             delivery_class=self._conv.delivery_class,
             dedupe=action_data['dedupe'])

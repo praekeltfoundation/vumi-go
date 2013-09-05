@@ -11,10 +11,6 @@ from vumi.connectors import IgnoreMessage
 
 from go.vumitools.api import VumiApiCommand, VumiApi, VumiApiEvent
 from go.vumitools.utils import MessageMetadataHelper
-from go.vumitools.conversation.models import (
-    CONVERSATION_STARTING, CONVERSATION_STOPPING)
-from go.vumitools.router.models import (
-    ROUTER_STARTING, ROUTER_STOPPING)
 
 
 class OneShotMetricManager(MetricManager):
@@ -203,9 +199,8 @@ class GoWorkerMixin(object):
 
         log.msg('Reconciling cache for %s' % (conversation_key,))
         message_store = user_api.api.mdb
-        for batch_key in conv.get_batch_keys():
-            if (yield message_store.needs_reconciliation(batch_key, delta)):
-                yield message_store.reconcile_cache(batch_key)
+        if (yield message_store.needs_reconciliation(conv.batch.key, delta)):
+            yield message_store.reconcile_cache(conv.batch.key)
         log.msg('Cache reconciled for %s' % (conversation_key,))
 
     @inlineCallbacks
@@ -311,11 +306,9 @@ class GoWorkerMixin(object):
         This is a utility method for collecting common metrics. It has to be
         called explicitly from :meth:`collect_metrics`
         """
-        sent = 0
-        received = 0
-        for batch_id in conversation.batches.keys():
-            sent += yield self.vumi_api.mdb.batch_outbound_count(batch_id)
-            received += yield self.vumi_api.mdb.batch_inbound_count(batch_id)
+        batch_id = conversation.batch.key
+        sent = yield self.vumi_api.mdb.batch_outbound_count(batch_id)
+        received = yield self.vumi_api.mdb.batch_inbound_count(batch_id)
 
         self.publish_conversation_metric(
             conversation, 'messages_sent', sent)
@@ -358,8 +351,8 @@ class GoApplicationMixin(GoWorkerMixin):
                 "Trying to start missing conversation '%s' for user '%s'." % (
                     conversation_key, user_account_key))
             return
-        status = conv.get_status()
-        if status != CONVERSATION_STARTING:
+        if not conv.starting():
+            status = conv.get_status()
             log.warning(
                 "Trying to start conversation '%s' for user '%s' with invalid "
                 "status: %s" % (conversation_key, user_account_key, status))
@@ -375,8 +368,8 @@ class GoApplicationMixin(GoWorkerMixin):
                 "Trying to stop missing conversation '%s' for user '%s'." % (
                     conversation_key, user_account_key))
             return
-        status = conv.get_status()
-        if status != CONVERSATION_STOPPING:
+        if not conv.stopping():
+            status = conv.get_status()
             log.warning(
                 "Trying to stop conversation '%s' for user '%s' with invalid "
                 "status: %s" % (conversation_key, user_account_key, status))
@@ -384,12 +377,35 @@ class GoApplicationMixin(GoWorkerMixin):
         conv.set_status_stopped()
         yield conv.save()
 
-    def process_command_initial_action_hack(self, *args, **kwargs):
-        # HACK: This lets us do whatever we used to do when we got a `start'
-        # message without having horrible app-specific view logic.
-        # TODO: Remove this when we've decoupled the various conversation
-        # actions from the lifecycle.
-        pass
+    @inlineCallbacks
+    def process_command_send_message(self, user_account_key, conversation_key,
+                                     command_data, **kwargs):
+        if kwargs:
+            log.info("Received unexpected command args: %s" % (kwargs,))
+        conv = yield self.get_conversation(user_account_key, conversation_key)
+        if conv is None:
+            log.warning("Cannot find conversation '%s' for user '%s'." % (
+                conversation_key, user_account_key))
+            return
+
+        log.info('Processing send_message: %s' % kwargs)
+        to_addr = command_data['to_addr']
+        content = command_data['content']
+        msg_options = command_data['msg_options']
+        in_reply_to = msg_options.pop('in_reply_to', None)
+        self.add_conv_to_msg_options(conv, msg_options)
+        if in_reply_to:
+            msg = yield self.vumi_api.mdb.get_inbound_message(in_reply_to)
+            if msg:
+                yield self.reply_to(
+                    msg, content,
+                    helper_metadata=msg_options['helper_metadata'])
+            else:
+                log.warning('Unable to reply, message %s does not exist.' % (
+                    in_reply_to))
+        else:
+            yield self.send_to(
+                to_addr, content, endpoint='default', **msg_options)
 
 
 class GoRouterMixin(GoWorkerMixin):

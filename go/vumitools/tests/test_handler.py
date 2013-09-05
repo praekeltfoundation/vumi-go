@@ -26,7 +26,6 @@ class EventHandlerTestCase(AppWorkerTestCase):
         self.user_api = self.vumi_api.get_user_api(self.account.key)
         yield self.setup_tagpools()
         self.conversation = yield self.create_conversation(
-            delivery_tag_pool=u'pool', delivery_class=u'sms',
             conversation_type=u'survey')
 
     def publish_event(self, event):

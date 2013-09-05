@@ -3,33 +3,24 @@
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import Clock, LoopingCall
 
-from vumi.tests.utils import VumiWorkerTestCase
-
-from go.vumitools.tests.utils import GoPersistenceMixin
+from go.vumitools.tests.utils import GoWorkerTestCase
 from go.vumitools import metrics_worker
 
 
-class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
-    use_riak = True
+class GoMetricsWorkerTestCase(GoWorkerTestCase):
+    worker_class = metrics_worker.GoMetricsWorker
 
     @inlineCallbacks
     def setUp(self):
-        self._persist_setUp()
         super(GoMetricsWorkerTestCase, self).setUp()
         self.clock = Clock()
         self.patch(metrics_worker, 'LoopingCall', self.looping_call)
         self.worker = yield self.get_metrics_worker()
 
-    @inlineCallbacks
-    def tearDown(self):
-        yield super(GoMetricsWorkerTestCase, self).tearDown()
-        yield self._persist_tearDown()
-
     def get_metrics_worker(self, config=None, start=True):
         if config is None:
             config = {}
-        return self.get_worker(
-            self.mk_config(config), metrics_worker.GoMetricsWorker, start)
+        return self.get_worker(self.mk_config(config), start)
 
     def rkey(self, name):
         return name
@@ -46,11 +37,11 @@ class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
         return user_api.new_conversation(conv_type, conv_name, u'', {})
 
     def start_conv(self, conv):
-        conv.batches.add_key(u'batch-%s' % (conv.key,))
         conv.set_status_started()
         return conv.save()
 
-    def end_conv(self, conv):
+    def archive_conv(self, conv):
+        conv.set_status_stopped()
         conv.set_status_finished()
         return conv.save()
 
@@ -90,7 +81,7 @@ class GoMetricsWorkerTestCase(VumiWorkerTestCase, GoPersistenceMixin):
         user_api = self.worker.vumi_api.get_user_api(akey)
 
         conv1 = yield self.make_conv(user_api, u'conv1')
-        yield self.end_conv(conv1)
+        yield self.archive_conv(conv1)
         conv2 = yield self.make_conv(user_api, u'conv2')
         yield self.start_conv(conv2)
         yield self.make_conv(user_api, u'conv3')

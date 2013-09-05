@@ -34,9 +34,7 @@ class TestOptOutApplication(AppWorkerTestCase):
         # Add tags
         yield self.setup_tagpools()
 
-        self.conversation = yield self.create_conversation(
-            delivery_tag_pool=u'pool',
-            delivery_class=self.transport_type)
+        self.conversation = yield self.create_conversation()
 
     @inlineCallbacks
     def opt_out(self, from_addr, to_addr, content, transport_type=None,

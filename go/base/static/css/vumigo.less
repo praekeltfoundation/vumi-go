@@ -159,7 +159,7 @@ a:link, button {
     }
 
     .right {
-      padding: 0 20px;
+      padding: 0 30px;
       overflow: hidden;
 
       .navbar-search {
@@ -296,9 +296,50 @@ a:link, button {
   }
 }
 
+.popover {
+  z-index: 20 !important;
+
+  &.notifier {
+    .close {
+      margin-left: 5px;
+      line-height: 18px;
+    }
+
+    .type (@color; @background) {
+      color: @color;
+      background: @background;
+
+      &.left {
+        .arrow:after { border-left-color: @background; }
+      }
+      &.right {
+        .arrow:after { border-right-color: @background; }
+      }
+      &.top {
+        .arrow:after { border-top-color: @background; }
+      }
+      &.bottom {
+        .arrow:after { border-bottom-color: @background; }
+      }
+    }
+
+    &.success { .type(#468847; #dff0d8); }
+    &.error { .type(#b94a48; #f2dede); }
+
+    &.info {
+      .close {
+        line-height: 22px;
+      }
+
+      .type(#3a87ad; #d9edf7);
+    }
+  }
+}
+
 @import "conversations.less";
 @import "channels.less";
 @import "campaigns.less";
+@import "routing.less";
 @import "contacts.less";
 @import "accounts.less";
 @import "tables.less";

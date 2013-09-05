@@ -72,33 +72,12 @@ class SendMessageCommandHandler(EventHandler):
             event.payload['conversation_key'])
         conv = user_api.wrap_conversation(conv)
 
-        batch_keys = conv.batches.keys()
-        if len(batch_keys) > 0:
-            batch_id = batch_keys[0]
-        else:
-            log.info("No batches found")
-            return
-
-        batch = yield user_api.api.mdb.get_batch(batch_id)
-        batch_tags = list(batch.tags)
-        if len(batch_tags) > 0:
-            tag = [batch_tags[0][0], batch_tags[0][1]]
-        else:
-            log.info("No batch tags found")
-            return
-
-        tag_info = yield user_api.api.tpm.get_metadata(tag[0])
-
         command_data = event.payload['content']
-        command_data['batch_id'] = batch_id
+        command_data['batch_id'] = conv.batch.key
         command_data['msg_options'] = {
-                'helper_metadata': {
-                    'go': {'user_account': event.payload['account_key']},
-                    'tag': {'tag': tag},
-                },
-                'transport_type': tag_info['transport_type'],
-                'transport_name': tag_info['msg_options']['transport_name'],
-                'from_addr': tag[1],
+            'helper_metadata': {
+                'go': {'user_account': event.payload['account_key']},
+            },
         }
 
         sm_cmd = VumiApiCommand.command(
