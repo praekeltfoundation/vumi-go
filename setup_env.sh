@@ -3,6 +3,8 @@
 # To die on the first error instead of carrying on.
 set -e
 
+./utils/js-env-setup.sh
+
 ./go-admin.sh syncdb --migrate --noinput
 
 ./go-admin.sh go_setup_env \
