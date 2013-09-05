@@ -89,7 +89,6 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
         })
         self.mw = yield self.create_middleware(OptOutMiddleware,
             config=self.config)
-        self._persist_redis_managers.append(self.mw.vumi_api.redis)
         yield self.mw.vumi_api.tpm.declare_tags([("pool", "tag1")])
         yield self.mw.vumi_api.tpm.set_metadata("pool", {
                 "transport_type": "other",
@@ -147,7 +146,6 @@ class OptOutMiddlewareTestCase(MiddlewareTestCase):
 
         # This is a bit ugly. We get a new fakeredis here.
         mw = yield self.create_middleware(OptOutMiddleware, config=config)
-        self._persist_redis_managers.append(mw.vumi_api.redis)
         yield mw.vumi_api.tpm.declare_tags([("pool", "tag1")])
         yield mw.vumi_api.tpm.set_metadata("pool", {
                 "transport_type": "other",

@@ -3,7 +3,6 @@ from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportUserMessage
 
-from go.vumitools.api import VumiApi
 from go.vumitools.utils import MessageMetadataHelper
 from go.vumitools.tests.utils import GoTestCase
 
@@ -14,7 +13,7 @@ class MessageMetadataHelperTestCase(GoTestCase):
     @inlineCallbacks
     def setUp(self):
         super(MessageMetadataHelperTestCase, self).setUp()
-        self.vumi_api = yield VumiApi.from_config_async(self._persist_config)
+        self.vumi_api = yield self.get_vumi_api()
         self.account = yield self.mk_user(self.vumi_api, u'user')
         self.user_api = self.vumi_api.get_user_api(self.account.key)
 

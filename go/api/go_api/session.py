@@ -12,8 +12,7 @@ class SessionStore(SessionBase):
     """
     def __init__(self, session_key=None):
         super(SessionStore, self).__init__(session_key)
-        self.vumi_api = vumi_api()
-        self.session_manager = self.vumi_api.session_manager
+        self.session_manager = vumi_api().session_manager
 
     def encode(self, data):
         """Replace Django's pickle serialization with a null-op.
