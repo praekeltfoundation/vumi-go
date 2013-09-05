@@ -9,7 +9,8 @@
   },
   "devDependencies": {
     "grunt": "~0.4.1",
-    "grunt-mocha-test": "~0.6.3"
+    "grunt-mocha-test": "~0.6.3",
+    "js-yaml": "~2.1.0"
   },
   "repository": {
     "type": "git",
