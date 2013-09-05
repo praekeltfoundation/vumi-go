@@ -12,6 +12,10 @@ module.exports = function (grunt) {
     }
   });
 
+  grunt.registerTask('test:jsbox_apps', [
+    'mochaTest:jsbox_apps'
+  ]);
+
   grunt.registerTask('test', [
     'mochaTest'
   ]);
