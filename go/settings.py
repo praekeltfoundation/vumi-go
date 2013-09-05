@@ -451,6 +451,10 @@ PIPELINE_JS = {
             'js/src/router/views.js',
             'js/src/router/dashboard.js',
             'js/src/router/show.js',
+            'js/src/channel/channel.js',
+            'js/src/channel/views.js',
+            'js/src/channel/dashboard.js',
+            'js/src/channel/show.js',
 
             # TODO This is here so we can access the test model data. This
             # gives us the data we need for a 'demo' of the routing screen.
