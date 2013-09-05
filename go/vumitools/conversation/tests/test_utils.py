@@ -6,7 +6,6 @@ from vumi.message import TransportMessage
 from vumi.application.tests.test_base import DummyApplicationWorker
 
 from go.vumitools.tests.utils import AppWorkerTestCase
-from go.vumitools.api import VumiApi
 from go.vumitools.opt_out import OptOutStore
 
 
@@ -23,8 +22,8 @@ class ConversationWrapperTestCase(AppWorkerTestCase):
         # Get a dummy worker so we have an amqp_client which we need
         # to set-up the MessageSender in the `VumiApi`
         self.worker = yield self.get_application({})
-        self.vumi_api = yield VumiApi.from_config_async(
-            self.mk_config({}), amqp_client=self.worker._amqp_client)
+        self.vumi_api = yield self.get_vumi_api(
+            amqp_client=self.worker._amqp_client)
         self.mdb = self.vumi_api.mdb
         self.user = yield self.mk_user(self.vumi_api, u'username')
         self.user_api = self.vumi_api.get_user_api(self.user.key)

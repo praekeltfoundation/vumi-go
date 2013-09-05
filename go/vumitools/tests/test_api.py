@@ -27,10 +27,10 @@ class TestTxVumiApi(AppWorkerTestCase):
             # Set up the vumi exchange, in case we don't have one.
             self._amqp.exchange_declare('vumi', 'direct')
             self.vumi_api = VumiApi.from_config_sync(
-                self._persist_config, FakeAmqpConnection(self._amqp))
+                self.mk_config({}), FakeAmqpConnection(self._amqp))
         else:
             self.vumi_api = yield VumiApi.from_config_async(
-                self._persist_config, get_fake_amq_client(self._amqp))
+                self.mk_config({}), get_fake_amq_client(self._amqp))
 
     @inlineCallbacks
     def test_declare_tags_from_different_pools(self):
@@ -61,10 +61,9 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     def setUp(self):
         yield super(TestTxVumiUserApi, self).setUp()
         if self.sync_persistence:
-            self.vumi_api = VumiApi.from_config_sync(self._persist_config)
+            self.vumi_api = VumiApi.from_config_sync(self.mk_config({}))
         else:
-            self.vumi_api = yield VumiApi.from_config_async(
-                self._persist_config)
+            self.vumi_api = yield VumiApi.from_config_async(self.mk_config({}))
         self.user_account = yield self.mk_user(self.vumi_api, u'Buster')
         self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
@@ -349,10 +348,10 @@ class TestTxVumiRouterApi(AppWorkerTestCase):
             # Set up the vumi exchange, in case we don't have one.
             self._amqp.exchange_declare('vumi', 'direct')
             self.vumi_api = VumiApi.from_config_sync(
-                self._persist_config, FakeAmqpConnection(self._amqp))
+                self.mk_config({}), FakeAmqpConnection(self._amqp))
         else:
             self.vumi_api = yield VumiApi.from_config_async(
-                self._persist_config, get_fake_amq_client(self._amqp))
+                self.mk_config({}), get_fake_amq_client(self._amqp))
         self.user_account = yield self.mk_user(self.vumi_api, u'Buster')
         self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
