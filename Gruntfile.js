@@ -7,7 +7,7 @@ module.exports = function (grunt) {
     paths: require('paths.yml'),
     mochaTest: {
       jsbox_apps: {
-        src: ['<%= paths.jsbox_apps.tests %>'],
+        src: ['<%= paths.tests.jsbox_apps %>'],
       }
     }
   });
