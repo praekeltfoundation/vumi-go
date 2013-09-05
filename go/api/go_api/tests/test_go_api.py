@@ -12,7 +12,6 @@ from twisted.web.server import Site
 from vumi.utils import http_request
 
 from go.vumitools.account.models import GoConnector, RoutingTableHelper
-from go.vumitools.api import VumiApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.api.go_api.api_types import RoutingEntryType, EndpointType
 from go.api.go_api.go_api import GoApiWorker, GoApiServer
@@ -26,10 +25,8 @@ class GoApiServerTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def setUp(self):
-        self._persist_setUp()
-        self.config = self.mk_config({})
-
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
+        super(GoApiServerTestCase, self).setUp()
+        self.vumi_api = yield self.get_vumi_api()
         self.account = yield self.mk_user(self.vumi_api, u'user')
         self.user_api = self.vumi_api.get_user_api(self.account.key)
         self.campaign_key = self.account.key
@@ -42,7 +39,7 @@ class GoApiServerTestCase(AppWorkerTestCase):
     @inlineCallbacks
     def tearDown(self):
         yield self.server.loseConnection()
-        yield self._persist_tearDown()
+        yield super(GoApiServerTestCase, self).tearDown()
 
     @inlineCallbacks
     def assert_faults(self, d, fault_code, fault_string):

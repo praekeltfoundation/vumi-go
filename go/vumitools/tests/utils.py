@@ -150,6 +150,11 @@ class GoPersistenceMixin(PersistenceMixin):
         yield user.save()
         returnValue(user)
 
+    def get_vumi_api(self, config=None, amqp_client=None):
+        if config is None:
+            config = self.mk_config({})
+        return VumiApi.from_config_async(config, amqp_client)
+
 
 class GoWorkerTestMixin(GoPersistenceMixin):
 
