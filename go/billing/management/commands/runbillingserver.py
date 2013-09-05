@@ -30,6 +30,6 @@ class Command(BaseCommand):
         def connection_error(err):
             self.stderr.write(err)
 
-        d = api.connection_pool.start()
+        d = api.start_connection_pool()
         d.addCallbacks(connection_established, connection_error)
         reactor.run()
