@@ -382,7 +382,7 @@ PIPELINE_JS = {
             'js/vendor/backbone-relational-0.8.5.js',
             'bootstrap/js/bootstrap.min.js',
             'js/vendor/bootbox.js',
-            'js/vendor/jquery.jsPlumb-1.4.1.js',
+            'js/vendor/jquery.jsPlumb-1.5.2.praekelt.js',
         ),
         'output_filename': 'export/lib.js'
     },
@@ -423,6 +423,7 @@ PIPELINE_JS = {
             'js/src/components/plumbing/diagrams.js',
             'js/src/components/tables.js',
             'js/src/routing/routing.js',
+            'js/src/routing/style.js',
             'js/src/routing/models.js',
             'js/src/routing/views.js',
             'js/src/apps/apps.js',
@@ -450,6 +451,10 @@ PIPELINE_JS = {
             'js/src/router/views.js',
             'js/src/router/dashboard.js',
             'js/src/router/show.js',
+            'js/src/channel/channel.js',
+            'js/src/channel/views.js',
+            'js/src/channel/dashboard.js',
+            'js/src/channel/show.js',
 
             # TODO This is here so we can access the test model data. This
             # gives us the data we need for a 'demo' of the routing screen.
