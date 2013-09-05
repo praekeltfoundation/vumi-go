@@ -31,8 +31,6 @@ class TestTxVumiApi(AppWorkerTestCase):
         else:
             self.vumi_api = yield VumiApi.from_config_async(
                 self._persist_config, get_fake_amq_client(self._amqp))
-        self._persist_riak_managers.append(self.vumi_api.manager)
-        self._persist_redis_managers.append(self.vumi_api.redis)
 
     @inlineCallbacks
     def test_declare_tags_from_different_pools(self):
@@ -355,8 +353,6 @@ class TestTxVumiRouterApi(AppWorkerTestCase):
         else:
             self.vumi_api = yield VumiApi.from_config_async(
                 self._persist_config, get_fake_amq_client(self._amqp))
-        self._persist_riak_managers.append(self.vumi_api.manager)
-        self._persist_redis_managers.append(self.vumi_api.redis)
         self.user_account = yield self.mk_user(self.vumi_api, u'Buster')
         self.user_api = VumiUserApi(self.vumi_api, self.user_account.key)
 
