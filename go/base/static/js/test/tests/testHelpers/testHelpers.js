@@ -2,9 +2,6 @@
 // ==============
 
 (function(exports) {
-  window.assert = chai.assert;
-  window.globals = {};
-
   var assertFails = function(fn) { assert.throws(fn, chai.AssertionError); };
 
   var oneElExists = function(selector) {
@@ -31,6 +28,13 @@
     collections.forEach(function(c) { c.reset([], {remove: true}); });
     Backbone.Relational.store._collections = [];
   };
+
+  var initialize = function() {
+    window.assert = chai.assert;
+    window.globals = {};
+  };
+
+  initialize();
 
   _.extend(exports, {
     assertFails: assertFails,

@@ -4,9 +4,10 @@ module.exports = function(config) {
   var paths = require('paths.yml');
 
   config.set({
-    basePath: 'go/base/static/',
-
     files: [].concat(
+      paths.client.styles.vendor,
+      paths.client.styles.go,
+      paths.client.templates.dest,
       paths.client.scripts.vendor,
       paths.client.scripts.go,
       paths.tests.client.vendor,
@@ -15,6 +16,10 @@ module.exports = function(config) {
 
     browsers: ['PhantomJS'],
     frameworks: ['mocha'],
-    plugins: ['karma-phantomjs-launcher', 'karma-mocha']
+
+    plugins: [
+      'karma-mocha',
+      'karma-phantomjs-launcher'
+    ]
   });
 };

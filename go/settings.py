@@ -15,6 +15,11 @@ def abspath(*args):
     return os.path.join(PROJECT_ROOT, *args)
 
 
+def staticpaths(paths):
+    return paths.map(
+        lambda p: os.path.relpath(p, '%s/base/static/' % PROJECT_ROOT))
+
+
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
@@ -374,15 +379,15 @@ PIPELINE_TEMPLATE_EXT = '.jst'
 
 PIPELINE_JS = {
     'vendor': {
-        'source_filenames': paths['client']['scripts']['vendor'],
+        'source_filenames': static_paths(paths['client']['scripts']['vendor']),
         'output_filename': 'export/vendor.js'
     },
     'templates': {
-        'source_filenames': paths['client']['templates'],
+        'source_filenames': static_paths(paths['client']['templates']),
         'output_filename': 'export/templates.js'
     },
     'go': {
-        'source_filenames': paths['client']['scripts']['go'],
+        'source_filenames': static_paths(paths['client']['scripts']['go']),
         'output_filename': 'export/go.js'
     },
 }
