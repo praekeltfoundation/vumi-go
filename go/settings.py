@@ -15,9 +15,10 @@ def abspath(*args):
     return os.path.join(PROJECT_ROOT, *args)
 
 
-def staticpaths(paths):
-    return paths.map(
-        lambda p: os.path.relpath(p, '%s/base/static/' % PROJECT_ROOT))
+def static_paths(paths):
+    return map(
+        lambda p: os.path.relpath(p, '%s/base/static/' % PROJECT_ROOT),
+        paths)
 
 
 DEBUG = True
@@ -361,14 +362,15 @@ ACCOUNT_ACTIVATION_DAYS = 7
 
 # PIPELINES CONFIGURATION
 paths = yaml.safe_load(open(os.path.join(PROJECT_ROOT, '..', 'paths.yml')))
+
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
 PIPELINE_CSS = {
     'vendor': {
-        'source_filenames': paths['client']['styles']['vendor'],
+        'source_filenames': static_paths(paths['client']['styles']['vendor']),
         'output_filename': 'export/vendor.css',
     },
     'go': {
-        'source_filenames': paths['client']['styles']['go'],
+        'source_filenames': static_paths(paths['client']['styles']['go']),
         'output_filename': 'export/go.css',
     },
 }
@@ -383,7 +385,7 @@ PIPELINE_JS = {
         'output_filename': 'export/vendor.js'
     },
     'templates': {
-        'source_filenames': static_paths(paths['client']['templates']),
+        'source_filenames': static_paths(paths['client']['templates']['src']),
         'output_filename': 'export/templates.js'
     },
     'go': {
