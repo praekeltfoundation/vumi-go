@@ -292,9 +292,10 @@ class AccountResource(Resource):
         # Create a new account
         query = """
             INSERT INTO billing_account
-                (user_id, account_number, description)
+                (user_id, account_number, description, credit_balance,
+                 alert_threshold, alert_credit_balance)
             VALUES
-                (%(user_id)s, %(account_number)s, %(description)s)
+                (%(user_id)s, %(account_number)s, %(description)s, 0, 0.0, 0)
             RETURNING id
         """
 
@@ -383,6 +384,217 @@ class AccountResource(Resource):
         defer.returnValue(result)
 
 
+class CostResource(Resource):
+    """Expose a REST interface for a message cost"""
+
+    isLeaf = True
+
+    def render_GET(self, request):
+        """Handle an HTTP GET request"""
+        account_number = request.args.get('account_number', [None])
+        tag_pool_name = request.args.get('tag_pool_name', [None])
+        message_direction = request.args.get('message_direction', [None])
+        d = self.get_cost_list(account_number[0], tag_pool_name[0],
+                               message_direction[0])
+
+        d.addCallbacks(_render_to_json, _handle_error,
+                       callbackArgs=[request], errbackArgs=[request])
+
+        return NOT_DONE_YET
+
+    def render_POST(self, request):
+        """Handle an HTTP POST request"""
+        data = _parse_json(request)
+        account_number = data.get('account_number', None)
+        tag_pool_name = data.get('tag_pool_name', None)
+        message_direction = data.get('message_direction', None)
+        message_cost = data.get('message_cost', None)
+        markup_percent = data.get('markup_percent', None)
+        if tag_pool_name and message_direction and message_cost \
+                and markup_percent:
+            d = self.create_cost(account_number, tag_pool_name,
+                                 message_direction, message_cost,
+                                 markup_percent)
+
+            d.addCallbacks(_render_to_json, _handle_error,
+                           callbackArgs=[request], errbackArgs=[request])
+
+            return NOT_DONE_YET
+        else:
+            request.setResponseCode(400)  # Bad Request
+            return ''
+
+    @defer.inlineCallbacks
+    def get_cost_list(self, account_number, tag_pool_name,
+                      message_direction):
+        """Fetch all message costs for the given parameters.
+
+        If an ``account_number`` is given, first check for an account cost
+        override.
+
+        """
+        if account_number:
+            query = """
+                SELECT a.account_number, t.name AS tag_pool_name,
+                       c.message_direction, c.message_cost, c.markup_percent,
+                       (c.message_cost
+                        + (c.message_cost * c.markup_percent / 100.0))
+                        * %(credit_factor)s AS credit_amount
+                FROM billing_costoverride c, billing_account a,
+                     billing_tagpool t
+                WHERE c.account_id = a.id
+                AND c.tag_pool_id = t.id
+                AND a.account_number = %(account_number)s
+            """
+
+            params = {
+                'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR,
+                'account_number': account_number
+            }
+
+            if tag_pool_name:
+                query += " AND t.name = %(tag_pool_name)s"
+                params['tag_pool_name'] = tag_pool_name
+            if message_direction:
+                query += " AND c.message_direction = %(message_direction)s"
+                params['message_direction'] = message_direction
+
+            result = yield _connection_pool.runQuery(query, params)
+        else:
+            result = None
+
+        if result:
+            defer.returnValue(result)
+        else:
+            query = """
+                SELECT t.name AS tag_pool_name, c.message_direction,
+                       c.message_cost, c.markup_percent,
+                       (c.message_cost
+                        + (c.message_cost * c.markup_percent / 100.0))
+                        * %(credit_factor)s AS credit_amount
+                FROM billing_basecost c, billing_tagpool t
+                WHERE c.tag_pool_id = t.id
+            """
+
+            params = {
+                'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR,
+            }
+
+            if tag_pool_name:
+                query += " AND t.name = %(tag_pool_name)s"
+                params['tag_pool_name'] = tag_pool_name
+            if message_direction:
+                query += " AND c.message_direction = %(message_direction)s"
+                params['message_direction'] = message_direction
+
+            result = yield _connection_pool.runQuery(query, params)
+            defer.returnValue(result)
+
+    @defer.inlineCallbacks
+    def create_cost_interaction(self, cursor, account_number, tag_pool_name,
+                                message_direction, message_cost,
+                                markup_percent):
+        """Create a new cost.
+
+        If an ``account_number`` is given create a message cost override,
+        otherwise create a base message cost.
+
+        """
+        # Get the tag pool or create a new one if it doesn't exist
+        query = """
+            WITH new_row AS (
+                INSERT INTO billing_tagpool (name, description)
+                SELECT %(tag_pool_name)s, ''
+                WHERE NOT EXISTS (SELECT * FROM billing_tagpool
+                                  WHERE name = %(tag_pool_name)s)
+                RETURNING id, name, description
+            )
+            SELECT id, name, description FROM new_row
+            UNION
+            SELECT id, name, description
+            FROM billing_tagpool
+            WHERE name = %(tag_pool_name)s
+        """
+
+        params = {'tag_pool_name': tag_pool_name}
+        cursor = yield cursor.execute(query, params)
+        tag_pool = yield cursor.fetchone()
+
+        if account_number:  # Create a message cost override
+            query = """
+                INSERT INTO billing_costoverride
+                    (account_id, tag_pool_id, message_direction,
+                     message_cost, markup_percent)
+                VALUES
+                    ((SELECT id FROM billing_account
+                      WHERE account_number = %(account_number)s),
+                     %(tag_pool_id)s, %(message_direction)s,
+                     %(message_cost)s, %(markup_percent)s)
+                RETURNING
+                    %(account_number)s AS account_number,
+                    %(tag_pool_name)s AS tag_pool_name,
+                    message_direction, message_cost, markup_percent,
+                    (message_cost + (message_cost * markup_percent / 100.0))
+                     * %(credit_factor)s AS credit_amount
+            """
+
+            params = {
+                'account_number': account_number,
+                'tag_pool_id': tag_pool.get('id'),
+                'tag_pool_name': tag_pool_name,
+                'message_direction': message_direction,
+                'message_cost': message_cost,
+                'markup_percent': markup_percent,
+                'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR
+            }
+
+            cursor = yield cursor.execute(query, params)
+            result = yield cursor.fetchone()
+            defer.returnValue(result)
+        else:  # Create the base message cost
+            query = """
+                INSERT INTO billing_basecost
+                    (tag_pool_id, message_direction, message_cost,
+                     markup_percent)
+                VALUES
+                    (%(tag_pool_id)s, %(message_direction)s,
+                     %(message_cost)s, %(markup_percent)s)
+                RETURNING
+                    %(tag_pool_name)s AS tag_pool_name,
+                    message_direction, message_cost, markup_percent,
+                    (message_cost + (message_cost * markup_percent / 100.0))
+                     * %(credit_factor)s AS credit_amount
+            """
+
+            params = {
+                'tag_pool_id': tag_pool.get('id'),
+                'tag_pool_name': tag_pool_name,
+                'message_direction': message_direction,
+                'message_cost': message_cost,
+                'markup_percent': markup_percent,
+                'credit_factor': app_settings.CREDIT_CONVERSION_FACTOR
+            }
+
+            cursor = yield cursor.execute(query, params)
+            result = yield cursor.fetchone()
+            defer.returnValue(result)
+
+    @defer.inlineCallbacks
+    def create_cost(self, account_number, tag_pool_name, message_direction,
+                    message_cost, markup_percent):
+        """Create a new cost.
+
+        If an ``account_number`` is given create a message cost override,
+        otherwise create a base message cost.
+
+        """
+        result = yield _connection_pool.runInteraction(
+            self.create_cost_interaction, account_number,
+            tag_pool_name, message_direction, message_cost, markup_percent)
+
+        defer.returnValue(result)
+
+
 class TransactionResource(Resource):
     """Expose a REST interface for a transaction"""
 
@@ -390,38 +602,20 @@ class TransactionResource(Resource):
 
     def render_GET(self, request):
         """Handle an HTTP GET request"""
-        params = filter(None, request.postpath)
-        if len(params) > 0 and params[0] == 'cost':
-            account_number = request.args.get('account_number', [])
-            tag_pool_name = request.args.get('tag_pool_name', [])
-            message_direction = request.args.get('message_direction', [])
-            if len(account_number) > 0 and len(tag_pool_name) > 0 \
-                    and len(message_direction) > 0:
-                d = self.get_cost(account_number[0], tag_pool_name[0],
-                                  message_direction[0])
+        account_number = request.args.get('account_number', [])
+        page_number = request.args.get('page_number', [0])
+        items_per_page = request.args.get('items_per_page', [20])
+        if len(account_number) > 0:
+            d = self.get_transaction_list(
+                account_number[0], page_number[0], items_per_page[0])
 
-                d.addCallbacks(_render_to_json, _handle_error,
-                               callbackArgs=[request], errbackArgs=[request])
+            d.addCallbacks(_render_to_json, _handle_error,
+                           callbackArgs=[request], errbackArgs=[request])
 
-                return NOT_DONE_YET
-            else:
-                request.setResponseCode(400)  # Bad Request
-                return ''
         else:
-            account_number = request.args.get('account_number', [])
-            page_number = request.args.get('page_number', [0])
-            items_per_page = request.args.get('items_per_page', [20])
-            if len(account_number) > 0:
-                d = self.get_transaction_list(
-                    account_number[0], page_number[0], items_per_page[0])
-
-                d.addCallbacks(_render_to_json, _handle_error,
-                               callbackArgs=[request], errbackArgs=[request])
-
-            else:
-                request.setResponseCode(400)  # Bad Request
-                return ''
-            return NOT_DONE_YET
+            request.setResponseCode(400)  # Bad Request
+            return ''
+        return NOT_DONE_YET
 
     def render_POST(self, request):
         """Handle an HTTP POST request"""
@@ -443,8 +637,13 @@ class TransactionResource(Resource):
 
     @defer.inlineCallbacks
     def get_cost(self, account_number, tag_pool_name, message_direction):
-        """Return the message cost"""
-        # Check for a account cost override
+        """Return the message cost.
+
+        First check if there is a cost override for the given
+        ``account_number``. If not, return the base cost.
+
+        """
+        # Check for an account cost override
         query = """
             SELECT c.message_cost, c.markup_percent,
                    (c.message_cost
@@ -470,7 +669,7 @@ class TransactionResource(Resource):
         if len(result) > 0:
             defer.returnValue(result[0])
         else:
-            # Return the base cost
+            # Find the message base cost
             query = """
                 SELECT c.message_cost, c.markup_percent,
                        (c.message_cost
@@ -614,4 +813,5 @@ class TransactionResource(Resource):
 root = Root()
 root.putChild('users', UserResource())
 root.putChild('accounts', AccountResource())
+root.putChild('costs', CostResource())
 root.putChild('transactions', TransactionResource())
