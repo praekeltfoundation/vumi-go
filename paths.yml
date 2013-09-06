@@ -89,4 +89,14 @@ client:
 
 tests:
   jsbox_apps:
-    - 'go/apps/**/test_vumi_app.js'
+    spec:
+      - 'go/apps/**/test_vumi_app.js'
+  client:
+    vendor:
+      - 'js/test/vendor/chai.js'
+    spec:
+      - 'js/test/tests/testHelpers/testHelpers.js'
+      - 'js/test/tests/testHelpers/testHelpers.test.js'
+      - 'js/test/tests/testHelpers/rpc.js'
+      - 'js/test/tests/errors.test.js'
+      - 'js/test/tests/utils.test.js'

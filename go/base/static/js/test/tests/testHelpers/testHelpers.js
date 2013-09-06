@@ -2,6 +2,9 @@
 // ==============
 
 (function(exports) {
+  window.assert = chai.assert;
+  window.globals = {};
+
   var assertFails = function(fn) { assert.throws(fn, chai.AssertionError); };
 
   var oneElExists = function(selector) {
