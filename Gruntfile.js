@@ -1,4 +1,5 @@
 require('js-yaml');
+var path = require('path');
 
 module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-contrib-jst');
@@ -15,12 +16,14 @@ module.exports = function (grunt) {
     jst: {
       options: {
         processName: function(filename) {
+          var dir = path.dirname(filename);
+          dir = path.relative('go/base/static/templates', dir);
+
+          var parts = dir.split('/');
+          parts.push(path.basename(filename, '.jst'));
+
           // process the template names the arb Django Pipelines way
-          return filename
-            .replace('go/base/static/templates/', '')
-            .replace(/\..+$/, '')
-            .split('/')
-            .join('_');
+          return parts.join('_');
         }
       },
       templates: {
