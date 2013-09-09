@@ -97,7 +97,7 @@ describe("go.apps.dialogue.views", function() {
           view.$('#save').click();
           server.respond();
 
-          assert.equal(location, '/conversations/conversation-1/');
+          assert.equal(location, 'conversation:show:conversation-1');
         });
       });
     });
