@@ -89,6 +89,16 @@ describe("go.apps.dialogue.views", function() {
 
           assert.include(view.save.notifier.$el.text(), "Save successful!");
         });
+
+        it("should redirect the user to the conversation show page",
+        function() {
+          server.respondWith('{}');
+
+          view.$('#save').click();
+          server.respond();
+
+          assert.equal(location, 'conversation:show:conversation-1');
+        });
       });
     });
 
