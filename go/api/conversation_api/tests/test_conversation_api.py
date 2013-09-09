@@ -6,7 +6,6 @@ from twisted.web import http
 
 from vumi.utils import http_request_full
 
-from go.vumitools.api import VumiApi
 from go.vumitools.tests.utils import AppWorkerTestCase
 from go.api.conversation_api.conversation_api import (
     ConversationApiWorker, ConversationConfigResource)
@@ -44,7 +43,7 @@ class ConversationApiTestCase(AppWorkerTestCase):
             self.addr.host, self.addr.port, self.config['web_path'])
 
         # get the router to test
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
+        self.vumi_api = yield self.get_vumi_api()
         self.account = yield self.mk_user(self.vumi_api, u'user')
         self.user_api = self.vumi_api.get_user_api(self.account.key)
 

@@ -30,6 +30,11 @@ class DialogueEditView(ConversationTemplateView):
         model_data = {
             'campaign_id': request.user_api.user_account_key,
             'conversation_key': conversation.key,
+            'urls': {
+                'show': self.get_view_url(
+                    'show',
+                    conversation_key=conversation.key)
+            }
         }
         model_data.update(r.json['result']['poll'])
 
