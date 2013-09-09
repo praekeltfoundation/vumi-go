@@ -2,8 +2,5 @@
 # only, used by readthedocs.org for publishing
 # docs on http://vumi-go.readthedocs.org/
 Sphinx
-Twisted
-zope.interface
-protobuf # riakasaurus needs this
 Django==1.4.2
 -e git+git://github.com/praekelt/vumi.git@develop#egg=vumi-dev
