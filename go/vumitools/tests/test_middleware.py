@@ -32,11 +32,14 @@ class MiddlewareTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def create_middleware(self, middleware_class, name='dummy_middleware',
-                            config=None):
+                          config=None):
         dummy_worker = yield self.get_application({})
-        mw = middleware_class(name, config or self.default_config,
-                                dummy_worker)
+        mw = middleware_class(
+            name, config or self.default_config, dummy_worker)
         yield mw.setup_middleware()
+        if hasattr(mw, 'vumi_api'):
+            self._persist_redis_managers.append(mw.vumi_api.redis)
+            self._persist_riak_managers.append(mw.vumi_api.manager)
         returnValue(mw)
 
     @inlineCallbacks
@@ -321,6 +324,11 @@ class ConversationStoringMiddlewareTestCase(MiddlewareTestCase):
         self.conv = yield self.create_conversation()
 
     @inlineCallbacks
+    def tearDown(self):
+        yield self.mw.teardown_middleware()
+        yield super(ConversationStoringMiddlewareTestCase, self).tearDown()
+
+    @inlineCallbacks
     def test_inbound_message(self):
         msg = self.mkmsg_in()
         self.add_conversation_md_to_msg(msg, self.conv)
@@ -348,6 +356,11 @@ class RouterStoringMiddlewareTestCase(MiddlewareTestCase,
         self.vumi_api = self.mw.vumi_api  # yoink!
         yield self.setup_user_api(self.vumi_api)
         self.router = yield self.create_router()
+
+    @inlineCallbacks
+    def tearDown(self):
+        yield self.mw.teardown_middleware()
+        yield super(RouterStoringMiddlewareTestCase, self).tearDown()
 
     @inlineCallbacks
     def test_inbound_message(self):

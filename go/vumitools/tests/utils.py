@@ -236,18 +236,6 @@ class GoWorkerTestMixin(GoPersistenceMixin):
         return self.user_api.api.mdb.add_inbound_message(
             msg, batch_id=batch_id)
 
-
-class GoAppWorkerTestMixin(GoWorkerTestMixin):
-
-    def _worker_name(self):
-        # DummyApplicationWorker has no worker_name attr.
-        return getattr(self.application_class, 'worker_name', 'unnamed')
-
-    def _conversation_type(self):
-        # This is a guess based on worker_name.
-        # We need a better way to do this.
-        return self._worker_name().rpartition('_')[0].decode('utf-8')
-
     @inlineCallbacks
     def create_conversation(self, started=False, **kw):
         conv_type = kw.pop('conversation_type', None)
@@ -262,6 +250,18 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
         conversation = yield self.user_api.new_conversation(
             conv_type, name, description, config, **kw)
         returnValue(self.user_api.wrap_conversation(conversation))
+
+
+class GoAppWorkerTestMixin(GoWorkerTestMixin):
+
+    def _worker_name(self):
+        # DummyApplicationWorker has no worker_name attr.
+        return getattr(self.application_class, 'worker_name', 'unnamed')
+
+    def _conversation_type(self):
+        # This is a guess based on worker_name.
+        # We need a better way to do this.
+        return self._worker_name().rpartition('_')[0].decode('utf-8')
 
     def add_conversation_md_to_msg(self, msg, conv, endpoint=None):
         msg.payload.setdefault('helper_metadata', {})
@@ -318,18 +318,6 @@ class GoRouterWorkerTestMixin(GoWorkerTestMixin):
         # This is a guess based on worker_name.
         # We need a better way to do this.
         return self._worker_name().rpartition('_')[0].decode('utf-8')
-
-    @inlineCallbacks
-    def get_router_worker(self, config, start=True):
-        if 'worker_name' not in config:
-            config['worker_name'] = self._worker_name()
-        if 'ri_connector_name' not in config:
-            config['ri_connector_name'] = 'ri_conn'
-        if 'ro_connector_name' not in config:
-            config['ro_connector_name'] = 'ro_conn'
-        worker = yield self.get_worker(
-            config, self.router_class, start=start)
-        returnValue(worker)
 
     def setup_router(self, config, started=True, **kw):
         if started:
@@ -419,6 +407,16 @@ class RouterWorkerTestCase(GoRouterWorkerTestMixin, VumiWorkerTestCase):
     def tearDown(self):
         yield super(RouterWorkerTestCase, self).tearDown()
         yield self._persist_tearDown()
+
+    def get_router_worker(self, config, start=True):
+        if 'worker_name' not in config:
+            config['worker_name'] = self._worker_name()
+        if 'ri_connector_name' not in config:
+            config['ri_connector_name'] = 'ri_conn'
+        if 'ro_connector_name' not in config:
+            config['ro_connector_name'] = 'ro_conn'
+        return self.get_worker(
+            config, self.router_class, start=start)
 
 
 class GoWorkerTestCase(GoWorkerTestMixin, VumiWorkerTestCase):
