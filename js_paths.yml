@@ -1,0 +1,3 @@
+tests:
+  jsbox_apps:
+    - 'go/apps/**/test_vumi_app.js'

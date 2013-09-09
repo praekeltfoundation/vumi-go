@@ -1,0 +1,24 @@
+{
+  "name": "vumi-go",
+  "version": "0.0.0",
+  "dependencies": {
+    "q": "~0.9.7",
+    "jed": "~0.5.4",
+    "vumigo_v01": "~0.1.17",
+    "libxmljs": "~0.8.1"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.1",
+    "grunt-mocha-test": "~0.6.3",
+    "js-yaml": "~2.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/praekelt/vumi-go"
+  },
+  "author": "Praekelt Foundation",
+  "license": "BSD",
+  "bugs": {
+    "url": "https://github.com/praekelt/vumi-go/issues"
+  }
+}
