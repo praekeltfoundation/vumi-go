@@ -4,3 +4,4 @@
 Sphinx
 Django==1.4.2
 -e git+git://github.com/praekelt/vumi.git@develop#egg=vumi-dev
+protobuf==2.5.0
