@@ -94,11 +94,11 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
             base_models.create_user_profile,
             sender=base_models.User,
             dispatch_uid='go.base.models.create_user_profile')
-        self._persist_tearDown()
         for patch in reversed(self._settings_patches):
             patch.disable()
         for patch in reversed(self._monkey_patches):
             patch.restore()
+        self._persist_tearDown()
 
     def monkey_patch(self, obj, attribute, value):
         monkey_patch = MonkeyPatcher((obj, attribute, value))

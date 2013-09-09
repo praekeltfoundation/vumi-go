@@ -26,9 +26,9 @@ class MiddlewareTestCase(AppWorkerTestCase):
 
     @inlineCallbacks
     def tearDown(self):
-        yield super(MiddlewareTestCase, self).tearDown()
         for mw in self._middlewares:
             yield maybeDeferred(mw.teardown_middleware)
+        yield super(MiddlewareTestCase, self).tearDown()
 
     @inlineCallbacks
     def create_middleware(self, middleware_class, name='dummy_middleware',
@@ -37,9 +37,6 @@ class MiddlewareTestCase(AppWorkerTestCase):
         mw = middleware_class(
             name, config or self.default_config, dummy_worker)
         yield mw.setup_middleware()
-        if hasattr(mw, 'vumi_api'):
-            self._persist_redis_managers.append(mw.vumi_api.redis)
-            self._persist_riak_managers.append(mw.vumi_api.manager)
         returnValue(mw)
 
     @inlineCallbacks
