@@ -8,9 +8,14 @@
     "libxmljs": "~0.8.1"
   },
   "devDependencies": {
+    "js-yaml": "~2.1.0",
     "grunt": "~0.4.1",
     "grunt-mocha-test": "~0.6.3",
-    "js-yaml": "~2.1.0"
+    "grunt-karma": "~0.6.2",
+    "karma": "~0.10.2",
+    "karma-mocha": "~0.1.0",
+    "karma-phantomjs-launcher": "~0.1.0",
+    "grunt-contrib-jst": "~0.5.1"
   },
   "repository": {
     "type": "git",

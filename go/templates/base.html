@@ -18,7 +18,8 @@
     <link rel="icon" type="image/x-icon" href="{{ STATIC_URL }}img/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    {% compressed_css 'all' %}
+    {% compressed_css 'vendor' %}
+    {% compressed_css 'go' %}
 
     <script type="text/javascript">
         // Create window.go.configs namespace ahead of time so that Django 
@@ -54,7 +55,8 @@
     {% block modals %}
     {% endblock %}
 
-    {% compressed_js 'lib' %}
+    {% compressed_js 'vendor' %}
+    {% compressed_js 'templates' %}
     {% compressed_js 'go' %}
 
     {% block extramedia %}

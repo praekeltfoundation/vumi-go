@@ -29,6 +29,13 @@
     Backbone.Relational.store._collections = [];
   };
 
+  var initialize = function() {
+    window.assert = chai.assert;
+    window.globals = {};
+  };
+
+  initialize();
+
   _.extend(exports, {
     assertFails: assertFails,
     oneElExists: oneElExists,
