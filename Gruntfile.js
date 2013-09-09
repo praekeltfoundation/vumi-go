@@ -22,7 +22,6 @@ module.exports = function (grunt) {
           var parts = dir.split('/');
           parts.push(path.basename(filename, '.jst'));
 
-          // process the template names the arb Django Pipelines way
           return parts.join('_');
         }
       },
