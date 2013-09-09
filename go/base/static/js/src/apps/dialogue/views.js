@@ -22,6 +22,10 @@
         useNotifier: true
       });
 
+      this.listenTo(this.save, 'success', function() {
+        go.utils.redirect(this.model.get('urls').get('show'));
+      });
+
       go.apps.dialogue.style.initialize();
     },
 

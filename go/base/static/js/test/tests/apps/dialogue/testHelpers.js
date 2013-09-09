@@ -11,6 +11,9 @@
     conversation_key: 'conversation-1',
     poll_metadata: {repeatable: false},
     start_state: {uuid: 'state1'},
+    urls: {
+      show: 'conversation:show:conversation-1'
+    },
     states: [{
       uuid: 'state1',
       name: 'Message 1',
