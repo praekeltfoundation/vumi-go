@@ -16,6 +16,8 @@ module.exports = function (grunt) {
     jst: {
       options: {
         processName: function(filename) {
+          // We need to process the template names the same way Django
+          // Pipelines does
           var dir = path.dirname(filename);
           dir = path.relative('go/base/static/templates', dir);
 
