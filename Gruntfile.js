@@ -4,7 +4,7 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-mocha-test');
 
   grunt.initConfig({
-    paths: require('paths.yml'),
+    paths: require('js_paths.yml'),
     mochaTest: {
       jsbox_apps: {
         src: ['<%= paths.tests.jsbox_apps %>'],
