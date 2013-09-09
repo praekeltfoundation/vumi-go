@@ -12,7 +12,6 @@ from twisted.web.test.test_web import DummyRequest
 from go.api.go_api.auth import (
     GoUserRealm, GoUserSessionAccessChecker, GoUserAuthSessionWrapper)
 from go.api.go_api.session_manager import SessionManager
-from go.vumitools.api import VumiApi
 from go.vumitools.tests.utils import GoTestCase
 
 import mock
@@ -90,8 +89,7 @@ class GoUserAuthSessionWrapperTestCase(GoTestCase):
     @inlineCallbacks
     def setUp(self):
         super(GoUserAuthSessionWrapperTestCase, self).setUp()
-        self.config = self.mk_config({})
-        self.vumi_api = yield VumiApi.from_config_async(self.config)
+        self.vumi_api = yield self.get_vumi_api()
 
     def mk_request(self, user=None, password=None):
         request = DummyRequest([''])
