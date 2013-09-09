@@ -37,7 +37,6 @@ class StreamingHTTPWorkerTestCase(AppWorkerTestCase):
 
         # Steal app's vumi_api
         self.vumi_api = self.app.vumi_api  # YOINK!
-        self._persist_riak_managers.append(self.vumi_api.manager)
 
         # Create a test user account
         self.account = yield self.mk_user(self.vumi_api, u'testuser')

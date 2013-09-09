@@ -62,16 +62,18 @@ class GoOutboundResource(SandboxResource):
         Command fields:
             - ``content``: The body of the reply message.
             - ``in_reply_to``: The ``message id`` of the message being replied
-            to.
+              to.
             - ``continue_session``: Whether to continue the session (if any).
-            Defaults to ``true``.
+              Defaults to ``true``.
 
         Reply fields:
             - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``.
+              ``false``.
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'outbound.reply_to',
                 {content: 'Welcome!',
@@ -88,16 +90,18 @@ class GoOutboundResource(SandboxResource):
         Command fields:
             - ``content``: The body of the reply message.
             - ``in_reply_to``: The ``message id`` of the message being replied
-            to.
+              to.
             - ``continue_session``: Whether to continue the session (if any).
-            Defaults to ``true``.
+              Defaults to ``true``.
 
         Reply fields:
             - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``.
+              ``false``.
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'outbound.reply_to_group',
                 {content: 'Welcome!',
@@ -117,14 +121,16 @@ class GoOutboundResource(SandboxResource):
             - ``to_addr``: The address of the recipient (e.g. an MSISDN).
             - ``tagpool``: The name of the tagpool to send the message via.
             - ``tag``: The name of the tag (within the tagpool) to send the
-            message from. Your Go user account must have the tag acquired.
+              message from. Your Go user account must have the tag acquired.
 
         Reply fields:
             - ``success``: ``true`` if the operation was successful, otherwise
-            ``false``.
+              ``false``.
 
         Example:
+
         .. code-block:: javascript
+
             api.request(
                 'outbound.send_to_tag',
                 {content: 'Welcome!', to_addr: '+27831234567',

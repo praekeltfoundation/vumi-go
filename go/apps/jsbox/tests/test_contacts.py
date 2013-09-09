@@ -566,7 +566,8 @@ class TestGroupsResource(ResourceTestCaseBase, GoPersistenceMixin):
 
     @inlineCallbacks
     def test_bad_query_handle_search(self):
-        reply = yield self.dispatch_command('search', query=u'name:[BAD_QUERY!]')
+        reply = yield self.dispatch_command(
+            'search', query=u'name:[BAD_QUERY!]')
         self.assertFalse(reply['success'])
         self.assertTrue('Error running MapReduce' in reply['reason'])
 

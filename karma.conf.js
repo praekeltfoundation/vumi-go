@@ -1,7 +1,7 @@
 require('js-yaml');
 
 module.exports = function(config) {
-  var paths = require('paths.yml');
+  var paths = require('js_paths.yml');
 
   config.set({
     files: [].concat(

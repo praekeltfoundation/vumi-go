@@ -26,6 +26,9 @@ class DialogueTestCase(DjangoGoApplicationTestCase):
         expected = poll.copy()
         expected["campaign_id"] = self.user_api.user_account_key
         expected["conversation_key"] = conv.key
+        expected["urls"] = {
+            "show": self.get_view_url('show')
+        }
         model_data = response.context["model_data"]
         self.assertEqual(json.loads(model_data), expected)
 

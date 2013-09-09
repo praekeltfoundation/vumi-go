@@ -176,6 +176,10 @@
 
     relations: [{
       type: Backbone.HasOne,
+      key: 'urls',
+      relatedModel: Model
+    }, {
+      type: Backbone.HasOne,
       key: 'poll_metadata',
       relatedModel: DialogueMetadataModel
     }, {
@@ -197,6 +201,7 @@
 
     defaults: {
       states: [],
+      urls: {},
       connections: [],
       poll_metadata: {}
     }

@@ -1,4 +1,5 @@
 require('js-yaml');
+var path = require('path');
 
 module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-contrib-jst');
@@ -6,7 +7,7 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-karma');
 
   grunt.initConfig({
-    paths: require('paths.yml'),
+    paths: require('js_paths.yml'),
     mochaTest: {
       jsbox_apps: {
         src: ['<%= paths.tests.jsbox_apps.spec %>'],
@@ -15,12 +16,15 @@ module.exports = function (grunt) {
     jst: {
       options: {
         processName: function(filename) {
-          // process the template names the arb Django Pipelines way
-          return filename
-            .replace('go/base/static/templates/', '')
-            .replace(/\..+$/, '')
-            .split('/')
-            .join('_');
+          // We need to process the template names the same way Django
+          // Pipelines does
+          var dir = path.dirname(filename);
+          dir = path.relative('go/base/static/templates', dir);
+
+          var parts = dir.split('/');
+          parts.push(path.basename(filename, '.jst'));
+
+          return parts.join('_');
         }
       },
       templates: {

@@ -133,7 +133,6 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
 
     def setup_api(self):
         self.api = VumiApi.from_config_sync(settings.VUMI_API_CONFIG)
-        self._persist_riak_managers.append(self.api.manager)
 
     def setup_user_api(self, django_user=None):
         if django_user is None:
