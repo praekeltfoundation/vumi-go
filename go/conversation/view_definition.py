@@ -221,11 +221,11 @@ class MessageListView(ConversationTemplateView):
         inbound_message_paginator = Paginator(
             PagedMessageCache(conversation.count_replies(),
                 lambda start, stop: conversation.received_messages(
-                    start, stop, batch_id)), 20)
+                    start, stop)), 20)
         outbound_message_paginator = Paginator(
             PagedMessageCache(conversation.count_sent_messages(),
-                lambda start, stop: conversation.sent_messages(start, stop,
-                    batch_id)), 20)
+                lambda start, stop: conversation.sent_messages(
+                    start, stop)), 20)
 
         tag_context = {
             'batch_id': batch_id,

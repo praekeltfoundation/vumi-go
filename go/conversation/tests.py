@@ -574,6 +574,28 @@ class TestConversationViews(BaseConversationViewTestCase):
         # the first page.
         self.assertContains(response, '&amp;p=0', 0)
 
+    def test_message_list_no_sensitive_msgs(self):
+        conv = self.create_conversation(
+            conversation_type=u'dummy', started=True)
+
+        def assert_messages(count):
+            r_in = self.client.get(
+                self.get_view_url(conv, 'message_list'),
+                {'direction': 'inbound'})
+            self.assertContains(r_in, 'from-addr', count)
+            r_out = self.client.get(
+                self.get_view_url(conv, 'message_list'),
+                {'direction': 'outbound'})
+            self.assertContains(r_out, 'from-addr', count)
+
+        assert_messages(0)
+        self.add_message_to_conv(conv, reply=True)
+        assert_messages(1)
+        self.add_message_to_conv(conv, reply=True, sensitive=True)
+        assert_messages(1)
+        self.add_message_to_conv(conv, reply=True)
+        assert_messages(2)
+
     def test_reply_on_inbound_messages_only(self):
         # Fake the routing setup.
         self.monkey_patch(
