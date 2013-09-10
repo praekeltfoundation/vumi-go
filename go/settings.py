@@ -2,6 +2,7 @@
 # Django settings for go project.
 import os
 import djcelery
+import yaml
 
 
 djcelery.setup_loader()
@@ -12,6 +13,12 @@ PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 def abspath(*args):
     """convert relative paths to absolute paths relative to PROJECT_ROOT"""
     return os.path.join(PROJECT_ROOT, *args)
+
+
+def static_paths(paths):
+    return map(
+        lambda p: os.path.relpath(p, '%s/base/static/' % PROJECT_ROOT),
+        paths)
 
 
 DEBUG = True
@@ -354,14 +361,17 @@ ACCOUNT_ACTIVATION_DAYS = 7
 
 
 # PIPELINES CONFIGURATION
+paths = yaml.safe_load(open(os.path.join(PROJECT_ROOT, '..', 'js_paths.yml')))
+
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
 PIPELINE_CSS = {
-    'all': {
-        'source_filenames': (
-            'bootstrap/css/bootstrap.min.css',
-            'css/vumigo.css',
-        ),
-        'output_filename': 'export/all.css',
+    'vendor': {
+        'source_filenames': static_paths(paths['client']['styles']['vendor']),
+        'output_filename': 'export/vendor.css',
+    },
+    'go': {
+        'source_filenames': static_paths(paths['client']['styles']['go']),
+        'output_filename': 'export/go.css',
     },
 }
 
@@ -370,97 +380,16 @@ PIPELINE_TEMPLATE_NAMESPACE = 'window.JST'
 PIPELINE_TEMPLATE_EXT = '.jst'
 
 PIPELINE_JS = {
-    'lib': {
-        'source_filenames': (
-            'js/vendor/base64-2.12.js',
-            'js/vendor/uuid-1.4.0.js',
-            'js/vendor/jquery-1.9.1.js',
-            'js/vendor/jquery.cookie-1.3.1.js',
-            'js/vendor/jquery.ui-1.10.3.js',
-            'js/vendor/lodash.underscore-1.2.1.js',
-            'js/vendor/backbone-1.0.0.js',
-            'js/vendor/backbone-relational-0.8.5.js',
-            'bootstrap/js/bootstrap.min.js',
-            'js/vendor/bootbox.js',
-            'js/vendor/jquery.jsPlumb-1.5.2.praekelt.js',
-        ),
-        'output_filename': 'export/lib.js'
+    'vendor': {
+        'source_filenames': static_paths(paths['client']['scripts']['vendor']),
+        'output_filename': 'export/vendor.js'
+    },
+    'templates': {
+        'source_filenames': static_paths(paths['client']['templates']['src']),
+        'output_filename': 'export/templates.js'
     },
     'go': {
-        'source_filenames': (
-            'templates/apps/dialogue/states/modes/preview.jst',
-            'templates/apps/dialogue/states/modes/edit.jst',
-            'templates/apps/dialogue/states/choice/edit.jst',
-            'templates/apps/dialogue/states/choice/preview.jst',
-            'templates/apps/dialogue/states/choice/choice/edit.jst',
-            'templates/apps/dialogue/states/choice/choice/extras.jst',
-            'templates/apps/dialogue/states/freetext/edit.jst',
-            'templates/apps/dialogue/states/freetext/preview.jst',
-            'templates/apps/dialogue/states/end/edit.jst',
-            'templates/apps/dialogue/states/end/preview.jst',
-            'templates/apps/dialogue/states/components/nameExtras.jst',
-            'templates/conversation/groups/row.jst',
-            'templates/components/confirm.jst',
-            'templates/components/notifiers/popover/busy.jst',
-            'templates/components/notifiers/popover/message.jst',
-            'templates/dummy/dummy.jst',
-
-            'js/src/go.js',
-            'js/src/utils.js',
-            'js/src/errors.js',
-            'js/src/components/components.js',
-            'js/src/components/structures.js',
-            'js/src/components/rpc.js',
-            'js/src/components/models.js',
-            'js/src/components/views.js',
-            'js/src/components/actions.js',
-            'js/src/components/grid.js',
-            'js/src/components/stateMachine.js',
-            'js/src/components/plumbing/plumbing.js',
-            'js/src/components/plumbing/endpoints.js',
-            'js/src/components/plumbing/states.js',
-            'js/src/components/plumbing/connections.js',
-            'js/src/components/plumbing/diagrams.js',
-            'js/src/components/tables.js',
-            'js/src/routing/routing.js',
-            'js/src/routing/style.js',
-            'js/src/routing/models.js',
-            'js/src/routing/views.js',
-            'js/src/apps/apps.js',
-            'js/src/apps/dialogue/dialogue.js',
-            'js/src/apps/dialogue/models.js',
-            'js/src/apps/dialogue/connections.js',
-            'js/src/apps/dialogue/states/states.js',
-            'js/src/apps/dialogue/states/partials.js',
-            'js/src/apps/dialogue/states/dummy.js',
-            'js/src/apps/dialogue/states/choice.js',
-            'js/src/apps/dialogue/states/freetext.js',
-            'js/src/apps/dialogue/states/end.js',
-            'js/src/apps/dialogue/diagram.js',
-            'js/src/apps/dialogue/views.js',
-            'js/src/apps/dialogue/style.js',
-            'js/src/contacts/contacts.js',
-            'js/src/contacts/models.js',
-            'js/src/conversation/conversation.js',
-            'js/src/conversation/models.js',
-            'js/src/conversation/views.js',
-            'js/src/conversation/dashboard.js',
-            'js/src/conversation/show.js',
-            'js/src/conversation/groups.js',
-            'js/src/router/router.js',
-            'js/src/router/views.js',
-            'js/src/router/dashboard.js',
-            'js/src/router/show.js',
-            'js/src/channel/channel.js',
-            'js/src/channel/views.js',
-            'js/src/channel/dashboard.js',
-            'js/src/channel/show.js',
-
-            # TODO This is here so we can access the test model data. This
-            # gives us the data we need for a 'demo' of the routing screen.
-            # Remove once the screen is hooked up to the API.
-            'js/test/tests/campaign/routing/testHelpers.js',
-        ),
+        'source_filenames': static_paths(paths['client']['scripts']['go']),
         'output_filename': 'export/go.js'
     },
 }

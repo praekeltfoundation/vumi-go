@@ -215,6 +215,23 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
             messages.append((msg_in, msg_out, ack))
         return messages
 
+    def add_message_to_conv(self, conversation, reply=False, sensitive=False):
+        msg = TransportUserMessage(
+            to_addr='9292',
+            from_addr='from-addr',
+            content='hello',
+            transport_type='sms',
+            transport_name='sphex')
+        if sensitive:
+            msg['helper_metadata']['go'] = {'sensitive': True}
+        self.api.mdb.add_inbound_message(msg, batch_id=conversation.batch.key)
+        if reply:
+            msg_out = msg.reply('hi')
+            if sensitive:
+                msg_out['helper_metadata']['go'] = {'sensitive': True}
+            self.api.mdb.add_outbound_message(
+                msg_out, batch_id=conversation.batch.key)
+
     def add_channel_to_conversation(self, conv, tag):
         # TODO: This is a duplicate of the method in
         #       go.vumitools.test.utils.GoAppWorkerTestMixin but
