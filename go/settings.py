@@ -361,7 +361,7 @@ ACCOUNT_ACTIVATION_DAYS = 7
 
 
 # PIPELINES CONFIGURATION
-paths = yaml.safe_load(open(os.path.join(PROJECT_ROOT, '..', 'go_paths.yml')))
+paths = yaml.safe_load(open(os.path.join(PROJECT_ROOT, '..', 'js_paths.yml')))
 
 STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
 PIPELINE_CSS = {
