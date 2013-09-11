@@ -1,6 +1,6 @@
 {
   "name": "vumi-go",
-  "version": "0.0.0",
+  "version": "0.5.0-dev",
   "homepage": "https://github.com/praekelt/vumi-go",
   "authors": [
     "Praekelt Foundation"
