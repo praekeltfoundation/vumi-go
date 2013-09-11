@@ -34,7 +34,7 @@
                     <td class="status {{ conversation.get_status }}">{{ conversation.get_status }}</td>
                     <td>{{ conversation.count_replies|add:conversation.count_sent_messages }} </td>
                     <!-- <td></td> -->
-                    <td>{{ conversation.created_at|naturaltime }}</td>
+                    <td title="{{conversation.created_at }}">{{ conversation.created_at|naturalday }}</td>
                     <td>
                         <a href="{% conversation_screen conversation 'message_list' %}">Messages</a>
                         {# <a href="{% url 'todo' %}">Reports</a> #}
@@ -44,7 +44,7 @@
                     </td>
                 </tr>
                 {% endfor %}
-                
+
             {% else %}
             <tr>
                 <td colspan="9">
