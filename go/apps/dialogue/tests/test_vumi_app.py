@@ -4,6 +4,7 @@
 
 import pkg_resources
 import uuid
+import os
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.trial.unittest import SkipTest
@@ -28,6 +29,7 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
 
         sandboxer_js = pkg_resources.resource_filename('vumi.application',
                                                        'sandboxer.js')
+        node_path = os.environ['SANDBOX_NODE_PATH']  # Required to run tests.
         redis = yield self.get_redis_manager()
         self.kv_redis = redis.sub_manager('kv')
         config = self.mk_config({
@@ -37,6 +39,9 @@ class DialogueApplicationTestCase(AppWorkerTestCase):
                 "{require: function(m) { if (m == 'jed' || m == 'vumigo_v01')"
                 " return require(m); return null; }, Buffer: Buffer}"
             ),
+            'env': {
+                'NODE_PATH': node_path,
+            },
             'sandbox': {
                 'config': {
                     'cls': 'go.apps.dialogue.vumi_app.PollConfigResource',
