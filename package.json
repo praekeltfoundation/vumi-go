@@ -1,6 +1,6 @@
 {
   "name": "vumi-go",
-  "version": "0.0.0",
+  "version": "0.5.0-dev",
   "dependencies": {
     "q": "~0.9.7",
     "jed": "~0.5.4",
