@@ -7,9 +7,9 @@ def deploy_go():
     with cd(env.path):
         sudo('git pull', user='vumi')
         sudo("find go -name '*.pyc' -delete")
+        setup_js_env()
         _venv_command('./ve/bin/django-admin.py collectstatic --pythonpath=. '
                       '--settings=go.settings --noinput')
-        setup_js_env()
 
 
 def setup_js_env():
