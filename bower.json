@@ -9,7 +9,7 @@
   "private": true,
   "dependencies": {
     "backbone": "~1.0.0",
-    "backbone-relational": "https://github.com/PaulUithol/Backbone-relational/blob/0.8.6/backbone-relational.js",
+    "backbone-relational": "https://raw.github.com/PaulUithol/Backbone-relational/0.8.6/backbone-relational.js",
     "bootbox": "~3.2.0",
     "jquery": "1.9.1",
     "jquery.cookie": "~1.3.1",
