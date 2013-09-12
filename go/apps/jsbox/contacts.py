@@ -425,8 +425,8 @@ class GroupsResource(SandboxResource):
     Sandbox resource for accessing, creating and modifying groups for
     a Go application.
 
-    See :class:`go.vumitools.contact.ContactGroup` for a look at the Contact model
-    and its fields.
+    See :class:`go.vumitools.contact.ContactGroup` for a look at the Contact
+    model and its fields.
     """
 
     def _contact_store_for_api(self, api):
