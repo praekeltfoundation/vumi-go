@@ -12,12 +12,12 @@ from twisted.web.server import Site
 from vumi.utils import http_request
 
 from go.vumitools.account.models import GoConnector, RoutingTableHelper
-from go.vumitools.tests.utils import AppWorkerTestCase
+from go.vumitools.tests.utils import GoWorkerTestCase
 from go.api.go_api.api_types import RoutingEntryType, EndpointType
 from go.api.go_api.go_api import GoApiWorker, GoApiServer
 
 
-class GoApiServerTestCase(AppWorkerTestCase):
+class GoApiServerTestCase(GoWorkerTestCase):
 
     worker_name = 'GoApiServer'
     transport_name = 'sphex'
@@ -433,7 +433,8 @@ class GoApiServerTestCase(AppWorkerTestCase):
                                  u"no such sub-handler unknown")
 
 
-class GoApiWorkerTestCase(AppWorkerTestCase):
+class GoApiWorkerTestCase(GoWorkerTestCase):
+    worker_class = GoApiWorker
 
     @inlineCallbacks
     def get_api_worker(self, config=None, start=True, auth=True):
@@ -443,7 +444,7 @@ class GoApiWorkerTestCase(AppWorkerTestCase):
         config.setdefault('web_path', 'api')
         config.setdefault('health_path', 'health')
         config = self.mk_config(config)
-        worker = yield self.get_worker(config, GoApiWorker, start)
+        worker = yield self.get_worker(config, start)
 
         vumi_api = worker.vumi_api
         user, password = None, None

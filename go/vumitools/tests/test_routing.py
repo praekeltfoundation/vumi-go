@@ -1,13 +1,12 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
-from twisted.trial.unittest import TestCase
 
 from go.vumitools.routing import (
     AccountRoutingTableDispatcher, RoutingMetadata, RoutingError)
-from go.vumitools.tests.utils import AppWorkerTestCase
+from go.vumitools.tests.utils import GoTestCase, AppWorkerTestCase
 from go.vumitools.utils import MessageMetadataHelper
 
 
-class TestRoutingMetadata(TestCase):
+class TestRoutingMetadata(GoTestCase):
     def mk_msg_rmeta(self, **routing_metadata):
         # We don't need a real message, just a container for routing_metadata.
         msg = {'routing_metadata': routing_metadata}

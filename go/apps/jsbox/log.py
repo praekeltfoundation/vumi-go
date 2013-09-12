@@ -64,9 +64,14 @@ class GoLoggingResource(LoggingResource):
         redis_config = self.config.get('redis_manager', {})
         max_logs_per_conversation = self.config.get(
             'max_logs_per_conversation')
-        redis = yield TxRedisManager.from_config(redis_config)
+        self._redis = yield TxRedisManager.from_config(redis_config)
         self.log_manager = LogManager(
-            redis, max_logs_per_conversation=max_logs_per_conversation)
+            self._redis, max_logs_per_conversation=max_logs_per_conversation)
+
+    @inlineCallbacks
+    def teardown(self):
+        yield self._redis.close_manager()
+        yield super(GoLoggingResource, self).teardown()
 
     @inlineCallbacks
     def log(self, api, msg, level):
