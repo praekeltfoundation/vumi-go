@@ -1,25 +1,22 @@
 from urllib import urlencode
 import urlparse
 
-from django.conf import settings
 from django.shortcuts import Http404, redirect
 from django.contrib.auth.views import logout
 from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
 
-from vumi.persist.redis_manager import RedisManager
 from vumi.utils import load_class_by_string
 
-from go.vumitools.token_manager import TokenManager
+from go.base.utils import vumi_api
 
 
 def token(request, token):
-    # This is special, since we don't necessarily have an authenticated user
-    # and we definitely don't have a conversation.
-    redis = RedisManager.from_config(settings.VUMI_API_CONFIG['redis_manager'])
-    tm = TokenManager(redis.sub_manager('token_manager'))
-    token_data = tm.get(token)
+    # We only need the redis manager here, but it's saner to get a whole
+    # vumi_api and not worry about all the setup magic.
+    api = vumi_api()
+    token_data = api.token_manager.get(token)
     if not token_data:
         raise Http404
 
@@ -50,11 +47,10 @@ def token(request, token):
 
 @login_required
 def token_task(request):
-    redis = request.user_api.api.redis
-    tm = TokenManager(redis.sub_manager('token_manager'))
+    api = request.user_api.api
 
     token = request.GET.get('token')
-    token_data = tm.verify_get(token)
+    token_data = api.token_manager.verify_get(token)
     if not token_data:
         raise Http404
 

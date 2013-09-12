@@ -4,7 +4,7 @@
 
 import uuid
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks, returnValue, DeferredQueue
 from twisted.internet.task import Clock
 
 from vumi.message import TransportUserMessage
@@ -38,6 +38,30 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         self.user_account = yield self.mk_user(self.vumi_api, u'testuser')
         self.user_api = self.vumi_api.get_user_api(self.user_account.key)
         yield self.setup_tagpools()
+        self._setup_wait_for_window_monitor()
+
+    def _setup_wait_for_window_monitor(self):
+        # Hackery to wait for the window manager on the app.
+        self._wm_state = {
+            'queue': DeferredQueue(),
+            'expected': 0,
+        }
+        orig = self.app.window_manager._monitor_windows
+
+        @inlineCallbacks
+        def monitor_wrapper(*args, **kw):
+            self._wm_state['expected'] += 1
+            yield orig(*args, **kw)
+            self._wm_state['queue'].put(object())
+
+        self.patch(
+            self.app.window_manager, '_monitor_windows', monitor_wrapper)
+
+    @inlineCallbacks
+    def wait_for_window_monitor(self):
+        while self._wm_state['expected'] > 0:
+            yield self._wm_state['queue'].get()
+            self._wm_state['expected'] -= 1
 
     @inlineCallbacks
     def setup_conversation(self, contact_count=2,
@@ -74,6 +98,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         # Go past the monitoring interval to ensure the window is
         # being worked through for delivery
         self.clock.advance(self.app.monitor_interval + 1)
+        yield self.wait_for_window_monitor()
 
         # Force processing of messages again
         yield self._amqp.kick_delivery()
@@ -99,6 +124,7 @@ class TestBulkMessageApplication(AppWorkerTestCase):
         window_id = self.app.get_window_id(conversation.key, batch_id)
         yield self._amqp.kick_delivery()
         self.clock.advance(self.app.monitor_interval + 1)
+        yield self.wait_for_window_monitor()
 
         [msg1, msg2] = yield self.get_dispatched_messages()
         yield self.store_outbound_msg(
