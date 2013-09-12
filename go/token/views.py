@@ -10,15 +10,13 @@ from django.contrib.auth.decorators import login_required
 from vumi.utils import load_class_by_string
 
 from go.base.utils import vumi_api
-from go.vumitools.token_manager import TokenManager
 
 
 def token(request, token):
     # We only need the redis manager here, but it's saner to get a whole
     # vumi_api and not worry about all the setup magic.
     api = vumi_api()
-    tm = TokenManager(api.redis.sub_manager('token_manager'))
-    token_data = tm.get(token)
+    token_data = api.token_manager.get(token)
     if not token_data:
         raise Http404
 
@@ -49,11 +47,10 @@ def token(request, token):
 
 @login_required
 def token_task(request):
-    redis = request.user_api.api.redis
-    tm = TokenManager(redis.sub_manager('token_manager'))
+    api = request.user_api.api
 
     token = request.GET.get('token')
-    token_data = tm.verify_get(token)
+    token_data = api.token_manager.verify_get(token)
     if not token_data:
         raise Http404
 
