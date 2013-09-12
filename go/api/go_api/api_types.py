@@ -5,7 +5,7 @@
 
 from vumi.rpc import Unicode, List, Dict, Tag
 
-from go.vumitools.account.models import GoConnector
+from go.vumitools.routing_table import GoConnector
 
 
 class CampaignType(Dict):

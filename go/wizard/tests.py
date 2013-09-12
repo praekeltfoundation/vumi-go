@@ -1,7 +1,7 @@
 from django.core.urlresolvers import reverse
 
 from go.base.tests.utils import VumiGoDjangoTestCase
-from go.vumitools.account import RoutingTableHelper, GoConnector
+from go.vumitools.routing_table import RoutingTable, GoConnector
 
 
 class WizardViewsTestCase(VumiGoDjangoTestCase):
@@ -27,7 +27,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         :param tag_router: List of (tag, router) pairs.
         :param router_conv: List of (router, endpoint, conversation) triples.
         """
-        rt = RoutingTableHelper({})
+        rt = RoutingTable({})
         for tag, conv in tag_conv:
             tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
             conv_conn = str(GoConnector.for_conversation(
@@ -50,7 +50,7 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
             rt.add_entry(rout_conn, endpoint, conv_conn, 'default')
             rt.add_entry(conv_conn, 'default', rout_conn, endpoint)
 
-        self.assertEqual(self.user_api.get_routing_table(), rt.routing_table)
+        self.assertEqual(self.user_api.get_routing_table(), rt._routing_table)
 
     def test_get_create_view(self):
         self.add_app_permission(u'go.apps.bulk_message')

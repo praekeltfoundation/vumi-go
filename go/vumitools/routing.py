@@ -8,7 +8,7 @@ from vumi.message import TransportEvent
 from vumi import log
 
 from go.vumitools.app_worker import GoWorkerMixin, GoWorkerConfigMixin
-from go.vumitools.account import GoConnector
+from go.vumitools.routing_table import GoConnector
 
 
 class RoutingError(Exception):

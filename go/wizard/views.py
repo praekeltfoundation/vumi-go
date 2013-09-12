@@ -13,7 +13,7 @@ from go.channel.forms import NewChannelForm
 from go.base.utils import (
     get_conversation_view_definition, conversation_or_404,
     get_router_view_definition)
-from go.vumitools.account import RoutingTableHelper, GoConnector
+from go.vumitools.routing_table import RoutingTable, GoConnector
 
 
 import logging
@@ -154,7 +154,7 @@ class WizardCreateView(BaseWizardView):
     def _setup_basic_routing(self, request, conv, tag):
         user_account = request.user_api.get_user_account()
         routing_table = request.user_api.get_routing_table(user_account)
-        rt_helper = RoutingTableHelper(routing_table)
+        rt_helper = RoutingTable(routing_table)
 
         conv_conn = str(
             GoConnector.for_conversation(conv.conversation_type, conv.key))
@@ -166,7 +166,7 @@ class WizardCreateView(BaseWizardView):
     def _setup_keyword_routing(self, request, conv, tag, router, endpoint):
         user_account = request.user_api.get_user_account()
         routing_table = request.user_api.get_routing_table(user_account)
-        rt_helper = RoutingTableHelper(routing_table)
+        rt_helper = RoutingTable(routing_table)
 
         if tag is not None:
             tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))

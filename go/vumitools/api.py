@@ -19,11 +19,12 @@ from vumi.persist.redis_manager import RedisManager
 from vumi.persist.txredis_manager import TxRedisManager
 from vumi import log
 
-from go.vumitools.account import AccountStore, RoutingTableHelper, GoConnector
+from go.vumitools.account import AccountStore
 from go.vumitools.channel import ChannelStore
 from go.vumitools.contact import ContactStore
 from go.vumitools.conversation import ConversationStore
 from go.vumitools.router import RouterStore
+from go.vumitools.routing_table import RoutingTable, GoConnector
 from go.vumitools.conversation.utils import ConversationWrapper
 from go.vumitools.credit import CreditManager
 from go.vumitools.token_manager import TokenManager
@@ -407,7 +408,7 @@ class VumiUserApi(object):
 
             # Clean up routing table entries.
             routing_table = yield self.get_routing_table(user_account)
-            rt_helper = RoutingTableHelper(routing_table)
+            rt_helper = RoutingTable(routing_table)
             rt_helper.remove_transport_tag(tag)
 
             yield user_account.save()
@@ -452,7 +453,7 @@ class VumiRouterApi(object):
         """
         user_account = yield self.user_api.get_user_account()
         routing_table = yield self.user_api.get_routing_table(user_account)
-        rt_helper = RoutingTableHelper(routing_table)
+        rt_helper = RoutingTable(routing_table)
         rt_helper.remove_router(router)
         yield user_account.save()
 

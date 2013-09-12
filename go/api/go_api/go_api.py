@@ -24,7 +24,7 @@ from go.api.go_api.action_dispatcher import (
     ConversationSubhandler, RouterSubhandler)
 from go.api.go_api.auth import GoUserRealm, GoUserAuthSessionWrapper
 from go.api.go_api.utils import GoApiSubHandler, GoApiError
-from go.vumitools.account import RoutingTableHelper
+from go.vumitools.routing_table import RoutingTable
 from go.vumitools.api import VumiApi
 
 
@@ -69,7 +69,7 @@ class GoApiServer(JSONRPC, GoApiSubHandler):
 
     def _routing_entries(self, user_api):
         def format_routing_entries(routing_table):
-            routing_table = RoutingTableHelper(routing_table)
+            routing_table = RoutingTable(routing_table)
             return [
                 RoutingEntryType.format_entry((src_conn, src_endp),
                                               (dst_conn, dst_endp))
@@ -215,7 +215,7 @@ class GoApiServer(JSONRPC, GoApiSubHandler):
 
         def populate_routing_table(routing_entries):
             routing_table = {}
-            rt_helper = RoutingTableHelper(routing_table)
+            rt_helper = RoutingTable(routing_table)
             for entry in routing_entries:
                 source, target = entry['source'], entry['target']
                 src_conn, src_endp = EndpointType.parse_uuid(

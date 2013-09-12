@@ -16,7 +16,7 @@ from vumi.tests.fake_amqp import FakeAMQPBroker
 from vumi.message import TransportUserMessage, TransportEvent
 
 from go.vumitools.tests.utils import GoPersistenceMixin, FakeAmqpConnection
-from go.vumitools.account.models import RoutingTableHelper
+from go.vumitools.routing_table import RoutingTable
 from go.vumitools.api import VumiApi
 from go.base import models as base_models
 from go.base import utils as base_utils
@@ -237,7 +237,7 @@ class VumiGoDjangoTestCase(GoPersistenceMixin, TestCase):
         #       go.vumitools.test.utils.GoAppWorkerTestMixin but
         #       there is no suitable common base class.
         user_account = self.user_api.get_user_account()
-        rt = RoutingTableHelper(user_account.routing_table)
+        rt = RoutingTable(user_account.routing_table)
         rt.add_oldstyle_conversation(conv, tag)
         user_account.save()
 

@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
 
 from go.base.utils import vumi_api_for_user
-from go.vumitools.account import RoutingTableHelper
+from go.vumitools.routing_table import RoutingTable
 
 
 class Command(BaseCommand):
@@ -106,7 +106,7 @@ class Command(BaseCommand):
         account = user_api.get_user_account()
         if account.routing_table is None:
             raise CommandError("No routing table found.")
-        rt_helper = RoutingTableHelper(account.routing_table)
+        rt_helper = RoutingTable(account.routing_table)
         rt_helper.add_entry(*options['add'])
         try:
             user_api.validate_routing_table(account)
@@ -120,7 +120,7 @@ class Command(BaseCommand):
         account = user_api.get_user_account()
         if account.routing_table is None:
             raise CommandError("No routing table found.")
-        rt_helper = RoutingTableHelper(account.routing_table)
+        rt_helper = RoutingTable(account.routing_table)
         target = rt_helper.lookup_target(src_conn, src_endpoint)
         if target is None:
             raise CommandError("No routing entry found for (%s, %s)." % (

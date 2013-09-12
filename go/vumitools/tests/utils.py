@@ -14,9 +14,10 @@ from vumi.application.tests.test_base import ApplicationTestCase
 from vumi.tests.utils import VumiWorkerTestCase, PersistenceMixin
 
 from go.vumitools.api import VumiApiCommand, VumiApi
-from go.vumitools.account import UserAccount, RoutingTableHelper
+from go.vumitools.account import UserAccount
 from go.vumitools.contact import Contact, ContactGroup
 from go.vumitools.utils import MessageMetadataHelper
+from go.vumitools.routing_table import RoutingTable
 
 
 def field_eq(f1, f2):
@@ -249,7 +250,7 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
         #       go.base.test.utils.VumiGoDjangoTestCase but
         #       there is no suitable common base class.
         user_account = yield self.user_api.get_user_account()
-        rt = RoutingTableHelper(user_account.routing_table)
+        rt = RoutingTable(user_account.routing_table)
         rt.add_oldstyle_conversation(conv, tag)
         yield user_account.save()
 

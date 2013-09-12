@@ -10,7 +10,7 @@ from vumi.persist.model import Manager
 
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.utils import MessageMetadataHelper
-from go.vumitools.account import RoutingTableHelper, GoConnector
+from go.vumitools.routing_table import RoutingTable, GoConnector
 
 
 class ConversationWrapper(object):
@@ -68,7 +68,7 @@ class ConversationWrapper(object):
             returnValue(self._channels)
         user_account = yield self.c.user_account.get(self.api.manager)
         routing_table = yield self.user_api.get_routing_table(user_account)
-        rt_helper = RoutingTableHelper(routing_table)
+        rt_helper = RoutingTable(routing_table)
         conn = GoConnector.for_conversation(
             self.conversation_type, self.key)
         incoming = rt_helper.transitive_sources(str(conn))
@@ -178,7 +178,7 @@ class ConversationWrapper(object):
         """
         user_account = yield self.c.user_account.get(self.api.manager)
         routing_table = yield self.user_api.get_routing_table(user_account)
-        rt_helper = RoutingTableHelper(routing_table)
+        rt_helper = RoutingTable(routing_table)
         rt_helper.remove_conversation(self.c)
         yield user_account.save()
 

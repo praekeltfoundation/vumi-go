@@ -16,7 +16,7 @@ from go.vumitools.api import (
     VumiApi, VumiUserApi, VumiApiCommand, VumiApiEvent)
 from go.vumitools.tests.utils import AppWorkerTestCase, FakeAmqpConnection
 from go.vumitools.account.old_models import AccountStoreVNone, AccountStoreV1
-from go.vumitools.account.models import GoConnector, RoutingTableHelper
+from go.vumitools.routing_table import GoConnector, RoutingTable
 
 
 class TestTxVumiApi(AppWorkerTestCase):
@@ -168,7 +168,7 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         # Each entry is a tuple of (src, dst) where src and dst are
         # conversations, tags or connector strings.
         user.routing_table = {}
-        rt_helper = RoutingTableHelper(user.routing_table)
+        rt_helper = RoutingTable(user.routing_table)
 
         def mkconn(thing):
             if isinstance(thing, basestring):
@@ -392,7 +392,7 @@ class TestTxVumiRouterApi(AppWorkerTestCase):
             rapi.router_type, rapi.router_key, GoConnector.OUTBOUND))
 
         user_account = yield self.user_api.get_user_account()
-        rt_helper = RoutingTableHelper(user_account.routing_table)
+        rt_helper = RoutingTable(user_account.routing_table)
         rt_helper.add_entry(tag_conn, 'default', rin_conn, 'default')
         rt_helper.add_entry(rin_conn, 'default', tag_conn, 'default')
         rt_helper.add_entry(conv_conn, 'default', rout_conn, 'default')
