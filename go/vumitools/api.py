@@ -515,11 +515,6 @@ class VumiApi(object):
         self.session_manager = SessionManager(
             self.redis.sub_manager('session_manager'))
         self.mapi = sender
-        self._persist_collect_hook(self)
-
-    def _persist_collect_hook(self, vumi_api):
-        # This allows us to collect riak/redis managers for cleanup in tests.
-        pass
 
     @staticmethod
     def _parse_config(config):

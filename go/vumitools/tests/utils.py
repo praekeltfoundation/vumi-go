@@ -73,26 +73,7 @@ class FakeAmqpConnection(object):
 class GoPersistenceMixin(PersistenceMixin):
     def _persist_setUp(self):
         self._users_created = 0
-        self._orig_vumi_api_collect_hook = VumiApi._persist_collect_hook
-        VumiApi._persist_collect_hook = self._persist_vumi_api_collect_hook
         return super(GoPersistenceMixin, self)._persist_setUp()
-
-    def _persist_tearDown(self):
-        VumiApi._persist_collect_hook = self._orig_vumi_api_collect_hook
-        self._riak_prefixes = set()
-        return super(GoPersistenceMixin, self)._persist_tearDown()
-
-    def _persist_vumi_api_collect_hook(self, vumi_api):
-        self.persist_cleanup_riak_manager(vumi_api.manager)
-        self.persist_cleanup_redis_manager(vumi_api.redis)
-
-    def persist_cleanup_riak_manager(self, manager):
-        if manager not in self._persist_riak_managers:
-            self._persist_riak_managers.append(manager)
-
-    def persist_cleanup_redis_manager(self, manager):
-        if manager not in self._persist_redis_managers:
-            self._persist_redis_managers.append(manager)
 
     @PersistenceMixin.sync_or_async
     def _clear_bucket_properties(self, account_keys, manager):
@@ -119,23 +100,14 @@ class GoPersistenceMixin(PersistenceMixin):
 
     @PersistenceMixin.sync_or_async
     def _persist_purge_riak(self, manager):
-        # We skip cleanup on managers with bucket prefixes we've already seen,
-        # because we've already cleaned up everything with that prefix. This
-        # makes cleanup faster for tests that have lots of riak managers.
-        if manager.bucket_prefix not in self._riak_prefixes:
-            self._riak_prefixes.add(manager.bucket_prefix)
-            # If buckets are empty, they aren't listed. However, they may still
-            # have properties set. Therefore, we find all account keys and
-            # clear properties from their associated buckets.
-            accounts = yield self._list_accounts(manager)
-            yield manager.purge_all()
-            # This must happen after the objects are deleted, otherwise the
-            # indexes don't go away.
-            yield self._clear_bucket_properties(accounts, manager)
-        # Hackety hack. Attempt to properly close any lingering connections so
-        # Riak doesn't barf on OSX where it's limited to 1024 file descriptors
-        # in its select() loop.
-        manager.client = None
+        # If buckets are empty, they aren't listed. However, they may still
+        # have properties set. Therefore, we find all account keys and
+        # clear properties from their associated buckets.
+        accounts = yield self._list_accounts(manager)
+        yield manager.purge_all()
+        # This must happen after the objects are deleted, otherwise the
+        # indexes don't go away.
+        yield self._clear_bucket_properties(accounts, manager)
 
     def mk_config(self, config):
         config = super(GoPersistenceMixin, self).mk_config(config)
@@ -236,18 +208,6 @@ class GoWorkerTestMixin(GoPersistenceMixin):
         return self.user_api.api.mdb.add_inbound_message(
             msg, batch_id=batch_id)
 
-
-class GoAppWorkerTestMixin(GoWorkerTestMixin):
-
-    def _worker_name(self):
-        # DummyApplicationWorker has no worker_name attr.
-        return getattr(self.application_class, 'worker_name', 'unnamed')
-
-    def _conversation_type(self):
-        # This is a guess based on worker_name.
-        # We need a better way to do this.
-        return self._worker_name().rpartition('_')[0].decode('utf-8')
-
     @inlineCallbacks
     def create_conversation(self, started=False, **kw):
         conv_type = kw.pop('conversation_type', None)
@@ -262,6 +222,18 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
         conversation = yield self.user_api.new_conversation(
             conv_type, name, description, config, **kw)
         returnValue(self.user_api.wrap_conversation(conversation))
+
+
+class GoAppWorkerTestMixin(GoWorkerTestMixin):
+
+    def _worker_name(self):
+        # DummyApplicationWorker has no worker_name attr.
+        return getattr(self.application_class, 'worker_name', 'unnamed')
+
+    def _conversation_type(self):
+        # This is a guess based on worker_name.
+        # We need a better way to do this.
+        return self._worker_name().rpartition('_')[0].decode('utf-8')
 
     def add_conversation_md_to_msg(self, msg, conv, endpoint=None):
         msg.payload.setdefault('helper_metadata', {})
@@ -318,18 +290,6 @@ class GoRouterWorkerTestMixin(GoWorkerTestMixin):
         # This is a guess based on worker_name.
         # We need a better way to do this.
         return self._worker_name().rpartition('_')[0].decode('utf-8')
-
-    @inlineCallbacks
-    def get_router_worker(self, config, start=True):
-        if 'worker_name' not in config:
-            config['worker_name'] = self._worker_name()
-        if 'ri_connector_name' not in config:
-            config['ri_connector_name'] = 'ri_conn'
-        if 'ro_connector_name' not in config:
-            config['ro_connector_name'] = 'ro_conn'
-        worker = yield self.get_worker(
-            config, self.router_class, start=start)
-        returnValue(worker)
 
     def setup_router(self, config, started=True, **kw):
         if started:
@@ -419,6 +379,16 @@ class RouterWorkerTestCase(GoRouterWorkerTestMixin, VumiWorkerTestCase):
     def tearDown(self):
         yield super(RouterWorkerTestCase, self).tearDown()
         yield self._persist_tearDown()
+
+    def get_router_worker(self, config, start=True):
+        if 'worker_name' not in config:
+            config['worker_name'] = self._worker_name()
+        if 'ri_connector_name' not in config:
+            config['ri_connector_name'] = 'ri_conn'
+        if 'ro_connector_name' not in config:
+            config['ro_connector_name'] = 'ro_conn'
+        return self.get_worker(
+            config, self.router_class, start=start)
 
 
 class GoWorkerTestCase(GoWorkerTestMixin, VumiWorkerTestCase):
