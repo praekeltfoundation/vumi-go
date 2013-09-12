@@ -24,11 +24,6 @@ class Command(BaseCommand):
             action='store_true',
             default=False,
             help='Avoid triggering a migration (only applies to --show)'),
-        make_option('--delete',
-            dest='delete',
-            action='store_true',
-            default=False,
-            help='Delete the routing table (setting it to None)'),
         make_option('--clear',
             dest='clear',
             action='store_true',
@@ -74,8 +69,6 @@ class Command(BaseCommand):
 
         if options['show']:
             return self.handle_show(user_api, options)
-        elif options['delete']:
-            return self.handle_delete(user_api, options)
         elif options['clear']:
             return self.handle_clear(user_api, options)
         elif options['add']:
@@ -90,15 +83,9 @@ class Command(BaseCommand):
         else:
             self.print_routing_table(user_api.get_routing_table())
 
-    def handle_delete(self, user_api, options):
-        account = user_api.get_user_account()
-        account.routing_table = None
-        account.save()
-        self.stdout.write("Routing table deleted.\n")
-
     def handle_clear(self, user_api, options):
         account = user_api.get_user_account()
-        account.routing_table = {}
+        account.routing_table = RoutingTable()
         account.save()
         self.stdout.write("Routing table cleared.\n")
 

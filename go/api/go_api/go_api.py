@@ -69,7 +69,6 @@ class GoApiServer(JSONRPC, GoApiSubHandler):
 
     def _routing_entries(self, user_api):
         def format_routing_entries(routing_table):
-            routing_table = RoutingTable(routing_table)
             return [
                 RoutingEntryType.format_entry((src_conn, src_endp),
                                               (dst_conn, dst_endp))
@@ -214,15 +213,14 @@ class GoApiServer(JSONRPC, GoApiSubHandler):
             return routing_entries
 
         def populate_routing_table(routing_entries):
-            routing_table = {}
-            rt_helper = RoutingTable(routing_table)
+            routing_table = RoutingTable()
             for entry in routing_entries:
                 source, target = entry['source'], entry['target']
                 src_conn, src_endp = EndpointType.parse_uuid(
                     source['uuid'])
                 dst_conn, dst_endp = EndpointType.parse_uuid(
                     target['uuid'])
-                rt_helper.add_entry(src_conn, src_endp, dst_conn, dst_endp)
+                routing_table.add_entry(src_conn, src_endp, dst_conn, dst_endp)
 
             d = user_api.get_user_account()
             d.addCallback(save_routing_table, routing_table)

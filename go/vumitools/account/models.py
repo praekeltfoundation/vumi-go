@@ -9,7 +9,9 @@ from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (
     Integer, Unicode, Timestamp, ManyToMany, Json, Boolean)
 
+from go.vumitools.account.fields import RoutingTableField
 from go.vumitools.account.migrations import UserAccountMigrator
+from go.vumitools.routing_table import RoutingTable
 
 
 class UserTagPermission(Model):
@@ -27,7 +29,7 @@ class UserAppPermission(Model):
 class UserAccount(Model):
     """A user account."""
 
-    VERSION = 2
+    VERSION = 3
     MIGRATOR = UserAccountMigrator
 
     # key is uuid
@@ -41,16 +43,8 @@ class UserAccount(Model):
     msisdn = Unicode(max_length=255, null=True)
     confirm_start_conversation = Boolean(default=False)
     email_summary = Unicode(max_length=255, null=True)
-    # `tags` is allowed to be null so that we can detect freshly-migrated
-    # accounts and populate the tags from active conversations. A new account
-    # has no legacy tags or conversations, so we start with an empty list and
-    # skip the tag collection.
-    tags = Json(default=[], null=True)
-    # `routing_table` is allowed to be null so that we can detect
-    # freshly-migrated accounts and populate the routing table from active
-    # conversations. A new account has no legacy conversations, so we start
-    # with an empty dict and skip the table building.
-    routing_table = Json(default={}, null=True)
+    tags = Json(default=[])
+    routing_table = RoutingTableField(default=RoutingTable({}))
 
     @Manager.calls_manager
     def has_tagpool_permission(self, tagpool):

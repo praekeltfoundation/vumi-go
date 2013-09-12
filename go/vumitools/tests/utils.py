@@ -17,7 +17,6 @@ from go.vumitools.api import VumiApiCommand, VumiApi
 from go.vumitools.account import UserAccount
 from go.vumitools.contact import Contact, ContactGroup
 from go.vumitools.utils import MessageMetadataHelper
-from go.vumitools.routing_table import RoutingTable
 
 
 def field_eq(f1, f2):
@@ -250,7 +249,7 @@ class GoAppWorkerTestMixin(GoWorkerTestMixin):
         #       go.base.test.utils.VumiGoDjangoTestCase but
         #       there is no suitable common base class.
         user_account = yield self.user_api.get_user_account()
-        rt = RoutingTable(user_account.routing_table)
+        rt = user_account.routing_table
         rt.add_oldstyle_conversation(conv, tag)
         yield user_account.save()
 

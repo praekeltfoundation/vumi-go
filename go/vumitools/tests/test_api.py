@@ -167,8 +167,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
     def _set_routing_table(self, user, entries):
         # Each entry is a tuple of (src, dst) where src and dst are
         # conversations, tags or connector strings.
-        user.routing_table = {}
-        rt_helper = RoutingTable(user.routing_table)
+        routing_table = RoutingTable()
+        user.routing_table = routing_table
 
         def mkconn(thing):
             if isinstance(thing, basestring):
@@ -183,7 +183,8 @@ class TestTxVumiUserApi(AppWorkerTestCase):
                     thing.conversation_type, thing.key))
 
         for src, dst in entries:
-            rt_helper.add_entry(mkconn(src), "default", mkconn(dst), "default")
+            routing_table.add_entry(
+                mkconn(src), "default", mkconn(dst), "default")
 
     @inlineCallbacks
     def test_release_tag_with_routing_entries(self):
@@ -198,15 +199,17 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         self._set_routing_table(user, [(conv, tag1), (tag1, conv)])
         yield user.save()
 
-        self.assertNotEqual({}, (yield self.user_api.get_routing_table()))
+        self.assertNotEqual(
+            RoutingTable(), (yield self.user_api.get_routing_table()))
         yield self.user_api.release_tag(tag1)
         yield self.assert_account_tags([])
-        self.assertEqual({}, (yield self.user_api.get_routing_table()))
+        self.assertEqual(
+            RoutingTable(), (yield self.user_api.get_routing_table()))
 
     @inlineCallbacks
     def test_get_empty_routing_table(self):
         routing_table = yield self.user_api.get_routing_table()
-        self.assertEqual({}, routing_table)
+        self.assertEqual(RoutingTable(), routing_table)
 
     @inlineCallbacks
     def _setup_routing_table_test_new_conv(self, routing_table=None):
@@ -234,19 +237,19 @@ class TestTxVumiUserApi(AppWorkerTestCase):
         self._set_routing_table(user, [(conv, tag), (tag, conv)])
         yield user.save()
         routing_table = yield self.user_api.get_routing_table()
-        self.assertEqual(routing_table, {
+        self.assertEqual(routing_table, RoutingTable({
             u':'.join([u'CONVERSATION:bulk_message', conv.key]): {
                 u'default': [u'TRANSPORT_TAG:pool1:1234', u'default']},
             u'TRANSPORT_TAG:pool1:1234': {
                 u'default': [
                     u'CONVERSATION:bulk_message:%s' % conv.key, u'default']},
-        })
+        }))
 
         # TODO: This belongs in a different test.
         yield conv.archive_conversation()
 
         routing_table = yield self.user_api.get_routing_table()
-        self.assertEqual(routing_table, {})
+        self.assertEqual(routing_table, RoutingTable())
 
     @inlineCallbacks
     def test_routing_table_validation_valid(self):
@@ -392,11 +395,11 @@ class TestTxVumiRouterApi(AppWorkerTestCase):
             rapi.router_type, rapi.router_key, GoConnector.OUTBOUND))
 
         user_account = yield self.user_api.get_user_account()
-        rt_helper = RoutingTable(user_account.routing_table)
-        rt_helper.add_entry(tag_conn, 'default', rin_conn, 'default')
-        rt_helper.add_entry(rin_conn, 'default', tag_conn, 'default')
-        rt_helper.add_entry(conv_conn, 'default', rout_conn, 'default')
-        rt_helper.add_entry(rout_conn, 'default', conv_conn, 'default')
+        routing_table = user_account.routing_table
+        routing_table.add_entry(tag_conn, 'default', rin_conn, 'default')
+        routing_table.add_entry(rin_conn, 'default', tag_conn, 'default')
+        routing_table.add_entry(conv_conn, 'default', rout_conn, 'default')
+        routing_table.add_entry(rout_conn, 'default', conv_conn, 'default')
         yield user_account.save()
 
     @inlineCallbacks
@@ -405,12 +408,14 @@ class TestTxVumiRouterApi(AppWorkerTestCase):
         router_api = yield self.get_router_api(router)
         yield self._add_routing_entries(router_api)
         self.assertEqual(router.archive_status, 'active')
-        self.assertNotEqual({}, (yield self.user_api.get_routing_table()))
+        self.assertNotEqual(
+            RoutingTable(), (yield self.user_api.get_routing_table()))
 
         yield router_api.archive_router()
         router = yield router_api.get_router()
         self.assertEqual(router.archive_status, 'archived')
-        self.assertEqual({}, (yield self.user_api.get_routing_table()))
+        self.assertEqual(
+            RoutingTable(), (yield self.user_api.get_routing_table()))
 
     @inlineCallbacks
     def test_start_router(self):

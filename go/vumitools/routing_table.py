@@ -138,8 +138,18 @@ class RoutingTable(object):
     lists).
     """
 
-    def __init__(self, routing_table):
+    def __init__(self, routing_table=None):
+        # XXX: Kill this check later.
+        if isinstance(routing_table, RoutingTable):
+            raise TypeError("I want a dict.")
+        if routing_table is None:
+            routing_table = {}
         self._routing_table = routing_table
+
+    def __eq__(self, other):
+        if not isinstance(other, RoutingTable):
+            return False
+        return self._routing_table == other._routing_table
 
     def lookup_target(self, src_conn, src_endpoint):
         return self._routing_table.get(src_conn, {}).get(src_endpoint)

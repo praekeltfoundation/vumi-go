@@ -11,7 +11,7 @@ from twisted.web.server import Site
 
 from vumi.utils import http_request
 
-from go.vumitools.routing_table import GoConnector, RoutingTable
+from go.vumitools.routing_table import GoConnector
 from go.vumitools.tests.utils import GoWorkerTestCase
 from go.api.go_api.api_types import RoutingEntryType, EndpointType
 from go.api.go_api.go_api import GoApiWorker, GoApiServer
@@ -206,13 +206,12 @@ class GoApiServerTestCase(GoWorkerTestCase):
         router_out_conn = str(GoConnector.for_router(
             router.router_type, router.key, GoConnector.OUTBOUND))
         user_account = yield self.user_api.get_user_account()
-        rt_helper = RoutingTable(user_account.routing_table)
-        rt_helper.add_entry(
-            channel_conn, 'default', router_in_conn, 'default')
-        rt_helper.add_entry(router_out_conn, 'default', conv_conn, 'default')
-        rt_helper.add_entry(conv_conn, 'default', router_out_conn, 'default')
-        rt_helper.add_entry(router_in_conn, 'default', channel_conn, 'default')
-        rt_helper.validate_all_entries()
+        rt = user_account.routing_table
+        rt.add_entry(channel_conn, 'default', router_in_conn, 'default')
+        rt.add_entry(router_out_conn, 'default', conv_conn, 'default')
+        rt.add_entry(conv_conn, 'default', router_out_conn, 'default')
+        rt.add_entry(router_in_conn, 'default', channel_conn, 'default')
+        rt.validate_all_entries()
         yield user_account.save()
 
     @inlineCallbacks

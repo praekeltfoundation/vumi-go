@@ -9,6 +9,7 @@ from django.contrib.auth import authenticate
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_setup_env
 from go.base.utils import vumi_api_for_user
+from go.vumitools.routing_table import RoutingTable
 
 from mock import Mock
 
@@ -469,7 +470,8 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
 
         self.command.setup_routing(user, account_info)
 
-        self.assertEqual(vumi_api_for_user(user).get_routing_table(), {
+        routing_table = vumi_api_for_user(user).get_routing_table()
+        self.assertEqual(routing_table, RoutingTable({
             u'TRANSPORT_TAG:pool1:default0': {
                 u'default': [u'CONVERSATION:survey:conv1', u'default'],
             },
@@ -490,7 +492,7 @@ class GoBootstrapEnvTestCase(VumiGoDjangoTestCase):
             u'CONVERSATION:wikipedia:conv2': {
                 u'default': [u'ROUTER:keyword:router1:OUTBOUND', u'default'],
             },
-        })
+        }))
 
     def test_startup_script(self):
         self.command.contact_group_info = [{

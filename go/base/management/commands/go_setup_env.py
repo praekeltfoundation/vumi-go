@@ -340,13 +340,13 @@ class Command(BaseCommand):
             connectors[router['key'] + ':OUTBOUND'] = GoConnector.for_router(
                 router['router_type'], router['key'], GoConnector.OUTBOUND)
 
-        rt = RoutingTable({})
+        rt = RoutingTable()
         for src, src_ep, dst, dst_ep in account_objects['routing_entries']:
             rt.add_entry(
                 str(connectors[src]), src_ep, str(connectors[dst]), dst_ep)
 
         user_account = vumi_api_for_user(user).get_user_account()
-        user_account.routing_table = rt._routing_table
+        user_account.routing_table = rt
         user_account.save()
 
         self.stdout.write('Routing table for %s built\n' % (user.email,))
