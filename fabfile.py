@@ -9,7 +9,12 @@ def deploy_go():
         sudo("find go -name '*.pyc' -delete")
         _venv_command('./ve/bin/django-admin.py collectstatic --pythonpath=. '
                       '--settings=go.settings --noinput')
-        sudo('./utils/js-setup-env.sh')
+        setup_go_js_env()
+
+
+def setup_go_js_env():
+    with cd(env.path):
+        _venv_command('./utils/js-setup-env.sh')
 
 
 def deploy_vumi():
