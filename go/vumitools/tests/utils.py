@@ -73,26 +73,7 @@ class FakeAmqpConnection(object):
 class GoPersistenceMixin(PersistenceMixin):
     def _persist_setUp(self):
         self._users_created = 0
-        self._orig_vumi_api_collect_hook = VumiApi._persist_collect_hook
-        VumiApi._persist_collect_hook = self._persist_vumi_api_collect_hook
         return super(GoPersistenceMixin, self)._persist_setUp()
-
-    def _persist_tearDown(self):
-        VumiApi._persist_collect_hook = self._orig_vumi_api_collect_hook
-        self._riak_prefixes = set()
-        return super(GoPersistenceMixin, self)._persist_tearDown()
-
-    def _persist_vumi_api_collect_hook(self, vumi_api):
-        self.persist_cleanup_riak_manager(vumi_api.manager)
-        self.persist_cleanup_redis_manager(vumi_api.redis)
-
-    def persist_cleanup_riak_manager(self, manager):
-        if manager not in self._persist_riak_managers:
-            self._persist_riak_managers.append(manager)
-
-    def persist_cleanup_redis_manager(self, manager):
-        if manager not in self._persist_redis_managers:
-            self._persist_redis_managers.append(manager)
 
     @PersistenceMixin.sync_or_async
     def _clear_bucket_properties(self, account_keys, manager):
@@ -119,23 +100,14 @@ class GoPersistenceMixin(PersistenceMixin):
 
     @PersistenceMixin.sync_or_async
     def _persist_purge_riak(self, manager):
-        # We skip cleanup on managers with bucket prefixes we've already seen,
-        # because we've already cleaned up everything with that prefix. This
-        # makes cleanup faster for tests that have lots of riak managers.
-        if manager.bucket_prefix not in self._riak_prefixes:
-            self._riak_prefixes.add(manager.bucket_prefix)
-            # If buckets are empty, they aren't listed. However, they may still
-            # have properties set. Therefore, we find all account keys and
-            # clear properties from their associated buckets.
-            accounts = yield self._list_accounts(manager)
-            yield manager.purge_all()
-            # This must happen after the objects are deleted, otherwise the
-            # indexes don't go away.
-            yield self._clear_bucket_properties(accounts, manager)
-        # Hackety hack. Attempt to properly close any lingering connections so
-        # Riak doesn't barf on OSX where it's limited to 1024 file descriptors
-        # in its select() loop.
-        manager.client = None
+        # If buckets are empty, they aren't listed. However, they may still
+        # have properties set. Therefore, we find all account keys and
+        # clear properties from their associated buckets.
+        accounts = yield self._list_accounts(manager)
+        yield manager.purge_all()
+        # This must happen after the objects are deleted, otherwise the
+        # indexes don't go away.
+        yield self._clear_bucket_properties(accounts, manager)
 
     def mk_config(self, config):
         config = super(GoPersistenceMixin, self).mk_config(config)
