@@ -1,13 +1,13 @@
 from fabric.api import cd, sudo, env, puts
 
 env.path = '/var/praekelt/vumi-go'
+env.sudo_prefix += '-H '
 
 
 def deploy_go():
     with cd(env.path):
         sudo('git pull', user='vumi')
         sudo("find go -name '*.pyc' -delete")
-        setup_js_env()
         _venv_command('./ve/bin/django-admin.py collectstatic --pythonpath=. '
                       '--settings=go.settings --noinput')
 
@@ -70,7 +70,8 @@ def supervisorctl(command):
 
 
 def _venv_command(command, user='vumi'):
-    return sudo('. ve/bin/activate && %s' % (command,), user=user)
+    return sudo('. ve/bin/activate && export PATH="ve/bin:$PATH" && %s'
+                % (command,), user=user)
 
 
 def _supervisorctl_status():
