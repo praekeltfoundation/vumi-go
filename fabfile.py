@@ -9,6 +9,7 @@ def deploy_go():
         sudo("find go -name '*.pyc' -delete")
         _venv_command('./ve/bin/django-admin.py collectstatic --pythonpath=. '
                       '--settings=go.settings --noinput')
+        sudo('./utils/js-setup-env.sh')
 
 
 def deploy_vumi():
@@ -55,24 +56,12 @@ def deploy_world(restart=True):
     """
     deploy_vumi()
     deploy_go()
-    update_nodejs_modules()
     if restart:
         restart_all()
 
 
-def update_nodejs_modules():
-    """
-    Update the Node.js modules that the JS sandbox depends on.
-    """
-    npm_install("vumigo_v01")
-
-
 def supervisorctl(command):
     return sudo('supervisorctl %s' % (command,))
-
-
-def npm_install(package):
-    return sudo('npm install --global %s' % (package,))
 
 
 def _venv_command(command, user='vumi'):
