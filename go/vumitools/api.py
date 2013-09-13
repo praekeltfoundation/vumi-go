@@ -299,23 +299,20 @@ class VumiUserApi(object):
         routing_table = yield self.get_routing_table(user_account)
         # We don't care about endpoints here, only connectors.
         routing_connectors = set()
-        rt_dict = routing_table._routing_table
-        for src_conn, connector_dict in rt_dict.iteritems():
+        for src_conn, _src_ep, dst_conn, _dst_ep in routing_table.entries():
             routing_connectors.add(src_conn)
-            for dst_conn, _ in connector_dict.values():
-                routing_connectors.add(dst_conn)
+            routing_connectors.add(dst_conn)
 
         # Checking tags is cheap and easy, so do that first.
         for tag in user_account.tags:
-            tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
+            tag_conn = GoConnector.for_transport_tag(tag[0], tag[1])
             if tag_conn in routing_connectors:
                 routing_connectors.remove(tag_conn)
 
         # Now we run through active conversations to check those.
         convs = yield self.active_conversations()
         for conv in convs:
-            conv_conn = str(GoConnector.for_conversation(
-                conv.conversation_type, conv.key))
+            conv_conn = conv.get_connector()
             if conv_conn in routing_connectors:
                 routing_connectors.remove(conv_conn)
 

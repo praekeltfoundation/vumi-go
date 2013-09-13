@@ -172,15 +172,12 @@ class TestTxVumiUserApi(AppWorkerTestCase):
 
         def mkconn(thing):
             if isinstance(thing, basestring):
-                # Use it as-is.
-                return thing
+                return GoConnector.parse(thing)
             elif isinstance(thing, tuple):
-                # It's a tag.
-                return str(GoConnector.for_transport_tag(thing[0], thing[1]))
+                return GoConnector.for_transport_tag(*thing)
             else:
                 # Assume it's a conversation.
-                return str(GoConnector.for_conversation(
-                    thing.conversation_type, thing.key))
+                return thing.get_connector()
 
         for src, dst in entries:
             routing_table.add_entry(
@@ -386,13 +383,11 @@ class TestTxVumiRouterApi(AppWorkerTestCase):
         self.assertEqual(router.config, got_router.config)
 
     @inlineCallbacks
-    def _add_routing_entries(self, rapi):
+    def _add_routing_entries(self, router):
         conv_conn = 'CONVERSATION:type:key'
         tag_conn = 'TRANSPORT_TAG:pool:tag'
-        rin_conn = str(GoConnector.for_router(
-            rapi.router_type, rapi.router_key, GoConnector.INBOUND))
-        rout_conn = str(GoConnector.for_router(
-            rapi.router_type, rapi.router_key, GoConnector.OUTBOUND))
+        rin_conn = router.get_inbound_connector()
+        rout_conn = router.get_outbound_connector()
 
         user_account = yield self.user_api.get_user_account()
         routing_table = user_account.routing_table
@@ -406,7 +401,7 @@ class TestTxVumiRouterApi(AppWorkerTestCase):
     def test_archive_router(self):
         router = yield self.create_router()
         router_api = yield self.get_router_api(router)
-        yield self._add_routing_entries(router_api)
+        yield self._add_routing_entries(router)
         self.assertEqual(router.archive_status, 'active')
         self.assertNotEqual(
             RoutingTable(), (yield self.user_api.get_routing_table()))

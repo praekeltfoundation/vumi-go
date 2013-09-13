@@ -3,16 +3,17 @@
 from uuid import uuid4
 from datetime import datetime
 
+from twisted.internet.defer import returnValue
+
 from vumi.persist.model import Model, Manager
 from vumi.persist.fields import (
     Unicode, ManyToMany, ForeignKey, Timestamp, Json, ListOf)
 from vumi.components.message_store import Batch
 
-from twisted.internet.defer import returnValue
-
 from go.vumitools.account import UserAccount, PerAccountStore
 from go.vumitools.contact import ContactGroup
 from go.vumitools.conversation.migrators import ConversationMigrator
+from go.vumitools.routing_table import GoConnector
 
 
 CONVERSATION_ACTIVE = u'active'
@@ -122,6 +123,9 @@ class Conversation(Model):
         """
         addrs = [contact.addr_for(self.delivery_class) for contact in contacts]
         return [addr for addr in addrs if addr]
+
+    def get_connector(self):
+        return GoConnector.for_conversation(self.conversation_type, self.key)
 
 
 class ConversationStore(PerAccountStore):

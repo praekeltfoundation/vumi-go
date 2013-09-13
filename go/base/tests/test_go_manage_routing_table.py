@@ -1,10 +1,8 @@
 from StringIO import StringIO
 
-from django.core.management.base import CommandError
-
 from go.base.tests.utils import VumiGoDjangoTestCase
 from go.base.management.commands import go_manage_routing_table
-from go.vumitools.routing_table import RoutingTable
+from go.vumitools.routing_table import GoConnector
 
 
 class TestGoManageRoutingTableCommand(VumiGoDjangoTestCase):
@@ -19,6 +17,13 @@ class TestGoManageRoutingTableCommand(VumiGoDjangoTestCase):
         self.command = go_manage_routing_table.Command()
         self.command.stdout = StringIO()
         self.command.stderr = StringIO()
+
+    def assert_routing_entries(self, routing_table, expected_entries):
+        self.assertEqual(
+            sorted(routing_table.entries()),
+            sorted((GoConnector.parse(str(sc)), se,
+                    GoConnector.parse(str(dc)), de)
+                   for sc, se, dc, de in expected_entries))
 
     def handle_command(self, **options):
         options.setdefault('email-address', self.django_user.username)
@@ -82,9 +87,9 @@ class TestGoManageRoutingTableCommand(VumiGoDjangoTestCase):
             add=(tag_conn, "default", conv_conn, "default"))
         self.assertEqual(['Routing table entry added.'], outlines)
         self.assertEqual([''], errlines)
-        self.assertEqual(
-            [(tag_conn, "default", conv_conn, "default")],
-            list(self.user_api.get_routing_table().entries()))
+        self.assert_routing_entries(
+            self.user_api.get_routing_table(),
+            [(tag_conn, "default", conv_conn, "default")])
 
     def test_remove(self):
         conv = self.create_conversation(name=u'active')
@@ -102,6 +107,6 @@ class TestGoManageRoutingTableCommand(VumiGoDjangoTestCase):
             remove=(tag_conn, "default", conv_conn, "default"))
         self.assertEqual(['Routing table entry removed.'], outlines)
         self.assertEqual([''], errlines)
-        self.assertEqual(
-            [(conv_conn, "default", tag_conn, "default")],
-            list(self.user_api.get_routing_table().entries()))
+        self.assert_routing_entries(
+            self.user_api.get_routing_table(),
+            [(conv_conn, "default", tag_conn, "default")])

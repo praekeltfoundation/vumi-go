@@ -198,13 +198,10 @@ class GoApiServerTestCase(GoWorkerTestCase):
 
     @inlineCallbacks
     def _connect_conversation_to_tag_through_router(self, conv, tag, router):
-        conv_conn = str(GoConnector.for_conversation(
-            conv.conversation_type, conv.key))
-        channel_conn = str(GoConnector.for_transport_tag(*tag))
-        router_in_conn = str(GoConnector.for_router(
-            router.router_type, router.key, GoConnector.INBOUND))
-        router_out_conn = str(GoConnector.for_router(
-            router.router_type, router.key, GoConnector.OUTBOUND))
+        conv_conn = conv.get_connector()
+        channel_conn = GoConnector.for_transport_tag(*tag)
+        router_in_conn = router.get_inbound_connector()
+        router_out_conn = router.get_outbound_connector()
         user_account = yield self.user_api.get_user_account()
         rt = user_account.routing_table
         rt.add_entry(channel_conn, 'default', router_in_conn, 'default')

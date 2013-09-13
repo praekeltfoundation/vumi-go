@@ -29,24 +29,20 @@ class WizardViewsTestCase(VumiGoDjangoTestCase):
         """
         rt = RoutingTable()
         for tag, conv in tag_conv:
-            tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
-            conv_conn = str(GoConnector.for_conversation(
-                conv.conversation_type, conv.key))
+            tag_conn = GoConnector.for_transport_tag(tag[0], tag[1])
+            conv_conn = conv.get_connector()
             rt.add_entry(tag_conn, 'default', conv_conn, 'default')
             rt.add_entry(conv_conn, 'default', tag_conn, 'default')
 
         for tag, router in tag_router:
-            tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
-            rin_conn = str(GoConnector.for_router(
-                router.router_type, router.key, GoConnector.INBOUND))
+            tag_conn = GoConnector.for_transport_tag(tag[0], tag[1])
+            rin_conn = router.get_inbound_connector()
             rt.add_entry(tag_conn, 'default', rin_conn, 'default')
             rt.add_entry(rin_conn, 'default', tag_conn, 'default')
 
         for router, endpoint, conv in router_conv:
-            rout_conn = str(GoConnector.for_router(
-                router.router_type, router.key, GoConnector.OUTBOUND))
-            conv_conn = str(GoConnector.for_conversation(
-                conv.conversation_type, conv.key))
+            rout_conn = router.get_outbound_connector()
+            conv_conn = conv.get_connector()
             rt.add_entry(rout_conn, endpoint, conv_conn, 'default')
             rt.add_entry(conv_conn, 'default', rout_conn, endpoint)
 

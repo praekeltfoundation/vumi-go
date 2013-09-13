@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
 
 from go.base.utils import vumi_api_for_user
-from go.vumitools.routing_table import RoutingTable
+from go.vumitools.routing_table import GoConnector, RoutingTable
 
 
 class Command(BaseCommand):
@@ -102,7 +102,7 @@ class Command(BaseCommand):
         if target is None:
             raise CommandError("No routing entry found for (%s, %s)." % (
                 src_conn, src_endpoint))
-        elif target != [dst_conn, dst_endpoint]:
+        elif target != [GoConnector.parse(dst_conn), dst_endpoint]:
             raise CommandError(
                 "Existing entry (%s, %s) does not match (%s, %s)." % (
                     target[0], target[1], dst_conn, dst_endpoint))

@@ -10,7 +10,6 @@ from vumi.persist.model import Manager
 
 from go.vumitools.opt_out import OptOutStore
 from go.vumitools.utils import MessageMetadataHelper
-from go.vumitools.routing_table import GoConnector
 
 
 class ConversationWrapper(object):
@@ -68,14 +67,12 @@ class ConversationWrapper(object):
             returnValue(self._channels)
         user_account = yield self.c.user_account.get(self.api.manager)
         routing_table = yield self.user_api.get_routing_table(user_account)
-        conn = GoConnector.for_conversation(
-            self.conversation_type, self.key)
+        conn = self.c.get_connector()
         incoming = routing_table.transitive_sources(str(conn))
         outbound = routing_table.transitive_targets(str(conn))
         connectors = incoming | outbound
-        go_connectors = [GoConnector.parse(s) for s in connectors]
         channels = []
-        for conn in go_connectors:
+        for conn in connectors:
             if conn.ctype != conn.TRANSPORT_TAG:
                 continue
             channel = yield self.user_api.get_channel(

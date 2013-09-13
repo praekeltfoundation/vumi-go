@@ -15,6 +15,9 @@ class FakeConversation(object):
         self.conversation_type = conversation_type
         self.key = key
 
+    def get_connector(self):
+        return GoConnector.for_model(self)
+
 
 class FakeRouter(object):
     """Fake router with the appropriate properties used for routing.
@@ -24,6 +27,12 @@ class FakeRouter(object):
         self.router_type = router_type
         self.key = key
 
+    def get_inbound_connector(self):
+        return GoConnector.for_model(self, GoConnector.INBOUND)
+
+    def get_outbound_connector(self):
+        return GoConnector.for_model(self, GoConnector.OUTBOUND)
+
 
 class FakePlasticChannel(object):
     """Fake channel with the appropriate properties used for routing.
@@ -32,6 +41,9 @@ class FakePlasticChannel(object):
     def __init__(self, tagpool, tag):
         self.tagpool = tagpool
         self.tag = tag
+
+    def get_connector(self):
+        return GoConnector.for_model(self)
 
 
 class RoutingTableTestCase(TestCase):
@@ -75,12 +87,23 @@ class RoutingTableTestCase(TestCase):
             routing_table = copy.deepcopy(self.DEFAULT_ROUTING)
         return RoutingTable(routing_table)
 
+    def assert_routing_entries(self, routing_table, expected_entries):
+        self.assertEqual(
+            sorted(routing_table.entries()),
+            sorted((GoConnector.parse(str(sc)), se,
+                    GoConnector.parse(str(dc)), de)
+                   for sc, se, dc, de in expected_entries))
+
+    def assert_connectors(self, connectors, expected_connectors):
+        self.assertEqual(sorted(connectors), sorted(
+            GoConnector.parse(str(conn)) for conn in expected_connectors))
+
     def test_lookup_target(self):
         rt = self.make_rt()
         self.assertEqual(rt.lookup_target(self.CONV_1, "default1.1"),
-                         [self.CHANNEL_2, "default2"])
+                         [GoConnector.parse(self.CHANNEL_2), "default2"])
         self.assertEqual(rt.lookup_target(self.CONV_1, "default1.2"),
-                         [self.CHANNEL_3, "default3"])
+                         [GoConnector.parse(self.CHANNEL_3), "default3"])
 
     def test_lookup_unknown_target(self):
         rt = self.make_rt()
@@ -90,9 +113,9 @@ class RoutingTableTestCase(TestCase):
     def test_lookup_source(self):
         rt = self.make_rt()
         self.assertEqual(rt.lookup_source(self.CHANNEL_2, "default2"),
-                         [self.CONV_1, "default1.1"])
+                         [GoConnector.parse(self.CONV_1), "default1.1"])
         self.assertEqual(rt.lookup_source(self.CHANNEL_3, "default3"),
-                         [self.CONV_1, "default1.2"])
+                         [GoConnector.parse(self.CONV_1), "default1.2"])
 
     def test_lookup_unknown_source(self):
         rt = self.make_rt()
@@ -101,26 +124,20 @@ class RoutingTableTestCase(TestCase):
 
     def test_lookup_targets(self):
         rt = self.make_rt()
-        self.assertEqual(
-            sorted(rt.lookup_targets(self.CONV_1)),
-            [
-                ("default1.1", [self.CHANNEL_2, "default2"]),
-                ("default1.2", [self.CHANNEL_3, "default3"]),
-            ],
-        )
+        self.assertEqual(sorted(rt.lookup_targets(self.CONV_1)), [
+            ("default1.1", [GoConnector.parse(self.CHANNEL_2), "default2"]),
+            ("default1.2", [GoConnector.parse(self.CHANNEL_3), "default3"]),
+        ])
 
     def test_lookup_sources(self):
         rt = self.make_rt()
-        self.assertEqual(
-            sorted(rt.lookup_sources(self.CHANNEL_3)),
-            [
-                ("default3", [self.CONV_1, "default1.2"]),
-            ],
-        )
+        self.assertEqual(sorted(rt.lookup_sources(self.CHANNEL_3)), [
+            ("default3", [GoConnector.parse(self.CONV_1), "default1.2"]),
+        ])
 
     def test_entries(self):
         rt = self.make_rt()
-        self.assertEqual(sorted(rt.entries()), [
+        self.assert_routing_entries(rt, [
             (self.CONV_1, "default1.1", self.CHANNEL_2, "default2"),
             (self.CONV_1, "default1.2", self.CHANNEL_3, "default3"),
         ])
@@ -130,7 +147,7 @@ class RoutingTableTestCase(TestCase):
         tag_conn = 'TRANSPORT_TAG:new:tag1'
         conv_conn = 'CONVERSATION:new:12345'
         rt.add_entry(tag_conn, "default4", conv_conn, "default5")
-        self.assertEqual(sorted(rt.entries()), [
+        self.assert_routing_entries(rt, [
             (self.CONV_1, "default1.1", self.CHANNEL_2, "default2"),
             (self.CONV_1, "default1.2", self.CHANNEL_3, "default3"),
             (tag_conn, "default4", conv_conn, "default5"),
@@ -146,7 +163,7 @@ class RoutingTableTestCase(TestCase):
                 " was ['%s', 'default3'], now ['%s', 'default4']" % (
                     self.CONV_1, self.CHANNEL_3, tag_conn)
             ])
-        self.assertEqual(sorted(rt.entries()), [
+        self.assert_routing_entries(rt, [
             (self.CONV_1, "default1.1", self.CHANNEL_2, "default2"),
             (self.CONV_1, "default1.2", tag_conn, "default4"),
         ])
@@ -155,7 +172,7 @@ class RoutingTableTestCase(TestCase):
         rt = self.make_rt()
         self.assertRaises(
             ValueError, rt.add_entry, self.CONV_1, "foo", self.CONV_2, "bar")
-        self.assertEqual(sorted(rt.entries()), [
+        self.assert_routing_entries(rt, [
             (self.CONV_1, "default1.1", self.CHANNEL_2, "default2"),
             (self.CONV_1, "default1.2", self.CHANNEL_3, "default3"),
         ])
@@ -163,7 +180,7 @@ class RoutingTableTestCase(TestCase):
     def test_remove_entry(self):
         rt = self.make_rt()
         rt.remove_entry(self.CONV_1, "default1.1")
-        self.assertEqual(sorted(rt.entries()), [
+        self.assert_routing_entries(rt, [
             (self.CONV_1, "default1.2", self.CHANNEL_3, "default3"),
         ])
 
@@ -175,7 +192,7 @@ class RoutingTableTestCase(TestCase):
                 "Attempting to remove missing routing entry for"
                 " ('%s', 'default1.unknown')." % (self.CONV_1,)
             ])
-        self.assertEqual(sorted(rt.entries()), [
+        self.assert_routing_entries(rt, [
             (self.CONV_1, "default1.1", self.CHANNEL_2, "default2"),
             (self.CONV_1, "default1.2", self.CHANNEL_3, "default3"),
         ])
@@ -183,12 +200,12 @@ class RoutingTableTestCase(TestCase):
     def test_remove_connector_source(self):
         rt = self.make_rt()
         rt.remove_connector(self.CONV_1)
-        self.assertEqual(sorted(rt.entries()), [])
+        self.assert_routing_entries(rt, [])
 
     def test_remove_connector_destination(self):
         rt = self.make_rt()
         rt.remove_connector(self.CHANNEL_2)
-        self.assertEqual(sorted(rt.entries()), [
+        self.assert_routing_entries(rt, [
             (self.CONV_1, "default1.2", self.CHANNEL_3, "default3"),
         ])
 
@@ -200,7 +217,7 @@ class RoutingTableTestCase(TestCase):
         rt.add_entry(conv_conn, "default", self.CHANNEL_2, "default")
         rt.add_entry(self.CHANNEL_2, "default", conv_conn, "default")
         rt.remove_conversation(conv)
-        self.assertEqual(sorted(rt.entries()), [])
+        self.assert_routing_entries(rt, [])
 
     def test_remove_router(self):
         rt = self.make_rt({})
@@ -215,7 +232,7 @@ class RoutingTableTestCase(TestCase):
         rt.add_entry(rout_conn, 'default', self.CONV_1, 'default')
         self.assertNotEqual(list(rt.entries()), [])
         rt.remove_router(router)
-        self.assertEqual(list(rt.entries()), [])
+        self.assert_routing_entries(rt, [])
 
     def test_remove_transport_tag(self):
         tag = ["pool1", "tag1"]
@@ -224,14 +241,14 @@ class RoutingTableTestCase(TestCase):
         rt.add_entry(tag_conn, "default", self.CONV_1, "default")
         rt.add_entry(self.CONV_1, "default", tag_conn, "default")
         rt.remove_transport_tag(tag)
-        self.assertEqual(sorted(rt.entries()), [])
+        self.assert_routing_entries(rt, [])
 
     def test_add_oldstyle_conversation(self):
         rt = self.make_rt({})
         conv = FakeConversation("conv_type_1", "12345")
         tag = ["pool1", "tag1"]
         rt.add_oldstyle_conversation(conv, tag)
-        self.assertEqual(sorted(rt.entries()), [
+        self.assert_routing_entries(rt, [
             ('CONVERSATION:conv_type_1:12345', 'default',
              'TRANSPORT_TAG:pool1:tag1', 'default'),
             ('TRANSPORT_TAG:pool1:tag1', 'default',
@@ -243,59 +260,59 @@ class RoutingTableTestCase(TestCase):
         conv = FakeConversation("conv_type_1", "12345")
         tag = ["pool1", "tag1"]
         rt.add_oldstyle_conversation(conv, tag, outbound_only=True)
-        self.assertEqual(sorted(rt.entries()), [
+        self.assert_routing_entries(rt, [
             ('CONVERSATION:conv_type_1:12345', 'default',
              'TRANSPORT_TAG:pool1:tag1', 'default'),
         ])
 
     def test_transitive_targets_simple_case(self):
         rt = self.make_rt()
-        self.assertEqual(sorted(rt.transitive_targets(self.CONV_1)), [
+        self.assert_connectors(rt.transitive_targets(self.CONV_1), [
             self.CHANNEL_2, self.CHANNEL_3,
         ])
 
     def test_transitive_targets_with_routers(self):
         rt = self.make_rt(self.COMPLEX_ROUTING)
-        self.assertEqual(sorted(rt.transitive_targets(self.CHANNEL_2)), [
+        self.assert_connectors(rt.transitive_targets(self.CHANNEL_2), [
             self.CONV_1, self.CONV_2, self.ROUTER_1_INBOUND,
         ])
-        self.assertEqual(sorted(rt.transitive_targets(self.CHANNEL_3)), [
+        self.assert_connectors(rt.transitive_targets(self.CHANNEL_3), [
         ])
-        self.assertEqual(sorted(rt.transitive_targets(self.CONV_1)), [
+        self.assert_connectors(rt.transitive_targets(self.CONV_1), [
             self.ROUTER_1_OUTBOUND, self.CHANNEL_2,
         ])
-        self.assertEqual(sorted(rt.transitive_targets(self.CONV_2)), [
+        self.assert_connectors(rt.transitive_targets(self.CONV_2), [
             self.ROUTER_1_OUTBOUND, self.CHANNEL_2, self.CHANNEL_3,
         ])
-        self.assertEqual(sorted(rt.transitive_targets(self.ROUTER_1_INBOUND)),
-                         [self.CHANNEL_2])
-        self.assertEqual(sorted(rt.transitive_targets(self.ROUTER_1_OUTBOUND)),
-                         [self.CONV_1, self.CONV_2])
+        self.assert_connectors(rt.transitive_targets(self.ROUTER_1_INBOUND),
+                               [self.CHANNEL_2])
+        self.assert_connectors(rt.transitive_targets(self.ROUTER_1_OUTBOUND),
+                               [self.CONV_1, self.CONV_2])
 
     def test_transitive_sources_simple_case(self):
         rt = self.make_rt()
-        self.assertEqual(sorted(rt.transitive_sources(self.CHANNEL_2)), [
+        self.assert_connectors(rt.transitive_sources(self.CHANNEL_2), [
             self.CONV_1,
         ])
 
     def test_transitive_sources_with_routers(self):
         rt = self.make_rt(self.COMPLEX_ROUTING)
-        self.assertEqual(sorted(rt.transitive_sources(self.CHANNEL_2)), [
+        self.assert_connectors(rt.transitive_sources(self.CHANNEL_2), [
             self.CONV_1, self.CONV_2, self.ROUTER_1_INBOUND,
         ])
-        self.assertEqual(sorted(rt.transitive_sources(self.CHANNEL_3)), [
+        self.assert_connectors(rt.transitive_sources(self.CHANNEL_3), [
             self.CONV_2,
         ])
-        self.assertEqual(sorted(rt.transitive_sources(self.CONV_1)), [
+        self.assert_connectors(rt.transitive_sources(self.CONV_1), [
             self.ROUTER_1_OUTBOUND, self.CHANNEL_2,
         ])
-        self.assertEqual(sorted(rt.transitive_sources(self.CONV_2)), [
+        self.assert_connectors(rt.transitive_sources(self.CONV_2), [
             self.ROUTER_1_OUTBOUND, self.CHANNEL_2,
         ])
-        self.assertEqual(sorted(rt.transitive_sources(self.ROUTER_1_INBOUND)),
-                         [self.CHANNEL_2])
-        self.assertEqual(sorted(rt.transitive_sources(self.ROUTER_1_OUTBOUND)),
-                         [self.CONV_1, self.CONV_2])
+        self.assert_connectors(rt.transitive_sources(self.ROUTER_1_INBOUND),
+                               [self.CHANNEL_2])
+        self.assert_connectors(rt.transitive_sources(self.ROUTER_1_OUTBOUND),
+                               [self.CONV_1, self.CONV_2])
 
     def test_entry_validation(self):
         rt = self.make_rt()

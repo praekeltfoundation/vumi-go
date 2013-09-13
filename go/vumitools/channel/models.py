@@ -1,6 +1,7 @@
 # -*- test-case-name: go.vumitools.channel.tests.test_models -*-
 
 from go.vumitools.account import PerAccountStore
+from go.vumitools.routing_table import GoConnector
 
 
 class FakeForeignKey(object):
@@ -38,6 +39,9 @@ class CheapPlasticChannel(object):
 
     def supports_replies(self):
         return self._check_support('replies')
+
+    def get_connector(self):
+        return GoConnector.for_transport_tag(self.tagpool, self.tag)
 
 
 class ChannelStore(PerAccountStore):

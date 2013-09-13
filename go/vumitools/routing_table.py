@@ -44,6 +44,27 @@ class GoConnector(object):
     def __str__(self):
         return ":".join([self.ctype] + self._parts)
 
+    def __repr__(self):
+        return "<GoConnector: %r>" % str(self)
+
+    def __eq__(self, other):
+        if not isinstance(other, GoConnector):
+            return False
+        return str(self) == str(other)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __cmp__(self, other):
+        if self == other:
+            return 0
+        if str(self) < str(other):
+            return -1
+        return 1
+
+    def __hash__(self):
+        return hash(str(self))
+
     def __getattr__(self, name):
         return self._attrs[name]
 
@@ -122,6 +143,12 @@ class GoConnector(object):
             "Unknown object type for connector: %s" % (model_obj,))
 
 
+def _to_conn(conn):
+    if not isinstance(conn, GoConnector):
+        conn = GoConnector.parse(conn)
+    return conn
+
+
 class RoutingTable(object):
     """Interface to routing table dictionaries.
 
@@ -155,24 +182,32 @@ class RoutingTable(object):
         return bool(self._routing_table)
 
     def lookup_target(self, src_conn, src_endpoint):
-        return self._routing_table.get(src_conn, {}).get(src_endpoint)
+        target = self._routing_table.get(str(src_conn), {}).get(src_endpoint)
+        if target is not None:
+            conn, ep = target
+            target = [_to_conn(conn), ep]
+        return target
 
     def lookup_targets(self, src_conn):
-        return self._routing_table.get(src_conn, {}).items()
+        targets = []
+        for ep, dst in self._routing_table.get(str(src_conn), {}).iteritems():
+            dst_str, dst_ep = dst
+            targets.append((ep, [_to_conn(dst_str), dst_ep]))
+        return targets
 
     def lookup_source(self, target_conn, target_endpoint):
-        for src_conn, routes in self._routing_table.iteritems():
-            for src_endpoint, (dst_conn, dst_endpoint) in routes.items():
-                if dst_conn == target_conn and dst_endpoint == target_endpoint:
-                    return [src_conn, src_endpoint]
+        target_conn = _to_conn(target_conn)
+        for src_conn, src_endpoint, dst_conn, dst_endpoint in self.entries():
+            if dst_conn == target_conn and dst_endpoint == target_endpoint:
+                return [src_conn, src_endpoint]
         return None
 
     def lookup_sources(self, target_conn):
+        target_conn = _to_conn(target_conn)
         sources = []
-        for src_conn, routes in self._routing_table.iteritems():
-            for src_endpoint, (dest_conn, dest_endpoint) in routes.items():
-                if dest_conn == target_conn:
-                    sources.append((dest_endpoint, [src_conn, src_endpoint]))
+        for src_conn, src_endpoint, dst_conn, dst_endpoint in self.entries():
+            if dst_conn == target_conn:
+                sources.append((dst_endpoint, [src_conn, src_endpoint]))
         return sources
 
     def entries(self):
@@ -182,31 +217,36 @@ class RoutingTable(object):
         """
         for src_conn, endpoints in self._routing_table.iteritems():
             for src_endp, (dst_conn, dst_endp) in endpoints.iteritems():
-                yield (src_conn, src_endp, dst_conn, dst_endp)
+                yield (
+                    _to_conn(src_conn), src_endp, _to_conn(dst_conn), dst_endp)
 
     def add_entry(self, src_conn, src_endpoint, dst_conn, dst_endpoint):
+        src_conn = _to_conn(src_conn)
+        dst_conn = _to_conn(dst_conn)
         self.validate_entry(src_conn, src_endpoint, dst_conn, dst_endpoint)
-        connector_dict = self._routing_table.setdefault(src_conn, {})
+        connector_dict = self._routing_table.setdefault(str(src_conn), {})
         if src_endpoint in connector_dict:
             log.warning(
                 "Replacing routing entry for (%r, %r): was %r, now %r" % (
-                    src_conn, src_endpoint, connector_dict[src_endpoint],
-                    [dst_conn, dst_endpoint]))
-        connector_dict[src_endpoint] = [dst_conn, dst_endpoint]
+                    str(src_conn), src_endpoint, connector_dict[src_endpoint],
+                    [str(dst_conn), dst_endpoint]))
+        connector_dict[src_endpoint] = [str(dst_conn), dst_endpoint]
 
     def remove_entry(self, src_conn, src_endpoint):
-        connector_dict = self._routing_table.get(src_conn)
+        src_conn = _to_conn(src_conn)
+        src_str = str(src_conn)
+        connector_dict = self._routing_table.get(src_str)
         if connector_dict is None or src_endpoint not in connector_dict:
             log.warning(
                 "Attempting to remove missing routing entry for (%r, %r)." % (
-                    src_conn, src_endpoint))
+                    src_str, src_endpoint))
             return None
 
         old_dest = connector_dict.pop(src_endpoint)
 
         if not connector_dict:
             # This is the last entry for this connector
-            self._routing_table.pop(src_conn)
+            self._routing_table.pop(src_str)
 
         return old_dest
 
@@ -215,21 +255,22 @@ class RoutingTable(object):
 
         Useful when the connector is going away for some reason.
         """
+        conn = _to_conn(conn)
         # remove entries with connector as source
-        self._routing_table.pop(conn, None)
+        self._routing_table.pop(str(conn), None)
 
         # remove entires with connector as destination
         to_remove = []
-        for src_conn, routes in self._routing_table.iteritems():
-            for src_endpoint, (dest_conn, dest_endpoint) in routes.items():
-                if dest_conn == conn:
+        for src_str, routes in self._routing_table.iteritems():
+            for src_endpoint, (dst_str, dst_endpoint) in routes.items():
+                if dst_str == str(conn):
                     del routes[src_endpoint]
             if not routes:
                 # We can't modify this dict while iterating over it.
-                to_remove.append(src_conn)
+                to_remove.append(src_str)
 
-        for src_conn in to_remove:
-            del self._routing_table[src_conn]
+        for src_str in to_remove:
+            del self._routing_table[src_str]
 
     def remove_conversation(self, conv):
         """Remove all entries linking to or from a given conversation.
@@ -237,9 +278,7 @@ class RoutingTable(object):
         Useful when archiving a conversation to ensure it is no longer
         present in the routing table.
         """
-        conv_conn = str(GoConnector.for_conversation(conv.conversation_type,
-                                                     conv.key))
-        self.remove_connector(conv_conn)
+        self.remove_connector(conv.get_connector())
 
     def remove_router(self, router):
         """Remove all entries linking to or from a given router.
@@ -247,10 +286,8 @@ class RoutingTable(object):
         Useful when archiving a router to ensure it is no longer present in the
         routing table.
         """
-        self.remove_connector(str(GoConnector.for_router(
-            router.router_type, router.key, GoConnector.INBOUND)))
-        self.remove_connector(str(GoConnector.for_router(
-            router.router_type, router.key, GoConnector.OUTBOUND)))
+        self.remove_connector(router.get_inbound_connector())
+        self.remove_connector(router.get_outbound_connector())
 
     def remove_transport_tag(self, tag):
         """Remove all entries linking to or from a given transport tag.
@@ -258,7 +295,7 @@ class RoutingTable(object):
         Useful when releasing a tag to ensure it is no longer present in the
         routing table.
         """
-        tag_conn = str(GoConnector.for_transport_tag(tag[0], tag[1]))
+        tag_conn = GoConnector.for_transport_tag(tag[0], tag[1])
         self.remove_connector(tag_conn)
 
     def add_oldstyle_conversation(self, conv, tag, outbound_only=False):
@@ -290,6 +327,7 @@ class RoutingTable(object):
         :param str src_conn: source connector to start search with.
         :rtype: set of destination connector strings.
         """
+        src_conn = _to_conn(src_conn)
         sources = [src_conn]
         sources_seen = set(sources)
         results = set()
@@ -298,10 +336,9 @@ class RoutingTable(object):
             destinations = self.lookup_targets(source)
             for _src_endpoint, (dst_conn, _dst_endpoint) in destinations:
                 results.add(dst_conn)
-                parsed_dst = GoConnector.parse(dst_conn)
-                if parsed_dst.ctype != GoConnector.ROUTER:
+                if dst_conn.ctype != GoConnector.ROUTER:
                     continue
-                extra_src = str(parsed_dst.flip_direction())
+                extra_src = str(dst_conn.flip_direction())
                 if extra_src not in sources_seen:
                     sources.append(extra_src)
                     sources_seen.add(extra_src)
@@ -327,6 +364,7 @@ class RoutingTable(object):
         :param str dst_conn: destination connector to start search with.
         :rtype: set of source connector strings.
         """
+        dst_conn = _to_conn(dst_conn)
         destinations = [dst_conn]
         destinations_seen = set(destinations)
         results = set()
@@ -335,10 +373,9 @@ class RoutingTable(object):
             sources = self.lookup_sources(destination)
             for _dst_endpoint, (src_conn, _src_endpoint) in sources:
                 results.add(src_conn)
-                parsed_src = GoConnector.parse(src_conn)
-                if parsed_src.ctype != GoConnector.ROUTER:
+                if src_conn.ctype != GoConnector.ROUTER:
                     continue
-                extra_dst = str(parsed_src.flip_direction())
+                extra_dst = str(src_conn.flip_direction())
                 if extra_dst not in destinations_seen:
                     destinations.append(extra_dst)
                     destinations_seen.add(extra_dst)
@@ -350,14 +387,14 @@ class RoutingTable(object):
         This method currently only validates that the source and destination
         have opposite directionality (IN->OUT or OUT->IN).
         """
-        parsed_src = GoConnector.parse(src_conn)
-        parsed_dst = GoConnector.parse(dst_conn)
-        if parsed_src.direction == parsed_dst.direction:
+        src_conn = _to_conn(src_conn)
+        dst_conn = _to_conn(dst_conn)
+        if src_conn.direction == dst_conn.direction:
             raise ValueError(
                 "Invalid routing table entry: %s source (%s, %s) maps to %s"
                 " destination (%s, %s)" % (
-                    parsed_src.direction, src_conn, src_endpoint,
-                    parsed_dst.direction, dst_conn, dst_endpoint))
+                    src_conn.direction, str(src_conn), src_endpoint,
+                    dst_conn.direction, str(dst_conn), dst_endpoint))
 
     def validate_all_entries(self):
         """Validates all entries in the routing table.
