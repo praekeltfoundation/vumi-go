@@ -19,11 +19,6 @@ class Command(BaseCommand):
             action='store_true',
             default=False,
             help='Display the current routing table'),
-        make_option('--no-migration',
-            dest='no-migration',
-            action='store_true',
-            default=False,
-            help='Avoid triggering a migration (only applies to --show)'),
         make_option('--clear',
             dest='clear',
             action='store_true',
@@ -44,7 +39,7 @@ class Command(BaseCommand):
     ]
     option_list = BaseCommand.option_list + tuple(LOCAL_OPTIONS)
 
-    CONFLICTING_OPTIONS = ['show', 'delete', 'clear', 'add', 'remove']
+    CONFLICTING_OPTIONS = ['show', 'clear', 'add', 'remove']
 
     def handle(self, *args, **options):
         options = options.copy()
@@ -78,10 +73,7 @@ class Command(BaseCommand):
         raise NotImplementedError('Unknown command.')
 
     def handle_show(self, user_api, options):
-        if options['no-migration']:
-            self.print_routing_table(user_api.get_user_account().routing_table)
-        else:
-            self.print_routing_table(user_api.get_routing_table())
+        self.print_routing_table(user_api.get_routing_table())
 
     def handle_clear(self, user_api, options):
         account = user_api.get_user_account()
@@ -93,8 +85,7 @@ class Command(BaseCommand):
         account = user_api.get_user_account()
         if account.routing_table is None:
             raise CommandError("No routing table found.")
-        rt_helper = RoutingTable(account.routing_table)
-        rt_helper.add_entry(*options['add'])
+        account.routing_table.add_entry(*options['add'])
         try:
             user_api.validate_routing_table(account)
         except Exception as e:
@@ -107,8 +98,7 @@ class Command(BaseCommand):
         account = user_api.get_user_account()
         if account.routing_table is None:
             raise CommandError("No routing table found.")
-        rt_helper = RoutingTable(account.routing_table)
-        target = rt_helper.lookup_target(src_conn, src_endpoint)
+        target = account.routing_table.lookup_target(src_conn, src_endpoint)
         if target is None:
             raise CommandError("No routing entry found for (%s, %s)." % (
                 src_conn, src_endpoint))
@@ -116,7 +106,7 @@ class Command(BaseCommand):
             raise CommandError(
                 "Existing entry (%s, %s) does not match (%s, %s)." % (
                     target[0], target[1], dst_conn, dst_endpoint))
-        rt_helper.remove_entry(src_conn, src_endpoint)
+        account.routing_table.remove_entry(src_conn, src_endpoint)
         try:
             user_api.validate_routing_table(account)
         except Exception as e:
@@ -134,7 +124,7 @@ class Command(BaseCommand):
             return
 
         self.stdout.write("Routing table:\n")
-        for source, values in routing_table.iteritems():
+        for source, values in routing_table._routing_table.iteritems():
             self.stdout.write("  %s\n" % (source,))
             for endpoint, dest in values.iteritems():
                 self.stdout.write("      %s  ->  %s - %s\n" % (

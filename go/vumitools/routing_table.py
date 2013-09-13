@@ -151,6 +151,9 @@ class RoutingTable(object):
             return False
         return self._routing_table == other._routing_table
 
+    def __nonzero__(self):
+        return bool(self._routing_table)
+
     def lookup_target(self, src_conn, src_endpoint):
         return self._routing_table.get(src_conn, {}).get(src_endpoint)
 
