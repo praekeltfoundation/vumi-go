@@ -17,7 +17,7 @@ def abspath(*args):
 
 def static_paths(paths):
     return map(
-        lambda p: os.path.relpath(p, '%s/base/static/' % PROJECT_ROOT),
+        lambda p: os.path.relpath(p, 'go/base/static/'),
         paths)
 
 

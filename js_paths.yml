@@ -28,7 +28,7 @@ client:
       - 'go/base/static/bower_components/js-base64/base64.js'
       - 'go/base/static/bower_components/node-uuid/uuid.js'
       - 'go/base/static/bower_components/backbone/backbone.js'
-      - 'go/base/static/bower_components/backbone-relational/backbone-relational.js'
+      - 'go/base/static/bower_components/backbone-relational/index.js'
       - 'go/base/static/bower_components/bootstrap/js/bootstrap.js'
       - 'go/base/static/bower_components/bootbox/bootbox.js'
     go:
